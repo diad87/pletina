@@ -174,6 +174,10 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - [ ] Fase 6: Linux y Mac
 - [ ] Fase 7: móvil
 
+## Repositorios
+- Código (privado): https://github.com/diad87/musify — rama `main`.
+- Versiones (público): https://github.com/diad87/musify-releases — instaladores y canal de actualizaciones automáticas.
+
 ## Desarrollo
 - Requisitos: Node 24, Rust (rustup, toolchain MSVC), Visual Studio Build Tools 2022 (C++) y WebView2 (viene con Windows 11).
 - Arrancar en modo desarrollo: `npm run tauri dev`
