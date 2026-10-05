@@ -35,6 +35,10 @@
     download: 'M12 16 7 11l1.4-1.4 2.6 2.6V4h2v8.2l2.6-2.6L17 11l-5 5zm-7 2h14v2H5z',
     downloaded: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 14-5-5 1.4-1.4 2.6 2.6V7h2v5.2l2.6-2.6L17 11l-5 5z',
     folder: 'M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z',
+    chevronDown: 'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+    chevronUp: 'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z',
+    queue: 'M4 6h13v2H4zm0 5h13v2H4zm0 5h9v2H4zm13-1.5 5 3-5 3z',
+    expand: 'M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z',
   }
 
   export type IconName = keyof typeof PATHS

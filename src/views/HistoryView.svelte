@@ -6,12 +6,16 @@
   import { relativeTime } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
+  import { theme } from '../lib/theme.svelte'
   import type { Entry } from '../lib/types'
 
   let entries = $state<Entry[] | null>(null)
   let error = $state<string | null>(null)
   let confirmClear = $state(false)
   let first = true
+
+  theme.clear()
+  theme.neutral()
 
   $effect(() => {
     void library.historyVersion
@@ -33,7 +37,7 @@
   const items = $derived((entries ?? []).map((e) => fromLib(e.track)))
 </script>
 
-<section class="page">
+<section class="page top">
   <div class="title-row">
     <h1 class="page-title">Historial</h1>
     {#if items.length && !confirmClear}

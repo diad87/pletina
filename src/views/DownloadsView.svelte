@@ -9,6 +9,7 @@
   import { fromLib } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
+  import { theme } from '../lib/theme.svelte'
   import { toast } from '../lib/toast.svelte'
   import type { DownloadEntry } from '../lib/types'
 
@@ -17,6 +18,9 @@
   let folder = $state('')
   let confirmRemoveAll = $state(false)
   let first = true
+
+  theme.clear()
+  theme.setColor('hsl(160 35% 24%)')
 
   $effect(() => {
     void downloads.version
@@ -60,7 +64,7 @@
   }
 </script>
 
-<section class="page">
+<section class="page top">
   <h1 class="page-title">Descargas</h1>
 
   <div class="folder">

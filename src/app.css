@@ -1,21 +1,42 @@
+/* Color de la página (sale de la carátula); registrado para poder animarlo. */
+@property --page-color {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2a2340;
+}
+
 :root {
-  --bg: #000;
-  --panel: #121214;
-  --elevated: #232327;
-  --hover: #1d1d21;
-  --line: #2c2c31;
-  --text: #f4f4f5;
-  --muted: #a1a1aa;
-  --faint: #5c5c66;
+  --bg: #050507;
+  --panel: #121216;
+  --panel-2: #18181e;
+  --elevated: #26262e;
+  --hover: rgb(255 255 255 / 0.07);
+  --press: rgb(255 255 255 / 0.12);
+  --line: rgb(255 255 255 / 0.08);
+  --text: #f6f6f8;
+  --muted: #a9a9b6;
+  --faint: #6c6c7a;
   --accent: #b69cff;
+  --accent-strong: #8f6cff;
+  --accent-grad: linear-gradient(135deg, #c7b3ff 0%, #8f6cff 100%);
+  --danger: #ff8a80;
+
+  --radius-s: 6px;
+  --radius: 10px;
+  --radius-l: 14px;
+  --shadow-1: 0 4px 14px rgb(0 0 0 / 0.35);
+  --shadow-2: 0 12px 32px rgb(0 0 0 / 0.5);
+  --shadow-3: 0 24px 64px rgb(0 0 0 / 0.6);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   color-scheme: dark;
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Figtree Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01';
 }
 
 *,
@@ -47,11 +68,16 @@ button {
   outline-offset: 2px;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 ::-webkit-scrollbar {
   width: 12px;
+  height: 12px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.16);
   border: 3px solid transparent;
   border-radius: 6px;
   background-clip: padding-box;
@@ -59,25 +85,45 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgb(255 255 255 / 0.3);
 }
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Entrada suave de cada pantalla. */
+.view {
+  animation: enter 0.35s var(--ease) both;
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
 
 /* Piezas compartidas por las vistas */
 
 .page {
+  position: relative;
   padding: 8px 24px 48px;
+}
+
+/* Páginas sin cabecera: dejan sitio a la barra superior, que va por encima del contenido. */
+.page.top {
+  padding-top: 76px;
 }
 
 .page-title {
   margin: 8px 12px 24px;
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .section-title {
-  margin: 24px 12px 4px;
+  margin: 28px 12px 8px;
   font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .grid {
@@ -92,7 +138,7 @@ button {
   background: var(--text);
   color: #000;
   font-weight: 700;
-  transition: transform 0.1s;
+  transition: transform 0.15s var(--ease);
 }
 .pill:hover {
   transform: scale(1.04);
@@ -106,56 +152,97 @@ button {
   color: var(--text);
 }
 
+/* Cabecera de disco / playlist: carátula grande con sombra y título enorme. */
 .hero {
+  position: relative;
   display: flex;
   align-items: flex-end;
-  gap: 24px;
-  padding: 24px 36px 28px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent);
+  gap: 28px;
+  padding: 84px 36px 28px;
 }
 .hero .art {
   flex: none;
-  width: clamp(160px, 18vw, 232px);
+  width: clamp(168px, 18vw, 240px);
+  filter: drop-shadow(0 18px 40px rgb(0 0 0 / 0.55));
+}
+.hero .art .cover,
+.hero .art .collage {
+  box-shadow: none;
+}
+.hero .info {
+  min-width: 0;
+  flex: 1;
 }
 .hero .kind {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 .hero h1 {
-  margin: 6px 0 14px;
-  font-size: clamp(32px, 5vw, 72px);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  margin: 6px 0 16px;
+  font-size: clamp(36px, 5.4vw, 88px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.25);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  padding-bottom: 0.08em;
 }
 .hero .meta {
-  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: rgb(255 255 255 / 0.75);
+  font-weight: 500;
+}
+.hero .meta .dot::before {
+  content: '•';
+  margin: 0 2px;
+  opacity: 0.7;
+}
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: var(--shadow-1);
 }
 
 /* Fila de acciones bajo la cabecera (reproducir, guardar, más opciones). */
 .actions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 8px 12px 16px;
+  padding: 20px 12px 20px;
 }
 .big-play {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
-  background: var(--accent);
-  color: #000;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.4);
-  transition: transform 0.1s;
+  background: var(--accent-grad);
+  color: #10002b;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--accent-strong) 45%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.35);
+  transition:
+    transform 0.15s var(--ease),
+    box-shadow 0.2s;
 }
 .big-play:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
+  box-shadow:
+    0 14px 34px color-mix(in srgb, var(--accent-strong) 60%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.35);
+}
+.big-play:active {
+  transform: scale(0.97);
 }
 .big-play:disabled {
   opacity: 0.4;
@@ -168,11 +255,11 @@ button {
   color: var(--muted);
   transition:
     color 0.15s,
-    transform 0.1s;
+    transform 0.15s var(--ease);
 }
 .action:hover {
   color: var(--text);
-  transform: scale(1.04);
+  transform: scale(1.06);
 }
 .action.on {
   color: var(--accent);
@@ -183,11 +270,38 @@ button {
   display: grid;
   place-items: center;
   gap: 12px;
-  padding: 64px 24px;
+  padding: 72px 24px;
   color: var(--muted);
   text-align: center;
 }
+.empty-state svg {
+  padding: 18px;
+  border-radius: 50%;
+  background: var(--panel-2);
+  box-sizing: content-box;
+  color: var(--accent);
+}
 .empty-state strong {
-  font-size: 20px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--text);
+}
+.empty-state p {
+  margin: 0;
+  max-width: 420px;
+}
+
+/* Brillo de carga para los esqueletos. */
+.shimmer {
+  background: linear-gradient(100deg, var(--panel-2) 30%, #222229 50%, var(--panel-2) 70%) 0 0 / 300% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
 }

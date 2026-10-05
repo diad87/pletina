@@ -25,7 +25,7 @@
 
 <aside class="sidebar">
   <div class="top">
-    <div class="brand"><Icon name="note" size={26} /> Musify</div>
+    <div class="brand"><span class="logo"><Icon name="note" size={18} /></span> Musify</div>
     <nav>
       <button class:active={route.name === 'home'} onclick={() => nav.go({ name: 'home' })}>
         <Icon name="home" size={24} /> Inicio
@@ -109,8 +109,9 @@
   }
   .top,
   .library {
-    border-radius: 10px;
-    background: var(--panel);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #17171d 0%, var(--panel) 140px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
   }
   .top {
     padding: 20px 12px 8px;
@@ -119,11 +120,22 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0 12px 12px;
-    font-size: 20px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    color: var(--accent);
+    padding: 0 12px 14px;
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+  .logo {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--accent-grad);
+    color: #10002b;
+    box-shadow:
+      0 6px 16px color-mix(in srgb, var(--accent-strong) 40%, transparent),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
   }
   nav {
     display: flex;
@@ -141,9 +153,12 @@
     color: var(--muted);
     transition: color 0.15s;
   }
-  nav button:hover,
+  nav button:hover {
+    color: var(--text);
+  }
   nav button.active {
     color: var(--text);
+    background: rgb(255 255 255 / 0.06);
   }
 
   .library {
@@ -195,8 +210,12 @@
   .item:hover {
     background: var(--hover);
   }
+  .item {
+    transition: background 0.15s;
+  }
   .item.active {
-    background: var(--elevated);
+    background: rgb(255 255 255 / 0.09);
+    box-shadow: inset 3px 0 0 var(--accent);
   }
   .art {
     flex: none;
@@ -204,19 +223,20 @@
   }
   .art :global(.cover),
   .art :global(.collage) {
-    border-radius: 4px;
-    box-shadow: none;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
   }
   .liked,
   .plain {
     display: grid;
     place-items: center;
     height: 44px;
-    border-radius: 4px;
+    border-radius: 6px;
   }
   .liked {
-    background: linear-gradient(135deg, #5b3fd1, #b69cff);
+    background: linear-gradient(135deg, #4b2fc9 0%, #8f6cff 55%, #e2d6ff 100%);
     color: #fff;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
   }
   .plain {
     background: var(--elevated);

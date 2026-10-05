@@ -2,6 +2,7 @@
   import Collage from '../components/Collage.svelte'
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
+  import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
   import * as api from '../lib/api'
@@ -10,6 +11,7 @@
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
+  import { theme } from '../lib/theme.svelte'
   import type { PlaylistDetail } from '../lib/types'
 
   let { id }: { id: number } = $props()
@@ -20,6 +22,8 @@
   let draft = $state('')
   let confirmDelete = $state(false)
   let loadedId = -1
+
+  theme.clear()
 
   // Se recarga al cambiar de playlist y cada vez que cambia la biblioteca.
   $effect(() => {
@@ -39,6 +43,7 @@
         const fresh = current !== loadedId
         data = p
         loadedId = current
+        theme.set(p.covers[0], p.name)
         if (fresh) {
           nav.ready()
           // Recién creada desde la barra lateral: el nombre, listo para escribir.
@@ -59,6 +64,10 @@
       player.queue.every((q, i) => q.track.id === items[i].track.id),
   )
   const playing = $derived(isThis && player.status === 'playing')
+
+  $effect(() => {
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0)) } : null
+  })
 
   function startRename() {
     if (!data) return
@@ -99,7 +108,7 @@
 {#if error}
   <Status {error} />
 {:else if !data}
-  <Status />
+  <Skeleton />
 {:else}
   <header class="hero">
     <div class="art"><Collage covers={data.covers} /></div>
@@ -133,10 +142,10 @@
         onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0))}
         title={playing ? 'Pausa' : 'Reproducir'}
       >
-        <Icon name={playing ? 'pause' : 'play'} size={24} />
+        <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
       <DownloadButton {items} />
-      <button class="action" onclick={playlistMenu} title="Más opciones"><Icon name="more" size={30} /></button>
+      <button class="action" onclick={playlistMenu} title="Más opciones"><Icon name="more" size={32} /></button>
     </div>
 
     {#if confirmDelete}

@@ -21,7 +21,7 @@ class Downloads {
 
   async init(downloadedIds: number[]) {
     for (const id of downloadedIds) this.done.add(id)
-    await listen<DownloadProgress>('download', (e) => this.#onProgress(e.payload))
+    if (api.inTauri) await listen<DownloadProgress>('download', (e) => this.#onProgress(e.payload))
   }
 
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */

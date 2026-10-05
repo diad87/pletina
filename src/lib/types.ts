@@ -3,6 +3,20 @@
 export interface ArtistRef {
   id: number
   name: string
+  /** Solo en algunos sitios (p. ej. la cabecera de un disco). */
+  pictureMedium?: string | null
+}
+
+export interface AlbumRef {
+  id: number
+  title: string
+  coverMedium: string | null
+  coverBig: string | null
+}
+
+/** Canción entre las más escuchadas de un artista, con su disco. */
+export interface TopTrack extends Track {
+  album: AlbumRef
 }
 
 export interface Artist {
@@ -63,6 +77,7 @@ export interface SearchResults {
 export interface ArtistPage {
   artist: Artist
   albums: Album[]
+  top: TopTrack[]
 }
 
 /** Lo que el backend necesita para buscar una canción en YouTube. */

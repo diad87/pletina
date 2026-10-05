@@ -2,6 +2,8 @@
 
 import * as api from './api'
 import { downloads } from './downloads.svelte'
+import { toast } from './toast.svelte'
+import type { AlbumDetail } from './types'
 import { library } from './library.svelte'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
@@ -67,4 +69,28 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
     { label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) },
   )
   return items
+}
+
+/** Las canciones de un disco como cola de reproducción. */
+export function albumQueue(album: AlbumDetail): QueueItem[] {
+  return album.tracks.map((track) => ({
+    track,
+    albumId: album.id,
+    albumTitle: album.title,
+    artistId: album.artist.id,
+    cover: album.coverBig,
+  }))
+}
+
+/** ¿Está sonando ahora este disco? */
+export const albumPlaying = (albumId: number) => player.current?.albumId === albumId && player.status === 'playing'
+
+/** Reproduce un disco entero desde una tarjeta (o lo pausa si ya está sonando). */
+export async function playAlbum(albumId: number) {
+  if (player.current?.albumId === albumId && player.status !== 'idle') return player.toggle()
+  try {
+    player.playQueue(albumQueue(await api.album(albumId)), 0)
+  } catch (e) {
+    toast.show(`No se pudo abrir el disco: ${e}`)
+  }
 }

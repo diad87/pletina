@@ -188,21 +188,26 @@
   .list.with-meta .row {
     grid-template-columns: 32px minmax(0, 4fr) minmax(0, 3fr) 120px 32px 56px 32px;
   }
+  .row:not(.head) {
+    transition: background 0.15s;
+  }
   .row:not(.head):hover,
   .row:focus-visible {
-    background: var(--hover);
+    background: rgb(255 255 255 / 0.07);
+  }
+  .row.current {
+    background: rgb(255 255 255 / 0.04);
   }
   .head {
-    position: sticky;
-    top: 0;
-    z-index: 1;
     min-height: 36px;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
-    background: var(--panel);
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
   .disc {
     padding: 20px 16px 8px;
@@ -253,6 +258,7 @@
   }
   .name {
     color: var(--text);
+    font-weight: 500;
   }
   .current .name {
     color: var(--accent);

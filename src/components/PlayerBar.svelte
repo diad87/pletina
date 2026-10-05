@@ -1,29 +1,37 @@
 <script lang="ts">
-  import { duration } from '../lib/format'
+  import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
+  import { theme } from '../lib/theme.svelte'
   import { toast } from '../lib/toast.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
 
-  // Mientras se arrastra la barra de progreso, manda la posición del dedo, no la del audio.
-  let dragging = $state(false)
-  let dragValue = $state(0)
-  const position = $derived(dragging ? dragValue : player.time)
-  const total = $derived(player.duration || current?.track.duration || 0)
+  // La barra se tiñe con el color de la carátula que suena.
+  let color = $state(FALLBACK_COLOR)
+  $effect(() => {
+    const cover = current?.cover
+    let alive = true
+    coverColor(cover).then((c) => alive && (color = c))
+    return () => {
+      alive = false
+    }
+  })
 
-  const pct = (value: number, max: number) => `${max > 0 ? Math.min(100, (value / max) * 100) : 0}%`
+  const volumeFill = $derived(`${(player.muted ? 0 : player.volume) * 100}%`)
 </script>
 
-<footer class="player">
+<footer class="player" style:--now={current ? color : FALLBACK_COLOR} class:idle={!current}>
   <div class="now">
     {#if current}
-      <button class="thumb" onclick={() => nav.go({ name: 'album', id: current.albumId })} title="Ir al disco">
+      <button class="thumb" onclick={() => (theme.nowPlaying = true)} title="Sonando ahora">
         <Cover src={current.cover} />
+        <span class="expand"><Icon name="chevronUp" size={22} /></span>
       </button>
       <div class="info">
         <button class="link title" onclick={() => nav.go({ name: 'album', id: current.albumId })}
@@ -45,67 +53,7 @@
     {/if}
   </div>
 
-  <div class="center">
-    <div class="buttons">
-      <button
-        class="icon toggle"
-        class:on={player.shuffle}
-        onclick={() => player.toggleShuffle()}
-        title={player.shuffle ? 'Desactivar aleatorio' : 'Aleatorio'}
-      >
-        <Icon name="shuffle" size={18} />
-      </button>
-      <button class="icon" onclick={() => player.prev()} disabled={!current} title="Anterior">
-        <Icon name="prev" />
-      </button>
-      <button
-        class="play"
-        onclick={() => player.toggle()}
-        disabled={!current}
-        title={player.status === 'playing' ? 'Pausa (espacio)' : 'Reproducir (espacio)'}
-      >
-        {#if player.status === 'loading'}
-          <span class="spinner"></span>
-        {:else}
-          <Icon name={player.status === 'playing' ? 'pause' : 'play'} size={18} />
-        {/if}
-      </button>
-      <button class="icon" onclick={() => player.next()} disabled={!player.hasNext} title="Siguiente">
-        <Icon name="next" />
-      </button>
-      <button
-        class="icon toggle"
-        class:on={player.repeat !== 'off'}
-        onclick={() => player.cycleRepeat()}
-        title={player.repeat === 'off' ? 'Repetir' : player.repeat === 'all' ? 'Repetir una' : 'No repetir'}
-      >
-        <Icon name={player.repeat === 'one' ? 'repeatOne' : 'repeat'} size={18} />
-      </button>
-    </div>
-    <div class="progress">
-      <span class="time">{duration(position)}</span>
-      <input
-        type="range"
-        class="slider"
-        min="0"
-        max={total}
-        step="1"
-        value={position}
-        disabled={!current || player.status === 'loading'}
-        style:--fill={pct(position, total)}
-        oninput={(e) => {
-          dragging = true
-          dragValue = Number(e.currentTarget.value)
-        }}
-        onchange={(e) => {
-          player.seek(Number(e.currentTarget.value))
-          dragging = false
-        }}
-        aria-label="Posición"
-      />
-      <span class="time">{duration(total)}</span>
-    </div>
-  </div>
+  <div class="center"><Transport /></div>
 
   <div class="side">
     <button
@@ -114,26 +62,37 @@
       disabled={!current}
       title="¿No es esta canción? Elegir otro vídeo"
     >
-      <Icon name="swap" />
+      <Icon name="swap" size={18} />
+    </button>
+    <button
+      class="icon"
+      class:on={theme.nowPlaying}
+      onclick={() => (theme.nowPlaying = !theme.nowPlaying)}
+      disabled={!current}
+      title="Sonando ahora y cola"
+    >
+      <Icon name="queue" size={20} />
     </button>
     <button class="icon" onclick={() => player.toggleMute()} title={player.muted ? 'Activar sonido' : 'Silenciar'}>
-      <Icon name={player.muted || player.volume === 0 ? 'mute' : 'volume'} />
+      <Icon name={player.muted || player.volume === 0 ? 'mute' : 'volume'} size={20} />
     </button>
     <input
       type="range"
-      class="slider volume"
+      class="volume"
       min="0"
       max="1"
       step="0.01"
       value={player.muted ? 0 : player.volume}
-      style:--fill={pct(player.muted ? 0 : player.volume, 1)}
+      style:--fill={volumeFill}
       oninput={(e) => player.setVolume(Number(e.currentTarget.value))}
       aria-label="Volumen"
     />
   </div>
 
   {#if toast.message}
-    <div class="notice" role="status">{toast.message}</div>
+    {#key toast.message}
+      <div class="notice" role="status">{toast.message}</div>
+    {/key}
   {/if}
 </footer>
 
@@ -142,22 +101,44 @@
     position: relative;
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr) minmax(180px, 1fr);
+    grid-template-columns: minmax(200px, 1fr) minmax(340px, 2fr) minmax(200px, 1fr);
     align-items: center;
     gap: 16px;
-    height: 72px;
-    padding: 0 8px;
+    height: 80px;
+    padding: 0 16px 0 10px;
+    border-radius: var(--radius);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--now) 45%, var(--bg)) 0%, var(--bg) 42%);
+  }
+  .player.idle {
+    background: var(--bg);
   }
 
   .now {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     min-width: 0;
   }
   .thumb {
+    position: relative;
     flex: none;
-    width: 56px;
+    width: 58px;
+  }
+  .thumb :global(.cover) {
+    box-shadow: 0 6px 16px rgb(0 0 0 / 0.5);
+  }
+  .expand {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-s);
+    background: rgb(0 0 0 / 0.5);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .thumb:hover .expand {
+    opacity: 1;
   }
   .info {
     display: flex;
@@ -174,6 +155,7 @@
     text-overflow: ellipsis;
   }
   .title {
+    font-weight: 600;
     color: var(--text);
   }
   .artist,
@@ -187,143 +169,57 @@
   .hint {
     color: var(--accent);
   }
-  .heart {
+
+  .icon {
+    display: grid;
+    place-items: center;
     flex: none;
+    color: var(--muted);
+    transition:
+      color 0.15s,
+      transform 0.15s var(--ease);
   }
-  .heart.on,
-  .heart.on:hover {
+  .icon:hover:not(:disabled) {
+    color: var(--text);
+    transform: scale(1.08);
+  }
+  .icon:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .icon.on,
+  .icon.on:hover {
     color: var(--accent);
   }
 
   .center {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .buttons {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-  .icon {
-    display: grid;
-    place-items: center;
-    color: var(--muted);
-    transition: color 0.15s;
-  }
-  .icon:hover:not(:disabled) {
-    color: var(--text);
-  }
-  /* Aleatorio / repetir activos: color de acento y un punto debajo. */
-  .toggle {
-    position: relative;
-  }
-  .toggle.on {
-    color: var(--accent);
-  }
-  .toggle.on:hover {
-    color: var(--accent);
-  }
-  .toggle.on::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: -7px;
-    width: 4px;
-    height: 4px;
-    margin-left: -2px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .icon:disabled,
-  .play:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-  .play {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: var(--text);
-    color: #000;
-    transition: transform 0.1s;
-  }
-  .play:hover:not(:disabled) {
-    transform: scale(1.06);
-  }
-  .spinner {
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgb(0 0 0 / 0.25);
-    border-top-color: #000;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .progress {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    max-width: 640px;
-  }
-  .time {
-    min-width: 40px;
-    font-size: 12px;
-    color: var(--muted);
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+    justify-content: center;
   }
 
   .side {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 12px;
-    padding-right: 8px;
+    gap: 14px;
   }
   .volume {
     width: 110px;
-    flex: none;
-  }
-
-  /* Barra fina que se rellena; al pasar el ratón, color de acento y bolita. */
-  .slider {
-    flex: 1;
-    height: 12px;
+    height: 14px;
     margin: 0;
     appearance: none;
     background: transparent;
     cursor: pointer;
   }
-  .slider:disabled {
-    cursor: default;
-  }
-  .slider::-webkit-slider-runnable-track {
+  .volume::-webkit-slider-runnable-track {
     height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(
-      to right,
-      var(--text) 0 var(--fill),
-      rgb(255 255 255 / 0.25) var(--fill) 100%
-    );
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--text) 0 var(--fill), rgb(255 255 255 / 0.2) var(--fill) 100%);
   }
-  .slider:hover:not(:disabled)::-webkit-slider-runnable-track {
-    background: linear-gradient(
-      to right,
-      var(--accent) 0 var(--fill),
-      rgb(255 255 255 / 0.25) var(--fill) 100%
-    );
+  .volume:hover::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, var(--accent) 0 var(--fill), rgb(255 255 255 / 0.2) var(--fill) 100%);
   }
-  .slider::-webkit-slider-thumb {
+  .volume::-webkit-slider-thumb {
     appearance: none;
     width: 12px;
     height: 12px;
@@ -332,21 +228,29 @@
     background: var(--text);
     opacity: 0;
   }
-  .slider:hover:not(:disabled)::-webkit-slider-thumb {
+  .volume:hover::-webkit-slider-thumb {
     opacity: 1;
   }
 
   .notice {
     position: absolute;
     left: 50%;
-    bottom: calc(100% + 12px);
-    transform: translateX(-50%);
+    bottom: calc(100% + 14px);
+    z-index: 30;
     max-width: min(560px, 90%);
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 11px 18px;
+    border-radius: 10px;
     background: var(--text);
     color: #000;
     font-weight: 600;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+    box-shadow: var(--shadow-2);
+    transform: translateX(-50%);
+    animation: pop 0.3s var(--ease);
+  }
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translate(-50%, 8px) scale(0.97);
+    }
   }
 </style>

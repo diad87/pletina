@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import type {
   AlbumDetail,
   Alternative,
@@ -14,6 +14,16 @@ import type {
   SearchResults,
   TrackQuery,
 } from './types'
+
+/** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
+export const inTauri = '__TAURI_INTERNALS__' in window
+
+// En un navegador normal (solo desarrollo) se usa un backend falso con datos guardados,
+// para poder ver y ajustar la interfaz. En la app compilada siempre es Tauri.
+const invoke: typeof tauriInvoke =
+  inTauri || !import.meta.env.DEV
+    ? tauriInvoke
+    : async (cmd, args) => (await import('../dev/mock')).mockInvoke(cmd, args)
 
 // Caché en memoria: volver atrás o reabrir un disco es instantáneo y no gasta cuota de Deezer.
 const cache = new Map<string, Promise<unknown>>()

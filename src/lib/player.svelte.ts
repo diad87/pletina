@@ -134,6 +134,16 @@ class Player {
     return this.queue.length > 0 && (this.pos < this.order.length - 1 || this.repeat === 'all')
   }
 
+  /** Lo que viene después de la canción actual, en el orden en que va a sonar. */
+  get upcoming(): { pos: number; item: QueueItem }[] {
+    return this.order.slice(this.pos + 1).map((index, i) => ({ pos: this.pos + 1 + i, item: this.queue[index] }))
+  }
+
+  /** Salta a una canción de la cola (por su posición en el orden de reproducción). */
+  playAt(pos: number) {
+    this.#load(pos)
+  }
+
   /** Reproduce una lista (p. ej. un disco) empezando por la canción `start`. */
   playQueue(items: QueueItem[], start: number) {
     this.queue = items
