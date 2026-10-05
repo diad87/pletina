@@ -2,6 +2,7 @@
 //! saca la URL del stream y recuerda la elección.
 
 use crate::db::{Db, Source};
+use crate::extractor;
 use crate::youtube::{self, CONFIDENT_SCORE, Candidate, MIN_SCORE, TrackQuery, YouTubeMusic};
 use crate::ytdlp::YtDlp;
 use serde::Serialize;
@@ -63,7 +64,7 @@ pub async fn resolve(
 
     let mut gone = None;
     if let Some(src) = db.source(q.id) {
-        match ytdlp.stream(&src.video_id, refresh).await {
+        match extractor::stream(ytdlp, &src.video_id, refresh).await {
             Ok(info) => return Ok(playable(src, info.url)),
             // El vídeo ya no existe: se busca otro.
             Err(e) if is_gone(&e) => {
@@ -84,7 +85,7 @@ pub async fn resolve(
 
     let mut last_err = None;
     for (c, score, _) in candidates.into_iter().take(MAX_ATTEMPTS) {
-        match ytdlp.stream(&c.video_id, refresh).await {
+        match extractor::stream(ytdlp, &c.video_id, refresh).await {
             Ok(info) => {
                 let src = Source {
                     video_id: c.video_id,
@@ -174,7 +175,7 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
 pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp) -> Result<Playable, String> {
-    let info = ytdlp.stream(video_id, false).await?;
+    let info = extractor::stream(ytdlp, video_id, false).await?;
     if let Some(path) = db.download_path(q.id) {
         let _ = std::fs::remove_file(path);
         db.forget_download(q.id);

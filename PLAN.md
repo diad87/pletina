@@ -76,7 +76,7 @@ Dos capas:
 
 ### Proyecto paralelo P1: extractor de YouTube sin yt-dlp
 yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS. Hay que llevar su trabajo (buscar y sacar la URL del audio) a algo que funcione en todas partes. Se desarrolla en paralelo, en su propia rama, sin bloquear las fases 4–6.
-- **Estado (6 de octubre de 2026): prototipo hecho y medido. youtubei.js es viable**, y en escritorio es más rápido y fiable que yt-dlp. Está en la rama `p1-youtubei` de una copia aparte (`C:\Users\iunan\musify-p1`), porque el repositorio aún no tiene commits y la fase 5 se estaba haciendo en la carpeta principal.
+- **Estado (6 de octubre de 2026): prototipo hecho y medido. youtubei.js es viable**, y en escritorio es más rápido y fiable que yt-dlp. Está en la rama `p1-youtubei`, sobre `main` (con la fase 5).
 - **Cómo funciona el prototipo:**
   - `youtubei.js` 18.1 (sin modificar) corre en la interfaz y solo se carga si se elige ese motor: 661 kB (165 kB comprimido) aparte del resto.
   - Sus peticiones HTTP las hace Rust con un comando propio (`http_fetch`, solo dominios de YouTube y Google). No hay CORS, se pueden mandar las cabeceras que el navegador no deja y no hace falta el plugin HTTP.
@@ -117,7 +117,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - `reqwest` usa la librería TLS del sistema; en Android conviene `rustls`.
   - En Mac, iOS y Linux (WebKit) puede hacer falta m4a en vez de opus. La elección de formato ya sabe caer a m4a: solo habría que darle preferencia allí.
   - Si una URL falla a mitad de canción, el reproductor ya pide otra y sigue donde iba; con youtubei.js eso tarda ~0,1 s en lugar de ~3 s.
-- **Para integrarlo en la carpeta principal** (`p1-youtubei.patch` en la copia):
+- **Qué cambia respecto a `main`:**
   - Archivos nuevos: `src-tauri/src/extractor.rs`, `src/lib/extractor/` (`youtubei.ts`, `fetch.ts`, `eval.worker.ts`, `engine.svelte.ts` y `bench.ts`) y `src/components/EngineSwitch.svelte`.
   - Cambios pequeños en archivos que ya existen:
     - `lib.rs`: el módulo, `extractor::init` y 8 comandos.
@@ -126,7 +126,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
     - `main.ts`: `extractor.start()`.
     - `Home.svelte`: el selector.
     - `package.json`: `youtubei.js`.
-  - `src-tauri/tauri.p1.conf.json` solo sirve para arrancar la copia a la vez que la app principal (`npx tauri dev --config src-tauri/tauri.p1.conf.json`: puerto 1430 e identificador `dev.musify.p1`). No hay que integrarlo.
+  - Para probar la rama con otra copia de la app abierta, hay que arrancarla con otro identificador y otro puerto (`tauri dev --config` con `identifier`, `devUrl` y `beforeDevCommand` distintos); si no, por ser de una sola instancia, la nueva se cierra al momento.
 - **Repetir las mediciones:**
   1. Crear la lista de vídeos: `MUSIFY_BENCH_IDS=plan.json cargo test bench_videos -- --ignored --nocapture`.
   2. Añadir a `plan.json` qué medir (`"full": true, "ytdlp": true, "audio": true`; opcional `"survey"`, `"e2e"`).

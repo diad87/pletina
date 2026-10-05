@@ -1,6 +1,7 @@
 mod db;
 mod deezer;
 mod downloads;
+mod extractor;
 mod library;
 mod player;
 mod youtube;
@@ -94,6 +95,7 @@ pub fn run() {
             std::fs::create_dir_all(&dir)?;
             app.manage(Db::open(&dir.join("musify.db"))?);
             app.manage(YtDlp::new(dir.join("bin")));
+            extractor::init(app.handle().clone());
             app.manage(downloads::Downloads::start(app.handle()));
 
             // Prepara yt-dlp en segundo plano (descarga o actualización diaria).
@@ -132,6 +134,14 @@ pub fn run() {
             downloads::choose_download_dir,
             downloads::open_download_dir,
             downloads::reveal_download,
+            extractor::http_fetch,
+            extractor::extractor_reply,
+            extractor::set_stream_engine,
+            extractor::stream_engine,
+            extractor::bench_plan,
+            extractor::bench_report,
+            extractor::bench_ytdlp,
+            extractor::bench_probe,
         ])
         .run(tauri::generate_context!())
         .expect("error al arrancar Musify");
