@@ -76,61 +76,84 @@ Dos capas:
 
 ### Proyecto paralelo P1: extractor de YouTube sin yt-dlp
 yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS. Hay que llevar su trabajo (buscar y sacar la URL del audio) a algo que funcione en todas partes. Se desarrolla en paralelo, en su propia rama, sin bloquear las fases 4–6.
-- **Estado (6 de octubre de 2026): prototipo hecho y medido. youtubei.js es viable**, y en escritorio es más rápido y fiable que yt-dlp. Está en la rama `p1-youtubei`, sobre `main` (con la fase 5).
-- **Cómo funciona el prototipo:**
-  - `youtubei.js` 18.1 (sin modificar) corre en la interfaz y solo se carga si se elige ese motor: 661 kB (165 kB comprimido) aparte del resto.
-  - Sus peticiones HTTP las hace Rust con un comando propio (`http_fetch`, solo dominios de YouTube y Google). No hay CORS, se pueden mandar las cabeceras que el navegador no deja y no hace falta el plugin HTTP.
-  - Rust le pide la URL con un evento y espera la respuesta. `player.rs` no cambia: donde llamaba a `ytdlp.stream(...)` ahora llama a `extractor::stream(...)`, que usa el motor elegido y, si youtubei.js falla, tira de yt-dlp.
-  - Cuando hace falta descifrar la firma o el parámetro `n`, lo hace el motor JavaScript del webview dentro de un Web Worker. Así el código de YouTube no ve la app ni puede llamar a Rust. Funciona con la CSP actual, también en la app compilada; no hace falta `unsafe-eval`.
-  - Opción en Inicio: "Audio de YouTube con: yt-dlp · youtubei.js (prueba)". Se recuerda entre sesiones. También se puede forzar al arrancar con `MUSIFY_ENGINE=youtubei`. yt-dlp sigue siendo el de por defecto.
-- **Mediciones** con las 30 canciones de los 5 discos de `real_albums`, dentro de la app, en dos rondas (la segunda con yt-dlp primero):
+- **Estado (6 de octubre de 2026):** rama `p1-youtubei`, sobre `main`. En Inicio se elige el motor: "Audio de YouTube con: yt-dlp · youtubei.js (prueba) · Propio". yt-dlp sigue siendo el de por defecto. **El recomendado es el motor propio**, hecho y medido en Windows.
 
-  | | youtubei.js | yt-dlp |
-  |---|---|---|
-  | Tiempo en sacar la URL (mediana) | **88 ms** | 2,7 s |
-  | URLs obtenidas | 60 de 60 | 60 de 60 |
-  | Suenan en `<audio>` y se puede saltar al 80 % | **60 de 60** | 55 de 60 |
-  | Formato | opus 251 (m4a 140 en 2 canciones) | el mismo |
-  | Arranque | ~30 ms (sin bajar el reproductor de YouTube) | descarga yt-dlp (~18 MB) y necesita Node o Deno |
+#### Motor propio
+- **Objetivo:** que funcione siempre que una persona pueda escuchar la canción en YouTube. Ninguna librería que imite la API interna de YouTube puede prometerlo (yt-dlp y youtubei.js se rompen cada vez que YouTube cambia algo). La única garantía real es usar el reproductor oficial, así que el motor tiene dos niveles:
+  1. **Nivel rápido** (`native.rs`): una petición a la API interna de YouTube desde Rust, sin librerías ni programas externos.
+     - Qué cliente de YouTube se imita, con qué versión y datos, va en una **receta** (`src-tauri/recipe/youtube.json`). Si YouTube cambia algo de eso, basta con publicar una receta con versión mayor: la app la baja sola (`MUSIFY_RECIPE_URL`) y se queda con la incluida si la nueva no vale.
+     - Pide antes una **sesión de visitante** (`sw.js_data`). Sin ella, YouTube responde "inicia sesión para confirmar que no eres un bot": 0 de 30, frente a 30 de 30 con ella. Se busca por su forma (empieza por "Cgt"), no por su posición en la respuesta.
+     - **Comprueba cada URL** pidiendo 1 KB hacia el 80 % antes de usarla. Es donde YouTube corta a veces (403); si pasa, pide otra.
+  2. **Nivel garantizado** (`capture.rs` y `capture.js`): **el reproductor oficial de YouTube Music en una ventana oculta**. Su reproductor hace todo (PO token, descifrado, SABR o lo que YouTube use) y el motor copia el audio que le entrega al navegador: siempre pasa por Media Source, y el de audio va en un buffer propio.
+     - El audio llega a Rust por el **canal nativo de WebView2** (`WebMessageReceived`), que solo existe en esa ventana. No hay puertos ni protocolos abiertos a la página, y la ventana no tiene permisos de Tauri.
+     - La ventana usa **su propio perfil y su propio proceso navegador**: si YouTube o WebView2 fallan ahí, la interfaz de Musify no se entera. Hay una ventana nueva para cada canción y se cierra en cuanto la canción está entera, así que los cientos de MB de YouTube Music solo se gastan mientras se copia.
+     - Comportamiento: rechaza las cookies ("Rechazar todo"), va siempre en silencio y deja pasar los anuncios como una persona (o los salta cuando sale el botón; nunca los acelera). La canción va a 16x y los últimos segundos más despacio, para no saltarse el final. La página se cree visible (`SetIsVisible`), para que el navegador no la frene.
+     - **Se cura sola:** si la página deja de dar señales (latido cada segundo) mientras copia, se rehace la ventana y sigue desde el último segundo copiado. Si al acabar falta algún trozo, o saltas a una parte aún no copiada, el reproductor oficial va a ese punto. Si al rehacer la ventana YouTube elige otro formato (opus o AAC), se avisa al navegador (`changeType`).
+  3. **En la app:** con el nivel rápido el `<audio>` reproduce la URL de YouTube. Con el garantizado, reproduce `musify-capture:<id>`, que la interfaz alimenta con Media Source a medida que llega (`capture.ts`): suena mientras se copia.
+- **Mediciones** con las canciones de los 5 discos de `real_albums`, dentro de la app, en la misma tanda:
 
-  - Las 5 URLs malas de yt-dlp dan 403 al pasar del primer MB, y la causa es de YouTube: repitiendo la misma petición a veces sale bien y a veces no. Con youtubei.js no ha pasado ni una vez en 89 intentos (60 en la app, 24 en Node y 5 en la app compilada). Probablemente influye que youtubei.js manda una sesión de visitante y yt-dlp no.
-  - Una vez con la URL, empezar a sonar y saltar cuesta lo mismo con los dos (~0,65 s), porque eso depende de los servidores de YouTube.
-  - Con el reproductor de la app y youtubei.js: de clic a sonar, 0,44 s con el vídeo ya guardado. La siguiente canción se prepara también con youtubei.js, y no hizo falta tirar de yt-dlp ninguna vez.
-- **PO token** (la comprobación anti-bots de YouTube). Se probaron 11 clientes de YouTube:
-  - **VISIONOS**: funciona sin PO token. Es el mismo que usa yt-dlp (versión 2026.08.19), y sus URLs no llevan firma ni `n`, así que ni siquiera hace falta bajar el reproductor de YouTube (2,5 MB) ni ejecutar su JavaScript.
-  - IOS, ANDROID_VR, TV_SIMPLY y YTMUSIC dan URL, pero YouTube corta con 403 pasado el primer MB, y `<audio>` falla. MWEB da 403 desde el primer byte. WEB y ANDROID solo dan streaming SABR, sin URL directa.
-  - TV responde "The page needs to be reloaded", y WEB_EMBEDDED y TV_EMBEDDED, "This video is unavailable".
-  - youtubei.js **no genera** PO tokens: acepta uno ya hecho (`po_token` al crear la sesión o por vídeo) y lo añade a las URLs (`pot=`). Generarlo exige ejecutar BotGuard (p. ej. con `bgutils-js`), que en la app podría correr en el propio webview, porque es un navegador de verdad. Es el plan B si YouTube cierra VISIONOS.
-  - Descifrado comprobado con los clientes web: con el `n` original YouTube da 403 y con el descifrado da 206. La primera vez el reproductor se baja y procesa en ~0,9 s, y queda guardado en IndexedDB; cada descifrado tarda ~8 ms en el worker.
-- **rusty_ytdl:** no hizo falta probarlo. Su última versión (0.7.4) es de agosto de 2024 y no conoce VISIONOS ni SABR. youtubei.js, en cambio, saca versión cada pocas semanas (la 18.1 es de septiembre de 2026). Descartado.
-- **Recomendación:**
-  - Usar youtubei.js como motor del móvil (fase 7).
-  - En escritorio, dejar la opción un tiempo en uso real y después hacerlo el motor por defecto, con yt-dlp de respaldo: la primera vez que suena una canción pasaría de ~3,5 s a ~1,5 s.
-  - En la fase 6 ahorraría bajar yt-dlp y el motor de JavaScript en Mac y Linux. yt-dlp seguiría haciendo falta para las descargas (fase 5) hasta que se haga lo de "Pendiente".
-- **Sobre que no le afecten los cambios de YouTube:** no se puede del todo (yt-dlp y youtubei.js se actualizan precisamente por eso), pero sí se puede evitar que un cambio rompa la app:
-  - Varios motores detrás de `stream(video_id)`, con respaldo automático. Ya está hecho.
-  - Una lista de clientes que se prueba en orden (hoy solo VISIONOS).
-  - Actualizar youtubei.js sin reinstalar la app, como hoy se actualiza yt-dlp: bajar la última versión al arrancar y quedarse con la que trae la app si la nueva falla. Implica ejecutar código descargado, igual que con yt-dlp.
-- **Pendiente para llevarlo al móvil:**
-  - Búsqueda de respaldo en YouTube normal (hoy `ytdlp.search`): pasarla a `youtube.rs` (API interna, como la de YouTube Music) o a `yt.search` de youtubei.js. Sin esto, en el móvil solo se buscaría en YouTube Music.
-  - Descargas sin yt-dlp: bajar desde Rust la URL que da youtubei.js, en trozos (el opus de YouTube se guarda tal cual).
-  - `reqwest` usa la librería TLS del sistema; en Android conviene `rustls`.
-  - En Mac, iOS y Linux (WebKit) puede hacer falta m4a en vez de opus. La elección de formato ya sabe caer a m4a: solo habría que darle preferencia allí.
-  - Si una URL falla a mitad de canción, el reproductor ya pide otra y sigue donde iba; con youtubei.js eso tarda ~0,1 s en lugar de ~3 s.
-- **Qué cambia respecto a `main`:**
-  - Archivos nuevos: `src-tauri/src/extractor.rs`, `src/lib/extractor/` (`youtubei.ts`, `fetch.ts`, `eval.worker.ts`, `engine.svelte.ts` y `bench.ts`) y `src/components/EngineSwitch.svelte`.
-  - Cambios pequeños en archivos que ya existen:
-    - `lib.rs`: el módulo, `extractor::init` y 8 comandos.
-    - `player.rs`: 3 llamadas a `stream`.
-    - `ytdlp.rs`: `VideoInfo` serializable, y `now` y `query_param` visibles para el módulo nuevo.
-    - `main.ts`: `extractor.start()`.
-    - `Home.svelte`: el selector.
-    - `package.json`: `youtubei.js`.
-  - Para probar la rama con otra copia de la app abierta, hay que arrancarla con otro identificador y otro puerto (`tauri dev --config` con `identifier`, `devUrl` y `beforeDevCommand` distintos); si no, por ser de una sola instancia, la nueva se cierra al momento.
-- **Repetir las mediciones:**
-  1. Crear la lista de vídeos: `MUSIFY_BENCH_IDS=plan.json cargo test bench_videos -- --ignored --nocapture`.
-  2. Añadir a `plan.json` qué medir (`"full": true, "ytdlp": true, "audio": true`; opcional `"survey"`, `"e2e"`).
-  3. Arrancar la app con `MUSIFY_BENCH=plan.json`; el resultado queda en `plan.result.json`.
+  | | yt-dlp | youtubei.js | Propio, rápido | Propio, garantizado |
+  |---|---|---|---|---|
+  | Hasta tener el audio (mediana) | 2 646 ms | 93 ms | **97 ms** (comprobado) | 1,5 s |
+  | Empieza a sonar en el `<audio>` | ~25 ms | ~22 ms | ~39 ms | **15 ms** |
+  | Suena y se puede saltar al 80 % | 25 de 30 | 30 de 30 | **30 de 30** | **39 de 39** (4 tandas) |
+  | Saltar al 80 % (mediana) | ~0,6 s | ~0,6 s | ~0,6 s | 1,7–2,8 s |
+  | Qué necesita | yt-dlp (18 MB) + Node o Deno | 660 kB de JavaScript | nada | nada |
+  | Si YouTube cambia su API | esperar a que se actualice | sacar otra versión | publicar receta nueva | nada |
+
+  - Las URLs malas de yt-dlp dan 403 al pasar del primer MB; se ve igual repitiendo la petición, así que es cosa de YouTube. El nivel rápido las detecta y las cambia antes de usarlas.
+  - Con el reproductor de la app y el motor propio: de clic a sonar, 0,24–0,3 s con la búsqueda incluida; las siguientes canciones, ya preparadas, en ~26–51 ms (4 de 4 en cada prueba). Solo con el nivel garantizado: 1,5 s la primera canción nueva, 3–4 s si pasas enseguida a otra que aún no estaba preparada, y 26–52 ms las ya copiadas.
+  - El nivel garantizado copia una canción entera en 7–25 s (16x).
+- **Límites honestos:**
+  - **DRM:** contenido cifrado (no la música normal de YouTube) no se puede sacar, y no se intentará.
+  - **Contenido que pide iniciar sesión** (con restricción de edad, por ejemplo): hará falta enseñar la ventana del motor para iniciar sesión una vez, como haría una persona. Pendiente.
+  - Si YouTube pidiera un **captcha**, igual: enseñar la ventana para resolverlo. Pendiente.
+  - En el nivel garantizado, saltar a una parte aún no copiada tarda 1–3 s.
+  - Las tiendas de apps no aceptan una app así (pasa igual con cualquier motor). En Android se instalaría con el APK; en iPhone, con Xcode (gratis caduca a los 7 días; con la cuenta de 99 $/año, al año).
+- **Pendiente:**
+  - Decidir dónde se publica la receta: tiene que ser un sitio público (un gist o un repositorio público pequeño), porque este repositorio es privado.
+  - Búsqueda de respaldo en YouTube normal sin yt-dlp (hoy `ytdlp.search`): pasarla a `youtube.rs`.
+  - Descargas sin yt-dlp: guardar lo que copia el nivel garantizado o bajar la URL del nivel rápido.
+- **Móvil (fase 7):** el nivel rápido es Rust y funciona igual. El garantizado necesita en cada sistema una WebView controlada por código nativo, con su canal nativo. Tauri no deja abrir una segunda ventana en el móvil, y Android no deja leer lo que una página envía a un protocolo propio.
+  - **Android:** plugin en Kotlin con su `WebView`, `addJavascriptInterface` como canal y `addDocumentStartJavaScript` para el script. Para que suene con la pantalla apagada hará falta un servicio en primer plano (igual con cualquier motor).
+  - **iOS:** `WKWebView` con `WKUserScript` y `WKScriptMessageHandler`. Primero hay que comprobar cómo reproduce YouTube Music en iPhone: si usa HLS en vez de Media Source, se captura la URL HLS que pide su reproductor y se reproduce tal cual (iOS sabe hacerlo).
+  - En Mac y Linux, lo mismo con WKWebView y WebKitGTK.
+
+#### Primer prototipo: youtubei.js
+- La librería (18.1, sin modificar) corre en la interfaz. Rust le hace las peticiones (`http_fetch`) y el descifrado va en un Web Worker. Funciona: 60 de 60 en dos rondas y ~90 ms. Pero imita la API interna igual que yt-dlp, y para seguir los cambios de YouTube hay que sacar una versión nueva de la app.
+- **PO token:** de 11 clientes de YouTube, solo VISIONOS da audio completo sin él (es el que usa yt-dlp 2026.08.19). IOS, ANDROID_VR, TV_SIMPLY y YTMUSIC cortan con 403 pasado el primer MB; MWEB, desde el primer byte. WEB y ANDROID solo dan SABR; TV dice "The page needs to be reloaded"; los *_EMBEDDED, "This video is unavailable". youtubei.js no genera PO tokens: acepta uno hecho y lo pone en las URLs (`pot=`).
+- **rusty_ytdl:** descartado. Su última versión es de agosto de 2024 y no conoce VISIONOS ni SABR.
+
+#### Notas técnicas (WebView2)
+- El receptor de mensajes de wry (la base de Tauri) va antes que el nuestro y corta la cadena con los mensajes que no son texto. Por eso `capture.js` manda texto con el prefijo `musify:`, que Tauri descarta en el primer carácter.
+- Destruir una WebView y crear otra en seguida con el mismo nombre ha llegado a tumbar el proceso navegador de WebView2 (acceso inválido en `msedge.dll`, al cerrarse). De ahí el perfil aparte, un nombre nuevo por ventana y el cierre ordenado (primero `about:blank`).
+- Reutilizar la misma página de YouTube Music para muchas canciones acaba colgándola (sin gastar CPU), sobre todo tras saltos. De ahí la ventana nueva por canción y el vigilante.
+- Los ejecutables de los tests no llevaban el manifiesto de Windows (comctl32 v6) y no arrancaban (`STATUS_ENTRYPOINT_NOT_FOUND`) en cuanto el código de ventanas fue alcanzable desde ellos. `build.rs` ahora incrusta el manifiesto con el enlazador en todos (`windows-app-manifest.xml`).
+- Al cerrar la ventana principal se cierra la app, aunque haya una ventana del motor abierta.
+
+#### Qué cambia respecto a `main`
+- Archivos nuevos:
+  - `src-tauri/src/`: `extractor.rs` (elige motor, `http_fetch` y las mediciones), `native.rs`, `capture.rs` y `capture.js`.
+  - `src-tauri/recipe/youtube.json` y `src-tauri/windows-app-manifest.xml`.
+  - `src/lib/extractor/`: `capture.ts`, `engine.svelte.ts`, `youtubei.ts`, `fetch.ts`, `eval.worker.ts` y `bench.ts`.
+  - `src/components/EngineSwitch.svelte`.
+- Cambios pequeños en archivos que ya existen:
+  - `lib.rs`: módulos, `init`, comandos y cerrar la app con la ventana principal.
+  - `player.rs`: 3 llamadas a `stream`.
+  - `ytdlp.rs`: `VideoInfo` serializable, y `now` y `query_param` visibles.
+  - `player.svelte.ts`: `setAudioSource` en vez de `audio.src`, y `stopCapture` al cambiar de canción.
+  - `main.ts` y `Home.svelte`: arranque y selector.
+  - `build.rs`, `Cargo.toml` (`base64`; y en Windows `webview2-com` y `windows-core`) y `package.json` (`youtubei.js`).
+  - CSP: `blob:` en `media-src`, para Media Source.
+- Para probar la rama con otra copia de la app abierta, hay que arrancarla con otro identificador y otro puerto (`tauri dev --config` con `identifier`, `devUrl` y `beforeDevCommand` distintos). Si no, por ser de una sola instancia, la nueva se cierra al momento; y con el mismo identificador abrirían la misma base de datos.
+
+#### Repetir las mediciones
+1. Crear la lista de vídeos: `MUSIFY_BENCH_IDS=plan.json cargo test bench_videos -- --ignored --nocapture`.
+2. Añadir a `plan.json` qué medir:
+   - motores: `"ytdlp"`, `"full"` (youtubei.js), `"tier1"` (rápido) o `"tier2": {"count": N}` (garantizado);
+   - `"audio": true` para comprobar el `<audio>`;
+   - `"e2e": [{"query": "...", "tracks": 3, "engine": "propio"}]` para probar con el reproductor de la app.
+3. Arrancar la app con `MUSIFY_BENCH=plan.json`; el resultado queda en `plan.result.json`.
 
 ## Riesgos y limitaciones
 - Reproducir el audio fuera del reproductor de YouTube va contra sus condiciones de uso. Para uso personal es asumible.

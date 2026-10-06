@@ -1,12 +1,22 @@
-// Prototipo P1: elegir con qué se saca la URL del audio (yt-dlp o youtubei.js) y atender
+// P1: elegir de dónde sale el audio de YouTube (yt-dlp, youtubei.js o el motor propio) y atender
 // las peticiones de Rust cuando se usa youtubei.js. Ver src-tauri/src/extractor.rs.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 
-export type Engine = 'ytdlp' | 'youtubei'
+/** `oficial` es el motor propio usando solo su nivel garantizado (para probarlo). */
+export type Engine = 'ytdlp' | 'youtubei' | 'propio' | 'oficial'
+
+/** Números del motor propio (ver `engine_stats` en Rust). */
+export interface EngineStats {
+  recipe: number
+  fast: number
+  fastFailed: number
+  replaced: number
+  official: number
+}
 
 const KEY = 'musify:engine'
-const isEngine = (v: unknown): v is Engine => v === 'ytdlp' || v === 'youtubei'
+const isEngine = (v: unknown): v is Engine => v === 'ytdlp' || v === 'youtubei' || v === 'propio' || v === 'oficial'
 
 class Extractor {
   engine = $state<Engine>('ytdlp')
@@ -39,6 +49,10 @@ class Extractor {
     // Medición: solo si se arranca con MUSIFY_BENCH=plan.json.
     const plan = await invoke<unknown>('bench_plan').catch(() => null)
     if (plan) import('./bench').then((b) => b.runBench(plan as never))
+  }
+
+  stats() {
+    return invoke<EngineStats>('engine_stats')
   }
 
   async set(engine: Engine) {

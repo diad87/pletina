@@ -1,9 +1,10 @@
-// Prototipo P1: compara youtubei.js con yt-dlp dentro de la app (tiempos, si suena en <audio>
-// y si YouTube corta el audio por falta de PO token). Se lanza con MUSIFY_BENCH=plan.json.
+// P1: compara los motores dentro de la app (tiempos, si suena en <audio> y si YouTube corta el
+// audio a mitad). Se lanza con MUSIFY_BENCH=plan.json.
 import { invoke } from '@tauri-apps/api/core'
 import * as api from '../api'
 import { player, type QueueItem } from '../player.svelte'
-import { extractor } from './engine.svelte'
+import { playCapture } from './capture'
+import { extractor, type Engine } from './engine.svelte'
 import { CLIENTS, innertube, stats, stream } from './youtubei'
 
 interface Plan {
@@ -18,12 +19,18 @@ interface Plan {
   ytdlpFirst?: boolean
   /** Comprobar que cada URL suena en un <audio> (y que se puede saltar al 80 %). */
   audio?: boolean
-  /** Reproducir canciones de verdad con el reproductor de la app y youtubei.js. */
-  e2e?: { query: string; tracks: number }
+  /** Motor propio, nivel rápido (Rust), con todos los vídeos. */
+  tier1?: boolean
+  /** Motor propio, nivel garantizado (reproductor oficial en la ventana oculta), con los primeros `count`. */
+  tier2?: { count: number }
+  /** Reproducir canciones de verdad con el reproductor de la app y el motor indicado. */
+  e2e?: E2E | E2E[]
 }
 
+type E2E = { query: string; tracks: number; engine?: Engine }
+
 type Probe = { length: number; start: number; deep: number }
-type AudioCheck = { ok: boolean; playMs?: number; seekMs?: number; duration?: number; error?: string }
+type AudioCheck = { ok: boolean; startMs?: number; playMs?: number; seekMs?: number; duration?: number; error?: string }
 
 const logs: string[] = []
 
@@ -35,9 +42,11 @@ export async function runBench(plan: Plan) {
     clients: CLIENTS,
   }
   try {
-    const t = performance.now()
-    await innertube()
-    report.session = { ms: Math.round(performance.now() - t), innerMs: Math.round(stats.sessionMs) }
+    if (plan.full || plan.survey) {
+      const t = performance.now()
+      await innertube()
+      report.session = { ms: Math.round(performance.now() - t), innerMs: Math.round(stats.sessionMs) }
+    }
 
     if (plan.survey) {
       const rows = []
@@ -61,7 +70,22 @@ export async function runBench(plan: Plan) {
     ]
     if (plan.ytdlpFirst) steps.reverse()
     for (const step of steps) await step()
-    if (plan.e2e) report.e2e = await endToEnd(plan.e2e)
+    if (plan.tier1) {
+      const rows = []
+      for (const v of plan.videos) rows.push({ label: v.label, ...(await viaNative(v.id, plan)) })
+      report.tier1 = rows
+    }
+    if (plan.tier2) {
+      const rows = []
+      for (const v of plan.videos.slice(0, plan.tier2.count)) rows.push({ label: v.label, ...(await viaCapture(v.id)) })
+      report.tier2 = rows
+    }
+    if (plan.e2e) {
+      const runs = []
+      for (const e of [plan.e2e].flat()) runs.push(await endToEnd(e))
+      report.e2e = runs
+    }
+    report.engineStats = await extractor.stats().catch(() => null)
   } catch (e) {
     report.fatal = String(e)
   } finally {
@@ -93,30 +117,61 @@ async function viaYtdlp(videoId: string, plan: Plan) {
   }
 }
 
+async function viaNative(videoId: string, plan: Plan) {
+  try {
+    const r = await invoke<{ ms: number; url: string; client: string; itag: number; mime: string }>('bench_native', { videoId })
+    return { videoId, ok: true, ms: r.ms, client: r.client, itag: r.itag, mime: r.mime, ...(await check(r.url, plan)) }
+  } catch (e) {
+    return { videoId, ok: false, error: String(e) }
+  }
+}
+
+/** Nivel garantizado: hasta que llega audio, que suene, que se pueda saltar al 80 % y cuánto tarda en estar entera. */
+async function viaCapture(videoId: string) {
+  try {
+    const r = await invoke<{ ms: number; title: string }>('bench_capture', { videoId })
+    const audio = await playCheck(videoId, true)
+    let status: Record<string, unknown> | null = null
+    const t = performance.now()
+    while (performance.now() - t < 90000) {
+      status = await invoke<Record<string, unknown> | null>('capture_status', { videoId })
+      if (status?.doneMs || status?.error) break
+      await new Promise((res) => setTimeout(res, 500))
+    }
+    return { videoId, ok: true, ms: r.ms, title: r.title, audio, status }
+  } catch (e) {
+    return { videoId, ok: false, error: String(e) }
+  }
+}
+
 async function check(url: string, plan: Plan): Promise<{ probe: Probe | string; audio?: AudioCheck }> {
   const probe = await invoke<Probe>('bench_probe', { url }).catch((e) => String(e))
   return { probe, audio: plan.audio ? await playCheck(url) : undefined }
 }
 
 /** Que suene en un <audio> (en silencio) y que se pueda saltar al 80 % y siga sonando. */
-async function playCheck(url: string): Promise<AudioCheck> {
+async function playCheck(url: string, capture = false): Promise<AudioCheck> {
   const a = new Audio()
   a.muted = true
   a.preload = 'auto'
   const t0 = performance.now()
+  let stop = () => {}
   try {
-    a.src = url
+    if (capture) stop = playCapture(a, url)
+    else a.src = url
     await Promise.all([until(a, 'playing', 15000), a.play()])
+    const startMs = Math.round(performance.now() - t0)
     await progress(a, 0.5)
     const playMs = Math.round(performance.now() - t0)
     const t1 = performance.now()
     a.currentTime = a.duration * 0.8
-    await until(a, 'seeked', 15000)
+    await until(a, 'seeked', capture ? 60000 : 15000)
     await progress(a, 0.5)
-    return { ok: true, playMs, seekMs: Math.round(performance.now() - t1), duration: Math.round(a.duration) }
+    return { ok: true, startMs, playMs, seekMs: Math.round(performance.now() - t1), duration: Math.round(a.duration) }
   } catch (e) {
     return { ok: false, error: String(e) }
   } finally {
+    stop()
     a.pause()
     a.removeAttribute('src')
     a.load()
@@ -144,8 +199,8 @@ async function progress(a: HTMLAudioElement, seconds: number) {
   }
 }
 
-/** Canciones de verdad con el reproductor de la app (volumen a 0) y el motor youtubei.js. */
-async function endToEnd({ query, tracks }: { query: string; tracks: number }) {
+/** Canciones de verdad con el reproductor de la app (volumen a 0) y el motor indicado. */
+async function endToEnd({ query, tracks, engine = 'youtubei' }: { query: string; tracks: number; engine?: Engine }) {
   const found = await api.search(query)
   const album = await api.album(found.albums[0].id)
   const items: QueueItem[] = album.tracks.slice(0, tracks).map((track) => ({
@@ -157,26 +212,39 @@ async function endToEnd({ query, tracks }: { query: string; tracks: number }) {
   }))
   const volume = player.volume
   player.setVolume(0)
-  await extractor.set('youtubei')
+  await extractor.set(engine)
   const before = { served: extractor.served, failed: extractor.failed }
   const rows = []
   player.playQueue(items, 0)
   for (let i = 0; i < items.length; i++) {
     const t = performance.now()
+    let startMs = -1
     let ok = true
     while (!(player.current?.track.id === items[i].track.id && player.status === 'playing' && player.time > 1)) {
-      if (performance.now() - t > 30000) {
+      if (startMs < 0 && player.current?.track.id === items[i].track.id && player.status === 'playing')
+        startMs = Math.round(performance.now() - t)
+      if (performance.now() - t > 60000) {
         ok = false
         break
       }
-      await new Promise((r) => setTimeout(r, 100))
+      await new Promise((r) => setTimeout(r, 25))
     }
-    rows.push({ title: items[i].track.title, ok, msToPlaying: Math.round(performance.now() - t) })
-    if (i < items.length - 1) player.next()
+    rows.push({ title: items[i].track.title, ok, msToPlaying: startMs, msToOneSecond: Math.round(performance.now() - t) })
+    // La siguiente se pide tras unos segundos sonando, como pasaría de verdad (le da tiempo a la precarga).
+    if (i < items.length - 1) {
+      await new Promise((r) => setTimeout(r, 4000))
+      player.next()
+    }
   }
   player.toggle()
   player.setVolume(volume)
-  return { rows, servedByYoutubei: extractor.served - before.served, fellBackToYtdlp: extractor.failed - before.failed }
+  return {
+    engine,
+    rows,
+    servedByYoutubei: extractor.served - before.served,
+    fellBackToYtdlp: extractor.failed - before.failed,
+    engineStats: await extractor.stats().catch(() => null),
+  }
 }
 
 /** Guarda los avisos de youtubei.js (p. ej. sobre PO tokens) para el informe. */

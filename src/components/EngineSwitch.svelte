@@ -1,12 +1,22 @@
 <script lang="ts">
   // Prototipo P1: elegir con qué se saca el audio de YouTube.
-  import { extractor, type Engine } from '../lib/extractor/engine.svelte'
+  import { extractor, type Engine, type EngineStats } from '../lib/extractor/engine.svelte'
   import { toast } from '../lib/toast.svelte'
 
   const options: { value: Engine; label: string }[] = [
     { value: 'ytdlp', label: 'yt-dlp' },
     { value: 'youtubei', label: 'youtubei.js (prueba)' },
+    { value: 'propio', label: 'Propio' },
   ]
+
+  let stats = $state<EngineStats | null>(null)
+  $effect(() => {
+    if (extractor.engine !== 'propio') return
+    const load = () => extractor.stats().then((s) => (stats = s)).catch(() => {})
+    load()
+    const timer = setInterval(load, 3000)
+    return () => clearInterval(timer)
+  })
 
   function choose(value: Engine) {
     extractor.set(value).catch((e) => toast.show(`No se pudo cambiar: ${e}`))
@@ -20,6 +30,12 @@
   {/each}
   {#if extractor.engine === 'youtubei' && (extractor.served || extractor.failed)}
     <span class="count">{extractor.served} con youtubei.js · {extractor.failed} con yt-dlp de respaldo</span>
+  {/if}
+  {#if extractor.engine === 'propio' && stats && (stats.fast || stats.official)}
+    <span class="count">
+      {stats.fast} al momento · {stats.official} con el reproductor de YouTube · {stats.replaced} URLs cambiadas antes de fallar ·
+      receta v{stats.recipe}
+    </span>
   {/if}
 </div>
 

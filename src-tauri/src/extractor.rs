@@ -1,18 +1,19 @@
-//! Prototipo P1: sacar la URL del audio sin yt-dlp, con youtubei.js dentro de la propia app.
-//!
-//! La librería corre en la interfaz (src/lib/extractor/). Rust hace dos cosas por ella:
-//! - Sus peticiones HTTP (`http_fetch`): sin CORS y con las cabeceras que necesita YouTube.
-//! - Pedirle URLs (`stream`): manda un evento a la interfaz y espera la respuesta.
-//!
-//! El motor se elige con `set_stream_engine` (o `MUSIFY_ENGINE=youtubei`). yt-dlp sigue siendo
-//! el de por defecto y queda de respaldo si youtubei.js falla.
+//! P1: de dónde sale el audio de YouTube. Hay tres motores y se elige con `set_stream_engine`
+//! (o `MUSIFY_ENGINE`); yt-dlp sigue siendo el de por defecto.
+//! - `ytdlp`: el programa yt-dlp.
+//! - `youtubei`: la librería youtubei.js en la interfaz. Rust le hace las peticiones HTTP
+//!   (`http_fetch`) y le pide las URLs con un evento. Si falla, yt-dlp.
+//! - `propio`: primero el nivel rápido (`native.rs`, una petición desde Rust) y, si falla, el nivel
+//!   garantizado (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta).
+//!   `oficial` usa solo el nivel garantizado (para probarlo).
 
 use crate::youtube::BROWSER_UA;
 use crate::ytdlp::{VideoInfo, YtDlp, now, query_param};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use crate::{capture, native};
+use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, State};
@@ -30,8 +31,8 @@ static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .expect("cliente HTTP")
 });
 
-/// `true` = youtubei.js (con yt-dlp de respaldo); `false` = solo yt-dlp.
-static USE_JS: AtomicBool = AtomicBool::new(false);
+const ENGINES: [&str; 4] = ["ytdlp", "youtubei", "propio", "oficial"];
+static ENGINE: AtomicU8 = AtomicU8::new(0);
 static BRIDGE: OnceLock<Bridge> = OnceLock::new();
 
 struct Bridge {
@@ -43,8 +44,8 @@ struct Bridge {
 }
 
 pub fn init(app: AppHandle) {
-    if std::env::var("MUSIFY_ENGINE").is_ok_and(|e| e == "youtubei") {
-        USE_JS.store(true, Ordering::Relaxed);
+    if let Ok(engine) = std::env::var("MUSIFY_ENGINE") {
+        let _ = set_stream_engine(engine);
     }
     let _ = BRIDGE.set(Bridge {
         app,
@@ -54,18 +55,45 @@ pub fn init(app: AppHandle) {
     });
 }
 
-/// URL del audio con el motor elegido. Si youtubei.js falla, se prueba con yt-dlp.
+/// Audio de un vídeo con el motor elegido.
 pub async fn stream(ytdlp: &YtDlp, video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
-    if USE_JS.load(Ordering::Relaxed) {
-        match stream_js(video_id, refresh).await {
-            Ok(info) => return Ok(info),
+    match ENGINES[ENGINE.load(Ordering::Relaxed) as usize] {
+        "youtubei" => match stream_js(video_id, refresh).await {
+            Ok(info) => Ok(info),
             Err(_e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("[youtubei.js] {video_id}: {_e} → yt-dlp");
+                ytdlp.stream(video_id, refresh).await
             }
+        },
+        "propio" => propio(video_id, refresh).await,
+        "oficial" => official(video_id, refresh).await,
+        _ => ytdlp.stream(video_id, refresh).await,
+    }
+}
+
+/// Motor propio: el nivel rápido y, si falla por lo que sea, el reproductor oficial.
+async fn propio(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+    match native::resolve(video_id, refresh).await {
+        Ok(d) => Ok(VideoInfo { url: d.url, title: d.title, channel: d.channel, duration: d.duration }),
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            eprintln!("[motor propio] {video_id}: {_e} → reproductor oficial");
+            official(video_id, refresh).await
         }
     }
-    ytdlp.stream(video_id, refresh).await
+}
+
+/// Nivel garantizado: el `<audio>` pide `musify-capture:<id>` y la interfaz lo sirve con lo capturado.
+async fn official(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+    let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
+    let meta = capture::stream(app, video_id, refresh).await?;
+    Ok(VideoInfo {
+        url: format!("{}{video_id}", capture::SCHEME),
+        title: meta.title,
+        channel: meta.channel,
+        duration: meta.duration,
+    })
 }
 
 /// Pide la URL a youtubei.js (en la interfaz) y la guarda mientras no caduque.
@@ -126,17 +154,27 @@ pub fn extractor_reply(reply: Reply) {
 
 #[tauri::command]
 pub fn set_stream_engine(engine: String) -> Result<(), String> {
-    match engine.as_str() {
-        "ytdlp" => USE_JS.store(false, Ordering::Relaxed),
-        "youtubei" => USE_JS.store(true, Ordering::Relaxed),
-        _ => return Err(format!("Motor desconocido: {engine}")),
-    }
+    let i = ENGINES.iter().position(|e| *e == engine).ok_or(format!("Motor desconocido: {engine}"))?;
+    ENGINE.store(i as u8, Ordering::Relaxed);
     Ok(())
 }
 
 #[tauri::command]
 pub fn stream_engine() -> &'static str {
-    if USE_JS.load(Ordering::Relaxed) { "youtubei" } else { "ytdlp" }
+    ENGINES[ENGINE.load(Ordering::Relaxed) as usize]
+}
+
+/// Números del motor propio para la interfaz.
+#[tauri::command]
+pub fn engine_stats() -> Value {
+    let s = &native::STATS;
+    json!({
+        "recipe": native::recipe_version(),
+        "fast": s.resolved.load(Ordering::Relaxed),
+        "fastFailed": s.failed.load(Ordering::Relaxed),
+        "replaced": s.replaced.load(Ordering::Relaxed),
+        "official": capture::USED.load(Ordering::Relaxed),
+    })
 }
 
 #[derive(Deserialize)]
@@ -232,6 +270,27 @@ pub async fn bench_ytdlp(video_id: String, ytdlp: State<'_, YtDlp>) -> Result<Va
     let t = Instant::now();
     let info = ytdlp.stream(&video_id, true).await?;
     Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": info.url, "title": info.title }))
+}
+
+/// Nivel rápido del motor propio, cronometrado (siempre pide una URL nueva).
+#[tauri::command]
+pub async fn bench_native(video_id: String) -> Result<Value, String> {
+    let t = Instant::now();
+    let d = native::resolve(&video_id, true).await.map_err(|e| e.to_string())?;
+    Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": d.url, "client": d.client, "itag": d.itag, "mime": d.mime }))
+}
+
+/// Nivel garantizado, cronometrado: hasta que llega el primer audio de la canción.
+#[tauri::command]
+pub async fn bench_capture(video_id: String) -> Result<Value, String> {
+    let t = Instant::now();
+    let info = official(&video_id, true).await?;
+    Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": info.url, "title": info.title }))
+}
+
+#[tauri::command]
+pub fn capture_status(video_id: String) -> Option<Value> {
+    capture::status(&video_id)
 }
 
 /// Pide 1 KB del principio y otro hacia el 80 % del audio: sin PO token, YouTube suele
