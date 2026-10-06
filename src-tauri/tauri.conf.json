@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Musify",
-  "version": "0.1.0",
+  "version": "../package.json",
   "identifier": "dev.musify.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -53,6 +53,18 @@
       "minimumSystemVersion": "11.0"
     },
     "category": "Music",
-    "shortDescription": "Reproductor de música personal"
+    "shortDescription": "Reproductor de música personal",
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzMDQ1MTA4RDJFRjczRUUKUldUdWMrL1NDRkVFRTQ5N1JmL3hWd3JxL1VHNUpqeHljdWI0cWkrY0I4TGxqZS9ZOHljUlpkRWcK",
+      "endpoints": [
+        "https://github.com/diad87/musify-releases/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "quiet"
+      }
+    }
   }
 }

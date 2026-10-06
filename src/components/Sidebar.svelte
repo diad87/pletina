@@ -3,6 +3,7 @@
   import { songs } from '../lib/format'
   import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
+  import { updates } from '../lib/updates.svelte'
   import { justCreated } from '../views/PlaylistView.svelte'
   import Collage from './Collage.svelte'
   import Cover from './Cover.svelte'
@@ -25,7 +26,10 @@
 
 <aside class="sidebar">
   <div class="top">
-    <div class="brand"><span class="logo"><Icon name="note" size={18} /></span> Musify</div>
+    <div class="brand">
+      <span class="logo"><Icon name="note" size={18} /></span> Musify
+      {#if updates.current}<span class="version" title="Versión instalada">{updates.current}</span>{/if}
+    </div>
     <nav>
       <button class:active={route.name === 'home'} onclick={() => nav.go({ name: 'home' })}>
         <Icon name="home" size={24} /> Inicio
@@ -124,6 +128,16 @@
     font-size: 21px;
     font-weight: 900;
     letter-spacing: -0.03em;
+  }
+  .version {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgb(255 255 255 / 0.06);
+    color: var(--faint);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0;
   }
   .logo {
     display: grid;

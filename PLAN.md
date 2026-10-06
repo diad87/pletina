@@ -177,7 +177,11 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - [x] GitHub Actions compila Windows (.exe), Mac universal (.dmg) y Linux (.AppImage y .deb) al subir una etiqueta `v*` o a mano. Tarda unos 10 minutos (Mac 4, Windows 7, Linux 9). Ojo: el repositorio de código es privado y los minutos de Actions gratuitos son 2.000 al mes; los de Mac cuentan ×10 y los de Windows ×2, así que cada versión gasta unos 65 minutos (unas 30 versiones al mes).
   - [x] Versión 0.1.0 publicada en `musify-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
   - [ ] Probar los de Mac y Linux en un equipo real (están compilados, pero no probados).
-  - [ ] Actualizaciones automáticas (actualizador de Tauri, firmado) y publicación directa desde Actions al repositorio público (necesita un token con permiso solo sobre `musify-releases`).
+  - [x] Actualizaciones automáticas (desde la 0.2.0): la app busca versión nueva al arrancar y cada 6 horas en `musify-releases/releases/latest/download/latest.json`, la descarga en segundo plano y la instala al cerrarse (en Windows, instalador silencioso). Si hay una lista, la barra superior muestra «Versión X lista · Reiniciar».
+    - Firmadas con una clave propia (minisign). La privada está en `%USERPROFILE%\.musify\` (clave + contraseña) y como secretos `TAURI_SIGNING_PRIVATE_KEY*` en el repositorio de código. **Si se pierde, las apps instaladas no aceptarán más versiones**: hay que guardarla en un sitio seguro.
+    - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `musify-releases`.
+    - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `musify-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
+    - Compilar en local sin firmar: `npm run build:local`.
 - [ ] Fase 7: móvil
 
 ## Repositorios

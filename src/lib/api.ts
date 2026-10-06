@@ -81,3 +81,6 @@ export const downloadDirPath = () => invoke<string>('download_dir_path')
 export const chooseDownloadDir = () => invoke<string | null>('choose_download_dir')
 export const openDownloadDir = () => invoke<void>('open_download_dir')
 export const revealDownload = (trackId: number) => invoke<void>('reveal_download', { trackId })
+
+// Actualizaciones.
+export const installUpdate = () => invoke<void>('install_update')

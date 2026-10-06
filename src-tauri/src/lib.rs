@@ -3,6 +3,7 @@ mod deezer;
 mod downloads;
 mod library;
 mod player;
+mod updater;
 mod youtube;
 mod ytdlp;
 
@@ -85,9 +86,11 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Deezer::new())
+        .manage(updater::Pending::default())
         .manage(YouTubeMusic::new())
         .setup(|app| {
             let dir = app.path().app_local_data_dir()?;
@@ -95,6 +98,7 @@ pub fn run() {
             app.manage(Db::open(&dir.join("musify.db"))?);
             app.manage(YtDlp::new(dir.join("bin")));
             app.manage(downloads::Downloads::start(app.handle()));
+            updater::start(app.handle());
 
             // Prepara yt-dlp en segundo plano (descarga o actualización diaria).
             let handle = app.handle().clone();
@@ -132,7 +136,14 @@ pub fn run() {
             downloads::choose_download_dir,
             downloads::open_download_dir,
             downloads::reveal_download,
+            updater::install_update,
         ])
-        .run(tauri::generate_context!())
-        .expect("error al arrancar Musify");
+        .build(tauri::generate_context!())
+        .expect("error al arrancar Musify")
+        .run(|app, event| {
+            // Al cerrar la app se instala la actualización que haya descargada.
+            if let tauri::RunEvent::Exit = event {
+                updater::install_pending(app);
+            }
+        });
 }

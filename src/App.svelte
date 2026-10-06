@@ -10,6 +10,7 @@
   import { nav } from './lib/nav.svelte'
   import { player } from './lib/player.svelte'
   import { theme } from './lib/theme.svelte'
+  import { updates } from './lib/updates.svelte'
   import AlbumView from './views/AlbumView.svelte'
   import ArtistView from './views/ArtistView.svelte'
   import DownloadsView from './views/DownloadsView.svelte'
@@ -28,6 +29,7 @@
   const route = $derived(nav.route)
 
   library.load().then((data) => downloads.init(data?.downloadedIds ?? []))
+  updates.init()
 
   // La barra superior se tiñe según el scroll; se lee una vez por fotograma.
   let frame = 0

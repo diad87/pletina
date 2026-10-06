@@ -1,6 +1,7 @@
 <script lang="ts">
   import { nav } from '../lib/nav.svelte'
   import { theme } from '../lib/theme.svelte'
+  import { updates } from '../lib/updates.svelte'
   import Icon from './Icon.svelte'
 
   let { scrollY = 0 }: { scrollY?: number } = $props()
@@ -84,6 +85,12 @@
       >
     {/if}
   </label>
+
+  {#if updates.state === 'ready'}
+    <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Musify; pulsa para instalarla ya">
+      <span class="dot"></span> Versión {updates.version} lista · <strong>Reiniciar</strong>
+    </button>
+  {/if}
 </header>
 
 <style>
@@ -214,6 +221,35 @@
   }
   input::placeholder {
     color: var(--muted);
+  }
+  .update {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 17px;
+    background: rgb(0 0 0 / 0.45);
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    font-size: 13px;
+    font-weight: 500;
+    animation: rise 0.3s var(--ease);
+    transition: background 0.15s;
+  }
+  .update:hover {
+    background: rgb(0 0 0 / 0.7);
+  }
+  .update strong {
+    color: var(--accent);
+  }
+  .update .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
   }
   .clear {
     display: grid;
