@@ -1,9 +1,21 @@
 // Motor youtubei.js: lo mismo que `YtDlp::stream` (URL del audio, título, canal y duración)
 // sin programas externos. Se carga solo si se elige este motor.
+//
+// Es un extractor que se actualiza solo (ver src-tauri/src/extractors.rs): además de ir dentro de la
+// app, se publica como un módulo aparte (`npm run build:extractors`). Por eso no importa nada de la
+// app: lo que necesita se lo da ella con `setup` (ver host.ts). Si cambia esa forma de hablar con la
+// app (`Host`, `setup`, `stream`), hay que subir `api` aquí y en extractors.json/extractors.rs.
 import { Innertube, Platform, Player, UniversalCache } from 'youtubei.js'
 import type { Types } from 'youtubei.js'
-import EvalWorker from './eval.worker?worker'
-import { rustFetch } from './fetch'
+
+/** Versión de la forma de hablar con la app. */
+export const api = 1
+
+/** Lo que pone la app: peticiones HTTP sin CORS y un sitio aislado donde ejecutar código de YouTube. */
+export interface Host {
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+  evaluate: (code: string) => Promise<unknown>
+}
 
 export interface StreamInfo {
   url: string
@@ -30,33 +42,31 @@ const NATIVE: Types.InnerTubeClient[] = ['VISIONOS', 'IOS', 'ANDROID_VR']
 /** Tiempos internos, para las mediciones. */
 export const stats = { sessionMs: 0, playerMs: 0, evals: 0, evalMs: 0 }
 
-// --- Evaluador: el código del reproductor de YouTube corre en un worker ---
-let worker: Worker | null = null
-let nextId = 0
-const waiting = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>()
+// --- Lo que pone la app ---
+let host: Host | null = null
 
-function evaluate(code: string): Promise<unknown> {
-  if (!worker) {
-    worker = new EvalWorker()
-    worker.onmessage = (e: MessageEvent<{ id: number; result?: unknown; error?: string }>) => {
-      const w = waiting.get(e.data.id)
-      waiting.delete(e.data.id)
-      if (e.data.error !== undefined) w?.reject(new Error(e.data.error))
-      else w?.resolve(e.data.result)
-    }
-  }
-  const id = ++nextId
-  const t = performance.now()
-  return new Promise<unknown>((resolve, reject) => {
-    waiting.set(id, { resolve, reject })
-    worker!.postMessage({ id, code })
-  }).finally(() => {
-    stats.evals++
-    stats.evalMs += performance.now() - t
-  })
+/** La app lo llama una vez antes de usar el motor. */
+export function setup(h: Host) {
+  if (host) return
+  host = h
+  Platform.load({ ...Platform.shim, eval: (data) => evaluate(data.output) as Promise<Types.EvalResult> })
 }
 
-Platform.load({ ...Platform.shim, eval: (data) => evaluate(data.output) as Promise<Types.EvalResult> })
+function app(): Host {
+  if (!host) throw new Error('youtubei.js sin preparar (falta setup)')
+  return host
+}
+
+/** El código del reproductor de YouTube se ejecuta donde diga la app (un worker aislado). */
+function evaluate(code: string): Promise<unknown> {
+  const t = performance.now()
+  return app()
+    .evaluate(code)
+    .finally(() => {
+      stats.evals++
+      stats.evalMs += performance.now() - t
+    })
+}
 
 // --- Sesión: se crea una vez, sin el reproductor de YouTube (VISIONOS no lo necesita) ---
 let session: Promise<Innertube> | null = null
@@ -66,7 +76,7 @@ export function innertube(): Promise<Innertube> {
   if (!session) {
     const t = performance.now()
     session = Innertube.create({
-      fetch: rustFetch,
+      fetch: app().fetch,
       cache: new UniversalCache(true),
       retrieve_player: false,
     }).then((yt) => {
@@ -87,7 +97,7 @@ export function innertube(): Promise<Innertube> {
 function loadPlayer(yt: Innertube): Promise<Player> {
   if (!player) {
     const t = performance.now()
-    player = Player.create(yt.session.cache, rustFetch).then((p) => {
+    player = Player.create(yt.session.cache, app().fetch).then((p) => {
       stats.playerMs = performance.now() - t
       yt.session.player = p
       return p

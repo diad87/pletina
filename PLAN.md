@@ -67,21 +67,49 @@ La única desventaja es que hace falta Rust para compilar la app. Para usarla no
 ### Actualizaciones automáticas en todas las plataformas
 Requisito: se instala el "cascarón" una vez y, al publicar una versión en GitHub, se actualiza solo, sin que el usuario haga nada. Todas las actualizaciones van firmadas con una clave propia; la app rechaza cualquier versión sin esa firma. GitHub Actions compila y publica todo al subir una versión.
 
-Dos capas:
-1. **Contenido (interfaz + extractor de YouTube en JavaScript de P1):** se descarga de GitHub en segundo plano y se aplica al volver a abrir la app. Silencioso en las 5 plataformas, incluido iOS (Apple permite actualizar código JavaScript que corre en su motor web). Cubre casi todos los cambios, también los arreglos cuando YouTube cambia algo. Requiere servir la interfaz desde una carpeta local en lugar de llevarla dentro del ejecutable; hay que construirlo.
-2. **Cascarón (el ejecutable, cuando cambia la parte de Rust):**
+Tres capas:
+1. **Extractores (hecho, 0.4.0):** lo que saca el audio de YouTube se actualiza por separado, cada pieza desde su fuente y sin tocar el resto de la app. Ver "Extractores que se actualizan solos" más abajo. Funciona igual en las 5 plataformas: lo baja y lo comprueba la parte de Rust, y son datos o JavaScript (iOS deja actualizar JavaScript que corre en su motor web).
+2. **Contenido (la interfaz):** se descargaría de GitHub en segundo plano y se aplicaría al volver a abrir la app. Requiere servir la interfaz desde una carpeta local en lugar de llevarla dentro del ejecutable; está sin hacer.
+3. **Cascarón (el ejecutable, cuando cambia la parte de Rust):**
    - Windows, Mac, Linux (AppImage): actualizador oficial de Tauri. Descarga en segundo plano e instala al cerrar la app. Totalmente silencioso.
    - Android: la app no puede ir a Google Play (incumple sus normas por usar YouTube). Se instala el APK con **Obtainium**, que vigila las versiones de GitHub y, en Android 12 o superior, actualiza en segundo plano sin preguntar.
    - iOS: tampoco puede ir a la App Store. Con **SideStore/AltStore** (gratis) la app se instala y se renueva sola cada 7 días, y puede actualizarse desde una "fuente" en GitHub, pero iOS no deja que sea del todo automático. Con la cuenta de desarrollador (99 $/año) el certificado dura un año; la actualización del cascarón sigue pidiendo un toque.
 
+### Extractores que se actualizan solos
+Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el resto de la app:
+
+| Extractor | De dónde sale | Cómo llega a la app |
+|---|---|---|
+| yt-dlp | sus versiones en GitHub (yt-dlp/yt-dlp) | la app lo actualiza una vez al día (`yt-dlp -U`) |
+| youtubei.js | npm | GitHub Actions mira cada día si hay versión nueva; si pasa las pruebas, la pone en `main`, la empaqueta con nuestro código (`youtubei.ts`) y la publica |
+| Receta del motor propio | este repositorio (`src-tauri/recipe/youtube.json`) | se publica al subir el cambio a `main` |
+| Script de la ventana oculta | este repositorio (`src-tauri/src/capture.js`) | se publica al subir el cambio a `main` |
+
+- **Publicación** (`.github/workflows/extractors.yml` y `scripts/extractors.mjs`): en la versión `extractores` de diad87/musify-releases (marcada como "pre-release" para que no la tome el actualizador de la app). Cada extractor va como `<nombre>-api<api>-v<versión>.<ext>`, firmado con la misma clave que las actualizaciones de la app, y un índice, `extractores.json`.
+- **En la app** (`src-tauri/src/extractors.rs`): al arrancar y cada 6 horas mira el índice. Si hay un extractor con la `api` que entiende y una versión mayor que la suya, lo baja, comprueba el resumen y la firma, y lo usa desde ese momento: la receta y el script en la siguiente canción, y youtubei.js en cuanto vuelve a hacer falta. Lo guarda para los siguientes arranques.
+- **Seguridad:** la firma cubre también el nombre del archivo (extractor, api y versión). Nadie puede hacer pasar un extractor viejo por uno nuevo tocando el índice, ni colar uno sin la clave.
+- **Si el nuevo falla**, se sigue funcionando:
+  - Receta: si no se entiende o no es de YouTube, no se usa; si con ella no sale el audio, se prueba la incluida y después la ventana oculta.
+  - youtubei.js: si el módulo no carga, se usa el incluido; si no saca el audio, yt-dlp.
+  - Script de la ventana oculta: no tiene respaldo automático. Si uno sale mal, se arregla publicando otro.
+- **`api` y `version`** (en `src-tauri/extractors.json`): al cambiar un extractor hay que subir su `version` (si no, `scripts/extractors.mjs` se niega a publicarlo). Si cambia cómo habla con la app (lo que espera de Rust o de la interfaz), se sube su `api` aquí y en `API` de `extractors.rs`, y ese extractor nuevo solo lo usan las apps que ya lo entienden. Las más viejas siguen con el último de su `api` hasta que se actualiza la app.
+- **Lo que no se puede cambiar así:** el código en Rust del motor propio (`native.rs`, `capture.rs`) y cómo se elige el motor (`extractor.rs`). Eso necesita una versión de la app, que en escritorio también se instala sola.
+- **Móvil:** el mismo sistema sirve en Android e iOS, porque el que baja y comprueba es Rust y lo que se baja son datos y JavaScript. yt-dlp no existe allí; la ventana oculta necesitará el plugin nativo de cada sistema (ver P1).
+- **Probado** (6 oct 2026, en el entorno aislado de Claude, ver "Estado"):
+  - con un canal local con la versión 2 de los tres, la app los cambió solos;
+  - tras reiniciar sin conexión al canal, siguió usando los guardados;
+  - sonaron 2 de 2 canciones con youtubei.js descargado y 2 de 2 con la receta descargada;
+  - la ventana oculta, con su script descargado, copió una canción entera.
+- **Probar sin publicar:** `node scripts/extractors.mjs --to <carpeta>` y arrancar la app con `MUSIFY_EXTRACTORS_URL=<carpeta>`.
+
 ### Proyecto paralelo P1: extractor de YouTube sin yt-dlp
 yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS. Hay que llevar su trabajo (buscar y sacar la URL del audio) a algo que funcione en todas partes. Se desarrolla en paralelo, en su propia rama, sin bloquear las fases 4–6.
-- **Estado (6 de octubre de 2026):** rama `p1-youtubei`, sobre `main`. En Inicio se elige el motor: "Audio de YouTube con: yt-dlp · youtubei.js (prueba) · Propio". yt-dlp sigue siendo el de por defecto. **El recomendado es el motor propio**, hecho y medido en Windows.
+- **Estado (6 de octubre de 2026):** integrado en `main` (0.4.0); la rama `p1-youtubei` ya no se usa. En Inicio se elige el motor: "Audio de YouTube con: yt-dlp · youtubei.js (prueba) · Propio". yt-dlp sigue siendo el de por defecto. **El recomendado es el motor propio**, hecho y medido en Windows. Debajo se ven las versiones de los extractores y si alguno se ha actualizado solo.
 
 #### Motor propio
 - **Objetivo:** que funcione siempre que una persona pueda escuchar la canción en YouTube. Ninguna librería que imite la API interna de YouTube puede prometerlo (yt-dlp y youtubei.js se rompen cada vez que YouTube cambia algo). La única garantía real es usar el reproductor oficial, así que el motor tiene dos niveles:
   1. **Nivel rápido** (`native.rs`): una petición a la API interna de YouTube desde Rust, sin librerías ni programas externos.
-     - Qué cliente de YouTube se imita, con qué versión y datos, va en una **receta** (`src-tauri/recipe/youtube.json`). Si YouTube cambia algo de eso, basta con publicar una receta con versión mayor: la app la baja sola (`MUSIFY_RECIPE_URL`) y se queda con la incluida si la nueva no vale.
+     - Qué cliente de YouTube se imita, con qué versión y datos, va en una **receta** (`src-tauri/recipe/youtube.json`). Si YouTube cambia algo de eso, basta con cambiar la receta y subir su versión: se publica y la app la baja sola (ver "Extractores que se actualizan solos"). Si la nueva no vale, se queda con la incluida.
      - Pide antes una **sesión de visitante** (`sw.js_data`). Sin ella, YouTube responde "inicia sesión para confirmar que no eres un bot": 0 de 30, frente a 30 de 30 con ella. Se busca por su forma (empieza por "Cgt"), no por su posición en la respuesta.
      - **Comprueba cada URL** pidiendo 1 KB hacia el 80 % antes de usarla. Es donde YouTube corta a veces (403); si pasa, pide otra.
   2. **Nivel garantizado** (`capture.rs` y `capture.js`): **el reproductor oficial de YouTube Music en una ventana oculta**. Su reproductor hace todo (PO token, descifrado, SABR o lo que YouTube use) y el motor copia el audio que le entrega al navegador: siempre pasa por Media Source, y el de audio va en un buffer propio.
@@ -111,7 +139,6 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - En el nivel garantizado, saltar a una parte aún no copiada tarda 1–3 s.
   - Las tiendas de apps no aceptan una app así (pasa igual con cualquier motor). En Android se instalaría con el APK; en iPhone, con Xcode (gratis caduca a los 7 días; con la cuenta de 99 $/año, al año).
 - **Pendiente:**
-  - Decidir dónde se publica la receta: tiene que ser un sitio público (un gist o un repositorio público pequeño), porque este repositorio es privado.
   - Búsqueda de respaldo en YouTube normal sin yt-dlp (hoy `ytdlp.search`): pasarla a `youtube.rs`.
   - Descargas sin yt-dlp: guardar lo que copia el nivel garantizado o bajar la URL del nivel rápido.
 - **Móvil (fase 7):** el nivel rápido es Rust y funciona igual. El garantizado necesita en cada sistema una WebView controlada por código nativo, con su canal nativo. Tauri no deja abrir una segunda ventana en el móvil, y Android no deja leer lo que una página envía a un protocolo propio.
@@ -120,7 +147,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - En Mac y Linux, lo mismo con WKWebView y WebKitGTK.
 
 #### Primer prototipo: youtubei.js
-- La librería (18.1, sin modificar) corre en la interfaz. Rust le hace las peticiones (`http_fetch`) y el descifrado va en un Web Worker. Funciona: 60 de 60 en dos rondas y ~90 ms. Pero imita la API interna igual que yt-dlp, y para seguir los cambios de YouTube hay que sacar una versión nueva de la app.
+- La librería (18.1, sin modificar) corre en la interfaz. Rust le hace las peticiones (`http_fetch`) y el descifrado va en un Web Worker. Funciona: 60 de 60 en dos rondas y ~90 ms. Pero imita la API interna igual que yt-dlp. Para seguir los cambios de YouTube depende de que salga una youtubei.js nueva; desde la 0.4.0 esa versión llega sola, sin actualizar la app (ver "Extractores que se actualizan solos").
 - **PO token:** de 11 clientes de YouTube, solo VISIONOS da audio completo sin él (es el que usa yt-dlp 2026.08.19). IOS, ANDROID_VR, TV_SIMPLY y YTMUSIC cortan con 403 pasado el primer MB; MWEB, desde el primer byte. WEB y ANDROID solo dan SABR; TV dice "The page needs to be reloaded"; los *_EMBEDDED, "This video is unavailable". youtubei.js no genera PO tokens: acepta uno hecho y lo pone en las URLs (`pot=`).
 - **rusty_ytdl:** descartado. Su última versión es de agosto de 2024 y no conoce VISIONOS ni SABR.
 
@@ -131,21 +158,22 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - Los ejecutables de los tests no llevaban el manifiesto de Windows (comctl32 v6) y no arrancaban (`STATUS_ENTRYPOINT_NOT_FOUND`) en cuanto el código de ventanas fue alcanzable desde ellos. `build.rs` ahora incrusta el manifiesto con el enlazador en todos (`windows-app-manifest.xml`).
 - Al cerrar la ventana principal se cierra la app, aunque haya una ventana del motor abierta.
 
-#### Qué cambia respecto a `main`
-- Archivos nuevos:
-  - `src-tauri/src/`: `extractor.rs` (elige motor, `http_fetch` y las mediciones), `native.rs`, `capture.rs` y `capture.js`.
-  - `src-tauri/recipe/youtube.json` y `src-tauri/windows-app-manifest.xml`.
-  - `src/lib/extractor/`: `capture.ts`, `engine.svelte.ts`, `youtubei.ts`, `fetch.ts`, `eval.worker.ts` y `bench.ts`.
+#### Integración en `main` (0.4.0)
+- Archivos del motor:
+  - `src-tauri/src/`: `extractor.rs` (elige motor, `http_fetch` y las mediciones), `native.rs`, `capture.rs` y `capture.js`; y `extractors.rs`, que actualiza los extractores.
+  - `src-tauri/recipe/youtube.json`, `src-tauri/extractors.json` y `src-tauri/windows-app-manifest.xml`.
+  - `src/lib/extractor/`: `capture.ts`, `engine.svelte.ts`, `host.ts`, `youtubei.ts`, `fetch.ts`, `eval.worker.ts` y `bench.ts`.
   - `src/components/EngineSwitch.svelte`.
-- Cambios pequeños en archivos que ya existen:
-  - `lib.rs`: módulos, `init`, comandos y cerrar la app con la ventana principal.
+- Cambios en archivos que ya existían:
+  - `lib.rs`: módulos, arranque, comandos y cerrar la app con la ventana principal.
   - `player.rs`: 3 llamadas a `stream`.
   - `ytdlp.rs`: `VideoInfo` serializable, y `now` y `query_param` visibles.
   - `player.svelte.ts`: `setAudioSource` en vez de `audio.src`, y `stopCapture` al cambiar de canción.
   - `main.ts` y `Home.svelte`: arranque y selector.
-  - `build.rs`, `Cargo.toml` (`base64`; y en Windows `webview2-com` y `windows-core`) y `package.json` (`youtubei.js`).
-  - CSP: `blob:` en `media-src`, para Media Source.
-- Para probar la rama con otra copia de la app abierta, hay que arrancarla con otro identificador y otro puerto (`tauri dev --config` con `identifier`, `devUrl` y `beforeDevCommand` distintos). Si no, por ser de una sola instancia, la nueva se cierra al momento; y con el mismo identificador abrirían la misma base de datos.
+  - `build.rs`, `Cargo.toml` (`base64`, `sha2`, `minisign-verify`; y en Windows `webview2-com` y `windows-core`) y `package.json` (`youtubei.js`).
+  - CSP: `blob:` en `media-src` (Media Source) y en `script-src` (youtubei.js descargado).
+- Al integrarlo, youtubei.ts dejó de importar nada de la app: lo que necesita (peticiones por Rust y el worker para el código de YouTube) se lo da `host.ts` con `setup`. Así el mismo archivo va dentro de la app y se publica suelto.
+- Para probar con otra copia de la app abierta, hay que arrancarla con otro identificador y otro puerto (`tauri dev --config` con `identifier`, `devUrl` y `beforeDevCommand` distintos). Si no, por ser de una sola instancia, la nueva se cierra al momento; y con el mismo identificador abrirían la misma base de datos.
 
 #### Repetir las mediciones
 1. Crear la lista de vídeos: `MUSIFY_BENCH_IDS=plan.json cargo test bench_videos -- --ignored --nocapture`.
@@ -212,6 +240,8 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - [x] **Protección de la base de datos:** copia completa antes de cada migración (`musify.db.antes-de-vN`, se guardan 3) y la app se niega a crear una base nueva encima de un archivo con datos. (El 6 oct 2026 una prueba en desarrollo dejó la base de datos viéndose vacía; los datos se recuperaron del archivo principal.)
   - 0.3.1: una base de datos con solo la cabecera (4 KB, sin tablas) cuenta como vacía y se usa; antes la protección la rechazaba y la app se cerraba al arrancar sin decir nada. Si la base de datos no se puede abrir, ahora sale un aviso con el error y la ruta.
   - **Ojo al probar desde Claude (app de escritorio):** los comandos que lanza Claude corren dentro de su paquete MSIX, y lo que escriben en `%LOCALAPPDATA%` va a `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\…`. Lo que se instale, actualice o se pruebe desde ahí usa otra carpeta de datos que el Musify que abres desde el menú Inicio. Las actualizaciones automáticas de 0.2.0 → 0.2.1 → 0.3.0 se probaron en esa copia aislada; en el equipo real todavía no.
+- [x] **Motor de audio propio y extractores que se actualizan solos** (0.4.0): el trabajo de P1 integrado (selector en Inicio: yt-dlp, youtubei.js o Propio; yt-dlp sigue por defecto). La receta y el script del motor propio y youtubei.js se publican y se actualizan por separado, sin reinstalar la app; youtubei.js nuevo se coge solo de npm. Ver "Extractores que se actualizan solos".
+  - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en musify-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
 - [ ] Fase 7: móvil
 
 ## Repositorios
@@ -230,6 +260,8 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - `src-tauri/src/youtube.rs`: búsqueda en YouTube Music y puntuación de coincidencias (con tests).
 - `src-tauri/src/ytdlp.rs`: descarga/actualización de yt-dlp, URL del audio y búsqueda de respaldo.
 - `src-tauri/src/player.rs`: de canción de Deezer a audio reproducible (usa lo guardado o busca, y lo guarda).
+- `src-tauri/src/extractor.rs`: elige con qué se saca el audio (yt-dlp, youtubei.js o el motor propio). El motor propio está en `native.rs` (nivel rápido, con la receta de `recipe/youtube.json`) y `capture.rs` + `capture.js` (ventana oculta).
+- `src-tauri/src/extractors.rs`: baja, comprueba y pone en uso los extractores nuevos (`extractors.json` tiene sus versiones). Se publican con `scripts/extractors.mjs`.
 - `src-tauri/src/db.rs`: SQLite local (`%LOCALAPPDATA%\dev.musify.desktop\musify.db`).
 - `src-tauri/src/lib.rs`: comandos que llama la interfaz (`search`, `artist`, `album`, `resolve`).
 - `src/lib/`: llamadas a esos comandos con caché, historial propio (`nav.svelte.ts`), reproductor y cola (`player.svelte.ts`), vistos recientemente y formatos.

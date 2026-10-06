@@ -1,0 +1,65 @@
+# Extractores que Musify cambia solo, sin reinstalar (ver src-tauri/src/extractors.rs).
+# - Al subir a main un cambio en un extractor (receta, script de la ventana oculta, youtubei.js),
+#   se publica firmado en musify-releases y las apps lo bajan en unas horas.
+# - Cada día se mira si hay youtubei.js nuevo en npm: si funciona, se pone, se sube a main y se publica.
+# Para publicar hace falta el secreto RELEASES_TOKEN (permiso de escritura en diad87/musify-releases).
+name: Extractores
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src-tauri/extractors.json
+      - src-tauri/recipe/**
+      - src-tauri/src/capture.js
+      - src/lib/extractor/youtubei.ts
+      - package-lock.json
+      - vite.extractors.config.ts
+      - scripts/extractors.mjs
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+concurrency: extractores
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: ¿Hay youtubei.js nuevo?
+        id: upgrade
+        if: github.event_name != 'push'
+        run: node scripts/extractors.mjs upgrade-youtubei
+
+      - name: Subir el cambio a main
+        if: steps.upgrade.outputs.changed == 'true'
+        run: |
+          version=$(node -p "require('./node_modules/youtubei.js/package.json').version")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Extractor youtubei: youtubei.js $version"
+          git push
+
+      - name: Publicar los extractores que hayan cambiado
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Falta el secreto RELEASES_TOKEN: no se publica. Así quedaría:"
+            node scripts/extractors.mjs --dry-run
+            exit 0
+          fi
+          node scripts/extractors.mjs

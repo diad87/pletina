@@ -1,26 +1,23 @@
 //! Motor propio, nivel rápido: una sola petición a la API interna de YouTube desde Rust, sin
 //! programas ni librerías externas. Qué cliente de YouTube se imita y con qué datos va en una
 //! receta (`recipe/youtube.json`): cuando YouTube cambie algo de eso, basta con publicar una
-//! receta nueva, sin sacar otra versión de la app. Si aun así falla, está el nivel garantizado
-//! (`capture.rs`).
+//! receta nueva (`extractors.rs`), sin sacar otra versión de la app. Si la descargada falla, se
+//! prueba la incluida, y si aun así falla, está el nivel garantizado (`capture.rs`).
 
 use crate::ytdlp::{now, query_param};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-const BUNDLED: &str = include_str!("../recipe/youtube.json");
 /// La sesión de visitante vale horas; se pide otra antes por si acaso.
 const VISITOR_TTL: Duration = Duration::from_secs(3 * 3600);
 const BROWSER_UA: &str = crate::youtube::BROWSER_UA;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Recipe {
-    pub version: u32,
     visitor: Fetch,
     player: String,
     clients: Vec<Client>,
@@ -84,8 +81,10 @@ pub struct Stats {
 }
 
 pub static STATS: LazyLock<Stats> = LazyLock::new(Stats::default);
-static RECIPE: LazyLock<RwLock<Recipe>> =
-    LazyLock::new(|| RwLock::new(serde_json::from_str(BUNDLED).expect("receta incluida")));
+/// La receta incluida en la app y la descargada (si hay una más nueva).
+static BUNDLED: LazyLock<Recipe> =
+    LazyLock::new(|| serde_json::from_str(crate::extractors::bundled_recipe()).expect("receta incluida"));
+static DOWNLOADED: RwLock<Option<Recipe>> = RwLock::new(None);
 static VISITOR: tokio::sync::Mutex<Option<(String, Instant)>> = tokio::sync::Mutex::const_new(None);
 static CACHE: LazyLock<Mutex<HashMap<String, Direct>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -95,44 +94,20 @@ static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .expect("cliente HTTP")
 });
 
-/// Usa la receta guardada si es más nueva que la incluida y, si hay `MUSIFY_RECIPE_URL`, busca
-/// otra en segundo plano.
-pub fn init(dir: PathBuf) {
-    let saved = dir.join("recipe.json");
-    if let Some(r) = std::fs::read_to_string(&saved).ok().and_then(|s| serde_json::from_str::<Recipe>(&s).ok()) {
-        adopt(r);
-    }
-    if let Ok(url) = std::env::var("MUSIFY_RECIPE_URL") {
-        tauri::async_runtime::spawn(async move {
-            let Ok(text) = HTTP.get(&url).send().await.and_then(|r| r.error_for_status()) else { return };
-            let Ok(text) = text.text().await else { return };
-            if let Ok(r) = serde_json::from_str::<Recipe>(&text)
-                && adopt(r)
-            {
-                let _ = std::fs::write(saved, text);
-            }
-        });
-    }
-}
-
-/// Se queda con una receta si es más nueva y sus URLs son de YouTube.
-fn adopt(r: Recipe) -> bool {
+/// Usa una receta descargada (ver `extractors.rs`) si se entiende y sus URLs son de YouTube.
+pub fn set_recipe(text: &str) -> Result<(), String> {
+    let r: Recipe = serde_json::from_str(text).map_err(|e| format!("receta no válida: {e}"))?;
     let youtube = |u: &str| {
         reqwest::Url::parse(u)
             .ok()
             .and_then(|u| u.host_str().map(|h| h == "youtube.com" || h.ends_with(".youtube.com")))
             .unwrap_or(false)
     };
-    let mut current = RECIPE.write().unwrap();
-    if r.version <= current.version || !youtube(&r.player) || !youtube(&r.visitor.url) || r.clients.is_empty() {
-        return false;
+    if !youtube(&r.player) || !youtube(&r.visitor.url) || r.clients.is_empty() {
+        return Err("receta no válida: URLs que no son de YouTube o sin clientes".into());
     }
-    *current = r;
-    true
-}
-
-pub fn recipe_version() -> u32 {
-    RECIPE.read().unwrap().version
+    *DOWNLOADED.write().unwrap() = Some(r);
+    Ok(())
 }
 
 /// URL del audio de un vídeo, ya comprobada (YouTube no la va a cortar a mitad).
@@ -142,19 +117,21 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     {
         return Ok(d.clone());
     }
-    let recipe = RECIPE.read().unwrap().clone();
+    // Primero la receta descargada y, si con ella no sale, la incluida.
+    let recipes: Vec<Recipe> = DOWNLOADED.read().unwrap().iter().cloned().chain([BUNDLED.clone()]).collect();
     let mut last = Error::Failed("La receta no tiene clientes".into());
-    for client in &recipe.clients {
+    let clients: Vec<(&Recipe, &Client)> = recipes.iter().flat_map(|r| r.clients.iter().map(move |c| (r, c))).collect();
+    for (recipe, client) in clients {
         // Segundo intento con sesión de visitante nueva y otra URL.
         for attempt in 0..2 {
-            let visitor = match visitor(&recipe, attempt > 0).await {
+            let visitor = match visitor(recipe, attempt > 0).await {
                 Ok(v) => v,
                 Err(e) => {
                     last = Error::Failed(e);
                     continue;
                 }
             };
-            match player(&recipe, client, video_id, &visitor).await {
+            match player(recipe, client, video_id, &visitor).await {
                 Ok(d) => match validate(&d).await {
                     Ok(()) => {
                         STATS.resolved.fetch_add(1, Ordering::Relaxed);
@@ -304,7 +281,7 @@ mod tests {
 
     #[test]
     fn bundled_recipe_parses() {
-        let r: Recipe = serde_json::from_str(BUNDLED).unwrap();
+        let r: Recipe = serde_json::from_str(crate::extractors::bundled_recipe()).unwrap();
         assert!(!r.clients.is_empty());
     }
 
@@ -317,7 +294,7 @@ mod tests {
 
     #[test]
     fn picks_opus_then_m4a() {
-        let r: Recipe = serde_json::from_str(BUNDLED).unwrap();
+        let r: Recipe = serde_json::from_str(crate::extractors::bundled_recipe()).unwrap();
         let c = &r.clients[0];
         let resp = |formats: Value| json!({ "playabilityStatus": { "status": "OK" }, "streamingData": { "adaptiveFormats": formats }, "videoDetails": { "title": "T", "author": "A", "lengthSeconds": "200" } });
         let f = |itag: u64, mime: &str, bitrate: u64| json!({ "itag": itag, "mimeType": mime, "bitrate": bitrate, "url": format!("https://x.googlevideo.com/videoplayback?itag={itag}&clen=100") });

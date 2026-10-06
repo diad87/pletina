@@ -1,10 +1,10 @@
 {
-  "version": 1,
-  "updated": "2026-10-06",
-  "notes": "Receta del motor propio (nivel rápido). Si YouTube cambia algo de esto, basta con publicar una receta nueva con un número de versión mayor: la app la baja sola.",
+  "notes": "Receta del motor propio (nivel rápido). Si YouTube cambia algo de esto, se cambia aquí y se sube su versión en extractors.json: la app la baja sola, sin sacar otra versión.",
   "visitor": {
     "url": "https://www.youtube.com/sw.js_data",
-    "headers": { "Referer": "https://www.youtube.com/sw.js" }
+    "headers": {
+      "Referer": "https://www.youtube.com/sw.js"
+    }
   },
   "player": "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
   "clients": [
@@ -22,5 +22,8 @@
       }
     }
   ],
-  "audio": ["audio/webm", "audio/mp4"]
+  "audio": [
+    "audio/webm",
+    "audio/mp4"
+  ]
 }

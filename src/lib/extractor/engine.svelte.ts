@@ -2,13 +2,48 @@
 // las peticiones de Rust cuando se usa youtubei.js. Ver src-tauri/src/extractor.rs.
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
+import { inTauri } from '../api'
+import { host } from './host'
+
+type YoutubeiModule = typeof import('./youtubei')
+
+let youtubei: Promise<YoutubeiModule> | null = null
+
+/**
+ * El motor youtubei.js: el descargado si hay uno más nuevo (ver src-tauri/src/extractors.rs) y,
+ * si no hay o no carga, el que trae la app.
+ */
+export function loadYoutubei(): Promise<YoutubeiModule> {
+  youtubei ??= (async () => {
+    const remote = await invoke<{ version: number; code: string } | null>('extractor_module', { name: 'youtubei' }).catch(() => null)
+    if (remote) {
+      const url = URL.createObjectURL(new Blob([remote.code], { type: 'text/javascript' }))
+      try {
+        const m: YoutubeiModule = await import(/* @vite-ignore */ url)
+        if (m.api !== 1) throw new Error(`api ${m.api}`)
+        m.setup(host)
+        return m
+      } catch (e) {
+        console.warn(`[extractores] youtubei v${remote.version} no carga; se usa el incluido:`, e)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    }
+    const m = await import('./youtubei')
+    m.setup(host)
+    return m
+  })()
+  youtubei.catch(() => (youtubei = null))
+  return youtubei
+}
 
 /** `oficial` es el motor propio usando solo su nivel garantizado (para probarlo). */
 export type Engine = 'ytdlp' | 'youtubei' | 'propio' | 'oficial'
 
 /** Números del motor propio (ver `engine_stats` en Rust). */
 export interface EngineStats {
-  recipe: number
+  /** Versión de cada extractor y si es uno descargado (ver src-tauri/src/extractors.rs). */
+  extractors: { name: 'recipe' | 'capture' | 'youtubei'; version: number; downloaded: boolean }[]
   fast: number
   fastFailed: number
   replaced: number
@@ -25,6 +60,8 @@ class Extractor {
   failed = $state(0)
 
   async start() {
+    // En el navegador (vista previa) no hay Rust ni motores.
+    if (!inTauri) return
     let saved: string | null = null
     try {
       saved = localStorage.getItem(KEY)
@@ -36,7 +73,7 @@ class Extractor {
 
     await listen<{ id: number; videoId: string }>('extractor:stream', async ({ payload }) => {
       try {
-        const { stream } = await import('./youtubei')
+        const { stream } = await loadYoutubei()
         const info = await stream(payload.videoId)
         this.served++
         await invoke('extractor_reply', { reply: { id: payload.id, info, error: null } })
@@ -44,6 +81,11 @@ class Extractor {
         this.failed++
         await invoke('extractor_reply', { reply: { id: payload.id, info: null, error: String(e) } })
       }
+    })
+
+    // Ha llegado un youtubei.js nuevo: se usa desde la siguiente canción.
+    await listen<{ name: string }>('extractors-updated', ({ payload }) => {
+      if (payload.name === 'youtubei') youtubei = null
     })
 
     // Medición: solo si se arranca con MUSIFY_BENCH=plan.json.

@@ -3,6 +3,7 @@ mod capture;
 mod deezer;
 mod downloads;
 mod extractor;
+mod extractors;
 mod library;
 mod local;
 mod native;
@@ -129,7 +130,7 @@ pub fn run() {
             app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
             extractor::init(app.handle().clone());
-            native::init(dir.clone());
+            extractors::start(app.handle());
             app.manage(downloads::Downloads::start(app.handle()));
             updater::start(app.handle());
             // Música local: carátulas guardadas visibles y escaneo de lo nuevo al arrancar.
@@ -190,6 +191,7 @@ pub fn run() {
             extractor::bench_capture,
             extractor::capture_status,
             extractor::engine_stats,
+            extractors::extractor_module,
             capture::capture_read,
             capture::capture_seek,
         ])

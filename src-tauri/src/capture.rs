@@ -23,7 +23,6 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 pub const LABEL: &str = "yt-engine";
 /// Lo que se le pide al `<audio>` para sonar con lo capturado.
 pub const SCHEME: &str = "musify-capture:";
-const SCRIPT: &str = include_str!("capture.js");
 /// Canciones capturadas que se guardan en memoria.
 const KEEP: usize = 6;
 /// Tope por canción (una de 10 minutos en opus son ~12 MB).
@@ -258,7 +257,7 @@ async fn open(app: &AppHandle, video_id: &str, at: Option<f64>) -> Result<(), St
         .skip_taskbar(true)
         .focused(false)
         .inner_size(960.0, 640.0)
-        .initialization_script(SCRIPT)
+        .initialization_script(crate::extractors::capture_script().to_string())
         .build()
         .map_err(|e| e.to_string())?;
     *WINDOW.lock().unwrap() = Some(label);

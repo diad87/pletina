@@ -169,7 +169,7 @@ pub fn stream_engine() -> &'static str {
 pub fn engine_stats() -> Value {
     let s = &native::STATS;
     json!({
-        "recipe": native::recipe_version(),
+        "extractors": crate::extractors::status(),
         "fast": s.resolved.load(Ordering::Relaxed),
         "fastFailed": s.failed.load(Ordering::Relaxed),
         "replaced": s.replaced.load(Ordering::Relaxed),

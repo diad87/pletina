@@ -11,12 +11,14 @@
 
   let stats = $state<EngineStats | null>(null)
   $effect(() => {
-    if (extractor.engine !== 'propio') return
     const load = () => extractor.stats().then((s) => (stats = s)).catch(() => {})
     load()
-    const timer = setInterval(load, 3000)
+    // Con el motor propio, los números van cambiando; con los demás basta de vez en cuando.
+    const timer = setInterval(load, extractor.engine === 'propio' ? 3000 : 30000)
     return () => clearInterval(timer)
   })
+
+  const LABELS = { recipe: 'receta', capture: 'ventana oculta', youtubei: 'youtubei.js' }
 
   function choose(value: Engine) {
     extractor.set(value).catch((e) => toast.show(`No se pudo cambiar: ${e}`))
@@ -33,8 +35,12 @@
   {/if}
   {#if extractor.engine === 'propio' && stats && (stats.fast || stats.official)}
     <span class="count">
-      {stats.fast} al momento · {stats.official} con el reproductor de YouTube · {stats.replaced} URLs cambiadas antes de fallar ·
-      receta v{stats.recipe}
+      {stats.fast} al momento · {stats.official} con el reproductor de YouTube · {stats.replaced} URLs cambiadas antes de fallar
+    </span>
+  {/if}
+  {#if stats?.extractors}
+    <span class="count versions" title="Los extractores se actualizan solos, sin reinstalar la app">
+      Extractores: {stats.extractors.map((e) => `${LABELS[e.name]} v${e.version}${e.downloaded ? ' (actualizado)' : ''}`).join(' · ')}
     </span>
   {/if}
 </div>
@@ -61,5 +67,8 @@
   }
   .count {
     color: var(--faint);
+  }
+  .versions {
+    flex-basis: 100%;
   }
 </style>

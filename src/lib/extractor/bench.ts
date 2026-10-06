@@ -5,7 +5,8 @@ import * as api from '../api'
 import { player, type QueueItem } from '../player.svelte'
 import { playCapture } from './capture'
 import { extractor, type Engine } from './engine.svelte'
-import { CLIENTS, innertube, stats, stream } from './youtubei'
+import { host } from './host'
+import { CLIENTS, innertube, setup, stats, stream } from './youtubei'
 
 interface Plan {
   videos: { id: string; label: string; duration: number }[]
@@ -35,6 +36,8 @@ type AudioCheck = { ok: boolean; startMs?: number; playMs?: number; seekMs?: num
 const logs: string[] = []
 
 export async function runBench(plan: Plan) {
+  // Se mide el youtubei.js que trae la app.
+  setup(host)
   const restore = captureLogs()
   const report: Record<string, unknown> = {
     startedAt: new Date().toISOString(),
