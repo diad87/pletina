@@ -1,5 +1,6 @@
 import { getVersion } from '@tauri-apps/api/app'
 import { listen } from '@tauri-apps/api/event'
+import { version } from '../../package.json'
 import * as api from './api'
 import { toast } from './toast.svelte'
 
@@ -13,7 +14,7 @@ class Updates {
 
   async init() {
     if (!api.inTauri) {
-      this.current = 'dev'
+      this.current = version
       return
     }
     this.current = await getVersion().catch(() => '')

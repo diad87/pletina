@@ -14,4 +14,9 @@ const app = mount(App, {
   target: document.getElementById('app')!,
 })
 
+// Vista previa en un navegador normal: permite abrir una pantalla desde la dirección (capturas).
+if (import.meta.env.DEV && !('__TAURI_INTERNALS__' in window)) {
+  import('./dev/preview').then((m) => m.apply())
+}
+
 export default app

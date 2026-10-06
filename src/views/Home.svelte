@@ -24,15 +24,21 @@
   let loaded = $state(false)
   $effect(() => {
     void library.historyVersion
+    // Si ya se ha salido de Inicio cuando llega la respuesta, no se toca el color de la otra pantalla.
+    let alive = true
     api
       .history(300)
       .then((entries) => {
+        if (!alive) return
         const seen = new Set<number>()
         played = entries.map((e) => e.track).filter((t) => !seen.has(t.albumId) && seen.add(t.albumId)).slice(0, 16)
         if (!loaded) theme.set(played[0]?.cover)
         loaded = true
       })
-      .catch(() => (loaded = true))
+      .catch(() => alive && (loaded = true))
+    return () => {
+      alive = false
+    }
   })
 
   nav.ready()
