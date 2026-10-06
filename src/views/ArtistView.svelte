@@ -4,9 +4,11 @@
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
-  import { albumPlaying, playAlbum } from '../lib/actions'
+  import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
-  import { fans, recordType, year } from '../lib/format'
+  import { fans, recordType, songs, year } from '../lib/format'
+  import { isLocal, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -65,12 +67,14 @@
 
   function playTop() {
     if (isThis) player.toggle()
-    else if (top.length) player.playQueue(top, 0)
+    else if (top.length) player.playQueue(top, 0, data?.artist.name)
   }
 
   $effect(() => {
     theme.play = top.length ? { playing, toggle: playTop } : null
   })
+
+  const mine = $derived(isLocal(id))
 
   const kindOf = (t: string | null) => (t === 'single' || t === 'ep' ? 'single' : t === 'compile' ? 'compile' : 'album')
   const counts = $derived({
@@ -94,12 +98,14 @@
 {:else if !data}
   <Skeleton round />
 {:else}
-  <header class="banner" style:--photo="url({data.artist.pictureXl ?? data.artist.pictureMedium})">
+  <header class="banner" style:--photo="url({mediaUrl(data.artist.pictureXl ?? data.artist.pictureMedium)})">
     <div class="photo" aria-hidden="true"></div>
     <div class="banner-text">
-      <span class="verified"><Icon name="user" size={16} /> Artista</span>
+      <span class="verified"><Icon name={mine ? 'folder' : 'user'} size={16} /> {mine ? 'Artista · tu música' : 'Artista'}</span>
       <h1>{data.artist.name}</h1>
-      <div class="stats">{fans(data.artist.nbFan)} fans · {data.albums.length} lanzamientos</div>
+      <div class="stats">
+        {#if mine}{songs(data.top.length)} · {data.albums.length === 1 ? '1 disco' : `${data.albums.length} discos`}{:else}{fans(data.artist.nbFan)} fans · {data.albums.length} lanzamientos{/if}
+      </div>
     </div>
   </header>
 
@@ -111,8 +117,8 @@
     </div>
 
     {#if top.length}
-      <h2 class="section-title">Populares</h2>
-      <TrackList items={showAllTop ? top : top.slice(0, 5)} variant="list" />
+      <h2 class="section-title">{mine ? 'Canciones' : 'Populares'}</h2>
+      <TrackList items={showAllTop ? top : top.slice(0, 5)} variant="list" context={data.artist.name} />
       {#if top.length > 5}
         <button class="more" onclick={() => (showAllTop = !showAllTop)}>{showAllTop ? 'Mostrar menos' : 'Mostrar más'}</button>
       {/if}
@@ -137,6 +143,7 @@
           playing={albumPlaying(album.id)}
           onclick={() => nav.go({ name: 'album', id: album.id })}
           onplay={() => playAlbum(album.id)}
+          oncontext={(e) => menu.show(e, albumCardMenu(album.id))}
         />
       {/each}
     </div>

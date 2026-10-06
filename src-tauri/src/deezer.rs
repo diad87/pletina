@@ -116,9 +116,13 @@ pub struct AlbumDetail {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SearchResults {
     pub artists: Vec<Artist>,
     pub albums: Vec<Album>,
+    /// Coincidencias en la música local del usuario.
+    pub local_artists: Vec<Artist>,
+    pub local_albums: Vec<Album>,
 }
 
 #[derive(Debug, Serialize)]
@@ -217,6 +221,8 @@ impl Deezer {
         Ok(SearchResults {
             artists: artists?.data,
             albums: albums?.data,
+            local_artists: vec![],
+            local_albums: vec![],
         })
     }
 

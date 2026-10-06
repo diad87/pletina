@@ -4,7 +4,8 @@
   import Cover from '../components/Cover.svelte'
   import Icon from '../components/Icon.svelte'
   import Shelf from '../components/Shelf.svelte'
-  import { albumPlaying, playAlbum } from '../lib/actions'
+  import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
   import { songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
@@ -128,6 +129,7 @@
           playing={albumPlaying(t.albumId)}
           onclick={() => nav.go({ name: 'album', id: t.albumId })}
           onplay={() => playAlbum(t.albumId)}
+          oncontext={(e) => menu.show(e, albumCardMenu(t.albumId))}
         />
       {/each}
     </Shelf>
@@ -157,6 +159,7 @@
           playing={albumPlaying(a.id)}
           onclick={() => nav.go({ name: 'album', id: a.id })}
           onplay={() => playAlbum(a.id)}
+          oncontext={(e) => menu.show(e, albumCardMenu(a.id))}
         />
       {/each}
     </Shelf>

@@ -5,7 +5,8 @@
   import Shelf from '../components/Shelf.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
-  import { albumPlaying, playAlbum } from '../lib/actions'
+  import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
   import { fans } from '../lib/format'
   import { nav } from '../lib/nav.svelte'
@@ -60,6 +61,7 @@
   })
 
   const topArtist = $derived(results?.artists[0])
+  const hasLocal = $derived(!!results && (results.localArtists.length > 0 || results.localAlbums.length > 0))
 </script>
 
 <section class="page top">
@@ -85,7 +87,7 @@
     <Status {error} retry={() => attempt++} />
   {:else if !results}
     <Skeleton kind="grid" />
-  {:else if !results.artists.length && !results.albums.length}
+  {:else if !results.artists.length && !results.albums.length && !hasLocal}
     {#if !loading}
       <div class="empty-state">
         <Icon name="search" size={40} />
@@ -95,6 +97,31 @@
     {/if}
   {:else}
     <div class:stale={loading}>
+      {#if hasLocal}
+        <Shelf title="En tu música">
+          {#each results.localArtists as artist (artist.id)}
+            <Card
+              image={artist.pictureMedium}
+              title={artist.name}
+              subtitle="Artista · tu música"
+              round
+              onclick={() => nav.go({ name: 'artist', id: artist.id })}
+            />
+          {/each}
+          {#each results.localAlbums as album (album.id)}
+            <Card
+              image={album.coverMedium}
+              title={album.title}
+              subtitle={album.artist?.name ?? ''}
+              playing={albumPlaying(album.id)}
+              onclick={() => nav.go({ name: 'album', id: album.id })}
+              onplay={() => playAlbum(album.id)}
+              oncontext={(e) => menu.show(e, albumCardMenu(album.id))}
+            />
+          {/each}
+        </Shelf>
+      {/if}
+
       {#if topArtist}
         <div class="top-row">
           <div class="top-col">
@@ -135,6 +162,7 @@
               playing={albumPlaying(album.id)}
               onclick={() => nav.go({ name: 'album', id: album.id })}
               onplay={() => playAlbum(album.id)}
+              oncontext={(e) => menu.show(e, albumCardMenu(album.id))}
             />
           {/each}
         </div>

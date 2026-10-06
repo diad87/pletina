@@ -1,6 +1,7 @@
 <script lang="ts">
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
+  import { isLocal } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -59,19 +60,22 @@
     <button
       class="icon"
       onclick={() => current && (player.picking = current)}
-      disabled={!current}
+      disabled={!current || isLocal(current.track.id)}
       title="¿No es esta canción? Elegir otro vídeo"
     >
       <Icon name="swap" size={18} />
     </button>
     <button
-      class="icon"
-      class:on={theme.nowPlaying}
-      onclick={() => (theme.nowPlaying = !theme.nowPlaying)}
-      disabled={!current}
-      title="Sonando ahora y cola"
+      class="icon queue-btn"
+      class:on={theme.queueOpen}
+      onclick={() => (theme.queueOpen = !theme.queueOpen)}
+      title="Cola de reproducción"
     >
       <Icon name="queue" size={20} />
+      {#if player.userQueue.length}<span class="badge">{player.userQueue.length}</span>{/if}
+    </button>
+    <button class="icon" onclick={() => (theme.nowPlaying = true)} disabled={!current} title="Sonando ahora (pantalla completa)">
+      <Icon name="expand" size={18} />
     </button>
     <button class="icon" onclick={() => player.toggleMute()} title={player.muted ? 'Activar sonido' : 'Silenciar'}>
       <Icon name={player.muted || player.volume === 0 ? 'mute' : 'volume'} size={20} />
@@ -190,6 +194,24 @@
   .icon.on,
   .icon.on:hover {
     color: var(--accent);
+  }
+  .queue-btn {
+    position: relative;
+  }
+  .badge {
+    position: absolute;
+    top: -7px;
+    right: -9px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #10002b;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
   }
 
   .center {

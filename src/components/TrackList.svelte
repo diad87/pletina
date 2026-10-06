@@ -22,9 +22,12 @@
     /** Columna extra, p. ej. cuándo se añadió. */
     metaLabel?: string
     meta?: (index: number) => string
+    /** De dónde vienen (nombre del disco, de la playlist…), para la cola. */
+    context?: string
   }
 
-  let { items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta }: Props = $props()
+  let { items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta, context = '' }: Props =
+    $props()
 
   const isCurrent = (item: QueueItem) => player.current?.track.id === item.track.id
   const disc = (i: number) => items[i].track.diskNumber || 1
@@ -33,7 +36,7 @@
 
   function play(i: number) {
     if (isCurrent(items[i])) player.toggle()
-    else player.playQueue(items, i)
+    else player.playQueue(items, i, context)
   }
 
   function openMenu(e: MouseEvent, i: number) {
@@ -96,11 +99,15 @@
         class:drop-after={dragFrom !== null && dropAt === items.length && i === items.length - 1}
         role="button"
         tabindex="0"
-        draggable={reorderable}
+        draggable="true"
         onclick={() => play(i)}
         onkeydown={(e) => e.key === 'Enter' && play(i)}
         oncontextmenu={(e) => openMenu(e, i)}
-        ondragstart={() => (dragFrom = i)}
+        ondragstart={(e) => {
+          // Se puede arrastrar a la cola (panel lateral) y, en playlists, para reordenar.
+          e.dataTransfer?.setData('application/x-musify-items', JSON.stringify([item]))
+          if (reorderable) dragFrom = i
+        }}
         ondragover={(e) => onDragOver(e, i)}
         ondrop={onDrop}
         ondragend={() => (dragFrom = dropAt = null)}

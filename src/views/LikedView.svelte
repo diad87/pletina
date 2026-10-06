@@ -43,7 +43,7 @@
   const playing = $derived(isThis && player.status === 'playing')
 
   $effect(() => {
-    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0)) } : null
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0, 'Canciones que te gustan')) } : null
   })
 </script>
 
@@ -66,14 +66,14 @@
       <div class="actions">
         <button
           class="big-play"
-          onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0))}
+          onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0, 'Canciones que te gustan'))}
           title={playing ? 'Pausa' : 'Reproducir'}
         >
           <Icon name={playing ? 'pause' : 'play'} size={26} />
         </button>
         <DownloadButton {items} />
       </div>
-      <TrackList {items} variant="list" metaLabel="Añadida" meta={(i) => shortDate(entries![i].at)} />
+      <TrackList {items} variant="list" context="Canciones que te gustan" metaLabel="Añadida" meta={(i) => shortDate(entries![i].at)} />
     {:else}
       <div class="empty-state">
         <Icon name="heart" size={48} />

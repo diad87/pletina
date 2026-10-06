@@ -1,5 +1,13 @@
 import { coverColor, FALLBACK_COLOR } from './color'
 
+function readFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === 'true'
+  } catch {
+    return false
+  }
+}
+
 /**
  * Aspecto de la página actual: color de fondo (sale de su carátula) y, para la barra superior
  * al hacer scroll, su título y un botón de reproducir.
@@ -10,6 +18,20 @@ class Theme {
   play = $state<{ playing: boolean; toggle: () => void } | null>(null)
   /** Pantalla completa de "Sonando ahora" abierta. */
   nowPlaying = $state(false)
+  /** Panel lateral de la cola abierto. */
+  #queueOpen = $state(readFlag('musify:queueOpen'))
+
+  get queueOpen() {
+    return this.#queueOpen
+  }
+  set queueOpen(open: boolean) {
+    this.#queueOpen = open
+    try {
+      localStorage.setItem('musify:queueOpen', JSON.stringify(open))
+    } catch {
+      // Sin almacenamiento: vale para esta sesión.
+    }
+  }
 
   #token = 0
 

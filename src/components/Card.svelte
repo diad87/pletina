@@ -12,6 +12,7 @@
     playing = false,
     onclick,
     onplay,
+    oncontext,
   }: {
     image?: string | null
     /** Mosaico de portadas (playlists) en lugar de una sola imagen. */
@@ -24,10 +25,12 @@
     onclick: () => void
     /** Si se pasa, aparece el botón de reproducir al pasar el ratón. */
     onplay?: () => void
+    /** Clic derecho (menú de la tarjeta). */
+    oncontext?: (e: MouseEvent) => void
   } = $props()
 </script>
 
-<div class="card" class:round>
+<div class="card" class:round oncontextmenu={oncontext} role="group">
   <button class="hit" {onclick} {title} aria-label={title}></button>
   <div class="art">
     {#if covers}<Collage {covers} />{:else}<Cover src={image} {round} />{/if}

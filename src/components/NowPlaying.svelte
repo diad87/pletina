@@ -2,6 +2,7 @@
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
   import { library } from '../lib/library.svelte'
+  import { mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -12,8 +13,9 @@
   const current = $derived(player.current)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
   const upcoming = $derived(player.upcoming.slice(0, 40))
+  const queued = $derived(player.userQueue)
   // Carátula grande: la de 1000 px si es de Deezer.
-  const big = $derived(current?.cover?.replace(/\/\d+x\d+-/, '/1000x1000-') ?? null)
+  const big = $derived(current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
 
   function go(route: Parameters<typeof nav.go>[0]) {
     theme.nowPlaying = false
@@ -24,7 +26,7 @@
 {#if theme.nowPlaying && current}
   <div class="np" role="dialog" aria-label="Sonando ahora">
     <div class="bg" aria-hidden="true">
-      {#if current.cover}<img src={current.cover} alt="" />{/if}
+      {#if current.cover}<img src={mediaUrl(current.cover)} alt="" />{/if}
     </div>
 
     <header>
@@ -64,8 +66,20 @@
 
       <aside class="queue">
         <h2>A continuación</h2>
-        {#if upcoming.length}
+        {#if queued.length || upcoming.length}
           <ol>
+            {#each queued as { key, item } (`q${key}`)}
+              <li>
+                <button onclick={() => player.playFromQueue(key)}>
+                  <span class="thumb"><Cover src={item.cover} /></span>
+                  <span class="q-text">
+                    <span class="q-title">{item.track.title}</span>
+                    <span class="q-sub"><span class="mine">En tu cola</span> {item.track.artist.name}</span>
+                  </span>
+                  <span class="q-dur">{duration(item.track.duration)}</span>
+                </button>
+              </li>
+            {/each}
             {#each upcoming as { pos, item } (pos)}
               <li>
                 <button onclick={() => player.playAt(pos)}>
@@ -296,6 +310,15 @@
   }
   .q-dur {
     font-variant-numeric: tabular-nums;
+  }
+  .mine {
+    margin-right: 4px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #10002b;
+    font-size: 10px;
+    font-weight: 800;
   }
   .empty {
     margin: 12px;

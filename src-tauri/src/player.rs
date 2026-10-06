@@ -46,6 +46,15 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
+    // Música local: el propio archivo, sin YouTube.
+    if crate::local::is_local(q.id) {
+        let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
+        if !std::path::Path::new(&path).exists() {
+            return Err("No se encuentra el archivo (¿se ha movido o borrado?)".into());
+        }
+        return Ok(Playable { video_id: String::new(), url: path, title: q.title.clone(), channel: q.artist.clone(), local: true });
+    }
+
     if let Some(path) = db.download_path(q.id) {
         if std::path::Path::new(&path).exists() {
             let src = db.source(q.id);

@@ -2,6 +2,7 @@ mod db;
 mod deezer;
 mod downloads;
 mod library;
+mod local;
 mod player;
 mod updater;
 mod youtube;
@@ -15,22 +16,31 @@ use youtube::{TrackQuery, YouTubeMusic};
 use ytdlp::YtDlp;
 
 #[tauri::command]
-async fn search(query: String, deezer: State<'_, Deezer>) -> Result<SearchResults, String> {
+async fn search(query: String, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<SearchResults, String> {
     let query = query.trim();
+    let empty = || SearchResults { artists: vec![], albums: vec![], local_artists: vec![], local_albums: vec![] };
     if query.is_empty() {
-        return Ok(SearchResults { artists: vec![], albums: vec![] });
+        return Ok(empty());
     }
-    deezer.search(query).await
+    let (local_artists, local_albums) = local::search(&db, query);
+    match deezer.search(query).await {
+        Ok(found) => Ok(SearchResults { local_artists, local_albums, ..found }),
+        // Sin conexión: al menos lo que haya en la música local.
+        Err(_) if !local_artists.is_empty() || !local_albums.is_empty() => {
+            Ok(SearchResults { local_artists, local_albums, ..empty() })
+        }
+        Err(e) => Err(e),
+    }
 }
 
 #[tauri::command]
-async fn artist(id: u64, deezer: State<'_, Deezer>) -> Result<ArtistPage, String> {
-    deezer.artist(id).await
+async fn artist(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<ArtistPage, String> {
+    if local::is_local(id) { local::artist(&db, id) } else { deezer.artist(id).await }
 }
 
 #[tauri::command]
-async fn album(id: u64, deezer: State<'_, Deezer>) -> Result<AlbumDetail, String> {
-    deezer.album(id).await
+async fn album(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<AlbumDetail, String> {
+    if local::is_local(id) { local::album(&db, id) } else { deezer.album(id).await }
 }
 
 /// Devuelve la URL del audio de una canción. `refresh` fuerza a pedir una URL nueva
@@ -91,6 +101,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(Deezer::new())
         .manage(updater::Pending::default())
+        .manage(local::Scanner::default())
         .manage(YouTubeMusic::new())
         .setup(|app| {
             let dir = app.path().app_local_data_dir()?;
@@ -99,6 +110,9 @@ pub fn run() {
             app.manage(YtDlp::new(dir.join("bin")));
             app.manage(downloads::Downloads::start(app.handle()));
             updater::start(app.handle());
+            // Música local: carátulas guardadas visibles y escaneo de lo nuevo al arrancar.
+            local::allow_covers(app.handle());
+            local::start_scan(app.handle());
 
             // Prepara yt-dlp en segundo plano (descarga o actualización diaria).
             let handle = app.handle().clone();
@@ -137,6 +151,11 @@ pub fn run() {
             downloads::open_download_dir,
             downloads::reveal_download,
             updater::install_update,
+            local::local_library,
+            local::add_local_folder,
+            local::remove_local_folder,
+            local::scan_local,
+            local::reveal_local,
         ])
         .build(tauri::generate_context!())
         .expect("error al arrancar Musify")

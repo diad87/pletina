@@ -18,6 +18,7 @@ export async function apply() {
   else if (view === 'search') nav.go({ name: 'search', query: p.get('q') ?? 'radiohead' })
   else if (view === 'playlist') nav.go({ name: 'playlist', id: id || 1 })
   else if (view === 'liked') nav.go({ name: 'liked' })
+  else if (view === 'local') nav.go({ name: 'local' })
 
   if (p.has('play') || p.has('np')) {
     const album = await api.album(Number(p.get('playId')) || 0)

@@ -2,11 +2,13 @@
   import ContextMenu from './components/ContextMenu.svelte'
   import NowPlaying from './components/NowPlaying.svelte'
   import PlayerBar from './components/PlayerBar.svelte'
+  import QueuePanel from './components/QueuePanel.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import SourcePicker from './components/SourcePicker.svelte'
   import TopBar from './components/TopBar.svelte'
   import { downloads } from './lib/downloads.svelte'
   import { library } from './lib/library.svelte'
+  import { local } from './lib/local.svelte'
   import { nav } from './lib/nav.svelte'
   import { player } from './lib/player.svelte'
   import { theme } from './lib/theme.svelte'
@@ -17,6 +19,7 @@
   import HistoryView from './views/HistoryView.svelte'
   import Home from './views/Home.svelte'
   import LikedView from './views/LikedView.svelte'
+  import LocalView from './views/LocalView.svelte'
   import PlaylistView from './views/PlaylistView.svelte'
   import Search from './views/Search.svelte'
 
@@ -30,6 +33,7 @@
 
   library.load().then((data) => downloads.init(data?.downloadedIds ?? []))
   updates.init()
+  local.init()
 
   // La barra superior se tiñe según el scroll; se lee una vez por fotograma.
   let frame = 0
@@ -63,7 +67,7 @@
 
 <svelte:window onkeydown={onKeydown} onmouseup={onMouseup} />
 
-<div class="app">
+<div class="app" class:with-queue={theme.queueOpen}>
   <Sidebar />
   <main class="main" style:--page-color={theme.color}>
     <TopBar {scrollY} />
@@ -85,6 +89,8 @@
             <PlaylistView id={route.id} />
           {:else if route.name === 'downloads'}
             <DownloadsView />
+          {:else if route.name === 'local'}
+            <LocalView />
           {:else}
             <HistoryView />
           {/if}
@@ -92,6 +98,7 @@
       {/key}
     </div>
   </main>
+  {#if theme.queueOpen}<QueuePanel />{/if}
   <PlayerBar />
 </div>
 
@@ -107,6 +114,9 @@
     gap: 8px;
     height: 100vh;
     padding: 8px;
+  }
+  .app.with-queue {
+    grid-template-columns: 248px minmax(0, 1fr) 340px;
   }
   .main {
     position: relative;

@@ -9,6 +9,7 @@ export type Route =
   | { name: 'playlist'; id: number }
   | { name: 'history' }
   | { name: 'downloads' }
+  | { name: 'local' }
 
 const sameRoute = (a: Route, b: Route) => JSON.stringify(a) === JSON.stringify(b)
 

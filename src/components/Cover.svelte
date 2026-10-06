@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { mediaUrl } from '../lib/media'
   import Icon from './Icon.svelte'
 
   let { src, round = false }: { src: string | null; round?: boolean } = $props()
+  const url = $derived(mediaUrl(src))
 
   let failed = $state(false)
   let loaded = $state(false)
@@ -13,9 +15,9 @@
 </script>
 
 <div class="cover" class:round>
-  {#if src && !failed}
+  {#if url && !failed}
     <img
-      {src}
+      src={url}
       alt=""
       loading="lazy"
       decoding="async"

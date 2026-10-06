@@ -84,6 +84,39 @@ const MIGRATIONS: &[&str] = &[
         value TEXT NOT NULL
     );
     ",
+    // 4: música local (carpetas del usuario). Los ids que ve la interfaz son LOCAL_BASE + id.
+    "
+    CREATE TABLE local_artists (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        name            TEXT    NOT NULL,
+        key             TEXT    NOT NULL UNIQUE,  -- nombre normalizado, para agrupar
+        picture         TEXT,                     -- foto de Deezer, si se encontró
+        picture_checked INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE local_albums (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        title         TEXT    NOT NULL,
+        artist_id     INTEGER NOT NULL REFERENCES local_artists(id),
+        year          TEXT,
+        cover         TEXT,                     -- ruta de la carátula guardada, o URL de Deezer
+        cover_checked INTEGER NOT NULL DEFAULT 0, -- ya se buscó en Deezer
+        key           TEXT    NOT NULL UNIQUE
+    );
+    CREATE TABLE local_tracks (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        path      TEXT    NOT NULL UNIQUE,
+        title     TEXT    NOT NULL,
+        artist_id INTEGER NOT NULL REFERENCES local_artists(id),
+        album_id  INTEGER NOT NULL REFERENCES local_albums(id),
+        track_no  INTEGER,
+        disc_no   INTEGER,
+        duration  INTEGER NOT NULL,
+        mtime     INTEGER NOT NULL,
+        size      INTEGER NOT NULL
+    );
+    CREATE INDEX local_tracks_album ON local_tracks(album_id);
+    CREATE INDEX local_tracks_artist ON local_tracks(artist_id);
+    ",
 ];
 
 pub struct Source {

@@ -5,7 +5,7 @@
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
-  import { addToPlaylistMenu, albumQueue } from '../lib/actions'
+  import { addToPlaylistMenu, albumQueue, queueMenu } from '../lib/actions'
   import * as api from '../lib/api'
   import { longDate, longDuration, recordType, songs, year } from '../lib/format'
   import { library } from '../lib/library.svelte'
@@ -60,7 +60,7 @@
 
   function playAlbum() {
     if (isThisAlbum) player.toggle()
-    else player.playQueue(queue, 0)
+    else player.playQueue(queue, 0, data?.title)
   }
 
   // Botón de reproducir en la barra superior al hacer scroll.
@@ -72,7 +72,8 @@
     if (!data) return
     const artistId = data.artist.id
     menu.show(e, [
-      addToPlaylistMenu(() => queue),
+      ...queueMenu(() => queue),
+      { ...addToPlaylistMenu(() => queue), separated: true },
       { label: 'Ir al artista', icon: 'user', action: () => nav.go({ name: 'artist', id: artistId }) },
     ])
   }
@@ -116,7 +117,7 @@
       <button class="action" onclick={albumMenu} title="Más opciones"><Icon name="more" size={32} /></button>
     </div>
 
-    <TrackList items={queue} variant="album" albumArtistId={data.artist.id} />
+    <TrackList items={queue} variant="album" albumArtistId={data.artist.id} context={data.title} />
 
     <footer class="credits">
       {#if releaseDate}<div class="date">{releaseDate}</div>{/if}

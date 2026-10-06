@@ -1,6 +1,8 @@
 // Color dominante de una carátula, para teñir la interfaz (como Spotify).
 // El servidor de imágenes de Deezer permite leer los píxeles (CORS abierto).
 
+import { mediaUrl } from './media'
+
 const cache = new Map<string, Promise<string>>()
 export const FALLBACK_COLOR = '#3a2f5c'
 
@@ -14,7 +16,7 @@ export function coverColor(url: string | null | undefined): Promise<string> {
   if (!url) return Promise.resolve(FALLBACK_COLOR)
   let hit = cache.get(url)
   if (!hit) {
-    hit = extract(small(url)).catch(() => FALLBACK_COLOR)
+    hit = extract(mediaUrl(small(url)) ?? url).catch(() => FALLBACK_COLOR)
     cache.set(url, hit)
   }
   return hit

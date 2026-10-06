@@ -5,6 +5,7 @@ import { downloads } from './downloads.svelte'
 import { toast } from './toast.svelte'
 import type { AlbumDetail } from './types'
 import { library } from './library.svelte'
+import { isLocal } from './media'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
@@ -32,18 +33,42 @@ export function addToPlaylistMenu(items: () => QueueItem[] | Promise<QueueItem[]
   }
 }
 
+/** "Reproducir a continuación" y "Añadir a la cola" (para una canción o un disco entero). */
+export function queueMenu(items: () => QueueItem[] | Promise<QueueItem[]>): MenuItem[] {
+  return [
+    { label: 'Reproducir a continuación', icon: 'next', action: async () => player.playNext(await items()) },
+    { label: 'Añadir a la cola', icon: 'queue', action: async () => player.addToQueue(await items()) },
+  ]
+}
+
+/** Clic derecho en la tarjeta de un disco. */
+export function albumCardMenu(albumId: number): MenuItem[] {
+  const tracks = async () => albumQueue(await api.album(albumId))
+  return [
+    { label: 'Reproducir', icon: 'play', action: () => playAlbum(albumId) },
+    ...queueMenu(tracks),
+    { ...addToPlaylistMenu(tracks), separated: true },
+    { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: albumId }) },
+  ]
+}
+
 export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: number }): MenuItem[] {
   const liked = library.liked.has(item.track.id)
   const items: MenuItem[] = [
+    ...queueMenu(() => [item]),
     {
       label: liked ? 'Quitar de Canciones que te gustan' : 'Añadir a Canciones que te gustan',
       icon: liked ? 'heartFilled' : 'heart',
+      separated: true,
       action: () => library.toggleLike(item),
     },
     addToPlaylistMenu(() => [item]),
   ]
   const id = item.track.id
-  if (downloads.done.has(id)) {
+  if (isLocal(id)) {
+    // Música local: ya está en el equipo y no viene de YouTube.
+    items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealLocal(id).catch(() => {}) })
+  } else if (downloads.done.has(id)) {
     items.push(
       { label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) },
       { label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) },
@@ -66,8 +91,10 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       action: () => nav.go({ name: 'artist', id: item.track.artist.id }),
     },
     { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: item.albumId }) },
-    { label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) },
   )
+  if (!isLocal(id)) {
+    items.push({ label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) })
+  }
   return items
 }
 
@@ -89,7 +116,8 @@ export const albumPlaying = (albumId: number) => player.current?.albumId === alb
 export async function playAlbum(albumId: number) {
   if (player.current?.albumId === albumId && player.status !== 'idle') return player.toggle()
   try {
-    player.playQueue(albumQueue(await api.album(albumId)), 0)
+    const album = await api.album(albumId)
+    player.playQueue(albumQueue(album), 0, album.title)
   } catch (e) {
     toast.show(`No se pudo abrir el disco: ${e}`)
   }

@@ -72,6 +72,18 @@ export interface AlbumDetail {
 export interface SearchResults {
   artists: Artist[]
   albums: Album[]
+  /** Coincidencias en tu música local. */
+  localArtists: Artist[]
+  localAlbums: Album[]
+}
+
+/** Tu música local (carpetas importadas). */
+export interface LocalLibrary {
+  folders: string[]
+  albums: Album[]
+  artists: Artist[]
+  tracks: number
+  scanning: boolean
 }
 
 export interface ArtistPage {

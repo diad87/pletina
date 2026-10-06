@@ -204,7 +204,8 @@ fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
 #[tauri::command]
 pub fn download(tracks: Vec<LibTrack>, app: AppHandle, db: State<'_, Db>, downloads: State<'_, Downloads>) -> Res<()> {
     let generation = downloads.generation.load(Ordering::SeqCst);
-    for track in tracks {
+    // La música local ya está en el equipo: no se descarga.
+    for track in tracks.into_iter().filter(|t| !crate::local::is_local(t.id)) {
         let id = track.id;
         if db.download_path(id).is_some_and(|p| Path::new(&p).exists()) {
             emit(&app, id, "done", 1.0, None);

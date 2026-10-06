@@ -2,6 +2,7 @@
   import { downloads } from '../lib/downloads.svelte'
   import { songs } from '../lib/format'
   import { library } from '../lib/library.svelte'
+  import { local } from '../lib/local.svelte'
   import { nav } from '../lib/nav.svelte'
   import { updates } from '../lib/updates.svelte'
   import { justCreated } from '../views/PlaylistView.svelte'
@@ -60,6 +61,16 @@
         <span class="text">
           <span class="title">Historial</span>
           <span class="sub">Lo que has escuchado</span>
+        </span>
+      </button>
+
+      <button class="item" class:active={route.name === 'local'} onclick={() => nav.go({ name: 'local' })}>
+        <span class="art plain mine" class:busy={!!local.scan}><Icon name="folder" size={20} /></span>
+        <span class="text">
+          <span class="title">Tu música</span>
+          <span class="sub">
+            {#if local.scan}Leyendo tus carpetas…{:else if local.data?.tracks}{songs(local.data.tracks)} en tus carpetas{:else}Importa tus mp3{/if}
+          </span>
         </span>
       </button>
 
@@ -258,6 +269,10 @@
   }
   .plain.busy {
     color: var(--accent);
+  }
+  .plain.mine {
+    background: linear-gradient(135deg, #7a4a1f, #d9a066);
+    color: #fff;
   }
   .text {
     display: flex;

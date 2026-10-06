@@ -6,6 +6,7 @@ import type {
   DownloadEntry,
   Entry,
   LibraryData,
+  LocalLibrary,
   LibTrack,
   Playable,
   PlaylistDetail,
@@ -39,12 +40,16 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   return hit
 }
 
-export const search = (query: string) =>
-  cached(`search:${query.trim().toLowerCase()}`, () => invoke<SearchResults>('search', { query }))
+export const search = (query: string) => invoke<SearchResults>('search', { query })
 
-export const artist = (id: number) => cached(`artist:${id}`, () => invoke<ArtistPage>('artist', { id }))
+// La música local cambia al reescanear: sin caché (además es instantánea).
+const LOCAL_BASE = 1_000_000_000_000_000
 
-export const album = (id: number) => cached(`album:${id}`, () => invoke<AlbumDetail>('album', { id }))
+export const artist = (id: number) =>
+  id >= LOCAL_BASE ? invoke<ArtistPage>('artist', { id }) : cached(`artist:${id}`, () => invoke<ArtistPage>('artist', { id }))
+
+export const album = (id: number) =>
+  id >= LOCAL_BASE ? invoke<AlbumDetail>('album', { id }) : cached(`album:${id}`, () => invoke<AlbumDetail>('album', { id }))
 
 // Sin caché aquí: el backend ya guarda el vídeo elegido y la URL mientras no caduque.
 export const resolve = (track: TrackQuery, refresh = false) => invoke<Playable>('resolve', { track, refresh })
@@ -81,6 +86,13 @@ export const downloadDirPath = () => invoke<string>('download_dir_path')
 export const chooseDownloadDir = () => invoke<string | null>('choose_download_dir')
 export const openDownloadDir = () => invoke<void>('open_download_dir')
 export const revealDownload = (trackId: number) => invoke<void>('reveal_download', { trackId })
+
+// Música local.
+export const localLibrary = () => invoke<LocalLibrary>('local_library')
+export const addLocalFolder = () => invoke<string[]>('add_local_folder')
+export const removeLocalFolder = (path: string) => invoke<string[]>('remove_local_folder', { path })
+export const scanLocal = () => invoke<void>('scan_local')
+export const revealLocal = (trackId: number) => invoke<void>('reveal_local', { trackId })
 
 // Actualizaciones.
 export const installUpdate = () => invoke<void>('install_update')

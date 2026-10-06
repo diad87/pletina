@@ -1,15 +1,18 @@
 <script lang="ts">
   // Descargar un disco o una lista entera: descarga / progreso / descargado.
   import { downloads } from '../lib/downloads.svelte'
+  import { isLocal } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import type { QueueItem } from '../lib/player.svelte'
   import Icon from './Icon.svelte'
 
-  let { items }: { items: QueueItem[] } = $props()
+  let { items: all }: { items: QueueItem[] } = $props()
+  // La música local ya está en el equipo.
+  const items = $derived(all.filter((i) => !isLocal(i.track.id)))
 
   const done = $derived(items.filter((i) => downloads.done.has(i.track.id)).length)
   const busy = $derived(items.some((i) => downloads.active.has(i.track.id)))
-  const all = $derived(items.length > 0 && done === items.length)
+  const complete = $derived(items.length > 0 && done === items.length)
   // Progreso global: canciones terminadas + lo que llevan las que están bajando.
   const progress = $derived(
     items.length
@@ -22,7 +25,7 @@
 
   function onclick(e: MouseEvent) {
     if (busy) return
-    if (all) {
+    if (complete) {
       const ids = items.map((i) => i.track.id)
       menu.show(e, [{ label: 'Quitar descargas', icon: 'trash', action: () => downloads.remove(ids) }])
     } else {
@@ -33,7 +36,7 @@
   const title = $derived(
     busy
       ? `Descargando: ${done} de ${items.length}`
-      : all
+      : complete
         ? 'Descargado · clic para quitar'
         : done
           ? `Descargar lo que falta (${items.length - done} de ${items.length})`
@@ -41,16 +44,18 @@
   )
 </script>
 
-<button class="action" class:on={all} {onclick} {title} disabled={!items.length}>
-  {#if busy}
-    <svg class="ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r={R} class="track" />
-      <circle cx="16" cy="16" r={R} class="fill" stroke-dasharray={C} stroke-dashoffset={C * (1 - progress)} />
-    </svg>
-  {:else}
-    <Icon name={all ? 'downloaded' : 'download'} size={30} />
-  {/if}
-</button>
+{#if items.length}
+  <button class="action" class:on={complete} {onclick} {title}>
+    {#if busy}
+      <svg class="ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="16" r={R} class="track" />
+        <circle cx="16" cy="16" r={R} class="fill" stroke-dasharray={C} stroke-dashoffset={C * (1 - progress)} />
+      </svg>
+    {:else}
+      <Icon name={complete ? 'downloaded' : 'download'} size={30} />
+    {/if}
+  </button>
+{/if}
 
 <style>
   .ring {

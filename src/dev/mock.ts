@@ -2,7 +2,7 @@
 // Solo se carga en desarrollo y fuera de la app; usa respuestas reales guardadas en ./fixtures
 // (se regeneran con `cargo test write_fixtures -- --ignored` en src-tauri).
 
-import type { AlbumDetail, ArtistPage, Entry, LibTrack, PlaylistSummary, SavedAlbum, SearchResults } from '../lib/types'
+import type { Album, AlbumDetail, ArtistPage, Entry, LibTrack, PlaylistSummary, SavedAlbum, SearchResults } from '../lib/types'
 import album1 from './fixtures/album-1.json'
 import album2 from './fixtures/album-2.json'
 import album3 from './fixtures/album-3.json'
@@ -11,6 +11,21 @@ import artistPage from './fixtures/artist.json'
 import searchResults from './fixtures/search.json'
 
 const albums = [album1, album2, album3, album4] as unknown as AlbumDetail[]
+
+/** Música local de ejemplo: los mismos discos, con ids locales. */
+const LOCAL_BASE = 1_000_000_000_000_000
+const localAlbums: Album[] = albums.map((a, i) => ({
+  id: LOCAL_BASE + i + 1,
+  title: a.title,
+  coverMedium: a.coverBig,
+  coverXl: a.coverXl,
+  releaseDate: a.releaseDate,
+  recordType: 'album',
+  nbTracks: a.tracks.length,
+  explicitLyrics: false,
+  fans: 0,
+  artist: { id: LOCAL_BASE + 100 + i, name: a.artist.name, pictureMedium: a.artist.pictureMedium ?? null },
+}))
 const now = Math.floor(Date.now() / 1000)
 
 function lib(album: AlbumDetail, i: number): LibTrack {
@@ -93,7 +108,22 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
   const out = ((): unknown => {
     switch (cmd) {
       case 'search':
-        return searchResults as unknown as SearchResults
+        return { ...(searchResults as unknown as SearchResults), localArtists: [], localAlbums: localAlbums.slice(0, 2) }
+      case 'local_library':
+        return {
+          folders: [String.raw`C:\Users\iunan\Music`, String.raw`D:\Música\Vinilos digitalizados`],
+          albums: localAlbums,
+          artists: [...new Map(localAlbums.map((a) => [a.artist!.id, a.artist!])).values()].map((ar) => ({
+            id: ar.id,
+            name: ar.name,
+            pictureMedium: ar.pictureMedium ?? null,
+            pictureXl: ar.pictureMedium ?? null,
+            nbAlbum: localAlbums.filter((a) => a.artist?.id === ar.id).length,
+            nbFan: 0,
+          })),
+          tracks: albums.reduce((s, a) => s + a.tracks.length, 0),
+          scanning: false,
+        }
       case 'artist':
         return artistPage as unknown as ArtistPage
       case 'album':

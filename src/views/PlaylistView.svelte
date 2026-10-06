@@ -8,6 +8,7 @@
   import * as api from '../lib/api'
   import { longDuration, shortDate, songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
+  import { queueMenu } from '../lib/actions'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
@@ -66,7 +67,7 @@
   const playing = $derived(isThis && player.status === 'playing')
 
   $effect(() => {
-    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0)) } : null
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name)) } : null
   })
 
   function startRename() {
@@ -83,7 +84,8 @@
 
   function playlistMenu(e: MouseEvent) {
     menu.show(e, [
-      { label: 'Cambiar nombre', icon: 'edit', action: startRename },
+      ...queueMenu(() => items),
+      { label: 'Cambiar nombre', icon: 'edit', separated: true, action: startRename },
       { label: 'Eliminar playlist', icon: 'trash', danger: true, separated: true, action: () => (confirmDelete = true) },
     ])
   }
@@ -139,7 +141,7 @@
       <button
         class="big-play"
         disabled={!items.length}
-        onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0))}
+        onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name))}
         title={playing ? 'Pausa' : 'Reproducir'}
       >
         <Icon name={playing ? 'pause' : 'play'} size={26} />
@@ -161,6 +163,7 @@
         {items}
         variant="list"
         playlistId={data.id}
+        context={data.name}
         {entryIds}
         metaLabel="Añadida"
         meta={(i) => shortDate(data!.entries[i].at)}
