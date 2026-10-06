@@ -1,6 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
+import { setAudioSource, stopCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
 import { toast } from './toast.svelte'
 import type { Playable, Track, TrackQuery } from './types'
@@ -331,7 +332,7 @@ class Player {
       redownload()
       if (token !== this.#token) return true
       this.#retried = false
-      this.#audio.src = audioSrc(playable)
+      setAudioSource(this.#audio, audioSrc(playable))
       await this.#audio.play()
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
@@ -380,13 +381,15 @@ class Player {
     this.time = startAt
     this.duration = item.track.duration
     this.#audio.pause()
+    // Si sonaba una captura del motor propio, deja de leerse: así puede empezar la siguiente.
+    stopCapture()
     this.#updateMediaSession(item)
 
     try {
       const playable = await this.#resolve(item, refresh)
       if (token !== this.#token) return
       this.#retried = refresh
-      this.#audio.src = audioSrc(playable)
+      setAudioSource(this.#audio, audioSrc(playable))
       if (startAt) this.#audio.currentTime = startAt
       await this.#audio.play()
       this.#prefetchNext()

@@ -1,8 +1,11 @@
 mod db;
+mod capture;
 mod deezer;
 mod downloads;
+mod extractor;
 mod library;
 mod local;
+mod native;
 mod player;
 mod updater;
 mod youtube;
@@ -125,6 +128,8 @@ pub fn run() {
             };
             app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
+            extractor::init(app.handle().clone());
+            native::init(dir.clone());
             app.manage(downloads::Downloads::start(app.handle()));
             updater::start(app.handle());
             // Música local: carátulas guardadas visibles y escaneo de lo nuevo al arrancar.
@@ -173,7 +178,28 @@ pub fn run() {
             local::remove_local_folder,
             local::scan_local,
             local::reveal_local,
+            extractor::http_fetch,
+            extractor::extractor_reply,
+            extractor::set_stream_engine,
+            extractor::stream_engine,
+            extractor::bench_plan,
+            extractor::bench_report,
+            extractor::bench_ytdlp,
+            extractor::bench_probe,
+            extractor::bench_native,
+            extractor::bench_capture,
+            extractor::capture_status,
+            extractor::engine_stats,
+            capture::capture_read,
+            capture::capture_seek,
         ])
+        // Al cerrar la ventana principal se cierra la app, aunque el motor propio tenga abierta su
+        // ventana oculta con YouTube Music.
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                window.app_handle().exit(0);
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error al arrancar Musify")
         .run(|app, event| {

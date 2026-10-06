@@ -2,6 +2,7 @@
   import Card from '../components/Card.svelte'
   import Collage from '../components/Collage.svelte'
   import Cover from '../components/Cover.svelte'
+  import EngineSwitch from '../components/EngineSwitch.svelte'
   import Icon from '../components/Icon.svelte'
   import Shelf from '../components/Shelf.svelte'
   import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
@@ -188,6 +189,8 @@
       <button class="pill" onclick={() => nav.focusSearch()}>Buscar</button>
     </div>
   {/if}
+
+  <EngineSwitch />
 </section>
 
 <style>

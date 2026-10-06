@@ -5,7 +5,7 @@
 //! porque deja de funcionar cada vez que YouTube cambia algo.
 
 use crate::youtube::{Candidate, normalize};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -40,7 +40,7 @@ const DOWNLOAD_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
 const UPDATE_EVERY: u64 = 24 * 3600;
 
 /// Lo que se saca de un vídeo para reproducirlo.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VideoInfo {
     pub url: String,
     #[serde(default)]
@@ -313,14 +313,14 @@ fn hide_window(cmd: &mut Command) {
     let _ = cmd;
 }
 
-fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
+pub(crate) fn query_param<'a>(url: &'a str, key: &str) -> Option<&'a str> {
     url.split_once('?')?
         .1
         .split('&')
         .find_map(|kv| kv.strip_prefix(key)?.strip_prefix('='))
 }
 
-fn now() -> u64 {
+pub(crate) fn now() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
