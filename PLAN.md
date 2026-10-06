@@ -171,7 +171,13 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - Vista "Descargas": carpeta (abrir / cambiar), lo que se está descargando con su progreso y botón para cancelar lo pendiente, y lo descargado con tamaño, reproducir todo y quitar todas.
   - Si con "¿No es esta canción?" se elige otro vídeo para una canción descargada, se borra el archivo antiguo y se vuelve a descargar.
   - Probado con una descarga real de principio a fin (test `real_fetch`).
-- [ ] Fase 6: Linux y Mac
+- [x] **Rediseño de la interfaz.** Misma estructura con más profundidad: color de cada página sacado de su carátula, tipografía Figtree incluida, barra superior que se tiñe al hacer scroll, tarjetas con botón de reproducir flotante, accesos rápidos y filas desplazables en Inicio, artista con foto de cabecera y populares, pantalla completa "Sonando ahora" con la cola y esqueletos de carga. Vista previa en el navegador con datos de ejemplo (`npm run dev` fuera de la app; datos en `src/dev`).
+- [ ] **Fase 6: Linux y Mac** (en curso)
+  - [x] Código adaptado: yt-dlp de cada sistema, formato de audio según el motor web (m4a en Mac, opus en Linux), firma ad hoc en Mac.
+  - [x] GitHub Actions compila Windows (.exe), Mac universal (.dmg) y Linux (.AppImage y .deb) al subir una etiqueta `v*` o a mano. Tarda unos 10 minutos (Mac 4, Windows 7, Linux 9). Ojo: el repositorio de código es privado y los minutos de Actions gratuitos son 2.000 al mes; los de Mac cuentan ×10 y los de Windows ×2, así que cada versión gasta unos 65 minutos (unas 30 versiones al mes).
+  - [x] Versión 0.1.0 publicada en `musify-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
+  - [ ] Probar los de Mac y Linux en un equipo real (están compilados, pero no probados).
+  - [ ] Actualizaciones automáticas (actualizador de Tauri, firmado) y publicación directa desde Actions al repositorio público (necesita un token con permiso solo sobre `musify-releases`).
 - [ ] Fase 7: móvil
 
 ## Repositorios
