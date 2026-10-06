@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accesos directos de la prueba de la fase 0 (mantener pulsado el icono de Musify). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="fase0"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/fase0_start"
+        android:shortcutLongLabel="@string/fase0_start_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.musify.desktop"
+            android:targetClass="dev.musify.desktop.MainActivity">
+            <extra android:name="fase0" android:value="radiohead ok computer|extremoduro agila|rosalia el mal querer|berri txarrak infrasoinuak" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="fase0log"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/fase0_log"
+        android:shortcutLongLabel="@string/fase0_log">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="dev.musify.desktop"
+            android:targetClass="dev.musify.desktop.MainActivity">
+            <extra android:name="fase0log" android:value="1" />
+        </intent>
+    </shortcut>
+</shortcuts>
