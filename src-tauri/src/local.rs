@@ -106,9 +106,11 @@ struct TrackInfo {
     picture: Option<(Vec<u8>, String)>,
 }
 
-/// "01 - Canción" o "1-03 Canción" → "Canción" (pero "1979" se queda como está).
-fn title_from_file(stem: &str) -> String {
+/// Del nombre del archivo: "01 - Canción" → (pista 1, "Canción"); "1-03 Canción" → (disco 1, pista 3, "Canción").
+/// "1979" o "4ever" se quedan como título.
+fn parse_file_name(stem: &str) -> (Option<u32>, Option<u32>, String) {
     let mut rest = stem.trim();
+    let mut numbers = Vec::new();
     for _ in 0..2 {
         let digits = rest.trim_start_matches(|c: char| c.is_ascii_digit());
         if digits.len() == rest.len() {
@@ -118,9 +120,15 @@ fn title_from_file(stem: &str) -> String {
         if after.len() == digits.len() || after.is_empty() {
             break;
         }
+        numbers.push(rest[..rest.len() - digits.len()].parse::<u32>().ok());
         rest = after.trim_start();
     }
-    rest.to_string()
+    let (disc, track) = match numbers.as_slice() {
+        [track] => (None, *track),
+        [disc, track] => (*disc, *track),
+        _ => (None, None),
+    };
+    (disc, track, rest.to_string())
 }
 
 fn non_empty(s: Option<impl AsRef<str>>) -> Option<String> {
@@ -131,13 +139,14 @@ fn non_empty(s: Option<impl AsRef<str>>) -> Option<String> {
 fn read_tags(path: &Path) -> TrackInfo {
     let name = |p: Option<&Path>| p.and_then(|p| p.file_name()).map(|n| n.to_string_lossy().into_owned());
     let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+    let (disc_no, track_no, title) = parse_file_name(&stem);
     let mut info = TrackInfo {
-        title: title_from_file(&stem),
+        title,
         artist: name(path.parent().and_then(|p| p.parent())).unwrap_or_else(|| UNKNOWN_ARTIST.into()),
         album_artist: None,
         album: name(path.parent()).unwrap_or_else(|| "Sin disco".into()),
-        track_no: None,
-        disc_no: None,
+        track_no,
+        disc_no,
         year: None,
         duration: 0,
         picture: None,
@@ -155,8 +164,8 @@ fn read_tags(path: &Path) -> TrackInfo {
         info.album = a;
     }
     info.album_artist = non_empty(tag.get_string(ItemKey::AlbumArtist));
-    info.track_no = tag.track();
-    info.disc_no = tag.disk();
+    info.track_no = tag.track().or(info.track_no);
+    info.disc_no = tag.disk().or(info.disc_no);
     info.year = tag.date().map(|d| d.year.to_string()).filter(|y| y != "0");
     let pictures = tag.pictures();
     if let Some(pic) = pictures.iter().find(|p| p.pic_type() == PictureType::CoverFront).or(pictures.first()) {
@@ -466,7 +475,7 @@ pub fn album(db: &Db, id: u64) -> Res<AlbumDetail> {
         .map_err(|e| e.to_string())?
         .ok_or("Este disco ya no está en tu música")?;
     let tracks: Vec<Track> = conn
-        .prepare(&format!("{TRACK_SELECT} WHERE t.album_id = ?1 ORDER BY t.disc_no, t.track_no, t.title"))
+        .prepare(&format!("{TRACK_SELECT} WHERE t.album_id = ?1 ORDER BY COALESCE(t.disc_no, 1), t.track_no IS NULL, t.track_no, t.title"))
         .and_then(|mut s| s.query_map(params![db_id(id)], track_row)?.collect())
         .map_err(|e| e.to_string())?;
     Ok(AlbumDetail {
@@ -502,7 +511,7 @@ pub fn artist(db: &Db, id: u64) -> Res<ArtistPage> {
         .prepare(&format!(
             "SELECT t.id, t.title, t.duration, t.track_no, t.disc_no, ar.id, ar.name, a.id, a.title, a.cover
              FROM local_tracks t JOIN local_artists ar ON ar.id = t.artist_id JOIN local_albums a ON a.id = t.album_id
-             WHERE t.artist_id = ?1 ORDER BY a.year DESC, a.title, t.disc_no, t.track_no LIMIT 50"
+             WHERE t.artist_id = ?1 ORDER BY a.year DESC, a.title, COALESCE(t.disc_no, 1), t.track_no IS NULL, t.track_no LIMIT 50"
         ))
         .and_then(|mut s| {
             s.query_map(params![db_id(id)], |r| {
@@ -609,12 +618,12 @@ mod tests {
 
     #[test]
     fn titles_from_file_names() {
-        assert_eq!(title_from_file("01 - Airbag"), "Airbag");
-        assert_eq!(title_from_file("07. Karma Police"), "Karma Police");
-        assert_eq!(title_from_file("1-03 Paranoid Android"), "Paranoid Android");
-        assert_eq!(title_from_file("Paranoid Android"), "Paranoid Android");
-        assert_eq!(title_from_file("1979"), "1979");
-        assert_eq!(title_from_file("4ever"), "4ever");
+        assert_eq!(parse_file_name("01 - Airbag"), (None, Some(1), "Airbag".into()));
+        assert_eq!(parse_file_name("07. Karma Police"), (None, Some(7), "Karma Police".into()));
+        assert_eq!(parse_file_name("1-03 Paranoid Android"), (Some(1), Some(3), "Paranoid Android".into()));
+        assert_eq!(parse_file_name("Paranoid Android"), (None, None, "Paranoid Android".into()));
+        assert_eq!(parse_file_name("1979"), (None, None, "1979".into()));
+        assert_eq!(parse_file_name("4ever"), (None, None, "4ever".into()));
     }
 
     #[test]

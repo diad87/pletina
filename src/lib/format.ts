@@ -21,6 +21,8 @@ export function year(date: string | null): string {
 
 export function longDate(date: string | null): string {
   if (!validDate(date)) return ''
+  // Solo el año (música local): no inventar "1 de enero".
+  if (/^\d{4}$/.test(date)) return date
   return new Intl.DateTimeFormat('es-ES', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(date))
 }
 
