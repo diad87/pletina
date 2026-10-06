@@ -182,6 +182,9 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
     - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `musify-releases`.
     - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `musify-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
     - Compilar en local sin firmar: `npm run build:local`.
+    - **Probado de principio a fin en Windows (6 oct 2026):** la 0.2.0 instalada encontró la 0.2.1, la descargó en segundo plano y, al cerrarla, se instaló sola en silencio y volvió a abrirse ya en 0.2.1.
+- [ ] **Música local** (siguiente): elegir una o varias carpetas y que todo lo que haya (mp3, m4a, flac, ogg…) entre en la biblioteca, integrado con discos, artistas, búsqueda, playlists e historial, sin pasar por YouTube. Carátulas siempre que se pueda: la incrustada en el archivo, la imagen de la carpeta (cover.jpg, folder.jpg…) o, si no hay, la de Deezer.
+- [ ] **Cola de reproducción tipo DJ:** «Añadir a la cola» y «Reproducir a continuación» desde cualquier canción, disco o playlist; lo añadido suena antes de seguir con el disco o la playlist. Cola siempre visible en un panel lateral, reordenable arrastrando, con quitar y vaciar, y «Guardar como playlist». (Una playlist es algo ya hecho; la cola se va montando al momento.)
 - [ ] Fase 7: móvil
 
 ## Repositorios
