@@ -24,13 +24,18 @@
     ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' data: https://*.dzcdn.net https://i.ytimg.com; media-src https://*.googlevideo.com asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost",
-      "assetProtocol": { "enable": true, "scope": [] },
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      },
       "devCsp": "default-src 'self'; img-src 'self' data: https://*.dzcdn.net https://i.ytimg.com; media-src https://*.googlevideo.com asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost ws://localhost:1420"
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": [
+      "nsis"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -39,7 +44,15 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "skip" }
-    }
+      "webviewInstallMode": {
+        "type": "skip"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
+    },
+    "category": "Music",
+    "shortDescription": "Reproductor de música personal"
   }
 }

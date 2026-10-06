@@ -15,7 +15,28 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::OnceCell;
 
-const DOWNLOAD_URL: &str = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe";
+/// Versión autónoma de yt-dlp (sin Python) de cada sistema, y nombre con el que se guarda.
+#[cfg(target_os = "windows")]
+const RELEASE_ASSET: (&str, &str) = ("yt-dlp.exe", "yt-dlp.exe");
+#[cfg(target_os = "macos")]
+const RELEASE_ASSET: (&str, &str) = ("yt-dlp_macos", "yt-dlp");
+#[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux_aarch64", "yt-dlp");
+#[cfg(all(target_os = "linux", not(target_arch = "aarch64")))]
+const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux", "yt-dlp");
+
+/// Formato del audio en streaming: el motor web de Mac (WebKit) va mejor con m4a;
+/// Windows y Linux, con webm/opus (en Linux, m4a puede necesitar códecs que no vienen instalados).
+#[cfg(target_os = "macos")]
+const STREAM_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
+#[cfg(not(target_os = "macos"))]
+const STREAM_FORMAT: &str = "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio";
+
+/// Formato de las descargas: m4a se reproduce en casi cualquier sitio; en Linux, opus por lo mismo de arriba.
+#[cfg(target_os = "linux")]
+const DOWNLOAD_FORMAT: &str = "bestaudio[ext=webm]/bestaudio";
+#[cfg(not(target_os = "linux"))]
+const DOWNLOAD_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
 const UPDATE_EVERY: u64 = 24 * 3600;
 
 /// Lo que se saca de un vídeo para reproducirlo.
@@ -52,7 +73,7 @@ impl YtDlp {
         self.ready
             .get_or_try_init(|| async {
                 std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
-                let bin = self.dir.join("yt-dlp.exe");
+                let bin = self.dir.join(RELEASE_ASSET.1);
                 let stamp = self.dir.join("yt-dlp.updated");
                 if !bin.exists() {
                     download(&bin).await?;
@@ -92,7 +113,7 @@ impl YtDlp {
         }
         args.extend([
             "-f",
-            "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio",
+            STREAM_FORMAT,
             "--no-playlist",
             "--no-warnings",
             "--print",
@@ -120,7 +141,7 @@ impl YtDlp {
         }
         cmd.args([
             "-f",
-            "bestaudio[ext=m4a]/bestaudio",
+            DOWNLOAD_FORMAT,
             "--no-playlist",
             "--no-warnings",
             "--no-mtime",
@@ -229,7 +250,8 @@ fn split_artist(title: &str, artist_norm: &str) -> (String, bool) {
 }
 
 async fn download(bin: &Path) -> Result<(), String> {
-    let bytes = reqwest::get(DOWNLOAD_URL)
+    let url = format!("https://github.com/yt-dlp/yt-dlp/releases/latest/download/{}", RELEASE_ASSET.0);
+    let bytes = reqwest::get(&url)
         .await
         .and_then(|r| r.error_for_status())
         .map_err(|e| format!("No se pudo descargar yt-dlp: {e}"))?
@@ -238,6 +260,12 @@ async fn download(bin: &Path) -> Result<(), String> {
         .map_err(|e| format!("No se pudo descargar yt-dlp: {e}"))?;
     let part = bin.with_extension("part");
     std::fs::write(&part, &bytes).map_err(|e| e.to_string())?;
+    // En Mac y Linux hay que marcarlo como ejecutable.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
+    }
     std::fs::rename(&part, bin).map_err(|e| e.to_string())
 }
 
