@@ -94,6 +94,8 @@ async fn choose_source(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "android")]
+    android::install_panic_hook();
     let builder = tauri::Builder::default();
     // Solo en escritorio: una sola instancia y el actualizador de Tauri (en Android, Obtainium).
     #[cfg(desktop)]

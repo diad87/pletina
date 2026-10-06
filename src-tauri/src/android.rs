@@ -15,7 +15,8 @@ use jni::sys::{jboolean, jstring};
 use serde::Serialize;
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::{LazyLock, Mutex};
+use std::io::Write;
+use std::sync::{LazyLock, Mutex, Once};
 use std::time::Instant;
 
 /// Runtime propio: el servicio puede llamar sin que Tauri haya arrancado.
@@ -28,6 +29,22 @@ static DEEZER: LazyLock<Deezer> = LazyLock::new(Deezer::new);
 static CHOSEN: LazyLock<Mutex<HashMap<u64, String>>> = LazyLock::new(Default::default);
 /// Candidatos que se prueban como mucho por canción.
 const MAX_CANDIDATES: usize = 3;
+/// Registro de la prueba (el mismo que escribe Kotlin, ver Fase0Log.kt).
+const LOG: &str = "/data/data/dev.musify.desktop/files/fase0.log";
+
+/// Un fallo de Rust cierra la app sin decir nada (panic = abort): antes, se apunta en el registro.
+pub fn install_panic_hook() {
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(LOG) {
+                let _ = writeln!(f, "CIERRE en Rust: {info}");
+            }
+            previous(info);
+        }));
+    });
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -103,6 +120,7 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_playlist<'l>(
     _class: JClass<'l>,
     queries: JString<'l>,
 ) -> jstring {
+    install_panic_hook();
     let queries = from_java(&mut env, &queries);
     let out = match RT.block_on(playlist(&queries)) {
         Ok(items) => serde_json::to_string(&items).unwrap_or_default(),
@@ -120,6 +138,7 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_resolve<'l>(
     query: JString<'l>,
     refresh: jboolean,
 ) -> jstring {
+    install_panic_hook();
     let query = from_java(&mut env, &query);
     let out = match serde_json::from_str::<TrackQuery>(&query) {
         Ok(q) => match RT.block_on(resolve(&q, refresh != 0)) {

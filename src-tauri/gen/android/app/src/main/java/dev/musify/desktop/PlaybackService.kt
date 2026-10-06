@@ -11,7 +11,6 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -24,8 +23,8 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import org.json.JSONArray
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import org.json.JSONObject
 
 /**
@@ -34,15 +33,15 @@ import org.json.JSONObject
  * de YouTube se le pide al núcleo Rust justo cuando ExoPlayer va a abrirla; ExoPlayer prepara la
  * siguiente antes de que acabe la actual.
  *
- * Para la prueba se arranca desde la actividad:
- * `adb shell am start -n dev.musify.desktop/.MainActivity --es fase0 "radiohead ok computer|estopa estopa"`
+ * La lista llega de un MediaController (la pantalla de la prueba, `Fase0Activity`): Media3 quita las
+ * URIs de lo que mandan los controladores, así que cada canción trae su consulta en
+ * `requestMetadata.extras` y aquí se le pone su `musify://track/<id>` (`onAddMediaItems`).
  */
 @OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
   private var session: MediaSession? = null
   private lateinit var player: ExoPlayer
   private val main = Handler(Looper.getMainLooper())
-  private val worker = Executors.newSingleThreadExecutor()
 
   /** Canción (id de Deezer) → consulta para el núcleo (TrackQuery en JSON). */
   private val queries = ConcurrentHashMap<String, String>()
@@ -50,6 +49,8 @@ class PlaybackService : MediaSessionService() {
   private val refresh = ConcurrentHashMap.newKeySet<String>()
   /** Reintentos seguidos de la canción actual. */
   private var retries = 0
+  /** Se cortó por falta de red: en cuanto vuelva, se sigue en el mismo punto. */
+  private var waitingForNetwork = false
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
   override fun onCreate() {
@@ -69,19 +70,12 @@ class PlaybackService : MediaSessionService() {
       .setWakeMode(C.WAKE_MODE_NETWORK)
       .build()
     player.addListener(listener)
-    session = MediaSession.Builder(this, player).build()
+    session = MediaSession.Builder(this, player).setCallback(callback).build()
     watchNetwork()
     heartbeat()
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
-
-  override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    if (intent?.action == ACTION_FASE0) {
-      intent.getStringExtra(EXTRA_QUERIES)?.let { start(it.replace('|', '\n')) }
-    }
-    return super.onStartCommand(intent, flags, startId)
-  }
 
   override fun onTaskRemoved(rootIntent: Intent?) {
     Fase0Log.log("app quitada de recientes; sonando=${player.isPlaying}")
@@ -97,42 +91,21 @@ class PlaybackService : MediaSessionService() {
       release()
     }
     session = null
-    worker.shutdown()
     super.onDestroy()
   }
 
-  /** Monta la cola con los discos de las búsquedas y empieza a sonar. */
-  private fun start(searches: String) {
-    worker.execute {
-      val json = MusifyCore.playlist(searches)
-      if (json.startsWith("{")) {
-        Fase0Log.log("lista: error ${JSONObject(json).optString("error")}")
-        return@execute
+  private val callback = object : MediaSession.Callback {
+    /** Canciones que manda un controlador: se apunta su consulta y se les pone su URI. */
+    override fun onAddMediaItems(
+      mediaSession: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      mediaItems: MutableList<MediaItem>,
+    ): ListenableFuture<MutableList<MediaItem>> {
+      val items = mediaItems.map { item ->
+        item.requestMetadata.extras?.getString(EXTRA_QUERY)?.let { queries[item.mediaId] = it }
+        item.buildUpon().setUri("musify://track/${item.mediaId}").build()
       }
-      val list = JSONArray(json)
-      val items = (0 until list.length()).map { i ->
-        val t = list.getJSONObject(i)
-        val id = t.getLong("id").toString()
-        queries[id] = JSONObject()
-          .put("id", t.getLong("id"))
-          .put("title", t.getString("title"))
-          .put("artist", t.getString("artist"))
-          .put("album", t.getString("album"))
-          .put("duration", t.getInt("duration"))
-          .toString()
-        val meta = MediaMetadata.Builder()
-          .setTitle(t.getString("title"))
-          .setArtist(t.getString("artist"))
-          .setAlbumTitle(t.getString("album"))
-        t.optString("cover").takeIf { it.isNotEmpty() && it != "null" }?.let { meta.setArtworkUri(Uri.parse(it)) }
-        MediaItem.Builder().setMediaId(id).setUri("musify://track/$id").setMediaMetadata(meta.build()).build()
-      }
-      Fase0Log.log("lista: ${items.size} canciones (${searches.replace('\n', '|')})")
-      main.post {
-        player.setMediaItems(items)
-        player.prepare()
-        player.play()
-      }
+      return Futures.immediateFuture(items.toMutableList())
     }
   }
 
@@ -172,18 +145,40 @@ class PlaybackService : MediaSessionService() {
     override fun onPlayerError(error: PlaybackException) {
       Fase0Log.log("error: ${error.errorCodeName} ${error.message} (${network()})")
       val id = player.currentMediaItem?.mediaId ?: return
-      // Problema de red o URL que ya no vale: se pide otra y se sigue en el mismo segundo.
-      if (error.errorCode in 2000..2999 && retries < 3) {
-        retries++
-        refresh.add(id)
-        val at = player.currentPosition
-        main.postDelayed({
-          Fase0Log.log("reintento $retries desde ${at / 1000} s")
-          player.seekTo(player.currentMediaItemIndex, at)
-          player.prepare()
-          player.play()
-        }, 1000L * retries)
+      // Siempre con URL nueva: la anterior puede haber caducado o ser de otra red.
+      refresh.add(id)
+      when {
+        error.errorCode !in 2000..2999 -> skip("no se puede reproducir")
+        network() == "sin red" -> {
+          waitingForNetwork = true
+          Fase0Log.log("esperando a que vuelva la red")
+        }
+        retries < 3 -> {
+          retries++
+          main.postDelayed({ resume("reintento $retries") }, 1000L * retries)
+        }
+        else -> skip("no sale después de 3 intentos")
       }
+    }
+  }
+
+  /** Sigue en la misma canción y el mismo segundo. */
+  private fun resume(why: String) {
+    val at = player.currentPosition
+    Fase0Log.log("$why desde ${at / 1000} s")
+    player.seekTo(player.currentMediaItemIndex, at)
+    player.prepare()
+    player.play()
+  }
+
+  /** Esta canción no sale: a la siguiente, para que la música no se pare. */
+  private fun skip(why: String) {
+    Fase0Log.log("se salta ($why)")
+    retries = 0
+    if (player.hasNextMediaItem()) {
+      player.seekToNextMediaItem()
+      player.prepare()
+      player.play()
     }
   }
 
@@ -218,7 +213,14 @@ class PlaybackService : MediaSessionService() {
     val cm = getSystemService(ConnectivityManager::class.java) ?: return
     val callback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
-        main.postDelayed({ Fase0Log.log("red: ${network()}") }, 500)
+        main.postDelayed({
+          Fase0Log.log("red: ${network()}")
+          if (waitingForNetwork) {
+            waitingForNetwork = false
+            retries = 0
+            resume("vuelve la red")
+          }
+        }, 1500)
       }
 
       override fun onLost(network: Network) {
@@ -230,7 +232,7 @@ class PlaybackService : MediaSessionService() {
   }
 
   companion object {
-    const val ACTION_FASE0 = "dev.musify.FASE0"
-    const val EXTRA_QUERIES = "queries"
+    /** Consulta de la canción para el núcleo (TrackQuery en JSON), en `requestMetadata.extras`. */
+    const val EXTRA_QUERY = "query"
   }
 }
