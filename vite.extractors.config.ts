@@ -14,6 +14,6 @@ export default defineConfig({
       formats: ['es'],
       fileName: () => 'youtubei.js',
     },
-    rollupOptions: { output: { inlineDynamicImports: true, minify: true } },
+    rollupOptions: { output: { codeSplitting: false, minify: true } },
   },
 })

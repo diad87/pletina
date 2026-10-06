@@ -330,14 +330,17 @@ mod tests {
         for e in &manifest.components {
             install(&source, e).await.unwrap();
         }
+        assert!(status().iter().all(|s| s.downloaded));
+        // Al arrancar, solo se usan los que son más nuevos que los incluidos.
         ACTIVE.write().unwrap().clear();
         for (name, _) in API {
             load(&dir, name).unwrap();
         }
         for s in status() {
-            println!("{} v{} {}", s.name, s.version, if s.downloaded { "descargado" } else { "incluido" });
+            let published = manifest.components.iter().find(|e| e.name == s.name).unwrap().version;
+            println!("{} publicado v{published}, en uso v{} ({})", s.name, s.version, if s.downloaded { "descargado" } else { "incluido" });
+            assert_eq!(s.downloaded, published > BUNDLED[s.name]);
         }
-        assert!(status().iter().all(|s| s.downloaded));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
