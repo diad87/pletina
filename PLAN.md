@@ -62,18 +62,18 @@ La única desventaja es que hace falta Rust para compilar la app. Para usarla no
    - Los tres se generan solos con GitHub Actions en cada versión.
    - Que no dependa de nada instalado: la app baja el yt-dlp de cada sistema y, en lugar de usar Node, un motor de JavaScript pequeño que también se descarga sola.
    - Comprobar los formatos de audio: el motor web de Mac y Linux (WebKit) puede necesitar m4a en lugar de webm/opus.
-7. **Móvil.** Tauri 2 también genera apps de Android e iOS con la misma interfaz. Depende del proyecto paralelo P1 (sacar el audio sin yt-dlp) y de sincronizar la biblioteca (Firebase).
+7. **Móvil: primero Android.** APK propio, sin tiendas ni cuentas de pago, instalado y actualizado con Obtainium. La misma interfaz (Tauri), pero la música suena en un servicio de Android con ExoPlayer, para que siga con la pantalla apagada, y el audio sale del motor propio, que es Rust y no necesita la interfaz. iPhone más adelante, gratis (SideStore). Android Auto y CarPlay, fuera por ahora. Plan completo en [docs/plan-mobile.md](docs/plan-mobile.md).
 
 ### Actualizaciones automáticas en todas las plataformas
 Requisito: se instala el "cascarón" una vez y, al publicar una versión en GitHub, se actualiza solo, sin que el usuario haga nada. Todas las actualizaciones van firmadas con una clave propia; la app rechaza cualquier versión sin esa firma. GitHub Actions compila y publica todo al subir una versión.
 
 Tres capas:
-1. **Extractores (hecho, 0.4.0):** lo que saca el audio de YouTube se actualiza por separado, cada pieza desde su fuente y sin tocar el resto de la app. Ver "Extractores que se actualizan solos" más abajo. Funciona igual en las 5 plataformas: lo baja y lo comprueba la parte de Rust, y son datos o JavaScript (iOS deja actualizar JavaScript que corre en su motor web).
+1. **Extractores (hecho, 0.4.0):** lo que saca el audio de YouTube se actualiza por separado, cada pieza desde su fuente y sin tocar el resto de la app. Ver "Extractores que se actualizan solos" más abajo. En Android funciona igual, porque lo baja y lo comprueba la parte de Rust. Allí lo que importa es la receta, que es lo que usará el motor del móvil; youtubei.js y la ventana oculta solo funcionan con la app delante.
 2. **Contenido (la interfaz):** se descargaría de GitHub en segundo plano y se aplicaría al volver a abrir la app. Requiere servir la interfaz desde una carpeta local en lugar de llevarla dentro del ejecutable; está sin hacer.
 3. **Cascarón (el ejecutable, cuando cambia la parte de Rust):**
    - Windows, Mac, Linux (AppImage): actualizador oficial de Tauri. Descarga en segundo plano e instala al cerrar la app. Totalmente silencioso.
-   - Android: la app no puede ir a Google Play (incumple sus normas por usar YouTube). Se instala el APK con **Obtainium**, que vigila las versiones de GitHub y, en Android 12 o superior, actualiza en segundo plano sin preguntar.
-   - iOS: tampoco puede ir a la App Store. Con **SideStore/AltStore** (gratis) la app se instala y se renueva sola cada 7 días, y puede actualizarse desde una "fuente" en GitHub, pero iOS no deja que sea del todo automático. Con la cuenta de desarrollador (99 $/año) el certificado dura un año; la actualización del cascarón sigue pidiendo un toque.
+   - Android: sin Google Play (decidido; además incumple sus normas por usar YouTube). APK firmado con clave propia y publicado en musify-releases; **Obtainium** lo vigila y lo instala. En Android 12 o superior puede actualizar sin preguntar; está por comprobar en el móvil.
+   - iOS (más adelante): sin App Store ni cuenta de pago (decidido). Con **SideStore** y un Apple ID gratis, la firma dura 7 días y se renueva desde el propio iPhone. Actualizar el cascarón pide un toque.
 
 ### Extractores que se actualizan solos
 Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el resto de la app:
@@ -94,7 +94,7 @@ Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el res
   - Script de la ventana oculta: no tiene respaldo automático. Si uno sale mal, se arregla publicando otro.
 - **`api` y `version`** (en `src-tauri/extractors.json`): al cambiar un extractor hay que subir su `version` (si no, `scripts/extractors.mjs` se niega a publicarlo). Si cambia cómo habla con la app (lo que espera de Rust o de la interfaz), se sube su `api` aquí y en `API` de `extractors.rs`, y ese extractor nuevo solo lo usan las apps que ya lo entienden. Las más viejas siguen con el último de su `api` hasta que se actualiza la app.
 - **Lo que no se puede cambiar así:** el código en Rust del motor propio (`native.rs`, `capture.rs`) y cómo se elige el motor (`extractor.rs`). Eso necesita una versión de la app, que en escritorio también se instala sola.
-- **Móvil:** el mismo sistema sirve en Android e iOS, porque el que baja y comprueba es Rust y lo que se baja son datos y JavaScript. yt-dlp no existe allí; la ventana oculta necesitará el plugin nativo de cada sistema (ver P1).
+- **Móvil:** el mismo sistema sirve en Android e iOS, porque el que baja y comprueba es Rust. Con la pantalla apagada solo cuenta la receta del motor propio (Rust); youtubei.js y la ventana oculta necesitan la interfaz viva. yt-dlp no existe allí. Ver [docs/plan-mobile.md](docs/plan-mobile.md).
 - **Probado** (6 oct 2026, en el entorno aislado de Claude, ver "Estado"):
   - con un canal local con la versión 2 de los tres, la app los cambió solos;
   - tras reiniciar sin conexión al canal, siguió usando los guardados;
@@ -137,11 +137,11 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - **Contenido que pide iniciar sesión** (con restricción de edad, por ejemplo): hará falta enseñar la ventana del motor para iniciar sesión una vez, como haría una persona. Pendiente.
   - Si YouTube pidiera un **captcha**, igual: enseñar la ventana para resolverlo. Pendiente.
   - En el nivel garantizado, saltar a una parte aún no copiada tarda 1–3 s.
-  - Las tiendas de apps no aceptan una app así (pasa igual con cualquier motor). En Android se instalaría con el APK; en iPhone, con Xcode (gratis caduca a los 7 días; con la cuenta de 99 $/año, al año).
+  - Las tiendas de apps no aceptan una app así (pasa igual con cualquier motor). No se publicará en ellas: en Android, APK propio con Obtainium; en iPhone, SideStore con un Apple ID gratis.
 - **Pendiente:**
   - Búsqueda de respaldo en YouTube normal sin yt-dlp (hoy `ytdlp.search`): pasarla a `youtube.rs`.
   - Descargas sin yt-dlp: guardar lo que copia el nivel garantizado o bajar la URL del nivel rápido.
-- **Móvil (fase 7):** el nivel rápido es Rust y funciona igual. El garantizado necesita en cada sistema una WebView controlada por código nativo, con su canal nativo. Tauri no deja abrir una segunda ventana en el móvil, y Android no deja leer lo que una página envía a un protocolo propio.
+- **Móvil (fase 7, ver [docs/plan-mobile.md](docs/plan-mobile.md)):** el nivel rápido es Rust, no necesita la interfaz y es el motor de la primera versión de Android: puede preparar canciones con la pantalla apagada. El garantizado se queda fuera de esa primera versión. Necesita en cada sistema una WebView controlada por código nativo, con su canal nativo, y una página viva, cosa que Android no sostiene con la pantalla apagada. Tauri no deja abrir una segunda ventana en el móvil, y Android no deja leer lo que una página envía a un protocolo propio. Notas para cuando toque:
   - **Android:** plugin en Kotlin con su `WebView`, `addJavascriptInterface` como canal y `addDocumentStartJavaScript` para el script. Para que suene con la pantalla apagada hará falta un servicio en primer plano (igual con cualquier motor).
   - **iOS:** `WKWebView` con `WKUserScript` y `WKScriptMessageHandler`. Primero hay que comprobar cómo reproduce YouTube Music en iPhone: si usa HLS en vez de Media Source, se captura la URL HLS que pide su reproductor y se reproduce tal cual (iOS sabe hacerlo).
   - En Mac y Linux, lo mismo con WKWebView y WebKitGTK.
@@ -194,6 +194,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - [x] Streaming de solo audio, sin el reproductor de YouTube. Las descargas para escuchar sin conexión llegan en la fase 5.
 - [x] Datos en local (SQLite). Firebase solo cuando llegue el móvil (fase 7).
 - [x] Hoja de ruta: 4 biblioteca → 5 descargas → 6 Linux y Mac → 7 móvil.
+- [x] Móvil (6 oct 2026): primero Android, con APK propio y Obtainium. Sin tiendas oficiales ni cuentas de pago. Android Auto y CarPlay, fuera por ahora. iPhone, más adelante y gratis (SideStore), sin CarPlay.
 
 ## Estado
 - [x] **Fase 1: esqueleto y catálogo.** Búsqueda de artistas y discos, discografía por secciones (álbumes / sencillos y EP / recopilatorios), página de disco con su lista de canciones (agrupada por CD si tiene varios), atrás/adelante que recuerda la búsqueda y el scroll, y "Visto recientemente" en Inicio.
@@ -242,7 +243,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - **Ojo al probar desde Claude (app de escritorio):** los comandos que lanza Claude corren dentro de su paquete MSIX, y lo que escriben en `%LOCALAPPDATA%` va a `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\…`. Lo que se instale, actualice o se pruebe desde ahí usa otra carpeta de datos que el Musify que abres desde el menú Inicio. Las actualizaciones automáticas de 0.2.0 → 0.2.1 → 0.3.0 se probaron en esa copia aislada; en el equipo real todavía no.
 - [x] **Motor de audio propio y extractores que se actualizan solos** (0.4.0): el trabajo de P1 integrado (selector en Inicio: yt-dlp, youtubei.js o Propio; yt-dlp sigue por defecto). La receta y el script del motor propio y youtubei.js se publican y se actualizan por separado, sin reinstalar la app; youtubei.js nuevo se coge solo de npm. Ver "Extractores que se actualizan solos".
   - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en musify-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
-- [ ] Fase 7: móvil
+- [ ] **Fase 7: móvil, empezando por Android.** Plan en [docs/plan-mobile.md](docs/plan-mobile.md). Lo primero es la fase 0: comprobar en un móvil de verdad que el motor propio sigue preparando canciones con la pantalla apagada.
 
 ## Repositorios
 - Código (privado): https://github.com/diad87/musify — rama `main`.
