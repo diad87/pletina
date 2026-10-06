@@ -73,6 +73,18 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 
 **Sale bien si** pasa de canción y prepara las nuevas con la pantalla apagada, se recupera al cambiar de red y no se corta en una hora. **Si el motor propio no funciona desde el móvil** (YouTube podría tratar distinto las conexiones móviles), se para aquí: probar otra receta (llega sola) o decidir otro camino, antes de seguir.
 
+**Cómo se hace:** el APK de prueba (rama `android-fase0`) trae un icono aparte, «Musify · prueba», con su pantalla: «Empezar» monta 47 canciones de 4 discos y «Enviar registro» comparte `files/fase0.log`. No hace falta cable. El registro apunta cada canción, lo que tarda en prepararse, la red, los errores, los cierres y una línea por minuto.
+
+**Resultados (6 oct 2026):**
+- **Emulador** (Android 15, en el PC): con la pantalla apagada, salta a canciones nuevas (≈1 s cada una). Sin red, espera y sigue sola cuando vuelve, con una URL nueva desde el mismo segundo; pasa de datos a Wi-Fi sin cortarse.
+- **Xiaomi del usuario, primera versión:** sonaba (0,85 s para preparar la canción con Wi-Fi) y siguió sin cortes al pasar de Wi-Fi a datos. Pero Android cerró el servicio al minuto y medio, porque no estaba en primer plano (por eso tampoco había controles en la pantalla de bloqueo). Arreglado: la música se arranca con un `MediaController` desde la pantalla de prueba.
+- **Xiaomi, segunda versión, 9 minutos con datos móviles:**
+  - prepara cada canción en 1,1–1,25 s;
+  - ExoPlayer preparó la siguiente minuto y medio antes de que acabara la actual;
+  - pasó de canción solo y siguió vivo todo el rato.
+
+  Falta la hora completa con la pantalla apagada: es lo que más se nota en un Xiaomi, por su ahorro de batería.
+
 ### Fase 1: el reproductor de verdad
 - El núcleo Rust con su propio arranque, usado igual por Tauri y por el servicio.
 - El servicio completo:
