@@ -165,7 +165,7 @@
     inset: 0;
     background: var(--photo) center 25% / cover no-repeat;
     mask-image: linear-gradient(180deg, #000 45%, transparent 100%);
-    animation: settle 1.2s var(--ease) both;
+    animation: settle 1.2s var(--ease) backwards;
   }
   @keyframes settle {
     from {
@@ -248,5 +248,15 @@
   .count {
     font-size: 12px;
     opacity: 0.6;
+  }
+
+  @media (max-width: 720px) {
+    .banner {
+      min-height: 300px;
+      padding: calc(60px + var(--safe-top)) 16px 20px;
+    }
+    h1 {
+      font-size: 44px;
+    }
   }
 </style>

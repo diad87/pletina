@@ -280,4 +280,26 @@
     opacity: 1;
     transform: none;
   }
+
+  @media (max-width: 720px) {
+    .home {
+      padding-top: calc(60px + var(--safe-top));
+    }
+    .tiles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 4px 12px;
+    }
+    .tile {
+      height: 56px;
+      gap: 10px;
+    }
+    .tile-art {
+      width: 56px;
+      height: 56px;
+    }
+    .tile-title {
+      font-size: 13px;
+    }
+  }
 </style>

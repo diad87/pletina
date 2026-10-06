@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layout } from '../lib/layout.svelte'
   import { nav } from '../lib/nav.svelte'
   import { theme } from '../lib/theme.svelte'
   import { updates } from '../lib/updates.svelte'
@@ -12,6 +13,9 @@
   // Se va volviendo opaca al bajar; pasada la cabecera, aparecen el título y el botón de reproducir.
   const solid = $derived(Math.min(1, Math.max(0, (scrollY - 40) / 180)))
   const compact = $derived(scrollY > 300 && !!theme.title)
+  // Móvil: las tres secciones de la barra de abajo no llevan "atrás"; el buscador solo en Buscar.
+  const root = $derived(['home', 'search', 'library'].includes(nav.route.name))
+  const showSearch = $derived(!layout.mobile || nav.route.name === 'search')
 
   // Al volver atrás a una búsqueda, el cuadro muestra su texto; fuera de búsqueda, vacío.
   $effect(() => {
@@ -41,15 +45,21 @@
   }
 </script>
 
-<header class="topbar" style:--solid={solid}>
-  <div class="arrows">
-    <button class="round" onclick={() => nav.back()} disabled={!nav.canBack} title="Atrás (Alt+←)">
-      <Icon name="back" />
-    </button>
-    <button class="round" onclick={() => nav.forward()} disabled={!nav.canForward} title="Adelante (Alt+→)">
-      <Icon name="forward" />
-    </button>
-  </div>
+<header class="topbar" class:mobile={layout.mobile} style:--solid={solid}>
+  {#if layout.mobile}
+    {#if !root && nav.canBack}
+      <button class="round" onclick={() => nav.back()} title="Atrás"><Icon name="back" /></button>
+    {/if}
+  {:else}
+    <div class="arrows">
+      <button class="round" onclick={() => nav.back()} disabled={!nav.canBack} title="Atrás (Alt+←)">
+        <Icon name="back" />
+      </button>
+      <button class="round" onclick={() => nav.forward()} disabled={!nav.canForward} title="Adelante (Alt+→)">
+        <Icon name="forward" />
+      </button>
+    </div>
+  {/if}
 
   {#if compact}
     <div class="compact">
@@ -62,6 +72,7 @@
     </div>
   {/if}
 
+  {#if showSearch}
   <label class="search" class:shrink={compact}>
     <Icon name="search" />
     <input
@@ -85,8 +96,8 @@
       >
     {/if}
   </label>
-
-  {#if updates.state === 'ready'}
+  {/if}
+  {#if updates.state === 'ready' && !layout.mobile}
     <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Musify; pulsa para instalarla ya">
       <span class="dot"></span> Versión {updates.version} lista · <strong>Reiniciar</strong>
     </button>
@@ -258,5 +269,20 @@
   }
   .clear:hover {
     color: var(--text);
+  }
+
+  /* Móvil: más baja, por debajo de la barra de estado. */
+  .topbar.mobile {
+    height: calc(56px + var(--safe-top));
+    padding: var(--safe-top) 12px 0;
+    gap: 12px;
+  }
+  .mobile .search {
+    width: 100%;
+    height: 42px;
+    margin: 0;
+  }
+  .mobile .compact .title {
+    font-size: 17px;
   }
 </style>

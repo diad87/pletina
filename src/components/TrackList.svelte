@@ -3,6 +3,7 @@
   import { trackMenu } from '../lib/actions'
   import { downloads } from '../lib/downloads.svelte'
   import { duration } from '../lib/format'
+  import { layout } from '../lib/layout.svelte'
   import { library } from '../lib/library.svelte'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
@@ -41,7 +42,12 @@
 
   function openMenu(e: MouseEvent, i: number) {
     const inPlaylist = playlistId != null && entryIds ? { id: playlistId, entryId: entryIds[i] } : undefined
-    menu.show(e, trackMenu(items[i], inPlaylist))
+    const item = items[i]
+    menu.show(e, trackMenu(item, inPlaylist), {
+      title: item.track.title,
+      subtitle: item.track.artist.name,
+      cover: item.cover,
+    })
   }
 
   function go(e: MouseEvent, route: Parameters<typeof nav.go>[0]) {
@@ -99,7 +105,7 @@
         class:drop-after={dragFrom !== null && dropAt === items.length && i === items.length - 1}
         role="button"
         tabindex="0"
-        draggable="true"
+        draggable={!layout.mobile}
         onclick={() => play(i)}
         onkeydown={(e) => e.key === 'Enter' && play(i)}
         oncontextmenu={(e) => openMenu(e, i)}
@@ -150,7 +156,7 @@
         {/if}
         {#if meta}<span class="meta">{meta(i)}</span>{/if}
 
-        <span>
+        <span class="like-cell">
           <button
             class="icon heart"
             class:on={liked}
@@ -162,7 +168,7 @@
           >
         </span>
         <span class="dur">{duration(item.track.duration)}</span>
-        <span>
+        <span class="more-cell">
           <button class="icon more" title="Más opciones" onclick={(e) => openMenu(e, i)}>
             <Icon name="more" size={18} />
           </button>
@@ -372,6 +378,36 @@
     }
     to {
       height: 14px;
+    }
+  }
+
+  /* Móvil: título y artista, y el botón "⋯" siempre visible. */
+  @media (max-width: 720px) {
+    .head,
+    .row > .num,
+    .row > .album,
+    .row > .meta,
+    .row > .dur,
+    .row > .like-cell {
+      display: none;
+    }
+    .row,
+    .list .row,
+    .list.with-meta .row {
+      grid-template-columns: minmax(0, 1fr) 40px;
+      gap: 8px;
+      min-height: 58px;
+      padding: 0 0 0 8px;
+      -webkit-touch-callout: none;
+    }
+    .more {
+      opacity: 1;
+    }
+    .row:hover {
+      background: none;
+    }
+    .row:active {
+      background: var(--press);
     }
   }
 </style>

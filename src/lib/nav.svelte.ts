@@ -10,6 +10,8 @@ export type Route =
   | { name: 'history' }
   | { name: 'downloads' }
   | { name: 'local' }
+  /** "Tu biblioteca" como página (en el móvil; en escritorio está en la barra lateral). */
+  | { name: 'library' }
 
 const sameRoute = (a: Route, b: Route) => JSON.stringify(a) === JSON.stringify(b)
 

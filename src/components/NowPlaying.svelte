@@ -2,7 +2,7 @@
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
   import { library } from '../lib/library.svelte'
-  import { mediaUrl } from '../lib/media'
+  import { isLocal, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -62,6 +62,15 @@
           </button>
         </div>
         <Transport big />
+        <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
+        <div class="extras">
+          <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
+            <Icon name="swap" size={20} /> ¿No es esta canción?
+          </button>
+          <button onclick={() => (theme.queueOpen = true)}>
+            <Icon name="queue" size={20} /> Cola{#if queued.length}&nbsp;· {queued.length}{/if}
+          </button>
+        </div>
       </section>
 
       <aside class="queue">
@@ -323,5 +332,48 @@
   .empty {
     margin: 12px;
     color: rgb(255 255 255 / 0.6);
+  }
+
+  .extras {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    header {
+      padding: calc(8px + var(--safe-top)) 12px 4px;
+    }
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 4px 24px calc(20px + var(--safe-bottom));
+    }
+    .queue {
+      display: none;
+    }
+    .art,
+    .meta {
+      width: min(100%, 44vh);
+    }
+    .stage {
+      gap: 20px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    .extras {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .extras button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      color: rgb(255 255 255 / 0.75);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .extras button:disabled {
+      opacity: 0.4;
+    }
   }
 </style>

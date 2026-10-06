@@ -4,11 +4,13 @@ import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { toast } from './toast.svelte'
 import type { AlbumDetail } from './types'
+import { layout } from './layout.svelte'
 import { library } from './library.svelte'
 import { isLocal } from './media'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
+import { justCreated } from '../views/PlaylistView.svelte'
 
 /** "Añadir a playlist ▸": nueva playlist + las que ya hay. */
 export function addToPlaylistMenu(items: () => QueueItem[] | Promise<QueueItem[]>): MenuItem {
@@ -73,7 +75,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       { label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) },
       { label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) },
     )
-  } else if (!downloads.active.has(id)) {
+  } else if (!downloads.active.has(id) && layout.canDownload) {
     items.push({ label: 'Descargar', icon: 'download', action: () => downloads.start([item]) })
   }
   if (playlist) {
@@ -121,4 +123,12 @@ export async function playAlbum(albumId: number) {
   } catch (e) {
     toast.show(`No se pudo abrir el disco: ${e}`)
   }
+}
+
+/** Crea una playlist vacía y la abre (con el nombre listo para cambiarlo). */
+export async function newPlaylist() {
+  const created = await library.createPlaylist()
+  if (!created) return
+  justCreated.add(created.id)
+  nav.go({ name: 'playlist', id: created.id })
 }

@@ -44,6 +44,10 @@ struct Bridge {
 }
 
 pub fn init(app: AppHandle) {
+    // En el móvil no hay yt-dlp: el motor de siempre es el propio.
+    if cfg!(mobile) {
+        let _ = set_stream_engine("propio".into());
+    }
     if let Ok(engine) = std::env::var("MUSIFY_ENGINE") {
         let _ = set_stream_engine(engine);
     }
@@ -152,8 +156,17 @@ pub fn extractor_reply(reply: Reply) {
     }
 }
 
+/// Motores que se pueden elegir aquí (en el móvil no hay yt-dlp ni ventana oculta).
+#[tauri::command]
+pub fn stream_engines() -> Vec<&'static str> {
+    if cfg!(mobile) { vec!["youtubei", "propio"] } else { vec!["ytdlp", "youtubei", "propio"] }
+}
+
 #[tauri::command]
 pub fn set_stream_engine(engine: String) -> Result<(), String> {
+    if cfg!(mobile) && !stream_engines().contains(&engine.as_str()) {
+        return Err(format!("{engine} no está en el móvil"));
+    }
     let i = ENGINES.iter().position(|e| *e == engine).ok_or(format!("Motor desconocido: {engine}"))?;
     ENGINE.store(i as u8, Ordering::Relaxed);
     Ok(())

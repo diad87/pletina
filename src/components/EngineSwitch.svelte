@@ -2,12 +2,17 @@
   // Prototipo P1: elegir con qué se saca el audio de YouTube.
   import { extractor, type Engine, type EngineStats } from '../lib/extractor/engine.svelte'
   import { toast } from '../lib/toast.svelte'
+  import { invoke } from '@tauri-apps/api/core'
 
-  const options: { value: Engine; label: string }[] = [
+  const ALL: { value: Engine; label: string }[] = [
     { value: 'ytdlp', label: 'yt-dlp' },
     { value: 'youtubei', label: 'youtubei.js (prueba)' },
     { value: 'propio', label: 'Propio' },
   ]
+  // Los que hay en este sistema (en el móvil no hay yt-dlp).
+  let available = $state<string[]>(['ytdlp', 'youtubei', 'propio'])
+  invoke<string[]>('stream_engines').then((list) => (available = list)).catch(() => {})
+  const options = $derived(ALL.filter((o) => available.includes(o.value)))
 
   let stats = $state<EngineStats | null>(null)
   $effect(() => {

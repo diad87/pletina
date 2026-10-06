@@ -11,20 +11,27 @@ export interface MenuItem {
   separated?: boolean
 }
 
-/** Menú contextual único: clic derecho en una canción o botón "⋯". */
-class Menu {
-  open = $state<{ x: number; y: number; items: MenuItem[] } | null>(null)
+/** De qué es el menú: en el móvil se enseña arriba de la hoja. */
+export interface MenuHeader {
+  title: string
+  subtitle?: string
+  cover?: string | null
+}
 
-  show(e: MouseEvent, items: MenuItem[]) {
+/** Menú contextual único: clic derecho (o mantener pulsado) en una canción o botón "⋯". */
+class Menu {
+  open = $state<{ x: number; y: number; items: MenuItem[]; header?: MenuHeader } | null>(null)
+
+  show(e: MouseEvent, items: MenuItem[], header?: MenuHeader) {
     e.preventDefault()
     e.stopPropagation()
     // Desde un botón, debajo del botón; con clic derecho, donde está el ratón.
     const target = e.currentTarget
     if (e.type === 'click' && target instanceof HTMLElement) {
       const r = target.getBoundingClientRect()
-      this.open = { x: r.left, y: r.bottom + 4, items }
+      this.open = { x: r.left, y: r.bottom + 4, items, header }
     } else {
-      this.open = { x: e.clientX, y: e.clientY, items }
+      this.open = { x: e.clientX, y: e.clientY, items, header }
     }
   }
 

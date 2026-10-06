@@ -192,6 +192,7 @@ pub fn run() {
             extractor::http_fetch,
             extractor::extractor_reply,
             extractor::set_stream_engine,
+            extractor::stream_engines,
             extractor::stream_engine,
             extractor::bench_plan,
             extractor::bench_report,

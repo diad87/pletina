@@ -1,6 +1,7 @@
 <script lang="ts">
   // Descargar un disco o una lista entera: descarga / progreso / descargado.
   import { downloads } from '../lib/downloads.svelte'
+  import { layout } from '../lib/layout.svelte'
   import { isLocal } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import type { QueueItem } from '../lib/player.svelte'
@@ -44,7 +45,7 @@
   )
 </script>
 
-{#if items.length}
+{#if items.length && layout.canDownload}
   <button class="action" class:on={complete} {onclick} {title}>
     {#if busy}
       <svg class="ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">

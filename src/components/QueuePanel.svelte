@@ -1,6 +1,7 @@
 <script lang="ts">
   // Panel lateral de la cola: lo que suena, tu cola (la que vas montando) y lo que viene después.
   import { duration } from '../lib/format'
+  import { layout } from '../lib/layout.svelte'
   import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
@@ -106,7 +107,11 @@
       <li class="drop-zone" class:drop-before={dropAt === player.userQueue.length && player.userQueue.length > 0}>
         {#if !player.userQueue.length}
           <Icon name="queue" size={20} />
-          <span>Arrastra canciones aquí, o usa <strong>⋯ → Añadir a la cola</strong> en cualquier canción o disco.</span>
+          {#if layout.mobile}
+            <span>Mantén pulsada una canción, o usa <strong>⋯ → Añadir a la cola</strong>.</span>
+          {:else}
+            <span>Arrastra canciones aquí, o usa <strong>⋯ → Añadir a la cola</strong> en cualquier canción o disco.</span>
+          {/if}
         {/if}
       </li>
     </ol>

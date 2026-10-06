@@ -249,4 +249,24 @@
     grid-auto-rows: 0;
     overflow: hidden;
   }
+
+  @media (max-width: 720px) {
+    .top-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .top-result {
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      margin: 0 4px;
+      padding: 14px;
+    }
+    .top-art {
+      width: 72px;
+      margin: 0;
+    }
+    .top-name {
+      font-size: 22px;
+    }
+  }
 </style>
