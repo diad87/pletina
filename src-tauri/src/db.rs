@@ -133,8 +133,8 @@ pub struct Db(pub(crate) Mutex<Connection>);
 
 impl Db {
     pub fn open(path: &Path) -> rusqlite::Result<Self> {
-        // Tamaño del archivo antes de abrirlo: si tiene contenido, nunca se crea una base nueva encima.
-        let had_data = std::fs::metadata(path).is_ok_and(|m| m.len() > 0);
+        // Si el archivo ya tiene tablas, nunca se crea una base nueva encima.
+        let had_data = has_content(path);
         let mut conn = Connection::open(path)?;
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;")?;
         let tables: i64 = conn.query_row("SELECT COUNT(*) FROM sqlite_master", [], |r| r.get(0))?;
@@ -228,6 +228,24 @@ impl Db {
     }
 }
 
+/// ¿Tiene el archivo algo más que la cabecera? Una base de datos sin tablas ocupa una sola
+/// página (p. ej. la que deja `journal_mode = WAL` antes de crear nada).
+fn has_content(path: &Path) -> bool {
+    use std::io::Read;
+    let Ok(mut file) = std::fs::File::open(path) else { return false };
+    let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let mut header = [0u8; 18];
+    if file.read_exact(&mut header).is_err() {
+        return false;
+    }
+    // Tamaño de página en los bytes 16-17 (1 significa 65536).
+    let page = match u16::from_be_bytes([header[16], header[17]]) {
+        1 => 65536,
+        n => u64::from(n),
+    };
+    len > page
+}
+
 /// Antes de cambiar la estructura de una base de datos con datos, una copia completa al lado
 /// (musify.db.antes-de-vN). Se guardan solo las 3 más recientes.
 fn backup_before_migrating(conn: &Connection, path: &Path) -> rusqlite::Result<()> {
@@ -264,6 +282,31 @@ fn migrate(conn: &mut Connection) -> rusqlite::Result<()> {
         tx.commit()?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opens_header_only_file() {
+        let dir = std::env::temp_dir().join(format!("musify-db-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("musify.db");
+
+        // Lo que deja una base de datos que se abrió en modo WAL y se cerró sin crear nada: solo la cabecera.
+        Connection::open(&path).unwrap().execute_batch("PRAGMA journal_mode = WAL;").unwrap();
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), 4096);
+        assert!(!has_content(&path));
+
+        let db = Db::open(&path).unwrap();
+        db.set_setting("k", "v");
+        drop(db);
+        assert!(has_content(&path));
+        assert_eq!(Db::open(&path).unwrap().setting("k").as_deref(), Some("v"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
 
 #[cfg(test)]

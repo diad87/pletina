@@ -106,7 +106,24 @@ pub fn run() {
         .setup(|app| {
             let dir = app.path().app_local_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            app.manage(Db::open(&dir.join("musify.db"))?);
+            let path = dir.join("musify.db");
+            let db = match Db::open(&path) {
+                Ok(db) => db,
+                Err(e) => {
+                    // Sin base de datos no se puede seguir, pero se avisa en vez de cerrarse sin más.
+                    use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                    app.dialog()
+                        .message(format!("No se pudo abrir la base de datos.\n\n{e}\n\n{}", path.display()))
+                        .title("Musify")
+                        .kind(MessageDialogKind::Error)
+                        .show(|_| std::process::exit(1));
+                    return Ok(());
+                }
+            };
+            app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
             app.manage(downloads::Downloads::start(app.handle()));
             updater::start(app.handle());
