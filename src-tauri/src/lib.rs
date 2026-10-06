@@ -1,4 +1,7 @@
+#[cfg(target_os = "android")]
+mod android;
 mod db;
+#[cfg_attr(mobile, path = "capture_mobile.rs")]
 mod capture;
 mod deezer;
 mod downloads;
@@ -8,6 +11,7 @@ mod library;
 mod local;
 mod native;
 mod player;
+#[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
 mod ytdlp;
@@ -90,7 +94,10 @@ async fn choose_source(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Solo en escritorio: una sola instancia y el actualizador de Tauri (en Android, Obtainium).
+    #[cfg(desktop)]
+    let builder = builder
         // Una sola ventana: abrir Musify otra vez trae al frente la que ya está abierta
         // (si no, sonarían dos reproductores a la vez).
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -100,7 +107,8 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Deezer::new())

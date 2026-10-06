@@ -16,6 +16,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
+#[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::{Semaphore, mpsc};
@@ -272,19 +273,35 @@ pub fn download_dir_path(app: AppHandle, db: State<'_, Db>) -> String {
 /// las anteriores se quedan donde están.
 #[tauri::command]
 pub async fn choose_download_dir(app: AppHandle, db: State<'_, Db>) -> Res<Option<String>> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog()
-        .file()
-        .set_title("Carpeta para las descargas")
-        .set_directory(download_dir(&app, &db))
-        .pick_folder(move |folder| {
-            let _ = tx.send(folder);
-        });
-    let Some(folder) = rx.await.map_err(|e| e.to_string())? else { return Ok(None) };
-    let path = folder.into_path().map_err(|e| e.to_string())?;
+    let Some(path) = pick_folder(&app, "Carpeta para las descargas", Some(download_dir(&app, &db))).await? else {
+        return Ok(None);
+    };
     let path = path.to_string_lossy().into_owned();
     db.set_setting(DIR_KEY, &path);
     Ok(Some(path))
+}
+
+/// Selector de carpetas del sistema.
+#[cfg(desktop)]
+pub(crate) async fn pick_folder(app: &AppHandle, title: &str, start: Option<PathBuf>) -> Res<Option<PathBuf>> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let mut dialog = app.dialog().file().set_title(title);
+    if let Some(dir) = start {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog.pick_folder(move |folder| {
+        let _ = tx.send(folder);
+    });
+    match rx.await.map_err(|e| e.to_string())? {
+        Some(folder) => Ok(Some(folder.into_path().map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+/// En el móvil, todavía no (ver docs/plan-mobile.md).
+#[cfg(mobile)]
+pub(crate) async fn pick_folder(_app: &AppHandle, _title: &str, _start: Option<PathBuf>) -> Res<Option<PathBuf>> {
+    Err("En el móvil todavía no se puede elegir carpeta".into())
 }
 
 #[tauri::command]

@@ -24,6 +24,9 @@ const RELEASE_ASSET: (&str, &str) = ("yt-dlp_macos", "yt-dlp");
 const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux_aarch64", "yt-dlp");
 #[cfg(all(target_os = "linux", not(target_arch = "aarch64")))]
 const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux", "yt-dlp");
+// En el móvil no hay yt-dlp (ver docs/plan-mobile.md): `ready` responde que no está.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+const RELEASE_ASSET: (&str, &str) = ("", "");
 
 /// Formato del audio en streaming: el motor web de Mac (WebKit) va mejor con m4a;
 /// Windows y Linux, con webm/opus (en Linux, m4a puede necesitar códecs que no vienen instalados).
@@ -70,6 +73,9 @@ impl YtDlp {
     /// Deja yt-dlp listo: lo descarga si falta y lo actualiza si hace más de un día.
     /// Si falla (p. ej. sin conexión), se reintenta en la siguiente llamada.
     async fn ready(&self) -> Result<&Ready, String> {
+        if cfg!(mobile) {
+            return Err("yt-dlp no existe en el móvil".into());
+        }
         self.ready
             .get_or_try_init(|| async {
                 std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
