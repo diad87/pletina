@@ -40,6 +40,12 @@ class Downloads {
     })
     // En Android, sin esto la descarga se congela al salir de la app.
     if (isAndroid) api.androidDownloadsStarted().catch(() => {})
+    // Las carátulas (la de las listas y la grande de «Sonando ahora»), a la caché del WebView: así se
+    // ven también sin conexión (Deezer deja guardarlas 150 días).
+    const covers = new Set(todo.map((i) => i.cover).filter((c): c is string => !!c?.startsWith('http')))
+    for (const cover of covers) {
+      for (const url of [cover, cover.replace(/\/\d+x\d+-/, '/1000x1000-')]) new Image().src = url
+    }
   }
 
   async remove(ids: number[]) {
