@@ -357,7 +357,16 @@ pub async fn resolve_with_priority(
         return Err("SOURCE_SELECTION_REQUIRED: Busca el vídeo en YouTube y pega su enlace para asociarlo a esta canción".into());
     }
 
+    if extractor::stream_engine() == "propio" {
+        // Sólo una sesión de visitante, compartida por el nivel rápido. El trabajo
+        // puede continuar si otra canción sustituye ésta, sin tocar sus leases.
+        tokio::spawn(crate::native::warm_visitor());
+    }
+    let search_started = std::time::Instant::now();
     let mut candidates = search(q, ytm, ytdlp, false).await?;
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!("[search-timing] {} totalMs={:.3}", q.id, search_started.elapsed().as_secs_f64() * 1000.0);
+    }
     ensure_current(ticket)?;
     candidates.retain(|(c, s, _)| *s >= MIN_SCORE && gone.as_ref() != Some(&c.video_id));
 

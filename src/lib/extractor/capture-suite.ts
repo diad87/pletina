@@ -156,12 +156,23 @@ type Audit = ReturnType<typeof evidenceAudit>
 function evidenceAudit() {
   const references = new Map<string, unknown>(), checks = new Map<string, { at: number; final: boolean; result: Verification }[]>()
   const active = new Set<string>(), sessions = new Map<string, unknown[]>()
+  const inFlight = new Map<string, Promise<void>>(), finalChecks = new Map<string, Promise<void>>()
+  const finishing = new Set<string>(), cycles = new Map<string, number>()
   let pending: Promise<void> = Promise.resolve(), timer: ReturnType<typeof setInterval> | undefined
-  const check = async (id: string, final: boolean) => {
-    pending = pending.then(async () => {
+  const check = (id: string, final: boolean): Promise<void> => {
+    if (!final && (!active.has(id) || finishing.has(id))) return Promise.resolve()
+    const tasks = final ? finalChecks : inFlight, existing = tasks.get(id)
+    if (existing) return existing
+    if (final) { finishing.add(id); active.delete(id) }
+    const cycle = cycles.get(id)
+    const work = pending.then(async () => {
       if (!final) {
+        // A queued periodic job may outlive its capture or be superseded by the
+        // final barrier. A running job finishes; final always takes a fresh snapshot.
+        if (!active.has(id) || finishing.has(id) || cycles.get(id) !== cycle) return
         const current = await status(id).catch(() => null)
         if (!current || !(Number(current.units) > 0 || Number(current.chunks) > 0)) return
+        if (!active.has(id) || finishing.has(id) || cycles.get(id) !== cycle) return
       }
       let result: Verification
       try { result = await invoke<Verification>('capture_verify_check', { videoId: id, final }) }
@@ -169,7 +180,10 @@ function evidenceAudit() {
       const history = checks.get(id) ?? []
       history.push({ at: performance.now(), final, result }); checks.set(id, history)
     })
-    await pending
+    pending = work
+    const task = work.finally(() => { if (tasks.get(id) === task) tasks.delete(id) })
+    tasks.set(id, task)
+    return task
   }
   return {
     async prepare(videos: CaptureCase[]) {
@@ -179,7 +193,7 @@ function evidenceAudit() {
       }
       timer = setInterval(() => { for (const id of active) void check(id, false) }, 10000)
     },
-    start(id: string) { active.add(id) },
+    start(id: string) { cycles.set(id, (cycles.get(id) ?? 0) + 1); finishing.delete(id); active.add(id) },
     async finish(id: string, row?: Row) {
       if (active.has(id) || checks.has(id)) { await check(id, true); active.delete(id) }
       if (row) {
@@ -198,7 +212,13 @@ function evidenceAudit() {
       if (JSON.stringify(history.at(-1)) !== JSON.stringify(value)) history.push(value)
       sessions.set(id, history)
     },
-    async close() { clearInterval(timer); for (const id of [...active]) await check(id, true); active.clear(); await pending },
+    async close() {
+      clearInterval(timer)
+      const remaining = [...active]
+      for (const id of remaining) finishing.add(id)
+      for (const id of remaining) await check(id, true)
+      active.clear(); await pending
+    },
     get references() { return Object.fromEntries(references) },
   }
 }
@@ -219,14 +239,18 @@ export function evidenceBlockers(row: Row): string[] {
       Number(last?.result.unitsChecked) < nativeUnits)
     reasons.push('El total de unidades comparadas no coincide con el ledger final')
   const observations = row.sessionObservations as { sessionState?: Record<string, unknown> | null; sessionStates?: unknown }[] | undefined
-  if (!observations?.length || observations.some(value => {
-    const s = value.sessionState
-    return !s || s.state !== 'signed-out' || typeof s.profileId !== 'string' || !s.profileId ||
-      typeof s.observedAt !== 'number' || !Number.isFinite(s.observedAt) || s.evidenceVersion !== 1
-  })) reasons.push('Sesión de captura sin prueba de usuario desconectado')
-  // Una foto final no permite acreditar el estado de sesiones anteriores de la misma caché.
+  const validSession = (s: Record<string, unknown> | null | undefined) => !!s &&
+    ['unknown', 'signed-out', 'signed-in'].includes(String(s.state)) && typeof s.profileId === 'string' && !!s.profileId &&
+    typeof s.observedAt === 'number' && Number.isFinite(s.observedAt) && s.observedAt >= 0 && s.evidenceVersion === 1
+  if (!observations?.length || observations.at(-1)?.sessionState?.state !== 'signed-out' ||
+      observations.some(value => !validSession(value.sessionState) || value.sessionState?.state === 'signed-in'))
+    reasons.push('Sesión de captura sin prueba de usuario desconectado')
+  // El arranque registra unknown antes de observar la página. Lo entregado se acredita
+  // por cada unidad del comparador y los contadores persistentes, no por ese estado inicial.
+  // Un período autenticado, incluso sin entrega, sí invalida este ensayo anónimo.
   if (!observations?.length || observations.some(value => !Array.isArray(value.sessionStates) || !value.sessionStates.length ||
-      value.sessionStates.some((s: Record<string, unknown>) => s.state !== 'signed-out')))
+      value.sessionStates.some((s: Record<string, unknown>) => !validSession(s) || s.state === 'signed-in') ||
+      value.sessionStates.at(-1)?.state !== value.sessionState?.state))
     reasons.push('Historial anónimo de todas las sesiones ausente o inconcluso')
   const finalStatus = row.status as Status | undefined
   if (finalStatus?.unknownAuthUnits !== 0 || finalStatus?.signedInUnits !== 0)

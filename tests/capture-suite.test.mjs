@@ -143,10 +143,11 @@ async function setup(t, options = {}) {
       if (command === 'capture_profile_status') return { sessionState: { profileId: 'reference-premium', state: 'signed-in' }, loggedIn: true,
         email: 'must-not-be-recorded@example.test', cookies: ['private'], dataDir: 'private-path' }
       if (command === 'capture_verify_check') {
+        const result = await options.verificationHook?.(args)
         if (options.verificationRealDelay) await new Promise(resolve => setTimeout(resolve, options.verificationRealDelay))
         clock += options.verificationDelay ?? 0
         return { ok: true, anonymous: true, captureAnonymous: true, complete: true, allPublishedUnits: true, mismatchCount: 0, unitsChecked: 4, unitsCheckedSnapshot: 4,
-          comparedPackets: 50, mismatches: [], ...options.verification }
+          comparedPackets: 50, mismatches: [], ...options.verification, ...result }
       }
       if (command === 'capture_bench_native_search') return { sourceCleared: true, cacheCleared: true, searchIncluded: true }
       if (command === 'capture_bench_forget') {
@@ -187,7 +188,7 @@ async function setup(t, options = {}) {
   globalThis[key] = runtime
   t.after(() => delete globalThis[key])
   const prelude = `const { invoke, api, player, toQuery, extractor, captureProgress, playCapture, seekCapture, stopCapture } = globalThis.${key};\n`
-  const module = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
+  const module = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript + '\nexport { evidenceAudit };').toString('base64')}`)
   return { ...module, player, progress, emitProgress, calls, snapshots, allAudio, queueCalls, forgetEvidence, lifecycle,
     extractor: runtime.extractor, originalPlay: Audio.prototype.play,
     execute: (plan, checkpoint) => module.runCaptureSuite(plan, async report => { snapshots.push(structuredClone(report)); await checkpoint?.(report) }) }
@@ -516,6 +517,31 @@ test('referencia o sesión desconocida conserva tiempos pero bloquea evidencia; 
   assert.equal(report.acceptanceOk, false)
 })
 
+test('unknown antes de entregar audio no invalida unidades anónimas, pero login o unidades desconocidas sí', async t => {
+  const env = await setup(t)
+  const row = evidenceRow()
+  const initial = session('unknown'), signedOut = { ...session(), observedAt: 2 }
+  row.sessionObservations = [
+    { sessionState: initial, sessionStates: [initial] },
+    { sessionState: signedOut, sessionStates: [initial, signedOut] },
+  ]
+  assert.deepEqual(env.evidenceBlockers(row), [], 'unknown inicial no entregó ninguna unidad; todas las unidades están acreditadas')
+  for (const counters of [{ unknownAuthUnits: 1 }, { signedInUnits: 1 }]) {
+    const broken = structuredClone(row)
+    Object.assign(broken.status, counters)
+    assert(env.evidenceBlockers(broken).some(reason => /Unidades entregadas/.test(reason)))
+  }
+  const signedIn = structuredClone(row)
+  signedIn.sessionObservations[1].sessionStates.splice(1, 0, session('signed-in'))
+  assert(env.evidenceBlockers(signedIn).some(reason => /Historial anónimo/.test(reason)), 'un período autenticado bloquea aunque los contadores estén a cero')
+  const unaudited = structuredClone(row)
+  unaudited.verification[0].result.captureAnonymous = false
+  assert(env.evidenceBlockers(unaudited).some(reason => /todas las unidades/.test(reason)), 'el estado final no sustituye la auditoría de unidades anteriores')
+  const malformed = structuredClone(row)
+  malformed.sessionObservations[0].sessionStates[0].observedAt = null
+  assert(env.evidenceBlockers(malformed).length > 0, 'unknown tampoco permite metadatos de autenticación inválidos')
+})
+
 test('prepare termina antes de capture_begin y la comparación final precede a la siguiente expulsión', async t => {
   const env = await setup(t, { contextTime: 0.25, holdPlayback: true })
   await env.execute({ mode: 'switch', videos: [video(1), video(2)] })
@@ -577,6 +603,49 @@ test('el comparador acumulativo no infla el siguiente arranque ni confunde unida
   assert.deepEqual(env.evidenceBlockers(valid), [], 'el total acumulado puede superar el inventario vigente')
   valid.verification[0].result.unitsCheckedSnapshot = 3
   assert(env.evidenceBlockers(valid).some(reason => /ledger final/.test(reason)))
+})
+
+test('una comparación lenta se coalesce por vídeo y final vuelve a consultar después sin ocultar discrepancias', async t => {
+  let tick, release, units = 1
+  t.mock.method(globalThis, 'setInterval', callback => { tick = callback; return 0 })
+  const gate = new Promise(resolve => { release = resolve })
+  const env = await setup(t, { native: { units: 4 }, verificationHook: async args => {
+    const snapshot = units
+    if (!args.final) await gate
+    return { unitsChecked: snapshot, unitsCheckedSnapshot: snapshot, mismatches: args.final ? [] : ['previous packet mismatch'] }
+  } })
+  const audit = env.evidenceAudit(), id = video(1).id
+  await audit.prepare([video(1)]); audit.start(id); tick()
+  await new Promise(setImmediate)
+  assert.equal(env.calls.filter(([command]) => command === 'capture_verify_check').length, 1)
+  for (let i = 0; i < 50; i++) tick()
+  units = 4
+  const row = evidenceRow(), done = audit.finish(id, row)
+  for (let i = 0; i < 50; i++) tick()
+  release(); await done
+  assert.deepEqual(env.calls.filter(([command]) => command === 'capture_verify_check').map(([, args]) => args.final), [false, true])
+  assert.deepEqual(row.verification.map(check => check.result.unitsCheckedSnapshot), [1, 4], 'final obtiene otro snapshot después de la comparación pendiente')
+  assert(row.evidenceBlockers.some(reason => /todas las unidades/.test(reason)), 'un resultado final limpio no borra el fallo anterior')
+  tick(); await audit.close()
+  assert.equal(env.calls.filter(([command]) => command === 'capture_verify_check').length, 2)
+})
+
+test('final cancela el trabajo periódico de otro vídeo aún en cola y conserva sólo su snapshot final fresco', async t => {
+  let tick, release
+  t.mock.method(globalThis, 'setInterval', callback => { tick = callback; return 0 })
+  const gate = new Promise(resolve => { release = resolve })
+  const a = video(1), b = video(2)
+  const env = await setup(t, { native: { units: 4 }, verificationHook: async args => {
+    if (args.videoId === a.id && !args.final) await gate
+  } })
+  const audit = env.evidenceAudit()
+  await audit.prepare([a, b]); audit.start(a.id); audit.start(b.id); tick()
+  await new Promise(setImmediate)
+  const done = audit.finish(b.id)
+  for (let i = 0; i < 50; i++) tick()
+  release(); await done; await audit.close()
+  assert.deepEqual(env.calls.filter(([command, args]) => command === 'capture_verify_check' && args.videoId === b.id).map(([, args]) => args.final), [true])
+  assert.deepEqual(env.calls.filter(([command, args]) => command === 'capture_verify_check' && args.videoId === a.id).map(([, args]) => args.final), [false, true])
 })
 
 test('una comparación lenta de A no confunde la reproducción ya observada de B y C con pistas saltadas', async t => {

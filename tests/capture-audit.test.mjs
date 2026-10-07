@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 const auditCode = readFileSync(new URL('../src-tauri/src/capture-audit.js', import.meta.url), 'utf8')
 const coreCode = readFileSync(new URL('../src-tauri/src/capture-core.js', import.meta.url), 'utf8')
 function setup(enabled = true) {
-  const messages = [], intervals = [], elements = [], listeners = new Map()
+  const messages = [], intervals = [], elements = [], listeners = new Map(), clearedIntervals = []
   let clock = 0
   class SB extends EventTarget {
     constructor() { super(); this.timestampOffset = 0; this.appendWindowStart = 0; this.appendWindowEnd = Infinity; this.mode = 'segments'; this.updating = false; this.buffered = { length: 0 } }
@@ -22,7 +22,9 @@ function setup(enabled = true) {
     SourceBuffer: SB, MediaSource: MS, HTMLMediaElement: Media, URL: { createObjectURL: () => `blob:private-${++urls}` },
     chrome: { webview: { postMessage: value => messages.push(JSON.parse(value.slice('musify-audit:'.length))) } },
     document: { querySelectorAll: () => elements }, performance: { now: () => clock }, crypto: { randomUUID: () => 'fixture-document' },
-    setInterval: fn => { intervals.push(fn); return intervals.length }, clearInterval() {}, addEventListener(type, fn) { const list = listeners.get(type) ?? []; list.push(fn); listeners.set(type, list) },
+    setInterval: fn => { intervals.push(fn); return intervals.length }, clearInterval(id) { clearedIntervals.push(id) },
+    addEventListener(type, fn) { const list = listeners.get(type) ?? []; list.push(fn); listeners.set(type, list) },
+    removeEventListener(type, fn) { listeners.set(type, (listeners.get(type) ?? []).filter(value => value !== fn)) },
     btoa: value => Buffer.from(value, 'binary').toString('base64'),
     __musifyCaptureYouTube: { create: () => ({ classify: () => ({ state: 'ad', evidence: { adMarker: true }, reason: 'https://private.invalid/never-store', title: 'Never store' }) }) },
   })
@@ -31,7 +33,7 @@ function setup(enabled = true) {
   const capture = context.__musifyCaptureCore.install({ scope: context, tracker })
   const native = new MS(), sb = native.addSourceBuffer('audio/webm; codecs="opus"'), media = new Media()
   media.src = context.URL.createObjectURL(native); elements.push(media)
-  return { context, tracker, capture, native, sb, media, messages, intervals, time(value) { clock = value }, event(type) { for (const listener of listeners.get(type) ?? []) listener({ target: media }) } }
+  return { context, tracker, capture, native, sb, media, messages, intervals, clearedIntervals, listeners, time(value) { clock = value }, event(type) { for (const listener of listeners.get(type) ?? []) listener({ target: media }) } }
 }
 
 test('private audit is absent unless explicitly enabled and never changes native append semantics', () => {
@@ -84,12 +86,12 @@ test('failed native operations are absent while successful parser mutations and 
   f.time(100); f.media.currentTime = 0.1; f.intervals[0]()
   f.time(120); f.event('ended'); f.event('pagehide')
   const clocks = f.messages.filter(m => m.kind === 'clock')
-  assert.equal(clocks.length, 2); assert.equal(clocks[0].siteState, 'ad'); assert.equal(clocks[0].adMarker, true)
+  assert.equal(clocks.length, 3); assert.equal(clocks[0].siteState, 'ad'); assert.equal(clocks[0].adMarker, true)
   assert.equal(clocks[0].position, 0.1); assert.equal(clocks[0].playbackRate, 1)
   assert.equal(JSON.stringify(f.messages).includes('https://'), false); assert.equal(JSON.stringify(f.messages).includes('blob:'), false)
   assert.equal(JSON.stringify(f.messages).includes('Never store'), false)
   assert.equal(f.messages.at(-1).reason, 'audit-pagehide')
-  assert.equal(f.messages.at(-1).statistics.parts, 0); assert.equal(f.messages.at(-1).statistics.clocks, 2)
+  assert.equal(f.messages.at(-1).statistics.parts, 0); assert.equal(f.messages.at(-1).statistics.clocks, 3)
 })
 
 test('a transport or copy failure is diagnostic and cannot make official playback throw', () => {
@@ -97,4 +99,32 @@ test('a transport or copy failure is diagnostic and cannot make official playbac
   assert.doesNotThrow(() => f.sb.appendBuffer(Uint8Array.of(1, 2)))
   assert.equal(f.tracker.bytes, 2)
   assert.doesNotThrow(() => f.intervals[0]())
+})
+
+test('explicit native finalization freezes all producers and accounts for the final clock without pagehide', () => {
+  const f = setup(); f.sb.appendBuffer(Uint8Array.of(1, 2, 3)); f.time(50); f.media.currentTime = 0.05
+  const finalize = f.context.__musifyCaptureAudit.finalize
+  assert.equal(finalize({ generation: 11, requestId: 'close-12-1' }), false, 'another generation cannot freeze this recorder')
+  assert.equal(finalize({ generation: 12, requestId: 'close-12-1' }), true)
+  const marker = f.messages.at(-1), count = f.messages.length
+  assert.equal(marker.reason, 'audit-finalized'); assert.equal(marker.requestId, 'close-12-1')
+  assert.deepEqual({ ...marker.statistics }, { appends: 1, parts: 1, bytes: 3, clocks: 1, dropped: 0, errors: 0 })
+  assert.equal(f.messages.at(-2).phase, 'finalize'); assert.equal(f.messages.at(-2).position, 0.05)
+  assert.deepEqual(f.clearedIntervals, [1]); assert([...f.listeners.values()].every(values => values.length === 0))
+  f.sb.appendBuffer(Uint8Array.of(4)); f.sb.abort(); f.intervals[0](); f.event('ended'); f.event('pagehide')
+  assert.equal(finalize({ generation: 12, requestId: 'close-12-1' }), false)
+  assert.equal(f.messages.length, count, 'no late producer can appear after the final counters')
+  assert.equal(f.tracker.bytes, 4, 'freezing the independent recorder does not mutate the capture parser')
+})
+
+test('losing the explicit final marker cannot produce a substitute final heartbeat or pagehide', () => {
+  const f = setup(); f.sb.appendBuffer(Uint8Array.of(1))
+  const post = f.context.chrome.webview.postMessage
+  f.context.chrome.webview.postMessage = text => {
+    if (JSON.parse(text.slice('musify-audit:'.length)).reason === 'audit-finalized') throw new Error('lost final')
+    post(text)
+  }
+  assert.equal(f.context.__musifyCaptureAudit.finalize({ generation: 12, requestId: 'close-12-2' }), false)
+  f.intervals[0](); f.event('pagehide')
+  assert.equal(f.messages.some(message => ['audit-finalized', 'audit-pagehide'].includes(message.reason)), false)
 })

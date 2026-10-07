@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v7 en validación; los resultados reales estarán en el
+API4/captura v8 en validación; los resultados reales estarán en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes
@@ -35,6 +35,10 @@ observado no queda automáticamente clasificado como imposible de saltar.
    paquetes publicados, incluidos los anteriores a saltos y recuperaciones, mediante
    hashes de contenido y tiempos; si no coincide, intenta PCM estricto con FFmpeg.
    Una discrepancia, paquete omitido o alineación no verificable impide aprobar.
+   La referencia se descarga por rangos verificados de256KiB, como máximo cuatro
+   simultáneos, conservando un mismo validador HTTP. El final exige todos los paquetes
+   que producen muestras, incluidos los recortes por appendWindow; no basta con
+   que los paquetes recibidos sean correctos. PCM usa el desplazamiento declarado.
 4. **Precarga de dos canciones.** Tres ventanas como máximo: actual y dos siguientes.
    Los Audio preparados se conservan por canción/plaza al avanzar; promocionar B no
    cancela C. El supervisor da prioridad a la actual y limita memoria total y por pista.
@@ -43,6 +47,9 @@ observado no queda automáticamente clasificado como imposible de saltar.
    Sólo un EOF limpio y todos sus índices permiten acreditar el intervalo completo.
    Un hueco de representación de1ms con MSE continuo y decodificación correcta no
    equivale a un paquete perdido. Un salto sin capturar conserva su hueco real.
+   Si la recuperación tras un salto encuentra ese hueco de representación, vuelve
+   a presentar una fuente original desde cero. Sólo el certificado nuevo acredita
+   su cobertura; los bytes ya entregados se conservan.
 6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
    puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
    históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.
@@ -80,9 +87,9 @@ perfil nuevo; se exige observar `LOGGED_IN=false`, nunca inferirlo por ausencia 
 El perfil `premium-manual` persiste separado y se abre para el acceso del usuario.
 
 ```powershell
-./scripts/bench-capture.ps1 -Suite native-search -CorpusPath capture-bench.local/corpus-30.json
-./scripts/bench-capture.ps1 -Suite album -CorpusPath capture-bench.local/corpus-30.json
-./scripts/bench-capture.ps1 -Suite ad-transitions -CorpusPath capture-bench.local/corpus-30.json
+./scripts/bench-capture.ps1 -Suite native-search -CorpusPath tests/fixtures/real-albums.capture.json
+./scripts/bench-capture.ps1 -Suite album -CorpusPath tests/fixtures/real-albums.capture.json -AuditAllAudio
+./scripts/bench-capture.ps1 -Suite ad-transitions -CorpusPath tests/fixtures/real-albums.capture.json -AuditAllAudio
 ./scripts/bench-capture.ps1 -Suite profile-login
 ```
 
@@ -90,6 +97,10 @@ Configuración: `MUSIFY_BENCH_HOLDBACK_SECONDS` (1,5), `MUSIFY_CAPTURE_MAX_SESSI
 (3), `MUSIFY_CAPTURE_TRACK_MB` (96) y `MUSIFY_CAPTURE_CACHE_MB` (288).
 Una configuración inválida o un total menor que el límite por pista debe fallar con
 diagnóstico. Estos límites acotan audio almacenado; la memoria del navegador se mide aparte.
+`-NoSeek` comprueba EOF completo sin mezclarlo con la prueba de salto.
+El probe se congela al retirar la sesión, confirma sus contadores en Rust y se cierra
+después. Una confirmación perdida mantiene la evidencia incompleta. Las comprobaciones
+periódicas se agrupan por vídeo; la final toma un snapshot nuevo y conserva los fallos.
 
 ## Promoción y mantenimiento
 

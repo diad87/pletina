@@ -25,6 +25,7 @@ param(
     [switch]$AuditAllAudio,
     [string]$CorpusPath,
     [switch]$VerifiedOnly,
+    [switch]$NoSeek,
     [switch]$NoBuild
 )
 
@@ -36,8 +37,8 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $configPath = Join-Path $outputDir 'tauri.json'
 $binaryPath = Join-Path $projectDir 'src-tauri\target\debug\musify.exe'
 $buildMarker = Join-Path $outputDir 'built-identifier.txt'
-$planPath = Join-Path $outputDir 'plan.json'
 $runId = Get-Date -Format 'yyyyMMdd-HHmmss'
+$planPath = Join-Path $outputDir "plan-$runId.json"
 $resultPath = Join-Path $outputDir "result-$runId.json"
 $stdoutPath = Join-Path $outputDir "stdout-$runId.log"
 $stderrPath = Join-Path $outputDir "stderr-$runId.log"
@@ -54,6 +55,7 @@ if ($Suite -eq 'native-search') { $Engine = 'propio'; $suitePlan.engine = $Engin
 if ($Suite -eq 'profile-login') { $ProfileMode = 'premium-manual'; $suitePlan.profileMode = $ProfileMode }
 if ($Suite -eq 'ad-transitions') { $suitePlan.maxAdAttempts = $AdAttempts; $suitePlan.minimumAdTransitions = 50; $suitePlan.verifyComplete = $false; $suitePlan.seek = $false }
 if ($VerifiedOnly) { $suitePlan.experimental = $false; $suitePlan.seek = $false }
+if ($NoSeek) { $suitePlan.seek = $false }
 if ($CorpusPath) {
     $corpus = Get-Content -LiteralPath $CorpusPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($corpus.captureSuite) { $corpus = $corpus.captureSuite.corpus }
@@ -111,6 +113,7 @@ try {
         rawAudioProbe = [bool]$AuditAllAudio
         limits = @{ maxSessions = $MaxSessions; trackMemoryMb = $TrackMemoryMb; cacheMemoryMb = $CacheMemoryMb }
         progressiveExperiment = !$VerifiedOnly
+        seekExperiment = !$VerifiedOnly -and !$NoSeek -and $Suite -ne 'ad-transitions'
         plan = $planPath
         report = $resultPath
     } | ConvertTo-Json -Depth 8

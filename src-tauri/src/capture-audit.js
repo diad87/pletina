@@ -1,6 +1,7 @@
 // Private benchmark recorder. This channel never supplies audio to the player or
 // assigns semantic ad labels. All successful audio appends are retained equally.
 (() => {
+  const recorders = new Set()
   function create({ scope = globalThis, epoch = () => scope.__musifyEpoch } = {}) {
     if (scope.__musifyBenchmarkAudit !== true && scope.window?.__musifyBenchmarkAudit !== true) return null
     const host = scope.window ?? scope, bridge = host.chrome?.webview
@@ -10,7 +11,8 @@
     const documentId = scope.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
     const MAX_BYTES = 1024 * 1024 * 1024, PART_BYTES = 128 * 1024
     const statistics = { appends: 0, parts: 0, bytes: 0, clocks: 0, dropped: 0, errors: 0 }
-    let sequence = 0, nextAppend = 0, capture = null, interval = null
+    let sequence = 0, nextAppend = 0, capture = null, interval = null, frozen = false
+    const listeners = []
     const now = () => scope.performance?.now?.() ?? 0
     const emit = message => {
       try { bridge.postMessage('musify-audit:' + JSON.stringify({ audit: 1, v: target, generation, epoch: epoch(), documentId, sequence: ++sequence, browserNow: now(), ...message })); return true }
@@ -23,6 +25,7 @@
       return scope.btoa(binary)
     }
     const append = (buffer, input, settings) => {
+      if (frozen) return
       try {
         // Copy independently: the gate can immediately discard these same bytes.
         const bytes = input instanceof ArrayBuffer ? new Uint8Array(input).slice() : new Uint8Array(input.buffer, input.byteOffset, input.byteLength).slice()
@@ -35,14 +38,14 @@
       } catch { statistics.dropped++; statistics.errors++; emit({ kind: 'diagnostic', reason: 'audit-copy-failed', statistics }) }
     }
     const mutation = (buffer, operation, detail = {}) => {
-      if (!buffer) return
+      if (frozen || !buffer) return
       // The caller supplies only operation names and numeric bounds, never URLs.
       emit({ kind: 'mutation', source: buffer.source.id, s: buffer.id, operation, start: detail.start, end: detail.end, error: detail.error === true })
     }
     let classifier = null
     try { classifier = scope.__musifyCaptureYouTube?.create({ target }) } catch { /* Unknown site observation is recorded explicitly. */ }
     const clock = (media, phase = 'tick') => {
-      if (!capture) return
+      if (frozen || !capture) return
       try {
         const snapshot = capture.snapshotOf(media)
         let observation
@@ -57,20 +60,40 @@
         if (emit(message)) statistics.clocks++
       } catch { statistics.errors++; statistics.dropped++; emit({ kind: 'diagnostic', reason: 'audit-clock-failed', statistics }) }
     }
+    const finalize = (reason, requestId) => {
+      if (frozen) return false
+      // Take the last clock while this document still exists, then stop every
+      // producer before the final counters. No unload/pagehide is required.
+      for (const media of scope.document?.querySelectorAll('audio,video') ?? []) clock(media, 'finalize')
+      frozen = true
+      if (interval !== null) scope.clearInterval(interval)
+      for (const [type, listener] of listeners) scope.removeEventListener?.(type, listener, true)
+      return emit({ kind: 'diagnostic', reason, ...(requestId ? { requestId } : {}), statistics: { ...statistics } })
+    }
     const attach = value => {
-      if (capture) return
+      if (frozen || capture) return
       capture = value
       for (const type of ['timeupdate', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata']) {
-        scope.addEventListener?.(type, event => { if (event.target instanceof scope.HTMLMediaElement) clock(event.target, type) }, true)
+        const listener = event => { if (event.target instanceof scope.HTMLMediaElement) clock(event.target, type) }
+        listeners.push([type, listener]); scope.addEventListener?.(type, listener, true)
       }
       interval = scope.setInterval(() => {
+        if (frozen) return
         for (const media of scope.document?.querySelectorAll('audio,video') ?? []) clock(media)
         emit({ kind: 'diagnostic', reason: 'audit-heartbeat', statistics })
       }, 100)
-      scope.addEventListener?.('pagehide', () => { if (interval !== null) scope.clearInterval(interval); emit({ kind: 'diagnostic', reason: 'audit-pagehide', statistics }) }, { once: true })
+      const pagehide = () => finalize('audit-pagehide')
+      listeners.push(['pagehide', pagehide]); scope.addEventListener?.('pagehide', pagehide, true)
       emit({ kind: 'diagnostic', reason: 'audit-started', statistics })
     }
+    recorders.add({ generation, finalize })
     return { append, mutation, clock, attach, statistics }
   }
-  globalThis.__musifyCaptureAudit = { create }
+  globalThis.__musifyCaptureAudit = { create, finalize({ generation, requestId } = {}) {
+    if (!Number.isSafeInteger(generation) || typeof requestId !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(requestId)) return false
+    let sent = false
+    for (const recorder of recorders) if (recorder.generation === generation)
+      sent = recorder.finalize('audit-finalized', requestId) || sent
+    return sent
+  } }
 })()

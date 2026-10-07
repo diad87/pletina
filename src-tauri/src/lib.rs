@@ -3,6 +3,7 @@ mod capture_audit;
 mod capture_bench;
 mod capture_legacy;
 mod capture_pcm;
+mod capture_reference;
 mod capture_verify;
 mod db;
 mod deezer;

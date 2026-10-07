@@ -703,6 +703,21 @@ impl Track {
             .filter(|r| r.start <= RANGE_EPSILON)
             .map_or(0.0, |r| r.end)
     }
+    fn recovery_start(&self) -> f64 {
+        // A seek cannot certify quantization between old epochs. Re-present the
+        // original source from zero instead of repeating the same sub-packet seek.
+        // This does not fill or forgive any gap: a new complete proof is required.
+        if self.eof
+            && self.ranges.windows(2).any(|r| {
+                let gap = r[1].start - r[0].end;
+                gap > RANGE_EPSILON && gap <= 0.001 + RANGE_EPSILON
+            })
+        {
+            0.0
+        } else {
+            self.first_gap()
+        }
+    }
     fn finish(&mut self, end: f64, why: Option<String>) {
         // Es el extremo del audio probado por EOF, no duración nominal del vídeo ni
         // el último bloque disponible. Un seek posterior no puede rebajar ese extremo.
@@ -988,6 +1003,11 @@ async fn begin_locked(
     recovery: bool,
 ) -> Result<u64, String> {
     supported()?;
+    let at = if recovery && at == Some(0.0) {
+        None
+    } else {
+        at
+    };
     if !recovery {
         request_current(ticket)?;
     }
@@ -2225,7 +2245,11 @@ fn watchdog(app: &AppHandle) {
                             if t.resets < MAX_RESETS {
                                 t.resets += 1;
                                 t.recovering = true;
-                                Some(Some(t.target.max(t.first_gap())))
+                                Some(Some(if t.eof {
+                                    t.recovery_start()
+                                } else {
+                                    t.target.max(t.recovery_start())
+                                }))
                             } else {
                                 Some(None)
                             }
@@ -2233,7 +2257,7 @@ fn watchdog(app: &AppHandle) {
                             if t.resets < MAX_RESETS && (t.eof || t.recovering) {
                                 t.resets += 1;
                                 t.recovering = true;
-                                Some(Some(t.first_gap()))
+                                Some(Some(t.recovery_start()))
                             } else {
                                 Some(None)
                             }
@@ -2278,6 +2302,37 @@ async fn retire_locked(app: &AppHandle, session: &Session) -> Result<(), String>
             return Ok(());
         };
         current.active = false;
+    }
+    // Benchmark recorder only: revoke playback ownership before freezing the
+    // independent probe, then wait for native receipt of its final counters.
+    if let Some(request) = crate::capture_audit::begin_finalization(&session.id, session.generation)
+    {
+        let script = format!(
+            "window.__musifyCaptureAudit?.finalize({{generation:{},requestId:{}}})",
+            session.generation,
+            serde_json::to_string(&request).unwrap()
+        );
+        let dispatched = app
+            .get_webview_window(&session.label)
+            .is_some_and(|window| window.eval(script).is_ok());
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while dispatched
+            && Instant::now() < deadline
+            && !crate::capture_audit::finalization_acknowledged(
+                &session.id,
+                session.generation,
+                &request,
+            )
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        if !crate::capture_audit::finalization_acknowledged(
+            &session.id,
+            session.generation,
+            &request,
+        ) {
+            crate::capture_audit::finalization_failed(&session.id, session.generation, &request);
+        }
     }
     let result = close_window(app, &session.label).await;
     if result.is_ok() {
@@ -3175,6 +3230,24 @@ mod tests {
         );
         assert_eq!(t.units[2].index, 2);
         assert_eq!(read_bounds(t, 2, Some(30)), (2, 3, false));
+    }
+    #[test]
+    fn a_quantization_sized_gap_requests_a_fresh_proof_without_crediting_coverage() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 0.020);
+        deliver(&mut s, 2, 0.021, 2.0);
+        ended(&mut s, 2.0);
+        let t = &s.tracks[ID];
+        assert!(!t.complete);
+        assert_eq!(t.first_gap(), 0.020);
+        assert_eq!(t.recovery_start(), 0.0);
+        assert_eq!(t.ranges.len(), 2);
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        deliver(&mut s, 2, 1.020, 2.0);
+        ended(&mut s, 2.0);
+        assert_eq!(s.tracks[ID].recovery_start(), 1.0);
+        assert!(!s.tracks[ID].complete);
     }
     #[test]
     fn future_tail_without_zero_and_false_eof_never_complete() {

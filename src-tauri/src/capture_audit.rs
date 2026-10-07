@@ -13,10 +13,13 @@ const MAX_PART: usize = 128 * 1024;
 #[derive(Default)]
 struct Document {
     sequence: u64,
+    appends: u64,
+    bytes: u64,
     parts: u64,
     clocks: u64,
     js_dropped: u64,
     final_marker: bool,
+    final_request: Option<String>,
 }
 struct Pending {
     next: u64,
@@ -27,6 +30,7 @@ struct Pending {
 #[derive(Default)]
 struct Audit {
     documents: HashMap<String, Document>,
+    finalizations: HashMap<u64, String>,
     pending: HashMap<String, Pending>,
     parts: u64,
     appends: u64,
@@ -42,6 +46,7 @@ struct Store {
     root: Option<PathBuf>,
     disk_bytes: u64,
     videos: HashMap<String, Audit>,
+    next_finalization: u64,
 }
 static STORE: LazyLock<Mutex<Store>> = LazyLock::new(|| Mutex::new(Store::default()));
 
@@ -93,6 +98,7 @@ struct Message {
     phase: Option<String>,
     operation: Option<String>,
     reason: Option<String>,
+    request_id: Option<String>,
     statistics: Option<Statistics>,
     position: Option<f64>,
     duration: Option<f64>,
@@ -111,6 +117,8 @@ struct Message {
 }
 #[derive(Deserialize)]
 struct Statistics {
+    appends: Option<u64>,
+    bytes: Option<u64>,
     parts: u64,
     clocks: u64,
     dropped: u64,
@@ -157,6 +165,9 @@ fn record(store: &mut Store, id: &str, message: Message) {
     }
     document.sequence = message.sequence;
     document.final_marker = false;
+    document.final_request = None;
+    let mut final_marker = false;
+    let mut final_request = None;
     let mut metadata = json!({"audit":1,"v":id,"generation":message.generation,"epoch":message.epoch,
         "documentId":message.document_id,"sequence":message.sequence,"kind":message.kind,"browserNow":message.browser_now,
         "source":message.source,"s":message.s});
@@ -303,19 +314,40 @@ fn record(store: &mut Store, id: &str, message: Message) {
         "diagnostic" => {
             metadata["reason"] = json!(safe_label(&message.reason));
             if let Some(stats) = message.statistics {
+                let requested = message.reason.as_deref() == Some("audit-finalized");
+                let bound_request = requested
+                    && message.request_id.as_ref().is_some_and(|request| {
+                        audit.finalizations.get(&message.generation) == Some(request)
+                    });
                 let document = audit.documents.get_mut(&document_key).unwrap();
-                if stats.parts != document.parts || stats.clocks != document.clocks {
+                let counters_match = stats.parts == document.parts
+                    && stats.clocks == document.clocks
+                    && stats.appends.is_none_or(|n| n == document.appends)
+                    && stats.bytes.is_none_or(|n| n == document.bytes)
+                    && (!requested || (stats.appends.is_some() && stats.bytes.is_some()));
+                if !counters_match || (requested && !bound_request) {
                     audit.integrity_errors += 1;
-                    audit.last_error = Some("javascript-native-counter-mismatch".into());
+                    audit.last_error = Some(
+                        if requested && !bound_request {
+                            "audit-finalization-binding-mismatch"
+                        } else {
+                            "javascript-native-counter-mismatch"
+                        }
+                        .into(),
+                    );
                 }
                 audit.dropped += stats.dropped.saturating_sub(document.js_dropped);
                 document.js_dropped = stats.dropped;
-                document.final_marker = message.reason.as_deref() == Some("audit-pagehide")
-                    && stats.parts == document.parts
-                    && stats.clocks == document.clocks
+                final_marker = (message.reason.as_deref() == Some("audit-pagehide")
+                    || bound_request)
+                    && counters_match
                     && stats.dropped == 0
                     && stats.errors == 0;
-                metadata["statistics"] = json!({"parts":stats.parts,"clocks":stats.clocks,"dropped":stats.dropped,"errors":stats.errors});
+                if bound_request {
+                    final_request = message.request_id.clone();
+                    metadata["requestId"] = json!(message.request_id);
+                }
+                metadata["statistics"] = json!({"appends":stats.appends,"bytes":stats.bytes,"parts":stats.parts,"clocks":stats.clocks,"dropped":stats.dropped,"errors":stats.errors});
             }
         }
         _ => {
@@ -377,6 +409,7 @@ fn record(store: &mut Store, id: &str, message: Message) {
         if pending.next == pending.parts {
             if pending.bytes == pending.total {
                 audit.appends += 1;
+                audit.documents.get_mut(&document_key).unwrap().appends += 1;
                 audit.pending.remove(&key);
             } else {
                 fail(audit, "incomplete-audio-append");
@@ -386,6 +419,7 @@ fn record(store: &mut Store, id: &str, message: Message) {
         audit.parts += 1;
         audit.bytes += bytes.len() as u64;
         audit.documents.get_mut(&document_key).unwrap().parts += 1;
+        audit.documents.get_mut(&document_key).unwrap().bytes += bytes.len() as u64;
     }
     if message.kind == "clock" {
         audit.clocks += 1;
@@ -394,6 +428,10 @@ fn record(store: &mut Store, id: &str, message: Message) {
     if message.kind == "mutation" {
         audit.mutations += 1;
     }
+    // A marker acknowledges native receipt only after its record was written.
+    let document = audit.documents.get_mut(&document_key).unwrap();
+    document.final_marker = final_marker;
+    document.final_request = final_request;
 }
 
 /// The native caller supplies the window binding; data cannot choose another track.
@@ -465,6 +503,67 @@ pub fn artifact_directory() -> Option<PathBuf> {
     STORE.lock().unwrap().root.clone()
 }
 
+/// Begin only after the playback lease has been retired. The JS marker must echo
+/// this native request; ExecuteScript completing is not a WebMessage receipt.
+pub fn begin_finalization(video_id: &str, generation: u64) -> Option<String> {
+    if !enabled() {
+        return None;
+    }
+    let mut store = STORE.lock().unwrap();
+    store.next_finalization += 1;
+    let request = format!("close-{generation}-{}", store.next_finalization);
+    store
+        .videos
+        .entry(video_id.into())
+        .or_default()
+        .finalizations
+        .insert(generation, request.clone());
+    Some(request)
+}
+
+fn has_finalization(audit: &Audit, generation: u64, request: &str) -> bool {
+    let prefix = format!("{generation}-");
+    let documents: Vec<_> = audit
+        .documents
+        .iter()
+        .filter(|(key, _)| key.starts_with(&prefix))
+        .map(|(_, doc)| doc)
+        .collect();
+    audit
+        .finalizations
+        .get(&generation)
+        .is_some_and(|value| value == request)
+        && audit.dropped == 0
+        && audit.integrity_errors == 0
+        && audit.pending.is_empty()
+        && !documents.is_empty()
+        && documents.iter().all(|doc| doc.final_marker)
+        && documents
+            .iter()
+            .any(|doc| doc.final_request.as_deref() == Some(request))
+}
+
+pub fn finalization_acknowledged(video_id: &str, generation: u64, request: &str) -> bool {
+    STORE
+        .lock()
+        .unwrap()
+        .videos
+        .get(video_id)
+        .is_some_and(|audit| has_finalization(audit, generation, request))
+}
+
+pub fn finalization_failed(video_id: &str, generation: u64, request: &str) {
+    let mut store = STORE.lock().unwrap();
+    if let Some(audit) = store.videos.get_mut(video_id)
+        && audit
+            .finalizations
+            .get(&generation)
+            .is_some_and(|value| value == request)
+    {
+        fail(audit, "audit-finalization-unacknowledged-before-close");
+    }
+}
+
 /// Call when a native benchmark window is retired. Without its final JS counters,
 /// losing an ENTIRE last append is undetectable from part sequence numbers alone.
 pub fn close_session(video_id: &str, generation: u64) {
@@ -472,12 +571,14 @@ pub fn close_session(video_id: &str, generation: u64) {
         return;
     }
     let mut store = STORE.lock().unwrap();
-    if let Some(audit) = store.videos.get_mut(video_id) {
+    {
+        let audit = store.videos.entry(video_id.into()).or_default();
         let prefix = format!("{generation}-");
-        if audit
-            .documents
-            .iter()
-            .any(|(key, doc)| key.starts_with(&prefix) && !doc.final_marker)
+        if !audit.documents.keys().any(|key| key.starts_with(&prefix))
+            || audit
+                .documents
+                .iter()
+                .any(|(key, doc)| key.starts_with(&prefix) && !doc.final_marker)
         {
             fail(audit, "native-window-closed-without-final-audit-counters");
         }
@@ -548,6 +649,89 @@ mod tests {
             bounded.videos[ID].last_error.as_deref(),
             Some("process-disk-budget1GiB-exceeded")
         );
+    }
+    fn final_message(sequence: u64, request: &str, parts: u64) -> Message {
+        message(
+            sequence,
+            json!({"kind":"diagnostic","reason":"audit-finalized","requestId":request,
+            "statistics":{"appends":1,"bytes":3,"parts":parts,"clocks":0,"dropped":0,"errors":0}}),
+        )
+    }
+    #[test]
+    fn explicit_finalization_requires_bound_request_written_counters_and_no_late_records() {
+        let mut store = Store::default();
+        record(&mut store, ID, message(1, part(0, 1, 3, &[1, 2, 3])));
+        store
+            .videos
+            .get_mut(ID)
+            .unwrap()
+            .finalizations
+            .insert(7, "close-7-1".into());
+        assert!(!has_finalization(&store.videos[ID], 7, "close-7-1"));
+        record(&mut store, ID, final_message(2, "close-7-1", 1));
+        assert!(has_finalization(&store.videos[ID], 7, "close-7-1"));
+        assert!(!has_finalization(&store.videos[ID], 8, "close-7-1"));
+        assert!(!has_finalization(&store.videos[ID], 7, "close-7-2"));
+        record(
+            &mut store,
+            ID,
+            message(3, json!({"kind":"clock","siteState":"content"})),
+        );
+        assert!(!has_finalization(&store.videos[ID], 7, "close-7-1"));
+    }
+    #[test]
+    fn lost_append_or_final_write_cannot_acknowledge_orderly_close() {
+        for missing in ["append", "write", "request"] {
+            let mut store = Store::default();
+            record(&mut store, ID, message(1, part(0, 1, 3, &[1, 2, 3])));
+            store
+                .videos
+                .get_mut(ID)
+                .unwrap()
+                .finalizations
+                .insert(7, "close-7-1".into());
+            if missing == "write" {
+                store.disk_bytes = MAX_DISK;
+            }
+            record(
+                &mut store,
+                ID,
+                final_message(
+                    2,
+                    if missing == "request" {
+                        "close-7-2"
+                    } else {
+                        "close-7-1"
+                    },
+                    if missing == "append" { 2 } else { 1 },
+                ),
+            );
+            assert!(
+                !has_finalization(&store.videos[ID], 7, "close-7-1"),
+                "{missing}"
+            );
+            assert!(store.videos[ID].integrity_errors > 0, "{missing}");
+        }
+    }
+    #[test]
+    fn final_document_cannot_hide_a_previous_document_without_its_final_marker() {
+        let mut store = Store::default();
+        record(&mut store, ID, message(1, part(0, 1, 3, &[1, 2, 3])));
+        store
+            .videos
+            .get_mut(ID)
+            .unwrap()
+            .finalizations
+            .insert(7, "close-7-1".into());
+        let mut next = message(1, part(0, 1, 3, &[1, 2, 3]));
+        next.document_id = "second-document".into();
+        record(&mut store, ID, next);
+        let mut final_record = final_message(2, "close-7-1", 1);
+        final_record.document_id = "second-document".into();
+        record(&mut store, ID, final_record);
+        assert!(!has_finalization(&store.videos[ID], 7, "close-7-1"));
+        assert!(!store.videos[ID].documents["7-test-document"].final_marker);
+        assert!(store.videos[ID].documents["7-second-document"].final_marker);
     }
     #[test]
     fn recorder_requires_the_official_origin_and_does_not_store_arbitrary_text() {

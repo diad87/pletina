@@ -117,6 +117,10 @@ pub fn set_recipe(text: &str) -> Result<(), String> {
 
 /// URL del audio de un vídeo, ya comprobada (YouTube no la va a cortar a mitad).
 pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
+    let started = Instant::now();
+    let mut visitor_ms = 0.0;
+    let mut player_ms = 0.0;
+    let mut validation_ms = 0.0;
     if !refresh
         && let Some(d) = CACHE
             .lock()
@@ -142,28 +146,45 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     for (recipe, client) in clients {
         // Segundo intento con sesión de visitante nueva y otra URL.
         for attempt in 0..2 {
+            let stage = Instant::now();
             let visitor = match visitor(recipe, attempt > 0).await {
                 Ok(v) => v,
                 Err(e) => {
+                    visitor_ms += stage.elapsed().as_secs_f64() * 1000.0;
                     last = Error::Failed(e);
                     continue;
                 }
             };
-            match player(recipe, client, video_id, &visitor).await {
-                Ok(d) => match validate(&d).await {
-                    Ok(()) => {
-                        STATS.resolved.fetch_add(1, Ordering::Relaxed);
-                        CACHE
-                            .lock()
-                            .unwrap()
-                            .insert(video_id.to_string(), d.clone());
-                        return Ok(d);
+            visitor_ms += stage.elapsed().as_secs_f64() * 1000.0;
+            let stage = Instant::now();
+            let result = player(recipe, client, video_id, &visitor).await;
+            player_ms += stage.elapsed().as_secs_f64() * 1000.0;
+            match result {
+                Ok(d) => {
+                    let stage = Instant::now();
+                    let validation = validate(&d).await;
+                    validation_ms += stage.elapsed().as_secs_f64() * 1000.0;
+                    match validation {
+                        Ok(()) => {
+                            if std::env::var_os("MUSIFY_BENCH").is_some() {
+                                eprintln!(
+                                    "[native-timing] {video_id} totalMs={:.3} visitorMs={visitor_ms:.3} playerMs={player_ms:.3} validationMs={validation_ms:.3}",
+                                    started.elapsed().as_secs_f64() * 1000.0
+                                );
+                            }
+                            STATS.resolved.fetch_add(1, Ordering::Relaxed);
+                            CACHE
+                                .lock()
+                                .unwrap()
+                                .insert(video_id.to_string(), d.clone());
+                            return Ok(d);
+                        }
+                        Err(e) => {
+                            STATS.replaced.fetch_add(1, Ordering::Relaxed);
+                            last = Error::Failed(e);
+                        }
                     }
-                    Err(e) => {
-                        STATS.replaced.fetch_add(1, Ordering::Relaxed);
-                        last = Error::Failed(e);
-                    }
-                },
+                }
                 // Otro cliente podría reproducirlo; si ninguno puede, se devuelve esto.
                 Err(Error::Gone(e)) => {
                     last = Error::Gone(e);
@@ -175,6 +196,17 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     }
     STATS.failed.fetch_add(1, Ordering::Relaxed);
     Err(last)
+}
+
+/// Solapa la preparación del visitante con la búsqueda de Propio. No selecciona
+/// vídeos ni toca URLs; la resolución conserva la sonda del audio y sus errores.
+pub async fn warm_visitor() {
+    let recipe = DOWNLOADED
+        .read()
+        .unwrap()
+        .clone()
+        .unwrap_or_else(|| BUNDLED.clone());
+    let _ = visitor(&recipe, false).await;
 }
 
 /// Referencia independiente del banco. No escribe la caché de reproducción ni usa cookies.
