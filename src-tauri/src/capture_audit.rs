@@ -20,6 +20,7 @@ struct Document {
     js_dropped: u64,
     final_marker: bool,
     final_request: Option<String>,
+    playback_samples: u64,
 }
 struct Pending {
     next: u64,
@@ -71,9 +72,13 @@ fn token(value: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b == b'-')
 }
 fn origin(value: &str) -> bool {
-    reqwest::Url::parse(value)
-        .ok()
-        .is_some_and(|url| url.scheme() == "https" && matches!(url.host_str(), Some("music.youtube.com" | "www.youtube.com")))
+    reqwest::Url::parse(value).ok().is_some_and(|url| {
+        url.scheme() == "https"
+            && matches!(
+                url.host_str(),
+                Some("music.youtube.com" | "www.youtube.com")
+            )
+    })
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +105,7 @@ struct Message {
     reason: Option<String>,
     request_id: Option<String>,
     statistics: Option<Statistics>,
+    playback: Option<Value>,
     position: Option<f64>,
     duration: Option<f64>,
     paused: Option<bool>,
@@ -153,6 +159,111 @@ fn safe_label(value: &Option<String>) -> Option<&str> {
             && s.bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b"-_ .".contains(&b))
     })
+}
+/// Optional diagnostic only: reconstruct an allowlisted object rather than
+/// persisting a caller's stack, URLs, arbitrary properties or account strings.
+fn playback_diagnostic(value: &Value) -> Option<Value> {
+    const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+    let version = value["version"].as_u64().filter(|n| *n == 1)?;
+    let phase = value["phase"]
+        .as_str()
+        .filter(|s| matches!(*s, "sample" | "summary"))?;
+    let samples = value["samples"].as_u64().filter(|n| *n <= 20)?;
+    let max_samples = value["maxSamples"].as_u64().filter(|n| *n == 20)?;
+    let mut counts = serde_json::Map::new();
+    for name in [
+        "pause",
+        "play",
+        "rateWrites",
+        "rateRedundant",
+        "mutedWrites",
+        "mutedRedundant",
+        "captureCalls",
+        "externalCalls",
+        "throws",
+    ] {
+        let count = value["counts"][name]
+            .as_u64()
+            .filter(|n| *n <= MAX_SAFE_INTEGER)?;
+        counts.insert(name.into(), json!(count));
+    }
+    let mut out = json!({"version":version,"phase":phase,"samples":samples,"maxSamples":max_samples,"counts":counts});
+    if phase == "sample" {
+        let control = &value["control"];
+        let method = control["method"].as_str().filter(|s| {
+            matches!(
+                *s,
+                "pause" | "play" | "playbackRate" | "defaultPlaybackRate" | "muted"
+            )
+        })?;
+        let origin = control["origin"]
+            .as_str()
+            .filter(|s| matches!(*s, "capture" | "external"))?;
+        let snapshot = |input: &Value| -> Option<Value> {
+            if input.is_null() {
+                return Some(Value::Null);
+            }
+            input.as_object()?;
+            let mut state = json!({});
+            for name in ["position", "rate"] {
+                if let Some(value) = input.get(name) {
+                    state[name] = json!(value.as_f64().filter(|n| n.is_finite())?);
+                }
+            }
+            for name in ["paused", "muted", "focused"] {
+                if let Some(value) = input.get(name) {
+                    state[name] = json!(value.as_bool()?);
+                }
+            }
+            if let Some(value) = input.get("visibility") {
+                state["visibility"] = json!(
+                    value
+                        .as_str()
+                        .filter(|s| matches!(*s, "visible" | "hidden"))?
+                );
+            }
+            Some(state)
+        };
+        let mut clean = json!({"method":method,"origin":origin,"before":snapshot(&control["before"])? ,"after":snapshot(&control["after"])? ,"threw":control["threw"].as_bool()?});
+        if let Some(reason) = control.get("reason") {
+            let reason = reason.as_str()?.to_string();
+            let label = Some(reason);
+            let safe = safe_label(&label).filter(|s| !s.is_empty())?;
+            clean["reason"] = json!(safe);
+        }
+        if let Some(requested) = control.get("requested") {
+            match method {
+                "muted" => clean["requested"] = json!(requested.as_bool()?),
+                "playbackRate" | "defaultPlaybackRate" => {
+                    clean["requested"] = json!(requested.as_f64().filter(|n| n.is_finite())?)
+                }
+                _ => return None,
+            }
+        }
+        if let Some(stack) = control.get("stack") {
+            let names = stack.as_array().filter(|names| names.len() <= 4)?;
+            let mut clean_names = Vec::with_capacity(names.len());
+            for name in names {
+                let name = name.as_str()?;
+                if name.is_empty()
+                    || name.len() > 64
+                    || !name
+                        .bytes()
+                        .next()
+                        .is_some_and(|b| b.is_ascii_alphabetic() || b"_$".contains(&b))
+                    || !name
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b"_$.".contains(&b))
+                {
+                    return None;
+                }
+                clean_names.push(name.to_string());
+            }
+            clean["stack"] = json!(clean_names);
+        }
+        out["control"] = clean;
+    }
+    Some(out)
 }
 fn record(store: &mut Store, id: &str, message: Message) {
     let audit = store.videos.entry(id.to_string()).or_default();
@@ -313,6 +424,25 @@ fn record(store: &mut Store, id: &str, message: Message) {
         }
         "diagnostic" => {
             metadata["reason"] = json!(safe_label(&message.reason));
+            if message.reason.as_deref() == Some("audit-playback-control") {
+                if let Some(playback) = message.playback.as_ref().and_then(playback_diagnostic) {
+                    let document = audit.documents.get_mut(&document_key).unwrap();
+                    if playback["phase"] == "sample" {
+                        if document.playback_samples < 20 {
+                            document.playback_samples += 1;
+                            metadata["playback"] = playback;
+                        } else {
+                            metadata["playbackRejected"] = json!(true);
+                        }
+                    } else {
+                        metadata["playback"] = playback;
+                    }
+                } else {
+                    // Losing optional caller telemetry does not change audio,
+                    // byte/clock counters, or finalization integrity accounting.
+                    metadata["playbackRejected"] = json!(true);
+                }
+            }
             if let Some(stats) = message.statistics {
                 let requested = message.reason.as_deref() == Some("audit-finalized");
                 let bound_request = requested
@@ -601,6 +731,145 @@ mod tests {
         json!({"kind":"append","source":1,"s":1,"appendId":1,"part":part,"parts":parts,"totalBytes":total,
             "mime":"audio/webm; codecs=opus","timelineSettings":{"timestampOffset":0,"appendWindowStart":0,"appendWindowEnd":null,"mode":"segments"},
             "data":base64::engine::general_purpose::STANDARD.encode(bytes)})
+    }
+    fn playback_sample() -> Value {
+        json!({"version":1,"phase":"sample","samples":1,"maxSamples":20,
+            "counts":{"pause":1,"play":0,"rateWrites":0,"rateRedundant":0,"mutedWrites":0,"mutedRedundant":0,"captureCalls":0,"externalCalls":1,"throws":0},
+            "control":{"method":"pause","origin":"external","threw":false,
+                "before":{"position":3.034396,"paused":false,"muted":true,"rate":1,"visibility":"hidden","focused":false},
+                "after":{"position":3.034396,"paused":true,"muted":true,"rate":1,"visibility":"hidden","focused":false},
+                "stack":["Object.$pause","site_fn"]}})
+    }
+    #[test]
+    fn playback_control_filters_private_properties_and_rejects_malformed_allowed_fields() {
+        let mut input = playback_sample();
+        input["url"] = json!("https://private.invalid/signed-token");
+        input["control"]["account"] = json!("private-account");
+        input["control"]["before"]["path"] = json!("C:/private/profile");
+        let clean = playback_diagnostic(&input).unwrap();
+        assert_eq!(clean["control"]["stack"][0], "Object.$pause");
+        let encoded = clean.to_string();
+        for private in [
+            "private.invalid",
+            "signed-token",
+            "private-account",
+            "C:/private/profile",
+        ] {
+            assert!(!encoded.contains(private));
+        }
+        for (pointer, bad) in [
+            ("/control/stack", json!(["https://private.invalid/token"])),
+            ("/control/stack", json!(["C:\\private\\profile"])),
+            ("/control/stack", json!(["a", "b", "c", "d", "e"])),
+            ("/control/reason", json!("https://private.invalid/token")),
+            ("/control/method", json!("arbitrary-operation")),
+            ("/control/origin", json!("private-account")),
+            ("/control/before/paused", json!("true")),
+            ("/control/before/position", json!({"value":3})),
+            ("/control/after/visibility", json!("private-account")),
+            ("/counts/pause", json!(-1)),
+            ("/counts/play", json!(9_007_199_254_740_992u64)),
+            ("/samples", json!(21)),
+        ] {
+            let mut bad_input = input.clone();
+            // reason is optional in the fixture.
+            if pointer == "/control/reason" {
+                bad_input["control"]["reason"] = bad;
+            } else {
+                *bad_input.pointer_mut(pointer).unwrap() = bad;
+            }
+            assert!(playback_diagnostic(&bad_input).is_none(), "{pointer}");
+        }
+        let mut throwing = playback_sample();
+        throwing["control"]["before"] = Value::Null;
+        throwing["control"]["after"] = json!({"paused":true});
+        throwing["control"]["threw"] = json!(true);
+        assert!(
+            playback_diagnostic(&throwing).is_some(),
+            "unavailable getters must not invent state"
+        );
+    }
+    #[test]
+    fn playback_telemetry_is_bounded_persisted_and_cannot_change_final_byte_counters() {
+        let mut store = Store::default();
+        record(&mut store, ID, message(1, part(0, 1, 3, &[1, 2, 3])));
+        for sequence in 2..=22 {
+            let mut playback = playback_sample();
+            playback["privateField"] = json!("must-not-persist");
+            record(
+                &mut store,
+                ID,
+                message(
+                    sequence,
+                    json!({"reason":"audit-playback-control","playback":playback}),
+                ),
+            );
+        }
+        record(
+            &mut store,
+            ID,
+            message(
+                23,
+                json!({"reason":"audit-playback-control","playback":{"control":{"stack":"private-stack"}}}),
+            ),
+        );
+        assert_eq!(store.videos[ID].parts, 1);
+        assert_eq!(store.videos[ID].bytes, 3);
+        assert_eq!(store.videos[ID].clocks, 0);
+        assert_eq!(store.videos[ID].integrity_errors, 0);
+        assert_eq!(
+            store.videos[ID].documents["7-test-document"].playback_samples,
+            20
+        );
+        store
+            .videos
+            .get_mut(ID)
+            .unwrap()
+            .finalizations
+            .insert(7, "close-7-1".into());
+        record(&mut store, ID, final_message(24, "close-7-1", 1));
+        assert!(has_finalization(&store.videos[ID], 7, "close-7-1"));
+        let text = std::fs::read_to_string(
+            store
+                .root
+                .as_ref()
+                .unwrap()
+                .join(format!("{ID}-observations.jsonl")),
+        )
+        .unwrap();
+        assert!(!text.contains("must-not-persist") && !text.contains("private-stack"));
+        let lines: Vec<Value> = text
+            .lines()
+            .map(|line| serde_json::from_str(line).unwrap())
+            .collect();
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|line| line.get("playback").is_some())
+                .count(),
+            20
+        );
+        assert_eq!(
+            lines
+                .iter()
+                .filter(|line| line["playbackRejected"] == true)
+                .count(),
+            2
+        );
+        assert_eq!(lines[1]["playback"]["control"]["before"]["paused"], false);
+        assert_eq!(lines[1]["playback"]["control"]["after"]["paused"], true);
+        record(
+            &mut store,
+            ID,
+            message(
+                25,
+                json!({"reason":"audit-playback-control","playback":playback_sample()}),
+            ),
+        );
+        assert!(
+            !has_finalization(&store.videos[ID], 7, "close-7-1"),
+            "a late diagnostic cannot borrow the previous final marker"
+        );
     }
     #[test]
     fn append_parts_account_for_every_byte_and_require_final_counters() {

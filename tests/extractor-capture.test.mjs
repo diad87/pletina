@@ -127,6 +127,76 @@ test('los primeros tramos se añaden antes de complete y el init compatible se o
   assert.equal(requests[2].from, 2)
 })
 
+test('muchas lecturas vacías mantienen 40 ms fijos y los lotes disponibles se drenan sin backoff', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let now = 0, reads = 0
+  t.mock.method(performance, 'now', () => now)
+  const readTimes = []
+  const env = environment(t, (command, args) => {
+    if (command !== 'capture_read') return Promise.resolve()
+    reads++; readTimes.push(now)
+    if (reads <= 16) return Promise.resolve(packet({ from: args.from }))
+    if (reads <= 18) return Promise.resolve(packet({ from: args.from, chunks: [[255, args.from, args.from + 1]] }))
+    return new Promise(() => {})
+  })
+  const drain = async () => { for (let i = 0; i < 60; i++) await Promise.resolve() }
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await drain()
+  for (let i = 0; i < 16; i++) {
+    assert.equal(reads, i + 1)
+    assert.equal(captureProgress(env.audio).reader.phase, 'empty-poll')
+    now += 39; t.mock.timers.tick(39); await drain()
+    assert.equal(reads, i + 1, 'no consulta antes del intervalo fijo')
+    now++; t.mock.timers.tick(1); await drain()
+  }
+  assert.deepEqual(readTimes.slice(0, 17), Array.from({ length: 17 }, (_, i) => i * 40))
+  assert.deepEqual(readTimes.slice(17), [640, 640], 'los dos lotes no agregan espera por unidad')
+  assert.equal(captureProgress(env.audio).units, 2)
+  assert.equal(captureProgress(env.audio).reader.emptyReads, 16)
+  assert.equal(captureProgress(env.audio).reader.emptyPolls, 16)
+  assert.equal(captureProgress(env.audio).reader.maxEmptyPollElapsedMs, 40)
+  assert.equal(captureProgress(env.audio).reader.appends, 2)
+})
+
+test('el diagnóstico distingue IPC pendiente de updateend pendiente sin adelantar progreso aceptado', async t => {
+  let now = 0, deliver, reads = 0
+  t.mock.method(performance, 'now', () => now)
+  const env = environment(t, (command, args) => {
+    if (command !== 'capture_read') return Promise.resolve()
+    reads++
+    if (reads === 1) return Promise.resolve(packet({ chunks: [[255, 0, 1]] }))
+    if (reads === 2) return new Promise(resolve => { deliver = resolve })
+    return new Promise(() => {})
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => !!deliver)
+  const earlier = captureProgress(env.audio)
+  now = 500
+  const pendingRead = captureProgress(env.audio)
+  assert.equal(pendingRead.reader.phase, 'read')
+  assert.equal(pendingRead.reader.elapsedMs - pendingRead.reader.phaseSinceMs, 500)
+  assert.equal(pendingRead.reader.emptyPolls, 0)
+  const sb = env.instances[0].buffers[0]; sb.hold = true
+  deliver(packet({ from: 1, chunks: [[255, 1, 2]] }))
+  await settle(() => sb.chunks.length === 2)
+  now = 750
+  const pendingAppend = captureProgress(env.audio)
+  assert.equal(pendingAppend.reader.phase, 'append')
+  assert.equal(pendingAppend.reader.lastReadMs, 500)
+  assert.equal(pendingAppend.reader.elapsedMs - pendingAppend.reader.phaseSinceMs, 250)
+  assert.equal(pendingAppend.units, 1, 'appendBuffer no acredita updateend pendiente')
+  assert.deepEqual(pendingAppend.buffered, [{ start: 0, end: 1 }])
+  sb.complete()
+  await settle(() => captureProgress(env.audio).units === 2)
+  const final = captureProgress(env.audio)
+  assert.equal(final.reader.maxReadMs, 500)
+  assert.equal(final.reader.maxAppendMs, 250)
+  assert.equal(final.reader.lastAppendAtMs, 750)
+  assert.equal(final.reader.appends, 2)
+  assert.equal(final.reader.emptyPolls, 0)
+  assert.equal(earlier.reader.appends, 1, 'los snapshots históricos no se mutan')
+})
+
 test('el primer play espera medio segundo MSE y updateend de todo el lote, no sólo el primer paquete', async t => {
   const env = environment(t, (command, args) => command !== 'capture_read' ? Promise.resolve() : args.from === 0
     ? Promise.resolve(packet({ chunks: [[255, 0, 1], [255, 1, 2]], ranges: [{ start: 0, end: 2 }] })) : new Promise(() => {}))

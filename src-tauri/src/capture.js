@@ -31,10 +31,11 @@
     if (failed) return
     failed = true
     if (tick) clearInterval(tick)
-    for (const media of document.querySelectorAll('audio,video')) { media.playbackRate = 1; media.pause() }
+    for (const media of document.querySelectorAll('audio,video')) controlled('error', () => { media.playbackRate = 1; media.pause() })
     event('error', { code, reason: String(reason).startsWith(`${code}:`) ? String(reason) : `${code}: ${reason}`, recoverable })
   }
   let capture
+  const controlled = (reason, operation) => capture?.control ? capture.control(reason, operation) : operation()
   const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target, skipDiagnostics: true,
     requestSkip: request => event('skip-request', request),
     skipContext: media => !failed && finalizedEpoch !== epoch ? { generation, epoch, source: capture?.sourceOf(media)?.id } : null,
@@ -148,7 +149,7 @@
     publish(source, snapshot)
     const proof = tracker.finish(source, snapshot)
     if (proof.certificate) proof.certificate.initKey = `${generation}:${proof.certificate.initKey}`
-    media.pause()
+    controlled('finished', () => media.pause())
     event('coverage', proof)
     event('ended', { ...proof, state: 'content', source: source.id, s: source.buffers[0].id, title: identity.title, author: identity.author, why: 'Official EOF and observed presentation ranges; completeness is the coverage union' })
     // Native ownership retires windows. Keep this source usable for a cache-miss seek.
@@ -188,9 +189,9 @@
     tracker.observe(source, identity, { position: media.currentTime, duration: media.duration, now: performance.now(), element: media, playbackRate: 1 })
     source.observations = []; source.progress.ranges = []
     pendingSeek.assigned = true; pendingSeek.start = start
-    media.playbackRate = 1
+    controlled('seek', () => { media.playbackRate = 1 })
     try { media.currentTime = start } catch (e) { problem('CAPTURE_SEEK_FAILED', String(e)); return true }
-    media.play().catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar'))
+    controlled('seek', () => media.play()).catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar'))
     return true
   }
   const observe = (media, endedEvent = false) => {
@@ -221,22 +222,22 @@
     if (pendingSeek?.startup && pendingSeek.assigned) {
       // Setting currentTime starts an asynchronous seek. Keep the acquisition
       // paused until a ready, non-seeking native clock actually exposes zero.
-      if (!media.paused) media.pause()
+      if (!media.paused) controlled('startup-seek-wait', () => media.pause())
       if (media.seeking || media.readyState < 2) return
       snapshot = capture.snapshotOf(media)
     }
     if (media.seeking || media.readyState < 1) return
     if (current.state === 'unknown' && media.currentTime === 0 && !source.observations.length && !source.error) {
-      media.pause()
+      controlled('startup-identity-wait', () => media.pause())
       const since = waiting.get(media) ?? performance.now(); waiting.set(media, since)
       if (performance.now() - since > 10000) problem('CAPTURE_IDENTITY_UNCERTAIN', `Initial identity did not become available: ${current.reason}`)
       return
     }
-    if (waiting.has(media) && current.state !== 'unknown') { waiting.delete(media); if (!pendingSeek?.startup) media.play().catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar')) }
+    if (waiting.has(media) && current.state !== 'unknown') { waiting.delete(media); if (!pendingSeek?.startup) controlled('identity-ready', () => media.play()).catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar')) }
     if (current.state === 'content' && source.seen.size === 0 && !source.observations.length && !pendingSeek && !source.error && media.currentTime > 0) {
       // Metadata/playing callbacks can first arrive a few milliseconds after sound.
       // Re-present the beginning while still quarantined instead of inventing coverage.
-      media.pause(); tracker.restartBeginning(source)
+      controlled('startup-rewind', () => media.pause()); tracker.restartBeginning(source)
       pendingSeek = { at: 0, start: 0, startup: true, assigned: true }
       source.state = 'content'; source.element = media
       try { media.currentTime = 0 } catch (e) { return problem('CAPTURE_SEEK_FAILED', String(e)) }
@@ -250,7 +251,7 @@
       previousSources.set(media, source)
       if (identity.state === 'ad') {
         if (snapshot.ended === true) event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'ad-native-ended', sourceEnded: snapshot.sourceEnded }) })
-        media.playbackRate = 1; adapter.skipAd(media); return
+        controlled('advertisement', () => { media.playbackRate = 1 }); adapter.skipAd(media); return
       }
       if (identity.state !== 'content') return
       if (!media.paused && !media.ended) presented.set(source, { identity, element: media, epoch, now: performance.now() })
@@ -258,7 +259,7 @@
         event('seeked', { requestId: pendingSeek.requestId, requestedAt: pendingSeek.at, position: media.currentTime, warmupStart: pendingSeek.start })
         const startup = pendingSeek.startup
         pendingSeek = null
-        if (startup) media.play().catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar'))
+        if (startup) controlled('startup-ready', () => media.play()).catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar'))
       }
       if (!started) { started = true; event('playing', { title: identity.title, author: identity.author, duration: media.duration }); event('meta', { title: identity.title, author: identity.author, duration: media.duration }) }
       publish(source, snapshot)
@@ -266,7 +267,7 @@
     } catch (e) {
       const replay = !pendingSeek && current.state === 'content' && e === source.error ? tracker.startupReplayUnpublished(source, snapshot) : null
       if (replay) {
-        media.pause(); presented.delete(source)
+      controlled('startup-replay', () => media.pause()); presented.delete(source)
         pendingSeek = { at: 0, start: 0, startup: true, assigned: true }
         event('diagnostic', { state: 'content', source: source.id, position: snapshot.position, playbackRate: 1, browserNow: performance.now(),
           reason: diagnosticReason({ phase: 'startup-replay-unpublished', ...replay, previousError: e.message }) })
@@ -279,7 +280,7 @@
   }
   const attach = media => {
     if (attached.has(media)) return
-    attached.add(media); media.muted = true; media.defaultPlaybackRate = 1; media.playbackRate = 1
+    attached.add(media); controlled('attach', () => { media.muted = true; media.defaultPlaybackRate = 1; media.playbackRate = 1 })
     media.addEventListener('encrypted', () => problem('CAPTURE_ENCRYPTED_MEDIA', 'Encrypted media is not capturable clear audio', false))
     for (const name of ['loadstart', 'emptied', 'loadedmetadata', 'playing', 'timeupdate', 'durationchange', 'seeked']) media.addEventListener(name, () => observe(media))
     media.addEventListener('ended', () => observe(media, true))
@@ -299,7 +300,7 @@
       queue = Promise.resolve()
       previousSources = new WeakMap()
       pendingSeek = { at: request.at, requestId: request.requestId, assigned: false }
-      for (const media of document.querySelectorAll('audio,video')) { media.playbackRate = 1; observe(media) }
+      for (const media of document.querySelectorAll('audio,video')) { controlled('seek', () => { media.playbackRate = 1 }); observe(media) }
       event('progress', { position: null, requestedAt: request.at, requestId: request.requestId, bytesQuarantined: tracker.bytes })
     } catch (e) { problem(e.code || 'CAPTURE_SEEK_FAILED', e.message) }
   }
@@ -310,11 +311,10 @@
     else {
       interaction = ''
       for (const media of document.querySelectorAll('audio,video')) {
-        attach(media); media.muted = true
-        if (media.playbackRate !== 1) media.playbackRate = 1
+        attach(media); controlled('tick', () => { media.muted = true; if (media.playbackRate !== 1) media.playbackRate = 1 })
         observe(media)
         if (failed) return
-        if (!pendingSeek?.startup && !waiting.has(media) && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) media.play().catch(() => {})
+        if (!pendingSeek?.startup && !waiting.has(media) && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) controlled('resume', () => media.play()).catch(() => {})
       }
     }
     if (now - lastBeat >= 1000) {

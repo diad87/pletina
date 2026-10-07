@@ -800,7 +800,7 @@
         return original.apply(this, args)
       }
     }
-    const result = { tracker, sourceOf, snapshotOf, rateStatistics }
+    const result = { tracker, sourceOf, snapshotOf, rateStatistics, control: (reason, operation) => audit ? audit.control(reason, operation) : operation() }
     try { audit?.attach(result) } catch { /* A failed audit remains unmeasured; it cannot gate playback. */ }
     return result
   }

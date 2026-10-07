@@ -18,6 +18,100 @@
       try { bridge.postMessage('musify-audit:' + JSON.stringify({ audit: 1, v: target, generation, epoch: epoch(), documentId, sequence: ++sequence, browserNow: now(), ...message })); return true }
       catch { statistics.dropped++; statistics.errors++; return false }
     }
+    // This diagnostic observes calls, never awaits/replaces a play promise or
+    // changes native receivers, arguments, exceptions, rates or pause policy.
+    const playbackCounts = { pause: 0, play: 0, rateWrites: 0, rateRedundant: 0, mutedWrites: 0, mutedRedundant: 0, captureCalls: 0, externalCalls: 0, throws: 0 }
+    const sampleBudgets = { pause: 8, play: 8, rate: 2, muted: 2 }
+    let playbackSamples = 0, playbackDirty = false, playbackLast = 0, controlReason = null, lastPlaybackMedia = null
+    const playbackSnapshot = media => {
+      try {
+        const state = {}, visibility = scope.document?.visibilityState
+        if (Number.isFinite(media.currentTime)) state.position = media.currentTime
+        if (Number.isFinite(media.playbackRate)) state.rate = media.playbackRate
+        if (typeof media.paused === 'boolean') state.paused = media.paused
+        if (typeof media.muted === 'boolean') state.muted = media.muted
+        if (visibility === 'visible' || visibility === 'hidden') state.visibility = visibility
+        if (typeof scope.document?.hasFocus === 'function') state.focused = scope.document.hasFocus() === true
+        return state
+      } catch { return null }
+    }
+    const safeStack = () => {
+      const names = []
+      try {
+        // Read only bounded function names. Never retain frame locations, URLs,
+        // query strings, exception messages, source text or account information.
+        for (const line of String(new Error().stack ?? '').slice(0, 8192).split('\n').slice(1, 17)) {
+          const name = /^\s*at ([A-Za-z_$][A-Za-z0-9_$.]{0,63})\s*\(/.exec(line)?.[1]
+          if (name && !['safeStack', 'auditedPlayback', 'control', 'controlled'].includes(name)) names.push(name)
+          if (names.length === 4) break
+        }
+      } catch { /* Optional caller evidence never changes the native call. */ }
+      return names
+    }
+    const playbackMessage = (phase, control) => {
+      let source = null
+      try { source = lastPlaybackMedia && capture?.sourceOf(lastPlaybackMedia) } catch {}
+      return { kind: 'diagnostic', reason: 'audit-playback-control', source: source?.id ?? null, s: source?.buffers?.[0]?.id ?? null,
+        playback: { version: 1, phase, ...(control ? { control } : {}), counts: { ...playbackCounts }, samples: playbackSamples, maxSamples: 20 } }
+    }
+    const playbackSummary = force => {
+      if (!playbackDirty || (!force && now() - playbackLast < 1000)) return
+      playbackLast = now(); playbackDirty = false
+      emit(playbackMessage('summary'))
+    }
+    const recordPlayback = (media, method, requested, previousValue, before, origin, reason, threw, stack) => {
+      if (frozen) return
+      lastPlaybackMedia = media; playbackDirty = true
+      playbackCounts[origin === 'capture' ? 'captureCalls' : 'externalCalls']++
+      if (threw) playbackCounts.throws++
+      if (method === 'pause' || method === 'play') playbackCounts[method]++
+      else if (method === 'muted') {
+        playbackCounts.mutedWrites++
+        if (typeof requested === 'boolean' && requested === previousValue) playbackCounts.mutedRedundant++
+      } else {
+        playbackCounts.rateWrites++
+        if (typeof requested === 'number' && requested === previousValue) playbackCounts.rateRedundant++
+      }
+      if (!stack) return
+      playbackSamples++
+      const control = { method, origin, ...(reason ? { reason } : {}), before, after: playbackSnapshot(media), threw, stack }
+      if (typeof requested === 'boolean' || (typeof requested === 'number' && Number.isFinite(requested))) control.requested = requested
+      emit(playbackMessage('sample', control))
+    }
+    const installPlayback = () => {
+      const prototype = scope.HTMLMediaElement?.prototype
+      if (!prototype) return
+      const wrap = (method, original, getter) => function auditedPlayback(...args) {
+        if (frozen) return original.apply(this, args)
+        let before = null, stack = null, previousValue, origin = controlReason ? 'capture' : 'external', reason = controlReason, threw = false
+        try {
+          before = playbackSnapshot(this)
+          if (getter) previousValue = getter.call(this)
+          const budget = ['play', 'pause', 'muted'].includes(method) ? method : 'rate'
+          if (sampleBudgets[budget] > 0) { sampleBudgets[budget]--; stack = safeStack() }
+        } catch { /* Optional instrumentation must not swallow a native call. */ }
+        try { return original.apply(this, args) }
+        catch (error) { threw = true; throw error }
+        finally {
+          try { recordPlayback(this, method, args[0], previousValue, before, origin, reason, threw, stack) } catch { statistics.errors++ }
+        }
+      }
+      for (const method of ['pause', 'play']) {
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, method)
+        if (typeof descriptor?.value === 'function' && descriptor.configurable)
+          Object.defineProperty(prototype, method, { ...descriptor, value: wrap(method, descriptor.value) })
+      }
+      for (const property of ['playbackRate', 'defaultPlaybackRate', 'muted']) {
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, property)
+        if (descriptor?.set && descriptor.configurable)
+          Object.defineProperty(prototype, property, { ...descriptor, set: wrap(property, descriptor.set, descriptor.get) })
+      }
+    }
+    const control = (reason, operation) => {
+      const previous = controlReason
+      controlReason = typeof reason === 'string' && /^[a-z-]{1,48}$/.test(reason) ? reason : 'capture-control'
+      try { return operation() } finally { controlReason = previous }
+    }
     const tuple = settings => ({ timestampOffset: settings.timestampOffset ?? 0, appendWindowStart: settings.appendWindowStart ?? 0, appendWindowEnd: Number.isFinite(settings.appendWindowEnd) ? settings.appendWindowEnd : null, mode: settings.mode ?? 'segments' })
     const base64 = bytes => {
       let binary = ''
@@ -65,6 +159,7 @@
       // Take the last clock while this document still exists, then stop every
       // producer before the final counters. No unload/pagehide is required.
       for (const media of scope.document?.querySelectorAll('audio,video') ?? []) clock(media, 'finalize')
+      playbackSummary(true)
       frozen = true
       if (interval !== null) scope.clearInterval(interval)
       for (const [type, listener] of listeners) scope.removeEventListener?.(type, listener, true)
@@ -73,6 +168,7 @@
     const attach = value => {
       if (frozen || capture) return
       capture = value
+      installPlayback()
       for (const type of ['timeupdate', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata']) {
         const listener = event => { if (event.target instanceof scope.HTMLMediaElement) clock(event.target, type) }
         listeners.push([type, listener]); scope.addEventListener?.(type, listener, true)
@@ -80,6 +176,7 @@
       interval = scope.setInterval(() => {
         if (frozen) return
         for (const media of scope.document?.querySelectorAll('audio,video') ?? []) clock(media)
+        playbackSummary(false)
         emit({ kind: 'diagnostic', reason: 'audit-heartbeat', statistics })
       }, 100)
       const pagehide = () => finalize('audit-pagehide')
@@ -87,7 +184,7 @@
       emit({ kind: 'diagnostic', reason: 'audit-started', statistics })
     }
     recorders.add({ generation, finalize })
-    return { append, mutation, clock, attach, statistics }
+    return { append, mutation, clock, attach, statistics, control }
   }
   globalThis.__musifyCaptureAudit = { create, finalize({ generation, requestId } = {}) {
     if (!Number.isSafeInteger(generation) || typeof requestId !== 'string' || !/^[A-Za-z0-9-]{1,64}$/.test(requestId)) return false

@@ -24,6 +24,16 @@ interface Frame {
   revision: number; generation: number; from: number; next: number
   ranges: Range[]; units: Unit[]; chunks: Uint8Array[]
 }
+interface ReaderDiagnostics {
+  /** All timestamps use this WebView's performance clock, never the producer clock. */
+  startedAtMs: number; elapsedMs: number; phaseSinceMs: number
+  phase: 'opening' | 'read' | 'append' | 'empty-poll' | 'eof' | 'failed' | 'stopped'
+  reads: number; emptyReads: number; appends: number
+  /** Includes the native long-poll wait; this is not IPC overhead alone. */
+  lastReadMs: number | null; maxReadMs: number
+  lastAppendMs: number | null; maxAppendMs: number; lastAppendAtMs: number | null
+  emptyPolls: number; emptyPollDelayMs: number; maxEmptyPollElapsedMs: number
+}
 /** Publicado después de updateend: recibir bytes todavía no prueba que MSE los acepte. */
 export interface CaptureProgress {
   api: number
@@ -32,6 +42,7 @@ export interface CaptureProgress {
   complete: boolean; recovering: boolean; softError: string | null
   units: number; firstAppendMs: number | null
   startupReserveSeconds: number; readyMs: number | null
+  reader: ReaderDiagnostics
 }
 type Stop = (cancelBackend?: boolean) => void
 const readers = new WeakMap<HTMLAudioElement, { stop: Stop; seek: (at: number) => Promise<boolean>; ready: () => boolean; waitReady: () => Promise<void>; progress: () => CaptureProgress | null }>()
@@ -41,9 +52,10 @@ const integer = (n: unknown): n is number => Number.isSafeInteger(n) && (n as nu
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 // Sólo error de coma flotante; no se cubre un frame ausente con tolerancia de reproducción.
 const EPSILON = 0.000001
-// The producer ticks at 100 ms and IPC polls at 40 ms. A half-second of accepted
-// audio leaves room for their jitter and the final held-back batch at native EOF.
+// A half-second of accepted audio leaves room for delivery jitter and the final
+// held-back batch at native EOF. Empty native reads use a fixed 40 ms retry delay.
 const STARTUP_RESERVE_SECONDS = 0.5
+const EMPTY_POLL_MS = 40
 
 function settings(value: unknown): TimelineSettings {
   if (!value || typeof value !== 'object') throw new Error('Ajustes temporales de captura inválidos')
@@ -162,6 +174,14 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   const frameEnds = new Map<string, number>()
   const initializations = new Map<string, Uint8Array>()
   let recoveryKey = '', recoveryCount = 0
+  const diagnostics: ReaderDiagnostics = { startedAtMs: started, elapsedMs: 0, phaseSinceMs: 0, phase: 'opening',
+    reads: 0, emptyReads: 0, appends: 0, lastReadMs: null, maxReadMs: 0,
+    lastAppendMs: null, maxAppendMs: 0, lastAppendAtMs: null,
+    emptyPolls: 0, emptyPollDelayMs: EMPTY_POLL_MS, maxEmptyPollElapsedMs: 0 }
+  const phase = (value: ReaderDiagnostics['phase']) => { diagnostics.phase = value; diagnostics.phaseSinceMs = performance.now() - started }
+  const readerSnapshot = (): ReaderDiagnostics => ({ ...diagnostics, elapsedMs: performance.now() - started })
+  // A waiting event can sample an IPC or append still pending, without inventing new accepted ranges.
+  const progressSnapshot = () => progress ? { ...progress, reader: readerSnapshot() } : null
   const buffered = () => sb ? rangesOf(sb.buffered) : []
   const ready = () => {
     if (signal.aborted || !progress) return false
@@ -185,7 +205,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   }
   const fail = (error: unknown) => {
     if (signal.aborted || failed) return
-    failed = true; failure = error
+    failed = true; failure = error; phase('failed')
     if (totalUnits) warning(error)
     else audio.dispatchEvent(new CustomEvent('captureerror', { detail: String(error) }))
   }
@@ -227,8 +247,12 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
     URL.revokeObjectURL(url)
     try {
       while (!signal.aborted && !failed) {
-        if (eof) { await delay(40, signal); continue }
-        const version = cursorVersion, f = await read(videoId, from, revision, signal)
+        if (eof) { phase('eof'); await delay(EMPTY_POLL_MS, signal); continue }
+        phase('read'); diagnostics.reads++
+        const version = cursorVersion, readStarted = performance.now(), f = await read(videoId, from, revision, signal)
+        diagnostics.lastReadMs = performance.now() - readStarted
+        diagnostics.maxReadMs = Math.max(diagnostics.maxReadMs, diagnostics.lastReadMs)
+        if (!f.chunks.length) diagnostics.emptyReads++
         check(signal)
         if (version !== cursorVersion) continue
         if (f.error) throw new Error(f.error)
@@ -258,6 +282,8 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
             if (!MediaSource.isTypeSupported(u.mime)) throw new Error(`Formato de captura no compatible: ${u.mime}`)
             sb = ms.addSourceBuffer(u.mime)
           }
+          phase('append')
+          const appendStarted = performance.now()
           await idle(sb, signal)
           const sameInit = installed?.initKey === initKey && installed?.mime === u.mime
           if (!installed || installed.context !== context || !sameInit) {
@@ -270,6 +296,9 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
           }
           if (f.duration && ms.readyState === 'open') ms.duration = Math.max(f.duration, ...buffered().map(r => r.end))
           await append(sb, audio, sameInit ? f.chunks[i].subarray(u.initBytes) : f.chunks[i], signal)
+          diagnostics.lastAppendMs = performance.now() - appendStarted
+          diagnostics.maxAppendMs = Math.max(diagnostics.maxAppendMs, diagnostics.lastAppendMs)
+          diagnostics.lastAppendAtMs = performance.now() - started; diagnostics.appends++
           installed = { initKey, mime: u.mime, context }
           metadata.set(key, value); totalUnits++
           frameEnds.set(context, Math.max(frameEnds.get(context) ?? 0, u.endFrame))
@@ -280,9 +309,9 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
         progress = { api: f.api, generation: f.generation, revision: f.revision, ranges: f.ranges, buffered: buffered(),
           duration: f.duration, audioDuration: f.audioDuration ?? null,
           complete: f.complete, recovering: f.recovering, softError: f.softError, units: totalUnits, firstAppendMs,
-          startupReserveSeconds: STARTUP_RESERVE_SECONDS, readyMs }
+          startupReserveSeconds: STARTUP_RESERVE_SECONDS, readyMs, reader: readerSnapshot() }
         if (ready()) { readyMs ??= performance.now() - started; progress.readyMs = readyMs }
-        audio.dispatchEvent(new CustomEvent('captureprogress', { detail: progress }))
+        audio.dispatchEvent(new CustomEvent('captureprogress', { detail: progressSnapshot() }))
         if (f.softError) warning(f.softError)
         const verifiedDuration = f.audioDuration ?? f.duration
         const gap = verifiedDuration ? firstGap(f.ranges, verifiedDuration) : null
@@ -309,18 +338,23 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
           if (recoveryCount++ < 2) await requestSeek(at)
           else { warning(`Captura incompleta desde ${at.toFixed(1)} s; se conserva el audio verificado`); eof = true }
         }
-        if (!f.chunks.length) await delay(40, signal)
+        if (!f.chunks.length) {
+          phase('empty-poll'); diagnostics.emptyPolls++
+          const pollStarted = performance.now()
+          await delay(EMPTY_POLL_MS, signal)
+          diagnostics.maxEmptyPollElapsedMs = Math.max(diagnostics.maxEmptyPollElapsedMs, performance.now() - pollStarted)
+        }
       }
     } catch (e) { if (!signal.aborted) fail(e) }
   }, { once: true })
   const stop: Stop = (cancelBackend = true) => {
     if (stopped) return
-    stopped = true
+    stopped = true; phase('stopped')
     lifetime.abort(); audio.removeEventListener('seeking', onSeeking); URL.revokeObjectURL(url)
     if (readers.get(audio)?.stop === stop) readers.delete(audio)
     if (cancelBackend && generation !== undefined) void invoke('capture_cancel', { videoId, generation }).catch(() => {})
   }
-  readers.set(audio, { stop, seek, ready, waitReady, progress: () => progress })
+  readers.set(audio, { stop, seek, ready, waitReady, progress: progressSnapshot })
   audio.src = url
   return stop
 }
