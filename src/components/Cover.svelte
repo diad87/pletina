@@ -7,16 +7,19 @@
 
   let failed = $state(false)
   let loaded = $state(false)
+  let img: HTMLImageElement | undefined = $state()
   $effect(() => {
     void src
     failed = false
-    loaded = false
+    // Si ya estaba cargada (caché), el "load" pudo llegar antes que esto: se mira directamente.
+    loaded = !!(img?.complete && img.naturalWidth)
   })
 </script>
 
 <div class="cover" class:round>
   {#if url && !failed}
     <img
+      bind:this={img}
       src={url}
       alt=""
       loading="lazy"

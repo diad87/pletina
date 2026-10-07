@@ -1,4 +1,4 @@
-import { listen } from '@tauri-apps/api/event'
+import { listen } from './events'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import { toLib } from './library.svelte'

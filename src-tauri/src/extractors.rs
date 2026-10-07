@@ -147,13 +147,7 @@ pub fn extractor_module(name: String) -> Option<Module> {
 /// Carga los extractores ya descargados y empieza a mirar si hay nuevos.
 pub fn start(app: &AppHandle) {
     let Ok(dir) = app.path().app_local_data_dir().map(|d| d.join("extractors")) else { return };
-    let _ = std::fs::create_dir_all(&dir);
-    for (name, _) in API {
-        if let Err(e) = load(&dir, name) {
-            eprintln!("[extractores] {name}: se queda el incluido ({e})");
-        }
-    }
-    let _ = DIR.set(dir);
+    load_saved(&dir);
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(FIRST_CHECK).await;
@@ -164,6 +158,18 @@ pub fn start(app: &AppHandle) {
             tokio::time::sleep(CHECK_EVERY).await;
         }
     });
+}
+
+/// Usa los extractores ya descargados, sin mirar si hay nuevos. También lo usa el servicio de
+/// música de Android cuando arranca sin la app.
+pub fn load_saved(dir: &Path) {
+    let _ = std::fs::create_dir_all(dir);
+    for (name, _) in API {
+        if let Err(e) = load(dir, name) {
+            eprintln!("[extractores] {name}: se queda el incluido ({e})");
+        }
+    }
+    let _ = DIR.set(dir.to_path_buf());
 }
 
 /// Usa el extractor guardado si sigue valiendo: misma api, más nuevo que el incluido, intacto y

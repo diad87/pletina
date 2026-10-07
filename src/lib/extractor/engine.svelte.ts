@@ -1,7 +1,7 @@
 // P1: elegir de dónde sale el audio de YouTube (yt-dlp, youtubei.js o el motor propio) y atender
 // las peticiones de Rust cuando se usa youtubei.js. Ver src-tauri/src/extractor.rs.
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { listen } from '../events'
 import { inTauri } from '../api'
 import { host } from './host'
 

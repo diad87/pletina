@@ -403,8 +403,13 @@
     .more {
       opacity: 1;
     }
-    .row:hover {
+    /* Tocar una fila no la deja marcada (en el móvil no hay ratón ni teclado). */
+    .row:hover,
+    .row:focus-visible {
       background: none;
+    }
+    .row.current {
+      background: rgb(255 255 255 / 0.04);
     }
     .row:active {
       background: var(--press);

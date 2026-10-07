@@ -19,6 +19,23 @@ import type {
 /** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
 export const inTauri = '__TAURI_INTERNALS__' in window
 
+/**
+ * La comunicación con Rust, lista. En Android, lo que se pide en los primeros instantes de arrancar
+ * la app se rechaza (Tauri aún está preparando los permisos de la ventana): main.ts espera a esto.
+ */
+export const ipcReady: Promise<void> = inTauri
+  ? (async () => {
+      for (let i = 0; i < 50; i++) {
+        try {
+          await tauriInvoke('plugin:app|version')
+          return
+        } catch {
+          await new Promise((r) => setTimeout(r, 100))
+        }
+      }
+    })()
+  : Promise.resolve()
+
 // En un navegador normal (solo desarrollo) se usa un backend falso con datos guardados,
 // para poder ver y ajustar la interfaz. En la app compilada siempre es Tauri.
 const invoke: typeof tauriInvoke =

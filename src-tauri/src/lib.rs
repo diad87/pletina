@@ -10,6 +10,7 @@ mod extractors;
 mod library;
 mod local;
 mod native;
+mod native_player;
 mod player;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
@@ -110,6 +111,9 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_updater::Builder::new().build());
+    // Android: el reproductor nativo (servicio de música), al que la interfaz manda órdenes.
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(native_player::plugin());
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -137,6 +141,9 @@ pub fn run() {
                     return Ok(());
                 }
             };
+            // Android: el servicio de música usa la misma base de datos (ver android.rs).
+            #[cfg(target_os = "android")]
+            android::attach(app.handle(), &db, &dir);
             app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
             extractor::init(app.handle().clone());
@@ -203,6 +210,7 @@ pub fn run() {
             extractor::capture_status,
             extractor::engine_stats,
             extractors::extractor_module,
+            native_player::player_native,
             capture::capture_read,
             capture::capture_seek,
         ])

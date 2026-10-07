@@ -1,5 +1,5 @@
 import { getVersion } from '@tauri-apps/api/app'
-import { listen } from '@tauri-apps/api/event'
+import { listen } from './events'
 import { version } from '../../package.json'
 import * as api from './api'
 import { toast } from './toast.svelte'

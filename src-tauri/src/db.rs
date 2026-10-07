@@ -3,7 +3,7 @@
 
 use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 /// Migraciones en orden; `PRAGMA user_version` guarda cuántas se han aplicado.
 const MIGRATIONS: &[&str] = &[
@@ -129,7 +129,9 @@ pub struct Source {
     pub verified: bool,
 }
 
-pub struct Db(pub(crate) Mutex<Connection>);
+/// Una conexión compartida: clonarla no abre otra (en Android la usan Tauri y el servicio de música).
+#[derive(Clone)]
+pub struct Db(pub(crate) Arc<Mutex<Connection>>);
 
 impl Db {
     pub fn open(path: &Path) -> rusqlite::Result<Self> {
@@ -146,7 +148,7 @@ impl Db {
         }
         backup_before_migrating(&conn, path)?;
         migrate(&mut conn)?;
-        Ok(Self(Mutex::new(conn)))
+        Ok(Self(Arc::new(Mutex::new(conn))))
     }
 
     pub fn source(&self, track_id: u64) -> Option<Source> {

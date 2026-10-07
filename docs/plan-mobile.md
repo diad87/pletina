@@ -107,6 +107,24 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 
 **Sale bien si** con la interfaz de escritorio tal cual, en el móvil se puede buscar, montar una cola, apagar la pantalla, y al volver ver la cola y la canción correctas.
 
+**Hecho (7 oct 2026, rama `android-fase0`):**
+- **Núcleo** (`android.rs`):
+  - usa la misma base de datos que la app (`Db` se comparte con `Arc`): vídeos elegidos, elecciones de «¿No es esta canción?» e historial;
+  - si el servicio arranca sin la app, la abre él con la carpeta que le da Kotlin (`MusifyCore.init(dataDir)`), carga los extractores guardados y usa el motor propio.
+  - JNI: `resolve` (el `player::resolve` de siempre), `recordPlay` y `emit` (avisos a la interfaz).
+- **Servicio** (`PlaybackService.kt`):
+  - cada canción es una «entrada» de la interfaz (JSON en `mediaMetadata.extras`);
+  - apunta el historial a los 30 s;
+  - guarda la cola en `files/cola.json` y la recupera al arrancar (en pausa) y al pulsar «play» con la app cerrada (`onPlaybackResumption`);
+  - reintenta con URL nueva, espera a que vuelva la red y salta lo que no sale.
+- **Puente** (`PlayerPlugin.kt` + `native_player.rs`): órdenes `setQueue`, `insert`, `remove`, `move`, `replace`, `skipTo`, `play`, `pause`, `next`, `previous`, `seek`, `setRepeat`, `setVolume`, `reload` y `state`; eventos `player-timeline` y `player-status`.
+- **Interfaz** (`player-android.svelte.ts`):
+  - mismo `PlayerApi` que el reproductor de escritorio, así que las pantallas no cambian;
+  - la cola tipo DJ va justo detrás de la actual en la cola nativa;
+  - el aleatorio reordena solo lo que queda del disco y respeta tu cola; al quitarlo, sigue en orden desde donde iba.
+- **Arranque:** en Android lo que se pide a Rust en los primeros instantes se rechaza («not allowed by ACL»). `main.ts` espera a `ipcReady` y `listen` reintenta.
+- **Probado en el emulador:** tocar una canción la hace sonar en el servicio; con la pantalla apagada salta y prepara canciones nuevas; al volver, la interfaz enseña la correcta. También funcionan «Añadir a la cola», el aleatorio (activar y quitar), repetir, el historial apuntado por el servicio, «¿No es esta canción?» (cambia el vídeo en el mismo segundo) y matar la app y volver (cola recuperada en el segundo exacto).
+
 ### Fase 2: interfaz táctil
 - Barra de abajo con Inicio, Buscar y Biblioteca. Minirreproductor siempre visible. «Sonando ahora» y la cola a pantalla completa.
 - Pulsación larga en lugar de clic derecho, y nada que dependa de pasar el ratón por encima.
