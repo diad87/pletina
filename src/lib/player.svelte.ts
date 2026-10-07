@@ -107,7 +107,7 @@ class Player {
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
-  #inFlight = new Map<string, { promise: Promise<Playable>; foreground: boolean; token: number; prefetchVersion: number }>()
+  #inFlight = new Map<string, { promise: Promise<Playable>; token: number; prefetchVersion: number }>()
   /** Una cancelación pendiente siempre termina antes de enviar la siguiente resolución. */
   #cancelPending: Promise<void> = Promise.resolve()
   /** Un vídeo elegido aún no se guarda si YouTube exige interacción antes de capturarlo. */
@@ -732,7 +732,7 @@ class Player {
     const id = item.track.id
     const key = `${foreground ? 'foreground' : 'next'}:${id}`
     let pending = this.#inFlight.get(key)
-    if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground) ||
+    if (!pending || refresh || pending.token !== this.#token ||
         (!foreground && pending.prefetchVersion !== prefetch?.version)) {
       // El clic debe llegar al backend para promocionar una precarga; allí se comparte la captura.
       const options = foreground ? this.#admissionOptions(item) : {
@@ -745,7 +745,6 @@ class Player {
           if (options.isCurrent?.() === false) throw new DOMException('Resolución sustituida', 'AbortError')
           return api.resolve(toQuery(item), refresh, foreground, options)
         }),
-        foreground,
         token: this.#token,
         prefetchVersion: prefetch?.version ?? 0,
       }
