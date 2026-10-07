@@ -1,232 +1,114 @@
-# Plan del motor propio basado en el reproductor de YouTube
+# Captura oficial de YouTube — P1
 
-El objetivo es que Musify siga obteniendo la canción cuando cambie la API interna de YouTube, con el menor mantenimiento posible y sin entregar anuncios al usuario. YouTube se encarga de reproducir con su código actualizado; Musify observa la entrega de audio al navegador y conserva únicamente el contenido identificado como la canción.
+Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
+fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
+API4/captura v7 en validación; los resultados reales estarán en el
+[informe](informe-captura-youtube-2026-10-07.md).
 
-Este documento recoge el plan y su estado de implementación. La primera plataforma es Windows con WebView2. La prioridad es la continuidad de reproducción y la separación correcta de anuncios; después, reducir espera, memoria y CPU.
+## Decisiones vigentes
 
-## Evolución API 3 — 7 de octubre de 2026
+El camino recomendado es **Propio**: nivel rápido en Rust, sin sesión y sin anuncios,
+y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
+el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
 
-El trabajo está aislado en `C:\Users\iunan\musify-oficial`, rama `p1-oficial`. El snapshot API 2 se conservó en `f4868be`; la carpeta compartida continúa en `main`. No se han fusionado ramas, hecho push ni publicado extractores.
+La aprobación se mide **sin iniciar sesión**. Premium sólo sirve como referencia,
+en un perfil separado y con acceso manual del usuario. Ningún agente introduce
+credenciales. Perfiles, cookies, tokens, medios y volcados quedan fuera de Git.
 
-La implementación nueva incorpora unidades completas de audio con tiempos, inventario de cobertura, lectura progresiva, recuperación sin vaciar el audio verificado, saltos por épocas y dos sesiones de captura con prioridad para la canción actual. La precarga prepara también el `Audio` y su MediaSource, que se promocionan al terminar la canción anterior. El protocolo pasa a API 3 y la captura a versión 6; receta y youtubei.js no cambian.
+Los anuncios se reproducen a1× y se saltan únicamente mediante el botón oficial visible
+y habilitado, igual que una persona. No se bloquean ni aceleran. Un anuncio sin botón
+observado no queda automáticamente clasificado como imposible de saltar.
 
-**La entrega progresiva no está aprobada para uso normal.** Un contraejemplo controlado reproduce un anuncio que empieza en 1,000 s reutilizando la misma fuente, mientras las señales del sitio siguen indicando la canción hasta 1,120 s. El experimento llegó a publicar 100 ms de anuncio a 1×. El cierre completo de API 2 entregó cero. Retener un intervalo fijo sólo desplazaría el límite: no existe un plazo documentado para esas señales. La ruta normal debe conservar la cuarentena hasta EOF e historia completa verificada. El experimento requiere simultáneamente `MUSIFY_BENCH` y `MUSIFY_BENCH_PROGRESSIVE=1`; no puede activarse sólo con la segunda variable.
+## Implementación
 
-«Propio» sigue recomendado y conserva su ruta rápida en Rust y el respaldo histórico separado (`capture_legacy.rs` y `capture-legacy.js`). La captura nueva no lo sustituye. yt-dlp sigue siendo el motor predeterminado. No se han añadido cambios en `db.rs` ni `downloads.rs` después del snapshot. Los cambios visibles se limitan al texto del selector, que refleja la cuarentena y la recomendación de Propio, y a un aviso si falla la promoción nativa mientras se conserva el audio confirmado. La gestión interna del reproductor cambia para preparar y adoptar un segundo Audio, necesaria para la precarga.
+1. **Clic nativo.** El adaptador propone las coordenadas de un botón conocido, visible,
+   habilitado y comprobado mediante hit-test. Rust revalida la propuesta, su fuente,
+   generación, época y caducidad. WebView2 ejecuta `Input.dispatchMouseEvent`, esperando
+   la respuesta de cada evento antes del siguiente. Se registran evento confiable,
+   cancelación y transición observada, separando intento de omisión efectiva.
+2. **Entrega progresiva experimental.** Cada unidad debe conservar identidad, fuente,
+   configuración y cobertura confirmadas. Se retienen los últimos1,5s, configurables,
+   y una contradicción descarta la cuarentena. El EOF válido libera la cola retenida.
+   El modo normal conserva la cuarentena completa hasta terminar las pruebas reales.
+3. **Verificación independiente.** Para el mismo vídeo se descarga el audio nativo sin
+   cookies, preferentemente con el mismo formato/itag. El banco compara todos los
+   paquetes publicados, incluidos los anteriores a saltos y recuperaciones, mediante
+   hashes de contenido y tiempos; si no coincide, intenta PCM estricto con FFmpeg.
+   Una discrepancia, paquete omitido o alineación no verificable impide aprobar.
+4. **Precarga de dos canciones.** Tres ventanas como máximo: actual y dos siguientes.
+   Los Audio preparados se conservan por canción/plaza al avanzar; promocionar B no
+   cancela C. El supervisor da prioridad a la actual y limita memoria total y por pista.
+5. **Final y cuantización.** API4 incorpora índices de paquetes y certificado
+   `complete-source-v1`, ligado a la fuente original, época, inicialización y ajustes.
+   Sólo un EOF limpio y todos sus índices permiten acreditar el intervalo completo.
+   Un hueco de representación de1ms con MSE continuo y decodificación correcta no
+   equivale a un paquete perdido. Un salto sin capturar conserva su hueco real.
+6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
+   puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
+   históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.
 
-El banco usa `dev.musify.captureofficialtest`, con perfil y base de datos propios. `tests/fixtures/real-albums.capture.json` fija las 30 canciones seleccionadas dentro de la app con la misma lógica de `player::tests::real_albums`. La búsqueda se usa para preparar el corpus; la captura recibe esos IDs y no emplea clientes API propios para extraer audio. Los informes conservan filas fallidas y checkpoints por fase. Los eventos de reproducción del navegador miden inicio y cortes; los contadores de anuncios del adaptador no son una prueba independiente de identidad semántica.
+Retener1,5s no es una prueba universal: el ensayo controlado con marcador retrasado1,7s
+conserva180ms de anuncio entregado en el experimento. La admisión será empírica y
+explícita; no se presenta como inmunidad total a cambios de YouTube.
 
-Primer ensayo de desarrollo, conservado como fallo (`result-20261007-080647.json`): Airbag arrancó en 35,834 s, 4,677 s al descontar la publicidad observada hasta ese momento; superó el límite de 3 s. El salto a 230,4 s falló por una inicialización WebM nueva tras el seek. El primer rango empezaba en 0,021 s, por lo que tampoco acreditaba el comienzo completo. Durante toda la prueba se contaron tres identidades de fuente etiquetadas como anuncio y cero unidades etiquetadas como anuncio entregadas; esto no subsana el contraejemplo semántico anterior.
+## Pruebas en la aplicación
 
-La cuarentena completa conserva la semántica de continuidad de API 2: después de EOF, historia observada desde cero y validación de la fuente original, admite la cuantización del contenedor dentro de una unidad certificada. El certificado está ligado a fuente, buffer, época, versión y ajustes. Las fronteras entre unidades y épocas siguen siendo exactas a 1 µs. Esto corrige la regresión de Opus con timestamps iniciales 0, 21 y 41 ms sin ampliar la tolerancia del experimento ni inventar intervalos observados. Una cadena indivisible que excede 4 MiB falla explícitamente.
+Se conservan las30 canciones de `real_albums`: seis de OK Computer, Infrasoinuak,
+Agila, El Mal Querer y Abbey Road. Los fallos permanecen en el informe y los reintentos
+no borran los intentos originales. Búsqueda fría y reproducción se miden juntas en
+Propio; preparar un ID fuera del cronómetro no cuenta como búsqueda incluida.
 
-La adopción del Audio API 3 preparado puede empezar antes de que Rust termine de cerrar la ventana anterior y promocionar la siguiente. Sólo se aplica al mismo vídeo, con lector vivo y buffer inicial, sin una petición de refresco. La precarga posterior espera a que la promoción y la reproducción hayan tenido éxito. Las respuestas obsoletas no cambian el Audio vigente; un error de promoción conserva lo que ya suena. Pausar y reanudar durante esa transición no deja bloqueada la cola. El banco registra ambos hitos con el mismo reloj que el evento `playing`.
+| Caso sin Premium | Criterio |
+|---|---|
+| Propio con nivel rápido: primer sonido, incluida búsqueda | ≤300ms |
+| Propio con nivel rápido: transición natural | ≤100ms |
+| Respaldo oficial: primer sonido | ≤3s más la parte de anuncio que no pudo saltarse |
+| Respaldo oficial: transición natural | ≤500ms |
+| Respaldo oficial: salto al80% aún no capturado | ≤1s |
+| Audio publicado | 0 discrepancias con la referencia |
+| Cobertura y escucha | EOF, principio/final completos y0 cortes |
+| Cohorte publicitaria | ≥50 transiciones reales distintas, sin sesión |
 
-La primera tanda con esa promoción (`result-20261007-092755.json`) conserva un fallo real de final en «Dardararen Bat»: el reloj observado era 212,981 s y la suma de timestamps del último paquete daba 212,98100000000002 s. El último paquete de 20 ms quedó retenido, la reproducción esperó en 212,900154 s y el caso agotó su plazo. La captura versión 4 acepta sólo el error de redondeo de esas comparaciones, acotado a `4 * Number.EPSILON * max(1, abs(actual), abs(expected))`. No cambia los timestamps, los bytes ni el margen de cobertura de 1 µs. Los tests siguen rechazando una diferencia real de 1 ps en esos dos ejemplos, finales no observados y huecos de contenido. La tanda anterior permanece como evidencia fallida y las canciones afectadas se repiten con `c603f8f`.
+Los eventos `playing`, `waiting`, `ended`, tiempos y rangos se observan dentro de
+WebView2 con volumen cero. La comparación de paquetes/PCM es independiente de las
+etiquetas de anuncios. Premium se mide aparte, con pocas tandas, sin contribuir a aprobar.
+La demora máxima del marcador necesita una referencia externa del inicio publicitario;
+no puede deducirse comparando el marcador consigo mismo.
 
-La repetición `result-20261007-101042.json` confirmó seis finales de Berri Txarrak, sin eventos de espera durante la escucha y con transiciones de 2,4 a 6,9 ms; las seis verificaciones globales siguieron incompletas por el hueco de 1 ms. Encontró otro fallo real en AAC: «Buscando una luna» terminó en el reloj nativo en 251,733333 s, frente a 251,73333333333332 s del inventario codificado. La diferencia de precisión del reloj retuvo el último paquete, el Audio quedó esperando en 251,590687 s y el intento agotó 621,856 s. Se conserva el informe fallido y su interrupción. Los extractos originales y sus huellas están en [diagnostics-eof.json](evidence/capture-2026-10-07/raw/diagnostics-eof.json).
-
-`029d0cf` (captura versión 5, API 3) añade un permiso específico para esa representación terminal inferior a 1 µs. Exige `ended` y pausa nativos, reloj igual a duración y truncado a microsegundos, EOF exitoso, MediaSource terminada y último rango concordante. Sólo se concede después de las comprobaciones de inventario, identidad y observaciones, y queda ligado a época, fuente, buffer nativo, versión, ajustes y snapshot. No altera los paquetes ni el comparador general. Las 211 pruebas JavaScript pasan, incluidas las variantes normal y experimental del caso AAC exacto, revocación del permiso, finales insuficientes y marcador publicitario tardío. La repetición real de los tres discos restantes usa este commit.
-
-Comprobaciones de API 3 hasta `c603f8f`: 204 pruebas JavaScript pasan; la última comprobación TypeScript/Svelte no informa de errores ni avisos. Las pruebas Rust dieron 43 correctas y 12 de integración ignoradas; las correcciones posteriores son de JavaScript y del banco. La comparación PCM con FFmpeg se limita a las muestras AAC y Opus generadas localmente. Las sesiones reales se miden dentro de la app aislada mediante eventos `playing`, `waiting`, `ended`, reloj y rangos del navegador, con volumen cero: son medidas de reproducción del navegador, no una grabación acústica ni una comparación de identidad del audio remoto.
-
-`4fd3003` adelanta la precarga al aviso nativo de admisión de la canción actual, emitido después de reservar o promover su sesión. Puede aprovechar la espera inicial y sus anuncios. La época esperada se comprueba atómicamente antes de cambiar la precarga; los tickets, el Audio y la canción descartan respuestas antiguas. Si se pierde el aviso, se conserva la precarga tras `play`. El Audio ya preparado mantiene su barrera de promoción y reproducción. La captura versión 6 registra además los controles públicos y resultados de los intentos de omisión, sin cambiar los selectores, clics ni velocidad. Esta información no permite atribuir retrospectivamente la omitibilidad de anuncios anteriores.
-
-Las comprobaciones del código de `4fd3003` pasan: 227 pruebas JavaScript sin omisiones, 46 Rust correctas y 12 de integración ignoradas, TypeScript/Svelte sin errores ni avisos y compilación de la aplicación aislada. Los ensayos de app son adicionales a esos tests Rust ignorados.
-
-La batería conserva las 30 canciones de `real_albums`, sus repeticiones y sus fallos. Las últimas medidas por ID dan 30/30 arranques dentro de 3 s **tras restar publicidad observada**, 30/30 cambios en frío dentro de 5 s más anuncio y 30/30 saltos al 80 % dentro de 3 s. No hubo arranques nuevos sin publicidad en esa muestra. La escucha natural de los cinco discos combina tres versiones: 30 finales y coberturas MSE, cero esperas dentro de las canciones después de empezar, pero sólo 2 inventarios globales completos y 23/25 transiciones dentro de 500 ms. Las dos transiciones de Rosalía de 50,9 y 57,2 s y los 28 inventarios Opus incompletos permanecen como fallos. Los controles normales de dos canciones verifican cuarentena, cobertura y final, con arranques de 306,4 y 48,7 s incluidos anuncios.
-
-El ensayo dirigido `122056` de `4fd3003` pide la precarga 23,3854 s antes del primer `playing` y registra una transición MALAMENTE → QUE de 2 ms. Las dos pistas terminan sin esperas dentro de la escucha, pero conservan el inventario Opus incompleto. La publicidad de la nueva sesión fue distinta: no demuestra que los 199 s anteriores queden resueltos. Al seleccionar el último intento por canción, las transiciones pasan a 24/25, combinando cuatro versiones; el agregado anterior de 23/25 y sus fallos sigue documentado. No se han repetido RENIEGO ni las 30 canciones completas con v6.
-
-El [informe de resultados](informe-captura-youtube-2026-10-07.md) recoge las tablas, el ensayo de precarga temprana, la procedencia por versión, los commits y los pendientes; la [tabla por canción](evidence/capture-2026-10-07/results.md) conserva también el historial. **El hito no está aprobado.** Quedan la atribución independiente antes de publicar bytes, la verificación global Opus progresiva sin rellenar huecos ficticios, las transiciones con anuncios largos, la muestra sin anuncios y la validación acústica/semántica. Ningún resultado de latencia equivale a separación garantizada de anuncios.
-
-## Línea base API 2 — 6 de octubre de 2026
-
-La captura oficial tiene un núcleo separado del adaptador YouTube y protocolo API 2. Es una **prueba experimental**, seleccionable como «Oficial (experimental)»: reproduce a 1× dentro de YouTube y retiene la fuente completa antes de entregarla a Musify. El motor predeterminado sigue siendo yt-dlp mientras no se supere la primera fase.
-
-**Batería histórica de API 2: correcta en su muestra de dos canciones.** `capture-bench.local/result-20261006-222951.json` pasó los cuatro controles MSE y las dos canciones reales, incluidas decodificación, cobertura continua, salto al 80 % y reproducción del final. Se ejecutó con las guardas de `abort`, `remove` y `changeType`, sin reintentos y usando únicamente la captura oficial para extraer el audio.
-
-| Canción | Formato | Cobertura de audio | Bytes | Tiempo hasta extracción |
-|---|---|---:|---:|---:|
-| Airbag (`jNY_wLukVW0`) | WebM/Opus | 0..287,901 s | 4.881.724 | 299,7 s |
-| Sucede (`nV-F1WSpJIA`) | MP4/AAC-LC | 0..187,333333 s | 3.034.789 | 215,4 s |
-
-La espera incluye publicidad y la reproducción oficial completa a 1×. Ambos intentos observaron señales de anuncio al principio y en la transición posterior al final. Esta muestra no valida todavía anuncios intermedios ni todos los cambios posibles del sitio.
-
-Implementado:
-
-- Asociación MediaSource → URL → elemento multimedia, cuarentena con límite de memoria y comprobación de los tiempos codificados de WebM/Opus y MP4 fragmentado/AAC-LC. Una fuente presentada con identidad desconocida o mezclada no se entrega. La inicialización, el orden de los bytes y los ajustes de `SourceBuffer` se conservan; formatos y estructuras sin verificación se rechazan. Un aborto con bytes ya capturados, una eliminación de rangos o un cambio de formato invalidan la fuente tras realizarse la operación nativa; una excepción sin cambio no la invalida.
-- Supervisor único, generaciones y secuencias, validación de la fuente confirmada, prioridad de reproducción sobre precarga y cancelación de búsquedas todavía sin ID. Watchdog por avance, reintentos limitados y cierre confirmado de ventanas. El avance de un anuncio en la misma fuente puede añadir hasta 180 s de espera; un latido, más bytes o un salto no amplían el plazo. Sin avance durante 60 s se activa la recuperación. Se conserva el último diagnóstico incluso al agotar el tiempo.
-- Lector con cancelación, espera de SourceBuffer, cambios de revisión y recuperación de rangos expulsados tras EOS. La caché completa permite reconstruir la reproducción al saltar sin volver a extraer desde una posición parcial.
-- Interacción explícita cuando YouTube necesita al usuario, conservación de las elecciones manuales y separación de errores temporales frente a vídeos eliminados.
-- Modo oficial independiente de la búsqueda interna: usa el ID guardado o abre la elección manual, con búsqueda en el sitio oficial y enlace pegado. No llama a YouTube Music interno ni a yt-dlp para resolver una canción en ese modo. Las otras opciones conservan su búsqueda automática.
-- Resultados del benchmark que exigen audio, saltos y final completo cuando se solicitan; conservan también el diagnóstico de los fallos. Pruebas automáticas y comprobaciones de CI antes de publicar.
-
-El banco real se ejecuta con `scripts/bench-capture.ps1`, con identificador de aplicación, perfil WebView2 y base de datos propios. Usa el código incluido, no actualiza componentes y pide solamente la captura oficial. Los informes quedan en `capture-bench.local/`, fuera de Git. Ejemplo en PowerShell:
+El banco usa identificador y base de datos aislados. Cada ejecución anónima crea un
+perfil nuevo; se exige observar `LOGGED_IN=false`, nunca inferirlo por ausencia de datos.
+El perfil `premium-manual` persiste separado y se abre para el acceso del usuario.
 
 ```powershell
-./scripts/bench-capture.ps1 -VideoId @('jNY_wLukVW0', 'nV-F1WSpJIA')
+./scripts/bench-capture.ps1 -Suite native-search -CorpusPath capture-bench.local/corpus-30.json
+./scripts/bench-capture.ps1 -Suite album -CorpusPath capture-bench.local/corpus-30.json
+./scripts/bench-capture.ps1 -Suite ad-transitions -CorpusPath capture-bench.local/corpus-30.json
+./scripts/bench-capture.ps1 -Suite profile-login
 ```
 
-**Primera batería real:** ambos intentos llegaron al reproductor oficial, sin resolver mediante los clientes internos de Musify, y entregaron cero bytes al fallar la validación. `jNY_wLukVW0` detectó el título visible vacío al comenzar la canción, aunque coincidían el ID del reproductor y la página. `nV-F1WSpJIA` eligió AAC/MP4, que el primer prototipo no analizaba. Estos resultados se conservaron como fallos; motivaron una espera de identificación a tiempo cero y el trabajo de validación de AAC.
+Configuración: `MUSIFY_BENCH_HOLDBACK_SECONDS` (1,5), `MUSIFY_CAPTURE_MAX_SESSIONS`
+(3), `MUSIFY_CAPTURE_TRACK_MB` (96) y `MUSIFY_CAPTURE_CACHE_MB` (288).
+Una configuración inválida o un total menor que el límite por pista debe fallar con
+diagnóstico. Estos límites acotan audio almacenado; la memoria del navegador se mide aparte.
 
-La inspección posterior identificó una variante sin sesión iniciada que no contiene `ytmusic-player-bar`. Se acepta únicamente cuando el título del enlace del propio reproductor y el de `navigator.mediaSession.metadata` coinciden exactamente con el título del vídeo presentado. Una barra existente con título contradictorio sigue bloqueando la captura. Si las señales aún no están disponibles y el reloj está exactamente en cero, se pausa antes de observar la presentación y se espera un máximo de diez segundos; no se reclasifica contenido ya presentado con identidad desconocida.
+## Promoción y mantenimiento
 
-Los ensayos completos detectaron además dos diferencias del navegador que el primer comprobador no contemplaba. En WebM, el tamaño exterior de Segment puede describir un archivo cuyos índices finales no se añaden a MSE: se comprueban estrictamente los hijos efectivamente añadidos. YouTube también puede sustituir la fuente antes de emitir `ended`: se observa el reloj anterior al cambio, pero cubrir los bytes descargados no basta para declarar completa una canción. Se exige también el EOF exitoso del reproductor oficial y que MediaSource siga en estado `ended`, o un evento `ended` real. Con ese EOF, puede cerrarse el audio mientras la identidad todavía sea contenido y el reloj cubra todos sus frames, aunque el vídeo termine después.
+La entrega progresiva pasa a normal sólo después de30 canciones completas distintas y
+50 transiciones publicitarias reales sin sesión, cero discrepancias, cobertura y tiempos
+correctos. Los informes parciales pueden superar sus medidas y seguir pendientes de
+aprobación. Si falla una canción, se informa su motivo y se conserva la reproducción ya
+confirmada durante la recuperación del tramo ausente.
 
-El marcador de un anuncio posterior puede aparecer cuando el elemento anterior ya ha terminado. En ese límite se conserva la identidad confirmada durante su última presentación: misma fuente y elemento, solamente observaciones de contenido, reloj exactamente al final, elemento nativo terminado y pausado, EOF exitoso y última observación hace como máximo 500 ms. Esto no rehabilita una fuente que haya mostrado identidad desconocida o de anuncio mientras avanzaba. Un evento `ended` sintético tampoco sustituye al estado real del elemento.
+El núcleo usa interfaces multimedia estándar; el adaptador concentra las señales del
+sitio. MSE en workers, HLS, multiplexación, cambios de códec y otras plataformas siguen
+necesitando pruebas específicas. Apoyarse en el reproductor reduce la dependencia de su
+API interna, pero identificar anuncios y copiar su audio todavía depende de capacidades
+observables. Receta y youtubei.ts no cambian en esta iteración.
 
-En AAC se observaron `timestampOffset=-0.036281179138321996` y una ventana de final finita. Se conserva una configuración inmutable desde el primer append, se transporta junto con la fuente verificada y se aplica antes de reproducir sus bytes. Se contrasta el rango que produciría descartar frames completos o recortar sus bordes con el rango real de audio del navegador. No se supone que el desplazamiento sea silencio ni se modifican los paquetes. Los cambios de configuración dentro de una fuente siguen sin estar admitidos. Estos bytes y ajustes forman una unidad: exportarlos como un MP4 independiente que ignore los ajustes todavía no está validado.
+Las evidencias históricas detalladas y sus32 hashes se trasladaron a
+`capture-evidence.local/legacy-2026-10-07/`, ignorada por Git. En docs queda sólo un
+[resumen histórico](evidence/capture-2026-10-07/README.md).
 
-En MP4 fragmentado, las duraciones de la cabecera inicial no describen necesariamente todos los fragmentos añadidos. El analizador conserva esos valores como diagnóstico y obtiene la línea temporal de las muestras y sus timestamps; comprueba por separado la duración global `mehd` si existe. Mantiene el rechazo de fragmentos intermedios ausentes, solapados o reordenados, y exige que el resultado coincida con los rangos reales de SourceBuffer. Véanse [MSE ISO-BMFF, segmentos de inicialización](https://www.w3.org/TR/mse-byte-stream-format-isobmff/#initialization-segments) e ISO/IEC 14496-12, §8.8.2 y anexo A.8, referenciados en el analizador.
-
-**Comprobación controlada en WebView2:** cuatro casos de audio generado localmente —tres AAC con distintas ventanas y un WebM/Opus con retraso y padding— reprodujeron hasta el final. Para cada caso, dos MediaSource independientes recibieron los mismos bytes y ajustes y produjeron idénticos rangos y duración. En el WebM, el rango codificado termina en 0,221 s y el audible analizado en aproximadamente 0,201 s; el navegador confirmó exactamente ese rango codificado. La comparación con SourceBuffer utiliza ahora el rango codificado, conserva el audible como diagnóstico y exige cubrir el mayor intervalo sin aumentar la tolerancia. Se reproduce con `./scripts/bench-capture.ps1 -MseOnly -TimeoutSeconds 120`; las muestras y su procedencia están en `tests/fixtures/mse-audio.json`, `tests/capture-mp4.test.mjs` y `tests/capture-core.test.mjs`. Esto comprueba temporización y decodificación, no identificación de anuncios.
-
-**Primera captura real completa comprobada:** el informe `result-20261006-220255.json` registra «Airbag» (`jNY_wLukVW0`), WebM/Opus, con 4.881.724 bytes y 14.395 frames. El rango empieza en cero y termina en 287,901 s; Musify comprobó decodificación, salto al 80 % y reproducción del tramo final hasta `ended`. La captura tardó 323,6 s, incluida la espera inicial. Los cuatro controles MSE también pasaron. El mismo informe conserva un fallo de AAC (`nV-F1WSpJIA`): agotó 120 s en estado anuncio antes de comenzar la canción; la batería conjunta sigue marcada como fallida. No se interpreta el contador de segmentos publicitarios recibidos por Rust como una medida de los anuncios vistos en YouTube.
-
-**AAC real comprobado:** `result-20261006-222415.json` pasó los cuatro controles MSE y la captura de «Sucede» (`nV-F1WSpJIA`). Conservó 3.034.789 bytes y 8.069 frames, con cobertura 0..187,333333 s, decodificación, salto al 80 % y final correcto en Musify. Tardó 209,2 s, tras un anuncio inicial de aproximadamente veinte segundos. Se aplicaron el desplazamiento y la ventana originales; no se reescribieron los paquetes. El ensayo anterior, `result-20261006-221856.json`, permanece como fallo del antiguo control de duración de la cabecera MP4.
-
-Comprobaciones automáticas de la línea base API 2: 115 pruebas JavaScript y 41 Rust pasan; 12 pruebas Rust de integración con red/datos locales permanecen ignoradas. TypeScript/Svelte no informa de errores ni avisos. La compilación de la aplicación de prueba también pasa. Las regresiones incluyen selección durante precarga, promoción de su prioridad, cancelación de resoluciones antiguas, rechazo de finales sintéticos, espera acotada de anuncios y fin de los reintentos cuando una caché incompleta no mejora. Los errores de selección se muestran dentro del diálogo y los ensayos cancelan cualquier carga pendiente antes de restaurar el volumen.
-
-**Límite de la evidencia:** los tests controlan transiciones, tiempos y protocolo; no demuestran por sí solos ausencia de anuncios reales. El ID, título y URL pueden describir la canción pendiente durante un anuncio. Si YouTube modifica las señales de anuncios, el adaptador podría clasificar mal una fuente aunque sus tiempos sean correctos. Las comprobaciones del contenedor no resuelven esa identidad semántica. Tampoco se compara con una grabación canónica: si el reproductor oficial entregase una versión acortada con EOF válido, la captura completa de esa fuente no demostraría que contiene la obra entera. Por ello la fase 1 permanece abierta hasta verificar suficientes sesiones reales con anuncios al principio, durante la canción y con precarga.
-
-Pendientes de ese criterio: promoción a motor principal, selección automática de resultados del sitio oficial, captura progresiva de baja latencia, descarga desde esta captura, recuperación automática de versiones de adaptador y portabilidad. Las descargas siguen utilizando su ruta existente de yt-dlp. No se considera terminada la independencia completa de las API de YouTube.
-
-## Arquitectura objetivo
-
-```text
-Canción de la biblioteca → ID de vídeo
-                              ↓
-              Navegador con reproductor oficial
-                              ↓
-                Observación de audio y tiempo
-                              ↓
-             Clasificación y retención temporal
-                 canción / anuncio / desconocido
-                              ↓
-               Audio de la canción → Musify
-```
-
-La ruta principal no construirá peticiones a InnerTube, imitará clientes como VISIONOS, interpretará `adaptiveFormats` ni descifrará firmas o tokens. El navegador oficial sí hará las peticiones que necesite: el desacoplamiento consiste en que nuestro código no conozca su contrato.
-
-El motor tendrá cuatro piezas con responsabilidades separadas:
-
-| Pieza | Responsabilidad |
-|---|---|
-| Captura del navegador | Observar fuentes y buffers mediante interfaces web, conservar formato y tiempos, y detectar capacidades. Sin selectores de YouTube. |
-| Adaptador YouTube | Abrir el contenido, identificar canción y anuncios, gestionar consentimiento y detectar cuándo hace falta interacción. Concentrar aquí las dependencias del sitio. |
-| Supervisor en Rust | Dar prioridad a la canción actual, gestionar una sesión activa, limitar recursos, cancelar trabajos y recuperar fallos. |
-| Consumidor de audio | Reproducir únicamente rangos confirmados de canción, gestionar huecos, cambios de formato y saltos. |
-
-El punto de partida es `src-tauri/src/capture.js`, `src-tauri/src/capture.rs` y `src/lib/extractor/capture.ts`. Los motores de API directa se conservan para comparación y uso opcional durante la transición; no serán necesarios para superar las pruebas de la nueva ruta.
-
-## Fase 1 Demostrar la separación de canción y anuncios
-
-Esta fase decide la viabilidad antes de integrar o acelerar nada.
-
-1. Instrumentar el reproductor oficial a velocidad normal y registrar documentos, fuentes, buffers, formatos, tiempos multimedia y cambios de contenido. Probar sesiones sin anuncios, anuncios al principio y durante la reproducción, y contenido que llega antes de comenzar a sonar.
-2. Preparar un reproductor de prueba local con audio identificable y secuencias controladas de anuncio y canción. Permitir que ambos precarguen datos y que reutilicen el mismo elemento multimedia.
-3. Correlacionar cada rango de audio con su fuente, sesión y línea temporal. Comparar la clasificación con la referencia controlada y revisar las transiciones en YouTube real.
-4. Introducir tres estados: canción confirmada, anuncio confirmado y desconocido. El estado desconocido retiene datos durante un tiempo y con una memoria limitados; no se entrega como canción ni se reclasifica por una suposición.
-5. Conservar los segmentos de inicialización necesarios. Rechazar todos los primeros bloques desconocidos sin analizarlos puede hacer que la canción deje de decodificarse.
-
-**Precaución técnica concreta:** el vídeo que aparece como actual en el momento de `appendBuffer` no identifica necesariamente los bytes añadidos. El reproductor puede estar precargando la canción mientras suena un anuncio. La URL de la página, un ID aislado o la duración tampoco bastan como prueba de identidad.
-
-**Criterio para avanzar:** en el banco controlado, todos los rangos entregados pertenecen a la canción, se conserva su principio y final y no quedan huecos. En los casos reales, registrar por separado clasificaciones confirmadas, ambiguas y fallidas. Si no se puede establecer la correspondencia entre contenido y bytes, mantener esta fase abierta y evaluar otra fuente de observación antes de convertir el prototipo en motor principal.
-
-## Fase 2 Separar la captura genérica del adaptador
-
-Extraer de `capture.js` las referencias a `#movie_player`, métodos internos, selectores y textos. El núcleo usará los eventos y propiedades multimedia estándar donde sean suficientes. Las señales específicas de YouTube se contrastarán en el adaptador y podrán sustituirse sin cambiar el núcleo.
-
-Definir un protocolo versionado entre JavaScript, Rust y la interfaz. Cada mensaje incluirá la generación de la petición, la sesión de captura, la fuente y una secuencia. Los segmentos conservarán su MIME, inicialización, discontinuidades y los ajustes de tiempo aplicables. Rechazar mensajes de sesiones canceladas o ventanas antiguas.
-
-Detectar las rutas disponibles en ejecución:
-
-- MSE con audio separado: primera ruta que se implementará y verificará.
-- Cambios de códec o de `SourceBuffer`: conservar la información necesaria para reconstruir el audio.
-- MSE en workers, buffers con audio y vídeo juntos y reproducción nativa de HLS: experimentos independientes con resultado explícito. No asumir que pasan por el mismo interceptor.
-- Rutas que no se pueden copiar: informar de la capacidad que falta, sin confundirla con un vídeo borrado. Una posible captura del audio decodificado del proceso se evaluaría en un prototipo aparte, midiendo calidad, aislamiento y tiempo real; no se dará por disponible de antemano.
-
-No fundamentar la compatibilidad en alterar `canConstructInDedicatedWorker` para obligar a YouTube a usar otra implementación. Esa técnica solo podrá mantenerse como compatibilidad temporal documentada.
-
-**Criterio para avanzar:** el núcleo reproduce el banco local sin código de YouTube; cambiar selectores o métodos del adaptador no obliga a modificar captura, supervisor o consumidor.
-
-## Fase 3 Hacer recuperable toda la sesión
-
-Sustituir las aperturas independientes de ventanas por un controlador único con estados explícitos: apertura, consentimiento, espera de contenido, captura, recuperación, interacción necesaria, finalización y error.
-
-- Dar prioridad a la canción que se escucha. Cancelar o suspender precargas antiguas y agrupar peticiones del mismo vídeo.
-- Serializar creación, navegación y cierre. Una generación identifica qué operación puede modificar el estado actual.
-- Vigilar por separado que la página responda, que avance la reproducción y que lleguen datos útiles. Un latido de JavaScript por sí solo no demuestra progreso.
-- Aplicar reintentos acotados y tiempo máximo por estado. Al agotarlos, liberar la ventana y devolver un error concreto.
-- Recuperar desde un punto validado, conservando los datos reutilizables y evitando duplicados o discontinuidades.
-- Permitir mostrar la sesión del navegador cuando sea necesaria una acción del usuario y continuar después.
-- Distinguir errores de red, identificación, formato, autenticación y contenido no disponible. Un fallo temporal no borra el vídeo elegido ni reemplaza una elección manual.
-
-**Criterio para avanzar:** cambios rápidos de canción, red interrumpida y caída de la ventana no dejan procesos sin seguimiento, audio de otra canción ni esperas indefinidas.
-
-## Fase 4 Integrar la reproducción y los saltos
-
-El consumidor de `capture.ts` mantendrá un mapa de rangos disponibles. Finalizar una tanda de captura no equivale a terminar para siempre el lector: saltar hacia atrás a un hueco o a una zona expulsada de memoria debe reactivar la lectura.
-
-La salida de Musify incluirá solo rangos confirmados de canción. El reproductor oficial podrá pasar un anuncio o usar su botón de salto cuando esté disponible; esos datos no se incorporarán a la canción. Esperar al anuncio puede aumentar la demora inicial, y el estado mostrado al usuario distinguirá esa espera de un fallo.
-
-Cambiar la selección del motor propio para que la captura oficial sea la ruta principal cuando supere los criterios anteriores. Mantener archivos locales, cola, pausa, volumen, teclas multimedia e historial. Probar por separado descargas y evitar marcar una captura parcial como archivo completo.
-
-**Criterio para avanzar:** reproducción completa, anuncio intermedio, pausas, repetición y saltos hacia delante y atrás conservan la canción correcta y su posición, sin filtrar anuncios ni perder fragmentos.
-
-## Fase 5 Desacoplar también la búsqueda
-
-`youtube.rs` consulta actualmente la API interna de YouTube Music. Aunque la captura sobreviva a un cambio, esa dependencia todavía puede impedir encontrar una canción nueva.
-
-Separar búsqueda y reproducción: un ID guardado o elegido por el usuario debe reproducirse sin hacer búsquedas ni resolver una URL multimedia externa. La búsqueda interna existente podrá seguir como optimización opcional.
-
-Preparar una ruta alternativa mediante la búsqueda del sitio oficial, con sus dependencias dentro del adaptador, y conservar las asociaciones verificadas. Si esa automatización no puede identificar el resultado con suficiente confianza, permitir elegir el vídeo en el navegador o pegar su enlace y recordar la elección. El resultado debe ser utilizable por el capturador sin pasar por yt-dlp ni youtubei.js.
-
-**Criterio para avanzar:** desactivar los clientes internos propios no impide reproducir canciones guardadas ni incorporar una canción nueva mediante la ruta oficial. Medir también el porcentaje de búsquedas que requieren intervención.
-
-## Fase 6 Probar resistencia a cambios y consumo
-
-Crear dos bancos complementarios: escenarios deterministas para fallos y transiciones, y una batería real con IDs fijos y condiciones registradas. Las pruebas reales dependerán de la disponibilidad de contenido; los fallos no se ocultarán retirando canciones de la muestra.
-
-| Cambio o fallo simulado | Resultado exigido |
-|---|---|
-| Respuestas incompatibles de los clientes API de Musify | La captura oficial sigue funcionando sin invocar esos clientes. No se bloquea la red del reproductor oficial. |
-| DOM distinto o identidad ausente | Estado desconocido y recuperación acotada; ningún bloque ambiguo se entrega como canción. |
-| Canción precargada durante un anuncio | Conservación del inicio y clasificación correcta por fuente y tiempo. |
-| Anuncio a mitad y posterior reanudación | Ningún audio publicitario en la salida; continuidad de la canción. |
-| Mensaje tardío de una ventana cerrada | Se descarta por generación. |
-| Página viva sin avance de audio | El supervisor detecta el atasco y recupera o termina con error. |
-| Nuevo formato, worker o ruta no soportada | Selección de una ruta comprobada o error de capacidad explícito. |
-| Final de captura seguido de salto a un hueco | Se reanuda la captura y el consumidor incorpora los nuevos datos. |
-| Fallo temporal con fuente elegida a mano | La elección manual permanece intacta. |
-
-Registrar por separado: extracción disponible, canción identificada, inicio de reproducción, saltos, cobertura completa, anuncios descartados, segmentos ambiguos, intervención del usuario y recuperación. Un `ok` global solo será verdadero si pasan todas las comprobaciones solicitadas.
-
-Medir p50 y p95 de clic a sonido y de salto, desglosando espera de anuncio, carga y captura; medir también CPU, memoria máxima y ventanas activas. Optimizar primero precarga y reutilización de datos. Evaluar después la aceleración de captura, conservándola solo si no introduce cortes, errores de clasificación ni más recuperaciones.
-
-**Criterio de publicación:** cero anuncios filtrados y cero pérdidas de contenido en el banco controlado; cero sesiones abandonadas en las pruebas de estrés; informe explícito de éxito y fallos de la batería real. Fijar los presupuestos de latencia y recursos tras medir la primera versión funcional, sin reutilizar las cifras del extractor nativo como expectativa de la captura oficial.
-
-## Fase 7 Desplegar y ampliar plataformas
-
-Aprovechar el trabajo en curso de extractores firmados y versionados para actualizar el adaptador cuando haga falta. Añadir comprobación de funcionamiento, conservación de la última versión válida y vuelta atrás tras fallos repetidos atribuibles a una nueva versión. Una desconexión aislada no debe desactivar una versión buena. No cambiar el código que gobierna una captura ya iniciada a mitad de canción.
-
-Probar primero con el motor seleccionable y promoverlo a predeterminado después de la batería completa. Renombrar el antiguo nivel «garantizado» como «captura oficial» y actualizar la documentación para separar mediciones históricas y comportamiento nuevo.
-
-Extender posteriormente el puente a Mac y Linux, y después a Android e iOS. Cada plataforma debe demostrar sus capacidades multimedia, aislamiento y comportamiento en segundo plano antes de anunciar compatibilidad.
-
-## Orden de implementación
-
-1. Instrumentación y prueba de separación entre canción y anuncios.
-2. Núcleo genérico, adaptador y protocolo de sesiones.
-3. Supervisor y consumidor recuperables.
-4. Integración como ruta principal y búsqueda alternativa.
-5. Batería de cambios, optimización, despliegue gradual y portabilidad.
-
-El primer entregable será una prueba reproducible que capture una canción completa sin anuncios usando únicamente el reproductor oficial, con los clientes internos de Musify desactivados. La separación entre contenido y datos debe quedar demostrada antes de invertir en velocidad o ampliar plataformas.
-
-## Referencias técnicas
-
-Los eventos y propiedades de los elementos multimedia se definen en el [estándar HTML](https://html.spec.whatwg.org/multipage/media.html). Los buffers y la construcción de Media Source en workers se describen en [Media Source Extensions](https://www.w3.org/TR/media-source/). Estos contratos son la base del núcleo genérico, sin asumir que todas las rutas de reproducción pasan por ellos.
-
-La [API oficial del reproductor de YouTube](https://developers.google.com/youtube/iframe_api_reference) documenta controles para reproductores incrustados; acceder a métodos parecidos dentro de la página de YouTube Music no convierte ese acceso en un contrato público ni proporciona por sí mismo una API de extracción o identificación de anuncios.
+Referencias de implementación: [WebView2 CallDevToolsProtocolMethod](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.3296.44),
+[CDP Input](https://chromedevtools.github.io/devtools-protocol/tot/Input/) y
+[ffprobe: hashes de paquetes](https://ffmpeg.org/ffprobe-all.html).
