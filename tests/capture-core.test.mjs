@@ -2002,6 +2002,116 @@ test('source replacement without ended reports prior timing and parsed ranges wi
   assert.equal(messages.some((m) => m.kind === 'seg'), false)
 })
 
+function inlineConsentFixture() {
+  const style = { display: 'block', visibility: 'visible', opacity: '1' }
+  class Button extends EventTarget {
+    constructor(text) { super(); this.textContent = text; this.calls = 0; this.isConnected = true; this.disabled = false; this.style = { ...style }; this.attributes = {} }
+    getClientRects() { return this.hidden ? [] : [{}] }
+    getAttribute(name) { return this.attributes[name] ?? null }
+    closest() { return this.blocked ? {} : null }
+    click() { this.calls++; if (this.failure) throw this.failure; this.dispatchEvent(new Event('click', { cancelable: true })) }
+  }
+  const reject = new Button('Rechazar todo'), accept = new Button('Aceptar todo')
+  let buttons = [reject, accept]
+  const dialog = { style: { ...style }, hidden: false, getClientRects() { return this.hidden ? [] : [{}] }, closest() { return this.blocked ? {} : null }, querySelectorAll: selector => selector === 'button' ? buttons : [] }
+  const root = { style: { ...style }, querySelector: selector => selector === 'tp-yt-paper-dialog#dialog' ? dialog : null }
+  const roots = [root], location = { hostname: 'www.youtube.com', search: '?v=target', hash: '' }
+  const document = { querySelectorAll: selector => selector === 'ytd-consent-bump-v2-lightbox' ? roots : [], defaultView: { getComputedStyle: element => element.style } }
+  const { context } = load()
+  const adapter = context.__musifyCaptureYouTube.create({ document, location, target: 'target' })
+  return { Button, adapter, document, location, roots, root, dialog, reject, accept, buttons(value) { buttons = value } }
+}
+
+test('inline consent rejects only a unique visible enabled exact reject-all button in its known dialog', () => {
+  for (const label of ['Rechazar todo', 'Reject all', ' Rechazar\n todo ']) {
+    const f = inlineConsentFixture(); f.reject.textContent = label
+    assert.deepEqual({ ...f.adapter.consentState() }, { present: true, visible: true, eligible: true, attempted: false })
+    let trusted
+    f.reject.addEventListener('click', event => { trusted = event.isTrusted; f.dialog.hidden = true })
+    assert.equal(f.adapter.rejectConsent(), true); assert.equal(trusted, false)
+    assert.equal(f.reject.calls, 1); assert.equal(f.accept.calls, 0)
+    assert.equal(f.adapter.consentState().visible, false)
+    assert.equal(f.adapter.rejectConsent(), false)
+  }
+  const blocked = [
+    f => { f.location.hostname = 'unrelated.invalid' }, f => { f.root.hidden = true }, f => { f.dialog.hidden = true },
+    f => { f.root.style.opacity = '0' }, f => { f.dialog.style.display = 'none' }, f => { f.dialog.blocked = true },
+    f => { f.reject.hidden = true }, f => { f.reject.style.visibility = 'hidden' }, f => { f.reject.disabled = true },
+    f => { f.reject.attributes['aria-disabled'] = 'true' }, f => { f.reject.blocked = true }, f => { f.reject.isConnected = false },
+    f => { f.reject.textContent = 'Rechazar y aceptar' }, f => { f.reject.attributes['aria-label'] = 'Aceptar todo' },
+    f => { f.buttons([f.reject, new f.Button('Reject all'), f.accept]) }, f => { f.roots.push({ ...f.root }) },
+  ]
+  for (const configure of blocked) {
+    const f = inlineConsentFixture(); configure(f)
+    assert.equal(f.adapter.rejectConsent(), false); assert.equal(f.reject.calls + f.accept.calls, 0)
+  }
+})
+
+test('inline consent reports a dispatched attempt without claiming closure or leaking button/DOM information', () => {
+  const f = inlineConsentFixture()
+  f.reject.disabled = true; assert.equal(f.adapter.rejectConsent(), false)
+  f.reject.disabled = false
+  f.reject.attributes.href = 'https://private.invalid/?account=secret'
+  f.root.innerHTML = 'private account data'
+  f.reject.addEventListener('click', event => event.preventDefault())
+  assert.equal(f.adapter.rejectConsent(), true)
+  assert.deepEqual({ ...f.adapter.consentState() }, { present: true, visible: true, eligible: true, attempted: true })
+  assert.equal(f.adapter.rejectConsent(), false); assert.equal(f.reject.calls, 1)
+  assert.equal(JSON.stringify(f.adapter.consentState()).includes('private'), false)
+  f.dialog.hidden = true; assert.equal(f.adapter.consentState().visible, false)
+  f.dialog.hidden = false; assert.equal(f.adapter.consentState().attempted, false)
+  assert.equal(f.adapter.rejectConsent(), true); assert.equal(f.reject.calls, 2, 'a confirmed closed/reopened cycle may reuse the same control')
+  assert.equal(f.adapter.rejectConsent(), false); assert.equal(f.reject.calls, 2)
+  const failed = inlineConsentFixture(); failed.reject.failure = new Error('private error payload')
+  assert.equal(failed.adapter.rejectConsent(), false); assert.equal(failed.adapter.consentState().attempted, true)
+  assert.equal(failed.adapter.rejectConsent(), false); assert.equal(failed.reject.calls, 1)
+})
+
+test('orchestration waits for inline consent closure without resume or presentation credit and preserves capture guards', async () => {
+  for (const closes of [true, false]) {
+    const f = inlineConsentFixture(), scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+    let clock = 0, tick, playCalls = 0
+    media.paused = true; media.play = () => { playCalls++; media.paused = false; return Promise.resolve() }
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+    const document = { ...f.document, querySelectorAll: selector => selector === 'audio,video' ? [media] : f.document.querySelectorAll(selector), querySelector: selector => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+    class FileReader { readAsDataURL(blob) { blob.arrayBuffer().then(buffer => { this.result = 'data:audio/webm;base64,' + Buffer.from(buffer).toString('base64'); this.onload() }) } }
+    const { context } = load({ ...scope, document, location: f.location, Blob, FileReader, performance: { now: () => clock }, setInterval: fn => { tick = fn; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyBenchmarkAudit: true, __musifyProgressiveExperiment: true, __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 77, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    f.reject.addEventListener('click', event => { assert.equal(event.isTrusted, false); if (closes) f.dialog.hidden = true })
+    vm.runInContext(orchestratorCode, context)
+    const mse = new scope.MediaSource(), sb = mse.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(mse); media._currentTime = 0.004
+    sb.appendBuffer(fixture().bytes); sb.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+    media.dispatchEvent(new Event('timeupdate'))
+    assert.equal(playCalls, 0)
+    tick(); await new Promise(resolve => setImmediate(resolve))
+    assert.equal(f.reject.calls, 1); assert.equal(f.accept.calls, 0)
+    assert.equal(messages.some(m => m.kind === 'seg' || m.type === 'playing'), false)
+    const before = messages.find(m => m.reason?.includes('"phase":"inline-consent"'))
+    assert.deepEqual(JSON.parse(before.reason), { phase: 'inline-consent', present: true, visible: true, eligible: true, attempted: false })
+    if (closes) {
+      assert.equal(media.currentTime, 0, 'real startup rewind re-presents the unobserved beginning')
+      clock = 25; tick(); assert.equal(playCalls, 1)
+      clock = 50; media._currentTime = 0.025; tick()
+      await new Promise(resolve => setImmediate(resolve)); assert.equal(messages.some(m => m.kind === 'seg'), false, 'default1.5s holdback is unchanged')
+      clock = 85; media._currentTime = 0.06; mse.endOfStream(); tick()
+      await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve))
+      assert.ok(messages.some(m => m.type === 'ended' && m.complete === true))
+      assert.ok(messages.filter(m => m.kind === 'seg').every(m => m.classification === 'content'))
+      assert.equal(messages.some(m => m.type === 'error'), false)
+    } else {
+      clock = 9999; tick(); await new Promise(resolve => setImmediate(resolve))
+      assert.equal(messages.some(m => m.type === 'interaction'), false)
+      clock = 10000; tick(); await new Promise(resolve => setImmediate(resolve))
+      assert.equal(messages.filter(m => m.type === 'interaction').length, 1)
+      assert.equal(playCalls, 0); assert.equal(f.reject.calls, 1)
+      assert.equal(messages.some(m => m.kind === 'seg' || m.type === 'playing'), false)
+    }
+    assert.equal(media.muted, true); assert.equal(media.playbackRate, 1)
+    assert.ok(media.nativeRateWrites.every(([, value]) => value === 1))
+  }
+})
+
 test('unrecognized consent keeps the page open and reports the injected target without a v query', async () => {
   const messages = [], navigations = []
   const location = { search: '', hostname: 'consent.youtube.com', replace: (url) => navigations.push(url) }

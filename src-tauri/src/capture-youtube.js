@@ -55,8 +55,40 @@
       const requiresUser = /sign in|log in|inici[ae] sesi[oó]n|iniciar sesi[oó]n|captcha|confirm|verif|comprueba|edad|age|bot/i.test(text)
       return { code: requiresUser ? 'CAPTURE_REQUIRES_INTERACTION' : 'CAPTURE_PLAYBACK_ERROR', reason: text.slice(0, 200) }
     }
+    let consentAttempts = new WeakSet(), consentWasVisible = false
+    const inlineConsent = () => {
+      if (!['www.youtube.com', 'music.youtube.com'].includes(location.hostname)) return { present: false, visible: false, eligible: false, attempted: false }
+      const roots = [...(document.querySelectorAll?.('ytd-consent-bump-v2-lightbox') ?? [])]
+      const visible = roots.flatMap(root => {
+        const dialog = root.querySelector?.('tp-yt-paper-dialog#dialog')
+        if (root.hidden || root.isConnected === false || !dialog || !visiblyRendered(dialog) || dialog.closest?.('[hidden], [inert], [aria-hidden="true"]')) return []
+        if (document.defaultView?.getComputedStyle?.(root)?.opacity === '0') return []
+        return [dialog]
+      })
+      // A new visible cycle may reuse the same DOM button. Only an observed
+      // closed dialog resets attempts; an ignored click while open never does.
+      if (!visible.length && consentWasVisible) consentAttempts = new WeakSet()
+      consentWasVisible = visible.length > 0
+      const rejects = new Set(['rechazar todo', 'reject all'])
+      const buttons = visible.length === 1 ? [...(visible[0].querySelectorAll?.('button') ?? [])].filter(button => {
+        const label = normalized(button.getAttribute?.('aria-label')).toLowerCase()
+        return visiblyRendered(button) && button.isConnected !== false && !button.disabled && button.getAttribute?.('aria-disabled') !== 'true'
+          && !button.closest?.('[hidden], [inert], [aria-hidden="true"]') && rejects.has(normalized(button.textContent).toLowerCase()) && (!label || rejects.has(label))
+      }) : []
+      const button = buttons.length === 1 ? buttons[0] : null
+      return { present: roots.length > 0, visible: visible.length > 0, eligible: !!button, attempted: !!button && consentAttempts.has(button), button }
+    }
+    const consentState = () => {
+      const { present, visible, eligible, attempted } = inlineConsent()
+      return { present, visible, eligible, attempted }
+    }
     const rejectConsent = () => {
-      if (location.hostname !== 'consent.youtube.com') return false
+      if (location.hostname !== 'consent.youtube.com') {
+        const { button, attempted } = inlineConsent()
+        if (!button || attempted) return false
+        consentAttempts.add(button)
+        try { button.click(); return true } catch { return false }
+      }
       const form = [...document.forms].find((f) => f.querySelector('input[name="set_eom"][value="true"]'))
       const button = form?.querySelector('button') || [...document.querySelectorAll('button')].find((b) => /rechazar|reject|ablehnen|refuser|rifiuta/i.test(b.textContent || ''))
       if (button) button.click()
@@ -208,7 +240,7 @@
         throw error
       }
     }
-    return { classify, interaction, rejectConsent, sessionState, skipAd, observeSkip, skipSummary, validateSkip, completeSkip }
+    return { classify, interaction, rejectConsent, consentState, sessionState, skipAd, observeSkip, skipSummary, validateSkip, completeSkip }
   }
   globalThis.__musifyCaptureYouTube = { create }
 })()

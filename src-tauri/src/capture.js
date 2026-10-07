@@ -8,6 +8,7 @@
   const target = window.__musifyTarget || new URLSearchParams(location.search).get('v'), generation = window.__musifyGeneration
   let epoch = window.__musifyEpoch, sequence = 0, queue = Promise.resolve(), tick = null
   let failed = false, started = false, lastBeat = 0, lastDiagnostic = 0, pendingSeek = null, interaction = '', finalizedEpoch = null, lastAuth = null
+  let lastConsentCheck = -Infinity, lastConsentState = null, inlineConsentVisible = false, inlineConsentSince = null
   const post = message => {
     sequence = Math.max(sequence + 1, Date.now() * 1000)
     bridge.postMessage('musify:' + JSON.stringify({ musify: 1, api: 4, v: target, generation, sequence, epoch, ...message }))
@@ -196,6 +197,9 @@
   }
   const observe = (media, endedEvent = false) => {
     if (failed || finalizedEpoch === epoch || (endedEvent && media.ended !== true)) return
+    // The official consent dialog intentionally pauses its player. Do not fight
+    // its pause timer or certify presentation until that visible dialog closes.
+    if (adapter.consentState?.().visible) return
     const source = capture.sourceOf(media)
     if (source?.endedEpoch === epoch) return
     const previous = previousSources.get(media)
@@ -306,8 +310,28 @@
   }
   tick = setInterval(() => {
     if (failed || finalizedEpoch === epoch) return
-    const now = performance.now(), issue = adapter.interaction()
-    if (issue?.code === 'CAPTURE_REQUIRES_INTERACTION') requireInteraction(issue.reason)
+    const now = performance.now()
+    const consent = adapter.consentState?.()
+    inlineConsentVisible = consent?.visible === true
+    if (now - lastConsentCheck >= 500) {
+      lastConsentCheck = now
+      if (consent) {
+        const state = JSON.stringify(consent)
+        if (window.__musifyBenchmarkAudit === true && state !== lastConsentState) event('diagnostic', { browserNow: now, reason: JSON.stringify({ phase: 'inline-consent', ...consent }) })
+        lastConsentState = state
+        if (consent.eligible && !consent.attempted) {
+          const dispatched = adapter.rejectConsent()
+          if (window.__musifyBenchmarkAudit === true) event('diagnostic', { browserNow: now, reason: JSON.stringify({ phase: 'inline-consent-attempt', dispatched }) })
+        }
+        inlineConsentVisible = adapter.consentState().visible
+      }
+    }
+    if (inlineConsentVisible) inlineConsentSince ??= now
+    else inlineConsentSince = null
+    const issue = adapter.interaction()
+    if (inlineConsentVisible) {
+      if (now - inlineConsentSince >= 10000) requireInteraction('Resuelve el formulario de consentimiento en la ventana de YouTube; no hay un rechazo inequívoco disponible o el diálogo sigue abierto')
+    } else if (issue?.code === 'CAPTURE_REQUIRES_INTERACTION') requireInteraction(issue.reason)
     else {
       interaction = ''
       for (const media of document.querySelectorAll('audio,video')) {
