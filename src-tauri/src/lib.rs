@@ -2,6 +2,7 @@ mod capture;
 mod capture_audit;
 mod capture_bench;
 mod capture_legacy;
+mod capture_mute;
 mod capture_pcm;
 mod capture_reference;
 mod capture_verify;

@@ -203,6 +203,10 @@ pub async fn capture_profile_open(app: AppHandle, mode: String) -> Result<Value,
     let profile = capture_profile(&app, Some(&mode))?;
     let label = "capture-premium-manual";
     if let Some(window) = app.get_webview_window(label) {
+        if let Err(error) = crate::capture_mute::enforce_window(&window).await {
+            let _ = window.destroy();
+            return Err(error);
+        }
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
     } else {
@@ -219,30 +223,40 @@ pub async fn capture_profile_open(app: AppHandle, mode: String) -> Result<Value,
         .title("Musify · acceso manual a YouTube Premium")
         .data_directory(profile.path.clone())
         .additional_browser_args(CAPTURE_BROWSER_ARGS)
-        .visible(true)
-        .focused(true)
+        .visible(false)
+        .focused(false)
         .inner_size(1080.0, 780.0)
         .initialization_script(script)
         .build()
         .map_err(|e| format!("CAPTURE_PROFILE: {e}"))?;
         let (tx, rx) = tokio::sync::oneshot::channel();
         let profile_id = profile.id.clone();
-        window
-            .with_webview(move |pw| {
-                #[cfg(windows)]
-                let result = unsafe { attach_profile(&pw, &profile_id) }.map_err(|e| e.to_string());
-                #[cfg(not(windows))]
-                let result: Result<(), String> = {
-                    let _ = (pw, profile_id);
-                    Err("CAPTURE_UNSUPPORTED_PLATFORM".into())
-                };
-                let _ = tx.send(result);
-            })
-            .map_err(|e| e.to_string())?;
-        tokio::time::timeout(Duration::from_secs(10), rx)
-            .await
-            .map_err(|_| "CAPTURE_PROFILE_TIMEOUT")?
-            .map_err(|_| "CAPTURE_PROFILE_CLOSED")??;
+        let result = async {
+            window
+                .with_webview(move |pw| {
+                    #[cfg(windows)]
+                    let result =
+                        unsafe { attach_profile(&pw, &profile_id) }.map_err(|e| e.to_string());
+                    #[cfg(not(windows))]
+                    let result: Result<(), String> = {
+                        let _ = (pw, profile_id);
+                        Err("CAPTURE_UNSUPPORTED_PLATFORM".into())
+                    };
+                    let _ = tx.send(result);
+                })
+                .map_err(|e| e.to_string())?;
+            tokio::time::timeout(Duration::from_secs(10), rx)
+                .await
+                .map_err(|_| "CAPTURE_PROFILE_TIMEOUT")?
+                .map_err(|_| "CAPTURE_PROFILE_CLOSED")?
+        }
+        .await;
+        if let Err(error) = result {
+            let _ = window.destroy();
+            return Err(error);
+        }
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
     }
     // Only this local setup response includes the private directory; status/evidence never do.
     Ok(
@@ -259,6 +273,7 @@ unsafe fn attach_profile(
     let profile_id = profile_id.to_string();
     unsafe {
         let core = pw.controller().CoreWebView2()?;
+        crate::capture_mute::enforce(&core)?;
         let handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
             let Some(args) = args else { return Ok(()) };
             let mut source = PWSTR::null();
@@ -1416,6 +1431,7 @@ unsafe fn attach(
     unsafe {
         let controller = pw.controller();
         let core = controller.CoreWebView2()?;
+        crate::capture_mute::enforce(&core)?;
         let click_core = core.clone();
         let handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
             let Some(args) = args else { return Ok(()) };

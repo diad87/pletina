@@ -470,6 +470,7 @@ unsafe fn attach(
     unsafe {
         let controller = pw.controller();
         let core = controller.CoreWebView2()?;
+        crate::capture_mute::enforce(&core)?;
         let handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
             let Some(args) = args else { return Ok(()) };
             let mut source = PWSTR::null();
