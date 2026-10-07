@@ -3,7 +3,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import * as api from '../api'
 import { player, type QueueItem } from '../player.svelte'
-import { playCapture } from './capture'
+import { playCapture, waitForCaptureReady } from './capture'
 import { extractor, type Engine } from './engine.svelte'
 import { host } from './host'
 import { CLIENTS, innertube, setup, stats, stream } from './youtubei'
@@ -393,6 +393,7 @@ async function playCheck(url: string, capture = false, beforeStop?: () => Promis
   try {
     if (capture) stop = playCapture(a, url)
     else a.src = url
+    if (capture) await waitForCaptureReady(a)
     await Promise.all([until(a, 'playing', 15000, controller.signal), a.play()])
     const startMs = Math.round(performance.now() - t0)
     await progress(a, 0.5)

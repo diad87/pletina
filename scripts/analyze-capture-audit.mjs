@@ -196,7 +196,32 @@ function presentedBracket(intervals, start, end) {
   }
   return null
 }
-export function delayCandidates(packets, clocks) {
+
+// A fresh source can start between metadata-at-zero (HAVE_METADATA, or paused)
+// and the first active clock. This bounds the onset; it does NOT fill presentation
+// coverage, make a canonical encoding anchor, or claim when a device emitted PCM.
+export function startupBracket({ clocks, events, firstPacket, fresh }) {
+  if (!fresh || !firstPacket || firstPacket.start !== 0 || !(firstPacket.end > 0)) return null
+  const ordered = [...clocks].sort((a, b) => a.sequence - b.sequence), advanced = ordered.find(c => finite(c.position) && c.position > 0)
+  if (!advanced || advanced.paused || advanced.ended || advanced.seeking || advanced.playbackRate !== 1 || advanced.readyState < 2) return null
+  const initial = ordered.filter(c => c.sequence < advanced.sequence), zero = initial.at(-1)
+  const metadata = initial.find(c => c.phase === 'loadedmetadata' && c.position === 0 && c.readyState >= 1)
+  if (!metadata || !zero || zero.position !== 0 || zero.readyState < 1 || !finite(zero.browserNow) || !finite(advanced.browserNow)) return null
+  const wall = advanced.browserNow - zero.browserNow
+  if (wall <= 0 || wall > 500 || advanced.position > wall / 1000 + EPSILON) return null
+  const startupEvents = events.filter(r => r.sequence <= advanced.sequence)
+  if (startupEvents.some(r => r.epoch !== advanced.epoch ||
+    (r.kind === 'mutation' && (r.operation !== 'endOfStream' || r.error)) ||
+    (r.kind === 'clock' && (r.seeking || r.ended || r.playbackRate !== 1 || !finite(r.position) || r.position < 0 || r.phase === 'seeking' || r.phase === 'seeked' || String(r.phase).startsWith('before-'))))) return null
+  const buffers = new Set(startupEvents.map(r => r.s).filter(positiveInteger))
+  if (buffers.size !== 1 || !buffers.has(advanced.s)) return null
+  const containsBeginning = c => c.audioRanges?.some(r => finite(r.start) && finite(r.end) && r.start === 0 && r.end >= firstPacket.end)
+  if (!containsBeginning(zero) || !containsBeginning(advanced)) return null
+  return { lower: zero.browserNow, upper: advanced.browserNow, zeroSequence: zero.sequence, advanceSequence: advanced.sequence, firstActivePosition: advanced.position,
+    basis: 'fresh-source-zero-to-active-clock', coverageCredit: false }
+}
+
+export function delayCandidates(packets, clocks, startup = null) {
   const candidates = [], sorted = [...clocks].sort((a, b) => a.sequence - b.sequence)
   let wasExternal = false
   for (const [index, packet] of packets.entries()) {
@@ -204,22 +229,29 @@ export function delayCandidates(packets, clocks) {
     if (wasExternal) continue
     wasExternal = true
     const previous = packets.slice(0, index).findLast(p => p.end > p.start)
-    const onsetObserved = !previous ? Math.abs(packet.start) <= EPSILON
+    let onsetObserved = !previous ? Math.abs(packet.start) <= EPSILON
       : previous.proof === 'canonical-packet' && previous.presentation && Math.abs(previous.end - packet.start) <= EPSILON
+    let onset = packet.presentation, onsetMethod = 'fully-observed-packet', onsetPacket = packet
+    const prefix = packets.slice(0, index + 1).filter(p => p.end > p.start)
+    if (!onsetObserved && startup && prefix[0]?.start === 0 && prefix.every(p => p.payloadProof === 'external-candidate') &&
+      presentedBracket(presentationIntervals(sorted.filter(c => c.sequence >= startup.advanceSequence)), startup.firstActivePosition, packet.end)) {
+      onsetObserved = true; onset = { lower: startup.lower, upper: startup.upper }; onsetMethod = 'fresh-source-clock-bracket'; onsetPacket = prefix[0]
+    }
     if (!onsetObserved) { candidates.push({ measured: false, reason: 'candidate-onset-before-or-between-observed-packets', packetStart: packet.start, packetEnd: packet.end }); continue }
     // A site observation associates this candidate with its ad signal; it is not
     // itself the independent semantic label required to call this a commercial.
-    const current = sorted.findLast(c => finite(c.browserNow) && c.browserNow <= packet.presentation.lower)
+    const current = sorted.findLast(c => finite(c.browserNow) && c.browserNow <= onset.lower)
     const ad = current?.siteState === 'ad' ? current
-      : sorted.find(c => c.siteState === 'ad' && finite(c.browserNow) && c.browserNow >= packet.presentation.lower)
+      : sorted.find(c => c.siteState === 'ad' && finite(c.browserNow) && c.browserNow >= onset.lower)
     if (!ad) { candidates.push({ measured: false, reason: 'no-associated-site-ad-observation', packetStart: packet.start, packetEnd: packet.end }); continue }
     const before = sorted.findLast(c => c.sequence < ad.sequence && c.siteState !== 'ad' && finite(c.browserNow))
-    const upper = Math.max(0, ad.browserNow - packet.presentation.lower)
+    const upper = Math.max(0, ad.browserNow - onset.lower)
     if (!before && upper > 0) { candidates.push({ measured: false, reason: 'site-signal-lower-bound-unobserved', packetStart: packet.start, packetEnd: packet.end }); continue }
-    const lower = before ? Math.max(0, before.browserNow - packet.presentation.upper) : 0
-    candidates.push({ measured: true, semanticAdVerified: false, kind: 'external-audio-associated-with-site-ad-signal', packetStart: packet.start, packetEnd: packet.end,
+    const lower = before ? Math.max(0, before.browserNow - onset.upper) : 0
+    candidates.push({ measured: true, semanticAdVerified: false, kind: 'external-audio-associated-with-site-ad-signal', packetStart: onsetPacket.start, packetEnd: onsetPacket.end,
+      onsetMethod, ...(onsetMethod === 'fresh-source-clock-bracket' ? { startupEvidence: startup, fullyObservedWitnessPacket: { start: packet.start, end: packet.end } } : {}),
       siteSignalSequence: ad.sequence,
-      candidateAudioOnsetBrowserMs: packet.presentation, siteSignalBrowserMs: { lower: before?.browserNow ?? null, upper: ad.browserNow },
+      candidateAudioOnsetBrowserMs: onset, siteSignalBrowserMs: { lower: before?.browserNow ?? null, upper: ad.browserNow },
       nonnegativeDelayMs: { lower, upper }, referenceProof: 'different-packet-after-compatible-canonical-encoding-anchors' })
   }
   return candidates
@@ -255,6 +287,7 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
       try {
         result.offset = offsetFor(group.key, offsets)
         const base = sourceBinding(group.base), prior = initialization.get(base)
+        const fresh = index === 0 && !prior && hasInitialization(run.bytes, run.mime)
         let bytes = run.bytes
         if (!hasInitialization(bytes, run.mime)) { if (!prior) throw new Error('parser-reset-without-preserved-initialization'); bytes = Buffer.concat([prior, bytes]) }
         const inventory = inspect(bytes, run.mime)
@@ -271,6 +304,8 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
           const sample = inventory.samples[i], start = Math.max(run.settings.appendWindowStart, sample.start + run.settings.timestampOffset), end = Math.min(run.settings.appendWindowEnd ?? Infinity, sample.end + run.settings.timestampOffset)
           return { ...packet, start, end, presentation: presentedBracket(intervals, start, end) }
         })
+        result.startup = startupBracket({ clocks: group.clocks, firstPacket: result.packets.find(p => p.end > p.start), fresh,
+          events: records.filter(r => r.v === group.base.v && r.generation === group.base.generation && r.documentId === group.base.documentId && r.source === group.base.source) })
         result.references = references.filter(ref => ref.videoId === group.base.v && ref.configuration === result.configuration)
         if (!result.references.length) throw new Error('no-canonical-reference-with-identical-codec-configuration')
         // Anchors from clean, observed packets establish which canonical encoding
@@ -300,15 +335,16 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
       run.reference = unique[0]
       let previousMatch = -1
       for (const packet of run.packets) {
-        if (!packet.presentation) { packet.proof = 'unpresented-or-unobserved'; continue }
         const match = comparePacket(packet, run.reference, run.offset.seconds, Math.max(run.quantum, run.reference.quantum))
+        packet.payloadProof = match.proof
+        if (!packet.presentation) { packet.proof = 'unpresented-or-unobserved'; continue }
         packet.proof = match.proof
         if (match.proof === 'canonical-packet') {
           if (match.index <= previousMatch) { packet.proof = 'alignment-unmeasured'; packet.reason = 'repeated-or-reordered-canonical-packet' }
           previousMatch = match.index
         } else if (match.reason) packet.reason = match.reason
       }
-      run.candidates = delayCandidates(run.packets, run.clocks)
+      run.candidates = delayCandidates(run.packets, run.clocks, run.startup)
     }
     const journal = { supplied: !!journalDirectory, units: 0, mappedUnits: 0, unmeasuredUnits: 0, externalCandidatePackets: 0, errors: [] }
     if (journalDirectory) for (const file of files(realpathSync(journalDirectory)).filter(file => file.endsWith('.unit')).sort()) {
@@ -340,7 +376,7 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
     const siteSignals = [...clockGroups].flatMap(([key, clocks]) => siteAdEpisodes(clocks).map(episode => ({ binding: key, ...episode,
       candidateDelayMeasured: measured.some(candidate => candidate.binding === key && candidate.siteSignalSequence >= episode.firstSequence && candidate.siteSignalSequence <= episode.lastSequence) })))
     const summary = { schema: 1, purpose: 'private-offline-candidate-audio-signal-delay', semanticAdVerification: false, universalHoldbackBound: null,
-      assumptions: ['Packet payload mismatch is candidate external audio, not a semantic ad label.', 'Origins are fixed before comparison; no correlation or offset search.', 'An encoding anchor accounts for every canonical packet exactly once and observes all presentable packets of the complete source.', 'Canonical anchors do not identify every different packet\'s meaning or exclude re-encoding of the same sound.', 'Bounds describe observed browser media-clock presentation; device-output latency is unmeasured.', 'Site ad-signal episodes are observations, not unique commercials or semantic ad transitions.', 'A finite measured maximum cannot guarantee future signal latency.'],
+      assumptions: ['Packet payload mismatch is candidate external audio, not a semantic ad label.', 'Origins are fixed before comparison; no correlation or offset search.', 'An encoding anchor accounts for every canonical packet exactly once and observes all presentable packets of the complete source.', 'Canonical anchors do not identify every different packet\'s meaning or exclude re-encoding of the same sound.', 'A fresh-source startup bracket bounds clock onset only; it adds no presented packet, canonical anchor, or coverage credit.', 'Bounds describe observed browser media-clock presentation; device-output latency is unmeasured.', 'Site ad-signal episodes are observations, not unique commercials or semantic ad transitions.', 'A finite measured maximum cannot guarantee future signal latency.'],
       provenance: { observations: provenance, references: references.map(ref => ({ videoId: ref.videoId, itag: ref.itag, sha256: ref.hash, codec: ref.codec })) }, referenceErrors,
       counts: { groups: groups.length, runs: runs.length, measuredRuns: runs.filter(run => !run.errors.length).length, unmeasuredRuns: runs.filter(run => run.errors.length).length,
         presentedPackets: runs.filter(run => !run.errors.length).reduce((sum, run) => sum + run.packets.filter(p => p.presentation).length, 0),
@@ -350,7 +386,7 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
         unboundClockObservations: records.filter(r => r.kind === 'clock' && (!positiveInteger(r.source) || !positiveInteger(r.s))).length },
       observedMaximumCandidateDelayMs: measured.length ? { lower: Math.max(...measured.map(c => c.nonnegativeDelayMs.lower)), upper: Math.max(...measured.map(c => c.nonnegativeDelayMs.upper)) } : null,
       runs: runs.map(run => ({ videoId: run.base.v, binding: run.binding, run: run.run, measured: !run.errors.length, reasons: [...new Set(run.errors)], codec: run.codec ?? null,
-        offset: run.offset, parserPackets: run.inventoryPackets ?? null, prefixPending: run.prefixPending ?? null, referenceHash: run.reference?.hash ?? null,
+        offset: run.offset, parserPackets: run.inventoryPackets ?? null, prefixPending: run.prefixPending ?? null, referenceHash: run.reference?.hash ?? null, startupOnsetBracket: run.startup ?? null,
         presentedPackets: run.packets.filter(p => p.presentation).length, canonicalPackets: run.packets.filter(p => p.proof === 'canonical-packet').length, externalCandidatePackets: run.packets.filter(p => p.proof === 'external-candidate').length,
         alignmentUnmeasuredPackets: run.packets.filter(p => p.proof === 'alignment-unmeasured').length, alignmentReasons: [...new Set(run.packets.map(p => p.reason).filter(Boolean))] })), candidates, siteSignals, journal }
     return summary

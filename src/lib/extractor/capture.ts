@@ -31,15 +31,19 @@ export interface CaptureProgress {
   duration: number | null; audioDuration: number | null
   complete: boolean; recovering: boolean; softError: string | null
   units: number; firstAppendMs: number | null
+  startupReserveSeconds: number; readyMs: number | null
 }
 type Stop = (cancelBackend?: boolean) => void
-const readers = new WeakMap<HTMLAudioElement, { stop: Stop; seek: (at: number) => Promise<boolean>; progress: () => CaptureProgress | null }>()
+const readers = new WeakMap<HTMLAudioElement, { stop: Stop; seek: (at: number) => Promise<boolean>; ready: () => boolean; waitReady: () => Promise<void>; progress: () => CaptureProgress | null }>()
 const cancelled = () => new DOMException('Captura cancelada', 'AbortError')
 const check = (signal: AbortSignal) => { if (signal.aborted) throw cancelled() }
 const integer = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) >= 0
 const finite = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 // Sólo error de coma flotante; no se cubre un frame ausente con tolerancia de reproducción.
 const EPSILON = 0.000001
+// The producer ticks at 100 ms and IPC polls at 40 ms. A half-second of accepted
+// audio leaves room for their jitter and the final held-back batch at native EOF.
+const STARTUP_RESERVE_SECONDS = 0.5
 
 function settings(value: unknown): TimelineSettings {
   if (!value || typeof value !== 'object') throw new Error('Ajustes temporales de captura inválidos')
@@ -151,13 +155,29 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   const ms = new MediaSource(), url = URL.createObjectURL(ms)
   let sb: SourceBuffer | null = null, generation: number | undefined, revision: number | undefined, from = 0
   let installed: { initKey: string; mime: string; context: string } | null = null
-  let progress: CaptureProgress | null = null, totalUnits = 0, firstAppendMs: number | null = null
+  let progress: CaptureProgress | null = null, totalUnits = 0, firstAppendMs: number | null = null, readyMs: number | null = null
+  let failure: unknown = null
   let requestId = 0, cursorVersion = 0, failed = false, stopped = false, notice = '', eof = false
   const metadata = new Map<string, string>(), contexts = new Map<string, TimelineSettings>()
   const frameEnds = new Map<string, number>()
   const initializations = new Map<string, Uint8Array>()
   let recoveryKey = '', recoveryCount = 0
   const buffered = () => sb ? rangesOf(sb.buffered) : []
+  const ready = () => {
+    if (signal.aborted || !progress) return false
+    const at = audio.currentTime, end = Math.min(at + STARTUP_RESERVE_SECONDS, progress.audioDuration ?? Infinity)
+    // progress is published only after the entire read batch reaches updateend.
+    return end > at && covers(progress.buffered, at, end) && covers(buffered(), at, end)
+  }
+  const waitReady = async () => {
+    while (!ready()) {
+      check(signal)
+      if (failed) throw failure
+      // Ads may precede the first accepted sample. Native leases/watchdogs and
+      // the caller's operation deadline supervise that wait; reserve adds none.
+      await delay(20, signal)
+    }
+  }
   const warning = (error: unknown) => {
     const message = String(error)
     if (message === notice || signal.aborted) return
@@ -165,7 +185,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   }
   const fail = (error: unknown) => {
     if (signal.aborted || failed) return
-    failed = true
+    failed = true; failure = error
     if (totalUnits) warning(error)
     else audio.dispatchEvent(new CustomEvent('captureerror', { detail: String(error) }))
   }
@@ -259,7 +279,9 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
         from = f.next
         progress = { api: f.api, generation: f.generation, revision: f.revision, ranges: f.ranges, buffered: buffered(),
           duration: f.duration, audioDuration: f.audioDuration ?? null,
-          complete: f.complete, recovering: f.recovering, softError: f.softError, units: totalUnits, firstAppendMs }
+          complete: f.complete, recovering: f.recovering, softError: f.softError, units: totalUnits, firstAppendMs,
+          startupReserveSeconds: STARTUP_RESERVE_SECONDS, readyMs }
+        if (ready()) { readyMs ??= performance.now() - started; progress.readyMs = readyMs }
         audio.dispatchEvent(new CustomEvent('captureprogress', { detail: progress }))
         if (f.softError) warning(f.softError)
         const verifiedDuration = f.audioDuration ?? f.duration
@@ -298,12 +320,15 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
     if (readers.get(audio)?.stop === stop) readers.delete(audio)
     if (cancelBackend && generation !== undefined) void invoke('capture_cancel', { videoId, generation }).catch(() => {})
   }
-  readers.set(audio, { stop, seek, progress: () => progress })
+  readers.set(audio, { stop, seek, ready, waitReady, progress: () => progress })
   audio.src = url
   return stop
 }
 
 export const captureProgress = (audio: HTMLAudioElement) => readers.get(audio)?.progress() ?? null
+export const captureReady = (audio: HTMLAudioElement) => readers.get(audio)?.ready() ?? false
+/** Sólo API4 necesita reserva: las URL directas y legacy conservan su arranque. */
+export const waitForCaptureReady = (audio: HTMLAudioElement): Promise<void> => readers.get(audio)?.waitReady() ?? Promise.resolve()
 /** Espera el nuevo rango sin mover el reloj del audio que todavía está sonando. */
 export function seekCapture(audio: HTMLAudioElement, at: number): Promise<boolean> {
   const reader = readers.get(audio)

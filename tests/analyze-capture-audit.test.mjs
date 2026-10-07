@@ -5,7 +5,7 @@ import { join, dirname, basename } from 'node:path'
 import { tmpdir } from 'node:os'
 import { spawnSync } from 'node:child_process'
 import vm from 'node:vm'
-import { analyzeAudit, reconstruct, presentationIntervals, delayCandidates, comparePacket, main } from '../scripts/analyze-capture-audit.mjs'
+import { analyzeAudit, reconstruct, presentationIntervals, startupBracket, delayCandidates, comparePacket, main } from '../scripts/analyze-capture-audit.mjs'
 
 const ID = 'jNY_wLukVW0', mime = 'audio/webm; codecs="opus"'
 const settings = { timestampOffset: 0, appendWindowStart: 0, appendWindowEnd: null, mode: 'segments' }
@@ -141,6 +141,55 @@ test('a seek prefix or an unobserved packet cannot establish when candidate exte
   assert.equal(delayCandidates([{ ...prior, proof: 'unpresented-or-unobserved', presentation: null }, { ...candidate, start: 0.02, end: 0.04 }], clocks)[0].measured, false)
 })
 
+function startupFixture() {
+  const clock = (sequence, position, browserNow, extra = {}) => ({ kind: 'clock', epoch: 1, source: 1, s: 1, sequence, position, browserNow, paused: false, ended: false, seeking: false, playbackRate: 1, readyState: 4, phase: 'tick', siteState: 'ad', audioRanges: [{ start: 0, end: 6.041 }], ...extra })
+  const clocks = [clock(1, 0, 1052.6, { phase: 'loadedmetadata', readyState: 1 }), clock(2, 0, 1157.7, { readyState: 1 }), clock(3, 0.007308, 1249.2), clock(4, 0.012883, 1254.7, { phase: 'playing' }), clock(5, 0.06873, 1311.5)]
+  return { clocks, events: clocks, fresh: true, firstPacket: { start: 0, end: 0.020 } }
+}
+
+test('a metadata/paused zero to active fresh-source clock gives only an onset bracket, never presentation coverage', () => {
+  for (const paused of [false, true]) {
+    const f = startupFixture(); f.clocks[1].paused = paused
+    const bracket = startupBracket(f)
+    assert.deepEqual({ lower: bracket.lower, upper: bracket.upper }, { lower: 1157.7, upper: 1249.2 })
+    assert.equal(bracket.coverageCredit, false)
+    assert.equal(presentationIntervals(f.clocks)[0].start, 0.007308, 'ordinary packet presentation still has the original missing beginning')
+  }
+})
+
+test('startup brackets reject old sources, seeks, parser resets, missing native beginning and implausible clocks', () => {
+  for (const change of [
+    f => { f.fresh = false },
+    f => { f.firstPacket.start = 0.001 },
+    f => { f.clocks[0].phase = 'tick' },
+    f => { f.clocks[0].position = 0.002 },
+    f => { f.clocks[2].paused = true },
+    f => { f.clocks[2].seeking = true },
+    f => { f.clocks[2].playbackRate = 2 },
+    f => { f.clocks[2].browserNow = 1750 },
+    f => { f.clocks[2].position = 0.100 },
+    f => { f.clocks[1].audioRanges = [{ start: 0.001, end: 6 }] },
+    f => { f.events = [...f.events, { kind: 'clock', sequence: 2.5, epoch: 1, s: 1, position: 0, playbackRate: 1, phase: 'seeked' }] },
+    f => { f.events = [...f.events, { kind: 'clock', sequence: 2.5, epoch: 1, s: 1, position: 0, playbackRate: 1, phase: 'before-load' }] },
+    f => { f.events = [...f.events, { kind: 'mutation', sequence: 2.5, epoch: 1, s: 1, operation: 'abort' }] },
+    f => { f.events = [...f.events, { kind: 'append', sequence: 2.5, epoch: 2, s: 1 }] },
+    f => { f.events = [...f.events, { kind: 'append', sequence: 2.5, epoch: 1, s: 2 }] },
+  ]) { const f = startupFixture(); change(f); assert.equal(startupBracket(f), null) }
+})
+
+test('startup candidate delay needs independently different prefix packets and continuous later clock evidence', () => {
+  const f = startupFixture(), startup = startupBracket(f)
+  const packets = [{ start: 0, end: 0.020, proof: 'unpresented-or-unobserved', payloadProof: 'external-candidate', presentation: null },
+    { start: 0.021, end: 0.041, proof: 'external-candidate', payloadProof: 'external-candidate', presentation: { lower: 1254.7, upper: 1311.5 } }]
+  const candidate = delayCandidates(packets, f.clocks, startup)[0]
+  assert.equal(candidate.measured, true); assert.equal(candidate.onsetMethod, 'fresh-source-clock-bracket')
+  assert.deepEqual(candidate.nonnegativeDelayMs, { lower: 0, upper: 0 })
+  assert.equal(packets[0].presentation, null); assert.equal(packets[0].proof, 'unpresented-or-unobserved')
+  for (const proof of ['canonical-packet', 'alignment-unmeasured', undefined]) assert.equal(delayCandidates([{ ...packets[0], payloadProof: proof }, packets[1]], f.clocks, startup)[0].measured, false)
+  const gap = structuredClone(f.clocks); gap[3].seeking = true
+  assert.equal(delayCandidates(packets, gap, startup)[0].measured, false, 'an interior clock gap cannot borrow the startup bracket')
+})
+
 test('real Opus byte inventories measure preroll candidate delay only after an independent full canonical anchor', t => {
   const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), ad = realTone(join(w.directory, 'different.webm'), 1499)
   writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
@@ -159,6 +208,35 @@ test('real Opus byte inventories measure preroll candidate delay only after an i
   assert.equal(report.journal.mappedUnits, 1); assert.equal(report.journal.externalCandidatePackets, 0)
   assert.equal(JSON.stringify(report).includes(w.directory), false, 'no private absolute path leaves the artifact')
   assert.equal(JSON.stringify(report).includes('data:'), false)
+})
+
+test('real encoded startup candidate gains a bracket without gaining an observed packet or canonical anchor', t => {
+  const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), external = realTone(join(w.directory, 'external.webm'), 1499)
+  writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
+  const parsed = context.__musifyCaptureCore.inspectWebMPrefix(new Uint8Array(external), { final: true })
+  const b = builder(w.audit); b.append(1, external); b.mutation(1, 'endOfStream')
+  const ranges = [{ start: 0, end: parsed.codedEnd }]
+  b.clock(1, 0, 0, 'ad', { phase: 'loadedmetadata', readyState: 1, audioRanges: ranges })
+  b.clock(1, 0.007, 90, 'ad', { audioRanges: ranges })
+  b.clock(1, 0.015, 100, 'ad', { phase: 'playing', audioRanges: ranges })
+  for (let ms = 50; ms < parsed.codedEnd * 1000; ms += 50) b.clock(1, ms / 1000, ms + 85, 'ad', { audioRanges: ranges })
+  b.clock(1, parsed.codedEnd, parsed.codedEnd * 1000 + 85, 'ad', { ended: true, paused: true, sourceEnded: true, audioRanges: ranges })
+  b.append(2, song); allPresented(b, 2, song, 1000); b.finish()
+  const report = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle })
+  assert.equal(report.counts.measuredCandidateTransitions, 1, JSON.stringify(report.runs))
+  assert.deepEqual(report.observedMaximumCandidateDelayMs, { lower: 0, upper: 0 })
+  assert.equal(report.runs[0].presentedPackets, parsed.samples.length - 1)
+  assert.equal(report.runs[0].canonicalPackets, 0)
+  assert.equal(report.candidates[0].startupEvidence.coverageCredit, false)
+  assert.equal(report.candidates[0].semanticAdVerified, false)
+  const records = structuredClone(b.records), canonicalClocks = records.filter(r => r.kind === 'clock' && r.source === 2)
+  for (const clock of canonicalClocks) clock.audioRanges = ranges
+  canonicalClocks[0].phase = 'loadedmetadata'; canonicalClocks[0].readyState = 1
+  writeFileSync(join(w.audit, `${ID}-observations.jsonl`), records.map(r => JSON.stringify(r)).join('\n') + '\n')
+  const missingAnchor = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle })
+  assert.ok(missingAnchor.runs[1].startupOnsetBracket, 'a startup clock bracket can exist without whole packet presentation')
+  assert.equal(missingAnchor.counts.measuredRuns, 0)
+  assert.equal(missingAnchor.counts.measuredCandidateTransitions, 0, 'the bracket cannot replace the independent fully observed canonical anchor')
 })
 
 test('matching codec alone, a missing reference, a partial clock and a missing final marker remain unmeasured', t => {

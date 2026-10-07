@@ -19,7 +19,7 @@ const proof = overrides => ({ generation: 3, revision: 1, duration: 1, audioDura
 
 async function setup(t, options = {}) {
   let clock = 0
-  if (options.firstSoundDelay || options.verificationDelay) t.mock.method(performance, 'now', () => clock)
+  if (options.firstSoundDelay || options.verificationDelay || options.reserveDelay) t.mock.method(performance, 'now', () => clock)
   const snapshots = [], progress = new Map(), timers = [], allAudio = [], calls = [], queueCalls = [], forgetEvidence = []
   const lifecycle = { toggles: 0, stops: 0 }
   let statusReads = 0, seeks = 0, forgotten = new Set()
@@ -168,6 +168,7 @@ async function setup(t, options = {}) {
     } },
     player, toQuery: item => item.track, extractor: { engine: 'propio', async set(value) { this.engine = value } },
     captureProgress: audio => progress.get(audio) ?? null,
+    waitForCaptureReady: async audio => { await options.waitForCaptureReady?.(audio); clock += options.reserveDelay ?? 0 },
     playCapture: audio => {
       emitProgress(audio, options.initialProgress ?? proof())
       audio.onPlay = () => {
@@ -187,7 +188,7 @@ async function setup(t, options = {}) {
   const key = `__captureSuite${++run}`
   globalThis[key] = runtime
   t.after(() => delete globalThis[key])
-  const prelude = `const { invoke, api, player, toQuery, extractor, captureProgress, playCapture, seekCapture, stopCapture } = globalThis.${key};\n`
+  const prelude = `const { invoke, api, player, toQuery, extractor, captureProgress, playCapture, waitForCaptureReady, seekCapture, stopCapture } = globalThis.${key};\n`
   const module = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript + '\nexport { evidenceAudit };').toString('base64')}`)
   return { ...module, player, progress, emitProgress, calls, snapshots, allAudio, queueCalls, forgetEvidence, lifecycle,
     extractor: runtime.extractor, originalPlay: Audio.prototype.play,
@@ -563,6 +564,21 @@ test('Propio busca dentro del flujo normal sin precalentar referencia ni asociar
   assert.deepEqual(env.queueCalls, [[1], [2]])
   assert.equal(report.acceptanceOk, false)
   assert.equal(env.extractor.engine, 'propio')
+})
+
+test('la reserva inicial cuenta dentro del arranque y un waiting posterior conserva su foto de MSE', async t => {
+  const env = await setup(t, { firstSoundDelay: 100, reserveDelay: 500, waitForCaptureReady: async audio => {
+    audio.addEventListener('playing', () => {
+      audio.dispatchEvent(new Event('waiting')); audio.dispatchEvent(new Event('playing'))
+    }, { once: true })
+  } })
+  const report = await env.execute({ mode: 'smoke', videos: [video(1)], seek: false })
+  const row = report.rows[0], waiting = row.events.find(event => event.type === 'waiting')
+  assert.equal(row.firstSoundMs, 600, 'no se reinicia el cronómetro después de acumular reserva')
+  assert.deepEqual(waiting.detail.buffered, [{ start: 0, end: 0.95 }])
+  assert.equal(waiting.detail.progress.units, 4)
+  assert.equal(row.gaps.length, 1, 'el gate no filtra ni reclasifica un corte real posterior')
+  assert(row.failures.some(reason => /episodios de espera/.test(reason)))
 })
 
 test('cincuenta observaciones duplicadas no son cincuenta transiciones y una cohorte incompleta no aprueba', async t => {

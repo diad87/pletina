@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { registerHooks } from 'node:module'
 registerHooks({ resolve(specifier, context, next) { return next(specifier === './capture-legacy' ? './capture-legacy.ts' : specifier, context) } })
-const { playCapture, seekCapture, captureProgress, prepareAudioSource } = await import('../src/lib/extractor/capture.ts')
+const { playCapture, seekCapture, captureProgress, captureReady, waitForCaptureReady, prepareAudioSource } = await import('../src/lib/extractor/capture.ts')
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 2))
 async function settle(predicate) {
@@ -125,6 +125,75 @@ test('los primeros tramos se añaden antes de complete y el init compatible se o
   assert.deepEqual(env.instances[0].ends, [])
   assert.equal(captureProgress(env.audio).complete, false)
   assert.equal(requests[2].from, 2)
+})
+
+test('el primer play espera medio segundo MSE y updateend de todo el lote, no sólo el primer paquete', async t => {
+  const env = environment(t, (command, args) => command !== 'capture_read' ? Promise.resolve() : args.from === 0
+    ? Promise.resolve(packet({ chunks: [[255, 0, 1], [255, 1, 2]], ranges: [{ start: 0, end: 2 }] })) : new Promise(() => {}))
+  const Source = globalThis.MediaSource, add = Source.prototype.addSourceBuffer
+  t.mock.method(Source.prototype, 'addSourceBuffer', function (...args) { const sb = add.apply(this, args); sb.hold = true; return sb })
+  env.audio.paused = true
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  let played = false
+  const playing = waitForCaptureReady(env.audio).then(() => { played = true; return env.audio.play() })
+  await settle(() => env.instances[0].buffers[0]?.chunks.length === 1)
+  const sb = env.instances[0].buffers[0]
+  sb.ranges = [[0, 0.02]]; sb.complete()
+  await settle(() => sb.chunks.length === 2)
+  sb.ranges = [[0, 0.52]]
+  assert.equal(captureReady(env.audio), false); assert.equal(played, false)
+  sb.complete(); await playing
+  assert.equal(captureReady(env.audio), true); assert.equal(played, true)
+  assert.equal(captureProgress(env.audio).startupReserveSeconds, 0.5)
+  assert(Number.isFinite(captureProgress(env.audio).readyMs))
+  assert.equal(captureProgress(env.audio).complete, false, 'el inicio no espera la canción entera')
+})
+
+test('un hueco nativo bloquea la reserva aunque el ledger esté completo; EOF probado admite audio corto', async t => {
+  const env = environment(t, (command, args) => command !== 'capture_read' ? Promise.resolve() : Promise.resolve(packet({
+    from: args.from, chunks: args.from === 0 ? [[255, 0, 1]] : [], complete: false, audioDuration: 0.2,
+    ranges: [{ start: 0, end: 0.2 }],
+  })))
+  const Source = globalThis.MediaSource, add = Source.prototype.addSourceBuffer
+  t.mock.method(Source.prototype, 'addSourceBuffer', function (...args) {
+    const sb = add.apply(this, args), append = sb.appendBuffer
+    sb.appendBuffer = function (chunk) { append.call(this, chunk); this.ranges = [[0, 0.02], [0.03, 0.2]] }
+    return sb
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => captureProgress(env.audio)?.units === 1)
+  assert.equal(captureReady(env.audio), false, 'la suma de islas no es un rango reproducible')
+  env.instances[0].buffers[0].ranges = [[0, 0.2]]
+  await waitForCaptureReady(env.audio)
+  assert.equal(captureReady(env.audio), true, 'el extremo sólo puede acortar la reserva si proviene de EOF validado')
+})
+
+test('cancelar durante la reserva inicial rechaza el play pendiente y no afecta a otra fuente', async t => {
+  const env = environment(t, () => new Promise(() => {}))
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa')
+  const pending = waitForCaptureReady(env.audio)
+  stop(); env.audio.src = 'https://example.test/direct'
+  await assert.rejects(pending, error => error.name === 'AbortError')
+  await waitForCaptureReady(env.audio)
+  assert.equal(env.audio.src, 'https://example.test/direct')
+})
+
+test('veinte segundos sin muestras durante el anuncio no agotan un temporizador nuevo de reserva', async t => {
+  let now = 0, deliver
+  t.mock.method(performance, 'now', () => now)
+  const env = environment(t, (command, args) => command !== 'capture_read' ? Promise.resolve() : args.from === 0
+    ? new Promise(resolve => { deliver = resolve }) : new Promise(() => {}))
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  let settled = false, error
+  const pending = waitForCaptureReady(env.audio).then(() => { settled = true }, value => { settled = true; error = value })
+  await settle(() => !!deliver)
+  now = 20_000
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false, 'sin audio aceptado manda el límite operativo, no un deadline añadido al gate')
+  deliver(packet({ chunks: [[255, 0, 1]] }))
+  await pending
+  assert.equal(error, undefined)
+  assert.equal(captureReady(env.audio), true)
 })
 
 test('complete nativo no cierra MSE hasta consumir todos los lotes y updateend', async t => {

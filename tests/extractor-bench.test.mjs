@@ -20,12 +20,13 @@ async function bench(t, handlers, overrides = {}) {
     extractor: { stats: async () => ({}) },
     setup() {}, host: {}, CLIENTS: ['VISIONOS'], stats: { evals: 0, evalMs: 0 },
     playCapture: () => () => {},
+    waitForCaptureReady: async () => {},
     ...overrides,
   }
   const key = `__benchTest${++run}`
   globalThis[key] = runtime
   t.after(() => delete globalThis[key])
-  const prelude = `const { invoke, extractor, setup, host, CLIENTS, stats, playCapture, api, player } = globalThis.${key};\n`
+  const prelude = `const { invoke, extractor, setup, host, CLIENTS, stats, playCapture, waitForCaptureReady, api, player } = globalThis.${key};\n`
   const module = await import(`data:text/javascript;base64,${Buffer.from(prelude + isolated).toString('base64')}`)
   return { run: module.runBench, result: () => report }
 }
@@ -127,6 +128,24 @@ test('audio fallido impide éxito aunque la extracción y los rangos sean correc
   assert.equal(b.result().ok, false)
   assert.equal(b.result().tier1[0].probeOk, true)
   assert.equal(b.result().tier1[0].audio.ok, false)
+})
+
+test('sólo captura espera reserva antes de play y esa espera cuenta en el cronómetro', async t => {
+  fakeAudio(t)
+  let clock = 0, waits = 0, starts = []
+  t.mock.method(performance, 'now', () => clock)
+  const originalPlay = globalThis.Audio.prototype.play
+  t.mock.method(globalThis.Audio.prototype, 'play', function () { starts.push(clock); return originalPlay.call(this) })
+  const b = await bench(t, {
+    bench_native: native, bench_probe: { length: 100, start: 206, deep: 206 },
+    bench_capture: { ms: 2 }, capture_status: { doneMs: 0 },
+  }, { waitForCaptureReady: async () => { waits++; clock += 500 } })
+  await b.run({ videos, tier1: true, audio: true })
+  assert.equal(waits, 0); assert.equal(starts[0], 0)
+  starts = []
+  await b.run({ videos, tier2: { count: 1 }, audio: true })
+  assert.equal(waits, 1); assert.equal(starts[0], 500)
+  assert.equal(b.result().tier2[0].audio.startMs, 500)
 })
 
 for (const [label, status, expected] of [

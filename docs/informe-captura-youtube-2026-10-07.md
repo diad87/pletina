@@ -16,8 +16,8 @@ de la referencia no se denomina anuncio automáticamente.
 
 | Comprobación de código | Resultado |
 |---|---|
-| JavaScript | 278 correctas,0 omitidas |
-| Rust | 82 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
+| JavaScript | 289 correctas,0 omitidas |
+| Rust | 84 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
 | TypeScript/Svelte | 0 errores y0 avisos |
 | Compilación Rust de producción | Correcta |
 
@@ -27,7 +27,7 @@ de la referencia no se denomina anuncio automáticamente.
 | Propio: siguiente canción | Pendiente | Pendiente |
 | Oficial: primer sonido y espera publicitaria | Ensayo v7: Airbag25,408s, anuncio observado20,043s; Preso9,742s, anuncio observado6,014s; incumplen3s restantes | Pendiente |
 | Oficial: siguiente canción y salto80% | Siguiente pendiente; ensayo v7 saltos2,029/2,067s, incumplen1s | Pendiente |
-| Anuncios omitidos mediante clic confiable + transición | Ensayo v7:0 solicitudes/0 clics; no apareció botón conocido | Pendiente |
+| Anuncios omitidos mediante clic confiable + transición | v8: botón visible;13 solicitudes rechazadas antes del clic,0 saltos confirmados | Pendiente |
 | Comparación independiente30 canciones/50 transiciones | Pendiente | No contribuye a aprobar |
 
 La batería no se da por aprobada por pasar tests. Los umbrales y el alcance están en el
@@ -53,6 +53,13 @@ comparador sin cola acumulativa, cierre confirmado del probe y recuperación nue
 ante cuantización tras seek. Se solapa visitante con búsqueda y se miden sus fases sin
 quitar la sonda del audio al80%.
 
-Pendientes: medir v8 en la app, completar30 canciones/50 transiciones anónimas y las pocas
+El ensayo v8 `220141`, sin sesión y sin seek, verificó la referencia completa de PRESO:
+2035/2035 paquetes coinciden y ninguna unidad publicada discrepa. Primer sonido25,633s,
+señal publicitaria observada19,999s; hubo una espera real de10,1ms a los39,14s.
+No aprueba tiempos ni continuidad. Se corrige el lector para esperar0,5s continuos aceptados
+por MSE, y el clic nativo para aceptar enteros seguros que WebView2 serializa como decimal.
+El siguiente ensayo debe comprobar ambos arreglos en la app.
+
+Pendientes: repetir v8 en la app, completar30 canciones/50 transiciones anónimas y las pocas
 referencias Premium, medir señales con referencia externa y evaluar velocidad segura.
 Esta tabla es provisional y conserva también los intentos fallidos.

@@ -44,6 +44,8 @@ async function setup(t, methods) {
     downloads: { done: new Set(), start() {} },
     setAudioSource: (a, url) => { a.src = url }, stopCapture: (...args) => stopped.push(args),
     CAPTURE: 'musify-capture:', captureProgress: a => progress.get(a) ?? null,
+    captureReady: a => !!progress.get(a) && a.ranges.some(range => range.start <= 0 && range.end >= 0.5),
+    waitForCaptureReady: a => methods.waitForCaptureReady?.(a) ?? Promise.resolve(),
     prepareAudioSource: (a, url) => {
       a.src = url
       if (url.startsWith('musify-capture:')) progress.set(a, { units: 3, generation: 1, revision: 1 })
@@ -54,7 +56,7 @@ async function setup(t, methods) {
   }
   t.after(() => delete globalThis[key])
   // La reactividad no interviene en estas carreras; sí ejecutamos los métodos privados reales.
-  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
+  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
   const { player } = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
   return { player, audio, audios, stopped, toasts, progress, downloads: globalThis[key].downloads, extractor: globalThis[key].extractor }
 }
@@ -79,6 +81,25 @@ test('el clic promociona la precarga pendiente y su resultado tardío no sustitu
   await tick()
   assert.equal(env.audio.src, 'foreground-second')
   assert.equal(env.player.current.track.id, 2)
+})
+
+test('cancelar o cambiar mientras se reúne reserva no reproduce después la canción sustituida', async t => {
+  const reserve = deferred()
+  const env = await setup(t, {
+    resolve: async track => captured(track.id),
+    waitForCaptureReady: audio => audio.src === captured(1).url ? reserve.promise : Promise.resolve(),
+  })
+  let plays = 0
+  env.audio.addEventListener('playing', () => plays++)
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => env.audio.src === captured(1).url)
+  assert.equal(env.player.status, 'loading'); assert.equal(plays, 0)
+  env.player.next()
+  await settle(() => env.player.status === 'playing')
+  reserve.resolve(); await tick()
+  assert.equal(env.player.current.track.id, 2)
+  assert.equal(env.audio.src, captured(2).url)
+  assert.equal(plays, 1, 'la espera anterior no puede hacer play sobre el Audio reutilizado')
 })
 
 test('el motor oficial permite elegir el vídeo sin saltar a la siguiente canción si falta asociación', async t => {

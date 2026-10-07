@@ -1,7 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
-import { CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
+import { CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
 import { extractor } from './extractor/engine.svelte'
 import { library, toLib } from './library.svelte'
 import { toast } from './toast.svelte'
@@ -462,7 +462,10 @@ class Player {
       this.#rememberPlayback(item, playable)
       this.#retried = false
       setAudioSource(this.#audio, audioSrc(playable))
-      await this.#audio.play()
+      const audio = this.#audio
+      await waitForCaptureReady(audio)
+      if (token !== this.#token || audio !== this.#audio) return true
+      await audio.play()
       this.#prefetchNext()
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
@@ -596,7 +599,10 @@ class Player {
         setAudioSource(this.#audio, audioSrc(playable))
       }
       if (startAt) await seekCapture(this.#audio, startAt)
-      await this.#audio.play()
+      const audio = this.#audio
+      await waitForCaptureReady(audio)
+      if (token !== this.#token || audio !== this.#audio) return
+      await audio.play()
       this.#prefetchNext()
     } catch (e) {
       prepared?.stop(false)
@@ -609,7 +615,7 @@ class Player {
   #readyCapture(prepared: PreparedAudio): boolean {
     const { audio, playable } = prepared
     if (playable.local || !/^[A-Za-z0-9_-]{11}$/.test(playable.videoId) || playable.url !== `${CAPTURE}${playable.videoId}` ||
-        !audio.paused || audio.currentTime !== 0 || audio.error || audio.readyState < 2 || !(captureProgress(audio)?.units)) return false
+        !audio.paused || audio.currentTime !== 0 || audio.error || audio.readyState < 2 || !(captureProgress(audio)?.units) || !captureReady(audio)) return false
     for (let i = 0; i < audio.buffered.length; i++)
       if (audio.buffered.start(i) <= 0.000001 && audio.buffered.end(i) > 0) return true
     return false

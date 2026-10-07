@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import * as api from '../api'
 import { player, toQuery, type QueueItem } from '../player.svelte'
 import { extractor } from './engine.svelte'
-import { captureProgress, playCapture, seekCapture, stopCapture } from './capture'
+import { captureProgress, playCapture, waitForCaptureReady, seekCapture, stopCapture } from './capture'
 
 export interface CaptureCase extends Partial<QueueItem> {
   id?: string; label: string; duration: number; error?: string
@@ -96,7 +96,10 @@ function observeAudio(audio: HTMLAudioElement, closeOnEnd = false) {
         return
       }
       events.push({ type: name, ms: now - started, position: audio.currentTime, phase,
-        ...(('detail' in e) ? { detail: (e as CustomEvent).detail } : {}) })
+        ...(name === 'waiting' ? { detail: {
+          readyState: audio.readyState, buffered: Array.from({ length: audio.buffered.length }, (_, i) => ({ start: audio.buffered.start(i), end: audio.buffered.end(i) })),
+          progress: captureProgress(audio),
+        } } : ('detail' in e) ? { detail: (e as CustomEvent).detail } : {}) })
       if (name === 'playing') {
         firstPlaying ??= now
         if (phase === 'startup') phase = 'listening'
@@ -294,6 +297,7 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
     t = performance.now()
     await within(invoke('capture_begin', { videoId: video.id, refresh: true, foreground: true }), t + timeout)
     stop = playCapture(audio, video.id); readerStarted = true
+    await within(waitForCaptureReady(audio), t + timeout)
     const play = audio.play(); play.catch(() => {})
     await until(() => observed.firstPlaying !== null && audio.currentTime > 0, t + timeout, check)
     await play

@@ -1405,9 +1405,76 @@ impl SkipRequest {
             && request.y < request.viewport_height)
             .then_some(request)
     }
+    fn validation_result(&self, value: &Value) -> Result<(), String> {
+        if value["valid"] != true {
+            // This is a closed diagnostic vocabulary, never arbitrary page/DOM text.
+            let reason = match value["reason"].as_str() {
+                Some(
+                    "stale-request"
+                    | "request-expired"
+                    | "source-changed"
+                    | "not-ad"
+                    | "button-ineligible"
+                    | "button-moved-or-covered"
+                    | "capture-failed",
+                ) => value["reason"].as_str().unwrap(),
+                _ => "page-rejected-or-unavailable",
+            };
+            return Err(format!("dom-{reason}"));
+        }
+        for (field, expected) in [
+            ("requestId", self.request_id),
+            ("generation", self.generation),
+            ("epoch", self.epoch),
+            ("source", self.source),
+            ("buttonToken", self.button_token),
+        ] {
+            // ExecuteScript serializes Chromium doubles, while the request arrives
+            // through JSON.stringify. A safe JS integer may therefore be `1791... .0`
+            // or exponent notation; serde's u64 deserializer rejects that JSON form.
+            // Accept the same exact numeric value, never a string, fraction or >2^53-1.
+            let actual = value[field]
+                .as_f64()
+                .filter(|n| {
+                    n.is_finite() && *n > 0.0 && *n <= 9_007_199_254_740_991.0 && n.fract() == 0.0
+                })
+                .ok_or_else(|| format!("validation-{field}-not-safe-integer"))?;
+            if actual as u64 != expected {
+                return Err(format!("validation-{field}-mismatch"));
+            }
+        }
+        for (field, expected) in [
+            ("x", self.x),
+            ("y", self.y),
+            ("viewportWidth", self.viewport_width),
+            ("viewportHeight", self.viewport_height),
+        ] {
+            if value[field].as_f64().filter(|n| n.is_finite()) != Some(expected) {
+                return Err(format!("validation-{field}-mismatch"));
+            }
+        }
+        Ok(())
+    }
+    #[cfg(test)]
     fn validated(&self, value: &Value) -> bool {
-        value["valid"] == true
-            && serde_json::from_value::<Self>(value.clone()).is_ok_and(|actual| actual == *self)
+        self.validation_result(value).is_ok()
+    }
+}
+#[derive(Deserialize)]
+struct SkipValidationReply {
+    origin: String,
+    validation: Value,
+}
+impl SkipValidationReply {
+    fn validate(output: &str, request: &SkipRequest) -> Result<(), String> {
+        // ExecuteScript returns a JSON object directly, not Runtime.evaluate's
+        // RemoteObject envelope. Keep the two contracts distinct and fail closed.
+        let reply: Self = serde_json::from_str(output)
+            .map_err(|_| "validation-invalid-execute-script-reply".to_string())?;
+        if reply.origin != "https://music.youtube.com" {
+            return Err("validation-origin-mismatch".into());
+        }
+        request.validation_result(&reply.validation)
     }
 }
 fn skip_current(state: &Supervisor, id: &str, request: &SkipRequest) -> bool {
@@ -1976,7 +2043,7 @@ fn receive(id: &str, generation: u64, source: &str, data: &str) -> Option<SkipRe
 #[cfg(windows)]
 mod native_click {
     use super::*;
-    use std::cell::Cell;
+    use std::cell::{Cell, RefCell};
     use std::rc::Rc;
     use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2;
     use webview2_com::{CallDevToolsProtocolMethodCompletedHandler, ExecuteScriptCompletedHandler};
@@ -1989,6 +2056,8 @@ mod native_click {
         pressed: Cell<bool>,
         released: Cell<bool>,
         completed: Cell<bool>,
+        validation: RefCell<Option<Value>>,
+        abort_reason: RefCell<Option<String>>,
     }
     #[derive(Clone, Copy)]
     enum Stage {
@@ -2005,6 +2074,8 @@ mod native_click {
             pressed: Cell::new(false),
             released: Cell::new(false),
             completed: Cell::new(false),
+            validation: RefCell::new(None),
+            abort_reason: RefCell::new(None),
         });
         validate(click, Stage::BeforePress);
         // A missing COM callback cannot leave a pressed mouse or an immortal lease.
@@ -2048,12 +2119,22 @@ mod native_click {
         );
         let callback_click = Rc::clone(&click);
         let handler = ExecuteScriptCompletedHandler::create(Box::new(move |result, output| {
-            let valid = result.is_ok()
-                && serde_json::from_str::<Value>(&output).is_ok_and(|value| {
-                    value["origin"] == "https://music.youtube.com"
-                        && callback_click.request.validated(&value["validation"])
-                })
-                && current(&callback_click);
+            let validation = if result.is_err() {
+                Err("validation-execution-callback-failed".to_string())
+            } else {
+                SkipValidationReply::validate(&output, &callback_click.request)
+            }
+            .and_then(|()| {
+                current(&callback_click)
+                    .then_some(())
+                    .ok_or_else(|| "validation-native-binding-invalidated".to_string())
+            });
+            let valid = validation.is_ok();
+            let reason = validation.err();
+            *callback_click.validation.borrow_mut() = Some(json!({
+                "stage":match stage {Stage::BeforePress=>"before-press",Stage::BeforeRelease=>"before-release",Stage::AfterRelease=>"after-release"},
+                "valid":valid,"reason":reason,
+            }));
             match stage {
                 Stage::BeforePress if valid => dispatch(callback_click, true, false),
                 Stage::BeforeRelease if valid => dispatch(callback_click, false, false),
@@ -2066,7 +2147,10 @@ mod native_click {
                         "released-state-changed"
                     },
                 ),
-                _ => abort(callback_click, "dom-validation-failed"),
+                _ => abort(
+                    callback_click,
+                    reason.as_deref().unwrap_or("dom-validation-failed"),
+                ),
             }
             Ok(())
         }));
@@ -2142,14 +2226,17 @@ mod native_click {
             }
         }
     }
-    fn abort(click: Rc<Click>, reason: &'static str) {
+    fn abort(click: Rc<Click>, reason: &str) {
+        if click.abort_reason.borrow().is_none() {
+            *click.abort_reason.borrow_mut() = Some(reason.to_string());
+        }
         if click.pressed.get() && !click.released.get() {
             dispatch(click, false, true);
         } else {
             finish(click, false, reason);
         }
     }
-    fn finish(click: Rc<Click>, ok: bool, reason: &'static str) {
+    fn finish(click: Rc<Click>, ok: bool, reason: &str) {
         if click.completed.replace(true) {
             return;
         }
@@ -2166,7 +2253,7 @@ mod native_click {
                 }
                 track.last_skip_result = Some(
                     json!({"requestId":click.request.request_id,"generation":click.request.generation,"epoch":click.request.epoch,
-                    "source":click.request.source,"pressed":click.pressed.get(),"released":click.released.get(),"ok":ok,"reason":reason}),
+                    "source":click.request.source,"pressed":click.pressed.get(),"released":click.released.get(),"ok":ok,"reason":reason,"validation":*click.validation.borrow(),"abortReason":*click.abort_reason.borrow()}),
                 );
             }
         }
@@ -3002,6 +3089,105 @@ mod tests {
             !skip_current(&s, ID, &request),
             "cancel marks ownership false before the native close completes"
         );
+    }
+    #[test]
+    fn native_skip_execute_script_accepts_exact_js_safe_integer_double_encoding() {
+        let request = SkipRequest {
+            request_id: 1_791_400_123_456_000,
+            generation: 1,
+            epoch: 2,
+            source: 3,
+            button_token: 1,
+            x: 842.25,
+            y: 581.5,
+            viewport_width: 960.0,
+            viewport_height: 640.0,
+        };
+        // Chromium JSON preserves DOUBLE representation for values outside int32.
+        let output = r#"{"origin":"https://music.youtube.com","validation":{"valid":true,"requestId":1791400123456000.0,"generation":1.0,"epoch":2,"source":3,"buttonToken":1,"x":842.25,"y":581.5,"viewportWidth":960,"viewportHeight":640}}"#;
+        let old: Value = serde_json::from_str(output).unwrap();
+        assert!(
+            serde_json::from_value::<SkipRequest>(old["validation"].clone()).is_err(),
+            "the old typed-u64 reply path rejected this valid browser number"
+        );
+        assert!(SkipValidationReply::validate(output, &request).is_ok());
+        assert!(
+            SkipValidationReply::validate(
+                &output.replace("1791400123456000.0", "1.791400123456e15"),
+                &request
+            )
+            .is_ok()
+        );
+        for replacement in [
+            "1791400123456001.0",
+            "1791400123456000.5",
+            "9007199254740992.0",
+            "-1",
+            "null",
+            "\"1791400123456000\"",
+        ] {
+            assert!(
+                SkipValidationReply::validate(
+                    &output.replace("1791400123456000.0", replacement),
+                    &request
+                )
+                .is_err(),
+                "{replacement}"
+            );
+        }
+        assert_eq!(
+            SkipValidationReply::validate(&output.replace("842.25", "842.26"), &request)
+                .unwrap_err(),
+            "validation-x-mismatch"
+        );
+        assert_eq!(
+            SkipValidationReply::validate(
+                &output.replace("https://music.youtube.com", "https://example.com"),
+                &request
+            )
+            .unwrap_err(),
+            "validation-origin-mismatch"
+        );
+        assert!(
+            SkipValidationReply::validate(r#"{"result":{"type":"object","value":{}}}"#, &request)
+                .is_err(),
+            "a CDP envelope is not ExecuteScript's contract"
+        );
+    }
+    #[test]
+    fn native_skip_preserves_safe_dom_failure_details_without_copying_page_text() {
+        let request = SkipRequest {
+            request_id: 1,
+            generation: 1,
+            epoch: 2,
+            source: 3,
+            button_token: 1,
+            x: 842.25,
+            y: 581.5,
+            viewport_width: 960.0,
+            viewport_height: 640.0,
+        };
+        let response = |reason| {
+            json!({"origin":"https://music.youtube.com","validation":{"valid":false,"requestId":1,"reason":reason}}).to_string()
+        };
+        assert_eq!(
+            SkipValidationReply::validate(&response("button-moved-or-covered"), &request)
+                .unwrap_err(),
+            "dom-button-moved-or-covered"
+        );
+        assert_eq!(
+            SkipValidationReply::validate(&response("request-expired"), &request).unwrap_err(),
+            "dom-request-expired"
+        );
+        assert_eq!(
+            SkipValidationReply::validate(
+                &response("https://private.invalid/token?secret"),
+                &request
+            )
+            .unwrap_err(),
+            "dom-page-rejected-or-unavailable"
+        );
+        assert!(SkipValidationReply::validate("null", &request).is_err());
     }
     #[test]
     fn trusted_click_telemetry_is_bound_to_the_native_request_and_counted_once() {
