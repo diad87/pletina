@@ -87,7 +87,8 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
   - 7 canciones seguidas, cada una preparada en 0,8–1,5 s;
   - varios cambios entre Wi-Fi y datos en 20 segundos sin cortarse;
   - pausas y reanudaciones que siempre volvieron a sonar;
-  - ningún cierre del servicio.
+  - ningún cierre del servicio;
+  - notificación grande con controles (confirmado por el usuario).
 
   En la segunda prueba hubo una pausa a las 22:21 que no se reanudó; no se sabe si la pidió el usuario. Desde la versión 4 el registro apunta el motivo de cada pausa (botón, otra app o llamada, auriculares), la pantalla encendida o apagada, el ahorro de batería y el reposo profundo de Android.
 
