@@ -6,12 +6,15 @@ use crate::extractor;
 use crate::youtube::{self, CONFIDENT_SCORE, Candidate, MIN_SCORE, TrackQuery, YouTubeMusic};
 use crate::ytdlp::YtDlp;
 use serde::Serialize;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
+use tauri::Emitter;
 
 // También invalida búsquedas que todavía no han obtenido un ID de YouTube.
 #[derive(Default)]
-struct RequestEpochs { resolution: AtomicU64, prefetch: AtomicU64 }
-static REQUESTS: RequestEpochs = RequestEpochs { resolution: AtomicU64::new(0), prefetch: AtomicU64::new(0) };
+struct EpochState { resolution: u64, prefetch: u64 }
+#[derive(Default)]
+struct RequestEpochs { state: Mutex<EpochState> }
+static REQUESTS: RequestEpochs = RequestEpochs { state: Mutex::new(EpochState { resolution: 0, prefetch: 0 }) };
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RequestTicket {
     pub resolution: u64,
@@ -20,25 +23,41 @@ pub struct RequestTicket {
 pub fn begin_resolution(foreground: bool) -> u64 {
     REQUESTS.begin_resolution(foreground)
 }
-pub fn resolution_current(ticket: u64) -> bool { REQUESTS.resolution.load(Ordering::SeqCst) == ticket }
+pub fn resolution_current(ticket: u64) -> bool { REQUESTS.state.lock().unwrap().resolution == ticket }
 pub fn cancel_prefetch_requests() -> u64 { REQUESTS.cancel_prefetch() }
 impl RequestEpochs {
     fn begin_resolution(&self, foreground: bool) -> u64 {
-        if foreground { self.resolution.fetch_add(1, Ordering::SeqCst) + 1 }
-        else { self.resolution.load(Ordering::SeqCst) }
+        let mut state = self.state.lock().unwrap();
+        if foreground { state.resolution += 1; }
+        state.resolution
     }
-    fn cancel_prefetch(&self) -> u64 { self.prefetch.fetch_add(1, Ordering::SeqCst) + 1 }
-    fn begin(&self, foreground: bool) -> RequestTicket {
-        RequestTicket { resolution: self.begin_resolution(foreground), prefetch: (!foreground).then(|| self.cancel_prefetch()) }
+    fn cancel_prefetch(&self) -> u64 {
+        let mut state = self.state.lock().unwrap();
+        state.prefetch += 1;
+        state.prefetch
+    }
+    fn begin(&self, foreground: bool, expected_foreground: Option<u64>) -> Result<RequestTicket, String> {
+        // Una señal antigua no puede incrementar next ni retirar la precarga nueva.
+        // La comparación y la admisión comparten el mismo cerrojo con begin/cancel.
+        let mut state = self.state.lock().unwrap();
+        if !foreground && expected_foreground.is_some_and(|expected| expected != state.resolution) {
+            return Err("CAPTURE_SUPERSEDED: la precarga pertenece a otra canción".into());
+        }
+        if foreground { state.resolution += 1; } else { state.prefetch += 1; }
+        Ok(RequestTicket { resolution: state.resolution, prefetch: (!foreground).then_some(state.prefetch) })
     }
     fn prefetch_current(&self, ticket: RequestTicket) -> bool {
-        ticket.prefetch.is_none_or(|p| self.prefetch.load(Ordering::SeqCst) == p)
+        let state = self.state.lock().unwrap();
+        ticket.prefetch.is_none_or(|p| state.prefetch == p)
     }
     fn current(&self, ticket: RequestTicket) -> bool {
-        self.resolution.load(Ordering::SeqCst) == ticket.resolution && self.prefetch_current(ticket)
+        let state = self.state.lock().unwrap();
+        state.resolution == ticket.resolution && ticket.prefetch.is_none_or(|p| state.prefetch == p)
     }
 }
-fn begin_request(foreground: bool) -> RequestTicket { REQUESTS.begin(foreground) }
+fn begin_request(foreground: bool, expected_foreground: Option<u64>) -> Result<RequestTicket, String> {
+    REQUESTS.begin(foreground, expected_foreground)
+}
 pub fn prefetch_current(ticket: RequestTicket) -> bool {
     REQUESTS.prefetch_current(ticket)
 }
@@ -47,6 +66,37 @@ pub fn request_current(ticket: RequestTicket) -> bool {
 }
 fn ensure_current(ticket: RequestTicket) -> Result<(), String> {
     if request_current(ticket) { Ok(()) } else { Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into()) }
+}
+
+/// Aviso opcional para comenzar next tras reservar/promover la plaza foreground.
+/// No equivale a audio disponible: capture lo emite después de begin, antes de ready.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ForegroundAdmission {
+    request_id: String,
+    resolution: u64,
+    track_id: u64,
+    video_id: String,
+    engine: &'static str,
+}
+impl ForegroundAdmission {
+    fn new(request_id: Option<&str>, ticket: RequestTicket, track_id: u64, video_id: &str, engine: &str) -> Option<Self> {
+        let request_id = request_id.filter(|id| !id.is_empty())?;
+        if ticket.prefetch.is_some() || engine != "oficial" || !valid_video_id(video_id) { return None; }
+        Some(Self { request_id: request_id.into(), resolution: ticket.resolution, track_id, video_id: video_id.into(), engine: "oficial" })
+    }
+    fn matches(&self, ticket: RequestTicket, video_id: &str) -> bool {
+        ticket.prefetch.is_none() && ticket.resolution == self.resolution && video_id == self.video_id
+    }
+    pub fn emit(&self, app: &tauri::AppHandle, ticket: Option<RequestTicket>, video_id: &str) {
+        if ticket.is_some_and(|t| self.matches(t, video_id) && request_current(t)) {
+            // Un listener ausente sólo pierde la precarga temprana; no falla la reproducción.
+            let _ = app.emit_to("main", "player:foreground-admitted", self);
+        }
+    }
+}
+fn valid_video_id(video_id: &str) -> bool {
+    video_id.len() == 11 && video_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 #[derive(Serialize)]
@@ -90,7 +140,7 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
-    resolve_with_priority(q, refresh, db, ytm, ytdlp, true).await
+    resolve_with_priority(q, refresh, db, ytm, ytdlp, true, None, None).await
 }
 
 pub async fn resolve_with_priority(
@@ -100,8 +150,10 @@ pub async fn resolve_with_priority(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
     foreground: bool,
+    expected_foreground: Option<u64>,
+    request_id: Option<&str>,
 ) -> Result<Playable, String> {
-    let ticket = begin_request(foreground);
+    let ticket = begin_request(foreground, expected_foreground)?;
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
@@ -128,14 +180,16 @@ pub async fn resolve_with_priority(
 
     let mut gone = None;
     if let Some(src) = db.source(q.id) {
-        match extractor::stream_with_priority(ytdlp, &src.video_id, refresh, foreground, Some(ticket)).await {
+        let admission = ForegroundAdmission::new(request_id, ticket, q.id, &src.video_id, extractor::stream_engine());
+        match extractor::stream_with_admission(ytdlp, &src.video_id, refresh, foreground, Some(ticket), admission).await {
             Ok(info) => { ensure_current(ticket)?; return Ok(playable(src, info.url)); },
             // El vídeo ya no existe: se busca otro.
             Err(e) if is_gone(&e) && !src.verified => {
                 ensure_current(ticket)?;
                 if !db.delete_automatic_source(q.id, &src.video_id) {
                     let chosen = db.source(q.id).ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
-                    let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    let admission = ForegroundAdmission::new(request_id, ticket, q.id, &chosen.video_id, extractor::stream_engine());
+                    let info = extractor::stream_with_admission(ytdlp, &chosen.video_id, false, foreground, Some(ticket), admission).await?;
                     ensure_current(ticket)?;
                     return Ok(playable(chosen, info.url));
                 }
@@ -264,9 +318,10 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
 
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
-pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, foreground: bool) -> Result<Playable, String> {
-    let ticket = begin_request(foreground);
-    let info = extractor::stream_with_priority(ytdlp, video_id, false, foreground, Some(ticket)).await?;
+pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, foreground: bool, request_id: Option<&str>) -> Result<Playable, String> {
+    let ticket = begin_request(foreground, None)?;
+    let admission = ForegroundAdmission::new(request_id, ticket, q.id, video_id, extractor::stream_engine());
+    let info = extractor::stream_with_admission(ytdlp, video_id, false, foreground, Some(ticket), admission).await?;
     ensure_current(ticket)?;
     if let Some(path) = db.download_path(q.id) {
         let _ = std::fs::remove_file(path);
@@ -366,25 +421,92 @@ mod tests {
     #[test]
     fn next_requests_are_latest_wins_without_cancelling_the_current_track() {
         let requests = RequestEpochs::default();
-        let current = requests.begin(true);
-        let slow_b = requests.begin(false);
-        let c = requests.begin(false);
+        let current = requests.begin(true, None).unwrap();
+        let slow_b = requests.begin(false, None).unwrap();
+        let c = requests.begin(false, None).unwrap();
         assert!(!requests.current(slow_b), "B cannot replace C after a slow search");
         assert!(requests.current(c));
         assert!(requests.current(current), "prefetch cannot cancel foreground");
-        let new_b = requests.begin(false);
+        let new_b = requests.begin(false, None).unwrap();
         assert!(!requests.current(c));
         assert!(!requests.current(slow_b), "B→C→B needs a new admission");
         assert!(requests.current(new_b));
-        let promotion = requests.begin(true);
+        let promotion = requests.begin(true, None).unwrap();
         assert!(!requests.current(new_b), "old pending results are obsolete");
         assert!(requests.prefetch_current(new_b), "already-admitted next survives until promotion");
         assert!(requests.current(promotion));
         let cancellation = requests.cancel_prefetch();
         assert!(!requests.prefetch_current(new_b));
-        let later = requests.begin(false);
+        let later = requests.begin(false, None).unwrap();
         assert!(later.prefetch.unwrap() > cancellation, "queued cancel cannot affect a newer next lease");
         assert!(requests.current(promotion));
+    }
+    #[test]
+    fn a_late_foreground_signal_cannot_replace_the_new_tracks_prefetch() {
+        let requests = RequestEpochs::default();
+        let a = requests.begin(true, None).unwrap();
+        let b = requests.begin(false, Some(a.resolution)).unwrap();
+        let c = requests.begin(true, None).unwrap();
+        let d = requests.begin(false, Some(c.resolution)).unwrap();
+        assert!(requests.begin(false, Some(a.resolution)).is_err());
+        assert!(requests.current(c));
+        assert!(requests.current(d), "the stale signal must not increment next's sequence");
+        assert!(!requests.current(b));
+        let cancellation = requests.begin_resolution(true);
+        assert!(requests.begin(false, Some(c.resolution)).is_err());
+        assert!(requests.prefetch_current(d), "a rejected request cannot cancel an admitted next lease");
+        let next = requests.begin(false, Some(cancellation)).unwrap();
+        assert_eq!(next.prefetch, d.prefetch.map(|n| n + 1));
+    }
+    #[test]
+    fn concurrent_foreground_admission_cannot_attach_early_next_to_a_different_track() {
+        use std::sync::{Arc, Barrier};
+        for _ in 0..32 {
+            let requests = Arc::new(RequestEpochs::default());
+            let a = requests.begin(true, None).unwrap();
+            let barrier = Arc::new(Barrier::new(2));
+            let other_requests = Arc::clone(&requests);
+            let other_barrier = Arc::clone(&barrier);
+            let background = std::thread::spawn(move || {
+                other_barrier.wait();
+                other_requests.begin(false, Some(a.resolution))
+            });
+            barrier.wait();
+            let current = requests.begin(true, None).unwrap();
+            let previous_prefetch = background.join().unwrap();
+            if let Ok(ticket) = previous_prefetch.as_ref() {
+                assert_eq!(ticket.resolution, a.resolution);
+                assert!(!requests.current(*ticket));
+            }
+            let next = requests.begin(false, Some(current.resolution)).unwrap();
+            assert_eq!(next.prefetch, Some(if previous_prefetch.is_ok() { 2 } else { 1 }));
+            assert!(requests.current(next));
+            assert!(requests.current(current));
+        }
+    }
+    #[test]
+    fn early_prefetch_notice_requires_an_official_known_foreground_and_matches_its_ticket() {
+        let foreground = RequestTicket { resolution: 7, prefetch: None };
+        let background = RequestTicket { resolution: 7, prefetch: Some(2) };
+        let video = "jNY_wLukVW0";
+        for engine in ["propio", "youtubei", "ytdlp"] {
+            assert!(ForegroundAdmission::new(Some("play-7"), foreground, 77, video, engine).is_none());
+        }
+        assert!(ForegroundAdmission::new(None, foreground, 77, video, "oficial").is_none());
+        assert!(ForegroundAdmission::new(Some(""), foreground, 77, video, "oficial").is_none());
+        assert!(ForegroundAdmission::new(Some("play-7"), background, 77, video, "oficial").is_none());
+        assert!(ForegroundAdmission::new(Some("play-7"), foreground, 77, "not-an-id", "oficial").is_none());
+        let notice = ForegroundAdmission::new(Some("play-7"), foreground, 77, video, "oficial").unwrap();
+        assert!(notice.matches(foreground, video));
+        assert!(!notice.matches(background, video));
+        assert!(!notice.matches(RequestTicket { resolution: 8, prefetch: None }, video));
+        assert!(!notice.matches(foreground, "abcdefghijk"));
+        let payload = serde_json::to_value(notice).unwrap();
+        assert_eq!(payload["requestId"], "play-7");
+        assert_eq!(payload["resolution"], 7);
+        assert_eq!(payload["trackId"], 77);
+        assert_eq!(payload["videoId"], video);
+        assert_eq!(payload["engine"], "oficial");
     }
     use crate::deezer::Deezer;
 
@@ -547,7 +669,7 @@ mod resolve_tests {
 
         // Elegir a mano un directo: queda guardado como verificado y es lo que suena después.
         let other = list.iter().find(|a| !a.current).unwrap();
-        let chosen = choose(&q, &other.video_id, &db, &ytdlp, true).await.unwrap();
+        let chosen = choose(&q, &other.video_id, &db, &ytdlp, true, None).await.unwrap();
         assert_eq!(chosen.video_id, other.video_id);
         let src = db.source(q.id).unwrap();
         assert!(src.verified);

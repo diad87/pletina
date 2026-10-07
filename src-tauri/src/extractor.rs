@@ -8,7 +8,7 @@
 //!   `oficial` usa solo la captura oficial (para probarla).
 
 use crate::youtube::BROWSER_UA;
-use crate::player::RequestTicket;
+use crate::player::{ForegroundAdmission, RequestTicket};
 use crate::ytdlp::{VideoInfo, YtDlp, now, query_param};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -58,6 +58,11 @@ pub fn init(app: AppHandle) {
 
 /// Audio de un vídeo con el motor elegido.
 pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
+    stream_with_admission(ytdlp, video_id, refresh, foreground, ticket, None).await
+}
+
+/// El aviso sólo viaja por Oficial; los demás motores conservan su ruta y prioridad.
+pub async fn stream_with_admission(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>, admission: Option<ForegroundAdmission>) -> Result<VideoInfo, String> {
     if ticket.is_some_and(|t| !crate::player::request_current(t)) {
         return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
     }
@@ -71,7 +76,7 @@ pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, 
             }
         },
         "propio" => propio(video_id, refresh, foreground, ticket).await,
-        "oficial" => official(video_id, refresh, foreground, ticket).await,
+        "oficial" => official(video_id, refresh, foreground, ticket, admission).await,
         _ => ytdlp.stream(video_id, refresh).await,
     }
 }
@@ -94,9 +99,9 @@ async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<
 }
 
 /// Captura oficial experimental: empieza con la primera unidad confirmada; EOF se valida aparte.
-async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
+async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>, admission: Option<ForegroundAdmission>) -> Result<VideoInfo, String> {
     let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
-    let meta = capture::stream_with_priority(app, video_id, refresh, foreground, ticket).await?;
+    let meta = capture::stream_with_priority(app, video_id, refresh, foreground, ticket, admission).await?;
     Ok(VideoInfo {
         url: format!("{}{video_id}", capture::SCHEME),
         title: meta.title,
@@ -295,7 +300,7 @@ pub async fn bench_native(video_id: String) -> Result<Value, String> {
 #[tauri::command]
 pub async fn bench_capture(video_id: String) -> Result<Value, String> {
     let t = Instant::now();
-    let info = official(&video_id, true, true, None).await?;
+    let info = official(&video_id, true, true, None, None).await?;
     Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": info.url, "title": info.title }))
 }
 

@@ -1,6 +1,6 @@
 //! API 3: unidades confirmadas, caché append-only y dos sesiones (actual + siguiente).
 //! generation identifica la ventana nativa, epoch un recorrido/seek. EOF no prueba cobertura.
-use crate::player::RequestTicket;
+use crate::player::{ForegroundAdmission, RequestTicket};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -492,6 +492,7 @@ pub async fn stream_with_priority(
     refresh: bool,
     foreground: bool,
     ticket: Option<RequestTicket>,
+    admission: Option<ForegroundAdmission>,
 ) -> Result<Meta, String> {
     supported()?;
     request_current(ticket)?;
@@ -500,6 +501,12 @@ pub async fn stream_with_priority(
     }
     // El contador se toma dentro de la misma admisión serializada que abre/promueve la sesión.
     let cancellation = begin(app, video_id, refresh, foreground, ticket, None, false).await?;
+    request_current(ticket)?;
+    // La plaza ya es foreground: next no puede retirar esta sesión al ganar TRANSITION.
+    // Emitir antes de begin permitiría que C retirase B cuando B aún era next.
+    if foreground {
+        if let Some(admission) = admission { admission.emit(app, ticket, video_id); }
+    }
     let mut generation;
     let started = Instant::now();
     let mut budget = Duration::from_secs(120);

@@ -2,6 +2,7 @@ import { convertFileSrc } from '@tauri-apps/api/core'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
+import { extractor } from './extractor/engine.svelte'
 import { library, toLib } from './library.svelte'
 import { toast } from './toast.svelte'
 import type { Playable, Track, TrackQuery } from './types'
@@ -99,6 +100,8 @@ class Player {
   #promotion: CapturePromotion | null = null
   #prefetchVersion = 0
   #prefetchId: number | null = null
+  #admission: (api.ForegroundAdmission & { token: number; audio: HTMLAudioElement }) | null = null
+  #loadingCanPrefetch = false
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
@@ -226,7 +229,7 @@ class Player {
     this.userQueue = [...this.userQueue, ...this.#wrap(items)]
     toast.show(items.length === 1 ? `«${items[0].track.title}» añadida a la cola` : `${items.length} canciones añadidas a la cola`)
     this.#startIfIdle()
-    if (this.status === 'playing') this.#prefetchNext()
+    if (this.status === 'playing' || this.status === 'loading') this.#prefetchNext()
   }
 
   /** Al principio de tu cola: suenan justo después de la actual. */
@@ -235,7 +238,7 @@ class Player {
     this.userQueue = [...this.#wrap(items), ...this.userQueue]
     toast.show(items.length === 1 ? `«${items[0].track.title}» sonará a continuación` : `${items.length} canciones sonarán a continuación`)
     this.#startIfIdle()
-    if (this.status === 'playing') this.#prefetchNext()
+    if (this.status === 'playing' || this.status === 'loading') this.#prefetchNext()
   }
 
   /** Inserta en tu cola en una posición concreta (al arrastrar al panel de la cola). */
@@ -244,7 +247,7 @@ class Player {
     list.splice(Math.max(0, Math.min(at, list.length)), 0, ...this.#wrap(items))
     this.userQueue = list
     this.#startIfIdle()
-    if (this.status === 'playing') this.#prefetchNext()
+    if (this.status === 'playing' || this.status === 'loading') this.#prefetchNext()
   }
 
   removeFromQueue(key: number) {
@@ -293,6 +296,8 @@ class Player {
 
   #cancelLoading() {
     ++this.#token
+    this.#admission = null
+    this.#loadingCanPrefetch = false
     this.#pendingSource = null
     this.#inFlight.clear()
     this.#discardPrefetch(true)
@@ -429,6 +434,8 @@ class Player {
 
     this.#discardPrefetch(true)
     const token = ++this.#token
+    this.#admission = null
+    this.#loadingCanPrefetch = true
     this.#pendingSource = null
     this.captureInteraction = null
     this.status = 'loading'
@@ -437,7 +444,7 @@ class Player {
     try {
       await this.#cancelPending
       if (token !== this.#token) return false
-      const playable = await api.chooseSource(toQuery(item), videoId)
+      const playable = await api.chooseSource(toQuery(item), videoId, true, this.#admissionOptions(item))
       redownload()
       if (token !== this.#token) return true
       this.#retried = false
@@ -453,6 +460,8 @@ class Player {
           this.#fail(item, String(e))
         }
         else {
+          this.#admission = null
+          this.#discardPrefetch(true)
           this.status = 'paused'
           reportError(e)
         }
@@ -491,6 +500,10 @@ class Player {
 
   async #start(item: QueueItem, refresh = false, startAt = 0) {
     const prepared = !refresh && this.#prepared?.id === item.track.id ? this.#prepared : null
+    // La señal nativa llega después de asegurar la plaza foreground, incluso si
+    // antes era next. Un Audio ya preparado conserva además su barrera de play.
+    this.#loadingCanPrefetch = !prepared
+    this.#admission = null
     if (!prepared) this.#discardPrefetch(this.#prefetchId !== item.track.id)
     else { ++this.#prefetchVersion; this.#prefetchId = null; this.#prepared = null }
     const token = ++this.#token
@@ -620,6 +633,8 @@ class Player {
   /** Prepara el decoder/MSE de la siguiente desde que empieza a sonar la actual. */
   #prefetchNext() {
     if (this.#promotion?.token === this.#token) return
+    const admission = this.#currentAdmission()
+    if (this.status === 'idle' || (this.status === 'loading' && (!this.#loadingCanPrefetch || !admission))) return
     const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
     const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
     if (!following || following === this.current || this.repeat === 'one') { this.#discardPrefetch(true); return }
@@ -627,6 +642,10 @@ class Player {
     this.#discardPrefetch()
     this.#prefetchId = following.track.id
     const version = this.#prefetchVersion
+    if (admission) this.#audio.dispatchEvent(new CustomEvent('capturehandoff', { detail: {
+      phase: 'prefetch-request', requestId: admission.requestId, resolution: admission.resolution,
+      trackId: admission.trackId, nextTrackId: following.track.id,
+    } }))
     this.#resolve(following, false, false).then(playable => {
       if (version !== this.#prefetchVersion) return
       // La vía legacy mantiene su política anterior: resolver URL, sin una segunda captura MSE.
@@ -648,8 +667,16 @@ class Player {
     if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground) ||
         (!foreground && pending.prefetchVersion !== this.#prefetchVersion)) {
       // El clic debe llegar al backend para promocionar una precarga; allí se comparte la captura.
+      const token = this.#token, version = this.#prefetchVersion
+      const options = foreground ? this.#admissionOptions(item) : {
+        expectedForeground: this.#currentAdmission()?.resolution,
+        isCurrent: () => token === this.#token && version === this.#prefetchVersion && this.#prefetchId === id,
+      }
       const entry = {
-        promise: this.#cancelPending.then(() => api.resolve(toQuery(item), refresh, foreground)),
+        promise: this.#cancelPending.then(() => {
+          if (options.isCurrent?.() === false) throw new DOMException('Resolución sustituida', 'AbortError')
+          return api.resolve(toQuery(item), refresh, foreground, options)
+        }),
         foreground,
         token: this.#token,
         prefetchVersion: this.#prefetchVersion,
@@ -659,6 +686,28 @@ class Player {
       entry.promise.finally(() => this.#inFlight.get(id) === entry && this.#inFlight.delete(id)).catch(() => {})
     }
     return pending.promise
+  }
+
+  #currentAdmission() {
+    const a = this.#admission
+    return a && a.token === this.#token && a.audio === this.#audio && a.trackId === this.current?.track.id &&
+      extractor.engine === 'oficial' ? a : null
+  }
+
+  #admissionOptions(item: QueueItem): api.ResolutionOptions {
+    const token = this.#token, audio = this.#audio, engine = extractor.engine
+    const isCurrent = () => token === this.#token && audio === this.#audio && item.track.id === this.current?.track.id
+    return {
+      isCurrent,
+      ...(engine === 'oficial' ? { onAdmitted: (admission: api.ForegroundAdmission) => {
+        if (!isCurrent() || extractor.engine !== engine || admission.engine !== engine ||
+            admission.trackId !== item.track.id || !Number.isSafeInteger(admission.resolution) || admission.resolution < 0 ||
+            !/^[A-Za-z0-9_-]{11}$/.test(admission.videoId)) return
+        this.#admission = { ...admission, token, audio }
+        audio.dispatchEvent(new CustomEvent('capturehandoff', { detail: { ...admission, phase: 'foreground-admitted' } }))
+        this.#prefetchNext()
+      } } : {}),
+    }
   }
 
   /** El audio falló a mitad (normalmente la URL caducó): se pide otra una vez y se sigue donde iba. */
@@ -673,11 +722,15 @@ class Player {
 
   #fail(item: QueueItem, reason: string) {
     if (reason.includes('SOURCE_SELECTION_REQUIRED')) {
+      this.#admission = null
+      this.#discardPrefetch(true)
       this.status = 'idle'
       this.picking = item
       return
     }
     if (reason.includes('CAPTURE_REQUIRES_INTERACTION')) {
+      this.#admission = null
+      this.#discardPrefetch(true)
       this.captureInteraction = reason.split('CAPTURE_REQUIRES_INTERACTION:').pop()?.trim() || 'YouTube necesita tu intervención.'
       this.status = 'idle'
       return
@@ -687,6 +740,8 @@ class Player {
     if (this.#failures < MAX_FAILURES && (this.userQueue.length > 0 || this.pos < this.order.length - 1)) {
       this.next()
     } else {
+      this.#admission = null
+      this.#discardPrefetch(true)
       this.status = 'idle'
     }
   }

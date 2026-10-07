@@ -32,8 +32,8 @@ const allCases = corpus => (corpus?.albums ?? []).flatMap((album, albumIndex) =>
   })))
 
 function effectiveExperiment(suite, metadata, rows) {
-  const fromStatus = rows.flatMap(row => [row.progressiveExperiment, row.status?.progressiveExperiment,
-    row.startStatus?.progressiveExperiment]).filter(value => typeof value === 'boolean')
+  const fromStatus = rows.flatMap(row => [row.progressiveExperiment, ...['status', 'startStatus', 'seekStatus', 'finalStatus', 'latestStatus']
+    .map(key => row[key]?.progressiveExperiment)]).filter(value => typeof value === 'boolean')
   const values = [...new Set(fromStatus)]
   const value = values.length === 1 ? values[0] : values.length > 1 ? null
     : boolean(metadata?.progressiveExperiment) ?? boolean(suite.experimental)
@@ -243,6 +243,7 @@ function diagnosticCell(entry) {
 const latestEntry = row => Object.values(row.latest).filter(Boolean).sort((a, b) =>
   (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0) || Number(b.runId.split(':')[0]) - Number(a.runId.split(':')[0]))[0]
 const categoryLabel = category => ({ latency: 'Latencia', switch: 'Cambio en frío', album: 'Álbum natural', quarantine: 'Cuarentena' })[category] ?? category
+const experimentLabel = experiment => experiment.value === true ? 'Progresivo experimental' : experiment.value === false ? 'Normal: cuarentena completa' : 'Desconocido o contradictorio'
 const count = value => value === null || value === undefined ? 'n/d' : String(value)
 const completeLabel = value => ({ verified: 'Verificada', incomplete: 'Incompleta', 'not-exercised': 'No ejercitada', 'not-measured': 'No medida' })[value] ?? 'n/d'
 const yesNo = value => value === null || value === undefined ? 'n/d' : value ? 'Sí' : 'No'
@@ -261,6 +262,7 @@ export function markdown(summary) {
   const lines = [
     '# Evidencia de captura', '', `Generado: ${summary.generatedAt}. Corpus: ${summary.representedTracks}/${summary.expectedTracks} filas.`, '',
     '**Aceptación: no. Ausencia semántica de anuncios: no verificada.** Los contadores publicitarios son etiquetas observadas, no una garantía.', '',
+    'El modo efectivo se conserva por ejecución: normal verifica la cuarentena completa; sus tiempos no acreditan los objetivos de latencia del experimento progresivo.', '',
     'Se muestra la última ejecución por categoría e ID, incluso si falla, sigue en curso o se interrumpió. El JSON conserva todas las ejecuciones y las filas originales.', '',
     'Las esperas durante seek/backfill se registran aparte. Un smoke con `gaps: []` no demuestra cero cortes durante una canción completa.', '',
     'Un `ad-timeout` inferido conserva el intento fallido, pero no demuestra incumplimiento de los 3 s: el primer sonido queda pendiente de medición.', '',
@@ -288,8 +290,8 @@ export function markdown(summary) {
     '| --- | --- | --- | --- | --- | --- | --- | --- |')
   for (const { row, entry } of evidence) lines.push(`| ${escape(row.label)} / ${escape(row.id)} | ${categoryLabel(entry.category)} | ${endedCell(entry.metrics)} | ${waitingCell(entry.metrics)} | ${count(entry.metrics.allPlaybackStallCount)} | ${yesNo(entry.metrics.coverageOk)} | ${completeLabel(entry.metrics.completeness)} | ${escape(entry.runId)} |`)
   if (!evidence.length) lines.push('| No ejercitado | — | n/d | n/d | n/d | n/d | No ejercitada | — |')
-  lines.push('', '## Fuentes y ejecuciones conservadas', '', '| Ejecución | Fecha | Commit | Categoría | Estado | Fuente |', '| --- | --- | --- | --- | --- | --- |')
-  for (const run of summary.runs) lines.push(`| ${escape(run.runId)} | ${escape(run.date)} | ${escape(run.commit)} | ${escape(run.category)} | ${run.fatal ? 'Error de entrada/ejecución' : run.interrupted ? 'Interrumpida' : run.running ? 'En curso' : 'Finalizada'} | ${escape(run.source)} |`)
+  lines.push('', '## Fuentes y ejecuciones conservadas', '', '| Ejecución | Fecha | Commit | Categoría | Modo efectivo | Estado | Fuente |', '| --- | --- | --- | --- | --- | --- | --- |')
+  for (const run of summary.runs) lines.push(`| ${escape(run.runId)} | ${escape(run.date)} | ${escape(run.commit)} | ${escape(run.category)} | ${experimentLabel(run.experiment)} (${escape(run.experiment.source)}) | ${run.fatal ? 'Error de entrada/ejecución' : run.interrupted ? 'Interrumpida' : run.running ? 'En curso' : 'Finalizada'} | ${escape(run.source)} |`)
   for (const run of summary.runs.filter(run => run.interrupted)) lines.push('', `Interrupción verificada de ${escape(run.runId)}: ${escape(run.interruption.stoppedAt)}. ${escape(run.interruption.reason ?? 'Sin motivo registrado')}. Auxiliar: ${escape(run.interruptionSource)}; SHA256 del informe: ${escape(run.sha256)}.`)
   lines.push('', '## Historial de errores', '')
   const errors = summary.runs.flatMap(run => [

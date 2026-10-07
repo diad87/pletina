@@ -57,12 +57,14 @@ async fn resolve(
     track: TrackQuery,
     refresh: bool,
     foreground: Option<bool>,
+    expected_foreground: Option<u64>,
+    request_id: Option<String>,
     db: State<'_, Db>,
     ytm: State<'_, YouTubeMusic>,
     ytdlp: State<'_, YtDlp>,
     app: tauri::AppHandle,
 ) -> Result<Playable, String> {
-    let playable = player::resolve_with_priority(&track, refresh, &db, &ytm, &ytdlp, foreground.unwrap_or(true)).await?;
+    let playable = player::resolve_with_priority(&track, refresh, &db, &ytm, &ytdlp, foreground.unwrap_or(true), expected_foreground, request_id.as_deref()).await?;
     // El archivo descargado se sirve por el protocolo de archivos locales: hay que permitirlo.
     if playable.local {
         app.asset_protocol_scope().allow_file(&playable.url).map_err(|e| e.to_string())?;
@@ -110,10 +112,11 @@ async fn choose_source(
     track: TrackQuery,
     video_id: String,
     foreground: Option<bool>,
+    request_id: Option<String>,
     db: State<'_, Db>,
     ytdlp: State<'_, YtDlp>,
 ) -> Result<Playable, String> {
-    player::choose(&track, &video_id, &db, &ytdlp, foreground.unwrap_or(true)).await
+    player::choose(&track, &video_id, &db, &ytdlp, foreground.unwrap_or(true), request_id.as_deref()).await
 }
 
 /// Guarda una asociación manual sin abrir el extractor ni modificar la canción actual.

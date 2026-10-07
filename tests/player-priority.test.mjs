@@ -39,6 +39,7 @@ async function setup(t, methods) {
   const key = `__playerTest${++count}`
   globalThis[key] = {
     api: { recordPlay: async () => {}, cancelPrefetch: async () => {}, ...methods },
+    extractor: { engine: 'ytdlp' },
     convertFileSrc: value => value,
     downloads: { done: new Set(), start() {} },
     setAudioSource: (a, url) => { a.src = url }, stopCapture: (...args) => stopped.push(args),
@@ -53,9 +54,9 @@ async function setup(t, methods) {
   }
   t.after(() => delete globalThis[key])
   // La reactividad no interviene en estas carreras; sí ejecutamos los métodos privados reales.
-  const prelude = `const $state = value => value; const { api, convertFileSrc, downloads, CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
+  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
   const { player } = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
-  return { player, audio, audios, stopped, toasts, progress, downloads: globalThis[key].downloads }
+  return { player, audio, audios, stopped, toasts, progress, downloads: globalThis[key].downloads, extractor: globalThis[key].extractor }
 }
 
 test('el clic promociona la precarga pendiente y su resultado tardío no sustituye la canción', async t => {
@@ -648,4 +649,198 @@ test('refresh no adopta una precarga del mismo track ni pierde la petición de r
   await settle(() => env.player.status === 'playing' && current.src === captured(99).url)
   assert.notEqual(env.player.playbackAudio, oldPrepared)
   assert.deepEqual(calls.find(call => call.refresh), { id: 1, refresh: true, foreground: true })
+})
+
+const admit = (options, id, resolution = 42) => options.onAdmitted?.({
+  requestId: `request-${resolution}`, resolution, trackId: id, videoId: captured(id).videoId, engine: 'oficial',
+})
+
+test('la admisión oficial prepara next durante el anuncio inicial, antes del primer playing', async t => {
+  const first = deferred(), calls = [], events = []
+  const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
+    calls.push({ id: track.id, foreground, options })
+    return foreground ? first.promise : Promise.resolve(captured(track.id))
+  } })
+  env.extractor.engine = 'oficial'
+  env.audio.addEventListener('capturehandoff', event => events.push(event.detail.phase))
+  env.audio.addEventListener('playing', () => events.push('playing'))
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => calls.length === 1)
+  admit(calls[0].options, 1)
+  await settle(() => env.player.preparedAudio !== null)
+  assert.equal(env.player.status, 'loading')
+  assert.equal(env.audio.src, '')
+  assert.equal(env.player.preparedAudio.paused, true)
+  assert.equal(env.player.preparedAudio.muted, true)
+  assert.equal(calls[1].options.expectedForeground, 42)
+  assert.deepEqual(events, ['foreground-admitted', 'prefetch-request'])
+  first.resolve(captured(1))
+  await settle(() => env.player.status === 'playing')
+  assert.equal(calls.length, 2, 'playing no duplica la precarga admitida')
+  assert.deepEqual(events, ['foreground-admitted', 'prefetch-request', 'playing'])
+})
+
+test('si no llega admisión se conserva la precarga después de play', async t => {
+  const first = deferred(), calls = []
+  const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
+    calls.push({ id: track.id, foreground, options })
+    return track.id === 1 ? first.promise : Promise.resolve(captured(track.id))
+  } })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => calls.length === 1)
+  await tick()
+  assert.equal(calls.length, 1)
+  first.resolve(captured(1))
+  await settle(() => env.player.preparedAudio !== null)
+  assert.equal(calls[1].options.expectedForeground, undefined)
+})
+
+test('la admisión tardía no precarga tras cancelar, cambiar canción, motor o identidad', async t => {
+  for (const action of ['cancel', 'track', 'engine', 'identity']) {
+    const pending = deferred(), calls = []
+    const env = await setup(t, {
+      resolve: (track, _refresh, foreground, options) => { calls.push({ id: track.id, foreground, options }); return pending.promise },
+      cancelResolve: async () => {},
+    })
+    env.extractor.engine = 'oficial'
+    env.player.playQueue([item(1), item(2)], 0)
+    await settle(() => calls.length === 1)
+    const old = calls[0]
+    if (action === 'cancel') env.player.toggle()
+    if (action === 'track') env.player.playQueue([item(3)], 0)
+    if (action === 'engine') env.extractor.engine = 'propio'
+    admit(old.options, action === 'identity' ? 99 : 1)
+    await tick(); await tick()
+    assert.equal(calls.some(call => !call.foreground), false, action)
+    assert.equal(env.player.preparedAudio, null)
+  }
+})
+
+test('next pendiente sólo precarga C tras la señal postbegin de su nueva plaza foreground', async t => {
+  const first = deferred(), background = deferred(), promotion = deferred(), calls = []
+  const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
+    calls.push({ id: track.id, foreground, options })
+    if (track.id === 1) return first.promise
+    if (track.id === 2) return foreground ? promotion.promise : background.promise
+    return Promise.resolve(captured(track.id))
+  } })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2), item(3)], 0)
+  await settle(() => calls.length === 1)
+  admit(calls[0].options, 1)
+  await settle(() => calls.length === 2)
+  first.resolve(captured(1))
+  await settle(() => env.player.status === 'playing')
+  env.player.next()
+  await settle(() => calls.length === 3)
+  await tick()
+  assert.equal(calls.some(call => call.id === 3), false)
+  admit(calls[0].options, 1)
+  await tick()
+  assert.equal(calls.some(call => call.id === 3), false, 'la señal antigua no autoriza otra precarga')
+  admit(calls[2].options, 2, 43)
+  await settle(() => calls.some(call => call.id === 3))
+  assert.equal(env.player.status, 'loading', 'B sigue esperando sus primeros bytes o el anuncio')
+  assert.equal(calls.find(call => call.id === 3).options.expectedForeground, 43)
+  promotion.resolve(captured(2))
+  await settle(() => env.player.status === 'playing')
+  background.resolve(captured(2)); await tick()
+  assert.equal(env.player.playbackAudio.src, captured(2).url)
+})
+
+test('el ack de promoción no elude play pendiente ni pausa y AbortError', async t => {
+  const promotion = deferred(), playing = deferred(), calls = []
+  const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
+    calls.push({ id: track.id, foreground, options })
+    return track.id === 2 && foreground ? promotion.promise : Promise.resolve(captured(track.id))
+  } })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2), item(3)], 0)
+  await settle(() => env.player.preparedAudio !== null)
+  const prepared = env.player.preparedAudio
+  let starts = 0
+  t.mock.method(prepared, 'play', () => {
+    prepared.paused = false; prepared.dispatchEvent(new Event('playing'))
+    return ++starts === 1 ? playing.promise : Promise.resolve()
+  })
+  env.player.next()
+  await settle(() => calls.some(call => call.id === 2 && call.foreground))
+  admit(calls.find(call => call.id === 2 && call.foreground).options, 2, 43)
+  promotion.resolve(captured(2)); await tick()
+  assert.equal(calls.some(call => call.id === 3), false)
+  env.player.toggle()
+  playing.reject(new DOMException('pause', 'AbortError')); await tick()
+  env.player.addToQueue([item(4)])
+  assert.equal(calls.some(call => call.id === 4), false)
+  env.player.toggle()
+  await settle(() => calls.some(call => call.id === 4))
+  assert.equal(calls.find(call => call.id === 4).options.expectedForeground, 43)
+})
+
+test('la cola cambiante durante loading sólo conserva la última precarga y cancelar elimina next', async t => {
+  const first = deferred(), backgrounds = [], calls = []
+  let cancels = 0
+  const env = await setup(t, {
+    resolve: (track, _refresh, foreground, options) => {
+      calls.push({ id: track.id, foreground, options })
+      if (foreground) return first.promise
+      const pending = deferred(); backgrounds.push(pending); return pending.promise
+    },
+    cancelPrefetch: async () => { cancels++ }, cancelResolve: async () => {},
+  })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => calls.length === 1)
+  admit(calls[0].options, 1)
+  await settle(() => calls.length === 2)
+  env.player.playNext([item(3)])
+  await settle(() => calls.length === 3)
+  env.player.clearQueue()
+  await settle(() => calls.length === 4)
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3, 2])
+  assert.equal(calls[1].options.isCurrent(), false)
+  assert.equal(calls[2].options.isCurrent(), false)
+  assert.equal(calls[3].options.isCurrent(), true)
+  backgrounds[0].resolve(captured(2)); backgrounds[1].resolve(captured(3)); await tick()
+  assert.equal(env.player.preparedAudio, null)
+  env.player.toggle()
+  await settle(() => cancels === 1)
+  backgrounds[2].resolve(captured(2)); first.resolve(captured(1)); await tick()
+  assert.equal(env.player.status, 'idle')
+  assert.equal(env.player.preparedAudio, null)
+})
+
+test('elegir fuente actual precarga durante login pendiente y conserva ID manual al reintentar', async t => {
+  const choices = [], calls = [], pending = [deferred(), deferred()]
+  let cancels = 0
+  const env = await setup(t, {
+    resolve: (track, _refresh, foreground, options) => {
+      calls.push({ id: track.id, foreground, options })
+      if (foreground) return Promise.reject(new Error('SOURCE_SELECTION_REQUIRED'))
+      return Promise.resolve(captured(track.id))
+    },
+    chooseSource: (track, videoId, foreground, options) => {
+      choices.push({ track, videoId, foreground, options }); return pending[choices.length - 1].promise
+    },
+    cancelPrefetch: async () => { cancels++ },
+  })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => env.player.picking !== null)
+  const choosing = env.player.useSource(captured(9).videoId, item(1))
+  await settle(() => choices.length === 1)
+  admit(choices[0].options, 1)
+  await settle(() => env.player.preparedAudio !== null)
+  pending[0].reject(new Error('CAPTURE_REQUIRES_INTERACTION: inicia sesión'))
+  assert.equal(await choosing, false)
+  await settle(() => cancels === 1)
+  assert.equal(env.player.preparedAudio, null)
+  env.player.retryCapture()
+  await settle(() => choices.length === 2)
+  assert.equal(choices[1].videoId, captured(9).videoId)
+  assert.equal(choices[0].options.isCurrent(), false)
+  assert.equal(calls.filter(call => call.foreground).length, 1)
+  pending[1].resolve(captured(9))
+  await settle(() => env.player.status === 'playing')
 })

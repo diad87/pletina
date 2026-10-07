@@ -1079,6 +1079,104 @@ test('only a visible enabled official skip button is clicked during a confirmed 
   assert.equal(adapter.skipAd(media), true)
   assert.equal(clicks, 1)
   assert.equal(adapter.skipAd(media), false, 'do not repeatedly click a skip action still processing')
+  assert.equal(adapter.skipSummary(), null, 'optional diagnostics stay disabled for unchanged adapter clients')
+})
+
+function skipDiagnosticSetup({ behavior = 'no-op', found = true } = {}) {
+  let now = 0, marker = true, scans = 0
+  const failure = new TypeError('native click failure')
+  const media = { paused: false, ended: false, seeking: false, readyState: 4, currentTime: 5, duration: 30 }
+  class Button extends EventTarget {
+    constructor() {
+      super(); this.calls = 0; this.added = 0; this.removed = 0; this.disabled = false; this.hidden = false; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir anuncio'; this.rects = [{}]
+    }
+    matches(selector) { return selector === '.ytp-ad-skip-button-modern' }
+    getAttribute(name) { assert.ok(['aria-disabled', 'aria-label', 'role'].includes(name)); return name === 'role' ? 'button' : name === 'aria-label' ? this.textContent : null }
+    getClientRects() { return this.rects }
+    addEventListener(type, fn, options) { if (options?.capture && options?.passive) this.added++; super.addEventListener(type, fn, options) }
+    removeEventListener(type, fn, capture) { this.removed++; super.removeEventListener(type, fn, capture) }
+    click() { this.calls++; if (behavior === 'throw') throw failure; if (behavior !== 'no-op') this.dispatchEvent(new Event('click', { cancelable: true })) }
+    get href() { assert.fail('diagnostic must not read href') }
+    get src() { assert.fail('diagnostic must not read src') }
+    get outerHTML() { assert.fail('diagnostic must not read markup') }
+  }
+  const button = new Button(), others = Array.from({ length: 12 }, () => new Button())
+  if (behavior === 'cancel') button.addEventListener('click', event => event.preventDefault())
+  const p = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => marker }, querySelector: () => null,
+    querySelectorAll(selector) { if (selector === 'audio,video') return [media]; if (selector === 'button, [role="button"]') { scans++; return others }; return found ? [button] : [] } }
+  const document = { querySelector: s => s === '#movie_player' ? p : { textContent: 'Song' }, defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
+  const { context } = load({ performance: { now: () => now }, Date: { now: () => now } })
+  const adapter = context.__musifyCaptureYouTube.create({ document, location: { search: '?v=target' }, target: 'target', skipDiagnostics: true })
+  return { adapter, media, button, others, failure, time: value => { now = value }, marker: value => { marker = value }, scans: () => scans,
+    observe(state = marker ? 'ad' : 'content', source = 1) { adapter.observeSkip({ state, source, now, position: media.currentTime, paused: media.paused, seeking: media.seeking, readyState: media.readyState }) } }
+}
+
+test('skip diagnostics distinguish a returned click without effect from an observed later transition', () => {
+  const f = skipDiagnosticSetup()
+  f.observe(); assert.equal(f.adapter.skipAd(f.media), true)
+  let summary = f.adapter.skipSummary()
+  assert.equal(summary.result, 'click-returned'); assert.equal(summary.tries, 1)
+  assert.equal(summary.last.eventSeen, false); assert.equal(summary.last.isTrusted, null)
+  assert.deepEqual(Array.from(summary.matches), [0, 0, 1])
+  f.time(100); f.observe()
+  assert.equal(f.adapter.skipAd(f.media), false)
+  summary = f.adapter.skipSummary()
+  assert.equal(summary.result, 'cooldown'); assert.equal(summary.last.after.state, 'ad'); assert.equal(summary.last.after.delayMs, 100)
+  assert.equal(f.button.calls, 1, 'diagnostics do not add clicks or shorten the original cooldown')
+  f.time(1000); assert.equal(f.adapter.skipAd(f.media), true)
+  f.time(1200); f.marker(false); f.observe('content', 2)
+  summary = f.adapter.skipSummary()
+  assert.equal(summary.tries, 2); assert.equal(summary.transition.from, 'ad'); assert.equal(summary.transition.to, 'content')
+  assert.equal(summary.transition.sinceTryMs, 200)
+  assert.equal(summary.last.after.state, 'content')
+  assert.equal('success' in summary, false, 'a subsequent transition is not proof that the click caused it')
+  summary.tries = 999
+  assert.equal(f.adapter.skipSummary().tries, 2, 'readers cannot mutate retained diagnostics')
+})
+
+test('skip diagnostics preserve canceled and throwing click semantics and remove temporary listeners', () => {
+  for (const behavior of ['cancel', 'throw']) {
+    const f = skipDiagnosticSetup({ behavior })
+    f.observe()
+    if (behavior === 'throw') assert.throws(() => f.adapter.skipAd(f.media), error => error === f.failure)
+    else assert.equal(f.adapter.skipAd(f.media), true, 'a canceled event does not change the original boolean return')
+    const summary = f.adapter.skipSummary()
+    assert.equal(f.button.calls, 1); assert.equal(f.button.added, 1); assert.equal(f.button.removed, 1)
+    assert.equal(summary.threw, behavior === 'throw' ? 1 : 0)
+    assert.equal(summary.returned, behavior === 'throw' ? 0 : 1)
+    assert.equal(summary.clickEvents, behavior === 'cancel' ? 1 : 0)
+    assert.equal(summary.canceled, behavior === 'cancel' ? 1 : 0)
+    if (behavior === 'cancel') { assert.equal(summary.last.defaultPrevented, true); assert.equal(summary.last.isTrusted, false) }
+    else { assert.equal(summary.result, 'click-threw'); assert.equal(summary.last.errorName, 'TypeError') }
+    f.time(100); assert.equal(f.adapter.skipAd(f.media), false, 'failed clicks preserve the preexisting cooldown behavior')
+  }
+})
+
+test('skip diagnostics bound control probes and public text without acting on unknown controls', () => {
+  const f = skipDiagnosticSetup({ found: false })
+  for (const control of f.others) { control.textContent = 'https://private.invalid/token ' + 'Omitir '.repeat(200); control.className = 'public-control '.repeat(200) }
+  f.observe(); assert.equal(f.adapter.skipAd(f.media), false)
+  let summary = f.adapter.skipSummary()
+  assert.equal(summary.result, 'no-match'); assert.equal(f.scans(), 1)
+  assert.ok(summary.controls.length <= 4)
+  assert.ok(summary.controls.every(c => c.label.length <= 32 && c.role.length <= 12 && c.classes.length <= 40))
+  assert.ok(JSON.stringify(summary).length <= 1000)
+  assert.ok(!JSON.stringify(summary).includes('private.invalid'))
+  for (let now = 100; now < 5000; now += 100) { f.time(now); f.adapter.skipAd(f.media) }
+  assert.equal(f.scans(), 1)
+  f.time(5000); f.adapter.skipAd(f.media); assert.equal(f.scans(), 2)
+  assert.ok(f.others.every(control => control.calls === 0), 'fallback discovery must never select a new clickable control')
+  const blocked = skipDiagnosticSetup()
+  blocked.button.disabled = true; blocked.button.hidden = true; blocked.button.rects = []
+  assert.equal(blocked.adapter.skipAd(blocked.media), false)
+  summary = blocked.adapter.skipSummary()
+  assert.equal(summary.result, 'ineligible')
+  assert.deepEqual(Array.from(summary.controls[0].blocked), ['disabled', 'hidden', 'no-rect'])
+  assert.equal(blocked.button.calls, 0)
+  const unreadable = skipDiagnosticSetup()
+  unreadable.button.getAttribute = name => { if (name === 'aria-label') throw new Error('optional label unavailable'); return null }
+  assert.equal(unreadable.adapter.skipAd(unreadable.media), true, 'a diagnostic read failure cannot suppress an eligible click')
+  assert.equal(unreadable.button.calls, 1)
 })
 
 test('observed no-bar layout requires both exact player-link and Media Session titles, without bypassing conflicts', () => {
@@ -1192,6 +1290,62 @@ test('capture clamps stored ad rates and reports identity/source transitions imm
   assert.ok(diagnostics.filter(m => m.state === 'ad').every(m => m.playbackRate === 1))
   assert.equal(messages.some(m => m.kind === 'seg'), false)
   assert.equal(messages.some(m => m.type === 'error'), false)
+})
+
+test('orchestrator retains bounded skip diagnostics after content and records a throwing click before the existing error', async () => {
+  for (const throws of [false, true]) {
+    const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+    let clock = 0, adShowing = true, tick
+    const title = 'Public song title '.repeat(12)
+    class Button extends EventTarget {
+      constructor() { super(); this.calls = 0; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir '.repeat(100) }
+      matches(selector) { return selector === '.ytp-ad-skip-button-modern' }
+      getAttribute(name) { return name === 'role' ? 'button' : name === 'aria-label' ? this.textContent : null }
+      getClientRects() { return [{}] }
+      click() { this.calls++; if (throws) throw new TypeError('native click failure'); this.dispatchEvent(new Event('click', { cancelable: true })) }
+    }
+    const button = new Button(), other = Array.from({ length: 3 }, () => new Button())
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title }), classList: { contains: () => adShowing }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : s.includes('skip') ? [button, ...other] : [] }
+    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: title } : null, defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
+    const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
+    const { context } = load({ ...scope, document, location, Date: { now: () => clock }, performance: { now: () => clock }, setInterval: fn => { tick = fn; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 35, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    vm.runInContext(orchestratorCode, context)
+    const adSource = new scope.MediaSource(); adSource.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(adSource); media.duration = 30
+    media.dispatchEvent(new Event('playing'))
+    if (!throws) {
+      clock = 1000; media._currentTime = 1; tick()
+      const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+      media.src = scope.URL.createObjectURL(source); adShowing = false; media.duration = 0.06; clock = 1100
+      buffer.appendBuffer(fixture().bytes); buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+      media.dispatchEvent(new Event('playing'))
+      clock = 2100; tick()
+    }
+    await new Promise(resolve => setImmediate(resolve))
+    const diagnostics = messages.filter(m => m.type === 'diagnostic' && m.reason).map(m => ({ ...m, detail: JSON.parse(m.reason) }))
+    assert.ok(diagnostics.every(m => m.reason.length <= 2048), 'skip details must not push these existing phase/evidence diagnostics past the native bound')
+    if (throws) {
+      const diagnostic = diagnostics.find(m => m.detail.phase === 'skip-ad')
+      assert.equal(diagnostic.detail.skip.result, 'click-threw')
+      assert.equal(diagnostic.detail.skip.threw, 1)
+      const failure = messages.find(m => m.type === 'error')
+      assert.equal(failure.code, 'CAPTURE_PROGRESSIVE_ERROR')
+      assert.ok(failure.reason.includes('native click failure'))
+      assert.ok(messages.indexOf(failure) > messages.findIndex(m => m.reason === diagnostic.reason))
+    } else {
+      assert.equal(messages.some(m => m.type === 'error'), false)
+      const latest = diagnostics.findLast(m => m.detail.phase === 'progressive' && m.state === 'content')
+      assert.ok(latest.detail.evidence, 'existing identity evidence must be preserved')
+      assert.equal(latest.detail.skip.tries, 2)
+      assert.equal(latest.detail.skip.clickEvents, 2)
+      assert.equal(latest.detail.skip.last.isTrusted, false)
+      assert.equal(latest.detail.skip.transition.to, 'content')
+      assert.equal(button.calls, 2)
+      assert.ok(other.every(control => control.calls === 0), 'selection remains the first eligible known control')
+    }
+    assert.equal(messages.some(m => m.kind === 'seg'), false)
+  }
 })
 
 test('an initially missed two milliseconds are re-presented from zero before any publication', async () => {

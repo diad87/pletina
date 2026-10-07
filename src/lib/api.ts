@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
+import { listen } from '@tauri-apps/api/event'
 import type {
   AlbumDetail,
   Alternative,
@@ -52,8 +53,37 @@ export const album = (id: number) =>
   id >= LOCAL_BASE ? invoke<AlbumDetail>('album', { id }) : cached(`album:${id}`, () => invoke<AlbumDetail>('album', { id }))
 
 // Sin caché aquí: el backend ya guarda el vídeo elegido y la URL mientras no caduque.
-export const resolve = (track: TrackQuery, refresh = false, foreground = true) =>
-  invoke<Playable>('resolve', { track, refresh, foreground })
+export interface ForegroundAdmission {
+  requestId: string; resolution: number; trackId: number; videoId: string; engine: 'oficial'
+}
+export interface ResolutionOptions {
+  onAdmitted?: (admission: ForegroundAdmission) => void
+  expectedForeground?: number
+  isCurrent?: () => boolean
+}
+async function resolveInvocation(command: string, args: Record<string, unknown>, options: ResolutionOptions): Promise<Playable> {
+  let unlisten: (() => void) | undefined
+  const requestId = options.onAdmitted && inTauri ? crypto.randomUUID() : undefined
+  try {
+    if (requestId) {
+      let delivered = false
+      try {
+        unlisten = await listen<ForegroundAdmission>('player:foreground-admitted', ({ payload }) => {
+          if (delivered || payload.requestId !== requestId || options.isCurrent?.() === false) return
+          delivered = true
+          options.onAdmitted?.(payload)
+        })
+      } catch { /* Sin señal, la precarga normal sigue después de play. */ }
+    }
+    if (options.isCurrent?.() === false) throw new DOMException('Resolución sustituida', 'AbortError')
+    return await invoke<Playable>(command, {
+      ...args, ...(unlisten ? { requestId } : {}),
+      ...(options.expectedForeground === undefined ? {} : { expectedForeground: options.expectedForeground }),
+    })
+  } finally { unlisten?.() }
+}
+export const resolve = (track: TrackQuery, refresh = false, foreground = true, options: ResolutionOptions = {}) =>
+  resolveInvocation('resolve', { track, refresh, foreground }, options)
 export const cancelResolve = () => invoke<void>('cancel_resolve')
 export const cancelPrefetch = () => invoke<void>('cancel_prefetch')
 export const showCapture = () => invoke<void>('capture_show')
@@ -62,8 +92,8 @@ export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('altern
 
 export const openYoutubeSearch = (track: TrackQuery) => invoke<void>('open_youtube_search', { track })
 
-export const chooseSource = (track: TrackQuery, videoId: string, foreground = true) =>
-  invoke<Playable>('choose_source', { track, videoId, foreground })
+export const chooseSource = (track: TrackQuery, videoId: string, foreground = true, options: ResolutionOptions = {}) =>
+  resolveInvocation('choose_source', { track, videoId, foreground }, options)
 
 export const rememberSource = (track: TrackQuery, videoId: string) =>
   invoke<void>('remember_source', { track, videoId })

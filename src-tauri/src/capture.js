@@ -34,8 +34,19 @@
     for (const media of document.querySelectorAll('audio,video')) { media.playbackRate = 1; media.pause() }
     event('error', { code, reason: String(reason).startsWith(`${code}:`) ? String(reason) : `${code}: ${reason}`, recoverable })
   }
-  const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target })
+  const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target, skipDiagnostics: true })
   if (!core?.ProgressiveTracker || !adapter || !target || !Number.isSafeInteger(generation) || !Number.isSafeInteger(epoch) || epoch < 1) return problem('CAPTURE_PROTOCOL_MISMATCH', 'Capture API 3 requires target, generation and native epoch', false)
+  const diagnosticReason = details => {
+    const skip = adapter.skipSummary?.()
+    if (!skip) return JSON.stringify(details)
+    let result = JSON.stringify({ ...details, skip })
+    // Preserve the existing phase/evidence and the skip counters after returning
+    // to content. Drop optional control samples before Rust's2048-character limit.
+    if (result.length > 2000) { delete skip.controls; skip.controlsOmitted = true; result = JSON.stringify({ ...details, skip }) }
+    if (result.length > 2000) { delete skip.observed; delete skip.transition; delete skip.last?.after; result = JSON.stringify({ ...details, skip }) }
+    if (result.length > 2000) result = JSON.stringify({ ...details, skip: { calls: skip.calls, tries: skip.tries, returned: skip.returned, threw: skip.threw, result: skip.result, detailsOmitted: true } })
+    return result
+  }
   const requireInteraction = reason => {
     if (interaction !== reason) event('interaction', { code: 'CAPTURE_REQUIRES_INTERACTION', reason: `CAPTURE_REQUIRES_INTERACTION: ${reason}` })
     interaction = reason
@@ -60,7 +71,7 @@
       if (failed || finalizedEpoch === epoch) return
       const identity = adapter.classify(media)
       const { phase: operation, ...details } = attempt
-      event('diagnostic', { state: identity.state, source: capture?.sourceOf(media)?.id ?? null, position: media.currentTime, duration: media.duration, playbackRate: media.playbackRate, browserNow: performance.now(), reason: JSON.stringify({ phase: 'rate-guard', operation, ...details }) })
+      event('diagnostic', { state: identity.state, source: capture?.sourceOf(media)?.id ?? null, position: media.currentTime, duration: media.duration, playbackRate: media.playbackRate, browserNow: performance.now(), reason: diagnosticReason({ phase: 'rate-guard', operation, ...details }) })
     },
   }) }
   catch (e) { return problem(e.code || 'CAPTURE_UNSUPPORTED_PIPELINE', e.message, false) }
@@ -86,7 +97,7 @@
   const terminalIdentity = (media, source, snapshot, current) => {
     const prior = presented.get(source), now = performance.now()
     if (prior && prior.element === media && prior.epoch === epoch && !source.error && source.state === 'content' && source.seen.size === 1 && snapshot.ended === true && snapshot.paused === true && snapshot.sourceEnded === true && snapshot.seeking === false && snapshot.position === snapshot.duration && now >= prior.now && now - prior.now <= 500) {
-      if (current.state !== 'content') event('diagnostic', { state: 'content', source: source.id, reason: `Source confirmed before presentation ended; terminal identity=${current.state}` })
+      if (current.state !== 'content') event('diagnostic', { state: 'content', source: source.id, reason: diagnosticReason({ phase: 'terminal-identity', message: `Source confirmed before presentation ended; terminal identity=${current.state}` }) })
       return prior.identity
     }
     return current
@@ -95,9 +106,10 @@
     const previous = lastIdentity.get(media)
     const current = { state: identity.state, source: source?.id ?? null, epoch, position: media.currentTime, browserNow: performance.now() }
     lastIdentity.set(media, current)
+    adapter.observeSkip?.({ ...current, now: current.browserNow, paused: media.paused, seeking: media.seeking, readyState: media.readyState })
     if (!previous || previous.state !== current.state || previous.source !== current.source || previous.epoch !== epoch) {
       // Report observed boundaries without inventing the unobserved tail of an ad.
-      event('diagnostic', { ...current, duration: media.duration, playbackRate: media.playbackRate, bytesQuarantined: tracker.bytes, reason: JSON.stringify({ phase: 'identity-transition', previous: previous ?? null, paused: media.paused, evidence: identity.evidence ?? identity.reason }) })
+      event('diagnostic', { ...current, duration: media.duration, playbackRate: media.playbackRate, bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'identity-transition', previous: previous ?? null, paused: media.paused, evidence: identity.evidence ?? identity.reason }) })
     }
   }
   const finish = (media, source, snapshot, identity) => {
@@ -131,12 +143,12 @@
     const source = snapshot?.source
     if (failed || finalizedEpoch === epoch || pendingSeek || !source || source.endedEpoch === epoch) return
     if (source.state === 'ad' && source.seen.size === 1 && source.seen.has('ad')) {
-      event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: JSON.stringify({ phase: 'ad-before-detach', operation: snapshot.operation, nativeEnded: snapshot.ended, sourceEnded: snapshot.sourceEnded }) })
+      event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'ad-before-detach', operation: snapshot.operation, nativeEnded: snapshot.ended, sourceEnded: snapshot.sourceEnded }) })
       return
     }
     if (!source.seen.has('content')) return
     const identity = terminalIdentity(media, source, snapshot, adapter.classify(media))
-    event('diagnostic', { state: source.state, source: source.id, reason: `Before source detach: ${JSON.stringify({ position: snapshot.position, duration: snapshot.duration, eof: snapshot.sourceEnded, nativeEnded: snapshot.ended, audioRanges: snapshot.audioRanges })}` })
+    event('diagnostic', { state: source.state, source: source.id, reason: diagnosticReason({ phase: 'before-detach', message: 'Before source detach', position: snapshot.position, duration: snapshot.duration, eof: snapshot.sourceEnded, nativeEnded: snapshot.ended, audioRanges: snapshot.audioRanges }) })
     try {
       tracker.observe(source, identity, { ...snapshot, now: performance.now(), element: media })
       if (source.error) throw source.error
@@ -214,7 +226,7 @@
       if (source.error && (identity.state !== 'ad' || source.seen.has('content'))) throw source.error
       previousSources.set(media, source)
       if (identity.state === 'ad') {
-        if (snapshot.ended === true) event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: JSON.stringify({ phase: 'ad-native-ended', sourceEnded: snapshot.sourceEnded }) })
+        if (snapshot.ended === true) event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'ad-native-ended', sourceEnded: snapshot.sourceEnded }) })
         media.playbackRate = 1; adapter.skipAd(media); return
       }
       if (identity.state !== 'content') return
@@ -228,7 +240,10 @@
       if (!started) { started = true; event('playing', { title: identity.title, author: identity.author, duration: media.duration }); event('meta', { title: identity.title, author: identity.author, duration: media.duration }) }
       publish(source, snapshot)
       if (snapshot.sourceEnded || snapshot.ended) finish(media, source, snapshot, identity)
-    } catch (e) { problem(e.code || 'CAPTURE_PROGRESSIVE_ERROR', e.message) }
+    } catch (e) {
+      if (adapter.skipSummary?.()?.result === 'click-threw') event('diagnostic', { reason: diagnosticReason({ phase: 'skip-ad', outcome: 'exception' }) })
+      problem(e.code || 'CAPTURE_PROGRESSIVE_ERROR', e.message)
+    }
   }
   const attach = media => {
     if (attached.has(media)) return
@@ -275,7 +290,7 @@
       const states = [...document.querySelectorAll('audio,video')].map(media => ({ media, identity: adapter.classify(media) }))
       const current = states.find(s => s.identity.state === 'content') ?? states.find(s => s.identity.state === 'ad') ?? states[0]
       event('progress', { position: current?.identity.state === 'content' ? current.media.currentTime : null, bytesQuarantined: tracker.bytes, ranges: tracker.coverage })
-      if (current && capture.sourceOf(current.media)?.endedEpoch !== epoch) event('diagnostic', { state: current.identity.state, source: capture.sourceOf(current.media)?.id ?? null, position: current.media.currentTime, duration: current.media.duration, playbackRate: current.media.playbackRate, browserNow: now, bytesQuarantined: tracker.bytes, reason: JSON.stringify({ phase: 'progressive', paused: current.media.paused, rate: current.media.playbackRate, rateGuard: capture.rateStatistics, evidence: current.identity.evidence ?? current.identity.reason }) })
+      if (current && capture.sourceOf(current.media)?.endedEpoch !== epoch) event('diagnostic', { state: current.identity.state, source: capture.sourceOf(current.media)?.id ?? null, position: current.media.currentTime, duration: current.media.duration, playbackRate: current.media.playbackRate, browserNow: now, bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'progressive', paused: current.media.paused, rate: current.media.playbackRate, rateGuard: capture.rateStatistics, evidence: current.identity.evidence ?? current.identity.reason }) })
       if (issue && issue.code !== 'CAPTURE_REQUIRES_INTERACTION') problem(issue.code, issue.reason)
     }
   }, 100)

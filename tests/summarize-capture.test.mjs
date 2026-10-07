@@ -56,6 +56,57 @@ test('el snapshot en curso no se omite; etiquetas canónicas y métricas no prom
   assert.match(markdown(summary), /no demuestra cero cortes/)
 })
 
+test('el modo nativo incluye snapshots latest/final/seek y nunca oculta una contradicción con el plan', () => {
+  for (const key of ['latestStatus', 'finalStatus', 'seekStatus']) {
+    const summary = summarize([{ source: `${key}.json`, report: report('2026-10-07T09:00:00Z', [
+      { videoId: 'video-1', phase: 'listening', [key]: { progressiveExperiment: false } },
+    ], { running: true }) }], { corpus })
+    assert.equal(summary.runs[0].experiment.value, false, key)
+    assert.equal(summary.runs[0].experiment.source, 'native-status', key)
+    assert.equal(summary.runs[0].category, 'quarantine', key)
+    assert.ok(summary.runs[0].experiment.conflicts.some(value => value.includes('report declara experimental=true')), key)
+    assert.match(markdown(summary), /Normal: cuarentena completa \(native-status\)/)
+  }
+  const mixed = summarize([{ source: 'mixed.json', report: report('2026-10-07T09:00:00Z', [
+    { videoId: 'video-1', status: { progressiveExperiment: true }, latestStatus: { progressiveExperiment: false } },
+  ]) }], { corpus })
+  assert.equal(mixed.runs[0].experiment.value, null)
+  assert.ok(mixed.runs[0].warnings.some(value => value.includes('contradictorios')))
+  assert.match(markdown(mixed), /Desconocido o contradictorio/)
+})
+
+test('treinta cambios, cuatro reintentos y dos normales mantienen categorías e historial independientes', () => {
+  const row = (id, ok, extra = {}) => ({ videoId: `video-${id}`, phase: 'finished', ok,
+    failures: ok ? [] : ['Fallo de este intento'], status: { progressiveExperiment: true, adsSeen: 2, adsDelivered: 0 }, ...extra })
+  const baseline = Array.from({ length: 30 }, (_, i) => row(i + 1, i !== 0, { unpreparedSwitchMs: 1200 }))
+  const retry = Array.from({ length: 4 }, (_, i) => row(i + 1, i !== 1, { unpreparedSwitchMs: i === 1 ? 6000 : 1100 }))
+  const normal = [1, 2].map(id => row(id, true, { firstSoundMs: 250000, complete: true, coverageOk: true,
+    status: { progressiveExperiment: false, adsSeen: 1, adsDelivered: 0 } }))
+  const summary = summarize([
+    { source: 'switch30.json', report: report('2026-10-07T09:00:00Z', baseline, { mode: 'switch', scope: 'cold-switch' }) },
+    { source: 'retry4.json', report: report('2026-10-07T10:00:00Z', retry, { mode: 'switch', scope: 'cold-switch' }) },
+    { source: 'normal2.json', report: report('2026-10-07T11:00:00Z', normal, { mode: 'smoke', scope: 'full-quarantine', experimental: false }) },
+  ], { corpus })
+  assert.deepEqual(summary.runs.map(run => run.rows.length), [30, 4, 2])
+  assert.deepEqual(summary.runs.map(run => run.category), ['switch', 'switch', 'quarantine'])
+  assert.equal(summary.cases[0].latest.switch.source, 'retry4.json')
+  assert.equal(summary.cases[0].latest.switch.state, 'measured-pass')
+  assert.equal(summary.cases[0].errorHistory[0].runId, '1:switch30.json')
+  assert.equal(summary.cases[1].latest.switch.state, 'failed')
+  assert.equal(summary.cases[1].latest.quarantine.metrics.firstSoundMs, 250000)
+  assert.equal(summary.cases[1].latest.quarantine.metrics.completeness, 'verified')
+  assert.equal(summary.cases[4].latest.switch.source, 'switch30.json')
+  assert.equal(summary.cases[0].history.length, 3)
+  assert.equal(summary.acceptanceOk, false); assert.equal(summary.guaranteeAds, false)
+  const output = markdown(summary)
+  assert.match(output, /Modo efectivo/)
+  assert.match(output, /Progresivo experimental \(native-status\)/)
+  assert.match(output, /Normal: cuarentena completa \(native-status\)/)
+  assert.match(output, /1:switch30.json \/ video-1: Fallo de este intento/)
+  assert.match(output, /2:retry4.json \/ video-2: Fallo de este intento/)
+  assert.match(output, /no anuncios únicos/)
+})
+
 test('tablas publicitarias separan fuentes observadas y unidades declaradas por categoría sin sumar snapshots ni ocultar intentos', () => {
   const summary = summarize([
     { source: 'old-album.json', report: report('2026-10-07T08:00:00Z', [{ videoId: 'video-1', phase: 'finished', ok: false,
