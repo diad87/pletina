@@ -1,4 +1,4 @@
-//! API 3: unidades confirmadas, caché append-only y dos sesiones (actual + siguiente).
+//! API 4: unidades confirmadas, caché append-only y tres sesiones (actual + dos siguientes).
 //! generation identifica la ventana nativa, epoch un recorrido/seek. EOF no prueba cobertura.
 use crate::player::{ForegroundAdmission, RequestTicket};
 use base64::Engine;
@@ -11,6 +11,10 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 pub const LABEL: &str = "yt-engine";
 pub const SCHEME: &str = "musify-capture:";
+// Keep native observations scheduled in hidden/occluded capture windows. This
+// does not change media playbackRate or relax the JS presentation-gap checks.
+// Login shares the profile, so its WebView2 environment needs identical args.
+pub(crate) const CAPTURE_BROWSER_ARGS: &str = "--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows";
 const KEEP: usize = 6;
 const MAX_BYTES: usize = 96 * 1024 * 1024;
 const MAX_TOTAL_BYTES: usize = 288 * 1024 * 1024;
@@ -214,6 +218,7 @@ pub async fn capture_profile_open(app: AppHandle, mode: String) -> Result<Value,
         )
         .title("Musify · acceso manual a YouTube Premium")
         .data_directory(profile.path.clone())
+        .additional_browser_args(CAPTURE_BROWSER_ARGS)
         .visible(true)
         .focused(true)
         .inner_size(1080.0, 780.0)
@@ -531,6 +536,14 @@ fn covers(ranges: &[Range], start: f64, end: f64) -> bool {
         .iter()
         .any(|r| r.start <= start + RANGE_EPSILON && r.end + RANGE_EPSILON >= end)
 }
+#[derive(Clone, Copy)]
+struct AdMarkerObservation {
+    generation: u64,
+    epoch: u64,
+    source: u64,
+    sequence: u64,
+    playback_rate: f64,
+}
 struct Track {
     revision: u64,
     generation: u64,
@@ -567,6 +580,7 @@ struct Track {
     unknown_auth_units: u64,
     signed_in_units: u64,
     ad_source: Option<u64>,
+    ad_marker: Option<AdMarkerObservation>,
     native_skip: Option<SkipRequest>,
     native_skip_started: Option<Instant>,
     last_skip_request: u64,
@@ -642,6 +656,7 @@ impl Track {
             unknown_auth_units: 0,
             signed_in_units: 0,
             ad_source: None,
+            ad_marker: None,
             native_skip: None,
             native_skip_started: None,
             last_skip_request: 0,
@@ -692,6 +707,7 @@ impl Track {
         self.generation = generation;
         self.epoch = epoch;
         self.ad_source = None;
+        self.ad_marker = None;
         self.session_state = SessionState {
             profile_id: self.session_state.profile_id.clone(),
             ..SessionState::unknown(generation, epoch)
@@ -1359,6 +1375,7 @@ async fn create_window(
     )
     .title("Musify · reproductor de YouTube")
     .data_directory(profile.path)
+    .additional_browser_args(CAPTURE_BROWSER_ARGS)
     .visible(std::env::var("MUSIFY_SHOW_ENGINE").is_ok())
     .skip_taskbar(true)
     .focused(false)
@@ -1892,10 +1909,12 @@ fn apply_message(
             t.soft_error = None;
         }
         "event" => {
+            let mut explicit_ad_marker = false;
             if m.event.as_deref() == Some("diagnostic") {
                 if let Some(reason) = m.reason.as_deref() {
                     t.last_diagnostic = Some(reason.chars().take(2048).collect());
                     if let Ok(detail) = serde_json::from_str::<Value>(reason) {
+                        explicit_ad_marker = detail["evidence"]["adMarker"] == true;
                         if detail["phase"] == "native-skip-result" {
                             if let Some(result) = t.last_skip_result.as_mut().filter(|r| {
                                 r["requestId"] == detail["requestId"]
@@ -1923,10 +1942,18 @@ fn apply_message(
             }) {
                 if t.phase == "ad" && phase == "content" {
                     if let Some(ad_source) = t.ad_source {
+                        let marker = t.ad_marker.filter(|marker| {
+                            marker.generation == generation
+                                && marker.epoch == t.epoch
+                                && marker.source == ad_source
+                                && m.sequence
+                                    .is_some_and(|sequence| marker.sequence < sequence)
+                        });
                         t.ad_transitions_total += 1;
                         if t.ad_transitions.len() < 256 {
                             t.ad_transitions.push(json!({"generation":generation,"epoch":t.epoch,"source":ad_source,"contentSource":m.source,
-                                "sequence":m.sequence,"from":"ad","to":"content","observed":true}));
+                                "sequence":m.sequence,"from":"ad","to":"content","observed":true,
+                                "markerObserved":marker.is_some(),"markerSequence":marker.map(|m|m.sequence),"markerPlaybackRate":marker.map(|m|m.playback_rate)}));
                         }
                     }
                 }
@@ -1935,6 +1962,22 @@ fn apply_message(
                     t.proof = None;
                 }
                 if phase == "ad" {
+                    // A different presented video alone also produces state=ad. Only an
+                    // explicit player marker at 1x qualifies this source's later transition.
+                    if t.ad_source != m.source {
+                        t.ad_marker = None;
+                    }
+                    if music && explicit_ad_marker && m.playback_rate == Some(1.0) {
+                        if let (Some(source), Some(sequence)) = (m.source, m.sequence) {
+                            t.ad_marker.get_or_insert(AdMarkerObservation {
+                                generation,
+                                epoch: t.epoch,
+                                source,
+                                sequence,
+                                playback_rate: 1.0,
+                            });
+                        }
+                    }
                     t.ad_source = m.source;
                     t.ads_observations += 1;
                     if let Some(rate) = m.playback_rate.filter(|r| r.is_finite() && *r > 0.0) {
@@ -1949,6 +1992,7 @@ fn apply_message(
                 } else {
                     t.ad_observation = None;
                     t.ad_source = None;
+                    t.ad_marker = None;
                 }
             }
             if m.event.as_deref() == Some("diagnostic") && m.verified == Some(true) {
@@ -4000,6 +4044,107 @@ mod tests {
         assert!(!t.observe_ad_progress(7, 500.0, start + Duration::from_secs(201)));
         assert!(!t.observe_ad_progress(8, 1.0, start + Duration::from_secs(202)));
         assert_eq!(t.ad_presented, Duration::from_secs(200));
+    }
+    fn ad_marker_diagnostic(source: u64, marker: Value, rate: Value) -> Value {
+        json!({"kind":"event","type":"diagnostic","state":"ad","source":source,"playbackRate":rate,
+            "reason":json!({"phase":"identity-transition","evidence":{"adMarker":marker,"presentedId":"different-video"}}).to_string()})
+    }
+    #[test]
+    fn ad_transition_qualification_requires_an_explicit_marker_and_exact_one_x_observation() {
+        let mut invalid_reason = ad_marker_diagnostic(8, json!(true), json!(1));
+        invalid_reason["reason"] = json!("not JSON");
+        let mut not_diagnostic = ad_marker_diagnostic(8, json!(true), json!(1));
+        not_diagnostic["type"] = json!("progress");
+        let mut no_source = ad_marker_diagnostic(8, json!(true), json!(1));
+        no_source["source"] = Value::Null;
+        for observation in [
+            ad_marker_diagnostic(8, json!(false), json!(1)),
+            ad_marker_diagnostic(8, json!("true"), json!(1)),
+            ad_marker_diagnostic(8, Value::Null, json!(1)),
+            ad_marker_diagnostic(8, json!(true), Value::Null),
+            ad_marker_diagnostic(8, json!(true), json!(2)),
+            invalid_reason,
+            not_diagnostic,
+            no_source,
+        ] {
+            let mut s = state();
+            send(&mut s, observation);
+            assert!(s.tracks[ID].ad_marker.is_none());
+            // Restore a known source without adding evidence. It must not borrow
+            // a marker observed without a source or merely from a different ID.
+            send(&mut s, ad_marker_diagnostic(8, json!(false), json!(1)));
+            send(
+                &mut s,
+                json!({"kind":"event","type":"diagnostic","state":"content","source":7}),
+            );
+            let t = &s.tracks[ID];
+            assert_eq!(
+                t.ad_transitions_total, 1,
+                "diagnostic count remains unchanged"
+            );
+            assert_eq!(t.ad_transitions[0]["markerObserved"], false);
+            assert!(t.ad_transitions[0]["markerSequence"].is_null());
+            assert!(t.ad_transitions[0]["markerPlaybackRate"].is_null());
+        }
+    }
+    #[test]
+    fn ad_marker_evidence_is_latched_once_and_consumed_by_its_source_transition() {
+        let mut s = state();
+        send(&mut s, ad_marker_diagnostic(8, json!(true), json!(1)));
+        let marker_sequence = s.tracks[ID].sequence.unwrap();
+        send(&mut s, ad_marker_diagnostic(8, json!(false), json!(1)));
+        send(
+            &mut s,
+            json!({"kind":"event","type":"diagnostic","state":"content","source":7}),
+        );
+        let transition = &s.tracks[ID].ad_transitions[0];
+        assert_eq!(transition["source"], 8);
+        assert_eq!(transition["contentSource"], 7);
+        assert_eq!(transition["markerObserved"], true);
+        assert_eq!(transition["markerSequence"], marker_sequence);
+        assert_eq!(transition["markerPlaybackRate"], 1.0);
+        assert!(marker_sequence < transition["sequence"].as_u64().unwrap());
+        assert!(s.tracks[ID].ad_marker.is_none());
+        send(&mut s, ad_marker_diagnostic(8, json!(false), json!(1)));
+        send(
+            &mut s,
+            json!({"kind":"event","type":"diagnostic","state":"content","source":7}),
+        );
+        assert_eq!(s.tracks[ID].ad_transitions_total, 2);
+        assert_eq!(s.tracks[ID].ad_transitions[1]["markerObserved"], false);
+    }
+    #[test]
+    fn ad_marker_evidence_cannot_cross_source_generation_epoch_or_unknown_identity() {
+        for (generation, epoch, intermediate) in [
+            (10, 20, ad_marker_diagnostic(9, json!(false), json!(1))),
+            (
+                10,
+                20,
+                json!({"kind":"event","type":"diagnostic","state":"unknown","source":8}),
+            ),
+            (10, 21, Value::Null),
+            (11, 20, Value::Null),
+        ] {
+            let mut s = state();
+            send(&mut s, ad_marker_diagnostic(8, json!(true), json!(1)));
+            if !intermediate.is_null() {
+                send(&mut s, intermediate);
+            } else {
+                s.sessions[0].generation = generation;
+                s.tracks
+                    .get_mut(ID)
+                    .unwrap()
+                    .begin_epoch(generation, epoch, 0.0, true);
+            }
+            assert!(s.tracks[ID].ad_marker.is_none());
+            send(&mut s, ad_marker_diagnostic(8, json!(false), json!(1)));
+            send(
+                &mut s,
+                json!({"kind":"event","type":"diagnostic","state":"content","source":7}),
+            );
+            assert_eq!(s.tracks[ID].ad_transitions_total, 1);
+            assert_eq!(s.tracks[ID].ad_transitions[0]["markerObserved"], false);
+        }
     }
     #[test]
     fn ad_diagnostics_do_not_replace_song_metadata_and_bound_details() {

@@ -1,6 +1,6 @@
 # P1 — Captura oficial, 7 de octubre de2026
 
-Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v10 en validación. No se ha hecho
+Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v11 en validación. No se ha hecho
 push, fusión ni publicación. Propio conserva el nivel rápido y el respaldo histórico;
 yt-dlp sigue predeterminado. La promoción progresiva depende de la batería nueva.
 
@@ -60,7 +60,7 @@ No aprueba tiempos ni continuidad. Se corrige el lector para esperar0,5s continu
 por MSE, y el clic nativo para aceptar enteros seguros que WebView2 serializa como decimal.
 El siguiente ensayo debe comprobar ambos arreglos en la app.
 
-Pendientes: medir v10 en la app, completar30 canciones/50 transiciones anónimas y las pocas
+Pendientes: medir v11 en la app, completar30 canciones/50 transiciones anónimas y las pocas
 referencias Premium, medir señales con referencia externa y evaluar velocidad segura.
 Esta tabla es provisional y conserva también los intentos fallidos.
 

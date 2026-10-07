@@ -16,6 +16,9 @@ const native = overrides => ({ generation: 3, epoch: 1, revision: 1, duration: 1
 const proof = overrides => ({ generation: 3, revision: 1, duration: 1, audioDuration: 0.95, complete: true,
   ranges: [{ start: 0, end: 0.95 }], buffered: [{ start: 0, end: 0.95 }], units: 4, firstAppendMs: 1,
   recovering: false, softError: null, ...overrides })
+const adTransition = (index, overrides = {}) => ({ from: 'ad', to: 'content', observed: true,
+  generation: 1, epoch: 1, source: index + 1, contentSource: index + 101, sequence: index * 3 + 2,
+  markerObserved: true, markerSequence: index * 3 + 1, markerPlaybackRate: 1, ...overrides })
 
 async function setup(t, options = {}) {
   let clock = 0
@@ -649,18 +652,67 @@ test('la reserva inicial cuenta dentro del arranque y un waiting posterior conse
 
 test('cincuenta observaciones duplicadas no son cincuenta transiciones y una cohorte incompleta no aprueba', async t => {
   const env = await setup(t)
-  const transition = n => ({ from: 'ad', to: 'content', observed: true, generation: 1, epoch: 1, source: n + 1, sequence: n })
-  const duplicate = { ...evidenceRow(), status: { adTransitions: Array(50).fill(transition(0)) } }
+  const duplicate = { ...evidenceRow(), status: { adTransitions: Array(50).fill(adTransition(0)) } }
   assert.equal(env.distinctAdTransitions([duplicate, duplicate]), 1)
   const rows = Array.from({ length: 30 }, (_, index) => ({ ...evidenceRow(), videoId: video(index).id, evidenceEligible: true,
     firstSoundMs: 1500, seekOk: true, seekWasCaptured: false, seekMs: 700, ...(index < 25 ? { nextTrackMs: 30 } : {}),
-    status: { adTransitions: index < 25 ? [transition(index * 2), transition(index * 2 + 1)] : [] } }))
+    status: { adTransitions: index < 25 ? [adTransition(index * 2), adTransition(index * 2 + 1)] : [] } }))
   assert.equal(env.distinctAdTransitions(rows), 50)
   assert.deepEqual(env.acceptanceCriteria(rows, 30), [])
   assert(env.acceptanceCriteria(rows.slice(0, 29), 30).length > 0)
   assert(env.acceptanceCriteria([...rows, { ...rows[0], ok: false }], 30).some(reason => /fallidos/.test(reason)))
   rows[0].firstSoundMs = 15000; rows[0].startAdMs = 14000
   assert(env.acceptanceCriteria(rows, 30).some(reason => /no omitible/.test(reason)), 'restar adMs observado no demuestra inevitabilidad')
+})
+
+test('cincuenta cambios clasificados sin marcador no cortan la campaña ni satisfacen el criterio publicitario', async t => {
+  const unmarked = Array.from({ length: 50 }, (_, index) => {
+    const { markerObserved, markerSequence, markerPlaybackRate, ...transition } = adTransition(index)
+    return transition
+  })
+  const env = await setup(t, { native: { adTransitions: unmarked } })
+  const report = await env.execute({ mode: 'ad-transitions', videos: [video(1)], maxAdAttempts: 2, seek: false })
+  assert.equal(report.rows.length, 2, 'ni un vídeo automático ni un informe histórico sin marcador cumplen el cutoff')
+  assert.equal(report.adTransitions, 0)
+  assert.equal(report.adTransitionsObserved, 50)
+  assert.equal(report.adTransitionsUnqualified, 50)
+  assert.equal(report.acceptanceOk, false)
+  assert(report.blocking.some(reason => /marcador publicitario.*0\/50/.test(reason)))
+  assert.equal(report.rows[0].status.adTransitions.length, 50, 'el inventario original sigue visible')
+})
+
+test('cincuenta marcadores propios a 1× cumplen sólo ese criterio y permiten cerrar la campaña acotada', async t => {
+  const env = await setup(t, { native: { adTransitions: Array.from({ length: 50 }, (_, index) => adTransition(index)) } })
+  const report = await env.execute({ mode: 'ad-transitions', videos: [video(1)], maxAdAttempts: 2, seek: false })
+  assert.equal(report.rows.length, 1)
+  assert.equal(report.adTransitions, 50)
+  assert.equal(report.adTransitionsObserved, 50)
+  assert.equal(report.adTransitionsUnqualified, 0)
+  assert.equal(report.blocking.some(reason => /marcador publicitario/.test(reason)), false)
+  assert.equal(report.acceptanceOk, false, 'siguen pendientes 30 canciones, seeks, transiciones naturales y evidencia completa')
+  assert.equal(report.guaranteeAds, false)
+})
+
+test('un marcador prestado, reutilizado, posterior o de otra velocidad nunca cuenta', async t => {
+  const env = await setup(t)
+  const row = transitions => ({ ...evidenceRow(), status: { adTransitions: transitions } })
+  for (const invalid of [
+    { markerObserved: false }, { markerPlaybackRate: 2 }, { markerPlaybackRate: null },
+    { markerSequence: -1 }, { markerSequence: 1.5 }, { markerSequence: Number.MAX_SAFE_INTEGER + 1 },
+    { markerSequence: 2 }, { markerSequence: 3 }, { contentSource: null },
+  ]) assert.equal(env.distinctAdTransitions([row([adTransition(0, invalid)])]), 0)
+
+  const original = adTransition(0)
+  const borrowed = adTransition(1, { markerSequence: original.markerSequence })
+  assert.deepEqual(env.adTransitionCounts([row([original]), row([borrowed])]),
+    { observed: 2, qualified: 0, unqualified: 2 }, 'una secuencia no puede acreditar dos fuentes')
+  const reused = { ...original, sequence: 4 }
+  assert.equal(env.distinctAdTransitions([row([original, reused])]), 0, 'tampoco otra transición posterior de la misma fuente')
+  assert.equal(env.distinctAdTransitions([row([original]), row([{ ...original, markerObserved: false }])]), 0,
+    'copias contradictorias no permiten escoger sólo la favorable')
+  assert.equal(env.distinctAdTransitions([row([original, original])]), 1, 'repetir el mismo snapshot sólo cuenta una vez')
+  assert.equal(env.distinctAdTransitions([row([original, { ...original, epoch: 2 }])]), 2,
+    'el contador de secuencia sí puede reiniciarse en otra época nativa')
 })
 
 test('el setup manual espera login y sólo guarda los campos públicos del perfil', async t => {

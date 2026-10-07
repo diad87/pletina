@@ -39,6 +39,7 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $configPath = Join-Path $outputDir 'tauri.json'
 $binaryPath = Join-Path $projectDir 'src-tauri\target\debug\musify.exe'
 $buildMarker = Join-Path $outputDir 'built-identifier.txt'
+$buildMetadataPath = Join-Path $outputDir 'built-identifier.json'
 $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $planPath = Join-Path $outputDir "plan-$runId.json"
 $resultPath = Join-Path $outputDir "result-$runId.json"
@@ -86,9 +87,20 @@ try {
         & node 'node_modules/@tauri-apps/cli/tauri.js' build --debug --no-bundle --no-sign --config $configPath
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar el banco de captura.' }
         [IO.File]::WriteAllText($buildMarker, (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash)
+        [IO.File]::WriteAllText($buildMetadataPath, (@{ commit = (& git rev-parse HEAD); changes = @(& git status --porcelain) } | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
     } elseif (!(Test-Path -LiteralPath $buildMarker) -or (Get-Content -LiteralPath $buildMarker -Raw) -ne (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash) {
         throw 'NoBuild requiere el mismo binario aislado que compiló este banco.'
     }
+    # Every process runs an immutable copy, allowing the next build without replacing
+    # an executable under measurement. Its SHA and build provenance remain in the report.
+    $binarySha = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
+    $snapshotDirectory = Join-Path $outputDir "binaries\$binarySha"
+    New-Item -ItemType Directory -Path $snapshotDirectory -Force | Out-Null
+    $snapshotBinaryPath = Join-Path $snapshotDirectory 'musify.exe'
+    if (!(Test-Path -LiteralPath $snapshotBinaryPath)) { Copy-Item -LiteralPath $binaryPath -Destination $snapshotBinaryPath }
+    if ((Get-FileHash -LiteralPath $snapshotBinaryPath -Algorithm SHA256).Hash -ne $binarySha) { throw 'El binario inmutable no coincide con la compilación.' }
+    $binaryPath = $snapshotBinaryPath
+    $binaryProvenance = if (Test-Path -LiteralPath $buildMetadataPath) { Get-Content -LiteralPath $buildMetadataPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
     $env:MUSIFY_BENCH = $planPath
     # Experimento explícito: el marcador tardío de anuncios impide promoverlo a producción.
     $env:MUSIFY_BENCH_PROGRESSIVE = if ($VerifiedOnly) { $null } else { '1' }
@@ -108,6 +120,7 @@ try {
         commit = (& git rev-parse HEAD)
         changes = @(& git status --porcelain)
         binarySha256 = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
+        binaryBuild = $binaryProvenance
         identifier = 'dev.musify.captureofficialtest'
         suite = if ($MseOnly) { 'mse-and-rates' } else { $Suite }
         engine = $Engine

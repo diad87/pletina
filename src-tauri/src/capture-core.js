@@ -467,7 +467,7 @@
       if (content && !source.error) {
         const last = source.observations.at(-1)
         if (!Number.isFinite(position) || !Number.isFinite(now) || !Number.isFinite(duration) || duration <= 0 || position < 0 || playbackRate !== 1) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Progressive presentation needs finite timing at rate 1')
-        else if (last && (position < last.position - 0.001 || position - last.position > (now - last.now) / 1000 + 0.15 || (position > last.position && now - last.now > 500))) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Unrequested seek or unobserved progressive interval')
+        else if (last && (position < last.position - 0.001 || position - last.position > (now - last.now) / 1000 + 0.15 || (position > last.position && now - last.now > 500))) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', `Unrequested seek or unobserved progressive interval: ${JSON.stringify({ previous: { now: last.now, position: last.position }, current: { now, position }, elapsedMs: now - last.now, advancedSeconds: position - last.position })}`)
         else {
           if (last && position > last.position) source.progress.ranges = mergeRanges([...source.progress.ranges, { start: last.position, end: position }])
           source.observations.push({ position, now, duration })

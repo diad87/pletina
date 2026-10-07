@@ -96,7 +96,10 @@
   let previousSources = new WeakMap()
   let unsupportedAt = null
   const publish = (source, snapshot) => {
+    const now = performance.now()
+    if (source.verifiedFinalEpoch !== epoch && now - (source.lastPullAt ?? -Infinity) < 75) return
     const units = tracker.pull(source, snapshot)
+    if (units.length) source.lastPullAt = now
     for (const unit of units) {
       const { data, ...metadata } = unit
       metadata.initKey = `${generation}:${metadata.initKey}`
@@ -307,7 +310,7 @@
       if (current && capture.sourceOf(current.media)?.endedEpoch !== epoch) event('diagnostic', { state: current.identity.state, source: capture.sourceOf(current.media)?.id ?? null, position: current.media.currentTime, duration: current.media.duration, playbackRate: current.media.playbackRate, browserNow: now, bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'progressive', holdbackSeconds: experimental ? holdbackSeconds : null, paused: current.media.paused, rate: current.media.playbackRate, rateGuard: capture.rateStatistics, evidence: current.identity.evidence ?? current.identity.reason }) })
       if (issue && issue.code !== 'CAPTURE_REQUIRES_INTERACTION') problem(issue.code, issue.reason)
     }
-  }, 100)
+  }, 25)
   const observer = new MutationObserver(() => { for (const media of document.querySelectorAll('audio,video')) attach(media) })
   observer.observe(document, { childList: true, subtree: true })
   for (const media of document.querySelectorAll('audio,video')) attach(media)

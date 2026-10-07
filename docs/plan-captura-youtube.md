@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v10 en validación; los resultados reales estarán en el
+API4/captura v11 en validación; los resultados reales estarán en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes
@@ -26,6 +26,9 @@ observado no queda automáticamente clasificado como imposible de saltar.
    generación, época y caducidad. WebView2 ejecuta `Input.dispatchMouseEvent`, esperando
    la respuesta de cada evento antes del siguiente. Se registran evento confiable,
    cancelación y transición observada, separando intento de omisión efectiva.
+   Para el umbral de50 sólo cuentan transiciones cuyo marcador publicitario explícito
+   se observó a1× en esa misma fuente/generación/época. Un ID diferente, una copia
+   del marcador o un registro antiguo sin esa evidencia no acredita otro anuncio.
 2. **Entrega progresiva experimental.** Cada unidad debe conservar identidad, fuente,
    configuración y cobertura confirmadas. Se retienen los últimos1,5s, configurables,
    y una contradicción descarta la cuarentena. El EOF válido libera la cola retenida.
@@ -62,6 +65,9 @@ El banco aislado permite tandas paralelas con identificador propio, SQLite por p
 y nombres de informe únicos. La batería de cobertura puede dividirse en los cinco
 álbumes (seis canciones y cinco transiciones naturales cada uno); se registra esa
 carga concurrente y no sustituye la medición normal de arranque.
+Cada proceso ejecuta una copia inmutable del binario, con SHA y procedencia de compilación.
+La observación funciona cada25ms y conserva el límite máximo de500ms entre relojes;
+la publicación agrupa tramos durante75ms y el EOF válido libera siempre la cola final.
 6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
    puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
    históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.

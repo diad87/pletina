@@ -396,7 +396,7 @@ async fn open_locked(
         } else {
             app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("yt-engine-legacy")
         };
-        let window = WebviewWindowBuilder::new(
+        let window_builder = WebviewWindowBuilder::new(
             app,
             &label,
             WebviewUrl::External("about:blank".parse().unwrap()),
@@ -407,8 +407,13 @@ async fn open_locked(
         .skip_taskbar(true)
         .focused(false)
         .inner_size(960.0, 640.0)
-        .initialization_script(include_str!("capture-legacy.js").to_string())
-        .build()
+        .initialization_script(include_str!("capture-legacy.js").to_string());
+        let window_builder = if std::env::var_os("MUSIFY_BENCH").is_some() {
+            window_builder.additional_browser_args(crate::capture::CAPTURE_BROWSER_ARGS)
+        } else {
+            window_builder
+        };
+        let window = window_builder.build()
         .map_err(|e| e.to_string())?;
         let expected_id = video_id.to_string();
         let (tx, rx) = tokio::sync::oneshot::channel();

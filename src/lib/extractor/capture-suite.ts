@@ -766,19 +766,52 @@ async function nativeSearch(videos: CaptureCase[], plan: CaptureSuitePlan, check
   return rows
 }
 
-/** Se cuentan transiciones identificadas, nunca observaciones repetidas ni adsSeen acumulado. */
-export function distinctAdTransitions(rows: Row[]): number {
-  const identities = new Set<string>()
+/** El marcador nativo queda ligado a la generación/época/fuente que originó cada transición. */
+export function adTransitionCounts(rows: Row[]): { observed: number; qualified: number; unqualified: number } {
+  const observations = new Map<string, { transition: Record<string, unknown>; marker: string | null }[]>()
   for (const row of rows) {
     const s = row.status as Status | undefined
     if (!Array.isArray(s?.adTransitions)) continue
     for (const transition of s.adTransitions as Record<string, unknown>[]) {
-      if (transition.from !== 'ad' || transition.to !== 'content' || transition.observed !== true ||
-          ![transition.generation, transition.epoch, transition.source, transition.sequence].every(Number.isSafeInteger)) continue
-      identities.add(JSON.stringify([row.videoId, transition.generation, transition.epoch, transition.source, transition.sequence]))
+      if (!transition || typeof row.videoId !== 'string' || !row.videoId ||
+          transition.from !== 'ad' || transition.to !== 'content' || transition.observed !== true ||
+          ![transition.generation, transition.epoch, transition.source].every(value => Number.isSafeInteger(value) && Number(value) > 0) ||
+          !Number.isSafeInteger(transition.sequence) || Number(transition.sequence) < 0) continue
+      const identity = JSON.stringify([row.videoId, transition.generation, transition.epoch, transition.source, transition.sequence])
+      const marker = transition.markerObserved === true && transition.markerPlaybackRate === 1 &&
+        Number.isSafeInteger(transition.markerSequence) && Number(transition.markerSequence) >= 0 &&
+        Number(transition.markerSequence) < Number(transition.sequence) &&
+        Number.isSafeInteger(transition.contentSource) && Number(transition.contentSource) > 0 ?
+        JSON.stringify([row.videoId, transition.generation, transition.epoch, transition.markerSequence]) : null
+      const copies = observations.get(identity) ?? []
+      copies.push({ transition, marker }); observations.set(identity, copies)
     }
   }
-  return identities.size
+  // Snapshots can repeat the same transition. One diagnostic sequence, however,
+  // cannot certify two transitions or sources in its native document/epoch.
+  const markerClaims = new Map<string, Set<string>>()
+  for (const [identity, copies] of observations) for (const { marker } of copies) {
+    if (!marker) continue
+    const claims = markerClaims.get(marker) ?? new Set<string>()
+    claims.add(identity); markerClaims.set(marker, claims)
+  }
+  let qualified = 0
+  for (const copies of observations.values()) {
+    const first = copies[0]
+    if (first.marker && markerClaims.get(first.marker)?.size === 1 && copies.every(copy =>
+      copy.marker === first.marker && copy.transition.contentSource === first.transition.contentSource)) qualified++
+  }
+  return { observed: observations.size, qualified, unqualified: observations.size - qualified }
+}
+
+/** Sólo las transiciones con marcador propio observado a 1× cuentan para la cohorte. */
+export const distinctAdTransitions = (rows: Row[]): number => adTransitionCounts(rows).qualified
+
+function reportAdTransitions(report: Record<string, unknown>, rows: Row[]) {
+  const counts = adTransitionCounts(rows)
+  report.adTransitions = counts.qualified
+  report.adTransitionsObserved = counts.observed
+  report.adTransitionsUnqualified = counts.unqualified
 }
 
 export function acceptanceCriteria(rows: Row[], expectedTracks: number, requiredAds = 50, engine: 'oficial' | 'propio' = 'oficial'): string[] {
@@ -786,7 +819,7 @@ export function acceptanceCriteria(rows: Row[], expectedTracks: number, required
   const completeIds = new Set(rows.filter(row => row.ok && row.evidenceEligible === true).map(row => row.videoId))
   if (completeIds.size < Math.max(30, expectedTracks)) missing.push(`Canciones distintas completas y verificadas: ${completeIds.size}/${Math.max(30, expectedTracks)}`)
   const transitions = distinctAdTransitions(rows)
-  if (transitions < requiredAds) missing.push(`Transiciones publicitarias reales identificadas: ${transitions}/${requiredAds}`)
+  if (transitions < requiredAds) missing.push(`Transiciones con marcador publicitario propio observado a 1×: ${transitions}/${requiredAds}`)
   if (!rows.length || rows.some(row => !row.ok)) missing.push('Hay intentos fallidos o no medidos en esta cohorte')
   if (rows.some(row => row.evidenceEligible !== true)) missing.push('Falta comparación independiente, sesión anónima o cobertura en algún intento')
   const seekIds = new Set(rows.filter(row => row.seekOk === true && row.seekWasCaptured === false &&
@@ -838,6 +871,7 @@ export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (repor
     continuityMethod: 'waiting durante escucha normal y final; seek/backfill queda registrado por separado y no demuestra escucha continua de toda la canción',
     timingMethod: 'Reloj monotónico de eventos HTMLAudioElement en WebView2; audio silenciado durante medición',
     adMethod: 'Estados oficiales observados; comparación independiente de todas las unidades publicadas. La demora entre sonido y marcador no se deduce del mismo marcador.',
+    adTransitionMethod: 'adTransitions cuenta sólo transiciones únicas con marcador publicitario nativo ligado a su fuente, secuencia anterior válida y velocidad 1×. adTransitionsObserved incluye también estados sin ese marcador; no demuestra semántica del audio.',
     rate: 1, rows: [] as Row[], running: true, ok: false,
     experimental: plan.mode !== 'catalog' && plan.experimental !== false, guaranteeAds: false, acceptanceOk: false,
     scope: plan.mode === 'catalog' ? 'catalog' : plan.mode === 'native-search' ? 'cold-search-and-start' : plan.experimental === false ? 'full-quarantine' : timingOnly(plan) ? 'timingOnly' : plan.mode === 'switch' ? 'cold-switch' : 'complete',
@@ -888,7 +922,7 @@ export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (repor
       const video = videos[attempt % videos.length], index = rows.length
       rows[index] = await smoke(video, plan, partial => { rows[index] = partial; return checkpoint(report) }, audit)
       rows[index].attempt = attempt + 1
-      report.adTransitions = distinctAdTransitions(rows); await checkpoint(report)
+      reportAdTransitions(report, rows); await checkpoint(report)
       if (attempt + 1 >= videos.length && (report.adTransitions as number) >= (report.requiredAdTransitions as number)) break
     }
   } else for (const video of videos) {
@@ -899,7 +933,7 @@ export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (repor
   } finally { await audit.close() }
   report.running = false
   report.measurementsOk = rows.length >= (report.expectedTracks as number) && rows.length > 0 && rows.every(row => row.ok)
-  report.adTransitions = distinctAdTransitions(rows)
+  reportAdTransitions(report, rows)
   report.blocking = acceptanceCriteria(rows, report.expectedTracks as number, Math.max(50, plan.minimumAdTransitions ?? 50), plan.engine)
   report.missingCriteria = report.blocking
   report.acceptanceOk = (report.blocking as string[]).length === 0
