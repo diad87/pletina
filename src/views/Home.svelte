@@ -310,5 +310,13 @@
     .tile-title {
       font-size: 13px;
     }
+    /* El botón de lo que suena va sobre la carátula: al lado, el título no cabría. */
+    .tile-play {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 32px;
+      height: 32px;
+    }
   }
 </style>

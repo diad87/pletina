@@ -28,8 +28,15 @@ export async function apply() {
     if (p.has('np')) theme.nowPlaying = true
     // En un navegador sin sonido (capturas) el audio no arranca: se simula una canción a mitad.
     // Se repite unos segundos porque el audio de prueba (30 s de silencio) pisa la duración al cargar.
+    // El audio de verdad se pausa: con el tiempo acelerado de las capturas llegaría al final y
+    // pasaría a la canción siguiente.
     const track = queue[index].track
+    let paused = false
     const fake = setInterval(() => {
+      if (!paused && player.status === 'playing') {
+        player.toggle()
+        paused = true
+      }
       player.status = 'playing'
       player.duration = track.duration
       player.time = Math.round(track.duration * 0.38)
