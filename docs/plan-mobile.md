@@ -83,7 +83,15 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
   - ExoPlayer preparó la siguiente minuto y medio antes de que acabara la actual;
   - pasó de canción solo y siguió vivo todo el rato.
 
-  Falta la hora completa con la pantalla apagada: es lo que más se nota en un Xiaomi, por su ahorro de batería.
+- **Xiaomi, tercera prueba, 31 minutos:**
+  - 7 canciones seguidas, cada una preparada en 0,8–1,5 s;
+  - varios cambios entre Wi-Fi y datos en 20 segundos sin cortarse;
+  - pausas y reanudaciones que siempre volvieron a sonar;
+  - ningún cierre del servicio.
+
+  En la segunda prueba hubo una pausa a las 22:21 que no se reanudó; no se sabe si la pidió el usuario. Desde la versión 4 el registro apunta el motivo de cada pausa (botón, otra app o llamada, auriculares), la pantalla encendida o apagada, el ahorro de batería y el reposo profundo de Android.
+
+  Falta confirmar la hora completa con la pantalla apagada.
 
 ### Fase 1: el reproductor de verdad
 - El núcleo Rust con su propio arranque, usado igual por Tauri y por el servicio.
