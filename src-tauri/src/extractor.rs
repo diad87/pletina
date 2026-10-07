@@ -157,8 +157,7 @@ pub fn extractor_reply(reply: Reply) {
 }
 
 /// Motores que se pueden elegir aquí (en el móvil no hay yt-dlp ni ventana oculta).
-#[tauri::command]
-pub fn stream_engines() -> Vec<&'static str> {
+fn stream_engines() -> Vec<&'static str> {
     // youtubei.js vive en la interfaz, que Android congela con la pantalla apagada.
     if cfg!(mobile) { vec!["propio"] } else { vec!["ytdlp", "youtubei", "propio"] }
 }

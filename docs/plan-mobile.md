@@ -158,6 +158,23 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 - Obtainium apunta a musify-releases y se queda con el `.apk`. En Android 12 o superior puede actualizar sin preguntar; hay que comprobarlo en el móvil.
 - Comprobar que actualizar conserva la base de datos.
 
+**Hecho (7 oct 2026, sale en la 0.5.0):**
+- **Clave de firma:** `~/.musify/android.jks` (RSA 4096, válida 100 años, alias `musify`) y su contraseña en `android.password`, junto a las del actualizador. En GitHub, secretos `ANDROID_KEYSTORE` (el archivo en base64) y `ANDROID_KEYSTORE_PASSWORD`. Gradle firma las versiones con ella; si falta, el APK sale sin firmar. **Si se pierde, los móviles no aceptan la versión siguiente sin desinstalar**: hay que guardar una copia de `~/.musify`.
+- **R8** (reduce el APK de las versiones): reglas para no tocar lo que se busca por nombre (funciones nativas de Rust, el plugin del reproductor y el puente con la interfaz).
+- **GitHub Actions** (`build.yml`, trabajo `android`): en cada etiqueta compila el APK, solo ARM de 64 bits (12 MB), y `release.mjs` lo publica como `Musify_X.Y.Z_android.apk`. Si falla solo el APK, lo de escritorio se publica igual.
+- **Obtainium:** instrucciones en el README. Basta con la dirección de musify-releases: hay un solo `.apk` por versión y la de los extractores es una versión previa, así que no la toma.
+- **En la app:**
+  - icono propio, también en escritorio, que hasta ahora llevaba el de Tauri;
+  - un solo icono en el móvil: fuera la pantalla de prueba de la fase 0;
+  - en «Tu biblioteca», la versión, el aviso de versión nueva (mira el `latest.json` de escritorio y lleva a la página de descarga) y «Enviar registro»;
+  - el registro pasa a `files/musify.log`, con tope de 512 KB.
+- **De las versiones de prueba a esta:** las de prueba iban firmadas con la clave de depuración del PC, así que hay que desinstalarlas una vez antes de instalar la firmada (Android no deja cambiar de firma). A partir de ahí, todas se instalan encima.
+- **Probado en el emulador:**
+  - la versión firmada desde cero: arranca, busca, suena en el servicio y comparte el registro;
+  - el APK de GitHub instalado encima del firmado en el PC: Android lo acepta como actualización y conserva historial y cola;
+  - en escritorio, la app de verdad (con otro identificador para no tocar la instalada): busca y suena.
+- **Falta en el móvil:** instalar Obtainium, añadir la app y comprobar que la versión siguiente se instala sola.
+
 ### Fase 4: música del móvil y sin conexión
 - Música guardada en el móvil: lista de Android (`MediaStore`, permiso de audio), con las mismas carátulas y la misma agrupación que en el PC.
 - Descargas sin yt-dlp: el núcleo baja por trozos la URL del motor propio a la carpeta de la app. Sirve también para el PC (está pendiente en P1).

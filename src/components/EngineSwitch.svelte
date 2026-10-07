@@ -2,17 +2,12 @@
   // Prototipo P1: elegir con qué se saca el audio de YouTube.
   import { extractor, type Engine, type EngineStats } from '../lib/extractor/engine.svelte'
   import { toast } from '../lib/toast.svelte'
-  import { invoke } from '@tauri-apps/api/core'
 
-  const ALL: { value: Engine; label: string }[] = [
+  const options: { value: Engine; label: string }[] = [
     { value: 'ytdlp', label: 'yt-dlp' },
     { value: 'youtubei', label: 'youtubei.js (prueba)' },
     { value: 'propio', label: 'Propio' },
   ]
-  // Los que hay en este sistema (en el móvil no hay yt-dlp).
-  let available = $state<string[]>(['ytdlp', 'youtubei', 'propio'])
-  invoke<string[]>('stream_engines').then((list) => (available = list)).catch(() => {})
-  const options = $derived(ALL.filter((o) => available.includes(o.value)))
 
   let stats = $state<EngineStats | null>(null)
   $effect(() => {
@@ -31,14 +26,10 @@
 </script>
 
 <div class="engine">
-  {#if options.length > 1}
-    <span>Audio de YouTube con</span>
-    {#each options as o (o.value)}
-      <button class="chip" class:on={extractor.engine === o.value} onclick={() => choose(o.value)}>{o.label}</button>
-    {/each}
-  {:else}
-    <span>Audio de YouTube con el motor propio</span>
-  {/if}
+  <span>Audio de YouTube con</span>
+  {#each options as o (o.value)}
+    <button class="chip" class:on={extractor.engine === o.value} onclick={() => choose(o.value)}>{o.label}</button>
+  {/each}
   {#if extractor.engine === 'youtubei' && (extractor.served || extractor.failed)}
     <span class="count">{extractor.served} con youtubei.js · {extractor.failed} con yt-dlp de respaldo</span>
   {/if}

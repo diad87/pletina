@@ -12,6 +12,7 @@
   import { fromLib, library } from '../lib/library.svelte'
   import { layout } from '../lib/layout.svelte'
   import { nav, type Route } from '../lib/nav.svelte'
+  import { isAndroid } from '../lib/player-android.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -197,7 +198,8 @@
     </div>
   {/if}
 
-  <EngineSwitch />
+  <!-- En el móvil no hay nada que elegir: siempre el motor propio. -->
+  {#if !isAndroid}<EngineSwitch />{/if}
 </section>
 
 <style>
