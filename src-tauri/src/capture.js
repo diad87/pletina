@@ -205,7 +205,8 @@
       return problem('CAPTURE_PARTIAL_PRESENTATION', `Source was replaced before verified EOF: ${JSON.stringify(detail)}`)
     }
     const current = adapter.classify(media)
-    const snapshot = capture.snapshotOf(media), identity = source ? terminalIdentity(media, source, snapshot, current) : current
+    let snapshot = capture.snapshotOf(media)
+    const identity = source ? terminalIdentity(media, source, snapshot, current) : current
     reportIdentity(media, source, identity)
     if (current.ambiguous) return problem('CAPTURE_IDENTITY_UNCERTAIN', current.reason)
     if (!source) {
@@ -217,6 +218,13 @@
     }
     unsupportedAt = null
     if (maybeSeek(media, source, current)) return
+    if (pendingSeek?.startup && pendingSeek.assigned) {
+      // Setting currentTime starts an asynchronous seek. Keep the acquisition
+      // paused until a ready, non-seeking native clock actually exposes zero.
+      if (!media.paused) media.pause()
+      if (media.seeking || media.readyState < 2) return
+      snapshot = capture.snapshotOf(media)
+    }
     if (media.seeking || media.readyState < 1) return
     if (current.state === 'unknown' && media.currentTime === 0 && !source.observations.length && !source.error) {
       media.pause()
@@ -224,7 +232,7 @@
       if (performance.now() - since > 10000) problem('CAPTURE_IDENTITY_UNCERTAIN', `Initial identity did not become available: ${current.reason}`)
       return
     }
-    if (waiting.has(media) && current.state !== 'unknown') { waiting.delete(media); media.play().catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar')) }
+    if (waiting.has(media) && current.state !== 'unknown') { waiting.delete(media); if (!pendingSeek?.startup) media.play().catch(() => requireInteraction('Pulsa reproducir en YouTube para continuar')) }
     if (current.state === 'content' && source.seen.size === 0 && !source.observations.length && !pendingSeek && !source.error && media.currentTime > 0) {
       // Metadata/playing callbacks can first arrive a few milliseconds after sound.
       // Re-present the beginning while still quarantined instead of inventing coverage.
@@ -234,7 +242,7 @@
       try { media.currentTime = 0 } catch (e) { return problem('CAPTURE_SEEK_FAILED', String(e)) }
       return
     }
-    if (pendingSeek?.startup && !media.seeking && media.currentTime !== 0) return problem('CAPTURE_UNOBSERVED_BEGINNING', 'The paused startup seek did not expose time zero; no missing sample is inferred')
+    if (pendingSeek?.startup && !media.seeking && media.currentTime !== 0) return problem('CAPTURE_UNOBSERVED_BEGINNING', `The paused startup seek did not expose time zero; no missing sample is inferred: position=${media.currentTime}, paused=${media.paused}, seeking=${media.seeking}, readyState=${media.readyState}`)
     if (media.paused && !media.ended && media.currentTime !== 0 && !pendingSeek) return
     try {
       tracker.observe(source, identity, { ...snapshot, now: performance.now(), element: media })
@@ -306,7 +314,7 @@
         if (media.playbackRate !== 1) media.playbackRate = 1
         observe(media)
         if (failed) return
-        if (!waiting.has(media) && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) media.play().catch(() => {})
+        if (!pendingSeek?.startup && !waiting.has(media) && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) media.play().catch(() => {})
       }
     }
     if (now - lastBeat >= 1000) {

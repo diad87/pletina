@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v12 en validación; los resultados reales estarán en el
+API4/captura v13 en validación; los resultados reales estarán en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes

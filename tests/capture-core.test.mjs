@@ -1625,14 +1625,17 @@ test('orchestrator reports the trusted result of ad A while ad B is the current 
 })
 
 test('orchestrator replays one unpublished WWW startup gap inside the same source and delivers only after new presentation', async () => {
-  for (const experimental of [false, true]) {
+  for (const experimental of [false, true]) for (const seekPosition of [0, 0.008785]) {
     const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
-    let clock = 1600
+    let clock = 1600, tick, seekWrites = 0
+    const nativeTime = Object.getOwnPropertyDescriptor(scope.HTMLMediaElement.prototype, 'currentTime'), nativePlay = scope.HTMLMediaElement.prototype.play, plays = []
+    Object.defineProperty(scope.HTMLMediaElement.prototype, 'currentTime', { ...nativeTime, set(value) { seekWrites++; nativeTime.set.call(this, value); this.seeking = true; this.readyState = 1 } })
+    scope.HTMLMediaElement.prototype.play = function () { plays.push({ position: this.currentTime, seeking: this.seeking, readyState: this.readyState }); return nativePlay.call(this) }
     const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
     const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
     const location = { search: '?v=target', hash: '', hostname: 'www.youtube.com' }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
-    const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+    const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: callback => { tick = callback; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
     context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 61, __musifyProgressiveExperiment: experimental, __musifyHoldbackSeconds: 1.5, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
@@ -1647,7 +1650,23 @@ test('orchestrator replays one unpublished WWW startup gap inside the same sourc
     const replays = messages.filter(m => m.type === 'diagnostic' && m.reason?.includes('startup-replay-unpublished'))
     assert.equal(replays.length, 1); assert.equal(JSON.parse(replays[0].reason).elapsedMs, 545)
     assert.equal(replays[0].generation, 61); assert.equal(replays[0].epoch, 1)
-    clock = 3000; media.dispatchEvent(new Event('seeked'))
+    clock = 2900; tick()
+    assert.equal(plays.length, 0, 'the automatic playback tick must not resume a pending native seek')
+    assert.equal(media.paused, true); assert.equal(media.seeking, true)
+    media.paused = false; clock = 2950; tick()
+    assert.equal(media.paused, true, 'a site resume observed while seeking is held again without credit')
+    media.seeking = false; clock = 2975; tick()
+    assert.equal(plays.length, 0, 'metadata-only zero does not unblock playback')
+    assert.equal(media.paused, true)
+    media.readyState = 4; media._currentTime = seekPosition; clock = 3000; media.dispatchEvent(new Event('seeked'))
+    assert.equal(seekWrites, 1, 'settling never adds another rewind')
+    if (seekPosition !== 0) {
+      await new Promise(resolve => setImmediate(resolve))
+      assert.equal(messages.find(m => m.type === 'error')?.code, 'CAPTURE_UNOBSERVED_BEGINNING')
+      assert.equal(messages.some(m => m.kind === 'seg'), false); assert.equal(plays.length, 0)
+      continue
+    }
+    assert.deepEqual(plays, [{ position: 0, seeking: false, readyState: 4 }], 'play is called only after the fresh exact-zero observation')
     assert.equal(media.paused, false)
     for (let ms = 200; ms <= 1400; ms += 200) { clock = 3000 + ms; media._currentTime = ms / 1000; media.dispatchEvent(new Event('timeupdate')) }
     await new Promise(resolve => setImmediate(resolve))
