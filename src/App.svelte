@@ -69,7 +69,7 @@
   ;(window as unknown as { __musifyBack: () => boolean }).__musifyBack = () => {
     if (menu.open) menu.close()
     else if (player.picking) player.picking = null
-    else if (theme.queueOpen && layout.mobile) theme.queueOpen = false
+    else if (theme.queueSheet && layout.mobile) theme.queueSheet = false
     else if (theme.nowPlaying) theme.nowPlaying = false
     else if (nav.canBack) nav.back()
     else return false
@@ -123,7 +123,7 @@
         {@render page()}
       </div>
     </main>
-    <div class="dock">
+    <div class="dock" class:hidden={layout.keyboard}>
       {#if toast.message}
         {#key toast.message}
           <div class="toast" role="status">{toast.message}</div>
@@ -133,7 +133,7 @@
       <BottomNav />
     </div>
   </div>
-  {#if theme.queueOpen}<div class="queue-sheet"><QueuePanel /></div>{/if}
+  {#if theme.queueSheet}<div class="queue-sheet"><QueuePanel /></div>{/if}
 {:else}
   <div class="app" class:with-queue={theme.queueOpen}>
     <Sidebar />
@@ -216,6 +216,9 @@
     gap: 4px;
     padding-top: 6px;
     background: var(--bg);
+  }
+  .dock.hidden {
+    display: none;
   }
   .toast {
     position: absolute;

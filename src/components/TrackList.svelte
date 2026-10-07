@@ -4,6 +4,7 @@
   import { downloads } from '../lib/downloads.svelte'
   import { duration } from '../lib/format'
   import { layout } from '../lib/layout.svelte'
+  import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
@@ -76,7 +77,15 @@
   }
 </script>
 
-<ol class="tracks {variant}" class:with-meta={!!meta}>
+<ol
+  class="tracks {variant}"
+  class:with-meta={!!meta}
+  class:grips={reorderable && layout.mobile}
+  use:reorder={{
+    enabled: reorderable && layout.mobile,
+    onMove: (from, to) => playlistId != null && entryIds && library.moveInPlaylist(playlistId, entryIds[from], to),
+  }}
+>
   <li class="row head">
     <span class="num">#</span>
     <span>Título</span>
@@ -96,7 +105,7 @@
     {#if multiDisc && (i === 0 || disc(i) !== disc(i - 1))}
       <li class="disc">Disco {disc(i)}</li>
     {/if}
-    <li>
+    <li data-reorder-index={i}>
       <div
         class="row"
         class:current
@@ -118,6 +127,9 @@
         ondrop={onDrop}
         ondragend={() => (dragFrom = dropAt = null)}
       >
+        {#if reorderable && layout.mobile}
+          <span class="grip" data-reorder-handle aria-label="Arrastrar para mover"><Icon name="grip" size={20} /></span>
+        {/if}
         <span class="num">
           {#if current && player.status === 'playing'}
             <span class="eq" aria-label="Sonando"><i></i><i></i><i></i></span>
@@ -413,6 +425,32 @@
     }
     .row:active {
       background: var(--press);
+    }
+  }
+
+  .grip {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    /* Playlists: asa a la izquierda para reordenar con el dedo (ver lib/reorder.ts). */
+    .tracks.grips .row,
+    .list.with-meta.grips .row {
+      grid-template-columns: 36px minmax(0, 1fr) 40px;
+      padding-left: 0;
+    }
+    .grip {
+      display: grid;
+      place-items: center;
+      align-self: stretch;
+      color: var(--faint);
+      touch-action: none;
+    }
+    :global(li.reordering) {
+      position: relative;
+      z-index: 2;
+      border-radius: 8px;
+      background: var(--elevated);
+      box-shadow: var(--shadow-2);
     }
   }
 </style>

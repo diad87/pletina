@@ -280,6 +280,11 @@
     opacity: 1;
     transform: none;
   }
+  @media (hover: none) {
+    .tile-play:not(.show) {
+      display: none;
+    }
+  }
 
   @media (max-width: 720px) {
     .home {

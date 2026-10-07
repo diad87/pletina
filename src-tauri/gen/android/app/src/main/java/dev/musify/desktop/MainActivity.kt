@@ -1,10 +1,12 @@
 package dev.musify.desktop
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -16,27 +18,36 @@ class MainActivity : TauriActivity() {
   private var webView: WebView? = null
 
   /**
-   * Zonas que ocupan la barra de estado y la de gestos (en px de CSS). El WebView de Android no las
-   * da con env(safe-area-inset-*), así que la interfaz las lee de aquí (ver src/lib/layout.svelte.ts).
+   * Zonas que ocupan la barra de estado y la de gestos (en px de CSS), y si el teclado está abierto.
+   * El WebView de Android no las da con env(safe-area-inset-*), así que la interfaz las lee de aquí
+   * (ver src/lib/layout.svelte.ts).
    */
   private val insets = object {
     @Volatile var top = 0f
     @Volatile var bottom = 0f
+    @Volatile var keyboard = false
 
     @JavascriptInterface
-    fun get(): String = "$top,$bottom"
+    fun get(): String = "$top,$bottom,${if (keyboard) 1 else 0}"
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    // La interfaz siempre es oscura: iconos claros en las barras aunque el móvil esté en modo claro.
+    enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
     super.onCreate(savedInstanceState)
 
     val density = resources.displayMetrics.density
     val content = findViewById<View>(android.R.id.content)
     ViewCompat.setOnApplyWindowInsetsListener(content) { view, windowInsets ->
       val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+      val ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime())
+      val keyboard = ime.bottom > bars.bottom
+      // Con el teclado abierto, el WebView se queda encima de él (de borde a borde, Android ya no lo
+      // encoge solo) y la barra de gestos queda debajo del teclado.
+      view.setPadding(0, 0, 0, if (keyboard) ime.bottom else 0)
       insets.top = bars.top / density
-      insets.bottom = bars.bottom / density
+      insets.bottom = if (keyboard) 0f else bars.bottom / density
+      insets.keyboard = keyboard
       webView?.evaluateJavascript("window.dispatchEvent(new Event('musify-insets'))", null)
       ViewCompat.onApplyWindowInsets(view, windowInsets)
     }

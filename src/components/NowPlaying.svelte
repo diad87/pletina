@@ -17,6 +17,53 @@
   // Carátula grande: la de 1000 px si es de Deezer.
   const big = $derived(current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
 
+  /**
+   * Deslizar hacia abajo para cerrar (con el dedo). No cuenta si empieza en un botón o en la barra
+   * de progreso. Si se suelta antes de 120 px (o despacio), vuelve a su sitio.
+   */
+  function swipeDown(node: HTMLElement) {
+    let start: { y: number; t: number } | null = null
+    let dy = 0
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || (e.target as HTMLElement).closest('button, input, a, .queue')) return
+      start = { y: e.clientY, t: performance.now() }
+      dy = 0
+      node.style.transition = 'none'
+    }
+    const move = (e: PointerEvent) => {
+      if (!start) return
+      dy = Math.max(0, e.clientY - start.y)
+      node.style.transform = `translateY(${dy}px)`
+    }
+    const up = () => {
+      if (!start) return
+      const fast = dy / Math.max(1, performance.now() - start.t) > 0.6
+      start = null
+      node.style.transition = 'transform 0.25s var(--ease)'
+      if (dy > 120 || (fast && dy > 40)) {
+        node.style.transform = 'translateY(100%)'
+        setTimeout(() => (theme.nowPlaying = false), 200)
+      } else {
+        node.style.transform = ''
+      }
+    }
+    // Si no, el navegador se queda el gesto vertical (pointercancel) y la pantalla no llega a moverse.
+    // La cola de al lado (escritorio) sigue con su scroll: tiene su propio contenedor.
+    node.style.touchAction = 'none'
+    node.addEventListener('pointerdown', down)
+    node.addEventListener('pointermove', move)
+    node.addEventListener('pointerup', up)
+    node.addEventListener('pointercancel', up)
+    return {
+      destroy() {
+        node.removeEventListener('pointerdown', down)
+        node.removeEventListener('pointermove', move)
+        node.removeEventListener('pointerup', up)
+        node.removeEventListener('pointercancel', up)
+      },
+    }
+  }
+
   function go(route: Parameters<typeof nav.go>[0]) {
     theme.nowPlaying = false
     nav.go(route)
@@ -24,7 +71,7 @@
 </script>
 
 {#if theme.nowPlaying && current}
-  <div class="np" role="dialog" aria-label="Sonando ahora">
+  <div class="np" role="dialog" aria-label="Sonando ahora" use:swipeDown>
     <div class="bg" aria-hidden="true">
       {#if current.cover}<img src={mediaUrl(current.cover)} alt="" />{/if}
     </div>
@@ -67,7 +114,7 @@
           <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
             <Icon name="swap" size={20} /> ¿No es esta canción?
           </button>
-          <button onclick={() => (theme.queueOpen = true)}>
+          <button onclick={() => (theme.queueSheet = true)}>
             <Icon name="queue" size={20} /> Cola{#if queued.length}&nbsp;· {queued.length}{/if}
           </button>
         </div>

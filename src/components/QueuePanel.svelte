@@ -2,6 +2,7 @@
   // Panel lateral de la cola: lo que suena, tu cola (la que vas montando) y lo que viene después.
   import { duration } from '../lib/format'
   import { layout } from '../lib/layout.svelte'
+  import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
@@ -63,7 +64,11 @@
     <button class="save" onclick={saveAsPlaylist} disabled={!current} title="Guardar como playlist">
       <Icon name="plus" size={16} /> Guardar como playlist
     </button>
-    <button class="close" onclick={() => (theme.queueOpen = false)} title="Cerrar"><Icon name="close" size={18} /></button>
+    <button
+      class="close"
+      onclick={() => (layout.mobile ? (theme.queueSheet = false) : (theme.queueOpen = false))}
+      title="Cerrar"><Icon name="close" size={18} /></button
+    >
   </header>
 
   <div class="scroll">
@@ -81,6 +86,10 @@
     <ol
       class="mine"
       class:dropping={dropAt !== null}
+      use:reorder={{
+        enabled: layout.mobile,
+        onMove: (from, to) => player.moveInQueue(player.userQueue[from].key, to),
+      }}
       ondragover={(e) => onDragOver(e, player.userQueue.length)}
       ondragleave={(e) => {
         if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) dropAt = null
@@ -90,7 +99,8 @@
       {#each player.userQueue as entry, i (entry.key)}
         <li
           class:drop-before={dropAt === i}
-          draggable="true"
+          data-reorder-index={i}
+          draggable={!layout.mobile}
           ondragstart={(e) => e.dataTransfer?.setData(KEY, String(entry.key))}
           ondragover={(e) => {
             e.stopPropagation()
@@ -101,7 +111,7 @@
             onDrop(e)
           }}
         >
-          {@render row(entry.item, false, () => player.playFromQueue(entry.key), () => player.removeFromQueue(entry.key))}
+          {@render row(entry.item, false, () => player.playFromQueue(entry.key), () => player.removeFromQueue(entry.key), layout.mobile)}
         </li>
       {/each}
       <li class="drop-zone" class:drop-before={dropAt === player.userQueue.length && player.userQueue.length > 0}>
@@ -127,8 +137,9 @@
   </div>
 </aside>
 
-{#snippet row(item: QueueItem, playing: boolean, play?: () => void, remove?: () => void)}
-  <div class="row" class:playing>
+{#snippet row(item: QueueItem, playing: boolean, play?: () => void, remove?: () => void, grip = false)}
+  <div class="row" class:playing class:with-grip={grip}>
+    {#if grip}<span class="grip" data-reorder-handle aria-label="Arrastrar para mover"><Icon name="grip" size={20} /></span>{/if}
     <button class="main" onclick={play} disabled={!play} title={play ? 'Reproducir ahora' : undefined}>
       <span class="thumb"><Cover src={item.cover} /></span>
       <span class="text">
@@ -341,11 +352,42 @@
   .row:hover .remove {
     opacity: 1;
   }
+  /* Con el dedo no hay "pasar por encima": la X siempre a la vista y más grande. */
+  @media (hover: none) {
+    .remove {
+      width: 40px;
+      height: 40px;
+      margin-right: 0;
+      opacity: 1;
+    }
+  }
   .remove:hover {
     background: rgb(255 255 255 / 0.1);
     color: var(--text);
   }
   li[draggable='true'] {
     cursor: grab;
+  }
+
+  /* Móvil: el asa para arrastrar con el dedo (ver lib/reorder.ts). */
+  .row.with-grip {
+    padding-left: 0;
+  }
+  .grip {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 36px;
+    align-self: stretch;
+    color: var(--faint);
+    touch-action: none;
+    cursor: grab;
+  }
+  :global(li.reordering) {
+    position: relative;
+    z-index: 2;
+    border-radius: 8px;
+    background: var(--elevated);
+    box-shadow: var(--shadow-2);
   }
 </style>

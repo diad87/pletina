@@ -31,10 +31,14 @@
 </script>
 
 <div class="engine">
-  <span>Audio de YouTube con</span>
-  {#each options as o (o.value)}
-    <button class="chip" class:on={extractor.engine === o.value} onclick={() => choose(o.value)}>{o.label}</button>
-  {/each}
+  {#if options.length > 1}
+    <span>Audio de YouTube con</span>
+    {#each options as o (o.value)}
+      <button class="chip" class:on={extractor.engine === o.value} onclick={() => choose(o.value)}>{o.label}</button>
+    {/each}
+  {:else}
+    <span>Audio de YouTube con el motor propio</span>
+  {/if}
   {#if extractor.engine === 'youtubei' && (extractor.served || extractor.failed)}
     <span class="count">{extractor.served} con youtubei.js · {extractor.failed} con yt-dlp de respaldo</span>
   {/if}

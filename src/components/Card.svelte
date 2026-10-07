@@ -113,6 +113,13 @@
     opacity: 1;
     transform: none;
   }
+  /* Con el dedo no hay "pasar por encima": tocar la tarjeta la abre. Sin botón invisible que se
+     pueda pulsar sin querer; solo se ve si ya suena (para pausar). */
+  @media (hover: none) {
+    .play:not(.show) {
+      display: none;
+    }
+  }
   .play:hover {
     transform: scale(1.06) !important;
   }

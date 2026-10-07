@@ -131,6 +131,27 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 - Reordenar la cola con el dedo: el arrastrar de ahora (HTML5) no funciona con pantallas táctiles.
 - Botón «atrás» de Android, zonas seguras (muesca, barra de gestos) y teclado.
 
+**Hecho (7 oct 2026, rama `android-fase0`):**
+- **Estructura** (por debajo de 720 px de ancho; el escritorio no cambia): barra de abajo (Inicio, Buscar, Tu biblioteca), minirreproductor encima, «Sonando ahora» y la cola a pantalla completa, y menús que salen desde abajo (también el «¿No es esta canción?»).
+- **Con el dedo:**
+  - pulsación larga en lugar de clic derecho;
+  - lo que en el escritorio sale al pasar el ratón está siempre a la vista o no está: la X de quitar de la cola, el ♥ y el «⋯» de cada canción, y el punto de la barra de progreso;
+  - fuera los botones invisibles que se podían pulsar sin querer: el «play» de las tarjetas, solo si ya suena; las flechas de las estanterías.
+- **Reordenar** (`lib/reorder.ts`): la cola y las playlists se ordenan arrastrando el asa de la izquierda, con desplazamiento automático cerca de los bordes. El arrastrar de HTML5 se queda para el escritorio.
+- **«Sonando ahora»** se cierra deslizando hacia abajo (`touch-action: none`, si no, el navegador se queda el gesto).
+- **Android** (`MainActivity.kt`):
+  - «atrás» cierra lo abierto o vuelve atrás, y si no queda nada pasa la app a segundo plano sin parar la música;
+  - zonas seguras con `MusifyInsets` (el WebView no da `env(safe-area-inset-*)`);
+  - iconos claros en las barras aunque el móvil esté en modo claro;
+  - con el teclado abierto el WebView se queda encima y la barra de abajo se esconde.
+- **Lo que aún no hay en el móvil no se enseña:** importar carpetas y descargas (fase 4), y el selector de motor (solo el propio).
+- **Probado en el emulador:**
+  - reordenar playlist y cola (el orden llega a la base de datos y al servicio);
+  - quitar de la cola;
+  - deslizar para cerrar: corto vuelve, largo cierra;
+  - botones y barra de progreso con el dedo;
+  - buscar con el teclado abierto y al cerrarlo.
+
 ### Fase 3: instalar y actualizar
 - Clave de firma propia para Android, guardada como la de escritorio (`~/.musify` y secretos de GitHub).
 - GitHub Actions compila el APK en cada versión y lo publica en musify-releases (`Musify_X.Y.Z_android.apk`).

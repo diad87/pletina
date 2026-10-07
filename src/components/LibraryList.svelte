@@ -31,6 +31,7 @@
     </span>
   </button>
 
+  {#if layout.canImportLocal}
   <button class="item" class:active={route.name === 'local'} onclick={() => nav.go({ name: 'local' })}>
     <span class="art plain mine" class:busy={!!local.scan}><Icon name="folder" size={20} /></span>
     <span class="text">
@@ -40,6 +41,7 @@
       </span>
     </span>
   </button>
+  {/if}
 
   {#if layout.canDownload}
   <button class="item" class:active={route.name === 'downloads'} onclick={() => nav.go({ name: 'downloads' })}>

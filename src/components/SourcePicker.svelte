@@ -282,4 +282,23 @@
   .panel > :last-child {
     margin-bottom: 20px;
   }
+
+  /* Móvil: hoja desde abajo, casi a pantalla completa. */
+  @media (max-width: 720px) {
+    dialog {
+      width: 100vw;
+      max-width: 100vw;
+      max-height: 88vh;
+      margin: auto 0 0;
+      border-radius: 16px 16px 0 0;
+      border-bottom: 0;
+    }
+    .panel {
+      max-height: 88vh;
+      padding-bottom: var(--safe-bottom);
+    }
+    header {
+      padding: 16px 12px 8px 16px;
+    }
+  }
 </style>

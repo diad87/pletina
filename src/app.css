@@ -320,6 +320,10 @@ button {
   * {
     scrollbar-width: none;
   }
+  /* El WebView de Android no entiende scrollbar-width (Chrome 124 incluido). */
+  ::-webkit-scrollbar {
+    display: none;
+  }
   .page {
     padding: 4px 12px 32px;
   }

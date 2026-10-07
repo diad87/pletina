@@ -61,6 +61,12 @@
   .shelf:hover .arrows {
     opacity: 1;
   }
+  /* Con el dedo la estantería se desliza sin más. */
+  @media (hover: none) {
+    .arrows {
+      display: none;
+    }
+  }
   .arrow {
     display: grid;
     place-items: center;

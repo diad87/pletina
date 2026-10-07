@@ -8,6 +8,7 @@
   import * as api from '../lib/api'
   import { longDuration, shortDate, songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
+  import { layout } from '../lib/layout.svelte'
   import { queueMenu } from '../lib/actions'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
@@ -168,7 +169,9 @@
         metaLabel="Añadida"
         meta={(i) => shortDate(data!.entries[i].at)}
       />
-      <p class="tip">Arrastra las canciones para cambiar el orden.</p>
+      <p class="tip">
+        {layout.mobile ? 'Arrastra las canciones por el asa de la izquierda para cambiar el orden.' : 'Arrastra las canciones para cambiar el orden.'}
+      </p>
     {:else}
       <div class="empty-state">
         <Icon name="note" size={48} />
