@@ -191,6 +191,8 @@ pub fn run() {
             downloads::open_download_dir,
             downloads::reveal_download,
             updater::install_update,
+            updater::newer_version,
+            updater::open_releases,
             local::local_library,
             local::add_local_folder,
             local::remove_local_folder,

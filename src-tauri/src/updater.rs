@@ -70,6 +70,12 @@ pub fn install_pending(app: &AppHandle) -> bool {
     }
 }
 
+/// Solo para el móvil (ver updater_mobile.rs): en el escritorio el actualizador avisa con eventos.
+#[tauri::command]
+pub async fn newer_version() -> Option<String> {
+    None
+}
+
 /// Botón "Reiniciar" de la interfaz: instala ya y vuelve a abrir la app.
 #[tauri::command]
 pub fn install_update(app: AppHandle) -> Result<(), String> {
@@ -77,4 +83,13 @@ pub fn install_update(app: AppHandle) -> Result<(), String> {
         return Err("No hay ninguna actualización lista".into());
     }
     app.restart();
+}
+
+/// Abre en el navegador la página de la última versión (para bajar el APK sin Obtainium).
+#[tauri::command]
+pub fn open_releases(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_url("https://github.com/diad87/musify-releases/releases/latest", None::<&str>)
+        .map_err(|e| e.to_string())
 }

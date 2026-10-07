@@ -2,12 +2,14 @@ package dev.musify.desktop
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.webkit.WebView
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -239,6 +241,31 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     c.prepare()
     c.play()
     null
+  }
+
+  /** Abre «Compartir» con el registro (MusifyLog), para mandarlo por correo, WhatsApp... */
+  @Command
+  fun shareLog(invoke: Invoke) {
+    main.post {
+      try {
+        val file = MusifyLog.file(activity)
+        if (!file.exists()) {
+          invoke.reject("Todavía no hay registro")
+          return@post
+        }
+        val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND)
+          .setType("text/plain")
+          .putExtra(Intent.EXTRA_SUBJECT, "Musify: registro")
+          .putExtra(Intent.EXTRA_TEXT, file.readText().takeLast(60_000))
+          .putExtra(Intent.EXTRA_STREAM, uri)
+          .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        activity.startActivity(Intent.createChooser(send, "Enviar registro"))
+        invoke.resolve()
+      } catch (e: Exception) {
+        invoke.reject(e.message ?: e.toString())
+      }
+    }
   }
 
   // --- Estado hacia la interfaz -------------------------------------------------------------

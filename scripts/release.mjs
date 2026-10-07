@@ -70,6 +70,10 @@ for (const re of [/\.dmg$/, /\.deb$/]) {
   if (f) publish(f)
 }
 
+// Android: lo instala y lo actualiza Obtainium, que busca el `.apk` de la última versión.
+const apk = find(/\.apk$/)
+if (apk) publish(apk, `Musify_${version}_android.apk`)
+
 if (!Object.keys(platforms).length) {
   console.error('No se ha encontrado ningún instalador en', dir)
   process.exit(1)

@@ -10,6 +10,7 @@
   import * as api from '../lib/api'
   import { songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
+  import { layout } from '../lib/layout.svelte'
   import { nav, type Route } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -89,6 +90,12 @@
 
   const tilePlay = (t: Tile) =>
     t.play ?? (t.liked ? playLiked : t.route.name === 'playlist' ? () => playPlaylist((t.route as { id: number }).id) : undefined)
+
+  /** En el móvil, el cuadro de búsqueda solo está en la pantalla de Buscar. */
+  function openSearch() {
+    if (layout.mobile) nav.go({ name: 'search', query: '' })
+    requestAnimationFrame(() => nav.focusSearch())
+  }
 </script>
 
 <section class="page home">
@@ -186,7 +193,7 @@
       <Icon name="search" size={40} />
       <strong>Empieza buscando un grupo</strong>
       <p>Encuentra sus discos, elige uno y dale a reproducir.</p>
-      <button class="pill" onclick={() => nav.focusSearch()}>Buscar</button>
+      <button class="pill" onclick={openSearch}>Buscar</button>
     </div>
   {/if}
 

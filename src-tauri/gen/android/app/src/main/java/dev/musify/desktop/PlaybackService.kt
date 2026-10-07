@@ -67,15 +67,15 @@ class PlaybackService : MediaSessionService() {
   /** Pantalla encendida / apagada, para el registro. */
   private val screen = object : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-      Fase0Log.log(if (intent.action == Intent.ACTION_SCREEN_OFF) "pantalla apagada" else "pantalla encendida")
+      MusifyLog.log(if (intent.action == Intent.ACTION_SCREEN_OFF) "pantalla apagada" else "pantalla encendida")
     }
   }
 
   override fun onCreate() {
     super.onCreate()
-    Fase0Log.init(this)
+    MusifyLog.init(this)
     MusifyCore.init(dataDir.absolutePath)
-    Fase0Log.log("servicio: creado")
+    MusifyLog.log("servicio: creado")
 
     val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
     // DefaultDataSource: además de http, archivos (música guardada en el móvil).
@@ -101,19 +101,19 @@ class PlaybackService : MediaSessionService() {
       addAction(Intent.ACTION_SCREEN_ON)
     })
     val free = getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(packageName) == true
-    Fase0Log.log("ahorro de batería de Android: ${if (free) "sin restricciones" else "con restricciones (lo normal)"}")
+    MusifyLog.log("ahorro de batería de Android: ${if (free) "sin restricciones" else "con restricciones (lo normal)"}")
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
   override fun onTaskRemoved(rootIntent: Intent?) {
-    Fase0Log.log("app quitada de recientes; sonando=${player.isPlaying}")
+    MusifyLog.log("app quitada de recientes; sonando=${player.isPlaying}")
     save()
     super.onTaskRemoved(rootIntent)
   }
 
   override fun onDestroy() {
-    Fase0Log.log("servicio: destruido")
+    MusifyLog.log("servicio: destruido")
     save()
     main.removeCallbacksAndMessages(null)
     runCatching { unregisterReceiver(screen) }
@@ -140,7 +140,7 @@ class PlaybackService : MediaSessionService() {
           remember(entry)
           itemFromEntry(entry)
         } else {
-          // Prueba de la fase 0 (Fase0Activity): solo trae la consulta.
+          // Sin entrada de la interfaz (no debería pasar): se busca con la consulta, si la trae.
           item.requestMetadata.extras?.getString(EXTRA_QUERY)?.let { queries[item.mediaId] = it }
           item.buildUpon().setUri("musify://track/${item.mediaId}").build()
         }
@@ -172,11 +172,11 @@ class PlaybackService : MediaSessionService() {
     val res = JSONObject(MusifyCore.resolve(query, fresh))
     if (res.has("error")) {
       val error = res.getString("error")
-      Fase0Log.log("url $id: ERROR $error (${network()})")
+      MusifyLog.log("url $id: ERROR $error (${network()})")
       throw IOException(error)
     }
     if (spec.position == 0L || fresh) {
-      Fase0Log.log("url $id: ${res.getLong("ms")} ms, vídeo ${res.optString("videoId")}${if (fresh) ", nueva" else ""} (${network()})")
+      MusifyLog.log("url $id: ${res.getLong("ms")} ms, vídeo ${res.optString("videoId")}${if (fresh) ", nueva" else ""} (${network()})")
     }
     val url = res.getString("url")
     return spec.withUri(if (res.optBoolean("local")) Uri.fromFile(File(url)) else Uri.parse(url))
@@ -192,7 +192,7 @@ class PlaybackService : MediaSessionService() {
         Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED -> "lista nueva"
         else -> "repetir"
       }
-      Fase0Log.log("suena (${player.currentMediaItemIndex + 1}/${player.mediaItemCount}, $why): ${item?.mediaMetadata?.artist} — ${item?.mediaMetadata?.title}")
+      MusifyLog.log("suena (${player.currentMediaItemIndex + 1}/${player.mediaItemCount}, $why): ${item?.mediaMetadata?.artist} — ${item?.mediaMetadata?.title}")
       save()
     }
 
@@ -210,24 +210,24 @@ class PlaybackService : MediaSessionService() {
         Player.PLAY_WHEN_READY_CHANGE_REASON_SUPPRESSED_TOO_LONG -> "demasiado rato en silencio"
         else -> "otro motivo ($reason)"
       }
-      Fase0Log.log("${if (playWhenReady) "reanudar" else "pausa"}: $why")
+      MusifyLog.log("${if (playWhenReady) "reanudar" else "pausa"}: $why")
       if (!playWhenReady) save()
     }
 
     override fun onPlaybackSuppressionReasonChanged(reason: Int) {
       when (reason) {
-        Player.PLAYBACK_SUPPRESSION_REASON_NONE -> Fase0Log.log("vuelve el sonido")
-        Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS -> Fase0Log.log("en silencio un momento: otro sonido (notificación, llamada...)")
-        else -> Fase0Log.log("en silencio un momento (motivo $reason)")
+        Player.PLAYBACK_SUPPRESSION_REASON_NONE -> MusifyLog.log("vuelve el sonido")
+        Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS -> MusifyLog.log("en silencio un momento: otro sonido (notificación, llamada...)")
+        else -> MusifyLog.log("en silencio un momento (motivo $reason)")
       }
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-      Fase0Log.log(if (isPlaying) "sonando" else "parado (${state()})")
+      MusifyLog.log(if (isPlaying) "sonando" else "parado (${state()})")
     }
 
     override fun onPlayerError(error: PlaybackException) {
-      Fase0Log.log("error: ${error.errorCodeName} ${error.message} (${network()})")
+      MusifyLog.log("error: ${error.errorCodeName} ${error.message} (${network()})")
       val item = player.currentMediaItem ?: return
       val id = trackId(item) ?: return
       // Siempre con URL nueva: la anterior puede haber caducado o ser de otra red.
@@ -236,7 +236,7 @@ class PlaybackService : MediaSessionService() {
         error.errorCode !in 2000..2999 -> skip("no se puede reproducir")
         network() == "sin red" -> {
           waitingForNetwork = true
-          Fase0Log.log("esperando a que vuelva la red")
+          MusifyLog.log("esperando a que vuelva la red")
         }
         retries < 3 -> {
           retries++
@@ -250,7 +250,7 @@ class PlaybackService : MediaSessionService() {
   /** Sigue en la misma canción y el mismo segundo. */
   private fun resume(why: String) {
     val at = player.currentPosition
-    Fase0Log.log("$why desde ${at / 1000} s")
+    MusifyLog.log("$why desde ${at / 1000} s")
     player.seekTo(player.currentMediaItemIndex, at)
     player.prepare()
     player.play()
@@ -259,7 +259,7 @@ class PlaybackService : MediaSessionService() {
   /** Esta canción no sale: a la siguiente, para que la música no se pare. */
   private fun skip(why: String) {
     val title = player.currentMediaItem?.mediaMetadata?.title
-    Fase0Log.log("se salta ($why)")
+    MusifyLog.log("se salta ($why)")
     MusifyCore.emit("player-error", JSONObject().put("message", "No se pudo reproducir «$title»: $why").toString())
     retries = 0
     if (player.hasNextMediaItem()) {
@@ -280,7 +280,7 @@ class PlaybackService : MediaSessionService() {
           if (lib != null) {
             worker.execute {
               val error = MusifyCore.recordPlay(lib.toString())
-              if (error.isNotEmpty()) Fase0Log.log("historial: ERROR $error")
+              if (error.isNotEmpty()) MusifyLog.log("historial: ERROR $error")
             }
           }
         }
@@ -326,7 +326,7 @@ class PlaybackService : MediaSessionService() {
   private fun restore() {
     val saved = loadSaved() ?: return
     player.setMediaItems(saved.mediaItems, saved.startIndex, saved.startPositionMs)
-    Fase0Log.log("cola recuperada: ${saved.mediaItems.size} canciones, en la ${saved.startIndex + 1}")
+    MusifyLog.log("cola recuperada: ${saved.mediaItems.size} canciones, en la ${saved.startIndex + 1}")
   }
 
   // --- Registro y red -----------------------------------------------------------------------
@@ -343,7 +343,7 @@ class PlaybackService : MediaSessionService() {
     main.postDelayed({
       if (player.mediaItemCount > 0 && player.playWhenReady) {
         val doze = getSystemService(PowerManager::class.java)?.isDeviceIdleMode == true
-        Fase0Log.log("vivo: ${player.currentMediaItemIndex + 1}/${player.mediaItemCount} en ${player.currentPosition / 1000} s, ${if (player.isPlaying) "sonando" else state()} (${network()}${if (doze) ", reposo profundo" else ""})")
+        MusifyLog.log("vivo: ${player.currentMediaItemIndex + 1}/${player.mediaItemCount} en ${player.currentPosition / 1000} s, ${if (player.isPlaying) "sonando" else state()} (${network()}${if (doze) ", reposo profundo" else ""})")
       }
       heartbeat()
     }, 60_000)
@@ -364,7 +364,7 @@ class PlaybackService : MediaSessionService() {
     val callback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
         main.postDelayed({
-          Fase0Log.log("red: ${network()}")
+          MusifyLog.log("red: ${network()}")
           if (waitingForNetwork) {
             waitingForNetwork = false
             retries = 0
@@ -374,7 +374,7 @@ class PlaybackService : MediaSessionService() {
       }
 
       override fun onLost(network: Network) {
-        Fase0Log.log("red: perdida")
+        MusifyLog.log("red: perdida")
       }
     }
     cm.registerDefaultNetworkCallback(callback)

@@ -14,6 +14,15 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Clave con la que se firman las versiones (release). Vive fuera del repositorio, como la del
+// actualizador de escritorio: en el PC, en ~/.musify; en GitHub Actions, en los secretos
+// ANDROID_KEYSTORE y ANDROID_KEYSTORE_PASSWORD (ver .github/workflows/build.yml).
+// Si se pierde, los móviles no aceptan la versión siguiente sin desinstalar: hay que guardarla.
+val musifyKeys = File(System.getProperty("user.home"), ".musify")
+val releaseKeystore = System.getenv("ANDROID_KEYSTORE_FILE")?.let(::File) ?: File(musifyKeys, "android.jks")
+val releasePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+    ?: File(musifyKeys, "android.password").takeIf { it.exists() }?.readText()?.trim()
+
 android {
     compileSdk = 37
     namespace = "dev.musify.desktop"
@@ -24,6 +33,16 @@ android {
         targetSdk = 37
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (releaseKeystore.exists() && releasePassword != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = releasePassword
+                keyAlias = "musify"
+                keyPassword = releasePassword
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -39,6 +58,8 @@ android {
             }
         }
         getByName("release") {
+            // Sin la clave, el APK sale sin firmar (y Android no lo instala).
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                enable = true
             }

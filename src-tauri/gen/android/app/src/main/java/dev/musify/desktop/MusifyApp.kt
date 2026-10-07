@@ -2,14 +2,14 @@ package dev.musify.desktop
 
 import android.app.Application
 
-/** Apunta en el registro de la prueba cualquier cierre por error (ver Fase0Log). */
+/** Apunta en el registro cualquier cierre por error (ver MusifyLog). */
 class MusifyApp : Application() {
   override fun onCreate() {
     super.onCreate()
-    Fase0Log.init(this)
+    MusifyLog.init(this)
     val previous = Thread.getDefaultUncaughtExceptionHandler()
     Thread.setDefaultUncaughtExceptionHandler { thread, error ->
-      Fase0Log.log("CIERRE en ${thread.name}: ${error.stackTraceToString().take(4000)}")
+      MusifyLog.log("CIERRE en ${thread.name}: ${error.stackTraceToString().take(4000)}")
       previous?.uncaughtException(thread, error)
     }
   }

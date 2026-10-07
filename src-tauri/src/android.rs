@@ -6,7 +6,6 @@
 //! solo (p. ej. tras cerrar la app, al pulsar "play" en los auriculares), la abre él (`init`).
 
 use crate::db::Db;
-use crate::deezer::Deezer;
 use crate::library::LibTrack;
 use crate::player;
 use crate::youtube::{TrackQuery, YouTubeMusic};
@@ -14,7 +13,6 @@ use crate::ytdlp::YtDlp;
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
 use jni::sys::{jboolean, jstring};
-use serde::Serialize;
 use serde_json::{Value, json};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -26,9 +24,8 @@ use tauri::{AppHandle, Emitter};
 static RT: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
     tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().expect("runtime")
 });
-static DEEZER: LazyLock<Deezer> = LazyLock::new(Deezer::new);
-/// Registro de la prueba (el mismo que escribe Kotlin, ver Fase0Log.kt).
-const LOG: &str = "/data/data/dev.musify.desktop/files/fase0.log";
+/// El registro de la app (el mismo que escribe Kotlin, ver MusifyLog.kt).
+const LOG: &str = "/data/data/dev.musify.desktop/files/musify.log";
 
 struct Core {
     db: Db,
@@ -157,54 +154,4 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_emit<'l>(
         let value: Value = serde_json::from_str(&payload).unwrap_or(Value::Null);
         let _ = app.emit(&event, value);
     }
-}
-
-// --- Prueba de la fase 0 (Fase0Activity): una lista de discos de Deezer ----------------------
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Item {
-    id: u64,
-    title: String,
-    artist: String,
-    album: String,
-    duration: u32,
-    cover: Option<String>,
-}
-
-/// Canciones de los discos que se encuentren con cada búsqueda (una por línea), en orden.
-async fn playlist(queries: &str) -> Result<Vec<Item>, String> {
-    let mut items = vec![];
-    for q in queries.lines().map(str::trim).filter(|q| !q.is_empty()) {
-        let found = DEEZER.search(q).await?;
-        let Some(first) = found.albums.first() else { continue };
-        let album = DEEZER.album(first.id).await?;
-        for t in album.tracks {
-            items.push(Item {
-                id: t.id,
-                title: t.title,
-                artist: t.artist.name,
-                album: album.title.clone(),
-                duration: t.duration,
-                cover: album.cover_xl.clone().or(album.cover_big.clone()),
-            });
-        }
-    }
-    Ok(items)
-}
-
-/// `MusifyCore.playlist(queries)`: JSON con las canciones, o `{"error": ...}`.
-#[unsafe(no_mangle)]
-pub extern "system" fn Java_dev_musify_desktop_MusifyCore_playlist<'l>(
-    mut env: JNIEnv<'l>,
-    _class: JClass<'l>,
-    queries: JString<'l>,
-) -> jstring {
-    install_panic_hook();
-    let queries = from_java(&mut env, &queries);
-    let out = match RT.block_on(playlist(&queries)) {
-        Ok(items) => serde_json::to_string(&items).unwrap_or_default(),
-        Err(e) => json!({ "error": e }).to_string(),
-    };
-    to_java(&mut env, out)
 }
