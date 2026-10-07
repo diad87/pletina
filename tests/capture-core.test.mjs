@@ -63,6 +63,20 @@ function roundedEndFixture(duration) {
   flush()
   return { bytes: concat(fixture().init, ...clusters), frames: times.length, duration }
 }
+function nativeFinalAacFixture() {
+  // Repeat the local FFmpeg AAC silence packet with its unchanged48kHz config.
+  // 11800 complete1024-sample frames have the exact rational endpoint from q9's
+  // regression:251.73333333333332. No fixture timestamp is rounded to the UI clock.
+  const encoded = JSON.parse(readFileSync(new URL('fixtures/mse-audio.json', import.meta.url), 'utf8')).mse[0]
+  const original = Buffer.from(encoded.base64, 'base64'), frames = 11800
+  const moofAt = original.indexOf(Buffer.from('moof')) - 4, moofSize = original.readUInt32BE(moofAt)
+  const init = original.subarray(0, moofAt), moof = Buffer.from(original.subarray(moofAt, moofAt + moofSize))
+  moof.writeUInt32BE(frames, moof.indexOf(Buffer.from('trun')) + 8)
+  const mdat = Buffer.alloc(8 + frames * 6)
+  mdat.writeUInt32BE(mdat.length); mdat.write('mdat', 4)
+  mdat.fill(Buffer.from('211004608c1c', 'hex'), 8)
+  return { bytes: new Uint8Array(Buffer.concat([init, moof, mdat])), frames, end: frames * 1024 / 48000, clock: 251.733333, mime: encoded.mime }
+}
 const content = { state: 'content', sourceBound: true, signals: ['presented-video-id', 'matching-visible-title'] }
 const ad = { state: 'ad', sourceBound: true, signals: ['ad-marker'] }
 function present(tracker, source, duration = 0.06) {
@@ -353,6 +367,62 @@ test('real decimal EOF regressions publish the final Opus packet in both modes w
       assert.equal(tracker.finish(source, terminal).complete, !experimental, 'experimental1ms initial coded gap is intentionally still incomplete')
       if (!experimental) assert.throws(() => tracker.pull(source, { ...terminal, position: duration - 1e-12 }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
     }
+  }
+})
+
+test('AAC native microsecond terminal clock releases its exact last packet only after complete final certification', () => {
+  for (const experimental of [false, true]) {
+    const { ProgressiveTracker, timeAtOrAfter } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental }), source = tracker.createSource(), f = nativeFinalAacFixture()
+    const buffer = tracker.createBuffer(source, f.mime)
+    buffer.native = {}; source.native = { readyState: 'ended' }
+    tracker.append(buffer, f.bytes); source.successfulEndOfStream = true
+    assert.equal(tracker.inventory(source, true).samples.at(-1).end, 251.73333333333332)
+    assert.equal(timeAtOrAfter(f.clock, f.end), false, 'the general comparison must remain strict')
+    for (let position = 0; position < f.clock; position += 0.25) tracker.observe(source, content, { position, now: position * 1000, duration: f.clock })
+    tracker.observe(source, content, { position: f.clock, now: f.clock * 1000, duration: f.clock })
+    const terminal = { source, position: f.clock, duration: f.clock, ended: true, paused: true, seeking: false, playbackRate: 1, readyState: 4, updating: false, sourceEnded: true, successfulEndOfStream: true, sourceReadyState: 'ended', audioRanges: [{ start: 0, end: f.clock }] }
+    const before = tracker.pull(source, terminal)
+    assert.equal(source.progress.emitted.has(f.frames - 1), false, 'terminal flags alone must never authorize publication')
+    assert.equal(source.nativeFinalClock, undefined)
+    tracker.finish(source, terminal)
+    const after = tracker.pull(source, terminal)
+    assert.equal(source.progress.emitted.has(f.frames - 1), true)
+    assert.equal([...before, ...after].reduce((sum, unit) => sum + unit.frames, 0), f.frames)
+    assert.equal(after.at(-1).rangeEnd, f.end, 'retain rational timestamps and original sample payloads')
+    assert.equal(tracker.finish(source, terminal).complete, true)
+    const repeated = tracker.pull(source, terminal)
+    assert.equal(repeated.length, 0, 'second finish and publication cannot repeat a sample')
+    for (const change of [{ ended: false }, { paused: false }, { position: f.clock - 1e-12 }, { duration: f.end }, { audioRanges: [{ start: 0, end: f.end }] }])
+      assert.equal(tracker.clockCovers(source, { ...terminal, ...change }, f.end), false, 'proof is tied to the original native terminal snapshot')
+    for (const [object, key, value] of [[tracker, 'epoch', 2], [source.progress, 'epoch', 2], [source, 'native', { readyState: 'ended' }], [buffer, 'native', {}], [buffer, 'timelineSettings', { ...buffer.timelineSettings, timestampOffset: 0.000001 }], [source, 'successfulEndOfStream', false]]) {
+      const saved = object[key]
+      object[key] = value
+      assert.equal(tracker.clockCovers(source, terminal, f.end), false, `a changed ${key} cannot reuse terminal permission`)
+      object[key] = saved
+    }
+    source.buffers[0] = { ...buffer }
+    assert.equal(tracker.clockCovers(source, terminal, f.end), false, 'a copied buffer is a different captured session')
+    source.buffers[0] = buffer
+    buffer.version++
+    assert.equal(tracker.clockCovers(source, terminal, f.end), false, 'a changed byte inventory revokes the final clock permission')
+  }
+})
+
+test('native microsecond permission fails closed without every final flag, exact range, clean history and full observations', () => {
+  for (const scenario of ['running', 'not-paused', 'no-eof', 'failed-eof', 'source-open', 'duration-different', 'off-grid', 'tail0.8ms', 'tail0.5ms', 'native-range-short', 'late-ad', 'unobserved-tail']) {
+    const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1 }), source = tracker.createSource(), f = nativeFinalAacFixture()
+    const buffer = tracker.createBuffer(source, f.mime)
+    buffer.native = {}; source.native = { readyState: 'ended' }
+    tracker.append(buffer, f.bytes); source.successfulEndOfStream = true
+    const clock = scenario === 'off-grid' ? f.clock - 1e-12 : scenario === 'tail0.8ms' ? f.clock - 0.0008 : scenario === 'tail0.5ms' ? f.clock - 0.0005 : f.clock
+    for (let position = 0; position < clock; position += 0.25) tracker.observe(source, content, { position, now: position * 1000, duration: clock })
+    tracker.observe(source, scenario === 'late-ad' ? ad : content, { position: clock, now: clock * 1000, duration: clock })
+    const terminal = { source, position: clock, duration: clock, ended: scenario !== 'running', paused: scenario !== 'not-paused', seeking: false, playbackRate: 1, readyState: 4, updating: false, sourceEnded: scenario !== 'no-eof', successfulEndOfStream: scenario !== 'failed-eof', sourceReadyState: scenario === 'source-open' ? 'open' : 'ended', audioRanges: [{ start: 0, end: scenario === 'native-range-short' ? f.clock - 0.000002 : f.clock }] }
+    if (scenario === 'duration-different') terminal.duration = f.end
+    if (scenario === 'unobserved-tail') source.progress.ranges.at(-1).end -= 0.0005
+    assert.throws(() => tracker.finish(source, terminal), codeIs(scenario === 'late-ad' ? 'CAPTURE_IDENTITY_UNCERTAIN' : 'CAPTURE_PARTIAL_PRESENTATION'), scenario)
+    assert.equal(source.nativeFinalClock, undefined, scenario)
+    assert.equal(source.progress.emitted.size, 0, scenario)
   }
 })
 
@@ -1191,6 +1261,44 @@ test('orchestrator EOF and normal certificate share the roundoff-only comparison
       assert.equal(units.reduce((count, unit) => count + unit.frames, 0), f.frames)
       assert.equal(units.at(-1).rangeEnd, duration === 212.981 ? 212.98100000000002 : 223.48100000000002)
     }
+  }
+})
+
+test('orchestrator publishes the final AAC packet at a certified native microsecond endpoint in both modes', async () => {
+  for (const experimental of [false, true]) {
+    const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = [], f = nativeFinalAacFixture()
+    let now = 0
+    media.duration = f.clock
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+    const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
+    class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/mp4;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
+    const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => now }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 33, __musifyProgressiveExperiment: experimental, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    vm.runInContext(orchestratorCode, context)
+    const source = new scope.MediaSource(), buffer = source.addSourceBuffer(f.mime)
+    media.src = scope.URL.createObjectURL(source)
+    buffer.buffered = { length: 1, start: () => 0, end: () => f.clock }
+    buffer.appendBuffer(f.bytes)
+    media.dispatchEvent(new Event('playing'))
+    for (let at = 0.25; at < f.clock; at += 0.25) { now = at * 1000; media._currentTime = at; media.dispatchEvent(new Event('timeupdate')) }
+    source.endOfStream()
+    now = f.clock * 1000; media._currentTime = f.clock
+    media.dispatchEvent(new Event('timeupdate')) // Still playing: no microsecond permission.
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(messages.some(m => m.type === 'ended' || m.type === 'error'), false)
+    assert.equal(messages.some(m => m.kind === 'seg' && m.rangeEnd === f.end), false)
+    media.ended = true; media.paused = true; media.dispatchEvent(new Event('ended'))
+    for (let attempts = 0; attempts < 10 && !messages.some(m => m.type === 'ended' || m.type === 'error'); attempts++) await new Promise(resolve => setImmediate(resolve))
+    const error = messages.find(m => m.type === 'error'), ended = messages.find(m => m.type === 'ended'), units = messages.filter(m => m.kind === 'seg')
+    assert.equal(error, undefined)
+    assert.equal(ended?.eof, true)
+    assert.equal(ended?.complete, true)
+    assert.equal(ended?.end, f.end)
+    assert.equal(ended?.duration, f.clock)
+    assert.equal(units.reduce((sum, unit) => sum + unit.frames, 0), f.frames)
+    assert.equal(units.at(-1).rangeEnd, f.end)
+    assert.equal(units.at(-1).verified, true)
   }
 })
 

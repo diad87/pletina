@@ -105,11 +105,13 @@
     const inventory = tracker.inventory(source, true), settings = source.buffers[0].timelineSettings
     const end = inventory.samples.reduce((end, s) => Math.max(end, tracker.sampleRange(s, settings).end), -Infinity)
     if (!Number.isFinite(end)) return false
-    if (!core.timeAtOrAfter(snapshot.position, end)) {
+    if (!core.timeAtOrAfter(snapshot.position, end) && !core.nativeFinalClockCandidate(snapshot, end)) {
       // Even sub-millisecond codec quantization is not proof of an unpresented tail.
       // A running source may reach it on the next observation. A native terminal
-      // clock before it is explicit incompleteness, never silently inferred padding.
-      if (snapshot.ended) throw new core.CaptureError('CAPTURE_UNPRESENTED_BYTES', `Native ended before the final coded sample: clock=${snapshot.position}, end=${end}`)
+      // clock before it is explicit incompleteness. The sole exception is native
+      // microsecond representation at a real terminal EOF; tracker.finish below
+      // must certify it before pull may deliver that last sample.
+      if (snapshot.ended) throw new core.CaptureError('CAPTURE_UNPRESENTED_BYTES', `Native ended before the final coded sample: clock=${snapshot.position}, end=${end}, duration=${snapshot.duration}, ended=${snapshot.ended}, paused=${snapshot.paused}, eof=${snapshot.sourceEnded}, successfulEndOfStream=${snapshot.successfulEndOfStream}, sourceReadyState=${snapshot.sourceReadyState}, native=${JSON.stringify(snapshot.audioRanges)}`)
       return false
     }
     // Normal mode verifies the complete clean history BEFORE putting any bytes in

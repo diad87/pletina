@@ -8,6 +8,20 @@
   // point roundoff, not codec quantum or the ledger's presentation tolerance.
   const timeAtOrAfter = (actual, expected) => Number.isFinite(actual) && Number.isFinite(expected) &&
     (actual >= expected || expected - actual <= 4 * Number.EPSILON * Math.max(1, Math.abs(actual), Math.abs(expected)))
+  // Chromium's terminal native clock can truncate a rational sample timestamp to
+  // whole microseconds. This is only a candidate: finish must still prove EOF,
+  // immutable bytes, native ranges and the clean presentation before authorizing it.
+  const nativeFinalClockCandidate = (snapshot, end) => {
+    const clock = snapshot?.position, range = snapshot?.audioRanges?.at(-1)
+    return Number.isFinite(clock) && Number.isFinite(end) && clock >= 0 &&
+      snapshot.ended === true && snapshot.paused === true && snapshot.sourceEnded === true &&
+      snapshot.successfulEndOfStream === true && snapshot.sourceReadyState === 'ended' &&
+      snapshot.source?.successfulEndOfStream === true && snapshot.source?.native?.readyState === 'ended' &&
+      snapshot.seeking === false && snapshot.playbackRate === 1 && snapshot.updating === false && snapshot.readyState >= 2 &&
+      clock === snapshot.duration && clock === Math.round(clock * 1e6) / 1e6 &&
+      end > clock && end - clock < 0.000001 && Math.floor(end * 1e6) / 1e6 === clock &&
+      Number.isFinite(range?.end) && Math.abs(range.end - end) <= 0.000001
+  }
   const copy = (data) => ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength).slice() : new Uint8Array(data).slice()
   const join = (chunks) => {
     const out = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0))
@@ -479,6 +493,16 @@
       if (!certificate || certificate.epoch !== this.epoch || source.progress.epoch !== this.epoch || certificate.buffer !== buffer || certificate.native !== buffer.native || certificate.version !== buffer.version || certificate.settings !== JSON.stringify(buffer.timelineSettings ?? settingsOf()) || !source.sealed) fail('CAPTURE_PARTIAL_PRESENTATION', 'The complete-source certificate no longer identifies this immutable source and epoch')
       return certificate
     }
+    clockCovers(source, snapshot, end) {
+      if (timeAtOrAfter(snapshot.position, end)) return true
+      const proof = source.nativeFinalClock, buffer = source.buffers[0]
+      return !!proof && proof.epoch === this.epoch && source.progress.epoch === this.epoch &&
+        proof.buffer === buffer && proof.native === buffer.native && proof.nativeSource === source.native &&
+        proof.version === buffer.version && proof.settings === JSON.stringify(buffer.timelineSettings ?? settingsOf()) &&
+        proof.position === snapshot.position && proof.duration === snapshot.duration &&
+        proof.ranges === JSON.stringify(snapshot.audioRanges) && source.observations.at(-1)?.position === snapshot.position &&
+        nativeFinalClockCandidate(snapshot, proof.end) && timeAtOrAfter(proof.end, end)
+    }
     pull(source, snapshot, { maxSeconds = 0.5, maxBytes = 4 * 1024 * 1024 } = {}) {
       if (!source || source.error) { if (source?.error) throw source.error; return [] }
       if (source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false) return []
@@ -487,13 +511,13 @@
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
       const certificate = this.experimental ? null : this.completeCertificate(source, buffer)
-      if (certificate && (!timeAtOrAfter(snapshot.position, certificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
+      if (certificate && (!this.clockCovers(source, snapshot, certificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
       const units = [], available = inventory.samples.map(s => this.sampleRange(s, settings))
       const normalEmitted = []
       for (let first = 0; first < available.length;) {
         const eligible = index => {
           const r = available[index]
-          return r.end > r.start && r.start >= 0 && timeAtOrAfter(snapshot.position, r.end) && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
+          return r.end > r.start && r.start >= 0 && this.clockCovers(source, snapshot, r.end) && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
         }
         if (!eligible(first)) { first++; continue }
         let until = first + 1, bytes = inventory.init.length + inventory.samples[first].size + 128
@@ -550,7 +574,8 @@
       const knownNativeRanges = mergeRanges([...ranges, ...previousRanges], coverageEpsilon)
       const nativeEnded = snapshot.ended === true && Math.abs(snapshot.position - snapshot.duration) <= codecEpsilon
       const knownNative = r => covers(ranges, r.start, r.end, codecEpsilon) || covers(knownNativeRanges, r.start, r.end, coverageEpsilon)
-      if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || !timeAtOrAfter(snapshot.position, end) || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}`)
+      const quantizedFinalClock = !timeAtOrAfter(snapshot.position, end) && nativeFinalClockCandidate(snapshot, end)
+      if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || (!timeAtOrAfter(snapshot.position, end) && !quantizedFinalClock) || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, duration=${snapshot.duration}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}, ended=${snapshot.ended}, paused=${snapshot.paused}, sourceReadyState=${snapshot.sourceReadyState}, successfulEndOfStream=${snapshot.successfulEndOfStream}, quantizedFinalClock=${quantizedFinalClock}`)
       if (!this.experimental) {
         if (source.observations[0]?.position !== 0 || !covers(source.progress.ranges, 0, end, coverageEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe capture requires the whole source presentation from zero; a seek or missing beginning remains incomplete')
         if (!source.completeCertificate) {
@@ -563,6 +588,12 @@
         const certificate = this.completeCertificate(source, buffer)
         if (snapshot.audioRanges.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', 'The native audio range changed after complete-source certification')
         source.verifiedFinalEpoch = this.epoch
+      }
+      if (quantizedFinalClock) {
+        // Never authorize in pull from an ended-looking snapshot alone. This record
+        // is issued only AFTER every final gate above succeeds, and cannot survive
+        // another epoch, append, setting, native buffer, clock or range mutation.
+        source.nativeFinalClock = { epoch: this.epoch, buffer, native: buffer.native, nativeSource: source.native, version: buffer.version, settings: JSON.stringify(settings), position: snapshot.position, duration: snapshot.duration, ranges: JSON.stringify(snapshot.audioRanges), end }
       }
       return { eof: true, complete: covers(this.coverage, 0, end, coverageEpsilon), duration: snapshot.duration, end, ranges: this.coverage.map(r => ({ ...r })) }
     }
@@ -693,5 +724,5 @@
     }
     return { tracker, sourceOf, snapshotOf, rateStatistics }
   }
-  globalThis.__musifyCaptureCore = { CaptureError, timeAtOrAfter, parseWebMOpus, inspectWebMPrefix, remuxWebM, projectTimeline, SessionTracker, ProgressiveTracker, mergeRanges, install }
+  globalThis.__musifyCaptureCore = { CaptureError, timeAtOrAfter, nativeFinalClockCandidate, parseWebMOpus, inspectWebMPrefix, remuxWebM, projectTimeline, SessionTracker, ProgressiveTracker, mergeRanges, install }
 })()

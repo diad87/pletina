@@ -135,6 +135,20 @@ test('AAC remux emits selected samples only, with original timestamps and decode
   assert.throws(() => remux(inventory, 0, 5), /Invalid remux sample selection/)
 })
 
+test('AAC final rational timestamp survives inventory and remux despite the shorter native microsecond clock', () => {
+  const frames = 11800, bytes = synthetic({ count: frames }), inventory = inspectPrefix(bytes, { final: true })
+  const end = frames * 1024 / 48000, clock = 251.733333
+  assert.equal(end, 251.73333333333332)
+  assert.equal(inventory.samples.at(-1).end, end)
+  assert(end > clock && end - clock < 0.000001)
+  const head = remux(inventory, 0, frames - 1, 1), tail = remux(inventory, frames - 1, 1, 2)
+  const parsed = parse(cat(head.init, head.media, tail.media))
+  assert.equal(parsed.end, end)
+  assert.equal(parsed.frames.length, frames)
+  const mdat = boxes(Buffer.from(tail.media)).find(b => b.type === 'mdat')
+  assert.deepEqual(Buffer.from(tail.media).subarray(mdat.start, mdat.end), packet)
+})
+
 test('sample defaults follow trun over tfhd over trex without guessing missing durations', () => {
   assert.equal(parse(synthetic({ defaultDuration: 0, defaultSize: 0, trunFlags: 0x701 })).frames.length, 2)
   let init = change(baseInit, 'moov/mvex/trex', 12, 1024)
