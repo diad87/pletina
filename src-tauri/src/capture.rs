@@ -313,6 +313,54 @@ impl TimelineSettings {
         settings.valid().then_some(settings)
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum CaptureSurface {
+    Music,
+    Youtube,
+}
+impl CaptureSurface {
+    fn origin(self) -> &'static str {
+        match self {
+            Self::Music => "https://music.youtube.com",
+            Self::Youtube => "https://www.youtube.com",
+        }
+    }
+    fn initial(benchmark: bool, configured: Option<&str>) -> Self {
+        if benchmark && configured == Some("youtube") {
+            Self::Youtube
+        } else {
+            Self::Music
+        }
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+struct TimelineFailure {
+    previous: TimelineSettings,
+    next_window_start: f64,
+    mime: String,
+}
+impl TimelineFailure {
+    fn parse(error: &str) -> Option<Self> {
+        let rest = error.strip_prefix(
+            "CAPTURE_UNSUPPORTED_TIMELINE: SourceBuffer settings changed: previous=",
+        )?;
+        let (previous, rest) = rest.split_once(", current=")?;
+        let (current, mime) = rest.rsplit_once(", mime=")?;
+        if mime.len() > 128 || !mime.starts_with("audio/") {
+            return None;
+        }
+        let previous = TimelineSettings::from_message(&serde_json::from_str(previous).ok()?)?;
+        let current = TimelineSettings::from_message(&serde_json::from_str(current).ok()?)?;
+        // The next track's end varies. It must not disguise the same incompatible
+        // transition away from this exact original presentation window.
+        Some(Self {
+            previous,
+            next_window_start: current.append_window_start,
+            mime: mime.into(),
+        })
+    }
+}
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 struct Range {
     start: f64,
@@ -508,6 +556,10 @@ struct Track {
     done_ms: Option<u64>,
     error: Option<String>,
     soft_error: Option<String>,
+    recovery_blocked: bool,
+    timeline_failures: Vec<TimelineFailure>,
+    capture_surface: CaptureSurface,
+    restart_from_zero: bool,
     why: Option<String>,
     last_diagnostic: Option<String>,
     session_state: SessionState,
@@ -576,6 +628,13 @@ impl Track {
             done_ms: None,
             error: None,
             soft_error: None,
+            recovery_blocked: false,
+            timeline_failures: Vec::new(),
+            capture_surface: CaptureSurface::initial(
+                std::env::var_os("MUSIFY_BENCH").is_some(),
+                std::env::var("MUSIFY_BENCH_SURFACE").ok().as_deref(),
+            ),
+            restart_from_zero: false,
             why: None,
             last_diagnostic: None,
             session_state: SessionState::unknown(generation, epoch),
@@ -638,6 +697,7 @@ impl Track {
             ..SessionState::unknown(generation, epoch)
         };
         self.target = target;
+        self.restart_from_zero = false;
         self.proof = None;
         self.accepted = None;
         self.last_unit = None;
@@ -665,6 +725,50 @@ impl Track {
         self.proof = None;
         self.epoch_done = true;
         self.recovering = false;
+    }
+    fn report_failure(&mut self, error: String, recoverable: bool) {
+        if let Some(fingerprint) = TimelineFailure::parse(&error) {
+            if self.timeline_failures.contains(&fingerprint) || self.timeline_failures.len() >= 16 {
+                self.recovery_blocked = true;
+                let error = format!(
+                    "CAPTURE_UNSUPPORTED_TIMELINE: automatic recovery stopped after a repeated incompatible SourceBuffer transition; confirmed audio is retained. {error}"
+                );
+                // Override an earlier soft notice so the terminal reason is visible.
+                if self.ready() {
+                    self.soft_error = None;
+                } else {
+                    self.error = None;
+                }
+                self.fail(error);
+                return;
+            }
+            if self.capture_surface == CaptureSurface::Music
+                && fingerprint.mime.starts_with("audio/mp4")
+            {
+                self.capture_surface = CaptureSurface::Youtube;
+                self.restart_from_zero = true;
+            }
+            self.timeline_failures.push(fingerprint);
+        }
+        self.fail(error);
+        self.recovering = recoverable && !self.recovery_blocked && self.resets < MAX_RESETS;
+    }
+    fn recovery_allowed(&self) -> bool {
+        !self.recovery_blocked && self.resets < MAX_RESETS
+    }
+    fn require_recovery(&self) -> Result<(), String> {
+        if self.recovery_blocked {
+            Err(self
+                .soft_error
+                .as_ref()
+                .or(self.error.as_ref())
+                .cloned()
+                .unwrap_or_else(|| {
+                    "CAPTURE_UNSUPPORTED_TIMELINE: automatic recovery is stopped".into()
+                }))
+        } else {
+            Ok(())
+        }
     }
     fn stalled(&self, now: Instant) -> bool {
         !self.epoch_done
@@ -707,11 +811,12 @@ impl Track {
         // A seek cannot certify quantization between old epochs. Re-present the
         // original source from zero instead of repeating the same sub-packet seek.
         // This does not fill or forgive any gap: a new complete proof is required.
-        if self.eof
-            && self.ranges.windows(2).any(|r| {
-                let gap = r[1].start - r[0].end;
-                gap > RANGE_EPSILON && gap <= 0.001 + RANGE_EPSILON
-            })
+        if self.restart_from_zero
+            || (self.eof
+                && self.ranges.windows(2).any(|r| {
+                    let gap = r[1].start - r[0].end;
+                    gap > RANGE_EPSILON && gap <= 0.001 + RANGE_EPSILON
+                }))
         {
             0.0
         } else {
@@ -1014,6 +1119,11 @@ async fn begin_locked(
     if !valid_id(id) {
         return Err("id de vídeo no válido".into());
     }
+    if !refresh {
+        if let Some(track) = STATE.lock().unwrap().tracks.get(id) {
+            track.require_recovery()?;
+        }
+    }
     let next_slot = if foreground {
         None
     } else {
@@ -1203,7 +1313,15 @@ async fn create_window(
     at: Option<f64>,
 ) -> Result<(), String> {
     let start = at.map(|s| format!("#musify-t={s:.6}")).unwrap_or_default();
-    let url = format!("https://music.youtube.com/watch?v={id}{start}");
+    let surface = STATE
+        .lock()
+        .unwrap()
+        .tracks
+        .get(id)
+        .filter(|t| t.generation == generation)
+        .map(|t| t.capture_surface)
+        .ok_or("CAPTURE_CANCELLED: capture surface lease was replaced")?;
+    let url = format!("{}/watch?v={id}{start}", surface.origin());
     let target = serde_json::to_string(id).map_err(|e| e.to_string())?;
     let progressive = progressive_experiment_enabled();
     let audit = audit_enabled();
@@ -1466,12 +1584,18 @@ struct SkipValidationReply {
     validation: Value,
 }
 impl SkipValidationReply {
-    fn validate(output: &str, request: &SkipRequest) -> Result<(), String> {
+    fn validate(output: &str, request: &SkipRequest, expected_origin: &str) -> Result<(), String> {
         // ExecuteScript returns a JSON object directly, not Runtime.evaluate's
         // RemoteObject envelope. Keep the two contracts distinct and fail closed.
         let reply: Self = serde_json::from_str(output)
             .map_err(|_| "validation-invalid-execute-script-reply".to_string())?;
-        if reply.origin != "https://music.youtube.com" {
+        if ![
+            CaptureSurface::Music.origin(),
+            CaptureSurface::Youtube.origin(),
+        ]
+        .contains(&expected_origin)
+            || reply.origin != expected_origin
+        {
             return Err("validation-origin-mismatch".into());
         }
         request.validation_result(&reply.validation)
@@ -1606,7 +1730,7 @@ fn journal_state(id: &str, t: &Track) {
     }
     let snapshot = json!({"videoId":id,"api":4,"revision":t.revision,"generation":t.generation,"epoch":t.epoch,
         "complete":t.complete,"eof":t.eof,"eofEnd":t.eof_end,"duration":t.duration,"ranges":t.ranges,
-        "error":t.error,"softError":t.soft_error,"bytesQuarantined":t.quarantined,"pendingProof":t.proof,
+        "error":t.error,"softError":t.soft_error,"recoveryBlocked":t.recovery_blocked,"captureSurface":t.capture_surface,"recovering":t.recovering,"bytesQuarantined":t.quarantined,"pendingProof":t.proof,
         "certificates":t.certificates,"sessionState":t.session_state,"sessionStates":t.session_states,
         "unknownAuthUnits":t.unknown_auth_units,"signedInUnits":t.signed_in_units,"currentUnits":t.units.len(),"allPublishedUnits":true});
     BENCH_LEDGER
@@ -1621,7 +1745,7 @@ fn source_kind(source: &str) -> Option<bool> {
         return None;
     }
     match url.host_str()? {
-        "music.youtube.com" => Some(true),
+        "music.youtube.com" | "www.youtube.com" => Some(true),
         "consent.youtube.com" => Some(false),
         _ => None,
     }
@@ -1940,10 +2064,7 @@ fn apply_message(
                         Some(code) if !reason.starts_with(code) => format!("{code}: {reason}"),
                         _ => reason,
                     };
-                    t.fail(error);
-                    if m.recoverable == Some(true) {
-                        t.recovering = t.resets < MAX_RESETS;
-                    }
+                    t.report_failure(error, m.recoverable == Some(true));
                     finished = true;
                 }
                 Some("interaction") => {
@@ -2053,6 +2174,7 @@ mod native_click {
         core: ICoreWebView2,
         id: String,
         request: SkipRequest,
+        origin: &'static str,
         pressed: Cell<bool>,
         released: Cell<bool>,
         completed: Cell<bool>,
@@ -2067,10 +2189,19 @@ mod native_click {
     }
 
     pub fn start(core: ICoreWebView2, id: String, request: SkipRequest) {
+        let origin = STATE
+            .lock()
+            .unwrap()
+            .tracks
+            .get(&id)
+            .filter(|t| t.generation == request.generation)
+            .map(|t| t.capture_surface.origin());
+        let Some(origin) = origin else { return };
         let click = Rc::new(Click {
             core,
             id: id.clone(),
             request: request.clone(),
+            origin,
             pressed: Cell::new(false),
             released: Cell::new(false),
             completed: Cell::new(false),
@@ -2122,7 +2253,11 @@ mod native_click {
             let validation = if result.is_err() {
                 Err("validation-execution-callback-failed".to_string())
             } else {
-                SkipValidationReply::validate(&output, &callback_click.request)
+                SkipValidationReply::validate(
+                    &output,
+                    &callback_click.request,
+                    callback_click.origin,
+                )
             }
             .and_then(|()| {
                 current(&callback_click)
@@ -2321,15 +2456,15 @@ fn watchdog(app: &AppHandle) {
                     } else if let Some(t) = state.tracks.get_mut(&session.id) {
                         // Una nueva canción actual conserva next para poder promoverla. Otra
                         // petición next sí sustituye su lease, incluso si su búsqueda tarda.
-                        if t.phase == "interaction" {
-                            None
-                        } else if t.complete {
+                        if t.recovery_blocked || t.complete {
                             Some(None)
+                        } else if t.phase == "interaction" {
+                            None
                         } else if t.stalled(Instant::now())
                             || t.session_started.elapsed() > MAX_WAIT
                         {
                             t.fail("CAPTURE_STALLED: el reproductor dejó de avanzar".into());
-                            if t.resets < MAX_RESETS {
+                            if t.recovery_allowed() {
                                 t.resets += 1;
                                 t.recovering = true;
                                 Some(Some(if t.eof {
@@ -2341,7 +2476,7 @@ fn watchdog(app: &AppHandle) {
                                 Some(None)
                             }
                         } else if t.epoch_done {
-                            if t.resets < MAX_RESETS && (t.eof || t.recovering) {
+                            if t.recovery_allowed() && (t.eof || t.recovering) {
                                 t.resets += 1;
                                 t.recovering = true;
                                 Some(Some(t.recovery_start()))
@@ -2678,6 +2813,7 @@ pub async fn capture_seek(
         if cached {
             (session, t.epoch, true, false)
         } else {
+            t.require_recovery()?;
             let reopen = t.epoch_done || t.phase == "interaction";
             let epoch = next_id();
             t.begin_epoch(t.generation, epoch, at, true);
@@ -2759,7 +2895,7 @@ pub async fn capture_read(
                 let chunks = &t.chunks[start..end];
                 let head=json!({"api":4,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"mimes":t.units[start..end].iter().map(|u|&u.mime).collect::<Vec<_>>(),
                     "units":&t.units[start..end],"ranges":t.ranges,"duration":t.duration,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"total":t.units.len(),
-                    "done":t.complete&&end==t.chunks.len(),"complete":t.complete,"eof":t.eof,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,
+                    "done":t.complete&&end==t.chunks.len(),"complete":t.complete,"eof":t.eof,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,"recoveryBlocked":t.recovery_blocked,"captureSurface":t.capture_surface,
                     "sessionState":t.session_state,"revision":t.revision,"generation":t.generation,"epoch":t.epoch,"reset":reset,"from":start,"next":end}).to_string();
                 let mut out = Vec::with_capacity(
                     4 + head.len() + chunks.iter().map(|c| c.len() + 4).sum::<usize>(),
@@ -2786,13 +2922,13 @@ pub fn status(video_id: &str) -> Option<Value> {
         "state":t.phase,"bytesQuarantined":t.quarantined,"verified":t.ready(),"frames":t.units.iter().map(|u|u.frames).sum::<u64>(),
         "rangeStart":t.ranges.first().map(|r|r.start),"rangeEnd":t.ranges.last().map(|r|r.end),"duration":t.duration,
         "firstMs":t.first_ms,"playingMs":t.playing_ms,"metaMs":t.meta_ms,"title":t.title,"doneMs":t.done_ms});
-    let detail = json!({"eof":t.eof,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"complete":t.complete,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,"why":t.why,"resets":t.resets,
+    let detail = json!({"eof":t.eof,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"complete":t.complete,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,"recoveryBlocked":t.recovery_blocked,"captureSurface":t.capture_surface,"why":t.why,"resets":t.resets,
         "lastDiagnostic":t.last_diagnostic,"lastPosition":t.position,"adMs":t.ad_presented.as_millis(),"adWaitMs":t.ad_wait_credit.as_millis(),
         "adRateViolations":t.ad_rate_violations,"adRateObservations":t.ad_rate_observations,
         "lastProgressAgoMs":t.last_progress.elapsed().as_millis(),"waitBudgetMs":t.wait_budget().as_millis(),
-        "captureRate":captured/t.opened.elapsed().as_secs_f64().max(0.001),"activeWindows":state.sessions.len(),"foreground":session.map(|s|s.foreground),
-        "generation":t.generation,"epoch":t.epoch,"revision":t.revision,
-        "sessionState":t.session_state,"sessionStates":t.session_states,"unknownAuthUnits":t.unknown_auth_units,"signedInUnits":t.signed_in_units,
+        "captureRate":captured/t.opened.elapsed().as_secs_f64().max(0.001),"activeWindows":state.sessions.len(),"active":session.is_some_and(|s|s.active),"foreground":session.map(|s|s.foreground),
+        "generation":t.generation,"epoch":t.epoch,"revision":t.revision});
+    let evidence = json!({"sessionState":t.session_state,"sessionStates":t.session_states,"unknownAuthUnits":t.unknown_auth_units,"signedInUnits":t.signed_in_units,
         "limits":limits().ok(),"certificates":t.certificates,"nextSlot":session.and_then(|s|s.next_slot),
         "adTransitions":t.ad_transitions,"adTransitionsTotal":t.ad_transitions_total,"adTransitionsTruncated":t.ad_transitions_total>t.ad_transitions.len(),
         "lastNativeSkip":t.last_skip_result,"nativeSkipRequests":t.native_skip_requests,"nativeSkipDispatches":t.native_skip_dispatches,
@@ -2801,6 +2937,10 @@ pub fn status(video_id: &str) -> Option<Value> {
         .as_object_mut()
         .unwrap()
         .extend(detail.as_object().unwrap().clone());
+    result
+        .as_object_mut()
+        .unwrap()
+        .extend(evidence.as_object().unwrap().clone());
     Some(result)
 }
 /// Private benchmark evidence. No cookies, account strings, signed URLs or unpublished bytes.
@@ -3110,11 +3250,14 @@ mod tests {
             serde_json::from_value::<SkipRequest>(old["validation"].clone()).is_err(),
             "the old typed-u64 reply path rejected this valid browser number"
         );
-        assert!(SkipValidationReply::validate(output, &request).is_ok());
+        assert!(
+            SkipValidationReply::validate(output, &request, CaptureSurface::Music.origin()).is_ok()
+        );
         assert!(
             SkipValidationReply::validate(
                 &output.replace("1791400123456000.0", "1.791400123456e15"),
-                &request
+                &request,
+                CaptureSurface::Music.origin()
             )
             .is_ok()
         );
@@ -3129,28 +3272,38 @@ mod tests {
             assert!(
                 SkipValidationReply::validate(
                     &output.replace("1791400123456000.0", replacement),
-                    &request
+                    &request,
+                    CaptureSurface::Music.origin()
                 )
                 .is_err(),
                 "{replacement}"
             );
         }
         assert_eq!(
-            SkipValidationReply::validate(&output.replace("842.25", "842.26"), &request)
-                .unwrap_err(),
+            SkipValidationReply::validate(
+                &output.replace("842.25", "842.26"),
+                &request,
+                CaptureSurface::Music.origin()
+            )
+            .unwrap_err(),
             "validation-x-mismatch"
         );
         assert_eq!(
             SkipValidationReply::validate(
                 &output.replace("https://music.youtube.com", "https://example.com"),
-                &request
+                &request,
+                CaptureSurface::Music.origin()
             )
             .unwrap_err(),
             "validation-origin-mismatch"
         );
         assert!(
-            SkipValidationReply::validate(r#"{"result":{"type":"object","value":{}}}"#, &request)
-                .is_err(),
+            SkipValidationReply::validate(
+                r#"{"result":{"type":"object","value":{}}}"#,
+                &request,
+                CaptureSurface::Music.origin()
+            )
+            .is_err(),
             "a CDP envelope is not ExecuteScript's contract"
         );
     }
@@ -3171,23 +3324,36 @@ mod tests {
             json!({"origin":"https://music.youtube.com","validation":{"valid":false,"requestId":1,"reason":reason}}).to_string()
         };
         assert_eq!(
-            SkipValidationReply::validate(&response("button-moved-or-covered"), &request)
-                .unwrap_err(),
+            SkipValidationReply::validate(
+                &response("button-moved-or-covered"),
+                &request,
+                CaptureSurface::Music.origin()
+            )
+            .unwrap_err(),
             "dom-button-moved-or-covered"
         );
         assert_eq!(
-            SkipValidationReply::validate(&response("request-expired"), &request).unwrap_err(),
+            SkipValidationReply::validate(
+                &response("request-expired"),
+                &request,
+                CaptureSurface::Music.origin()
+            )
+            .unwrap_err(),
             "dom-request-expired"
         );
         assert_eq!(
             SkipValidationReply::validate(
                 &response("https://private.invalid/token?secret"),
-                &request
+                &request,
+                CaptureSurface::Music.origin()
             )
             .unwrap_err(),
             "dom-page-rejected-or-unavailable"
         );
-        assert!(SkipValidationReply::validate("null", &request).is_err());
+        assert!(
+            SkipValidationReply::validate("null", &request, CaptureSurface::Music.origin())
+                .is_err()
+        );
     }
     #[test]
     fn trusted_click_telemetry_is_bound_to_the_native_request_and_counted_once() {
@@ -3638,6 +3804,173 @@ mod tests {
         assert_eq!(read_bounds(&t, 0, Some(3)), (0, 1, false));
         t.chunks = vec![vec![0]; 40];
         assert_eq!(read_bounds(&t, 0, None), (0, 32, false));
+    }
+    fn timeline_change(end: f64, next_start: f64) -> String {
+        format!(
+            "CAPTURE_UNSUPPORTED_TIMELINE: SourceBuffer settings changed: previous={}, current={}, mime=audio/mp4; codecs=\"mp4a.40.2\"",
+            json!({"timestampOffset":-0.036281179138321996,"appendWindowStart":0,"appendWindowEnd":40.69,"mode":"segments"}),
+            json!({"timestampOffset":40.65371882086168,"appendWindowStart":next_start,"appendWindowEnd":end,"mode":"segments"})
+        )
+    }
+    #[test]
+    fn repeated_aac_timeline_transition_retries_www_once_then_stops_without_erasing_audio() {
+        let mut s = state();
+        s.tracks.get_mut(ID).unwrap().capture_surface = CaptureSurface::Music;
+        deliver(&mut s, 1, 0.0, 1.0);
+        let before = s.tracks[ID].chunks.clone();
+        let ranges = s.tracks[ID].ranges.clone();
+        let revision = s.tracks[ID].revision;
+        send(
+            &mut s,
+            json!({"kind":"event","type":"error","code":"CAPTURE_UNSUPPORTED_TIMELINE",
+            "reason":timeline_change(288.2,40.69),"recoverable":true}),
+        );
+        let t = s.tracks.get_mut(ID).unwrap();
+        assert_eq!(t.capture_surface, CaptureSurface::Youtube);
+        assert!(t.recovering && !t.recovery_blocked && t.recovery_allowed());
+        assert_eq!(
+            t.recovery_start(),
+            0.0,
+            "the alternate surface starts fresh, not at an old partial gap"
+        );
+        assert!(t.error.is_none());
+        t.resets += 1;
+        t.begin_epoch(11, 21, 0.0, true);
+        s.sessions[0].generation = 11;
+        let m = message(
+            &s,
+            json!({"kind":"event","type":"error","code":"CAPTURE_UNSUPPORTED_TIMELINE",
+            "reason":timeline_change(405.34709750566896,40.69),"recoverable":true}),
+        );
+        assert!(apply_message(
+            &mut s,
+            ID,
+            11,
+            "https://www.youtube.com/watch?v=aaaaaaaaaaa",
+            m,
+            Instant::now()
+        ));
+        let t = &s.tracks[ID];
+        assert!(t.recovery_blocked && t.epoch_done);
+        assert!(!t.recovering && !t.recovery_allowed());
+        assert!(
+            t.require_recovery()
+                .unwrap_err()
+                .contains("automatic recovery stopped")
+        );
+        assert!(
+            t.error.is_none(),
+            "published audio retains a soft warning, never a fatal playback error"
+        );
+        assert!(
+            t.soft_error
+                .as_ref()
+                .unwrap()
+                .starts_with("CAPTURE_UNSUPPORTED_TIMELINE")
+        );
+        assert_eq!(t.chunks, before);
+        assert_eq!(t.ranges, ranges);
+        assert_eq!(t.revision, revision);
+        assert_eq!(
+            read_bounds(t, 0, Some(revision)),
+            (0, 1, false),
+            "retired acquisition remains replayable"
+        );
+        assert!(
+            !t.eof && !t.complete,
+            "a stopped acquisition never invents final coverage"
+        );
+        let refreshed = Track::new(12, 22, 31);
+        assert!(
+            !refreshed.recovery_blocked && refreshed.timeline_failures.is_empty(),
+            "only a new cache lifetime clears the circuit"
+        );
+    }
+    #[test]
+    fn timeline_fingerprints_ignore_future_track_length_but_not_original_window_or_boundary() {
+        let a = TimelineFailure::parse(&timeline_change(288.2, 40.69)).unwrap();
+        assert_eq!(
+            a,
+            TimelineFailure::parse(&timeline_change(405.3, 40.69)).unwrap()
+        );
+        assert_ne!(
+            a,
+            TimelineFailure::parse(&timeline_change(405.3, 41.0)).unwrap()
+        );
+        let altered = timeline_change(288.2, 40.69).replacen("-0.036281179138321996", "-0.05", 1);
+        assert_ne!(a, TimelineFailure::parse(&altered).unwrap());
+        assert!(TimelineFailure::parse("CAPTURE_NETWORK: offline").is_none());
+        assert!(
+            TimelineFailure::parse("CAPTURE_UNSUPPORTED_TIMELINE: truncated settings").is_none()
+        );
+        let mut t = Track::new(1, 2, 3);
+        t.report_failure("CAPTURE_NETWORK: offline".into(), true);
+        t.begin_epoch(4, 5, 0.0, true);
+        t.report_failure("CAPTURE_NETWORK: offline".into(), true);
+        assert!(
+            !t.recovery_blocked && t.recovering,
+            "ordinary missing-data/network recovery is unchanged"
+        );
+        t.capture_surface = CaptureSurface::Music;
+        t.report_failure(timeline_change(288.2, 40.69), true);
+        t.begin_epoch(6, 7, 0.0, true);
+        t.report_failure(timeline_change(405.3, 41.0), true);
+        assert!(
+            !t.recovery_blocked,
+            "a different boundary is not the repeated incompatibility"
+        );
+    }
+    #[test]
+    fn www_surface_is_benchmark_only_initially_and_native_input_stays_bound_to_its_origin() {
+        assert_eq!(
+            CaptureSurface::initial(false, Some("youtube")),
+            CaptureSurface::Music
+        );
+        assert_eq!(
+            CaptureSurface::initial(true, Some("youtube")),
+            CaptureSurface::Youtube
+        );
+        assert_eq!(CaptureSurface::initial(true, None), CaptureSurface::Music);
+        assert_eq!(
+            source_kind("https://www.youtube.com/watch?v=aaaaaaaaaaa"),
+            Some(true)
+        );
+        for url in [
+            "https://www.youtube.com.evil.test/",
+            "https://youtube.com/",
+            "http://www.youtube.com/",
+            "https://www.youtube.com:444/",
+        ] {
+            assert_eq!(source_kind(url), None, "{url}");
+        }
+        let request = SkipRequest {
+            request_id: 1,
+            generation: 1,
+            epoch: 2,
+            source: 3,
+            button_token: 1,
+            x: 20.0,
+            y: 30.0,
+            viewport_width: 960.0,
+            viewport_height: 640.0,
+        };
+        let mut validation = serde_json::to_value(&request).unwrap();
+        validation["valid"] = json!(true);
+        let output =
+            json!({"origin":CaptureSurface::Youtube.origin(),"validation":validation}).to_string();
+        assert!(
+            SkipValidationReply::validate(&output, &request, CaptureSurface::Youtube.origin())
+                .is_ok()
+        );
+        assert!(
+            SkipValidationReply::validate(&output, &request, CaptureSurface::Music.origin())
+                .is_err(),
+            "a redirect cannot borrow another window's allowed origin"
+        );
+        assert!(
+            SkipValidationReply::validate(&output, &request, "https://www.youtube.com.evil.test")
+                .is_err()
+        );
     }
     #[test]
     fn terminal_error_after_delivery_is_soft_and_never_erases_chunks() {

@@ -197,16 +197,22 @@ fn remember_source(track: TrackQuery, video_id: String, db: State<'_, Db>) -> Re
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let context = tauri::generate_context!();
+    let isolated_bench = std::env::var_os("MUSIFY_BENCH").is_some()
+        && context.config().identifier == "dev.musify.captureofficialtest";
+    let mut builder = tauri::Builder::default();
+    if !isolated_bench {
         // Una sola ventana: abrir Musify otra vez trae al frente la que ya está abierta
         // (si no, sonarían dos reproductores a la vez).
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.show();
                 let _ = window.set_focus();
             }
-        }))
+        }));
+    }
+    builder
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -214,10 +220,14 @@ pub fn run() {
         .manage(updater::Pending::default())
         .manage(local::Scanner::default())
         .manage(YouTubeMusic::new())
-        .setup(|app| {
+        .setup(move |app| {
             let dir = app.path().app_local_data_dir()?;
             std::fs::create_dir_all(&dir)?;
-            let path = dir.join("musify.db");
+            let path = if isolated_bench {
+                dir.join(format!("musify-bench-{}.db", std::process::id()))
+            } else {
+                dir.join("musify.db")
+            };
             let db = match Db::open(&path) {
                 Ok(db) => db,
                 Err(e) => {
@@ -335,7 +345,7 @@ pub fn run() {
                 window.app_handle().exit(0);
             }
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error al arrancar Musify")
         .run(|app, event| {
             // Al cerrar la app se instala la actualización que haya descargada.

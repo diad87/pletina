@@ -73,7 +73,7 @@ fn token(value: &str) -> bool {
 fn origin(value: &str) -> bool {
     reqwest::Url::parse(value)
         .ok()
-        .is_some_and(|url| url.scheme() == "https" && url.host_str() == Some("music.youtube.com"))
+        .is_some_and(|url| url.scheme() == "https" && matches!(url.host_str(), Some("music.youtube.com" | "www.youtube.com")))
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -736,10 +736,12 @@ mod tests {
     #[test]
     fn recorder_requires_the_official_origin_and_does_not_store_arbitrary_text() {
         assert!(origin("https://music.youtube.com/watch?v=jNY_wLukVW0"));
+        assert!(origin("https://www.youtube.com/watch?v=jNY_wLukVW0"));
         for value in [
             "http://music.youtube.com",
             "https://music.youtube.com.attacker.invalid",
-            "https://www.youtube.com",
+            "http://www.youtube.com",
+            "https://www.youtube.com.attacker.invalid",
             "file:///tmp/audio",
         ] {
             assert!(!origin(value));

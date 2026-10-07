@@ -1114,7 +1114,7 @@ test('ad diagnostics distinguish hidden persistent nodes from active classes wit
   assert.equal(visible.evidence.adClassShowing, true)
 })
 
-function skipDiagnosticSetup({ behavior = 'no-op', found = true, diagnostics = true } = {}) {
+function skipDiagnosticSetup({ behavior = 'no-op', found = true, diagnostics = true, hostname = 'music.youtube.com' } = {}) {
   let now = 0, marker = true, scans = 0, covered = false
   const failure = new TypeError('native request failure'), requests = [], binding = { generation: 7, epoch: 1, source: 1 }
   const media = { paused: false, ended: false, seeking: false, readyState: 4, currentTime: 5, duration: 30 }
@@ -1139,7 +1139,7 @@ function skipDiagnosticSetup({ behavior = 'no-op', found = true, diagnostics = t
     querySelectorAll(selector) { if (selector === 'audio,video') return [media]; if (selector === 'button, [role="button"]') { scans++; return others }; return found ? [button] : [] } }
   const document = { querySelector: s => s === '#movie_player' ? p : { textContent: 'Song' }, elementFromPoint: () => covered ? {} : button, defaultView: { innerWidth: 640, innerHeight: 480, getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
   const { context } = load({ performance: { now: () => now }, Date: { now: () => now } })
-  const adapter = context.__musifyCaptureYouTube.create({ document, location: { search: '?v=target' }, target: 'target', skipDiagnostics: diagnostics,
+  const adapter = context.__musifyCaptureYouTube.create({ document, location: { hostname, search: '?v=target' }, target: 'target', skipDiagnostics: diagnostics,
     skipContext: () => binding, requestSkip: request => { if (behavior === 'throw') throw failure; requests.push(request) } })
   return { adapter, media, button, others, failure, requests, binding, time: value => { now = value }, marker: value => { marker = value }, covered: value => { covered = value }, scans: () => scans,
     finish(ok = true) { if (behavior === 'cancel') button.dispatchEvent(new Event('click', { cancelable: true })); return adapter.completeSkip({ requestId: requests.at(-1).requestId, ok, reason: ok ? 'native-complete' : 'native-failed' }) },
@@ -1187,6 +1187,39 @@ test('native skip request identities do not restart at one in a replacement docu
   assert.equal(after.adapter.completeSkip({ requestId: after.requests[0].requestId, epoch: 2, source: 1, ok: true }), false)
   assert.equal(after.adapter.completeSkip({ requestId: after.requests[0].requestId, epoch: 1, source: 2, ok: true }), false)
   assert.equal(after.adapter.validateSkip(after.requests[0].requestId).valid, true)
+})
+
+test('a trusted native skip result arriving after the next ad preserves its own binding without consuming the new request', () => {
+  const f = skipDiagnosticSetup(); f.observe(); f.adapter.skipAd(f.media)
+  const first = f.requests[0]
+  f.button.listener({ isTrusted: true, defaultPrevented: true })
+  f.time(1100); f.binding.source = 2; f.observe('ad', 2)
+  assert.equal(f.adapter.skipAd(f.media), true)
+  const second = f.requests[1]
+  assert.equal(f.adapter.validateSkip(first.requestId).valid, false, 'retention never makes old input eligible again')
+  assert.equal(f.adapter.completeSkip({ ...first, source: 2, ok: true }), false, 'the old result still needs its original binding')
+  assert.equal(f.adapter.completeSkip({ ...first, ok: true, reason: 'native-complete' }), true)
+  const completed = f.adapter.skipSummary(first.requestId)
+  assert.equal(completed.last.requestId, first.requestId); assert.equal(completed.last.source, 1)
+  assert.equal(completed.last.eventSeen, true); assert.equal(completed.last.isTrusted, true); assert.equal(completed.last.defaultPrevented, true)
+  assert.equal(completed.returned, 1); assert.equal(completed.clickEvents, 1); assert.equal(completed.canceled, 1)
+  assert.equal(f.adapter.skipSummary().last.requestId, second.requestId)
+  assert.equal(f.adapter.skipSummary().result, 'native-requested')
+  assert.equal(f.adapter.validateSkip(second.requestId).valid, true)
+  assert.equal(f.adapter.completeSkip({ ...first, ok: true }), false, 'a delayed result is counted only once')
+  assert.equal(f.adapter.completeSkip({ ...second, ok: false }), true)
+  assert.equal(f.adapter.skipSummary().clickEvents, 1, 'the first event is never attributed to the second request')
+  assert.equal(f.button.calls, 0); assert.equal(f.button.removed, 2)
+})
+
+test('retired native skip result bookkeeping is bounded and reports exhausted retention', () => {
+  const f = skipDiagnosticSetup()
+  for (let i = 0; i < 7; i++) { f.time(i * 1100); f.binding.source = i + 1; f.observe('ad', i + 1); assert.equal(f.adapter.skipAd(f.media), true) }
+  assert.equal(f.adapter.skipSummary().lateResultsDropped, 2)
+  assert.equal(f.adapter.completeSkip({ ...f.requests[0], ok: true }), false)
+  assert.equal(f.adapter.completeSkip({ ...f.requests[2], ok: true }), true)
+  assert.ok(JSON.stringify(f.adapter.skipSummary(f.requests[2].requestId)).length <= 1000)
+  assert.equal(f.adapter.validateSkip(f.requests[6].requestId).valid, true)
 })
 
 test('skip diagnostics distinguish a returned native action without effect from a later transition', () => {
@@ -1272,6 +1305,41 @@ test('observed no-bar layout requires both exact player-link and Media Session t
   assert.equal(adapter.classify(media).state, 'unknown')
   barTitle = ''; location.search = '?v=another'
   assert.equal(adapter.classify(media).state, 'unknown')
+})
+
+test('www watch without a Music bar requires the same complete source-bound identity evidence', () => {
+  const metadata = { title: 'Song' }, location = { hostname: 'www.youtube.com', pathname: '/watch', search: '?v=target' }
+  const { context } = load({ navigator: { mediaSession: { metadata } } })
+  const media = { paused: false, ended: false, readyState: 4, currentTime: 0 }, data = { video_id: 'target', title: 'Song' }
+  let links = ['Song'], marker = false, elements = [media]
+  const player = { contains: e => elements.includes(e), getVideoData: () => data, classList: { contains: () => marker }, querySelector: () => null,
+    querySelectorAll: selector => selector === 'audio,video' ? elements : selector === '.ytp-title-link' ? links.map(textContent => ({ textContent })) : [] }
+  const document = { querySelector: selector => selector === '#movie_player' ? player : null }
+  const adapter = context.__musifyCaptureYouTube.create({ document, location, target: 'target' })
+  const complete = adapter.classify(media)
+  assert.equal(complete.state, 'content'); assert.equal(complete.sourceBound, true)
+  assert.deepEqual(Array.from(complete.signals), ['presented-video-id', 'watch-location', 'player-title-link', 'media-session-title'])
+  metadata.title = ''; assert.equal(adapter.classify(media).state, 'unknown')
+  metadata.title = 'Song'; links = []; assert.equal(adapter.classify(media).state, 'unknown')
+  links = ['Different song']; assert.equal(adapter.classify(media).state, 'unknown')
+  links = ['Song', 'Song']; assert.equal(adapter.classify(media).state, 'unknown')
+  links = ['Song']; location.search = '?v=other'; assert.equal(adapter.classify(media).state, 'unknown')
+  location.search = '?v=target'; data.video_id = 'other'; assert.equal(adapter.classify(media).state, 'ad')
+  data.video_id = 'target'; elements = [media, { ...media }]; assert.equal(adapter.classify(media).state, 'unknown')
+  elements = [media]; assert.equal(adapter.classify({ ...media }).sourceBound, false)
+  marker = true; assert.equal(adapter.classify(media).state, 'ad')
+})
+
+test('www skip requests still need an ad and preserve the native generation epoch source binding', () => {
+  const f = skipDiagnosticSetup({ hostname: 'www.youtube.com' })
+  f.marker(false); assert.equal(f.adapter.skipAd(f.media), false); assert.equal(f.requests.length, 0)
+  f.marker(true); f.observe(); assert.equal(f.adapter.skipAd(f.media), true)
+  const request = f.requests[0], proof = f.adapter.validateSkip(request.requestId)
+  for (const key of ['generation', 'epoch', 'source']) assert.equal(proof[key], request[key])
+  assert.equal(proof.valid, true); assert.equal(f.button.calls, 0)
+  f.binding.source++; assert.equal(f.adapter.validateSkip(request.requestId).valid, false)
+  assert.equal(f.adapter.completeSkip({ ...request, source: f.binding.source, ok: true }), false)
+  assert.equal(f.adapter.completeSkip({ ...request, ok: false }), true)
 })
 
 test('authentication telemetry reads only a public boolean hint and never guesses from absent or throwing site config', () => {
@@ -1447,6 +1515,33 @@ test('orchestrator routes native skip proposals and retains bounded results afte
     assert.equal(latest.detail.skip.transition.to, 'content'); assert.equal(button.calls, 0)
     assert.ok(other.every(control => control.calls === 0)); assert.equal(messages.some(m => m.kind === 'seg'), false)
   }
+})
+
+test('orchestrator reports the trusted result of ad A while ad B is the current native skip proposal', async () => {
+  const f = skipDiagnosticSetup(); f.observe(); f.adapter.skipAd(f.media)
+  const first = f.requests[0]
+  f.button.listener({ isTrusted: true, defaultPrevented: false })
+  f.time(1100); f.binding.source = 2; f.observe('ad', 2); f.adapter.skipAd(f.media)
+  const second = f.requests[1], messages = []
+  const { context } = load({ ...browserMocks(), document: { querySelectorAll: () => [], querySelector: () => null },
+    location: { search: '?v=target', hash: '', hostname: 'music.youtube.com' }, performance: { now: () => 1100 },
+    setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+  context.__musifyCaptureYouTube.create = () => f.adapter
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 7, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+  vm.runInContext(orchestratorCode, context)
+  assert.equal(context.window.__musifySkipResult({ ...first, ok: true, reason: 'native-complete' }), true)
+  assert.equal(context.window.__musifySkipResult({ ...first, ok: true }), false)
+  await new Promise(resolve => setImmediate(resolve))
+  const results = messages.filter(m => m.type === 'diagnostic' && m.reason).map(m => ({ message: m, detail: JSON.parse(m.reason) })).filter(m => m.detail.phase === 'native-skip-result')
+  assert.equal(results.length, 1)
+  assert.ok(results[0].message.reason.length <= 2048)
+  assert.equal(results[0].detail.requestId, first.requestId)
+  assert.equal(results[0].detail.skip.last.requestId, first.requestId)
+  assert.equal(results[0].detail.skip.last.source, first.source)
+  assert.equal(results[0].detail.skip.last.eventSeen, true); assert.equal(results[0].detail.skip.last.isTrusted, true)
+  assert.equal(f.adapter.skipSummary().last.requestId, second.requestId)
+  assert.equal(context.window.__musifyValidateSkip(second.requestId).valid, true)
+  assert.equal(f.button.calls, 0)
 })
 
 test('an initially missed two milliseconds are re-presented from zero before any publication', async () => {

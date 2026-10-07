@@ -1,6 +1,6 @@
 # P1 — Captura oficial, 7 de octubre de2026
 
-Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v8 en validación. No se ha hecho
+Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v10 en validación. No se ha hecho
 push, fusión ni publicación. Propio conserva el nivel rápido y el respaldo histórico;
 yt-dlp sigue predeterminado. La promoción progresiva depende de la batería nueva.
 
@@ -16,8 +16,8 @@ de la referencia no se denomina anuncio automáticamente.
 
 | Comprobación de código | Resultado |
 |---|---|
-| JavaScript | 289 correctas,0 omitidas |
-| Rust | 84 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
+| JavaScript | 296 correctas,0 omitidas; suite posterior41/41 correcta |
+| Rust | 87 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
 | TypeScript/Svelte | 0 errores y0 avisos |
 | Compilación Rust de producción | Correcta |
 
@@ -60,6 +60,21 @@ No aprueba tiempos ni continuidad. Se corrige el lector para esperar0,5s continu
 por MSE, y el clic nativo para aceptar enteros seguros que WebView2 serializa como decimal.
 El siguiente ensayo debe comprobar ambos arreglos en la app.
 
-Pendientes: repetir v8 en la app, completar30 canciones/50 transiciones anónimas y las pocas
+Pendientes: medir v10 en la app, completar30 canciones/50 transiciones anónimas y las pocas
 referencias Premium, medir señales con referencia externa y evaluar velocidad segura.
 Esta tabla es provisional y conserva también los intentos fallidos.
+
+Repetición `222302`, commit8b1704b: PRESO completa sin sesión,2035/2035 paquetes iguales,
+0 discrepancias y0 esperas durante reproducción (el seek de comprobación final se registra
+aparte). Primer sonido11,468s, señal publicitaria6,016s y resto5,452s: falla el tiempo.
+Ese anuncio no mostró botón;0 solicitudes nativas y0 saltos confirmados.
+
+Tanda nativa `222456`:30/30 rápidas,0 respaldo; mediana697,85ms. Búsqueda388,184ms,
+Player103,938ms, validación57,221ms y arranque de audio41,5ms (medianas por fase,
+no suman necesariamente la mediana total). La búsqueda sola supera300ms en28/30.
+
+Premium `222539` se interrumpió tras repetirse tres recuperaciones: PRESO empieza
+en4,660s sin señal publicitaria, pero Music AAC prepara otro vídeo a los30,5s,
+cambiando appendWindow de0..40,69 a40,69..288,2 (y otros finales). El rechazo evita
+mezclar audio, pero no hay EOF certificado ni transición a MALAMENTE. No se aprueba.
+La interrupción limita la exposición de la cuenta; el checkpoint se conserva fuera de Git.

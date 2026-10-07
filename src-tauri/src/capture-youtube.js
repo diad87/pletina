@@ -68,7 +68,10 @@
       return { state: loggedIn === true ? 'signed-in' : loggedIn === false ? 'signed-out' : 'unknown', browserNow: Math.round(globalThis.performance?.now?.() ?? 0), evidenceVersion: 1 }
     }
     const clickedAt = new WeakMap(), buttonTokens = new WeakMap()
-    let nextRequest = 0, nextButton = 0, pendingSkip = null
+    let nextRequest = 0, nextButton = 0, pendingSkip = null, completedSkip = null
+    // Invalidated proposals cannot be used for input, but their native callback
+    // can arrive after the next ad has created another proposal.
+    const retiredSkips = new Map()
     const skipSelectors = ['.ytp-skip-ad-button', '.ytp-ad-skip-button', '.ytp-ad-skip-button-modern']
     const skip = { calls: 0, tries: 0, returned: 0, threw: 0, clickEvents: 0, canceled: 0, result: null, matches: [0, 0, 0], outcomes: { notAd: 0, noMatch: 0, ineligible: 0, cooldown: 0 } }
     let sampledAt = -Infinity, observation = null
@@ -107,15 +110,18 @@
       if (observation && (observation.state !== next.state || observation.source !== next.source || observation.epoch !== next.epoch)) skip.transition = { from: observation.state, fromSource: observation.source, to: next.state, source: next.source, at: next.at, sinceTryMs: skip.last ? next.at - skip.last.at : null }
       observation = next
     })
-    const skipSummary = () => {
+    const skipSummary = requestId => {
       if (!skipDiagnostics || (!skip.calls && !observation)) return null
       // Copy, don't expose the mutable diagnostic state. A fixed serialized budget
       // also bounds unusual public labels and very large counter/clock values.
       const summary = JSON.parse(JSON.stringify(skip))
+      const completed = completedSkip?.requestId === requestId ? completedSkip : null
+      if (completed) { summary.last = { ...completed.attempt }; summary.result = completed.result }
       while (JSON.stringify(summary).length > 1000 && summary.controls?.length) { summary.controls.pop(); summary.controlsOmitted = true }
       if (JSON.stringify(summary).length > 1000) { delete summary.observed; summary.detailsOmitted = true }
       if (JSON.stringify(summary).length > 1000) { delete summary.transition; delete summary.last?.after }
-      if (JSON.stringify(summary).length > 1000) return { calls: skip.calls, tries: skip.tries, returned: skip.returned, threw: skip.threw, result: skip.result, detailsOmitted: true }
+      if (JSON.stringify(summary).length > 1000) return { calls: skip.calls, tries: skip.tries, returned: skip.returned, threw: skip.threw, result: completed?.result ?? skip.result,
+        ...(completed ? { last: { requestId, source: completed.attempt.source, epoch: completed.attempt.epoch, eventSeen: completed.attempt.eventSeen, isTrusted: completed.attempt.isTrusted, defaultPrevented: completed.attempt.defaultPrevented, nativeOk: completed.attempt.nativeOk } } : {}), detailsOmitted: true }
       return summary
     }
     const eligibleButton = button => !!button && button.isConnected === true && !button.disabled && button.getAttribute?.('aria-disabled') !== 'true' && visiblyRendered(button)
@@ -129,16 +135,20 @@
       return hit && (hit === button || button.contains?.(hit)) ? { x, y, viewportWidth, viewportHeight } : null
     }
     const completeSkip = ({ requestId, epoch, source, ok = false, reason = 'native-result-missing' } = {}) => {
-      if (!pendingSkip || pendingSkip.requestId !== requestId) return false
-      if ((epoch !== undefined && epoch !== pendingSkip.binding.epoch) || (source !== undefined && source !== pendingSkip.binding.source)) return false
-      const pending = pendingSkip; pendingSkip = null
-      pending.button.removeEventListener?.('click', pending.onClick, true)
+      const pending = pendingSkip?.requestId === requestId ? pendingSkip : retiredSkips.get(requestId)
+      if (!pending) return false
+      if ((epoch !== undefined && epoch !== pending.binding.epoch) || (source !== undefined && source !== pending.binding.source)) return false
+      if (pending === pendingSkip) pendingSkip = null
+      retiredSkips.delete(requestId)
+      if (!pending.detached) pending.button.removeEventListener?.('click', pending.onClick, true)
       diagnose(() => {
         const seen = pending.seen, attempt = pending.attempt
-        skip.result = ok ? 'native-returned' : 'native-rejected'
+        const result = ok ? 'native-returned' : 'native-rejected'
+        if (skip.last === attempt) skip.result = result
         if (ok) skip.returned++
         if (attempt) { attempt.eventSeen = !!seen; attempt.isTrusted = seen ? seen.isTrusted === true : null; attempt.defaultPrevented = seen ? seen.defaultPrevented === true : null; attempt.nativeOk = ok === true; attempt.reason = publicText(reason, 64) }
         if (seen) { skip.clickEvents++; if (seen.defaultPrevented) skip.canceled++ }
+        completedSkip = { requestId, result, attempt: { ...attempt } }
       })
       return true
     }
@@ -157,7 +167,12 @@
     const skipAd = (element) => {
       diagnose(() => { skip.calls++ })
       if (pendingSkip) {
-        if (!validateSkip(pendingSkip.requestId).valid) completeSkip({ requestId: pendingSkip.requestId, reason: 'request-invalidated' })
+        if (!validateSkip(pendingSkip.requestId).valid) {
+          const retired = pendingSkip; pendingSkip = null
+          retired.button.removeEventListener?.('click', retired.onClick, true); retired.detached = true
+          retiredSkips.set(retired.requestId, retired)
+          if (retiredSkips.size > 4) { retiredSkips.delete(retiredSkips.keys().next().value); diagnose(() => { skip.lateResultsDropped = (skip.lateResultsDropped ?? 0) + 1 }) }
+        }
         else { diagnose(() => { skip.result = 'native-pending' }); return false }
       }
       if (classify(element).state !== 'ad') { diagnose(() => { skip.result = 'not-ad'; skip.outcomes.notAd++ }); return false }
@@ -178,6 +193,7 @@
       // The native window can navigate without changing generation. Do not recycle
       // request1 in its replacement document while an old COM callback is pending.
       nextRequest = Math.max(nextRequest + 1, Date.now() * 1000)
+      if (attempt) Object.assign(attempt, { requestId: nextRequest, generation: binding.generation, epoch: binding.epoch, source: binding.source })
       const pending = { requestId: nextRequest, buttonToken: buttonTokens.get(button), button, element, binding: { generation: binding.generation, epoch: binding.epoch, source: binding.source }, point, at: diagnosticNow(), attempt, seen: null }
       pending.onClick = event => { pending.seen = event }
       button.addEventListener?.('click', pending.onClick, { capture: true, passive: true })

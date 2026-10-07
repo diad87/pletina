@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v8 en validación; los resultados reales estarán en el
+API4/captura v10 en validación; los resultados reales estarán en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes
@@ -30,6 +30,9 @@ observado no queda automáticamente clasificado como imposible de saltar.
    configuración y cobertura confirmadas. Se retienen los últimos1,5s, configurables,
    y una contradicción descarta la cuarentena. El EOF válido libera la cola retenida.
    El modo normal conserva la cuarentena completa hasta terminar las pruebas reales.
+   El lector espera0,5s continuos aceptados por MSE antes de reproducir; el margen
+   evita arrancar al borde del buffer. Los resultados tardíos de clic conservan
+   su solicitud original aunque ya haya comenzado otro anuncio.
 3. **Verificación independiente.** Para el mismo vídeo se descarga el audio nativo sin
    cookies, preferentemente con el mismo formato/itag. El banco compara todos los
    paquetes publicados, incluidos los anteriores a saltos y recuperaciones, mediante
@@ -50,6 +53,15 @@ observado no queda automáticamente clasificado como imposible de saltar.
    Si la recuperación tras un salto encuentra ese hueco de representación, vuelve
    a presentar una fuente original desde cero. Sólo el certificado nuevo acredita
    su cobertura; los bytes ya entregados se conservan.
+   Se prueba una segunda superficie pública (`www.youtube.com`) cuando Music cambia
+   los ajustes MSE para anticipar otro vídeo. No se mezcla ese inventario ni se
+   interpreta el cambio como EOF. Una incompatibilidad repetida debe detener las
+   recargas automáticas y conservar el audio ya publicado.
+
+El banco aislado permite tandas paralelas con identificador propio, SQLite por proceso
+y nombres de informe únicos. La batería de cobertura puede dividirse en los cinco
+álbumes (seis canciones y cinco transiciones naturales cada uno); se registra esa
+carga concurrente y no sustituye la medición normal de arranque.
 6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
    puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
    históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.

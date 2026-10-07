@@ -12,6 +12,8 @@ param(
     [string]$Engine = 'oficial',
     [ValidateSet('anonymous', 'premium-manual')]
     [string]$ProfileMode = 'anonymous',
+    [ValidateSet('auto', 'youtube')]
+    [string]$Surface = 'auto',
     [ValidateRange(0, 30)]
     [double]$HoldbackSeconds = 1.5,
     [ValidateRange(1, 3)]
@@ -37,7 +39,7 @@ New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $configPath = Join-Path $outputDir 'tauri.json'
 $binaryPath = Join-Path $projectDir 'src-tauri\target\debug\musify.exe'
 $buildMarker = Join-Path $outputDir 'built-identifier.txt'
-$runId = Get-Date -Format 'yyyyMMdd-HHmmss'
+$runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $planPath = Join-Path $outputDir "plan-$runId.json"
 $resultPath = Join-Path $outputDir "result-$runId.json"
 $stdoutPath = Join-Path $outputDir "stdout-$runId.log"
@@ -72,7 +74,7 @@ $plan = if ($MseOnly) {
 } | ConvertTo-Json -Depth 20 }
 [IO.File]::WriteAllText($planPath, $plan, [Text.UTF8Encoding]::new($false))
 
-$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE', 'MUSIFY_BENCH_PROFILE_MODE', 'MUSIFY_BENCH_HOLDBACK_SECONDS', 'MUSIFY_CAPTURE_MAX_SESSIONS', 'MUSIFY_CAPTURE_TRACK_MB', 'MUSIFY_CAPTURE_CACHE_MB', 'MUSIFY_BENCH_AUDIT_ALL_AUDIO')
+$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE', 'MUSIFY_BENCH_PROFILE_MODE', 'MUSIFY_BENCH_SURFACE', 'MUSIFY_BENCH_HOLDBACK_SECONDS', 'MUSIFY_CAPTURE_MAX_SESSIONS', 'MUSIFY_CAPTURE_TRACK_MB', 'MUSIFY_CAPTURE_CACHE_MB', 'MUSIFY_BENCH_AUDIT_ALL_AUDIO')
 $savedEnv = @{}
 foreach ($key in $envKeys) { $savedEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process') }
 $testProcess = $null
@@ -94,6 +96,7 @@ try {
     $env:MUSIFY_BENCH_EXIT = '1'
     $env:MUSIFY_ENGINE = $Engine
     $env:MUSIFY_BENCH_PROFILE_MODE = $ProfileMode
+    $env:MUSIFY_BENCH_SURFACE = if ($Surface -eq 'youtube') { 'youtube' } else { $null }
     $env:MUSIFY_BENCH_HOLDBACK_SECONDS = $HoldbackSeconds.ToString([Globalization.CultureInfo]::InvariantCulture)
     $env:MUSIFY_CAPTURE_MAX_SESSIONS = "$MaxSessions"
     $env:MUSIFY_CAPTURE_TRACK_MB = "$TrackMemoryMb"
@@ -109,6 +112,7 @@ try {
         suite = if ($MseOnly) { 'mse-and-rates' } else { $Suite }
         engine = $Engine
         profileMode = $ProfileMode
+        captureSurface = $Surface
         holdbackSeconds = $HoldbackSeconds
         rawAudioProbe = [bool]$AuditAllAudio
         limits = @{ maxSessions = $MaxSessions; trackMemoryMb = $TrackMemoryMb; cacheMemoryMb = $CacheMemoryMb }

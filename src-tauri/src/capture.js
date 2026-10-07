@@ -3,7 +3,7 @@
 (() => {
   const bridge = window.chrome?.webview
   if (!bridge || window.__musifyCapture || (window.top && window.top !== window)) return
-  if (!['music.youtube.com', 'consent.youtube.com'].includes(location.hostname)) return
+  if (!['music.youtube.com', 'www.youtube.com', 'consent.youtube.com'].includes(location.hostname)) return
   window.__musifyCapture = true
   const target = window.__musifyTarget || new URLSearchParams(location.search).get('v'), generation = window.__musifyGeneration
   let epoch = window.__musifyEpoch, sequence = 0, queue = Promise.resolve(), tick = null
@@ -47,7 +47,7 @@
     return true
   }
   const diagnosticReason = details => {
-    const skip = adapter.skipSummary?.()
+    const skip = adapter.skipSummary?.(details.phase === 'native-skip-result' ? details.requestId : undefined)
     if (!skip) return JSON.stringify(details)
     let result = JSON.stringify({ ...details, skip })
     // Preserve the existing phase/evidence and the skip counters after returning

@@ -105,7 +105,7 @@ async function setup(t, options = {}) {
         emitProgress(audio, options.progress ?? proof())
         if (options.errorAfterPlayingTrack === this.current.track.id)
           audio.dispatchEvent(new CustomEvent('captureerror', { detail: 'fixture failure after playing' }))
-        if (options.holdPlayback) return
+        if (options.holdPlayback || options.holdPlayerTrack === this.current.track.id) return
         const position = this.pos
         timers.push(setTimeout(() => {
           audio.currentTime = options.endedAt ?? 0.95; audio.ended = true
@@ -119,7 +119,7 @@ async function setup(t, options = {}) {
         }, 45))
       }
       // playing síncrono: se pierde con un observador que sólo haga polling después de playQueue.
-      void audio.play()
+      if (options.loadingPlayerTrack !== this.current.track.id) void audio.play()
     },
     next() { if (this.pos + 1 < this.items.length) { this.pos++; this.begin() } },
   }
@@ -133,7 +133,7 @@ async function setup(t, options = {}) {
           allAudio.at(-1).dispatchEvent(new Event('playing'))
         }
         if (forgotten.has(args.videoId)) return null
-        return native(typeof options.native === 'function' ? options.native(statusReads) : options.native)
+        return native(typeof options.native === 'function' ? options.native(statusReads, args.videoId) : options.native)
       }
       if (command === 'capture_verify_prepare') {
         if (options.referenceFails) throw new Error('reference unavailable')
@@ -244,6 +244,72 @@ test('un error guardando una asociación mantiene su fila y deja medir las otras
   assert.equal(report.rows.length, 2)
   assert.match(report.rows[0].failures[0], /guardar asociación/)
   assert.equal(report.rows[1].ok, true)
+})
+
+test('el circuito terminal cierra pronto una fila incompleta y conserva la siguiente sin inventar ended', { timeout: 5000 }, async t => {
+  let firstReads = 0
+  const softError = 'CAPTURE_UNSUPPORTED_TIMELINE: repeated tuple; automatic recovery stopped'
+  const env = await setup(t, { holdPlayerTrack: 1,
+    progress: proof({ complete: false, audioDuration: null, buffered: [{ start: 0, end: 0.4 }] }),
+    native: (_read, id) => id === video(1).id ? {
+      duration: 600, audioDuration: null, complete: false, ranges: [{ start: 0, end: 0.4 }],
+      active: ++firstReads === 1, recovering: false, recoveryBlocked: firstReads > 1, softError,
+    } : {},
+  })
+  const started = performance.now()
+  const report = await env.execute({ mode: 'album', videos: [video(1), video(2)], timeoutSeconds: 600 })
+  assert(performance.now() - started < 4000, 'no debe esperar duración+180s ni el timeout de 600s')
+  const [failed, next] = report.rows
+  assert.equal(failed.phase, 'finished')
+  assert.equal(failed.ok, false)
+  assert.equal(failed.complete, false)
+  assert.equal(failed.endedObserved, false)
+  assert.equal(failed.endedPosition, null)
+  assert.equal(failed.events.some(event => event.type === 'ended'), false)
+  assert.equal(failed.terminalCapture.reason, softError)
+  assert.equal(failed.terminalCapture.status.active, false)
+  assert.deepEqual(failed.terminalCapture.progress.buffered, [{ start: 0, end: 0.4 }])
+  assert(failed.failures.some(reason => /recuperación automática detenida/.test(reason)))
+  assert.equal(next.phase, 'finished')
+  assert.equal(next.endedObserved, true)
+  assert.equal(next.complete, true)
+  assert.equal(next.nextTrackMs, null, 'continuar tras el fallo no acredita una transición natural')
+  assert(next.failures.some(reason => /Transición natural ausente/.test(reason)))
+  assert.equal(env.player.volume, 0.8)
+})
+
+test('softError no detiene la escucha mientras haya recuperación o una sesión activa', async t => {
+  for (const state of [
+    { active: true, recovering: false, recoveryBlocked: true },
+    { active: false, recovering: true, recoveryBlocked: true },
+    { active: false, recovering: false, recoveryBlocked: false },
+    { recovering: false, recoveryBlocked: true },
+  ]) {
+    const env = await setup(t, { native: read => read === 1 ? {
+      complete: false, audioDuration: null, softError: 'CAPTURE_UNSUPPORTED_TIMELINE: retry pending', ...state,
+    } : {} })
+    const report = await env.execute({ mode: 'album', videos: [video(1)], timeoutSeconds: 1 })
+    assert.equal(report.rows[0].ok, true)
+    assert.equal(report.rows[0].endedObserved, true)
+    assert.equal(report.rows[0].terminalCapture, undefined)
+  }
+})
+
+test('un prefijo menor que la reserva no obliga a esperar el timeout tras un fallo terminal', { timeout: 4000 }, async t => {
+  const env = await setup(t, { loadingPlayerTrack: 1, native: {
+    complete: false, audioDuration: null, ranges: [{ start: 0, end: 0.2 }],
+    active: false, recovering: false, recoveryBlocked: true,
+    softError: 'CAPTURE_UNSUPPORTED_TIMELINE: automatic recovery stopped',
+  } })
+  const report = await env.execute({ mode: 'album', videos: [video(1)], timeoutSeconds: 600 })
+  const row = report.rows[0]
+  assert.equal(row.ok, false)
+  assert.equal(row.endedObserved, false)
+  assert.equal(row.firstSoundMs, undefined)
+  assert.equal(row.complete, false)
+  assert.equal(row.terminalCapture.live.paused, true)
+  assert.deepEqual(row.terminalCapture.status.ranges, [{ start: 0, end: 0.2 }])
+  assert.equal(env.lifecycle.toggles, 1, 'el cierre del banco cancela loading sin iniciar reproducción')
 })
 
 test('catálogo conserva las treinta filas aunque falten resultados', async t => {

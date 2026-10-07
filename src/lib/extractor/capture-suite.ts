@@ -33,6 +33,7 @@ type Range = { start: number; end: number }
 type Status = {
   generation: number; epoch: number; revision: number; duration?: number; audioDuration?: number; eofEnd?: number
   complete?: boolean; doneMs?: number; ranges?: Range[]; error?: string; softError?: string
+  active?: boolean; recovering?: boolean; recoveryBlocked?: boolean
   adsSeen?: number; adsDelivered?: number; adMs?: number; adRateViolations?: number; adRateObservations?: number
   [key: string]: unknown
 }
@@ -51,14 +52,21 @@ export function continuous(ranges: Range[], duration: number, epsilon = 0.000001
     Math.abs(ranges[0].start) <= epsilon && Math.abs(ranges[0].end - duration) <= epsilon
 }
 
-async function until(predicate: () => boolean, deadline: number, check: () => void = () => {}, pulse?: () => Promise<void>) {
+async function until(predicate: () => boolean, deadline: number, check: () => void = () => {}, pulse?: () => Promise<void>, pulseMs = 15000) {
   let lastPulse = performance.now()
   while (!predicate()) {
     check()
     if (performance.now() >= deadline) throw new Error('Se agotó la espera operativa; el criterio temporal no se ha superado')
-    if (pulse && performance.now() - lastPulse >= 15000) { await pulse(); lastPulse = performance.now() }
+    if (pulse && performance.now() - lastPulse >= pulseMs) { await pulse(); lastPulse = performance.now() }
     await sleep(20)
   }
+}
+
+function terminalCaptureFailure(s: Status | null): string | null {
+  // A retained prefix and a soft error are normal during recovery. Only the
+  // native circuit breaker plus an inactive lease declare automatic recovery over.
+  return s?.complete !== true && s?.recoveryBlocked === true && s.active === false && s.recovering === false &&
+    typeof s.softError === 'string' && s.softError.length > 0 ? s.softError : null
 }
 
 function liveAudio(audio: HTMLAudioElement, started: number) {
@@ -484,6 +492,14 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
     for (const [position, entry] of playable.entries()) {
       const row = rows[entry.index], began = performance.now()
       let latest: Status | null = null
+      const checkTerminal = (audio?: HTMLAudioElement, observed?: ReturnType<typeof observeAudio>) => {
+        const reason = terminalCaptureFailure(latest)
+        if (!reason) return
+        row.terminalCapture = { reason, elapsedMs: performance.now() - began, status: structuredClone(latest),
+          live: audio ? liveAudio(audio, began) : null, progress: (audio ? captureProgress(audio) : null) ?? observed?.progress ?? null }
+        row.complete = false
+        throw new Error(`Captura incompleta: recuperación automática detenida (${reason})`)
+      }
       row.phase = 'starting'; await checkpoint(rows)
       try {
         await until(() => {
@@ -494,7 +510,13 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         }, began + (plan.timeoutSeconds ?? 360) * 1000, () => {
           if (player.pos > position) throw new Error('Musify saltó la pista tras un fallo')
           if (observers.get(position)?.observed.events.some(e => e.type === 'captureerror')) throw new Error('La captura falló antes del primer sonido')
-        })
+        }, async () => {
+          const watched = observers.get(position)
+          latest = plan.engine === 'propio' && (!watched || !captureProgress(watched.audio)) ? null :
+            await status(entry.video.id).catch(() => latest)
+          audit.observe(entry.video.id, latest)
+          checkTerminal(watched?.audio, watched?.observed)
+        }, 1000)
         const { audio, observed } = observers.get(position)!
         latest = plan.engine === 'propio' && !captureProgress(audio) ? null : await status(entry.video.id)
         audit.observe(entry.video.id, latest)
@@ -522,18 +544,23 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.phase = 'listening'; await checkpoint(rows)
         const duration = latest?.duration ?? audio.duration
         row.duration = duration
+        let lastCheckpoint = performance.now()
         await until(() => observed.ended !== null, performance.now() + Math.max((plan.timeoutSeconds ?? 360) * 1000,
           (Number.isFinite(duration) ? duration : entry.video.duration) * 1000 + 180000), () => {
           if (audio.error) throw new Error(`Audio ${audio.error.code}: ${audio.error.message}`)
           if (observed.events.some(e => e.type === 'captureerror')) throw new Error('Captura detenida antes del final')
           if (player.pos > position && observed.ended === null) throw new Error('Cambio de pista sin ended natural')
+          checkTerminal(audio, observed)
         }, async () => {
           latest = plan.engine === 'propio' && !captureProgress(audio) ? null : await status(entry.video.id).catch(() => latest)
           audit.observe(entry.video.id, latest)
-          row.latestStatus = structuredClone(latest); row.progress = captureProgress(audio) ?? observed.progress
-          row.live = liveAudio(audio, began); row.elapsedMs = performance.now() - began
-          await checkpoint(rows)
-        })
+          checkTerminal(audio, observed)
+          if (performance.now() - lastCheckpoint >= 15000) {
+            row.latestStatus = structuredClone(latest); row.progress = captureProgress(audio) ?? observed.progress
+            row.live = liveAudio(audio, began); row.elapsedMs = performance.now() - began
+            await checkpoint(rows); lastCheckpoint = performance.now()
+          }
+        }, 1000)
         previousEnded = observed.ended
         const progress = observed.progress ?? captureProgress(audio)
         const nativeDirect = plan.engine === 'propio' && !progress
@@ -541,6 +568,7 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.nativeDirect = nativeDirect
         const audioDuration = nativeDirect ? audio.duration : latest?.audioDuration ?? latest?.eofEnd ?? progress?.audioDuration
         row.status = latest; row.coverage = progress; row.audioDuration = audioDuration ?? null
+        row.endedObserved = observed.ended !== null
         row.endedPosition = observed.endedPosition; row.endedBuffered = observed.endedBuffered
         row.complete = nativeDirect ? observed.ended !== null : latest?.complete === true || progress?.complete === true
         row.coverageOk = continuous(observed.endedBuffered ?? progress?.buffered ?? [], audioDuration ?? NaN)
@@ -558,6 +586,9 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.events = watched?.observed.events ?? []; row.gaps = watched?.observed.gaps ?? []
         row.allPlaybackStalls = watched?.observed.allPlaybackStalls ?? []
         row.coverage = watched?.observed.progress ?? null
+        row.endedObserved = watched?.observed.ended != null
+        row.endedPosition = watched?.observed.endedPosition ?? null
+        row.endedBuffered = watched?.observed.endedBuffered ?? null
         previousEnded = null
         if (plan.engine !== 'propio') checkAds(row, row.status as Status | null)
         // Continuar una fila fallida no permite dar por buena la transición siguiente.
