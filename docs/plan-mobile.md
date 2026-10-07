@@ -172,6 +172,7 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 - **Probado en el emulador:**
   - la versión firmada desde cero: arranca, busca, suena en el servicio y comparte el registro;
   - el APK de GitHub instalado encima del firmado en el PC: Android lo acepta como actualización y conserva historial y cola;
+  - con la 0.5.0 ya publicada, la 0.4.0 avisa de que hay versión nueva, y el APK de musify-releases se instala encima conservando historial y cola;
   - en escritorio, la app de verdad (con otro identificador para no tocar la instalada): busca y suena.
 - **Falta en el móvil:** instalar Obtainium, añadir la app y comprobar que la versión siguiente se instala sola.
 
