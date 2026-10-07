@@ -52,6 +52,13 @@ export function continuous(ranges: Range[], duration: number, epsilon = 0.000001
     Math.abs(ranges[0].start) <= epsilon && Math.abs(ranges[0].end - duration) <= epsilon
 }
 
+/** Una URL nativa puede conservar priming AAC antes de cero; debe cubrir todo lo reproducible. */
+export function directPlaybackCoverage(ranges: Range[], duration: number, epsilon = 0.000001): boolean {
+  return Number.isFinite(duration) && duration > 0 && ranges.length === 1 &&
+    Number.isFinite(ranges[0].start) && Number.isFinite(ranges[0].end) && ranges[0].start < ranges[0].end &&
+    ranges[0].start <= epsilon && ranges[0].end >= duration - epsilon
+}
+
 async function until(predicate: () => boolean, deadline: number, check: () => void = () => {}, pulse?: () => Promise<void>, pulseMs = 15000) {
   let lastPulse = performance.now()
   while (!predicate()) {
@@ -523,12 +530,13 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         if (plan.engine !== 'propio') checkExperiment(row, latest, plan)
         row.startStatus = latest
         row.selectedSource = player.playbackSource
+        row.legacyCapture = player.playbackSource?.kind === 'capture-legacy'
         if (plan.engine === 'propio' && player.playbackSource?.trackId === entry.item.track.id &&
             player.playbackSource.videoId !== entry.video.id)
           row.failures.push('La búsqueda eligió un vídeo distinto del esperado por el corpus')
         row.firstSoundMs = observed.firstPlaying! - (position === 0 ? albumStart : previousEnded ?? began)
         if (position === 0) {
-          const adMs = plan.engine === 'propio' ? 0 : adTime(latest)
+          const adMs = row.legacyCapture ? null : plan.engine === 'propio' ? 0 : adTime(latest)
           row.firstSoundWithoutAdMs = adMs === null ? null : (row.firstSoundMs as number) - adMs
           row.startAdMs = adMs
           if (adMs !== null && adMs > (row.firstSoundMs as number) + 1) row.failures.push('El tiempo publicitario excede la ventana medida de primer sonido')
@@ -563,15 +571,21 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         }, 1000)
         previousEnded = observed.ended
         const progress = observed.progress ?? captureProgress(audio)
-        const nativeDirect = plan.engine === 'propio' && !progress
-        latest = nativeDirect ? null : await status(entry.video.id).catch(() => latest)
+        const nativeDirect = plan.engine === 'propio' && (row.selectedSource as { kind?: string } | null)?.kind === 'network'
+        const legacyCapture = row.legacyCapture === true
+        latest = nativeDirect || legacyCapture ? null : await status(entry.video.id).catch(() => latest)
         row.nativeDirect = nativeDirect
-        const audioDuration = nativeDirect ? audio.duration : latest?.audioDuration ?? latest?.eofEnd ?? progress?.audioDuration
+        const audioDuration = nativeDirect || legacyCapture ? audio.duration : latest?.audioDuration ?? latest?.eofEnd ?? progress?.audioDuration
         row.status = latest; row.coverage = progress; row.audioDuration = audioDuration ?? null
         row.endedObserved = observed.ended !== null
         row.endedPosition = observed.endedPosition; row.endedBuffered = observed.endedBuffered
-        row.complete = nativeDirect ? observed.ended !== null : latest?.complete === true || progress?.complete === true
-        row.coverageOk = continuous(observed.endedBuffered ?? progress?.buffered ?? [], audioDuration ?? NaN)
+        row.complete = legacyCapture ? false : nativeDirect ? observed.ended !== null : latest?.complete === true || progress?.complete === true
+        const finalBuffered = observed.endedBuffered ?? progress?.buffered ?? []
+        row.coverageOk = nativeDirect ? directPlaybackCoverage(finalBuffered, audioDuration ?? NaN) : continuous(finalBuffered, audioDuration ?? NaN)
+        if (legacyCapture) {
+          row.completeNotExercised = true
+          row.failures.push('Respaldo legacy: ended y cobertura del consumidor observados; EOF, anuncios y velocidad de la captura sin auditoría API4')
+        }
         if (!row.complete) row.failures.push('EOF sin verificación completa')
         if (!row.coverageOk) row.failures.push('Cobertura final ausente o con huecos')
         if (!Number.isFinite(audioDuration) || observed.endedPosition === null || observed.endedPosition < (audioDuration ?? Infinity) - 0.000001)
@@ -579,7 +593,7 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.events = observed.events; row.gaps = observed.gaps
         row.allPlaybackStalls = observed.allPlaybackStalls
         if (observed.gaps.length) row.failures.push(`${observed.gaps.length} cortes durante escucha normal`)
-        if (!nativeDirect) checkAds(row, latest)
+        if (!nativeDirect && !legacyCapture) checkAds(row, latest)
       } catch (error) {
         row.failures.push(String(error)); row.status = latest ?? await status(entry.video.id).catch(() => null)
         const watched = observers.get(position)
@@ -742,10 +756,11 @@ async function nativeSearch(videos: CaptureCase[], plan: CaptureSuitePlan, check
         if (player.playbackSource?.videoId && player.playbackSource.videoId !== video.id)
           row.failures.push('La búsqueda eligió un vídeo distinto del esperado por el corpus')
         row.initialProgress = captureProgress(audio!)
-        row.nativeDirect = !row.initialProgress
-        row.fallbackCapture = !!row.initialProgress
+        row.nativeDirect = player.playbackSource?.kind === 'network'
+        row.legacyCapture = player.playbackSource?.kind === 'capture-legacy'
+        row.fallbackCapture = player.playbackSource?.kind === 'capture' || row.legacyCapture === true
         if ((row.firstSoundMs as number) > NATIVE_LIMITS.firstSoundMs) row.failures.push('Búsqueda e inicio de audio superan 300 ms')
-        row.status = row.nativeDirect ? null : await status(video.id).catch(() => null)
+        row.status = row.nativeDirect || row.legacyCapture ? null : await status(video.id).catch(() => null)
         row.phase = 'first-sound'; await checkpoint(rows)
       } catch (error) { row.failures.push(String(error)) }
       finally {

@@ -96,6 +96,7 @@ async function setup(t, options = {}) {
     },
     begin() {
       this.current = this.items[this.pos]; this.status = 'loading'
+      if (options.sourceKind) this.playbackSource = { kind: options.sourceKind, trackId: this.current.track.id, videoId: video(this.current.track.id).id }
       forgotten.delete(video(this.current.track.id).id)
       if (options.promote && this.pos > 0) this.playbackAudio = this.preparedAudio
       const audio = this.playbackAudio
@@ -105,7 +106,7 @@ async function setup(t, options = {}) {
       this.preparedAudio = options.promote && this.upcoming.length ? new Audio() : null
       audio.onPlay = () => {
         this.status = 'playing'
-        emitProgress(audio, options.progress ?? proof())
+        if (!options.noCaptureProgress) emitProgress(audio, options.progress ?? proof())
         if (options.errorAfterPlayingTrack === this.current.track.id)
           audio.dispatchEvent(new CustomEvent('captureerror', { detail: 'fixture failure after playing' }))
         if (options.holdPlayback || options.holdPlayerTrack === this.current.track.id) return
@@ -532,6 +533,45 @@ test('cobertura exige ambos extremos exactos, no acepta una cola extra ni inicio
   assert.equal(env.continuous([{ start: 0, end: 1.02 }], 1), false)
   assert.equal(env.continuous([{ start: -0.02, end: 1 }], 1), false)
   assert.equal(env.continuous([{ start: 0, end: 0.9 }], 1), false)
+})
+
+test('la cobertura de URL directa contiene el intervalo reproducible sin exigir eliminar priming AAC', async t => {
+  const env = await setup(t)
+  for (const duration of [251.733333, 187.333333])
+    assert.equal(env.directPlaybackCoverage([{ start: -0.013061, end: duration }], duration), true)
+  for (const ranges of [[{ start: 0.02, end: 1 }], [{ start: -0.013061, end: 0.99 }],
+    [{ start: 0, end: 0.5 }, { start: 0.6, end: 1 }], [{ start: 1, end: 0 }], [{ start: -Infinity, end: 1 }]])
+    assert.equal(env.directPlaybackCoverage(ranges, 1), false)
+})
+
+test('álbum directo reconoce cobertura AAC con priming negativo y ended exacto', async t => {
+  const env = await setup(t, { sourceKind: 'network', noCaptureProgress: true, endedAt: 251.733333 })
+  env.player.playbackAudio.duration = 251.733333
+  env.player.playbackAudio.ranges = [{ start: -0.013061, end: 251.733333 }]
+  const report = await env.execute({ mode: 'album', engine: 'propio', videos: [video(1)], timeoutSeconds: 1 })
+  assert.equal(report.rows[0].nativeDirect, true)
+  assert.equal(report.rows[0].endedObserved, true)
+  assert.equal(report.rows[0].coverageOk, true)
+  assert(!report.rows[0].failures.some(reason => /Cobertura/.test(reason)))
+})
+
+test('el respaldo legacy conserva ended del consumidor sin acreditarse como nativo ni como EOF API4 auditado', async t => {
+  const env = await setup(t, { sourceKind: 'capture-legacy', noCaptureProgress: true })
+  const report = await env.execute({ mode: 'album', engine: 'propio', videos: [video(1)], timeoutSeconds: 1 })
+  const row = report.rows[0]
+  assert.equal(row.nativeDirect, false)
+  assert.equal(row.legacyCapture, true)
+  assert.equal(row.endedObserved, true)
+  assert.equal(row.audioDuration, 0.95)
+  assert.equal(row.coverageOk, true)
+  assert.equal(row.complete, false)
+  assert.equal(row.completeNotExercised, true)
+  assert.equal(row.startAdMs, null)
+  assert.equal(row.status, null)
+  assert.equal(row.adsDelivered, undefined)
+  assert.equal(row.adRateViolations, undefined)
+  assert(row.failures.some(reason => /Respaldo legacy/.test(reason)))
+  assert(!env.calls.some(([name]) => /^capture_(?:status|verify_)/.test(name)))
 })
 
 test('el control de cuarentena verifica EOF sin aplicar el requisito progresivo de 3 segundos', async t => {
