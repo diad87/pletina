@@ -1,4 +1,4 @@
-// Capture API 2. No site selectors: complete sources remain quarantined until verified.
+// Capture API 3. No site selectors; normal mode quarantines complete sources until verified.
 (() => {
   class CaptureError extends Error {
     constructor(code, message) { super(`${code}: ${message}`); this.name = 'CaptureError'; this.code = code }
@@ -470,6 +470,11 @@
       const end = Math.min(settings.appendWindowEnd ?? Infinity, sample.end + settings.timestampOffset)
       return { start, end }
     }
+    completeCertificate(source, buffer) {
+      const certificate = source.completeCertificate
+      if (!certificate || certificate.epoch !== this.epoch || source.progress.epoch !== this.epoch || certificate.buffer !== buffer || certificate.native !== buffer.native || certificate.version !== buffer.version || certificate.settings !== JSON.stringify(buffer.timelineSettings ?? settingsOf()) || !source.sealed) fail('CAPTURE_PARTIAL_PRESENTATION', 'The complete-source certificate no longer identifies this immutable source and epoch')
+      return certificate
+    }
     pull(source, snapshot, { maxSeconds = 0.5, maxBytes = 4 * 1024 * 1024 } = {}) {
       if (!source || source.error) { if (source?.error) throw source.error; return [] }
       if (source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false) return []
@@ -477,7 +482,10 @@
       const buffer = source.buffers[0], inventory = this.inventory(source)
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
+      const certificate = this.experimental ? null : this.completeCertificate(source, buffer)
+      if (certificate && (snapshot.position < certificate.proof.timeline.end || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
       const units = [], available = inventory.samples.map(s => this.sampleRange(s, settings))
+      const normalEmitted = []
       for (let first = 0; first < available.length;) {
         const eligible = index => {
           const r = available[index]
@@ -485,15 +493,44 @@
         }
         if (!eligible(first)) { first++; continue }
         let until = first + 1, bytes = inventory.init.length + inventory.samples[first].size + 128
-        while (until < available.length && eligible(until) && Math.abs(available[until].start - available[until - 1].end) <= coverageEpsilon && available[until].end - available[first].start <= maxSeconds && bytes + inventory.samples[until].size + 32 <= maxBytes) { bytes += inventory.samples[until].size + 32; until++ }
+        if (certificate) {
+          // Only a completely observed, sealed source may retain the same intraframe
+          // timestamp quantization already accepted by API 2's strict parser. Keep
+          // that connection INSIDE one remux unit; the ledger still joins at 1us.
+          const quantum = Math.max(certificate.proof.timeline.quantum, coverageEpsilon) + 1e-9
+          let exactCut = null
+          while (true) {
+            const more = until < available.length && eligible(until)
+            const gap = more ? Math.abs(available[until].start - available[until - 1].end) : 0
+            if (!more || gap <= coverageEpsilon) {
+              exactCut = until
+              if (!more || available[until - 1].end - available[first].start >= maxSeconds) break
+            }
+            if (gap > quantum) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'A complete-source unit crosses more than certified codec quantization')
+            const nextBytes = bytes + inventory.samples[until].size + 32
+            if (nextBytes > maxBytes) {
+              if (exactCut === null) fail('CAPTURE_UNIT_LIMIT', 'An indivisible codec-quantized chain exceeds the unit transport budget')
+              until = exactCut; break
+            }
+            bytes = nextBytes; until++
+          }
+        } else {
+          while (until < available.length && eligible(until) && Math.abs(available[until].start - available[until - 1].end) <= coverageEpsilon && available[until].end - available[first].start <= maxSeconds && bytes + inventory.samples[until].size + 32 <= maxBytes) { bytes += inventory.samples[until].size + 32; until++ }
+        }
         const unit = ++this.nextUnit, media = buffer.remux(inventory, first, until - first, unit)
         const data = join([media.init, media.media])
         if (data.byteLength > maxBytes) fail('CAPTURE_UNIT_LIMIT', 'One verified unit exceeds the transport budget')
         const rangeStart = available[first].start, rangeEnd = available[until - 1].end
-        for (let i = first; i < until; i++) source.progress.emitted.add(i)
-        this.coverage = mergeRanges([...this.coverage, { start: rangeStart, end: rangeEnd }], coverageEpsilon)
+        for (let i = first; i < until; i++) { if (certificate) normalEmitted.push(i); else source.progress.emitted.add(i) }
+        if (!certificate) this.coverage = mergeRanges([...this.coverage, { start: rangeStart, end: rangeEnd }], coverageEpsilon)
         units.push({ epoch: this.epoch, source: source.id, s: buffer.id, unit, initKey: this.initializationKey(media.init, settings), initBytes: media.init.length, mime: buffer.mime, rangeStart, rangeEnd, decodeStart: rangeStart, decodeEnd: rangeEnd, frames: until - first, timelineSettings: settings, data })
         first = until
+      }
+      // No units escape this call if a later indivisible chain fails. Do not credit
+      // earlier prepared units until the entire normal-mode publication succeeds.
+      if (certificate) {
+        for (const index of normalEmitted) source.progress.emitted.add(index)
+        this.coverage = mergeRanges([...this.coverage, ...units.map(unit => ({ start: unit.rangeStart, end: unit.rangeEnd }))], coverageEpsilon)
       }
       return units
     }
@@ -512,6 +549,15 @@
       if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || snapshot.position < end || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}`)
       if (!this.experimental) {
         if (source.observations[0]?.position !== 0 || !covers(source.progress.ranges, 0, end, coverageEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe capture requires the whole source presentation from zero; a seek or missing beginning remains incomplete')
+        if (!source.completeCertificate) {
+          // Seal once, with the original complete-source parser (no seek-gap option),
+          // one native audio range and immutable bytes/settings. Observation coverage
+          // above remains exact; codec quantum never repairs an unobserved interval.
+          const proof = super.seal(source, snapshot)
+          source.completeCertificate = { epoch: this.epoch, buffer, native: buffer.native, version: buffer.version, settings: JSON.stringify(settings), proof }
+        }
+        const certificate = this.completeCertificate(source, buffer)
+        if (snapshot.audioRanges.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', 'The native audio range changed after complete-source certification')
         source.verifiedFinalEpoch = this.epoch
       }
       return { eof: true, complete: covers(this.coverage, 0, end, coverageEpsilon), duration: snapshot.duration, end, ranges: this.coverage.map(r => ({ ...r })) }

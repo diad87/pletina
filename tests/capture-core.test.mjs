@@ -358,6 +358,106 @@ test('normal API3 quarantines until full clean history and native EOF pass befor
   assert.equal(tracker.finish(source, snapshot).complete, true)
 })
 
+function normalQuantizedSetup(times = [0, 21, 41]) {
+  const core = load(), tracker = new core.ProgressiveTracker({ epoch: 1 }), source = tracker.createSource()
+  const buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"'), f = fixture({ times })
+  tracker.append(buffer, f.bytes)
+  const snapshot = { source, position: f.duration, duration: f.duration, playbackRate: 1, seeking: false, readyState: 4, updating: false, sourceEnded: true, audioRanges: [{ start: 0, end: f.duration }] }
+  const observe = (position, now = position * 1000, identity = content) => tracker.observe(source, identity, { position, now, duration: f.duration })
+  return { ...core, tracker, source, buffer, f, snapshot, observe }
+}
+
+test('normal EOF certificate groups codec quantization inside units while every unit boundary stays exact', () => {
+  const { tracker, source, buffer, f, snapshot, observe, inspectWebMPrefix } = normalQuantizedSetup([0, 21, 41, 61, 82, 102])
+  let strictParses = 0
+  const originalParser = buffer.parser
+  buffer.parser = bytes => { strictParses++; return originalParser(bytes) }
+  observe(0); observe(f.duration)
+  assert.equal(tracker.pull(source, snapshot).length, 0, 'complete data and observation alone cannot bypass EOF certification')
+  assert.equal(tracker.finish(source, snapshot).complete, false, 'certification does not credit units before publication')
+  const certificate = source.completeCertificate
+  assert.equal(source.sealed, true)
+  const units = tracker.pull(source, snapshot, { maxSeconds: 0.019 })
+  assert.deepEqual(Array.from(units, u => u.frames), [2, 1, 2, 1], 'a soft duration limit never splits a quantized boundary')
+  for (let i = 1; i < units.length; i++) assert.ok(Math.abs(units[i].rangeStart - units[i - 1].rangeEnd) <= 0.000001)
+  assert.deepEqual(Array.from(tracker.coverage, r => ({ ...r })), [{ start: 0, end: f.duration }])
+  assert.equal(tracker.finish(source, snapshot).complete, true)
+  assert.equal(source.completeCertificate, certificate, 'second finish reuses the immutable certificate instead of sealing twice')
+  assert.equal(strictParses, 1)
+  assert.equal(tracker.pull(source, snapshot).length, 0, 'each sample remains published once')
+  const restored = concat(units[0].data, ...units.slice(1).map(u => u.data.subarray(u.initBytes)))
+  const original = inspectWebMPrefix(f.bytes, { final: true }), remuxed = inspectWebMPrefix(restored, { final: true })
+  assert.deepEqual(remuxed.codedFrames, original.codedFrames)
+  assert.deepEqual(remuxed.samples.map(s => Buffer.from(restored.subarray(s.offset, s.offset + s.size))), original.samples.map(s => Buffer.from(f.bytes.subarray(s.offset, s.offset + s.size))), 'all complete Block payloads remain exact and in order')
+  assert.throws(() => tracker.finish(source, { ...snapshot, audioRanges: [{ start: 0.01, end: f.duration }] }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.throws(() => tracker.pull(source, { ...snapshot, position: f.duration - 0.0008 }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+})
+
+test('the same quantized source remains incomplete in experimental progressive mode', () => {
+  const { tracker, source, f, snapshot, observe } = normalQuantizedSetup()
+  tracker.experimental = true
+  observe(0); observe(f.duration)
+  const units = tracker.pull(source, snapshot)
+  assert.equal(units.length, 2)
+  assert.equal(units[0].rangeEnd, 0.02)
+  assert.equal(units[1].rangeStart, 0.021)
+  assert.equal(tracker.finish(source, snapshot).complete, false)
+  assert.equal(source.completeCertificate, undefined)
+  assert.equal(source.sealed, false)
+})
+
+test('normal codec certification never repairs missing packets, partial observation, identity mixing or epoch holes', () => {
+  for (const scenario of ['missing-packet', 'partial', 'ad', 'unknown', 'epoch-gap', 'native-gap']) {
+    const { tracker, source, f, snapshot, observe } = normalQuantizedSetup(scenario === 'missing-packet' ? [0, 40] : undefined)
+    if (scenario === 'missing-packet') tracker.beginEpoch(2, 0) // Prefix inventory may allow gaps; API2 complete-source parser must still reject them.
+    observe(scenario === 'partial' ? 0.0005 : 0)
+    if (scenario === 'ad' || scenario === 'unknown') observe(0.02, 20, scenario === 'ad' ? ad : { state: 'unknown', sourceBound: true, signals: [] })
+    if (scenario === 'epoch-gap') { observe(0.02); tracker.beginEpoch(2, 0.0205); observe(0.0205, 100) }
+    observe(f.duration, scenario === 'epoch-gap' ? 141 : f.duration * 1000)
+    const terminal = ['missing-packet', 'native-gap'].includes(scenario) ? { ...snapshot, audioRanges: [{ start: 0, end: 0.02 }, { start: scenario === 'missing-packet' ? 0.04 : 0.021, end: f.duration }] } : snapshot
+    const expected = scenario === 'missing-packet' ? 'CAPTURE_AMBIGUOUS_TIMELINE' : ['ad', 'unknown'].includes(scenario) ? 'CAPTURE_IDENTITY_UNCERTAIN' : 'CAPTURE_PARTIAL_PRESENTATION'
+    assert.throws(() => tracker.finish(source, terminal), codeIs(expected), scenario)
+    assert.equal(source.completeCertificate, undefined, scenario)
+    assert.equal(source.progress.emitted.size, 0, scenario)
+    assert.equal(tracker.coverage.length, 0, scenario)
+  }
+})
+
+test('normal publication refuses indivisible oversized chains without crediting earlier prepared units', () => {
+  const times = [0, ...Array.from({ length: 20 }, (_, i) => 20 + i * 21)]
+  const { tracker, source, f, snapshot, observe, remuxWebM } = normalQuantizedSetup(times)
+  observe(0); observe(f.duration)
+  tracker.finish(source, snapshot)
+  const inventory = tracker.inventory(source), one = remuxWebM(inventory, 0, 1), chain = remuxWebM(inventory, 1, times.length - 1)
+  const maxBytes = one.init.length + one.media.length + 10
+  assert.ok(chain.init.length + chain.media.length > maxBytes)
+  assert.throws(() => tracker.pull(source, snapshot, { maxSeconds: 0.02, maxBytes }), e => e.code === 'CAPTURE_UNIT_LIMIT' && /indivisible/.test(e.message))
+  assert.equal(source.progress.emitted.size, 0)
+  assert.equal(tracker.coverage.length, 0, 'no range is credited when none of the prepared units was returned')
+  assert.equal(tracker.finish(source, snapshot).complete, false)
+  const units = tracker.pull(source, snapshot, { maxSeconds: 0.02, maxBytes: 4096 })
+  assert.equal(units.length, 2)
+  assert.equal(units[0].rangeEnd, units[1].rangeStart)
+  assert.equal(units[1].frames, 20)
+  assert.equal(tracker.finish(source, snapshot).complete, true)
+})
+
+test('a normal complete-source certificate cannot be reused after inventory, source-buffer, settings or epoch changes', () => {
+  for (const change of ['version', 'native', 'settings', 'epoch', 'append']) {
+    const { tracker, source, buffer, f, snapshot, observe } = normalQuantizedSetup()
+    observe(0); observe(f.duration); tracker.finish(source, snapshot)
+    if (change === 'version') buffer.version++
+    else if (change === 'native') buffer.native = {}
+    else if (change === 'settings') buffer.timelineSettings = { ...buffer.timelineSettings, timestampOffset: 1 }
+    else if (change === 'epoch') tracker.beginEpoch(2, 0)
+    else tracker.append(buffer, Uint8Array.of(0))
+    if (change === 'epoch') assert.equal(tracker.pull(source, snapshot).length, 0)
+    else assert.throws(() => tracker.pull(source, snapshot), codeIs(change === 'append' ? 'CAPTURE_AMBIGUOUS_SOURCE' : 'CAPTURE_PARTIAL_PRESENTATION'), change)
+    assert.equal(source.progress.emitted.size, 0, change)
+    assert.equal(tracker.coverage.length, 0, change)
+  }
+})
+
 test('seek parser reset accepts either fresh split initialization or media with the preserved initialization', () => {
   for (const freshInit of [true, false]) {
     const { tracker, source, buffer } = progressiveSetup()
@@ -399,6 +499,19 @@ test('real AAC/Opus remux retains the identical decoded PCM across many sample b
     assert(expected.length > 48000 * 2 * 4)
     assert.deepEqual(actual, expected, `${format}: decoded samples must be bit-for-bit identical, including beginning and tail`)
     t.diagnostic(`${format}: ${inventory.samples.length} coded samples, ${media.length} progressive units, ${actual.length / (2 * 4)} decoded stereo frames identical`)
+    const tracker = new core.ProgressiveTracker({ epoch: 1 }), captured = tracker.createSource()
+    tracker.append(tracker.createBuffer(captured, format === 'webm' ? 'audio/webm; codecs="opus"' : 'audio/mp4; codecs="mp4a.40.2"'), source)
+    const end = inventory.codedEnd ?? inventory.end
+    for (let position = 0; position < end; position += 0.1) tracker.observe(captured, content, { position, now: position * 1000, duration: end })
+    tracker.observe(captured, content, { position: end, now: end * 1000, duration: end })
+    const terminal = { source: captured, position: end, duration: end, sourceEnded: true, playbackRate: 1, seeking: false, readyState: 4, updating: false, audioRanges: [{ start: 0, end }] }
+    tracker.finish(captured, terminal)
+    const normalUnits = tracker.pull(captured, terminal, { maxSeconds: 0.09 })
+    assert.ok(normalUnits.length > 10)
+    assert.equal(tracker.finish(captured, terminal).complete, true)
+    const normalDecoded = decode(concat(normalUnits[0].data, ...normalUnits.slice(1).map(unit => unit.data.subarray(unit.initBytes))))
+    assert.deepEqual(normalDecoded, expected, `${format}: normal certified grouping must retain exact PCM without duplicating preroll packets`)
+    t.diagnostic(`${format}: ${normalUnits.length} normal EOF-certified units, full continuous coverage, identical decoded PCM`)
   }
 })
 
