@@ -17,9 +17,9 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/movil-inicio.png" alt="Inicio en el móvil" width="260"></td>
-    <td><img src="docs/screenshots/movil-sonando.png" alt="Sonando ahora en el móvil" width="260"></td>
-    <td><img src="docs/screenshots/movil-cola.png" alt="Cola en el móvil" width="260"></td>
+    <td width="33%"><img src="docs/screenshots/movil-inicio.png" alt="Inicio en el móvil" width="100%"></td>
+    <td width="33%"><img src="docs/screenshots/movil-sonando.png" alt="Sonando ahora en el móvil" width="100%"></td>
+    <td width="33%"><img src="docs/screenshots/movil-cola.png" alt="Cola en el móvil" width="100%"></td>
   </tr>
   <tr>
     <td><b>Inicio</b>, con lo que suena abajo</td>
@@ -27,9 +27,9 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
     <td><b>Cola</b>: tu cola se ordena arrastrando el asa</td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/movil-disco.png" alt="Disco en el móvil" width="260"></td>
-    <td><img src="docs/screenshots/movil-biblioteca.png" alt="Tu biblioteca en el móvil" width="260"></td>
-    <td><img src="docs/screenshots/movil-bloqueo.png" alt="Pantalla de bloqueo" width="260"></td>
+    <td width="33%"><img src="docs/screenshots/movil-disco.png" alt="Disco en el móvil" width="100%"></td>
+    <td width="33%"><img src="docs/screenshots/movil-biblioteca.png" alt="Tu biblioteca en el móvil" width="100%"></td>
+    <td width="33%"><img src="docs/screenshots/movil-bloqueo.png" alt="Pantalla de bloqueo" width="100%"></td>
   </tr>
   <tr>
     <td><b>Disco</b></td>
