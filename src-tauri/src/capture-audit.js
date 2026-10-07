@@ -35,8 +35,26 @@
         return state
       } catch { return null }
     }
+    const frameCategory = line => {
+      const body = line.replace(/^\s*at\s+/, '').trim(), isEval = body.includes('eval at ')
+      const location = /\(([^()]*)\)\s*$/.exec(body)?.[1] ?? body
+      const suffix = /:([0-9]+):([0-9]+)\)*$/.exec(location)
+      const origin = suffix ? location.slice(0, suffix.index) : location
+      const revision = /^https:\/\/(?:www\.|music\.)?youtube\.com\/s\/player\/([a-z0-9]{8,32})\/(?:[^/?#\s]+\/)*base\.js(?:[?#].*)?$/.exec(origin)?.[1]
+      const category = isEval ? 'eval' : revision ? 'player-script'
+        : /^https:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch|embed\/[^/?#\s]+)?(?:[?#].*)?$/.test(origin) ? 'youtube-page'
+          : /^(?:<anonymous>|VM[0-9]+)$/.test(origin) ? 'anonymous' : 'other'
+      const frame = { category }
+      if (suffix) {
+        const lineNumber = Number(suffix[1]), column = Number(suffix[2])
+        if (Number.isSafeInteger(lineNumber) && lineNumber > 0) frame.line = lineNumber
+        if (Number.isSafeInteger(column) && column > 0) frame.column = column
+      }
+      if (category === 'player-script') frame.revision = revision
+      return frame
+    }
     const safeStack = () => {
-      const names = []
+      const names = [], frames = []
       try {
         // V8 normally captures ten frames, including these wrappers. Raise that
         // local diagnostic capture limit briefly, then restore the exact property.
@@ -48,15 +66,18 @@
           }
           raw = String(new ErrorType().stack ?? '').slice(0, 8192)
         } finally { if (raised) Object.defineProperty(ErrorType, 'stackTraceLimit', limit) }
-        // Read only bounded function names. Never retain frame locations, URLs,
-        // query strings, exception messages, source text or account information.
+        // Keep only function tokens and whitelisted location categories/numbers.
+        // Never retain URLs, paths, queries, messages, source text or account data.
         for (const line of raw.split('\n').slice(1, 25)) {
+          if (!/^\s*at\s+/.test(line)) continue
           const name = /^\s*at ([A-Za-z_$][A-Za-z0-9_$.]{0,63})\s*\(/.exec(line)?.[1]
-          if (name && !['safeStack', 'auditedPlayback', 'control', 'controlled'].includes(name.split('.').at(-1))) names.push(name)
-          if (names.length === 12) break
+          if (name && ['safeStack', 'auditedPlayback', 'control', 'controlled'].includes(name.split('.').at(-1))) continue
+          if (name && names.length < 12) names.push(name)
+          if (frames.length < 12) frames.push(frameCategory(line))
+          if (names.length === 12 && frames.length === 12) break
         }
       } catch { /* Optional caller evidence never changes the native call. */ }
-      return names
+      return { names, frames }
     }
     const playbackMessage = (phase, control) => {
       let source = null
@@ -84,7 +105,7 @@
       }
       if (!stack) return
       playbackSamples++
-      const control = { method, origin, ...(reason ? { reason } : {}), before, after: playbackSnapshot(media), threw, stack }
+      const control = { method, origin, ...(reason ? { reason } : {}), before, after: playbackSnapshot(media), threw, stack: stack.names, frames: stack.frames }
       if (typeof requested === 'boolean' || (typeof requested === 'number' && Number.isFinite(requested))) control.requested = requested
       emit(playbackMessage('sample', control))
     }

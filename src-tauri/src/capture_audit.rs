@@ -6,6 +6,7 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 const MAX_DISK: u64 = 1024 * 1024 * 1024;
@@ -142,13 +143,15 @@ fn fail(audit: &mut Audit, reason: &str) {
     audit.last_error = Some(reason.to_string());
 }
 fn create_root() -> std::io::Result<PathBuf> {
+    static SEQUENCE: AtomicU64 = AtomicU64::new(1);
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_nanos();
     let path = std::env::temp_dir().join(format!(
-        "musify-capture-audit-{}-{stamp}.local",
-        std::process::id()
+        "musify-capture-audit-{}-{stamp}-{}.local",
+        std::process::id(),
+        SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ));
     std::fs::create_dir(&path)?;
     Ok(path)
@@ -260,6 +263,43 @@ fn playback_diagnostic(value: &Value) -> Option<Value> {
                 clean_names.push(name.to_string());
             }
             clean["stack"] = json!(clean_names);
+        }
+        if let Some(frames) = control.get("frames") {
+            let frames = frames.as_array().filter(|frames| frames.len() <= 12)?;
+            let mut clean_frames = Vec::with_capacity(frames.len());
+            for frame in frames {
+                let category = frame["category"].as_str().filter(|category| {
+                    matches!(
+                        *category,
+                        "player-script" | "youtube-page" | "anonymous" | "eval" | "other"
+                    )
+                })?;
+                let mut clean_frame = json!({"category":category});
+                for field in ["line", "column"] {
+                    if let Some(value) = frame.get(field) {
+                        clean_frame[field] = json!(
+                            value
+                                .as_u64()
+                                .filter(|value| *value >= 1 && *value <= MAX_SAFE_INTEGER)?
+                        );
+                    }
+                }
+                if let Some(revision) = frame.get("revision") {
+                    let revision = revision.as_str()?;
+                    if category != "player-script"
+                        || !(8..=32).contains(&revision.len())
+                        || !revision
+                            .bytes()
+                            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+                    {
+                        return None;
+                    }
+                    clean_frame["revision"] = json!(revision);
+                }
+                // URL/path/query and all unrecognized frame properties are omitted.
+                clean_frames.push(clean_frame);
+            }
+            clean["frames"] = json!(clean_frames);
         }
         out["control"] = clean;
     }
@@ -719,6 +759,19 @@ pub fn close_session(video_id: &str, generation: u64) {
 mod tests {
     use super::*;
     const ID: &str = "jNY_wLukVW0";
+    #[test]
+    fn concurrent_audit_roots_are_fresh_even_when_wall_clock_resolution_is_shared() {
+        let workers: Vec<_> = (0..16).map(|_| std::thread::spawn(create_root)).collect();
+        let paths: Vec<_> = workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap().unwrap())
+            .collect();
+        let distinct: std::collections::HashSet<_> = paths.iter().collect();
+        assert_eq!(distinct.len(), paths.len());
+        for path in paths {
+            std::fs::remove_dir(path).unwrap();
+        }
+    }
     fn message(sequence: u64, extra: Value) -> Message {
         let mut value = json!({"audit":1,"v":ID,"generation":7,"epoch":1,"documentId":"test-document","sequence":sequence,"browserNow":0,"kind":"diagnostic"});
         value
@@ -880,6 +933,44 @@ mod tests {
             !has_finalization(&store.videos[ID], 7, "close-7-1"),
             "a late diagnostic cannot borrow the previous final marker"
         );
+    }
+    #[test]
+    fn playback_frames_keep_only_categories_coordinates_and_public_revision_shape() {
+        let mut input = playback_sample();
+        input["control"]["frames"] = json!([
+            {"category":"player-script","line":245,"column":17,"revision":"a8b123cd",
+                "url":"https://private.invalid/file?token=must-not-persist","path":"C:/private/profile","account":"must-not-persist"},
+            {"category":"youtube-page","line":1,"column":900},
+            {"category":"anonymous"},{"category":"eval"},{"category":"other"}
+        ]);
+        let clean = playback_diagnostic(&input).unwrap();
+        assert_eq!(
+            clean["control"]["frames"][0],
+            json!({"category":"player-script","line":245,"column":17,"revision":"a8b123cd"})
+        );
+        assert!(!clean.to_string().contains("must-not-persist"));
+        assert!(!clean.to_string().contains("private"));
+        for bad in [
+            json!({"category":"https://private.invalid"}),
+            json!({"category":"player-script","revision":"https://private.invalid"}),
+            json!({"category":"player-script","revision":"C:/private/profile"}),
+            json!({"category":"player-script","revision":"ABCDEF12"}),
+            json!({"category":"player-script","revision":"short"}),
+            json!({"category":"player-script","revision":"x".repeat(33)}),
+            json!({"category":"anonymous","revision":"a8b123cd"}),
+            json!({"category":"player-script","line":0}),
+            json!({"category":"player-script","column":-1}),
+            json!({"category":"player-script","line":9_007_199_254_740_992u64}),
+            json!({"category":"player-script","line":"245"}),
+        ] {
+            let mut invalid = input.clone();
+            invalid["control"]["frames"] = json!([bad]);
+            assert!(playback_diagnostic(&invalid).is_none());
+        }
+        input["control"]["frames"] = json!(vec![json!({"category":"anonymous"}); 12]);
+        assert!(playback_diagnostic(&input).is_some());
+        input["control"]["frames"] = json!(vec![json!({"category":"anonymous"}); 13]);
+        assert!(playback_diagnostic(&input).is_none());
     }
     #[test]
     fn append_parts_account_for_every_byte_and_require_final_counters() {

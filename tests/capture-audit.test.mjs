@@ -272,3 +272,44 @@ test('failure while capturing a diagnostic stack restores its limit and still ca
   assert.equal(f.media.nativeCalls.filter(call => call[0] === 'pause').length, 1)
   assert.deepEqual([...playback(f)[0].playback.control.stack], [])
 })
+
+test('anonymous caller locations retain categories and public player revision but no locations or account text', () => {
+  const f = setup()
+  const lines = [
+    'at g.pause (https://www.youtube.com/s/player/a1b2c3d4/player_ias.vflset/en_US/base.js:102:9)',
+    'at https://music.youtube.com/watch?v=secret-video&account=private:230:45',
+    'at <anonymous>:8:2',
+    'at VM483:12:4',
+    'at eval (eval at hidden (https://private.invalid/account.js?token=secret:22:6), <anonymous>:4:7)',
+    'at hidden (C:/Users/private/account/file.js:23:11)',
+    'at https://www.youtube.com.evil.invalid/s/player/a1b2c3d4/en/base.js:34:12',
+    'at https://www.youtube.com/s/player/short/en/base.js:45:13',
+    'at https://www.youtube.com/s/player/a1b2c3d4/en/base.js?token=secret#private:56:14',
+    'at https://www.youtube.com/s/player/ABCDEFGHIJKLMNOP/en/base.js:67:15',
+    'at https://www.youtube.com/embed/secret-video?account=private:78:16',
+    'at <anonymous>:99999999999999999999:0',
+    'at omitted (https://private.invalid/account.js:90:17)',
+  ]
+  f.context.Error = class { constructor() { this.stack = 'Error: private-message\n' + lines.map(line => '    ' + line).join('\n') } }
+  f.media.pause()
+  const control = playback(f)[0].playback.control, frames = JSON.parse(JSON.stringify(control.frames))
+  assert.equal(frames.length, 12)
+  assert.deepEqual(frames, [
+    { category: 'player-script', line: 102, column: 9, revision: 'a1b2c3d4' },
+    { category: 'youtube-page', line: 230, column: 45 },
+    { category: 'anonymous', line: 8, column: 2 },
+    { category: 'anonymous', line: 12, column: 4 },
+    { category: 'eval', line: 4, column: 7 },
+    { category: 'other', line: 23, column: 11 },
+    { category: 'other', line: 34, column: 12 },
+    { category: 'other', line: 45, column: 13 },
+    { category: 'player-script', line: 56, column: 14, revision: 'a1b2c3d4' },
+    { category: 'other', line: 67, column: 15 },
+    { category: 'youtube-page', line: 78, column: 16 },
+    { category: 'anonymous' },
+  ])
+  const text = JSON.stringify(playback(f))
+  for (const secret of ['https:', 'C:/', 'secret', 'private', 'account', 'base.js', '/player/', 'VM483', '?', '#']) assert.equal(text.includes(secret), false)
+  assert.ok(JSON.stringify(playback(f)[0]).length < 2400)
+  assert.equal(f.media.nativeCalls.filter(call => call[0] === 'pause').length, 1)
+})
