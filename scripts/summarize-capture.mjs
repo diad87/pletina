@@ -85,6 +85,11 @@ function inferAdTimeout(row, failures, snapshot, finished) {
 function metricRow(row, run, rowIndex) {
   const completeSkipped = row.completeNotExercised === true || row.coverageNotExercised === true || run.scope === 'timingOnly'
   const status = row.status ?? row.finalStatus ?? {}
+  const counterStatus = row.status ?? row.finalStatus ?? row.latestStatus ?? row.startStatus ?? {}
+  const events = Array.isArray(row.events) ? row.events : null
+  const endedEvents = events?.filter(event => event.type === 'ended') ?? []
+  const lastEnded = endedEvents.at(-1)
+  const gaps = Array.isArray(row.gaps) ? row.gaps : null
   const failures = diagnostics(row)
   const finished = row.phase === 'finished' || (!run.running && !run.interrupted && row.phase !== 'pending')
   const interrupted = run.interrupted && !finished
@@ -116,9 +121,16 @@ function metricRow(row, run, rowIndex) {
       elapsedMs: number(row.elapsedMs), legacyExtractionMs: run.protocol === 'legacy-bench' ? number(row.ms) : null,
       legacyAudioStartMs: run.protocol === 'legacy-bench' ? number(row.audio?.startMs) : null,
       normalGapCount: Array.isArray(row.gaps) ? row.gaps.length : null,
+      openNormalGapCount: gaps === null ? null : gaps.filter(gap => number(gap.endMs) === null).length,
+      normalGapDurationMs: gaps === null || gaps.some(gap => number(gap.startMs) === null || number(gap.endMs) === null || gap.endMs < gap.startMs) ? null : gaps.reduce((sum, gap) => sum + gap.endMs - gap.startMs, 0),
       allPlaybackStallCount: Array.isArray(row.allPlaybackStalls) ? row.allPlaybackStalls.length : null,
+      nativeEndedObserved: events === null ? null : endedEvents.length > 0,
+      nativeEndedEventCount: events === null ? null : endedEvents.length,
+      nativeEndedAtMs: number(lastEnded?.ms), nativeEndedPosition: number(row.endedPosition ?? lastEnded?.position),
+      nativeEndedPhase: typeof lastEnded?.phase === 'string' ? lastEnded.phase : null,
       continuity: continuityExercised ? (row.gaps.length ? 'observed-gaps' : 'no-waiting-events-observed') : 'not-exercised-for-full-song',
-      adsSeen: number(row.adsSeen ?? status.adsSeen), labelledAdsDelivered: number(row.adsDelivered ?? status.adsDelivered),
+      adsSeen: number(row.adsSeen ?? counterStatus.adsSeen ?? counterStatus.adsSourcesSeen), labelledAdsDelivered: number(row.adsDelivered ?? counterStatus.adsDelivered),
+      adObservations: number(row.adObservations ?? counterStatus.adObservations),
       adRateViolations: number(row.adRateViolations ?? status.adRateViolations), adRateObservations: number(row.adRateObservations ?? status.adRateObservations),
       semanticAdAbsence: 'unverified',
     },
@@ -193,8 +205,9 @@ export function summarize(inputs, { corpus, corpusSource = null, generatedAt = n
     interpretation: {
       latestPolicy: 'Última ejecución por fecha/categoría/ID, aunque falle, siga en curso o se haya interrumpido; todos los informes explícitos se conservan en runs',
       measurements: 'measured-pass sólo significa que esa fila declaró cumplir sus mediciones; nunca aceptación del extractor',
-      ads: 'labelledAdsDelivered cuenta unidades etiquetadas como anuncio; ausencia semántica no verificada',
+      ads: 'adsSeen cuenta fuentes distintas por generación/época/fuente marcadas anuncio; adObservations son observaciones repetidas. labelledAdsDelivered reproduce adsDelivered, contador del filtro de protocolo, no un detector semántico. No sumar snapshots ni categorías de la misma caché/revisión',
       continuity: 'Una lista gaps vacía en smoke/latency con seek/backfill no demuestra cero cortes durante la canción completa',
+      nativeEvents: 'ended es un evento del audio local; su posición está en segundos y ms cuenta desde el inicio del observador. gaps cuenta episodios waiting en listening/tail sin pausa ni seek; endMs ausente deja la duración desconocida. allPlaybackStalls incluye waiting tras primer playing también durante seek/backfill. Ninguno verifica por sí solo cobertura global ni continuidad PCM',
       labels: 'El corpus canónico aporta la etiqueta por videoID; rawLabel y los bytes/errores de origen permanecen en el historial',
       adTimeout: 'unmeasured/ad-timeout es una inferencia de anuncio activo reciente al agotarse la espera: el intento operativo falló, pero el requisito de primer sonido sigue sin medirse',
       interruption: 'Un auxiliar de interrupción sólo cambia el estado si coincide el nombre y SHA256 del informe; las filas finished conservan resultados, las activas quedan interrumpidas y las pending no ejercitadas',
@@ -216,8 +229,8 @@ function cell(entry) {
   const m = entry.metrics, state = { 'measured-pass': 'Medido ✓', failed: 'FALLO', 'in-progress': 'En curso', interrupted: 'Interrumpido; medición parcial', 'not-exercised': 'No ejercitado' }[entry.state]
   const values = entry.category === 'latency' ? `inicio ${ms(m.firstSoundMs)}; sin anuncio ${ms(m.firstSoundWithoutAdMs)}; seek ${ms(m.seekMs)}`
     : entry.category === 'switch' ? `cambio ${ms(m.unpreparedSwitchMs)}; sin anuncio ${ms(m.unpreparedSwitchWithoutAdMs)}`
-    : entry.category === 'album' ? `transición ${ms(m.nextTrackMs)}; EOF ${m.completeness}; cortes ${m.continuity === 'not-exercised-for-full-song' ? 'no verificados' : m.normalGapCount}`
-    : `inicio ${ms(m.firstSoundMs)}; EOF ${m.completeness}; final ${ms(m.tailMs)}`
+    : entry.category === 'album' ? `transición ${ms(m.nextTrackMs)}; verificación global ${m.completeness}`
+    : `inicio ${ms(m.firstSoundMs)}; verificación global ${m.completeness}; final ${ms(m.tailMs)}`
   return escape(`${state}: ${values} [${entry.runId}]`)
 }
 
@@ -229,6 +242,20 @@ function diagnosticCell(entry) {
 }
 const latestEntry = row => Object.values(row.latest).filter(Boolean).sort((a, b) =>
   (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0) || Number(b.runId.split(':')[0]) - Number(a.runId.split(':')[0]))[0]
+const categoryLabel = category => ({ latency: 'Latencia', switch: 'Cambio en frío', album: 'Álbum natural', quarantine: 'Cuarentena' })[category] ?? category
+const count = value => value === null || value === undefined ? 'n/d' : String(value)
+const completeLabel = value => ({ verified: 'Verificada', incomplete: 'Incompleta', 'not-exercised': 'No ejercitada', 'not-measured': 'No medida' })[value] ?? 'n/d'
+const yesNo = value => value === null || value === undefined ? 'n/d' : value ? 'Sí' : 'No'
+function endedCell(metrics) {
+  if (metrics.nativeEndedObserved === null) return 'n/d'
+  if (!metrics.nativeEndedObserved) return 'No observado'
+  const position = metrics.nativeEndedPosition === null ? 'posición n/d' : `pos ${metrics.nativeEndedPosition.toFixed(6)} s`
+  return escape(`Sí; ${position}; t+${ms(metrics.nativeEndedAtMs)}${metrics.nativeEndedPhase ? `; ${metrics.nativeEndedPhase}` : ''}`)
+}
+function waitingCell(metrics) {
+  if (metrics.normalGapCount === null) return 'n/d'
+  return escape(`${metrics.normalGapCount}; ${metrics.openNormalGapCount ?? 'n/d'} abiertos; duración ${ms(metrics.normalGapDurationMs)}`)
+}
 
 export function markdown(summary) {
   const lines = [
@@ -245,6 +272,22 @@ export function markdown(summary) {
     lines.push('', '## Casos fuera del corpus', '', '| Caso / vídeo | Latencia | Cambio en frío | Álbum natural | Cuarentena |', '| --- | --- | --- | --- | --- |')
     for (const row of summary.outsideCorpus) lines.push(`| ${escape(row.label)} / ${escape(row.id)} | ${categories.map(category => cell(row.latest[category])).join(' | ')} |`)
   }
+  const evidence = [...summary.cases, ...summary.outsideCorpus].flatMap(row => categories.filter(category => row.latest[category]).map(category => ({ row, entry: row.latest[category] })))
+  lines.push('', '## Anuncios observados por caso y categoría', '',
+    'Último intento de cada categoría. «Observados» cuenta fuentes marcadas como anuncio (generación/época/fuente), no anuncios únicos ni el número de avisos repetidos. No se suman snapshots, categorías ni ejecuciones que reutilicen una caché.', '',
+    '«Entregadas» reproduce `adsDelivered`, el contador del filtro de protocolo: las unidades declaradas anuncio se rechazan. Un 0 no detecta publicidad mal etiquetada ni demuestra ausencia semántica de anuncios. `n/d` no equivale a cero.', '',
+    '| Caso / vídeo | Categoría | Anuncios observados (fuentes) | Unidades etiquetadas anuncio entregadas (filtro) | Intento |',
+    '| --- | --- | --- | --- | --- |')
+  for (const { row, entry } of evidence) lines.push(`| ${escape(row.label)} / ${escape(row.id)} | ${categoryLabel(entry.category)} | ${count(entry.metrics.adsSeen)} | ${count(entry.metrics.labelledAdsDelivered)} | ${escape(entry.runId)} |`)
+  if (!evidence.length) lines.push('| No ejercitado | — | n/d | n/d | — |')
+  lines.push('', '## Reproducción observada y verificación global', '',
+    '`ended` describe el final observado del audio local: posición en segundos y t+ desde que se instaló su observador. Puede aparecer después de un seek o al comprobar la cola; por sí solo no acredita escuchar la canción entera.', '',
+    'Los episodios normales son eventos `waiting` tras `playing`, durante listening/tail y sin pausa ni seek. Una espera abierta tiene duración n/d. «Todos» incluye waiting también durante seek/backfill; `stalled` por sí solo no se cuenta como corte. Cero eventos observados no equivale a cero huecos PCM.', '',
+    'La cobertura MSE declarada (`coverageOk`) y la verificación global (`complete`) se muestran aparte: puede haber ended y un rango MSE continuo mientras el registro global sigue incompleto. Esto no cambia la aceptación del extractor.', '',
+    '| Caso / vídeo | Categoría | ended observado | waiting normales | waiting todos tras playing | Cobertura MSE completa | Verificación global | Intento |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |')
+  for (const { row, entry } of evidence) lines.push(`| ${escape(row.label)} / ${escape(row.id)} | ${categoryLabel(entry.category)} | ${endedCell(entry.metrics)} | ${waitingCell(entry.metrics)} | ${count(entry.metrics.allPlaybackStallCount)} | ${yesNo(entry.metrics.coverageOk)} | ${completeLabel(entry.metrics.completeness)} | ${escape(entry.runId)} |`)
+  if (!evidence.length) lines.push('| No ejercitado | — | n/d | n/d | n/d | n/d | No ejercitada | — |')
   lines.push('', '## Fuentes y ejecuciones conservadas', '', '| Ejecución | Fecha | Commit | Categoría | Estado | Fuente |', '| --- | --- | --- | --- | --- | --- |')
   for (const run of summary.runs) lines.push(`| ${escape(run.runId)} | ${escape(run.date)} | ${escape(run.commit)} | ${escape(run.category)} | ${run.fatal ? 'Error de entrada/ejecución' : run.interrupted ? 'Interrumpida' : run.running ? 'En curso' : 'Finalizada'} | ${escape(run.source)} |`)
   for (const run of summary.runs.filter(run => run.interrupted)) lines.push('', `Interrupción verificada de ${escape(run.runId)}: ${escape(run.interruption.stoppedAt)}. ${escape(run.interruption.reason ?? 'Sin motivo registrado')}. Auxiliar: ${escape(run.interruptionSource)}; SHA256 del informe: ${escape(run.sha256)}.`)

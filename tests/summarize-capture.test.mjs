@@ -56,6 +56,91 @@ test('el snapshot en curso no se omite; etiquetas canónicas y métricas no prom
   assert.match(markdown(summary), /no demuestra cero cortes/)
 })
 
+test('tablas publicitarias separan fuentes observadas y unidades declaradas por categoría sin sumar snapshots ni ocultar intentos', () => {
+  const summary = summarize([
+    { source: 'old-album.json', report: report('2026-10-07T08:00:00Z', [{ videoId: 'video-1', phase: 'finished', ok: false,
+      adsSeen: 2, adsDelivered: 0, failures: ['Fallo previo conservado'] }], { mode: 'album', scope: 'complete' }) },
+    { source: 'album.json', report: report('2026-10-07T09:00:00Z', [{ videoId: 'video-1', phase: 'finished', ok: false,
+      adsSeen: 1, adsDelivered: 0, status: { adsSeen: 1, adsDelivered: 0, adObservations: 39 }, startStatus: { adsSeen: 1 },
+      failures: ['EOF sin verificación completa'] }], { mode: 'album', scope: 'complete' }) },
+    { source: 'latency.json', report: report('2026-10-07T09:00:00Z', [{ videoId: 'video-1', phase: 'finished', ok: true,
+      adsSeen: 3, adsDelivered: 0, status: { adsSeen: 3, adsDelivered: 0 }, startStatus: { adsSeen: 2 }, failures: [] }]) },
+    { source: 'switch.json', report: report('2026-10-07T09:00:00Z', [{ videoId: 'video-1', phase: 'finished', ok: false,
+      failures: ['Preparación fallida'] }], { mode: 'switch' }) },
+    { source: 'running.json', report: report('2026-10-07T10:00:00Z', [{ videoId: 'video-2', phase: 'listening', ok: false,
+      latestStatus: { adsSeen: 4, adsDelivered: 0 }, failures: [] }], { mode: 'album', scope: 'complete', running: true }) },
+  ], { corpus })
+  const output = markdown(summary), ads = output.split('## Anuncios observados por caso y categoría')[1].split('## Reproducción observada')[0]
+  assert.match(ads, /Anuncios observados \(fuentes\)/)
+  assert.match(ads, /Unidades etiquetadas anuncio entregadas \(filtro\)/)
+  assert.match(ads, /\| Canción 1 \/ video-1 \| Álbum natural \| 1 \| 0 \| 2:album\.json \|/)
+  assert.match(ads, /\| Canción 1 \/ video-1 \| Latencia \| 3 \| 0 \| 3:latency\.json \|/)
+  assert.match(ads, /\| Canción 1 \/ video-1 \| Cambio en frío \| n\/d \| n\/d \| 4:switch\.json \|/)
+  assert.match(ads, /\| Canción 2 \/ video-2 \| Álbum natural \| 4 \| 0 \| 5:running\.json \|/)
+  assert.equal(summary.cases[0].latest.album.metrics.adObservations, 39)
+  assert.equal(summary.cases[0].history.length, 4)
+  assert.equal(summary.cases[0].errorHistory.length, 3)
+  assert.match(output, /Fallo previo conservado/)
+  assert.match(output, /EOF sin verificación completa/)
+  assert.match(output, /Un 0 no detecta publicidad mal etiquetada/)
+  assert.match(output, /No se suman snapshots/)
+  assert.equal(summary.runs.length, 5)
+  assert.equal(summary.acceptanceOk, false)
+  assert.equal(summary.guaranteeAds, false)
+})
+
+test('ended y cobertura MSE observados permanecen visibles aunque el registro global siga incompleto', () => {
+  const ended = { type: 'ended', ms: 213456.7, position: 212.981, phase: 'listening' }
+  const row = { videoId: 'video-1', phase: 'finished', ok: false, complete: false, coverageOk: true,
+    endedPosition: 212.981, gaps: [], allPlaybackStalls: [], events: [{ type: 'playing', ms: 500, position: 0, phase: 'startup' }, ended],
+    failures: ['EOF sin verificación completa'] }
+  const summary = summarize([{ source: 'album.json', report: report('2026-10-07T09:00:00Z', [row], { mode: 'album', scope: 'complete' }) }], { corpus })
+  const entry = summary.cases[0].latest.album, m = entry.metrics, output = markdown(summary)
+  assert.equal(m.nativeEndedObserved, true)
+  assert.equal(m.nativeEndedEventCount, 1)
+  assert.equal(m.nativeEndedAtMs, 213456.7)
+  assert.equal(m.nativeEndedPosition, 212.981)
+  assert.equal(m.nativeEndedPhase, 'listening')
+  assert.equal(m.normalGapCount, 0)
+  assert.equal(m.allPlaybackStallCount, 0)
+  assert.equal(m.coverageOk, true)
+  assert.equal(m.completeness, 'incomplete')
+  assert.equal(m.continuity, 'not-exercised-for-full-song', 'existing continuity inference is unchanged')
+  assert.equal(entry.state, 'failed')
+  assert.deepEqual(entry.rawRow, row)
+  assert.match(output, /\| Sí; pos 212\.981000 s; t\+213456\.7 ms; listening \| 0; 0 abiertos; duración 0\.0 ms \| 0 \| Sí \| Incompleta \|/)
+  assert.match(output, /Cero eventos observados no equivale a cero huecos PCM/)
+  assert.match(output, /puede haber ended y un rango MSE continuo mientras el registro global sigue incompleto/)
+})
+
+test('esperas abiertas y ended tras seek se muestran sin inventar duración ni escuchar la canción completa', () => {
+  const summary = summarize([{ source: 'smoke.json', report: report('2026-10-07T09:00:00Z', [
+    { videoId: 'video-1', phase: 'finished', ok: false, complete: false, failures: ['Cola sin verificar'],
+      events: [{ type: 'playing', ms: 0, position: 0, phase: 'startup' }, { type: 'waiting', ms: 10, position: 0.01, phase: 'listening' },
+        { type: 'playing', ms: 40, position: 0.01, phase: 'listening' }, { type: 'waiting', ms: 90, position: 0.06, phase: 'tail' },
+        { type: 'stalled', ms: 110, position: 0.06, phase: 'tail' }, { type: 'ended', ms: 200, position: 0.1, phase: 'tail' }],
+      gaps: [{ startMs: 10, endMs: 40, position: 0.01, phase: 'listening' }, { startMs: 90, position: 0.06, phase: 'tail' }],
+      allPlaybackStalls: [{ ms: 10 }, { ms: 60, phase: 'seek' }, { ms: 90 }] },
+    { videoId: 'video-2', phase: 'finished', ok: false, failures: ['No arrancó'], events: [] },
+    { videoId: 'video-3', phase: 'finished', ok: false, failures: ['Sin eventos'], endedPosition: 99 },
+  ], { mode: 'smoke', scope: 'complete' }) }], { corpus })
+  const m = summary.cases[0].latest.latency.metrics
+  assert.equal(m.normalGapCount, 2)
+  assert.equal(m.openNormalGapCount, 1)
+  assert.equal(m.normalGapDurationMs, null, 'an unfinished wait does not get zero or a fabricated final timestamp')
+  assert.equal(m.allPlaybackStallCount, 3)
+  assert.equal(m.nativeEndedObserved, true)
+  assert.equal(m.nativeEndedPhase, 'tail')
+  assert.equal(m.continuity, 'not-exercised-for-full-song')
+  assert.equal(summary.cases[1].latest.latency.metrics.nativeEndedObserved, false)
+  assert.equal(summary.cases[2].latest.latency.metrics.nativeEndedObserved, null, 'a position alone cannot invent an ended event')
+  const output = markdown(summary)
+  assert.match(output, /2; 1 abiertos; duración n\/d \| 3 \|/)
+  assert.match(output, /pos 0\.100000 s; t\+200\.0 ms; tail/)
+  assert.match(output, /No observado/)
+  assert.match(output, /por sí solo no acredita escuchar la canción entera/)
+})
+
 test('metadata adjunta aporta fecha/commit y conflictos; un JSON roto sigue visible como error de entrada', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'musify-summary-'))
   t.after(() => rm(directory, { recursive: true, force: true }))
