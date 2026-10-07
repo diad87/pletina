@@ -1,0 +1,391 @@
+// Capture API 2. No site selectors: complete sources remain quarantined until verified.
+(() => {
+  class CaptureError extends Error {
+    constructor(code, message) { super(`${code}: ${message}`); this.name = 'CaptureError'; this.code = code }
+  }
+  const fail = (code, message) => { throw new CaptureError(code, message) }
+  const copy = (data) => ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength).slice() : new Uint8Array(data).slice()
+  const join = (chunks) => {
+    const out = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0))
+    let at = 0
+    for (const c of chunks) { out.set(c, at); at += c.byteLength }
+    return out
+  }
+  const settingsOf = (settings = {}) => ({ timestampOffset: settings.timestampOffset ?? 0, appendWindowStart: settings.appendWindowStart ?? 0, appendWindowEnd: (settings.appendWindowEnd ?? Infinity) === Infinity ? null : settings.appendWindowEnd, mode: settings.mode ?? 'segments' })
+  const defaultSettings = (s) => s.timestampOffset === 0 && s.appendWindowStart === 0 && s.appendWindowEnd === null && s.mode === 'segments'
+  const nativeRanges = (buffer) => {
+    const ranges = []
+    try { for (let i = 0; i < (buffer?.buffered?.length ?? 0); i++) ranges.push({ start: buffer.buffered.start(i), end: buffer.buffered.end(i) }) } catch { return [] }
+    return ranges
+  }
+  function projectTimeline(parsed, settings, ranges) {
+    if (parsed.codedFrames) {
+      // Chromium's WebM SourceBuffer ranges use coded PTS+packet duration; codec delay
+      // and discard padding are consumed by the decoder, not subtracted from buffered.
+      // Keep both inventories, and require the clock to cover the longer coded range.
+      parsed = { ...parsed, containerAudibleRange: { start: parsed.start, end: parsed.end }, frames: parsed.codedFrames, start: parsed.codedStart, end: parsed.codedEnd }
+    }
+    if (defaultSettings(settings)) return { ...parsed, timelineSettings: settings }
+    // MSE §5.5.8 permits full-frame dropping or optional audio boundary splicing.
+    // Predict both, then require the actual official AUDIO SourceBuffer to select a range.
+    // Excluded bytes are retained and must be replayed with this exact immutable tuple.
+    const from = settings.appendWindowStart, until = settings.appendWindowEnd ?? Infinity
+    const shifted = parsed.frames.map(f => ({ start: f.start + settings.timestampOffset, end: f.end + settings.timestampOffset }))
+    const drop = shifted.filter(f => f.start >= from - 1e-9 && f.end <= until + 1e-9)
+    const splice = shifted.filter(f => f.end > from && f.start < until).map(f => ({ start: Math.max(from, f.start), end: Math.min(until, f.end) }))
+    const epsilon = parsed.quantum + 0.000001, actual = ranges?.[0]
+    const predictions = [drop, splice].filter(frames => frames.length && frames[0].start <= epsilon && frames[0].start >= -epsilon && ranges?.length === 1 && Number.isFinite(actual?.start) && Number.isFinite(actual?.end) && Math.abs(actual.start - frames[0].start) <= epsilon && Math.abs(actual.end - frames.at(-1).end) <= epsilon && frames.every((f, i) => !i || Math.abs(f.start - frames[i - 1].end) <= epsilon))
+    if (!predictions.length) fail('CAPTURE_UNSUPPORTED_APPEND_WINDOW', `Official audio ranges match neither complete-frame discard nor boundary splice: settings=${JSON.stringify(settings)}, rawStart=${parsed.start}, rawEnd=${parsed.end}, drop=${drop.length ? `${drop[0].start}..${drop.at(-1).end}` : 'empty'}, splice=${splice.length ? `${splice[0].start}..${splice.at(-1).end}` : 'empty'}, native=${JSON.stringify(ranges)}, quantum=${parsed.quantum}`)
+    predictions.sort((a, b) => b.at(-1).end - a.at(-1).end)
+    const frames = predictions[0]
+    return { ...parsed, frames, start: frames[0].start, end: frames.at(-1).end, timelineSettings: settings }
+  }
+
+  // Restricted demux inspection. buffered ranges alone hide overwritten/duplicate frames.
+  // Unsupported structures fail closed instead of pretending that every byte was presented.
+  function parseWebMOpus(bytes) {
+    const error = (message) => fail('CAPTURE_UNSUPPORTED_WEBM', message)
+    const vint = (at, id = false) => {
+      const first = bytes[at]
+      if (!first) error('Invalid or truncated EBML integer')
+      let width = 1
+      while (width <= 8 && !(first & (0x80 >> (width - 1)))) width++
+      if (width > (id ? 4 : 8) || at + width > bytes.length) error('Truncated EBML integer')
+      let value = id ? first : first & (0xff >> width)
+      let unknown = !id && value === (0xff >> width)
+      for (let i = 1; i < width; i++) { value = value * 256 + bytes[at + i]; unknown &&= bytes[at + i] === 255 }
+      if (!unknown && !Number.isSafeInteger(value)) error('Oversized EBML integer')
+      return { value, width, unknown }
+    }
+    const element = (at, limit, mseSegment = false) => {
+      const id = vint(at, true), size = vint(at + id.width)
+      const start = at + id.width + size.width, declaredEnd = size.unknown ? Infinity : start + size.value
+      // MSE WebM §3 defines this as an initialization header, not a complete file.
+      // Its finite size only has to cover Info+Tracks; unappended Cues are not media.
+      // Every child still has to fit in the bytes actually appended to SourceBuffer.
+      const end = mseSegment && id.value === 0x18538067 ? limit : size.unknown ? limit : declaredEnd
+      if (end > limit || start > limit) error(`Truncated EBML element id=0x${id.value.toString(16)} offset=${at} expectedEnd=${declaredEnd} parentEnd=${limit} actualLength=${bytes.length}`)
+      return { id: id.value, start, end, declaredEnd, unknown: size.unknown }
+    }
+    const uint = (el) => {
+      if (el.unknown || el.end - el.start > 6) error('Unsupported integer size')
+      let value = 0
+      for (let i = el.start; i < el.end; i++) value = value * 256 + bytes[i]
+      return value
+    }
+    const signed = (el) => {
+      let value = 0n
+      for (let i = el.start; i < el.end; i++) value = (value << 8n) | BigInt(bytes[i])
+      if (bytes[el.start] & 128) value -= 1n << BigInt((el.end - el.start) * 8)
+      const number = Number(value)
+      if (!Number.isSafeInteger(number)) error('Oversized signed integer')
+      return number
+    }
+    const children = (start, end, visit) => {
+      for (let at = start; at < end;) {
+        const el = element(at, end)
+        if (el.unknown) error('Unknown-size nested element')
+        visit(el); at = el.end
+      }
+    }
+    const text = (el) => String.fromCharCode(...bytes.subarray(el.start, el.end))
+    const opusDuration = (start, end) => {
+      if (start >= end) error('Empty Opus packet')
+      const toc = bytes[start], config = toc >> 3, mode = toc & 3
+      const frameMs = config >= 16 ? 2.5 * (1 << (config & 3)) : config >= 12 ? 10 * (1 << (config & 1)) : (config & 3) === 3 ? 60 : 10 * (1 << (config & 3))
+      if (mode === 3 && start + 1 >= end) error('Truncated Opus packet')
+      const count = mode === 0 ? 1 : mode === 3 ? bytes[start + 1] & 63 : 2
+      if (!count || count * frameMs > 120) error('Invalid Opus frame count')
+      return count * frameMs / 1000
+    }
+    let scale = 1e6, track = null, headerSeen = false, infoSeen = false, tracksSeen = false, segmentSeen = false
+    const frames = [], codedFrames = []
+    let lastBlock = null
+    const levelOne = new Set([0x114d9b74, 0x1549a966, 0x1654ae6b, 0x1f43b675, 0x1c53bb6b, 0x1254c367, 0x1941a469, 0x1043a770])
+    const block = (el, clock, padding = 0) => {
+      if (!track || clock === null) error('Block before track or cluster timestamp')
+      const number = vint(el.start), at = el.start + number.width
+      if (number.value !== track.number || at + 3 > el.end) error('Unknown track or truncated block')
+      if (bytes[at + 2] & 6) error('Laced blocks need a separately verified parser')
+      let relative = bytes[at] * 256 + bytes[at + 1]
+      if (relative >= 32768) relative -= 65536
+      const codedStart = (clock + relative) * scale / 1e9, rawStart = codedStart - track.delay
+      const length = opusDuration(at + 3, el.end)
+      if (padding < 0) error('Negative discard padding is not supported')
+      const start = Math.max(0, rawStart), end = rawStart + length - padding / 1e9
+      if (end <= start) error('Invalid coded-frame range')
+      frames.push({ start, end })
+      codedFrames.push({ start: codedStart, end: codedStart + length })
+      lastBlock = { codedStart, packetDuration: length, codecDelay: track.delay, discardPadding: padding / 1e9, codedEnd: codedStart + length, audibleStart: start, audibleEnd: end }
+    }
+    const cluster = (el) => {
+      let at = el.start, clock = null
+      while (at < el.end) {
+        const child = element(at, el.end)
+        if (el.unknown && levelOne.has(child.id)) break
+        if (child.unknown) error('Unknown-size cluster child')
+        if (child.id === 0xe7) clock = uint(child)
+        else if (child.id === 0xa3) block(child, clock)
+        else if (child.id === 0xa0) {
+          let media = null, padding = 0
+          children(child.start, child.end, (entry) => {
+            if (entry.id === 0xa1) { if (media) error('Multiple blocks in one group'); media = entry }
+            else if (entry.id === 0x75a2) padding = signed(entry)
+            else if (![0x9b, 0xfb, 0xfa, 0xec, 0xbf].includes(entry.id)) error('Unsupported block-group metadata')
+          })
+          if (!media) error('Block group without media')
+          block(media, clock, padding)
+        } else if (![0xa7, 0xab, 0xec, 0xbf].includes(child.id)) error('Unsupported cluster element')
+        at = child.end
+      }
+      return at
+    }
+    const segment = (el) => {
+      for (let at = el.start; at < el.end;) {
+        const child = element(at, el.end)
+        if (child.id === 0x1549a966) {
+          if (infoSeen || tracksSeen || child.end > el.declaredEnd) error('Invalid or repeated initialization timing')
+          infoSeen = true
+          children(child.start, child.end, (entry) => { if (entry.id === 0x2ad7b1) scale = uint(entry) })
+          if (!scale || scale > 1e6) error('Timestamp scale is too coarse to verify packet continuity')
+        } else if (child.id === 0x1654ae6b) {
+          if (!infoSeen || tracksSeen || child.end > el.declaredEnd) error('Invalid or repeated initialization tracks')
+          tracksSeen = true
+          children(child.start, child.end, (entry) => {
+            if (entry.id !== 0xae) return
+            const next = { number: 0, type: 0, codec: '', delay: 0 }
+            children(entry.start, entry.end, (field) => {
+              if (field.id === 0xd7) next.number = uint(field)
+              if (field.id === 0x83) next.type = uint(field)
+              if (field.id === 0x86) next.codec = text(field)
+              if (field.id === 0x56aa) next.delay = uint(field) / 1e9
+            })
+            if (track || next.type !== 2 || next.codec !== 'A_OPUS' || !next.number) error('Only a single Opus audio track is verified')
+            track = next
+          })
+        } else if (child.id === 0x1f43b675) { at = cluster(child); continue }
+        else if (![0x114d9b74, 0x1c53bb6b, 0x1254c367, 0x1941a469, 0x1043a770, 0xec, 0xbf].includes(child.id)) error('Unsupported segment element or repeated initialization')
+        if (child.unknown) error('Unknown-size non-cluster element')
+        at = child.end
+      }
+    }
+    for (let at = 0; at < bytes.length;) {
+      const el = element(at, bytes.length, true)
+      if (el.id === 0x1a45dfa3 && !headerSeen && !segmentSeen && !el.unknown) headerSeen = true
+      else if (el.id === 0x18538067 && headerSeen && !segmentSeen) { segmentSeen = true; segment(el) }
+      else error('Missing or repeated WebM initialization')
+      at = el.end
+    }
+    if (!headerSeen || !track || !frames.length) error('Incomplete WebM/Opus source')
+    let until = 0
+    for (const frame of frames) {
+      // WebM rounds timestamps to TimestampScale. Permit only that quantization error.
+      if (Math.abs(frame.start - until) > Math.max(scale / 1e9, 0.000001) + 1e-9) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded frames')
+      until = frame.end
+    }
+    let codedUntil = 0
+    for (const frame of codedFrames) {
+      if (Math.abs(frame.start - codedUntil) > Math.max(scale / 1e9, 0.000001) + 1e-9) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded timestamps')
+      codedUntil = frame.end
+    }
+    return { frames, start: frames[0].start, end: until, codedFrames, codedStart: codedFrames[0].start, codedEnd: codedUntil, lastBlock, codec: track.codec, quantum: scale / 1e9 }
+  }
+
+  class SessionTracker {
+    constructor({ maxBytes = 96 * 1024 * 1024, onDiagnostic = () => {} } = {}) {
+      this.maxBytes = maxBytes; this.onDiagnostic = onDiagnostic; this.sources = new Map()
+      this.nextSource = 0; this.nextBuffer = 0; this.bytes = 0
+    }
+    createSource() {
+      const source = { id: ++this.nextSource, state: 'unknown', buffers: [], seen: new Set(), observations: [], sealed: false, error: null, successfulEndOfStream: false }
+      this.sources.set(source.id, source); return source
+    }
+    createBuffer(source, mime) {
+      source.parsedTimeline = null; source.projectedTimeline = null
+      const webm = /^audio\/webm\s*;\s*codecs\s*=\s*["']?opus["']?\s*$/i.test(mime)
+      const aac = /^audio\/mp4\s*;\s*codecs\s*=\s*["']?mp4a\.40\.2["']?\s*$/i.test(mime)
+      const parser = webm ? parseWebMOpus : aac ? globalThis.__musifyCaptureMp4?.parse : null
+      const buffer = { id: ++this.nextBuffer, mime, chunks: [], source, parser, webm }
+      source.buffers.push(buffer)
+      if (!parser) this.reject(source, 'CAPTURE_UNSUPPORTED_FORMAT', `Unverified audio format or missing parser: ${mime}`)
+      if (source.buffers.length !== 1) this.reject(source, 'CAPTURE_AMBIGUOUS_SOURCE', 'Multiple audio buffers in one source')
+      return buffer
+    }
+    reject(source, code, reason) {
+      source.state = 'ambiguous'; source.error ||= new CaptureError(code, reason)
+      source.parsedTimeline = null; source.projectedTimeline = null
+      this.onDiagnostic({ state: source.state, source: source.id, code, reason, bytesQuarantined: this.bytes })
+    }
+    append(buffer, data, settings = {}) {
+      const source = buffer.source
+      if (source.sealed) return this.reject(source, 'CAPTURE_AMBIGUOUS_SOURCE', 'Append after source was sealed')
+      source.successfulEndOfStream = false
+      source.parsedTimeline = null; source.projectedTimeline = null
+      const tuple = settingsOf(settings)
+      if (!Number.isFinite(tuple.timestampOffset) || !Number.isFinite(tuple.appendWindowStart) || tuple.appendWindowStart < 0 || (tuple.appendWindowEnd !== null && (!Number.isFinite(tuple.appendWindowEnd) || tuple.appendWindowEnd <= tuple.appendWindowStart)) || tuple.mode !== 'segments') return this.reject(source, 'CAPTURE_UNSUPPORTED_TIMELINE', `Invalid SourceBuffer timeline settings: ${JSON.stringify(tuple)}, mime=${buffer.mime}`)
+      if (buffer.webm && !defaultSettings(tuple)) return this.reject(source, 'CAPTURE_UNSUPPORTED_TIMELINE', `Non-default WebM/Opus timeline settings require a separate browser probe: ${JSON.stringify(tuple)}`)
+      if (buffer.timelineSettings && JSON.stringify(buffer.timelineSettings) !== JSON.stringify(tuple)) return this.reject(source, 'CAPTURE_UNSUPPORTED_TIMELINE', `SourceBuffer settings changed: previous=${JSON.stringify(buffer.timelineSettings)}, current=${JSON.stringify(tuple)}, mime=${buffer.mime}`)
+      buffer.timelineSettings ||= tuple
+      if (source.error || source.state === 'ad') return
+      const bytes = copy(data)
+      if (this.bytes + bytes.byteLength > this.maxBytes) return this.reject(source, 'CAPTURE_QUARANTINE_LIMIT', 'Quarantined audio exceeded the memory budget')
+      this.bytes += bytes.byteLength; buffer.chunks.push(bytes)
+    }
+    observe(source, evidence, { position, now, duration, ended = false, element = null }) {
+      if (!source || source.sealed) return
+      if (element && source.element && source.element !== element) this.reject(source, 'CAPTURE_AMBIGUOUS_SOURCE', 'One source was presented by multiple elements')
+      source.element ||= element
+      const content = evidence?.state === 'content' && evidence.sourceBound === true && evidence.signals?.length >= 2
+      const observed = content ? 'content' : evidence?.state === 'ad' && evidence.sourceBound === true ? 'ad' : 'unknown'
+      source.seen.add(observed)
+      if (observed === 'unknown' || source.seen.size > 1) this.reject(source, 'CAPTURE_IDENTITY_UNCERTAIN', `Unknown or mixed identity while this source was presented; seen=${[...source.seen].join(',')}; evidence=${evidence?.reason || JSON.stringify(evidence?.evidence ?? {})}`)
+      else if (!source.error) source.state = observed
+      if (observed === 'ad') this.drop(source)
+      if (observed === 'content' && !source.error) {
+        const last = source.observations.at(-1)
+        if (!Number.isFinite(position) || !Number.isFinite(now) || !Number.isFinite(duration) || duration <= 0) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Missing finite presentation timing')
+        else if (!last && position > 0.05) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'The beginning of this source was not observed')
+        else if (last && (position < last.position - 0.001 || position - last.position > (now - last.now) / 1000 + 0.15 || (position > last.position && now - last.now > 500))) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Seek, accelerated presentation or an unobserved interval')
+        else source.observations.push({ position, now, duration, ended })
+      }
+      this.onDiagnostic({ state: source.state, source: source.id, position, duration, bytesQuarantined: this.bytes })
+    }
+    drop(source) {
+      source.parsedTimeline = null; source.projectedTimeline = null
+      for (const buffer of source.buffers) { this.bytes -= buffer.chunks.reduce((n, c) => n + c.byteLength, 0); buffer.chunks = [] }
+    }
+    inspect(source, ranges = null) {
+      if (source.buffers.length !== 1 || !source.buffers[0].parser) fail('CAPTURE_UNSUPPORTED_FORMAT', 'Exactly one parsed audio buffer is required')
+      const buffer = source.buffers[0]
+      const actual = ranges ?? nativeRanges(buffer.native), key = JSON.stringify(actual)
+      if (source.successfulEndOfStream && source.projectedTimeline?.key === key) return source.projectedTimeline.value
+      const parsed = source.parsedTimeline ?? buffer.parser(join(buffer.chunks))
+      const result = projectTimeline(parsed, buffer.timelineSettings ?? settingsOf(), actual)
+      // EOF makes the byte inventory final; do not repeatedly concatenate/parse a song
+      // while waiting for its clock to reach the final audio frame. Native ranges remain
+      // part of the cache key so eviction or changed coverage cannot reuse stale proof.
+      if (source.successfulEndOfStream) { source.parsedTimeline = parsed; source.projectedTimeline = { key, value: result } }
+      return result
+    }
+    seal(source, terminal = null) {
+      if (!source || source.sealed) fail('CAPTURE_AMBIGUOUS_SOURCE', 'Missing or already sealed source')
+      source.sealed = true
+      if (source.error) throw source.error
+      if (source.state !== 'content' || source.seen.size !== 1) fail('CAPTURE_IDENTITY_UNCERTAIN', 'Source is not confirmed content')
+      const first = source.observations[0], last = source.observations.at(-1)
+      if (!first || !last || (!terminal && (!last.ended || Math.abs(last.position - last.duration) > 0.05))) fail('CAPTURE_PARTIAL_PRESENTATION', 'Complete presentation was not observed')
+      if (source.buffers.length !== 1) fail('CAPTURE_UNSUPPORTED_FORMAT', 'Exactly one audio buffer is required')
+      const buffer = source.buffers[0], timeline = this.inspect(source, terminal?.audioRanges)
+      const epsilon = timeline.quantum + 0.000001
+      if (terminal) {
+        // The complete captured buffer might be only the downloaded prefix of a song.
+        // A full clock/range match is insufficient until the official source declares EOF.
+        const nativeEnded = terminal.ended === true && Math.abs(last.position - last.duration) <= epsilon
+        if (!nativeEnded && terminal.sourceEnded !== true) fail('CAPTURE_PARTIAL_PRESENTATION', `Official source completion was not observed: clock=${last.position}, duration=${last.duration}, nativeEnded=${terminal.ended}, audioEnd=${timeline.end}, MediaSource.readyState=${terminal.sourceReadyState}, successfulEndOfStream=${terminal.successfulEndOfStream}`)
+        const range = terminal.audioRanges?.[0]
+        if (terminal.source !== source || terminal.position !== last.position || terminal.seeking !== false || terminal.playbackRate !== 1 || terminal.readyState < 2 || terminal.updating !== false || terminal.audioRanges?.length !== 1 || !range || !Number.isFinite(range.start) || !Number.isFinite(range.end) || Math.abs(range.start - timeline.start) > epsilon || Math.abs(range.end - timeline.end) > epsilon || last.position + epsilon < timeline.end || timeline.end > last.duration + epsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Pre-detach clock/ranges do not prove complete audio: clock=${last.position}, duration=${last.duration}, start=${timeline.start}, end=${timeline.end}, quantum=${timeline.quantum}, audioRanges=${JSON.stringify(terminal.audioRanges)}, seeking=${terminal.seeking}, rate=${terminal.playbackRate}, readyState=${terminal.readyState}, updating=${terminal.updating}`)
+      }
+      if (timeline.start > timeline.quantum || (!terminal && Math.abs(timeline.end - last.duration) > epsilon)) fail('CAPTURE_UNPRESENTED_BYTES', `Coded audio does not match the complete presentation: start=${timeline.start}, end=${timeline.end}, duration=${last.duration}, quantum=${timeline.quantum}`)
+      return { source: source.id, session: buffer.id, mime: buffer.mime, chunks: buffer.chunks, timeline, timelineSettings: buffer.timelineSettings ?? settingsOf() }
+    }
+  }
+
+  function install({ scope = globalThis, tracker = new SessionTracker(), onBeforeDetach = () => {} } = {}) {
+    if (!scope.MediaSource || !scope.SourceBuffer) fail('CAPTURE_UNSUPPORTED_PIPELINE', 'Main-thread Media Source is unavailable')
+    const sources = new WeakMap(), buffers = new WeakMap(), urls = new Map()
+    const sourceFor = (media) => { if (!sources.has(media)) { const source = tracker.createSource(); source.native = media; sources.set(media, source) }; return sources.get(media) }
+    const originalURL = scope.URL.createObjectURL
+    scope.URL.createObjectURL = function (object) {
+      const url = originalURL.call(this, object)
+      if (object instanceof scope.MediaSource) urls.set(url, sourceFor(object))
+      return url
+    }
+    const originalEnd = scope.MediaSource.prototype.endOfStream
+    if (originalEnd) scope.MediaSource.prototype.endOfStream = function (...args) {
+      const result = originalEnd.apply(this, args)
+      const source = sourceFor(this)
+      source.successfulEndOfStream = args[0] === undefined && this.readyState === 'ended'
+      if (args[0] !== undefined) tracker.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', `Official source ended with an error: ${String(args[0])}`)
+      return result
+    }
+    const originalAdd = scope.MediaSource.prototype.addSourceBuffer
+    scope.MediaSource.prototype.addSourceBuffer = function (mime) {
+      const sb = originalAdd.call(this, mime), source = sourceFor(this)
+      if (mime.startsWith('audio/')) { const buffer = tracker.createBuffer(source, mime); buffer.native = sb; buffers.set(sb, buffer) }
+      else if (/opus|mp4a|vorbis|flac/i.test(mime)) tracker.reject(source, 'CAPTURE_UNSUPPORTED_MULTIPLEXED', 'Audio and video share a source buffer')
+      sb.addEventListener('error', () => tracker.reject(source, 'CAPTURE_SOURCEBUFFER_ERROR', 'The official SourceBuffer rejected media'))
+      return sb
+    }
+    const originalAppend = scope.SourceBuffer.prototype.appendBuffer
+    scope.SourceBuffer.prototype.appendBuffer = function (data) {
+      const buffer = buffers.get(this), bytes = buffer ? copy(data) : null
+      const result = originalAppend.call(this, data)
+      if (buffer) tracker.append(buffer, bytes, this)
+      return result
+    }
+    const originalAbort = scope.SourceBuffer.prototype.abort
+    if (originalAbort) scope.SourceBuffer.prototype.abort = function (...args) {
+      const buffer = buffers.get(this), hadBytes = buffer?.chunks.some(chunk => chunk.byteLength > 0)
+      // Native abort may discard parser-input bytes already copied into quarantine.
+      // Reject immediately after success, before its queued abort event or a detach can
+      // seal that inventory. A native exception did not perform the operation.
+      const result = originalAbort.apply(this, args)
+      if (hadBytes) tracker.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'SourceBuffer.abort discarded or reset captured parser input')
+      return result
+    }
+    const originalChange = scope.SourceBuffer.prototype.changeType
+    if (originalChange) scope.SourceBuffer.prototype.changeType = function (mime) {
+      const buffer = buffers.get(this)
+      const result = originalChange.call(this, mime)
+      if (buffer) tracker.reject(buffer.source, 'CAPTURE_UNSUPPORTED_FORMAT_CHANGE', `SourceBuffer changed to ${mime}`)
+      return result
+    }
+    const originalRemove = scope.SourceBuffer.prototype.remove
+    scope.SourceBuffer.prototype.remove = function (start, end) {
+      const buffer = buffers.get(this)
+      const result = originalRemove.call(this, start, end)
+      if (buffer) tracker.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'SourceBuffer ranges were removed or overwritten')
+      return result
+    }
+    const sourceOf = (element) => element.srcObject ? sources.get(element.srcObject) ?? null : urls.get(element.currentSrc || element.src) ?? null
+    const snapshotOf = (element, operation = 'snapshot') => {
+      const source = sourceOf(element)
+      if (!source) return null
+      const native = source.buffers[0]?.native
+      return { source, operation, position: element.currentTime, duration: element.duration, seeking: element.seeking, paused: element.paused, ended: element.ended, readyState: element.readyState, playbackRate: element.playbackRate, updating: native?.updating ?? true, audioRanges: nativeRanges(native), sourceReadyState: source.native?.readyState, successfulEndOfStream: source.successfulEndOfStream, sourceEnded: source.successfulEndOfStream && source.native?.readyState === 'ended' }
+    }
+    const beforeDetach = (element, operation) => {
+      const source = sourceOf(element)
+      if (!source || source.sealed || !source.seen.has('content')) return
+      onBeforeDetach(element, snapshotOf(element, operation))
+    }
+    const mediaPrototype = scope.HTMLMediaElement?.prototype
+    for (const property of ['src', 'srcObject', 'currentTime']) {
+      const descriptor = mediaPrototype && Object.getOwnPropertyDescriptor(mediaPrototype, property)
+      if (!descriptor?.set || !descriptor.configurable) continue
+      Object.defineProperty(mediaPrototype, property, { ...descriptor, set(value) {
+        if (property === 'currentTime') {
+          const source = sourceOf(this)
+          if (source?.state === 'content' && !source.sealed) tracker.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'A currentTime assignment invalidates presentation before its asynchronous seeking event')
+        } else beforeDetach(this, `${property} setter`)
+        return descriptor.set.call(this, value)
+      } })
+    }
+    if (mediaPrototype?.load) {
+      const originalLoad = mediaPrototype.load
+      mediaPrototype.load = function (...args) { beforeDetach(this, 'load'); return originalLoad.apply(this, args) }
+    }
+    // Reflected DOM setters do not have to call an overridden IDL setter.
+    for (const method of ['setAttribute', 'removeAttribute', 'setAttributeNS', 'removeAttributeNS']) {
+      const prototype = scope.Element?.prototype, original = prototype?.[method]
+      if (!original) continue
+      prototype[method] = function (...args) {
+        const name = String(args[method.endsWith('NS') ? 1 : 0]).toLowerCase()
+        if (scope.HTMLMediaElement && this instanceof scope.HTMLMediaElement && name === 'src') beforeDetach(this, method)
+        return original.apply(this, args)
+      }
+    }
+    return { tracker, sourceOf, snapshotOf }
+  }
+  globalThis.__musifyCaptureCore = { CaptureError, parseWebMOpus, projectTimeline, SessionTracker, install }
+})()

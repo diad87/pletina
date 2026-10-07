@@ -52,12 +52,20 @@ export const album = (id: number) =>
   id >= LOCAL_BASE ? invoke<AlbumDetail>('album', { id }) : cached(`album:${id}`, () => invoke<AlbumDetail>('album', { id }))
 
 // Sin caché aquí: el backend ya guarda el vídeo elegido y la URL mientras no caduque.
-export const resolve = (track: TrackQuery, refresh = false) => invoke<Playable>('resolve', { track, refresh })
+export const resolve = (track: TrackQuery, refresh = false, foreground = true) =>
+  invoke<Playable>('resolve', { track, refresh, foreground })
+export const cancelResolve = () => invoke<void>('cancel_resolve')
+export const showCapture = () => invoke<void>('capture_show')
 
 export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('alternatives', { track })
 
-export const chooseSource = (track: TrackQuery, videoId: string) =>
-  invoke<Playable>('choose_source', { track, videoId })
+export const openYoutubeSearch = (track: TrackQuery) => invoke<void>('open_youtube_search', { track })
+
+export const chooseSource = (track: TrackQuery, videoId: string, foreground = true) =>
+  invoke<Playable>('choose_source', { track, videoId, foreground })
+
+export const rememberSource = (track: TrackQuery, videoId: string) =>
+  invoke<void>('remember_source', { track, videoId })
 
 // Biblioteca: sin caché, la base de datos local es instantánea.
 export const library = () => invoke<LibraryData>('library')

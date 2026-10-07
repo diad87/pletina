@@ -13,29 +13,39 @@
   let link = $state('')
   let linkError = $state(false)
   let choosing = $state<string | null>(null)
+  let selection = 0
 
   const item = $derived(player.picking)
 
   $effect(() => {
     const current = item
+    const request = ++selection
     list = null
     error = null
     link = ''
     linkError = false
+    choosing = null
     if (!current) return
     if (dialog && !dialog.open) dialog.showModal()
     let alive = true
     api
       .alternatives(toQuery(current))
       .then((l) => alive && (list = l))
-      .catch((e) => alive && (error = String(e)))
+      .catch((e) => alive && request === selection && (error = String(e)))
     return () => {
       alive = false
     }
   })
 
   function close() {
+    ++selection
     dialog?.close()
+  }
+
+  async function searchOfficial() {
+    if (!item) return
+    try { await api.openYoutubeSearch(toQuery(item)) }
+    catch (e) { error = `No se pudo abrir YouTube: ${e}` }
   }
 
   /** Acepta el ID de 11 caracteres o cualquier enlace de YouTube / YouTube Music. */
@@ -54,10 +64,15 @@
   }
 
   async function choose(videoId: string) {
+    const current = item, request = ++selection
+    error = null
     choosing = videoId
-    const ok = await player.useSource(videoId, item)
+    const ok = await player.useSource(videoId, current, (message) => {
+      if (request === selection && item === current) error = message
+    })
+    if (request !== selection || item !== current) return
     choosing = null
-    if (ok) close()
+    if (ok || player.captureInteraction) close()
   }
 
   function submitLink(e: SubmitEvent) {
@@ -125,12 +140,18 @@
         />
         <button class="pill" type="submit" disabled={!link.trim() || choosing !== null}>Usar</button>
       </form>
+      <p class="official-search">
+        <button type="button" onclick={searchOfficial}>Buscar en YouTube</button>
+        y pegar aquí el enlace del vídeo elegido.
+      </p>
       {#if linkError}<p class="link-error">Ese enlace no parece de un vídeo de YouTube.</p>{/if}
     </div>
   {/if}
 </dialog>
 
 <style>
+  .official-search { margin: 0; padding: 0 24px 20px; color: var(--muted); font-size: 13px; }
+  .official-search button { color: var(--text); text-decoration: underline; }
   dialog {
     width: min(760px, calc(100vw - 48px));
     max-height: calc(100vh - 96px);

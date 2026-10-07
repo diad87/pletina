@@ -1,11 +1,11 @@
-//! P1: de dónde sale el audio de YouTube. Hay tres motores y se elige con `set_stream_engine`
+//! P1: de dónde sale el audio de YouTube. Hay cuatro motores y se elige con `set_stream_engine`
 //! (o `MUSIFY_ENGINE`); yt-dlp sigue siendo el de por defecto.
 //! - `ytdlp`: el programa yt-dlp.
 //! - `youtubei`: la librería youtubei.js en la interfaz. Rust le hace las peticiones HTTP
 //!   (`http_fetch`) y le pide las URLs con un evento. Si falla, yt-dlp.
 //! - `propio`: primero el nivel rápido (`native.rs`, una petición desde Rust) y, si falla, el nivel
-//!   garantizado (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta).
-//!   `oficial` usa solo el nivel garantizado (para probarlo).
+//!   experimental (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta).
+//!   `oficial` usa solo la captura oficial (para probarla).
 
 use crate::youtube::BROWSER_UA;
 use crate::ytdlp::{VideoInfo, YtDlp, now, query_param};
@@ -56,7 +56,10 @@ pub fn init(app: AppHandle) {
 }
 
 /// Audio de un vídeo con el motor elegido.
-pub async fn stream(ytdlp: &YtDlp, video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
+    if ticket.is_some_and(|t| !crate::player::resolution_current(t)) {
+        return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
+    }
     match ENGINES[ENGINE.load(Ordering::Relaxed) as usize] {
         "youtubei" => match stream_js(video_id, refresh).await {
             Ok(info) => Ok(info),
@@ -66,28 +69,28 @@ pub async fn stream(ytdlp: &YtDlp, video_id: &str, refresh: bool) -> Result<Vide
                 ytdlp.stream(video_id, refresh).await
             }
         },
-        "propio" => propio(video_id, refresh).await,
-        "oficial" => official(video_id, refresh).await,
+        "propio" => propio(video_id, refresh, foreground, ticket).await,
+        "oficial" => official(video_id, refresh, foreground, ticket).await,
         _ => ytdlp.stream(video_id, refresh).await,
     }
 }
 
 /// Motor propio: el nivel rápido y, si falla por lo que sea, el reproductor oficial.
-async fn propio(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
     match native::resolve(video_id, refresh).await {
         Ok(d) => Ok(VideoInfo { url: d.url, title: d.title, channel: d.channel, duration: d.duration }),
         Err(_e) => {
             #[cfg(debug_assertions)]
             eprintln!("[motor propio] {video_id}: {_e} → reproductor oficial");
-            official(video_id, refresh).await
+            official(video_id, refresh, foreground, ticket).await
         }
     }
 }
 
-/// Nivel garantizado: el `<audio>` pide `musify-capture:<id>` y la interfaz lo sirve con lo capturado.
-async fn official(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+/// Captura oficial experimental: entrega únicamente una fuente completa confirmada.
+async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
     let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
-    let meta = capture::stream(app, video_id, refresh).await?;
+    let meta = capture::stream_with_priority(app, video_id, refresh, foreground, ticket).await?;
     Ok(VideoInfo {
         url: format!("{}{video_id}", capture::SCHEME),
         title: meta.title,
@@ -280,11 +283,11 @@ pub async fn bench_native(video_id: String) -> Result<Value, String> {
     Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": d.url, "client": d.client, "itag": d.itag, "mime": d.mime }))
 }
 
-/// Nivel garantizado, cronometrado: hasta que llega el primer audio de la canción.
+/// Captura oficial, cronometrada hasta que supera el control de presentación completa.
 #[tauri::command]
 pub async fn bench_capture(video_id: String) -> Result<Value, String> {
     let t = Instant::now();
-    let info = official(&video_id, true).await?;
+    let info = official(&video_id, true, true, None).await?;
     Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": info.url, "title": info.title }))
 }
 

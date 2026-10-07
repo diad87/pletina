@@ -7,6 +7,7 @@
     { value: 'ytdlp', label: 'yt-dlp' },
     { value: 'youtubei', label: 'youtubei.js (prueba)' },
     { value: 'propio', label: 'Propio' },
+    { value: 'oficial', label: 'Oficial (experimental)' },
   ]
 
   let stats = $state<EngineStats | null>(null)
@@ -14,7 +15,7 @@
     const load = () => extractor.stats().then((s) => (stats = s)).catch(() => {})
     load()
     // Con el motor propio, los números van cambiando; con los demás basta de vez en cuando.
-    const timer = setInterval(load, extractor.engine === 'propio' ? 3000 : 30000)
+    const timer = setInterval(load, ['propio', 'oficial'].includes(extractor.engine) ? 3000 : 30000)
     return () => clearInterval(timer)
   })
 
@@ -30,6 +31,9 @@
   {#each options as o (o.value)}
     <button class="chip" class:on={extractor.engine === o.value} onclick={() => choose(o.value)}>{o.label}</button>
   {/each}
+  {#if extractor.engine === 'oficial'}
+    <span class="count versions">Prueba en Windows: espera a capturar la canción completa antes de reproducirla. La identificación de anuncios sigue en validación.</span>
+  {/if}
   {#if extractor.engine === 'youtubei' && (extractor.served || extractor.failed)}
     <span class="count">{extractor.served} con youtubei.js · {extractor.failed} con yt-dlp de respaldo</span>
   {/if}

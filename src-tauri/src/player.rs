@@ -6,6 +6,18 @@ use crate::extractor;
 use crate::youtube::{self, CONFIDENT_SCORE, Candidate, MIN_SCORE, TrackQuery, YouTubeMusic};
 use crate::ytdlp::YtDlp;
 use serde::Serialize;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+// También invalida búsquedas que todavía no han obtenido un ID de YouTube.
+static RESOLUTION: AtomicU64 = AtomicU64::new(0);
+pub fn begin_resolution(foreground: bool) -> u64 {
+    if foreground { RESOLUTION.fetch_add(1, Ordering::SeqCst) + 1 }
+    else { RESOLUTION.load(Ordering::SeqCst) }
+}
+pub fn resolution_current(ticket: u64) -> bool { RESOLUTION.load(Ordering::SeqCst) == ticket }
+fn ensure_current(ticket: u64) -> Result<(), String> {
+    if resolution_current(ticket) { Ok(()) } else { Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into()) }
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -40,6 +52,7 @@ const MAX_ATTEMPTS: usize = 3;
 
 type Scored = (Candidate, i32, &'static str);
 
+#[cfg(test)]
 pub async fn resolve(
     q: &TrackQuery,
     refresh: bool,
@@ -47,6 +60,18 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
+    resolve_with_priority(q, refresh, db, ytm, ytdlp, true).await
+}
+
+pub async fn resolve_with_priority(
+    q: &TrackQuery,
+    refresh: bool,
+    db: &Db,
+    ytm: &YouTubeMusic,
+    ytdlp: &YtDlp,
+    foreground: bool,
+) -> Result<Playable, String> {
+    let ticket = begin_resolution(foreground);
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
@@ -73,18 +98,29 @@ pub async fn resolve(
 
     let mut gone = None;
     if let Some(src) = db.source(q.id) {
-        match extractor::stream(ytdlp, &src.video_id, refresh).await {
-            Ok(info) => return Ok(playable(src, info.url)),
+        match extractor::stream_with_priority(ytdlp, &src.video_id, refresh, foreground, Some(ticket)).await {
+            Ok(info) => { ensure_current(ticket)?; return Ok(playable(src, info.url)); },
             // El vídeo ya no existe: se busca otro.
-            Err(e) if is_gone(&e) => {
-                db.delete_source(q.id);
+            Err(e) if is_gone(&e) && !src.verified => {
+                ensure_current(ticket)?;
+                if !db.delete_automatic_source(q.id, &src.video_id) {
+                    let chosen = db.source(q.id).ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
+                    let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    return Ok(playable(chosen, info.url));
+                }
                 gone = Some(src.video_id);
             }
             Err(e) => return Err(e),
         }
     }
 
+    if extractor::stream_engine() == "oficial" {
+        ensure_current(ticket)?;
+        return Err("SOURCE_SELECTION_REQUIRED: Busca el vídeo en YouTube y pega su enlace para asociarlo a esta canción".into());
+    }
+
     let mut candidates = search(q, ytm, ytdlp, false).await?;
+    ensure_current(ticket)?;
     candidates.retain(|(c, s, _)| *s >= MIN_SCORE && gone.as_ref() != Some(&c.video_id));
 
     #[cfg(debug_assertions)]
@@ -94,8 +130,10 @@ pub async fn resolve(
 
     let mut last_err = None;
     for (c, score, _) in candidates.into_iter().take(MAX_ATTEMPTS) {
-        match extractor::stream(ytdlp, &c.video_id, refresh).await {
+        ensure_current(ticket)?;
+        match extractor::stream_with_priority(ytdlp, &c.video_id, refresh, foreground, Some(ticket)).await {
             Ok(info) => {
+                ensure_current(ticket)?;
                 let src = Source {
                     video_id: c.video_id,
                     title: c.title,
@@ -104,7 +142,11 @@ pub async fn resolve(
                     score,
                     verified: false,
                 };
-                db.save_source(q.id, &src);
+                if !db.save_source(q.id, &src) {
+                    let chosen = db.source(q.id).ok_or("No se pudo guardar el vídeo de la canción")?;
+                    let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    return Ok(playable(chosen, info.url));
+                }
                 return Ok(playable(src, info.url));
             }
             Err(e) => last_err = Some(e),
@@ -121,8 +163,12 @@ pub async fn alternatives(
     ytdlp: &YtDlp,
 ) -> Result<Vec<Alternative>, String> {
     let current = db.source(q.id);
-    let mut list: Vec<Alternative> = search(q, ytm, ytdlp, true)
-        .await?
+    let found = if extractor::stream_engine() == "oficial" {
+        Vec::new()
+    } else {
+        search(q, ytm, ytdlp, true).await?
+    };
+    let mut list: Vec<Alternative> = found
         .into_iter()
         .take(16)
         .map(|(c, score, origin)| Alternative {
@@ -177,14 +223,19 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
         score,
         verified: false,
     };
-    db.save_source(q.id, &src);
-    Ok(src.video_id)
+    if db.save_source(q.id, &src) {
+        Ok(src.video_id)
+    } else {
+        db.source(q.id).map(|chosen| chosen.video_id).ok_or_else(|| "No se pudo guardar el vídeo de la canción".into())
+    }
 }
 
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
-pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp) -> Result<Playable, String> {
-    let info = extractor::stream(ytdlp, video_id, false).await?;
+pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, foreground: bool) -> Result<Playable, String> {
+    let ticket = begin_resolution(foreground);
+    let info = extractor::stream_with_priority(ytdlp, video_id, false, foreground, Some(ticket)).await?;
+    ensure_current(ticket)?;
     if let Some(path) = db.download_path(q.id) {
         let _ = std::fs::remove_file(path);
         db.forget_download(q.id);
@@ -197,8 +248,34 @@ pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp) -> R
         score: 100,
         verified: true,
     };
-    db.save_source(q.id, &src);
+    if !db.save_source(q.id, &src) {
+        return Err("No se pudo guardar el vídeo elegido".into());
+    }
     Ok(playable(src, info.url))
+}
+
+/// Asocia el enlace elegido para otra canción sin preparar audio ni afectar la reproducción.
+/// Los metadatos son los del catálogo; la disponibilidad del vídeo se comprueba al reproducirlo.
+pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), String> {
+    if video_id.len() != 11 || !video_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+        return Err("El ID del vídeo de YouTube no es válido".into());
+    }
+    let src = Source {
+        video_id: video_id.to_string(),
+        title: q.title.clone(),
+        channel: q.artist.clone(),
+        duration: Some(q.duration),
+        score: 100,
+        verified: true,
+    };
+    if !db.save_source(q.id, &src) {
+        return Err("No se pudo guardar el vídeo elegido".into());
+    }
+    if let Some(path) = db.download_path(q.id) {
+        let _ = std::fs::remove_file(path);
+        db.forget_download(q.id);
+    }
+    Ok(())
 }
 
 /// Candidatos puntuados, de mejor a peor y sin repetidos. Con `everywhere` busca siempre
@@ -240,7 +317,9 @@ async fn search(q: &TrackQuery, ytm: &YouTubeMusic, ytdlp: &YtDlp, everywhere: b
 
 pub(crate) fn is_gone(err: &str) -> bool {
     let err = err.to_lowercase();
-    ["unavailable", "not available", "private", "removed", "terminated", "age"]
+    // Solo desaparición explícita. "webpage" contiene "age" y no significa que el vídeo
+    // haya desaparecido; tampoco una restricción de edad o un fallo temporal de captura.
+    ["private video", "video is private", "video has been removed", "video has been deleted", "account has been terminated"]
         .iter()
         .any(|w| err.contains(w))
 }
@@ -253,6 +332,41 @@ fn playable(src: Source, url: String) -> Playable {
 mod tests {
     use super::*;
     use crate::deezer::Deezer;
+
+    #[test]
+    fn remembering_a_manual_video_is_independent_of_playback_resolution() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let q = TrackQuery { id: 77, title: "Airbag".into(), artist: "Radiohead".into(), album: "OK Computer".into(), duration: 288 };
+        let playing = begin_resolution(true);
+        remember_source(&q, "jNY_wLukVW0", &db).unwrap();
+        assert!(resolution_current(playing), "asociar otra canción no cancela la que suena");
+        begin_resolution(true);
+        let remembered = db.source(q.id).unwrap();
+        assert!(remembered.verified);
+        assert_eq!(remembered.video_id, "jNY_wLukVW0");
+        assert_eq!((remembered.title.as_str(), remembered.channel.as_str(), remembered.duration), ("Airbag", "Radiohead", Some(288)));
+        for invalid in ["", "jNY_wLukVW0?", "bad/id12345", "á234567890"] {
+            assert!(remember_source(&q, invalid, &db).is_err());
+        }
+        assert_eq!(db.source(q.id).unwrap().video_id, "jNY_wLukVW0");
+    }
+
+    #[test]
+    fn transient_errors_do_not_erase_sources() {
+        for error in [
+            "Unable to download webpage: timed out",
+            "Sign in to confirm your age",
+            "Capture unavailable: no audio progress",
+            "El reproductor de YouTube se quedó colgado",
+            "Service unavailable (503)",
+            "Video unavailable. Sign in to confirm your age",
+            "This video is not available in your country",
+        ] {
+            assert!(!is_gone(error), "{error}");
+        }
+        assert!(is_gone("ERROR: Video unavailable. This video has been removed"));
+        assert!(is_gone("ERROR: Private video. Sign in if you've been granted access"));
+    }
 
     /// Comprueba la elección de vídeo con discos reales (usa la red):
     /// `cargo test real_albums -- --ignored --nocapture`
@@ -378,7 +492,7 @@ mod resolve_tests {
 
         // Elegir a mano un directo: queda guardado como verificado y es lo que suena después.
         let other = list.iter().find(|a| !a.current).unwrap();
-        let chosen = choose(&q, &other.video_id, &db, &ytdlp).await.unwrap();
+        let chosen = choose(&q, &other.video_id, &db, &ytdlp, true).await.unwrap();
         assert_eq!(chosen.video_id, other.video_id);
         let src = db.source(q.id).unwrap();
         assert!(src.verified);

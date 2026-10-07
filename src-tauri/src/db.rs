@@ -119,6 +119,7 @@ const MIGRATIONS: &[&str] = &[
     ",
 ];
 
+#[derive(Debug, Clone)]
 pub struct Source {
     pub video_id: String,
     pub title: String,
@@ -172,20 +173,34 @@ impl Db {
             .flatten()
     }
 
-    pub fn save_source(&self, track_id: u64, s: &Source) {
-        let _ = self.0.lock().unwrap().execute(
-            "INSERT OR REPLACE INTO sources (track_id, video_id, title, channel, duration, score, verified, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())",
+    /// Una búsqueda antigua no puede sustituir la elección manual que terminó antes que ella.
+    pub fn save_source(&self, track_id: u64, s: &Source) -> bool {
+        self.0.lock().unwrap().execute(
+            "INSERT INTO sources (track_id, video_id, title, channel, duration, score, verified, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())
+             ON CONFLICT(track_id) DO UPDATE SET video_id = excluded.video_id,
+               title = excluded.title, channel = excluded.channel, duration = excluded.duration,
+               score = excluded.score, verified = excluded.verified, updated_at = excluded.updated_at
+             WHERE sources.verified = 0 OR excluded.verified = 1",
             params![track_id as i64, s.video_id, s.title, s.channel, s.duration, s.score, s.verified],
-        );
+        ).is_ok_and(|rows| rows == 1)
     }
 
+    #[cfg(test)]
     pub fn delete_source(&self, track_id: u64) {
         let _ = self
             .0
             .lock()
             .unwrap()
             .execute("DELETE FROM sources WHERE track_id = ?1", params![track_id as i64]);
+    }
+
+    /// Un error de una petición anterior solo puede retirar su propia asociación automática.
+    pub fn delete_automatic_source(&self, track_id: u64, video_id: &str) -> bool {
+        self.0.lock().unwrap().execute(
+            "DELETE FROM sources WHERE track_id = ?1 AND video_id = ?2 AND verified = 0",
+            params![track_id as i64, video_id],
+        ).is_ok_and(|rows| rows == 1)
     }
 }
 
@@ -287,6 +302,29 @@ fn migrate(conn: &mut Connection) -> rusqlite::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_late_search_preserves_the_manual_video() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        migrate(&mut conn).unwrap();
+        let db = Db(Mutex::new(conn));
+        let manual = Source { video_id: "chosenvideo".into(), title: "Chosen".into(), channel: "Artist".into(),
+            duration: Some(180), score: 100, verified: true };
+        let automatic = Source { video_id: "oldsearchid".into(), verified: false, ..manual.clone() };
+        assert!(db.save_source(1, &manual));
+        assert!(!db.save_source(1, &automatic));
+        let saved = db.source(1).unwrap();
+        assert_eq!(saved.video_id, manual.video_id);
+        assert!(saved.verified);
+        assert!(!db.delete_automatic_source(1, &automatic.video_id));
+        assert!(!db.delete_automatic_source(1, &manual.video_id));
+        let replacement = Source { video_id: "newchoiceid".into(), ..manual };
+        assert!(db.save_source(1, &replacement));
+        assert_eq!(db.source(1).unwrap().video_id, replacement.video_id);
+        assert!(db.save_source(2, &automatic));
+        assert!(!db.delete_automatic_source(2, "differentid"));
+        assert!(db.delete_automatic_source(2, &automatic.video_id));
+    }
 
     #[test]
     fn opens_header_only_file() {

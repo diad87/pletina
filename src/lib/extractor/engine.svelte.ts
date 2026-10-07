@@ -37,7 +37,7 @@ export function loadYoutubei(): Promise<YoutubeiModule> {
   return youtubei
 }
 
-/** `oficial` es el motor propio usando solo su nivel garantizado (para probarlo). */
+/** `oficial` prueba la captura experimental con el reproductor oficial, sin la API nativa. */
 export type Engine = 'ytdlp' | 'youtubei' | 'propio' | 'oficial'
 
 /** Números del motor propio (ver `engine_stats` en Rust). */

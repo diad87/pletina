@@ -1,5 +1,5 @@
 //! Extractores que se actualizan solos, sin sacar otra versión de la app: la receta del motor
-//! propio (`recipe`), el script del nivel garantizado (`capture`) y el motor youtubei.js
+//! propio (`recipe`), el script de captura oficial (`capture`) y el motor youtubei.js
 //! (`youtubei`). Cada uno tiene su `version` y su `api` (la forma en que habla con esta app) en
 //! `extractors.json`. yt-dlp no está aquí: se actualiza él solo desde su propio GitHub (`ytdlp.rs`).
 //!
@@ -30,11 +30,16 @@ const MAX_SIZE: usize = 8 * 1024 * 1024;
 
 /// Versión de la forma de hablar con cada extractor que entiende esta app. Debe coincidir con
 /// `extractors.json` (lo comprueba un test).
-pub const API: [(&str, u32); 3] = [("recipe", 1), ("capture", 1), ("youtubei", 1)];
+pub const API: [(&str, u32); 3] = [("recipe", 1), ("capture", 2), ("youtubei", 1)];
 
 const BUNDLED_META: &str = include_str!("../extractors.json");
 const BUNDLED_RECIPE: &str = include_str!("../recipe/youtube.json");
-const BUNDLED_CAPTURE: &str = include_str!("capture.js");
+const BUNDLED_CAPTURE: &str = concat!(
+    include_str!("capture-mp4.js"), "\n;\n",
+    include_str!("capture-core.js"), "\n;\n",
+    include_str!("capture-youtube.js"), "\n;\n",
+    include_str!("capture.js"),
+);
 
 fn ext(name: &str) -> &'static str {
     match name {
@@ -115,7 +120,7 @@ fn active(name: &str) -> Option<Arc<str>> {
     ACTIVE.read().unwrap().get(name).map(|(_, code)| code.clone())
 }
 
-/// Script del nivel garantizado que se mete en la ventana oculta.
+/// Script de captura oficial que se mete en la ventana oculta.
 pub fn capture_script() -> Arc<str> {
     active("capture").unwrap_or_else(|| BUNDLED_CAPTURE.into())
 }

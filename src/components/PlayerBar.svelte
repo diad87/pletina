@@ -41,7 +41,7 @@
         <button class="link artist" onclick={() => nav.go({ name: 'artist', id: current.track.artist.id })}
           >{current.track.artist.name}</button
         >
-        {#if player.status === 'loading'}<span class="hint">Buscando en YouTube…</span>{/if}
+        {#if player.status === 'loading'}<span class="hint">Preparando audio…</span>{/if}
       </div>
       <button
         class="icon heart"
@@ -93,7 +93,15 @@
     />
   </div>
 
-  {#if toast.message}
+  {#if player.captureInteraction}
+    <div class="notice interaction" role="status">
+      <span>YouTube necesita tu intervención: {player.captureInteraction}</span>
+      <div class="actions">
+        <button onclick={() => player.openCapture()}>Abrir YouTube</button>
+        <button onclick={() => player.retryCapture()}>Reintentar</button>
+      </div>
+    </div>
+  {:else if toast.message}
     {#key toast.message}
       <div class="notice" role="status">{toast.message}</div>
     {/key}
@@ -268,6 +276,24 @@
     box-shadow: var(--shadow-2);
     transform: translateX(-50%);
     animation: pop 0.3s var(--ease);
+  }
+  .interaction {
+    width: min(560px, 90%);
+    font-weight: 500;
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .actions button {
+    padding: 6px 10px;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .actions button:hover {
+    background: rgb(0 0 0 / 0.08);
   }
   @keyframes pop {
     from {

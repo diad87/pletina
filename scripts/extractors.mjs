@@ -63,8 +63,12 @@ async function publish({ dryRun, to }) {
   const local = Object.entries(SOURCES).map(([name, path]) => {
     const { api, version } = meta[name]
     const file = `${name}-api${api}-v${version}.${EXT[name]}`
-    copyFileSync(path, join(OUT, file))
-    return { name, api, version, file, sha256: sha256(readFileSync(path)) }
+    const data = name === 'capture'
+      ? Buffer.from(['capture-mp4.js', 'capture-core.js', 'capture-youtube.js', 'capture.js']
+          .map((part) => readFileSync(join('src-tauri/src', part), 'utf8')).join('\n;\n'))
+      : readFileSync(path)
+    writeFileSync(join(OUT, file), data)
+    return { name, api, version, file, sha256: sha256(data) }
   })
 
   // Lo publicado ahora.

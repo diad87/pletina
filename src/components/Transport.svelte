@@ -33,7 +33,7 @@
       class="play"
       onclick={() => player.toggle()}
       disabled={!current}
-      title={player.status === 'playing' ? 'Pausa (espacio)' : 'Reproducir (espacio)'}
+      title={player.status === 'loading' ? 'Cancelar carga (espacio)' : player.status === 'playing' ? 'Pausa (espacio)' : 'Reproducir (espacio)'}
     >
       {#if player.status === 'loading'}
         <span class="spinner"></span>

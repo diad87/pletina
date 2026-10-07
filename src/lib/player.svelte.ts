@@ -88,12 +88,18 @@ class Player {
   repeat = $state<Repeat>(load('musify:repeat', 'off', (v) => v === 'off' || v === 'all' || v === 'one'))
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking = $state<QueueItem | null>(null)
+  /** YouTube necesita que la persona resuelva algo en su ventana antes de reintentar. */
+  captureInteraction = $state<string | null>(null)
 
   #audio = new Audio()
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
-  #inFlight = new Map<number, Promise<Playable>>()
+  #inFlight = new Map<number, { promise: Promise<Playable>; foreground: boolean; token: number }>()
+  /** Una cancelación pendiente siempre termina antes de enviar la siguiente resolución. */
+  #cancelPending: Promise<void> = Promise.resolve()
+  /** Un vídeo elegido aún no se guarda si YouTube exige interacción antes de capturarlo. */
+  #pendingSource: { videoId: string; item: QueueItem } | null = null
   #retried = false
   #failures = 0
   /** Si la canción actual ya se apuntó en el historial. */
@@ -135,6 +141,16 @@ class Player {
       }
     })
     a.addEventListener('error', () => this.#onAudioError())
+    a.addEventListener('captureerror', (event) => {
+      const item = this.current
+      if (!item) return
+      // La captura comunica fallos de identidad/formato incluso antes de crear un SourceBuffer.
+      // Detenerla impide que una respuesta tardía alimente la siguiente canción.
+      ++this.#token
+      stopCapture(!(event as CustomEvent<string>).detail.includes('CAPTURE_REQUIRES_INTERACTION'))
+      a.pause()
+      this.#fail(item, (event as CustomEvent<string>).detail)
+    })
     this.#setupMediaSession()
   }
 
@@ -230,10 +246,45 @@ class Player {
   }
 
   toggle() {
-    if (this.status === 'playing') this.#audio.pause()
+    if (this.status === 'loading') this.#cancelLoading()
+    else if (this.status === 'playing') this.#audio.pause()
     else if (this.status === 'paused') this.#audio.play().catch(() => {})
     else if (this.manual && this.status === 'idle') this.#loadManual(this.manual)
     else if (this.current && this.status === 'idle') this.#load(this.pos)
+  }
+
+  #cancelLoading() {
+    ++this.#token
+    this.#pendingSource = null
+    this.#inFlight.clear()
+    stopCapture()
+    this.#audio.pause()
+    this.#audio.removeAttribute('src')
+    this.#audio.load()
+    this.status = 'idle'
+    this.captureInteraction = null
+    this.#cancelPending = this.#cancelPending.then(() => api.cancelResolve()).catch((e) => {
+      toast.show(`No se pudo cancelar la preparación: ${e}`)
+    })
+  }
+
+  async openCapture() {
+    try {
+      await api.showCapture()
+    } catch (e) {
+      this.captureInteraction = `No se pudo abrir YouTube: ${e}. Pulsa Reintentar para preparar otra ventana.`
+    }
+  }
+
+  retryCapture() {
+    const pending = this.#pendingSource
+    if (pending && pending.item.track.id === this.current?.track.id) {
+      void this.useSource(pending.videoId, pending.item)
+      return
+    }
+    this.#pendingSource = null
+    if (this.manual) this.#loadManual(this.manual, true)
+    else if (this.current) this.#load(this.pos, true)
   }
 
   next() {
@@ -250,6 +301,10 @@ class Player {
       this.#load(0)
     } else {
       // Fin de la cola: se queda parado al principio de la última canción.
+      if (this.status === 'loading') {
+        this.#cancelLoading()
+        return
+      }
       this.#audio.pause()
       this.#audio.currentTime = 0
       this.status = 'paused'
@@ -302,8 +357,13 @@ class Player {
    * Fija a mano el vídeo de una canción y lo recuerda. Si es la que suena, se cambia al momento;
    * si no, solo se guarda para la próxima vez.
    */
-  async useSource(videoId: string, item: QueueItem | null = this.current): Promise<boolean> {
+  async useSource(videoId: string, item: QueueItem | null = this.current, onError?: (message: string) => void): Promise<boolean> {
     if (!item) return false
+    const reportError = (e: unknown) => {
+      const message = `No se pudo usar ese vídeo: ${e}`
+      if (onError) onError(message)
+      else toast.show(message)
+    }
     // Si estaba descargada, el archivo era del vídeo equivocado: el backend lo borra y se vuelve a bajar.
     const wasDownloaded = downloads.done.has(item.track.id)
     const redownload = () => {
@@ -314,20 +374,25 @@ class Player {
 
     if (item.track.id !== this.current?.track.id) {
       try {
-        await api.chooseSource(toQuery(item), videoId)
+        await api.rememberSource(toQuery(item), videoId)
         redownload()
         toast.show(`Hecho: «${item.track.title}» sonará con ese vídeo`)
         return true
       } catch (e) {
-        toast.show(`No se pudo usar ese vídeo: ${e}`)
+        reportError(e)
         return false
       }
     }
 
     const token = ++this.#token
+    this.#pendingSource = null
+    this.captureInteraction = null
     this.status = 'loading'
     this.#audio.pause()
+    stopCapture()
     try {
+      await this.#cancelPending
+      if (token !== this.#token) return false
       const playable = await api.chooseSource(toQuery(item), videoId)
       redownload()
       if (token !== this.#token) return true
@@ -338,8 +403,14 @@ class Player {
       return true
     } catch (e) {
       if (token === this.#token) {
-        this.status = 'paused'
-        toast.show(`No se pudo usar ese vídeo: ${e}`)
+        if (String(e).includes('CAPTURE_REQUIRES_INTERACTION')) {
+          this.#pendingSource = { videoId, item }
+          this.#fail(item, String(e))
+        }
+        else {
+          this.status = 'paused'
+          reportError(e)
+        }
       }
       return false
     }
@@ -375,6 +446,8 @@ class Player {
 
   async #start(item: QueueItem, refresh = false, startAt = 0) {
     const token = ++this.#token
+    this.#pendingSource = null
+    this.captureInteraction = null
     // Recargar la misma canción (URL caducada) no cuenta como otra escucha.
     if (!refresh) this.#recorded = false
     this.status = 'loading'
@@ -404,18 +477,24 @@ class Player {
   #prefetchNext() {
     const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
     const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
-    if (following && following !== this.current) this.#resolve(following, false).catch(() => {})
+    if (following && following !== this.current) this.#resolve(following, false, false).catch(() => {})
   }
 
-  #resolve(item: QueueItem, refresh: boolean): Promise<Playable> {
+  #resolve(item: QueueItem, refresh: boolean, foreground = true): Promise<Playable> {
     const id = item.track.id
     let pending = this.#inFlight.get(id)
-    if (!pending || refresh) {
-      pending = api.resolve(toQuery(item), refresh)
-      this.#inFlight.set(id, pending)
-      pending.finally(() => this.#inFlight.get(id) === pending && this.#inFlight.delete(id)).catch(() => {})
+    if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground)) {
+      // El clic debe llegar al backend para promocionar una precarga; allí se comparte la captura.
+      const entry = {
+        promise: this.#cancelPending.then(() => api.resolve(toQuery(item), refresh, foreground)),
+        foreground,
+        token: this.#token,
+      }
+      pending = entry
+      this.#inFlight.set(id, entry)
+      entry.promise.finally(() => this.#inFlight.get(id) === entry && this.#inFlight.delete(id)).catch(() => {})
     }
-    return pending
+    return pending.promise
   }
 
   /** El audio falló a mitad (normalmente la URL caducó): se pide otra una vez y se sigue donde iba. */
@@ -429,6 +508,16 @@ class Player {
   }
 
   #fail(item: QueueItem, reason: string) {
+    if (reason.includes('SOURCE_SELECTION_REQUIRED')) {
+      this.status = 'idle'
+      this.picking = item
+      return
+    }
+    if (reason.includes('CAPTURE_REQUIRES_INTERACTION')) {
+      this.captureInteraction = reason.split('CAPTURE_REQUIRES_INTERACTION:').pop()?.trim() || 'YouTube necesita tu intervención.'
+      this.status = 'idle'
+      return
+    }
     this.#failures++
     toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)
     if (this.#failures < MAX_FAILURES && (this.userQueue.length > 0 || this.pos < this.order.length - 1)) {

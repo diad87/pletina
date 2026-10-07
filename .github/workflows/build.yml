@@ -50,6 +50,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Comprobar antes de compilar instaladores
+        run: |
+          npm test
+          npm run check
+
+      - name: Pruebas Rust en Windows
+        if: runner.os == 'Windows'
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - name: Compilar y firmar
         run: npm run tauri build -- --bundles ${{ matrix.bundles }} ${{ matrix.args }}
         env:

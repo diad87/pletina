@@ -12,6 +12,7 @@ on:
       - src-tauri/extractors.json
       - src-tauri/recipe/**
       - src-tauri/src/capture.js
+      - src-tauri/src/capture-*.js
       - src/lib/extractor/youtubei.ts
       - package-lock.json
       - vite.extractors.config.ts
@@ -36,6 +37,11 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Comprobar captura y tipos antes de publicar
+        run: |
+          npm test
+          npm run check
 
       - name: ¿Hay youtubei.js nuevo?
         id: upgrade

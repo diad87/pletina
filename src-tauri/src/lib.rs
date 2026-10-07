@@ -16,6 +16,7 @@ use db::Db;
 use deezer::{AlbumDetail, ArtistPage, Deezer, SearchResults};
 use player::{Alternative, Playable};
 use tauri::{Manager, State};
+use tauri_plugin_opener::OpenerExt;
 use youtube::{TrackQuery, YouTubeMusic};
 use ytdlp::YtDlp;
 
@@ -53,17 +54,25 @@ async fn album(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<
 async fn resolve(
     track: TrackQuery,
     refresh: bool,
+    foreground: Option<bool>,
     db: State<'_, Db>,
     ytm: State<'_, YouTubeMusic>,
     ytdlp: State<'_, YtDlp>,
     app: tauri::AppHandle,
 ) -> Result<Playable, String> {
-    let playable = player::resolve(&track, refresh, &db, &ytm, &ytdlp).await?;
+    let playable = player::resolve_with_priority(&track, refresh, &db, &ytm, &ytdlp, foreground.unwrap_or(true)).await?;
     // El archivo descargado se sirve por el protocolo de archivos locales: hay que permitirlo.
     if playable.local {
         app.asset_protocol_scope().allow_file(&playable.url).map_err(|e| e.to_string())?;
     }
     Ok(playable)
+}
+
+/// Invalida búsquedas pendientes y detiene la captura activa al cancelar la carga.
+#[tauri::command]
+async fn cancel_resolve(app: tauri::AppHandle) -> Result<(), String> {
+    let epoch = player::begin_resolution(true);
+    capture::cancel_before(&app, epoch).await
 }
 
 /// Vídeos que podrían ser la canción, para elegir otro a mano.
@@ -77,15 +86,30 @@ async fn alternatives(
     player::alternatives(&track, &db, &ytm, &ytdlp).await
 }
 
+/// La búsqueda se realiza en YouTube Music y el usuario elige el enlace del vídeo.
+#[tauri::command]
+async fn open_youtube_search(track: TrackQuery, app: tauri::AppHandle) -> Result<(), String> {
+    let mut url = reqwest::Url::parse("https://music.youtube.com/search").map_err(|e| e.to_string())?;
+    url.query_pairs_mut().append_pair("q", &track.search_text());
+    app.opener().open_url(url.to_string(), None::<&str>).map_err(|e| e.to_string())
+}
+
 /// Fija a mano el vídeo de una canción y lo devuelve listo para reproducir.
 #[tauri::command]
 async fn choose_source(
     track: TrackQuery,
     video_id: String,
+    foreground: Option<bool>,
     db: State<'_, Db>,
     ytdlp: State<'_, YtDlp>,
 ) -> Result<Playable, String> {
-    player::choose(&track, &video_id, &db, &ytdlp).await
+    player::choose(&track, &video_id, &db, &ytdlp, foreground.unwrap_or(true)).await
+}
+
+/// Guarda una asociación manual sin abrir el extractor ni modificar la canción actual.
+#[tauri::command]
+fn remember_source(track: TrackQuery, video_id: String, db: State<'_, Db>) -> Result<(), String> {
+    player::remember_source(&track, &video_id, &db)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -130,18 +154,20 @@ pub fn run() {
             app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
             extractor::init(app.handle().clone());
-            extractors::start(app.handle());
             app.manage(downloads::Downloads::start(app.handle()));
-            updater::start(app.handle());
             // Música local: carátulas guardadas visibles y escaneo de lo nuevo al arrancar.
             local::allow_covers(app.handle());
-            local::start_scan(app.handle());
-
-            // Prepara yt-dlp en segundo plano (descarga o actualización diaria).
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                handle.state::<YtDlp>().warm_up().await;
-            });
+            // Las mediciones usan exactamente el código incluido y no actualizan programas,
+            // extractores ni la app mientras se observa la captura oficial.
+            if std::env::var_os("MUSIFY_BENCH").is_none() {
+                extractors::start(app.handle());
+                updater::start(app.handle());
+                local::start_scan(app.handle());
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    handle.state::<YtDlp>().warm_up().await;
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -150,7 +176,9 @@ pub fn run() {
             album,
             resolve,
             alternatives,
+            open_youtube_search,
             choose_source,
+            remember_source,
             library::library,
             library::set_liked,
             library::liked_tracks,
@@ -194,6 +222,9 @@ pub fn run() {
             extractors::extractor_module,
             capture::capture_read,
             capture::capture_seek,
+            capture::capture_cancel,
+            capture::capture_show,
+            cancel_resolve,
         ])
         // Al cerrar la ventana principal se cierra la app, aunque el motor propio tenga abierta su
         // ventana oculta con YouTube Music.

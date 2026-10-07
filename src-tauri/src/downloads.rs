@@ -138,9 +138,9 @@ async fn fetch(
     let file = match ytdlp.download(&video_id, &target, &mut report).await {
         Ok(file) => file,
         // El vídeo guardado ya no existe: se busca otro una vez.
-        Err(e) if player::is_gone(&e) => {
-            db.delete_source(t.id);
-            video_id = player::resolve(&q, false, db, ytm, ytdlp).await?.video_id;
+        Err(e) if player::is_gone(&e) && !db.source(t.id).is_some_and(|source| source.verified) => {
+            db.delete_automatic_source(t.id, &video_id);
+            video_id = player::find_video(&q, db, ytm, ytdlp).await?;
             ytdlp.download(&video_id, &target, &mut report).await?
         }
         Err(e) => return Err(e),
