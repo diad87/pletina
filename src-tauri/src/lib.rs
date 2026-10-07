@@ -1,5 +1,7 @@
 mod db;
 mod capture;
+mod capture_legacy;
+mod capture_bench;
 mod deezer;
 mod downloads;
 mod extractor;
@@ -72,7 +74,15 @@ async fn resolve(
 #[tauri::command]
 async fn cancel_resolve(app: tauri::AppHandle) -> Result<(), String> {
     let epoch = player::begin_resolution(true);
-    capture::cancel_before(&app, epoch).await
+    let (official, legacy) = tokio::join!(capture::cancel_before(&app, epoch), capture_legacy::cancel_before(&app, epoch));
+    official.and(legacy)
+}
+
+#[tauri::command]
+async fn cancel_prefetch(app: tauri::AppHandle) -> Result<(), String> {
+    let epoch = player::cancel_prefetch_requests();
+    let (official, legacy) = tokio::join!(capture::cancel_next_before(&app, epoch), capture_legacy::cancel_next_before(&app, epoch));
+    official.and(legacy)
 }
 
 /// Vídeos que podrían ser la canción, para elegir otro a mano.
@@ -221,10 +231,19 @@ pub fn run() {
             extractor::engine_stats,
             extractors::extractor_module,
             capture::capture_read,
+            capture::capture_begin,
+            capture::capture_prefetch,
             capture::capture_seek,
             capture::capture_cancel,
             capture::capture_show,
+            capture_legacy::capture_legacy_read,
+            capture_legacy::capture_legacy_seek,
+            capture_legacy::capture_legacy_cancel,
+            capture_bench::capture_bench_catalog,
+            capture_bench::capture_bench_checkpoint,
+            capture_bench::capture_bench_forget,
             cancel_resolve,
+            cancel_prefetch,
         ])
         // Al cerrar la ventana principal se cierra la app, aunque el motor propio tenga abierta su
         // ventana oculta con YouTube Music.

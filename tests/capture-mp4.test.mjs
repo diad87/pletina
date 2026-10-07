@@ -7,6 +7,8 @@ const parserCode = readFileSync(new URL('../src-tauri/src/capture-mp4.js', impor
 const context = vm.createContext({ Uint8Array, ArrayBuffer, DataView })
 vm.runInContext(parserCode, context)
 const parse = bytes => context.__musifyCaptureMp4.parse(new Uint8Array(bytes))
+const inspectPrefix = (bytes, options) => context.__musifyCaptureMp4.inspectPrefix(new Uint8Array(bytes), options)
+const remux = (...args) => context.__musifyCaptureMp4.remux(...args)
 // Generated locally with FFmpeg 8.1: anullsrc=r=48000:cl=stereo, -t .064 -c:a aac
 // -b:a 64k -movflags +frag_keyframe+empty_moov+default_base_moof -frag_duration 43000
 // -fflags +bitexact -flags:a +bitexact. ffprobe independently reports 4 packets of
@@ -101,6 +103,36 @@ test('real AAC-LC ISO-BMFF fixture matches independently inspected packet timing
   assert.equal(result.start, 0)
   assert.equal(result.end, 4096 / 48000)
   for (let i = 0; i < 4; i++) { assert.equal(result.frames[i].start, i * 1024 / 48000); assert.equal(result.frames[i].end, (i + 1) * 1024 / 48000) }
+})
+
+test('progressive AAC inventory exposes only complete physically present samples at every byte boundary', () => {
+  const complete = inspectPrefix(real, { final: true })
+  assert.equal(complete.samples.length, 4)
+  for (let length = 0; length <= real.length; length++) {
+    const current = inspectPrefix(real.subarray(0, length))
+    for (const sample of current.samples) {
+      assert(sample.offset + sample.size <= length)
+      assert.deepEqual(real.subarray(sample.offset, sample.offset + sample.size), packet)
+    }
+    const expected = complete.samples.filter(s => s.offset + s.size <= length).length
+    assert.equal(current.samples.length, expected, `prefix ${length}`)
+  }
+  assert.throws(() => inspectPrefix(real.subarray(0, real.length - 1), { final: true }), /CAPTURE_UNSUPPORTED_MP4/)
+})
+
+test('AAC remux emits selected samples only, with original timestamps and decoder configuration', () => {
+  const inventory = inspectPrefix(real, { final: true })
+  const first = remux(inventory, 0, 1, 1), tail = remux(inventory, 1, 3, 2)
+  const one = parse(cat(first.init, first.media))
+  assert.equal(one.frames.length, 1)
+  assert.equal(one.end, 1024 / 48000)
+  const all = parse(cat(first.init, first.media, tail.media))
+  assert.deepEqual(all.frames, parse(real).frames)
+  assert.deepEqual(first.init, inventory.init)
+  const payloads = boxes(Buffer.from(first.media)).filter(b => b.type === 'mdat')
+  assert.equal(payloads.length, 1)
+  assert.deepEqual(Buffer.from(first.media).subarray(payloads[0].start, payloads[0].end), packet)
+  assert.throws(() => remux(inventory, 0, 5), /Invalid remux sample selection/)
 })
 
 test('sample defaults follow trun over tfhd over trex without guessing missing durations', () => {

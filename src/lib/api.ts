@@ -55,6 +55,7 @@ export const album = (id: number) =>
 export const resolve = (track: TrackQuery, refresh = false, foreground = true) =>
   invoke<Playable>('resolve', { track, refresh, foreground })
 export const cancelResolve = () => invoke<void>('cancel_resolve')
+export const cancelPrefetch = () => invoke<void>('cancel_prefetch')
 export const showCapture = () => invoke<void>('capture_show')
 
 export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('alternatives', { track })

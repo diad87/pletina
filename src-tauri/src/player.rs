@@ -9,14 +9,44 @@ use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 // También invalida búsquedas que todavía no han obtenido un ID de YouTube.
-static RESOLUTION: AtomicU64 = AtomicU64::new(0);
-pub fn begin_resolution(foreground: bool) -> u64 {
-    if foreground { RESOLUTION.fetch_add(1, Ordering::SeqCst) + 1 }
-    else { RESOLUTION.load(Ordering::SeqCst) }
+#[derive(Default)]
+struct RequestEpochs { resolution: AtomicU64, prefetch: AtomicU64 }
+static REQUESTS: RequestEpochs = RequestEpochs { resolution: AtomicU64::new(0), prefetch: AtomicU64::new(0) };
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RequestTicket {
+    pub resolution: u64,
+    pub prefetch: Option<u64>,
 }
-pub fn resolution_current(ticket: u64) -> bool { RESOLUTION.load(Ordering::SeqCst) == ticket }
-fn ensure_current(ticket: u64) -> Result<(), String> {
-    if resolution_current(ticket) { Ok(()) } else { Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into()) }
+pub fn begin_resolution(foreground: bool) -> u64 {
+    REQUESTS.begin_resolution(foreground)
+}
+pub fn resolution_current(ticket: u64) -> bool { REQUESTS.resolution.load(Ordering::SeqCst) == ticket }
+pub fn cancel_prefetch_requests() -> u64 { REQUESTS.cancel_prefetch() }
+impl RequestEpochs {
+    fn begin_resolution(&self, foreground: bool) -> u64 {
+        if foreground { self.resolution.fetch_add(1, Ordering::SeqCst) + 1 }
+        else { self.resolution.load(Ordering::SeqCst) }
+    }
+    fn cancel_prefetch(&self) -> u64 { self.prefetch.fetch_add(1, Ordering::SeqCst) + 1 }
+    fn begin(&self, foreground: bool) -> RequestTicket {
+        RequestTicket { resolution: self.begin_resolution(foreground), prefetch: (!foreground).then(|| self.cancel_prefetch()) }
+    }
+    fn prefetch_current(&self, ticket: RequestTicket) -> bool {
+        ticket.prefetch.is_none_or(|p| self.prefetch.load(Ordering::SeqCst) == p)
+    }
+    fn current(&self, ticket: RequestTicket) -> bool {
+        self.resolution.load(Ordering::SeqCst) == ticket.resolution && self.prefetch_current(ticket)
+    }
+}
+fn begin_request(foreground: bool) -> RequestTicket { REQUESTS.begin(foreground) }
+pub fn prefetch_current(ticket: RequestTicket) -> bool {
+    REQUESTS.prefetch_current(ticket)
+}
+pub fn request_current(ticket: RequestTicket) -> bool {
+    REQUESTS.current(ticket)
+}
+fn ensure_current(ticket: RequestTicket) -> Result<(), String> {
+    if request_current(ticket) { Ok(()) } else { Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into()) }
 }
 
 #[derive(Serialize)]
@@ -71,7 +101,7 @@ pub async fn resolve_with_priority(
     ytdlp: &YtDlp,
     foreground: bool,
 ) -> Result<Playable, String> {
-    let ticket = begin_resolution(foreground);
+    let ticket = begin_request(foreground);
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
@@ -106,6 +136,7 @@ pub async fn resolve_with_priority(
                 if !db.delete_automatic_source(q.id, &src.video_id) {
                     let chosen = db.source(q.id).ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
                     let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    ensure_current(ticket)?;
                     return Ok(playable(chosen, info.url));
                 }
                 gone = Some(src.video_id);
@@ -145,6 +176,7 @@ pub async fn resolve_with_priority(
                 if !db.save_source(q.id, &src) {
                     let chosen = db.source(q.id).ok_or("No se pudo guardar el vídeo de la canción")?;
                     let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    ensure_current(ticket)?;
                     return Ok(playable(chosen, info.url));
                 }
                 return Ok(playable(src, info.url));
@@ -233,7 +265,7 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
 pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, foreground: bool) -> Result<Playable, String> {
-    let ticket = begin_resolution(foreground);
+    let ticket = begin_request(foreground);
     let info = extractor::stream_with_priority(ytdlp, video_id, false, foreground, Some(ticket)).await?;
     ensure_current(ticket)?;
     if let Some(path) = db.download_path(q.id) {
@@ -331,6 +363,29 @@ fn playable(src: Source, url: String) -> Playable {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn next_requests_are_latest_wins_without_cancelling_the_current_track() {
+        let requests = RequestEpochs::default();
+        let current = requests.begin(true);
+        let slow_b = requests.begin(false);
+        let c = requests.begin(false);
+        assert!(!requests.current(slow_b), "B cannot replace C after a slow search");
+        assert!(requests.current(c));
+        assert!(requests.current(current), "prefetch cannot cancel foreground");
+        let new_b = requests.begin(false);
+        assert!(!requests.current(c));
+        assert!(!requests.current(slow_b), "B→C→B needs a new admission");
+        assert!(requests.current(new_b));
+        let promotion = requests.begin(true);
+        assert!(!requests.current(new_b), "old pending results are obsolete");
+        assert!(requests.prefetch_current(new_b), "already-admitted next survives until promotion");
+        assert!(requests.current(promotion));
+        let cancellation = requests.cancel_prefetch();
+        assert!(!requests.prefetch_current(new_b));
+        let later = requests.begin(false);
+        assert!(later.prefetch.unwrap() > cancellation, "queued cancel cannot affect a newer next lease");
+        assert!(requests.current(promotion));
+    }
     use crate::deezer::Deezer;
 
     #[test]

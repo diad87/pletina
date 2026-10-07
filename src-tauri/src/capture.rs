@@ -1,18 +1,19 @@
-//! Captura oficial experimental. Cada ventana tiene una generación nativa y cada conjunto de
-//! bytes una revisión. Los callbacks no pueden elegir su sesión y las ventanas se serializan.
+//! API 3: unidades confirmadas, caché append-only y dos sesiones (actual + siguiente).
+//! generation identifica la ventana nativa, epoch un recorrido/seek. EOF no prueba cobertura.
+use crate::player::RequestTicket;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use std::collections::HashMap;
+use serde_json::{Value, json};
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
-
 pub const LABEL: &str = "yt-engine";
 pub const SCHEME: &str = "musify-capture:";
 const KEEP: usize = 6;
 const MAX_BYTES: usize = 96 * 1024 * 1024;
+const MAX_TOTAL_BYTES: usize = 192 * 1024 * 1024;
 const MAX_SEGMENT_BYTES: usize = 4 * 1024 * 1024;
 const READ_BYTES: usize = 1024 * 1024;
 const READ_CHUNKS: usize = 32;
@@ -21,7 +22,8 @@ const PROGRESS_STALL: Duration = Duration::from_secs(60);
 const MAX_RESETS: u8 = 2;
 const MAX_WAIT: Duration = Duration::from_secs(20 * 60);
 const MAX_AD_WAIT_CREDIT: Duration = Duration::from_secs(180);
-
+// Sólo redondeo IEEE754; nunca cubre un frame ausente.
+const RANGE_EPSILON: f64 = 0.000001;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TimelineSettings {
@@ -30,18 +32,6 @@ struct TimelineSettings {
     append_window_end: Option<f64>,
     mode: String,
 }
-
-impl Default for TimelineSettings {
-    fn default() -> Self {
-        Self {
-            timestamp_offset: 0.0,
-            append_window_start: 0.0,
-            append_window_end: None,
-            mode: "segments".into(),
-        }
-    }
-}
-
 impl TimelineSettings {
     fn valid(&self) -> bool {
         self.timestamp_offset.is_finite()
@@ -49,52 +39,121 @@ impl TimelineSettings {
             && self.append_window_start >= 0.0
             && self
                 .append_window_end
-                .is_none_or(|end| end.is_finite() && end > self.append_window_start)
+                .is_none_or(|v| v.is_finite() && v > self.append_window_start)
             && self.mode == "segments"
     }
-
-    fn from_message(value: Option<serde_json::Value>) -> Option<Self> {
-        // API 2 en desarrollo: sólo la ausencia del objeto completo admite el default.
-        let Some(value) = value else {
-            return Some(Self::default());
-        };
+    fn from_message(value: &Value) -> Option<Self> {
         if !value.as_object()?.contains_key("appendWindowEnd") {
             return None;
         }
-        let settings: Self = serde_json::from_value(value).ok()?;
+        let settings: Self = serde_json::from_value(value.clone()).ok()?;
         settings.valid().then_some(settings)
     }
 }
-
-fn present_json<'de, D>(deserializer: D) -> Result<Option<serde_json::Value>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    // Distingue un objeto ausente (default de serde) de un null explícito inválido.
-    serde_json::Value::deserialize(deserializer).map(Some)
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+struct Range {
+    start: f64,
+    end: f64,
 }
-
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Unit {
+    verified: bool,
+    index: usize,
+    generation: u64,
+    epoch: u64,
+    source: u64,
+    s: u64,
+    unit: u64,
+    init_key: String,
+    init_bytes: usize,
+    mime: String,
+    range_start: f64,
+    range_end: f64,
+    decode_start: f64,
+    decode_end: f64,
+    frames: u64,
+    timeline_settings: TimelineSettings,
+}
+impl Unit {
+    fn from_message(m: &Message, generation: u64) -> Option<Self> {
+        let result = Self {
+            verified: true,
+            index: 0,
+            generation,
+            epoch: m.epoch?,
+            source: m.source?,
+            s: m.s?,
+            unit: m.unit?,
+            init_key: m.init_key.clone()?,
+            init_bytes: m.init_bytes?,
+            mime: m.mime.clone()?,
+            range_start: m.range_start?,
+            range_end: m.range_end?,
+            decode_start: m.decode_start?,
+            decode_end: m.decode_end?,
+            frames: m.frames?,
+            timeline_settings: TimelineSettings::from_message(m.timeline_settings.as_ref()?)?,
+        };
+        (m.verified == Some(true)
+            && result.frames > 0
+            && result.init_bytes > 0
+            && !result.init_key.is_empty()
+            && result.init_key.len() <= 256
+            && result.mime.starts_with("audio/")
+            && result.mime.len() <= 256
+            && [
+                result.range_start,
+                result.range_end,
+                result.decode_start,
+                result.decode_end,
+            ]
+            .iter()
+            .all(|v| v.is_finite())
+            && result.range_start >= 0.0
+            && result.range_end > result.range_start
+            && result.decode_start <= result.range_start + RANGE_EPSILON
+            && result.decode_end + RANGE_EPSILON >= result.range_end
+            && result.decode_end > result.decode_start)
+            .then_some(result)
+    }
+}
+fn union(ranges: &mut Vec<Range>, range: Range) {
+    ranges.push(range);
+    ranges.sort_by(|a, b| a.start.total_cmp(&b.start));
+    let mut merged: Vec<Range> = Vec::with_capacity(ranges.len());
+    for current in ranges.drain(..) {
+        if let Some(previous) = merged
+            .last_mut()
+            .filter(|p| current.start <= p.end + RANGE_EPSILON)
+        {
+            previous.end = previous.end.max(current.end);
+        } else {
+            merged.push(current);
+        }
+    }
+    *ranges = merged;
+}
+fn covers(ranges: &[Range], start: f64, end: f64) -> bool {
+    ranges
+        .iter()
+        .any(|r| r.start <= start + RANGE_EPSILON && r.end + RANGE_EPSILON >= end)
+}
 struct Track {
     revision: u64,
     generation: u64,
+    epoch: u64,
     sequence: Option<u64>,
     opened: Instant,
     used: Instant,
     session_started: Instant,
-    mime: String,
     chunks: Vec<Vec<u8>>,
-    mimes: Vec<String>,
+    units: Vec<Unit>,
+    ranges: Vec<Range>,
     bytes: usize,
-    ads: usize,
-    unknown: usize,
-    quarantined: u64,
-    verified: bool,
-    verified_source: Option<u64>,
-    verified_buffer: Option<u64>,
-    timeline_settings: Option<TimelineSettings>,
-    frames: u64,
-    range_start: Option<f64>,
-    range_end: Option<f64>,
+    proof: Option<Unit>,
+    accepted: Option<(u64, u64, u64)>,
+    last_unit: Option<u64>,
     phase: String,
     title: String,
     author: String,
@@ -104,42 +163,51 @@ struct Track {
     meta_ms: Option<u64>,
     done_ms: Option<u64>,
     error: Option<String>,
+    soft_error: Option<String>,
     why: Option<String>,
     last_diagnostic: Option<String>,
+    eof: bool,
+    eof_end: Option<f64>,
+    complete: bool,
+    epoch_done: bool,
+    recovering: bool,
     last_read: Option<Instant>,
     last_msg: Instant,
     last_progress: Instant,
     position: f64,
+    resets: u8,
+    seek_operation: u64,
+    target: f64,
+    quarantined: u64,
+    unknown: usize,
+    ads_observations: usize,
+    ads_sources: HashSet<(u64, u64, u64)>,
+    ads_delivered: usize,
     ad_observation: Option<(u64, f64, Instant)>,
     ad_wait_credit: Duration,
-    resets: u8,
+    ad_presented: Duration,
+    ad_rate_violations: usize,
+    ad_rate_observations: usize,
 }
-
 impl Track {
-    fn new(revision: u64, generation: u64) -> Self {
+    fn new(generation: u64, epoch: u64, revision: u64) -> Self {
         let now = Instant::now();
         Self {
             revision,
             generation,
+            epoch,
             sequence: None,
             opened: now,
             used: now,
             session_started: now,
-            mime: String::new(),
             chunks: vec![],
-            mimes: vec![],
+            units: vec![],
+            ranges: vec![],
             bytes: 0,
-            ads: 0,
-            unknown: 0,
-            quarantined: 0,
-            verified: false,
-            verified_source: None,
-            verified_buffer: None,
-            timeline_settings: None,
-            frames: 0,
-            range_start: None,
-            range_end: None,
-            phase: "unknown".into(),
+            proof: None,
+            accepted: None,
+            last_unit: None,
+            phase: "opening".into(),
             title: String::new(),
             author: String::new(),
             duration: None,
@@ -148,37 +216,79 @@ impl Track {
             meta_ms: None,
             done_ms: None,
             error: None,
+            soft_error: None,
             why: None,
             last_diagnostic: None,
+            eof: false,
+            eof_end: None,
+            complete: false,
+            epoch_done: false,
+            recovering: false,
             last_read: None,
             last_msg: now,
             last_progress: now,
             position: 0.0,
+            resets: 0,
+            seek_operation: 0,
+            target: 0.0,
+            quarantined: 0,
+            unknown: 0,
+            ads_observations: 0,
+            ads_sources: HashSet::new(),
+            ads_delivered: 0,
             ad_observation: None,
             ad_wait_credit: Duration::ZERO,
-            resets: 0,
+            ad_presented: Duration::ZERO,
+            ad_rate_violations: 0,
+            ad_rate_observations: 0,
         }
     }
     fn ms(&self) -> u64 {
         self.opened.elapsed().as_millis() as u64
     }
     fn ready(&self) -> bool {
-        self.error.is_none() && self.first_ms.is_some()
+        !self.chunks.is_empty()
     }
-    fn protected(&self, now: Instant) -> bool {
-        self.done_ms.is_none()
-            && self.error.is_none()
-            && (self
-                .last_read
-                .is_some_and(|at| now.saturating_duration_since(at) < Duration::from_secs(2))
-                || now.saturating_duration_since(self.session_started) < Duration::from_secs(3))
+    fn begin_epoch(&mut self, generation: u64, epoch: u64, target: f64, recovering: bool) {
+        if generation != self.generation {
+            self.sequence = None;
+        }
+        self.generation = generation;
+        self.epoch = epoch;
+        self.target = target;
+        self.proof = None;
+        self.accepted = None;
+        self.last_unit = None;
+        self.error = None;
+        self.soft_error = None;
+        self.why = None;
+        self.last_diagnostic = None;
+        self.epoch_done = false;
+        self.recovering = recovering;
+        self.phase = "opening".into();
+        self.session_started = Instant::now();
+        self.last_msg = self.session_started;
+        self.last_progress = self.session_started;
+        self.position = target;
+        self.quarantined = 0;
+        self.ad_observation = None;
+        self.ad_wait_credit = Duration::ZERO;
+    }
+    fn fail(&mut self, error: String) {
+        if self.ready() {
+            self.soft_error.get_or_insert(error);
+        } else {
+            self.error.get_or_insert(error);
+        }
+        self.proof = None;
+        self.epoch_done = true;
+        self.recovering = false;
     }
     fn stalled(&self, now: Instant) -> bool {
-        self.done_ms.is_none()
-            && self.error.is_none()
+        !self.epoch_done
             && self.phase != "interaction"
-            && (now.saturating_duration_since(self.last_msg) >= HEARTBEAT_STALL
-                || now.saturating_duration_since(self.last_progress) >= PROGRESS_STALL)
+            && (now.duration_since(self.last_msg) >= HEARTBEAT_STALL
+                || now.duration_since(self.last_progress) >= PROGRESS_STALL)
     }
     fn wait_budget(&self) -> Duration {
         Duration::from_secs_f64(
@@ -186,293 +296,174 @@ impl Track {
                 .clamp(120.0, MAX_WAIT.as_secs_f64()),
         )
     }
-
-    /// Sólo descuenta del presupuesto el tiempo observado de publicidad que avanza a 1x.
-    /// Un heartbeat, un salto al omitir un anuncio o un cambio de fuente no compra tiempo.
     fn observe_ad_progress(&mut self, source: u64, position: f64, now: Instant) -> bool {
         let previous = self.ad_observation.replace((source, position, now));
-        let Some((previous_source, previous_position, at)) = previous else {
+        let Some((old_source, old_position, old_time)) = previous else {
             return false;
         };
-        let elapsed = now.saturating_duration_since(at);
-        let advance = position - previous_position;
-        if source != previous_source
-            || elapsed > HEARTBEAT_STALL
+        let wall = now.duration_since(old_time);
+        let advance = position - old_position;
+        if source != old_source
+            || wall > HEARTBEAT_STALL
             || advance <= 0.05
-            || advance > elapsed.as_secs_f64() + 0.25
+            || advance > wall.as_secs_f64() + 0.25
         {
             return false;
         }
-        let credit = Duration::from_secs_f64(advance.min(elapsed.as_secs_f64()));
-        self.ad_wait_credit = (self.ad_wait_credit + credit).min(MAX_AD_WAIT_CREDIT);
+        let observed = Duration::from_secs_f64(advance.min(wall.as_secs_f64()));
+        self.ad_presented += observed;
+        self.ad_wait_credit = (self.ad_wait_credit + observed).min(MAX_AD_WAIT_CREDIT);
         true
     }
-
-    fn resume(&mut self, generation: u64) {
-        let now = Instant::now();
-        self.generation = generation;
-        self.sequence = None;
-        self.done_ms = None;
-        self.error = None;
-        self.why = None;
-        self.last_diagnostic = None;
-        self.phase = "unknown".into();
-        self.quarantined = 0;
-        self.verified = false;
-        self.verified_source = None;
-        self.verified_buffer = None;
-        self.timeline_settings = None;
-        self.frames = 0;
-        self.range_start = None;
-        self.range_end = None;
-        self.session_started = now;
-        self.last_msg = now;
-        self.last_progress = now;
-        self.ad_observation = None;
-        self.ad_wait_credit = Duration::ZERO;
-        self.used = now;
+    fn first_gap(&self) -> f64 {
+        self.ranges
+            .first()
+            .filter(|r| r.start <= RANGE_EPSILON)
+            .map_or(0.0, |r| r.end)
     }
-
-    fn replay_complete(&mut self, revision: u64) -> bool {
-        if !self.verified || self.done_ms.is_none() || self.error.is_some() {
-            return false;
+    fn finish(&mut self, end: f64, why: Option<String>) {
+        // Es el extremo del audio probado por EOF, no duración nominal del vídeo ni
+        // el último bloque disponible. Un seek posterior no puede rebajar ese extremo.
+        if !end.is_finite()
+            || end <= 0.0
+            || self
+                .ranges
+                .last()
+                .is_some_and(|r| r.end > end + RANGE_EPSILON)
+        {
+            self.fail("CAPTURE_INCOMPLETE: EOF anterior a rangos de audio ya confirmados".into());
+            return;
         }
-        self.revision = revision;
-        self.used = Instant::now();
-        self.last_read = Some(self.used);
-        true
-    }
-
-    fn mark_cancelled(&mut self) {
-        if self.done_ms.is_none() {
-            self.error
-                .get_or_insert_with(|| "CAPTURE_CANCELLED: captura cancelada".into());
+        self.eof = true;
+        self.eof_end = Some(self.eof_end.map_or(end, |known| known.max(end)));
+        self.epoch_done = true;
+        self.why = why;
+        self.proof = None;
+        self.complete = self
+            .eof_end
+            .is_some_and(|end| covers(&self.ranges, 0.0, end));
+        self.recovering = false;
+        if self.complete {
+            let ms = self.ms();
+            self.done_ms.get_or_insert(ms);
+            self.soft_error = None;
+            self.error = None;
+        } else {
+            self.fail(
+                "CAPTURE_INCOMPLETE: faltan rangos de audio confirmados; se puede recuperar".into(),
+            );
         }
     }
 }
-
 #[derive(Clone, Debug)]
 struct Session {
     id: String,
     generation: u64,
     label: String,
     foreground: bool,
-    ticket: Option<u64>,
+    ticket: Option<RequestTicket>,
+    active: bool,
 }
-
 #[derive(Default)]
 struct Supervisor {
     tracks: HashMap<String, Track>,
-    session: Option<Session>,
+    sessions: Vec<Session>,
     cancellations: HashMap<String, u64>,
+    // El lector puede dejar de consultar tras EOF, pero aún necesitará estos bytes al saltar.
+    foreground: Option<(String, Option<RequestTicket>)>,
 }
-
-#[derive(Debug, PartialEq)]
-enum StartDecision {
-    Join(u64),
-    Wait,
-    Start,
-}
-
 impl Supervisor {
     fn owns(&self, id: &str, generation: u64) -> bool {
-        self.session
-            .as_ref()
-            .is_some_and(|s| s.id == id && s.generation == generation)
+        self.sessions
+            .iter()
+            .any(|s| s.active && s.id == id && s.generation == generation)
+    }
+    fn session(&self, id: &str) -> Option<&Session> {
+        self.sessions.iter().find(|s| s.active && s.id == id)
     }
     fn cancellation(&self, id: &str) -> u64 {
         self.cancellations.get(id).copied().unwrap_or(0)
     }
-
-    fn can_cancel(&self, id: &str, generation: Option<u64>, before: Option<u64>) -> bool {
-        if generation.is_some_and(|generation| !self.owns(id, generation)) {
-            return false;
-        }
-        before.is_none_or(|before| {
-            self.session
-                .as_ref()
-                .is_some_and(|s| s.id == id && s.ticket.is_some_and(|ticket| ticket < before))
-        })
+    fn total_bytes(&self) -> usize {
+        self.tracks.values().map(|t| t.bytes).sum()
     }
-
-    fn request(&mut self, id: &str, refresh: bool, foreground: bool) -> StartDecision {
-        if foreground {
-            if let Some(session) = self.session.as_mut().filter(|s| s.id == id) {
-                session.foreground = true;
-            }
-        }
-        match &self.session {
-            Some(s)
-                if s.id == id
-                    && !refresh
-                    && self.tracks.get(id).is_some_and(|t| t.error.is_none()) =>
-            {
-                StartDecision::Join(s.generation)
-            }
-            Some(s)
-                if !foreground
-                    && s.id != id
-                    && self
-                        .tracks
-                        .get(&s.id)
-                        .is_some_and(|t| t.done_ms.is_none() && t.error.is_none()) =>
-            {
-                StartDecision::Wait
-            }
-            _ => StartDecision::Start,
-        }
-    }
-
-    /// El caller mantiene TRANSITION: incluso la caché lista debe adoptar el ticket de la
-    /// petición explícita antes de que el watchdog pueda cancelar su ventana de precarga.
-    fn prepare(
-        &mut self,
-        id: &str,
-        refresh: bool,
-        foreground: bool,
-        ticket: Option<u64>,
-    ) -> (StartDecision, Option<Meta>) {
-        let decision = self.request(id, refresh, foreground);
-        if foreground && matches!(decision, StartDecision::Join(_)) {
-            if let Some(session) = self.session.as_mut() {
-                session.ticket = ticket;
-            }
-        }
-        let cached = self.tracks.get(id).filter(|t| {
-            !refresh
-                && t.ready()
-                && (t.done_ms.is_some() || self.session.as_ref().is_some_and(|s| s.id == id))
-        });
-        (decision, cached.map(meta))
-    }
-
-    fn trim(&mut self, keep_id: &str) {
-        while self.tracks.len() > KEEP {
+    fn trim(&mut self, keep: &str, incoming: usize) {
+        while self.tracks.len() > KEEP
+            || self.total_bytes().saturating_add(incoming) > MAX_TOTAL_BYTES
+        {
             let oldest = self
                 .tracks
                 .iter()
-                .filter(|(id, t)| id.as_str() != keep_id && !t.protected(Instant::now()))
+                .filter(|(id, _)| {
+                    id.as_str() != keep
+                        && self.session(id).is_none()
+                        && self
+                            .foreground
+                            .as_ref()
+                            .is_none_or(|(current, _)| current != *id)
+                })
                 .min_by_key(|(_, t)| t.used)
                 .map(|(id, _)| id.clone());
-            let Some(id) = oldest else { break };
-            self.tracks.remove(&id);
+            let Some(oldest) = oldest else { break };
+            self.tracks.remove(&oldest);
         }
+    }
+    fn victim(&self, id: &str, foreground: bool) -> Option<Session> {
+        self.sessions
+            .iter()
+            .find(|s| !s.active || (s.id != id && s.foreground == foreground))
+            .cloned()
+    }
+    fn promote(&mut self, id: &str, ticket: Option<RequestTicket>) {
+        self.foreground = Some((id.into(), ticket));
+        if let Some(session) = self.sessions.iter_mut().find(|s| s.active && s.id == id) {
+            session.foreground = true;
+            session.ticket = ticket;
+        }
+    }
+    fn release_foreground(&mut self, id: &str) {
+        if self
+            .foreground
+            .as_ref()
+            .is_some_and(|(current, _)| current == id)
+        {
+            self.foreground = None;
+        }
+    }
+    fn cancel_generation(
+        &mut self,
+        id: &str,
+        generation: Option<u64>,
+        mark: bool,
+    ) -> Option<Session> {
+        if generation.is_some_and(|g| self.tracks.get(id).is_none_or(|t| t.generation != g)) {
+            return None;
+        }
+        self.release_foreground(id);
+        *self.cancellations.entry(id.into()).or_default() += 1;
+        if mark {
+            if let Some(t) = self.tracks.get_mut(id).filter(|t| !t.complete) {
+                t.fail("CAPTURE_CANCELLED: captura cancelada".into());
+                t.phase = "cancelled".into();
+            }
+        }
+        self.session(id).cloned()
     }
 }
 pub static USED: AtomicU64 = AtomicU64::new(0);
 static STATE: LazyLock<Mutex<Supervisor>> = LazyLock::new(Default::default);
-/// Solo las operaciones de crear, cerrar y navegar ventanas mantienen este guard.
+// Sólo operaciones de ventanas; nunca se mantiene el mutex de datos durante await/eval.
 static TRANSITION: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
 static SEQ: AtomicU64 = AtomicU64::new(1);
+fn next_id() -> u64 {
+    SEQ.fetch_add(1, Ordering::Relaxed)
+}
 pub struct Meta {
     pub title: String,
     pub channel: Option<String>,
     pub duration: Option<f64>,
 }
-
-fn supported() -> Result<(), String> {
-    if cfg!(windows) {
-        Ok(())
-    } else {
-        Err("CAPTURE_UNSUPPORTED_PLATFORM: la captura oficial requiere Windows".into())
-    }
-}
-
-fn request_current(ticket: Option<u64>) -> Result<(), String> {
-    if ticket.is_some_and(|ticket| !crate::player::resolution_current(ticket)) {
-        Err("CAPTURE_CANCELLED: resolución sustituida".into())
-    } else {
-        Ok(())
-    }
-}
-
-/// Las precargas no sustituyen una presentación en curso. Una petición explícita del usuario
-/// sí puede hacerlo; la solicitud antigua termina cancelada y nunca recupera la ventana.
-pub async fn stream_with_priority(
-    app: &AppHandle,
-    video_id: &str,
-    refresh: bool,
-    foreground: bool,
-    ticket: Option<u64>,
-) -> Result<Meta, String> {
-    supported()?;
-    request_current(ticket)?;
-    if !valid_id(video_id) {
-        return Err("id de vídeo no válido".into());
-    }
-    let started = Instant::now();
-    let cancellation = STATE.lock().unwrap().cancellation(video_id);
-    let mut generation = None;
-    let mut wait_budget = Duration::from_secs(120);
-    loop {
-        request_current(ticket)?;
-        {
-            let state = STATE.lock().unwrap();
-            if state.cancellation(video_id) != cancellation {
-                return Err("CAPTURE_CANCELLED: captura cancelada".into());
-            }
-            if let Some(t) = state.tracks.get(video_id) {
-                if let Some(g) = generation {
-                    if let Some(e) = &t.error {
-                        return Err(e.clone());
-                    }
-                    // Una recuperación conserva la solicitud; otra canción no vuelve a abrirla.
-                    if !state.owns(video_id, g)
-                        && !state.session.as_ref().is_some_and(|s| s.id == video_id)
-                        && t.done_ms.is_none()
-                    {
-                        return Err("CAPTURE_CANCELLED: otra canción sustituyó la captura".into());
-                    }
-                    if let Some(session) = state.session.as_ref().filter(|s| s.id == video_id) {
-                        generation = Some(session.generation);
-                    }
-                    if t.ready() {
-                        return Ok(meta(t));
-                    }
-                    wait_budget = wait_budget.max(t.wait_budget());
-                    if started.elapsed() > wait_budget {
-                        break;
-                    }
-                }
-            }
-        }
-        if started.elapsed() > MAX_WAIT {
-            break;
-        }
-        if generation.is_none() {
-            let _guard = TRANSITION.lock().await;
-            request_current(ticket)?;
-            let (decision, cached) = {
-                let mut state = STATE.lock().unwrap();
-                if state.cancellation(video_id) != cancellation {
-                    return Err("CAPTURE_CANCELLED: captura cancelada".into());
-                }
-                state.prepare(video_id, refresh, foreground, ticket)
-            };
-            if let Some(meta) = cached {
-                return Ok(meta);
-            }
-            match decision {
-                StartDecision::Join(g) => generation = Some(g),
-                StartDecision::Start => {
-                    generation =
-                        Some(open_locked(app, video_id, None, false, foreground, ticket).await?);
-                    USED.fetch_add(1, Ordering::Relaxed);
-                }
-                StartDecision::Wait => {}
-            }
-        }
-        tokio::time::sleep(Duration::from_millis(80)).await;
-    }
-    let error = "CAPTURE_TIMEOUT: YouTube no entregó una presentación completa dentro del límite";
-    if let Some(generation) = generation {
-        fail_session(video_id, generation, error);
-    }
-    let _ = cancel(app, video_id, generation).await;
-    Err(error.into())
-}
-
 fn meta(t: &Track) -> Meta {
     Meta {
         title: t.title.clone(),
@@ -480,103 +471,276 @@ fn meta(t: &Track) -> Meta {
         duration: t.duration,
     }
 }
-
-/// El caller mantiene TRANSITION, incluso durante el cierre de la ventana anterior.
-async fn open_locked(
+fn supported() -> Result<(), String> {
+    if cfg!(windows) {
+        Ok(())
+    } else {
+        Err("CAPTURE_UNSUPPORTED_PLATFORM: la captura oficial requiere Windows".into())
+    }
+}
+fn request_current(ticket: Option<RequestTicket>) -> Result<(), String> {
+    if ticket.is_some_and(|t| !crate::player::request_current(t)) {
+        Err("CAPTURE_CANCELLED: resolución sustituida".into())
+    } else {
+        Ok(())
+    }
+}
+/// Devuelve metadatos con la primera unidad confirmada, sin esperar el EOF.
+pub async fn stream_with_priority(
     app: &AppHandle,
     video_id: &str,
-    at: Option<f64>,
-    recovery: bool,
+    refresh: bool,
     foreground: bool,
-    ticket: Option<u64>,
-) -> Result<u64, String> {
+    ticket: Option<RequestTicket>,
+) -> Result<Meta, String> {
     supported()?;
     request_current(ticket)?;
-    let _ = APP.set(app.clone());
-    watchdog(app);
-    let generation = SEQ.fetch_add(1, Ordering::Relaxed);
-    let label = format!("{LABEL}-{generation}");
-    #[cfg(debug_assertions)]
-    eprintln!(
-        "[captura] {video_id} generation={generation} open foreground={foreground} recovery={recovery}"
-    );
-    let old = {
-        let mut state = STATE.lock().unwrap();
-        let old = state.session.take();
-        let previous_resets = state.tracks.get(video_id).map(|t| t.resets).unwrap_or(0);
-        let previous_duration = state.tracks.get(video_id).and_then(|t| t.duration);
-        match (at, state.tracks.get_mut(video_id)) {
-            (Some(_), Some(t)) if !t.chunks.is_empty() => t.resume(generation),
-            _ => {
-                let mut t = Track::new(generation, generation);
-                if recovery {
-                    t.resets = previous_resets;
-                    t.duration = previous_duration;
-                }
-                state.tracks.insert(video_id.into(), t);
+    if !valid_id(video_id) {
+        return Err("id de vídeo no válido".into());
+    }
+    // El contador se toma dentro de la misma admisión serializada que abre/promueve la sesión.
+    let cancellation = begin(app, video_id, refresh, foreground, ticket, None, false).await?;
+    let mut generation;
+    let started = Instant::now();
+    let mut budget = Duration::from_secs(120);
+    loop {
+        request_current(ticket)?;
+        {
+            let state = STATE.lock().unwrap();
+            if cancellation != state.cancellation(video_id) {
+                return Err("CAPTURE_CANCELLED: captura cancelada".into());
+            }
+            let t = state
+                .tracks
+                .get(video_id)
+                .ok_or("CAPTURE_CANCELLED: caché sustituida")?;
+            generation = t.generation;
+            if t.ready() {
+                return Ok(meta(t));
+            }
+            if let Some(error) = t.error.as_ref().filter(|_| !t.recovering) {
+                return Err(error.clone());
+            }
+            budget = budget.max(t.wait_budget());
+            if !state.owns(video_id, t.generation) && !t.recovering {
+                return Err("CAPTURE_CANCELLED: sesión sustituida".into());
+            }
+            if started.elapsed() > budget || started.elapsed() > MAX_WAIT {
+                break;
             }
         }
-        state.session = Some(Session {
-            id: video_id.into(),
+        tokio::time::sleep(Duration::from_millis(30)).await;
+    }
+    let error = "CAPTURE_TIMEOUT: YouTube no entregó audio confirmado dentro del límite";
+    fail_session(video_id, generation, error);
+    cancel(app, video_id, Some(generation), false).await?;
+    Err(error.into())
+}
+async fn begin(
+    app: &AppHandle,
+    id: &str,
+    refresh: bool,
+    foreground: bool,
+    ticket: Option<RequestTicket>,
+    at: Option<f64>,
+    recovery: bool,
+) -> Result<u64, String> {
+    let _guard = TRANSITION.lock().await;
+    begin_locked(app, id, refresh, foreground, ticket, at, recovery).await?;
+    Ok(STATE.lock().unwrap().cancellation(id))
+}
+async fn begin_locked(
+    app: &AppHandle,
+    id: &str,
+    refresh: bool,
+    foreground: bool,
+    ticket: Option<RequestTicket>,
+    at: Option<f64>,
+    recovery: bool,
+) -> Result<u64, String> {
+    supported()?;
+    if !recovery {
+        request_current(ticket)?;
+    }
+    if !valid_id(id) {
+        return Err("id de vídeo no válido".into());
+    }
+    let _ = APP.set(app.clone());
+    watchdog(app);
+    let inactive: Vec<Session> = STATE
+        .lock()
+        .unwrap()
+        .sessions
+        .iter()
+        .filter(|s| !s.active)
+        .cloned()
+        .collect();
+    for session in inactive {
+        retire_locked(app, &session).await?;
+    }
+    let existing = STATE.lock().unwrap().session(id).cloned();
+    if let Some(session) = existing.filter(|_| (!refresh || !foreground) && at.is_none()) {
+        if foreground {
+            let old = STATE
+                .lock()
+                .unwrap()
+                .sessions
+                .iter()
+                .find(|s| s.active && s.foreground && s.id != id)
+                .cloned();
+            if let Some(old) = old {
+                retire_locked(app, &old).await?;
+            }
+            if !recovery {
+                request_current(ticket)?;
+            }
+            STATE.lock().unwrap().promote(id, ticket);
+        }
+        let mut state = STATE.lock().unwrap();
+        if !foreground {
+            if let Some(next) = state
+                .sessions
+                .iter_mut()
+                .find(|s| s.active && s.id == id && !s.foreground)
+            {
+                next.ticket = ticket;
+            }
+        }
+        if let Some(t) = state.tracks.get_mut(id) {
+            t.used = Instant::now();
+        }
+        return Ok(session.generation);
+    }
+    if !refresh && at.is_none() {
+        let cached = STATE
+            .lock()
+            .unwrap()
+            .tracks
+            .get(id)
+            .filter(|t| t.complete)
+            .map(|t| t.generation);
+        if let Some(generation) = cached {
+            if foreground {
+                let old = STATE
+                    .lock()
+                    .unwrap()
+                    .sessions
+                    .iter()
+                    .find(|s| s.active && s.foreground && s.id != id)
+                    .cloned();
+                if let Some(old) = old {
+                    retire_locked(app, &old).await?;
+                }
+            }
+            if !recovery {
+                request_current(ticket)?;
+            }
+            if foreground {
+                STATE.lock().unwrap().promote(id, ticket);
+            }
+            return Ok(generation);
+        }
+    }
+    // Una precarga reemplaza sólo next, nunca foreground. Los cierres fallidos retienen su plaza.
+    let old = {
+        let state = STATE.lock().unwrap();
+        state
+            .session(id)
+            .cloned()
+            .or_else(|| state.victim(id, foreground))
+    };
+    if let Some(old) = old {
+        retire_locked(app, &old).await?;
+    }
+    if !recovery {
+        request_current(ticket)?;
+    }
+    if STATE.lock().unwrap().sessions.len() >= 2 {
+        return Err("CAPTURE_BUSY: las dos plazas de captura están ocupadas".into());
+    }
+    let generation = next_id();
+    let epoch = next_id();
+    let label = format!("{LABEL}-{generation}");
+    {
+        let mut state = STATE.lock().unwrap();
+        if refresh || !state.tracks.contains_key(id) {
+            state
+                .tracks
+                .insert(id.into(), Track::new(generation, epoch, next_id()));
+        }
+        state.tracks.get_mut(id).unwrap().begin_epoch(
+            generation,
+            epoch,
+            at.unwrap_or(0.0),
+            recovery,
+        );
+        state.sessions.push(Session {
+            id: id.into(),
             generation,
             label: label.clone(),
             foreground,
             ticket,
+            active: true,
         });
-        state.trim(video_id);
-        old
-    };
-    // Publicar la sustitución antes de esperar evita que un consumidor confunda el cierre
-    // de una recuperación con una cancelación; el callback antiguo ya no es propietario.
-    if let Some(old) = old {
-        if let Err(error) = close_session(app, &old).await {
-            let mut state = STATE.lock().unwrap();
-            if let Some(t) = state.tracks.get_mut(video_id) {
-                t.error = Some(error.clone());
-            }
-            // Conserva la ventana que no se pudo cerrar y no crea una segunda.
-            if state.owns(video_id, generation) {
-                state.session = Some(old);
-            }
-            return Err(error);
+        if foreground {
+            state.promote(id, ticket);
         }
+        state.trim(id, 0);
     }
-    let result = match request_current(ticket) {
-        Ok(()) => create_window(app, video_id, generation, &label, at)
-            .await
-            .and_then(|_| request_current(ticket)),
-        Err(e) => Err(e),
-    };
-    if let Err(e) = result {
-        fail_session(video_id, generation, &e);
-        let old = {
-            let mut state = STATE.lock().unwrap();
-            if state.owns(video_id, generation) {
-                state.session.take()
+    #[cfg(debug_assertions)]
+    eprintln!(
+        "[captura] {id} generation={generation} epoch={epoch} open foreground={foreground} recovery={recovery}"
+    );
+    let result = create_window(app, id, generation, epoch, &label, at)
+        .await
+        .and_then(|_| {
+            if recovery {
+                Ok(())
             } else {
-                None
+                request_current(ticket)
             }
-        };
-        if let Some(s) = old {
-            let _ = close_session(app, &s).await;
+        });
+    if let Err(error) = result {
+        fail_session(id, generation, &error);
+        STATE.lock().unwrap().release_foreground(id);
+        let session = STATE
+            .lock()
+            .unwrap()
+            .sessions
+            .iter()
+            .find(|s| s.generation == generation)
+            .cloned();
+        if let Some(session) = session {
+            let _ = retire_locked(app, &session).await;
         }
-        return Err(e);
+        return Err(error);
     }
+    USED.fetch_add(1, Ordering::Relaxed);
     Ok(generation)
 }
-
+fn progressive_experiment(bench: bool, flag: Option<&str>) -> bool {
+    bench && flag == Some("1")
+}
+fn progressive_experiment_enabled() -> bool {
+    progressive_experiment(
+        std::env::var_os("MUSIFY_BENCH").is_some(),
+        std::env::var("MUSIFY_BENCH_PROGRESSIVE").ok().as_deref(),
+    )
+}
 async fn create_window(
     app: &AppHandle,
-    video_id: &str,
+    id: &str,
     generation: u64,
+    epoch: u64,
     label: &str,
     at: Option<f64>,
 ) -> Result<(), String> {
-    let start = at.map(|s| format!("#musify-t={s:.1}")).unwrap_or_default();
-    let url = format!("https://music.youtube.com/watch?v={video_id}{start}");
-    let target = serde_json::to_string(video_id).map_err(|e| e.to_string())?;
+    let start = at.map(|s| format!("#musify-t={s:.6}")).unwrap_or_default();
+    let url = format!("https://music.youtube.com/watch?v={id}{start}");
+    let target = serde_json::to_string(id).map_err(|e| e.to_string())?;
+    let progressive = progressive_experiment_enabled();
     let script = format!(
-        "Object.defineProperty(window,'__musifyGeneration',{{value:{generation},writable:false}});Object.defineProperty(window,'__musifyTarget',{{value:{target},writable:false}});\n{}",
+        "Object.defineProperty(window,'__musifyGeneration',{{value:{generation},writable:false}});Object.defineProperty(window,'__musifyTarget',{{value:{target},writable:false}});Object.defineProperty(window,'__musifyProgressiveExperiment',{{value:{progressive},writable:false}});window.__musifyEpoch={epoch};\n{}",
         crate::extractors::capture_script()
     );
     let profile = app
@@ -598,7 +762,7 @@ async fn create_window(
     .initialization_script(script)
     .build()
     .map_err(|e| format!("CAPTURE_WINDOW: {e}"))?;
-    let id = video_id.to_string();
+    let id = id.to_string();
     let (tx, rx) = tokio::sync::oneshot::channel();
     window
         .with_webview(move |pw| {
@@ -618,7 +782,6 @@ async fn create_window(
         .map_err(|_| "CAPTURE_BRIDGE_TIMEOUT".to_string())?
         .map_err(|_| "CAPTURE_BRIDGE_CLOSED".to_string())?
 }
-
 #[cfg(windows)]
 unsafe fn attach(
     pw: &tauri::webview::PlatformWebview,
@@ -652,37 +815,36 @@ unsafe fn attach(
         core.Navigate(&HSTRING::from(url))
     }
 }
-
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Message {
     musify: u8,
+    api: Option<u8>,
     v: Option<String>,
     generation: Option<u64>,
+    epoch: Option<u64>,
     sequence: Option<u64>,
     kind: String,
     mime: Option<String>,
     classification: Option<String>,
     source: Option<u64>,
     s: Option<u64>,
+    unit: Option<u64>,
+    init_key: Option<String>,
+    init_bytes: Option<usize>,
     ad: Option<bool>,
     data: Option<String>,
     #[serde(rename = "type")]
     event: Option<String>,
     state: Option<String>,
-    #[serde(rename = "bytesQuarantined")]
     bytes_quarantined: Option<u64>,
     verified: Option<bool>,
-    #[serde(
-        default,
-        rename = "timelineSettings",
-        deserialize_with = "present_json"
-    )]
-    timeline_settings: Option<serde_json::Value>,
+    timeline_settings: Option<Value>,
     frames: Option<u64>,
-    #[serde(rename = "rangeStart")]
     range_start: Option<f64>,
-    #[serde(rename = "rangeEnd")]
     range_end: Option<f64>,
+    decode_start: Option<f64>,
+    decode_end: Option<f64>,
     duration: Option<f64>,
     title: Option<String>,
     author: Option<String>,
@@ -690,8 +852,11 @@ struct Message {
     code: Option<String>,
     why: Option<String>,
     position: Option<f64>,
+    eof: Option<bool>,
+    end: Option<f64>,
+    recoverable: Option<bool>,
+    playback_rate: Option<f64>,
 }
-
 fn source_kind(source: &str) -> Option<bool> {
     let url = reqwest::Url::parse(source).ok()?;
     if url.scheme() != "https" || url.port_or_known_default() != Some(443) {
@@ -703,8 +868,6 @@ fn source_kind(source: &str) -> Option<bool> {
         _ => None,
     }
 }
-
-/// Los tests proporcionan su propio supervisor, sin contaminar el estado de la app.
 fn apply_message(
     state: &mut Supervisor,
     id: &str,
@@ -718,81 +881,105 @@ fn apply_message(
     };
     if !state.owns(id, generation)
         || m.musify != 1
+        || m.api != Some(3)
         || m.v.as_deref() != Some(id)
         || m.generation != Some(generation)
     {
         return false;
     }
-    let Some(sequence) = m.sequence else {
-        return false;
-    };
-    let Some(t) = state
-        .tracks
-        .get_mut(id)
-        .filter(|t| t.generation == generation)
-    else {
-        return false;
-    };
-    if t.sequence.is_some_and(|previous| sequence <= previous) {
+    // Ni un heartbeat viejo puede mantener viva la generación/época actual.
+    if state.tracks.get(id).is_none_or(|t| {
+        t.generation != generation
+            || m.epoch != Some(t.epoch)
+            || m.sequence
+                .is_none_or(|s| t.sequence.is_some_and(|previous| s <= previous))
+    }) {
         return false;
     }
-    t.sequence = Some(sequence);
+    state.trim(
+        id,
+        m.data.as_ref().map_or(0, |d| d.len().saturating_mul(3) / 4),
+    );
+    let total_bytes = state.total_bytes();
+    let t = state.tracks.get_mut(id).unwrap();
+    t.sequence = m.sequence;
     t.last_msg = now;
-    if t.error.is_some() || t.done_ms.is_some() {
+    if t.epoch_done || t.phase == "interaction" {
         return false;
     }
     let ms = t.ms();
-    #[cfg(debug_assertions)]
-    let previous = (t.phase.clone(), t.error.clone());
-    #[cfg(debug_assertions)]
-    let previous_ad_credit_step = t.ad_wait_credit.as_secs() / 15;
-    #[cfg(debug_assertions)]
-    let event = m.event.clone();
-    let mut finished = false;
+    let previous_phase = t.phase.clone();
+    let previous_error = (t.error.clone(), t.soft_error.clone());
     let says_content = m.state.as_deref() == Some("content");
-    let says_ad = m.state.as_deref() == Some("ad");
-    let excludes_content = m.state.as_deref().is_some_and(|state| state != "content");
+    let mut finished = false;
     match m.kind.as_str() {
         "seg" if music => {
             if m.ad == Some(true) || m.classification.as_deref() == Some("ad") {
-                t.ads += 1;
+                t.ads_observations += 1;
                 return false;
             }
+            let Some(mut unit) = Unit::from_message(&m, generation) else {
+                t.unknown += 1;
+                return false;
+            };
             if m.classification.as_deref() != Some("content")
                 || t.phase != "content"
-                || !t.verified
-                || m.source != t.verified_source
-                || m.s != t.verified_buffer
+                || t.proof.as_ref() != Some(&unit)
+                || t.last_unit.is_some_and(|last| unit.unit <= last)
             {
                 t.unknown += 1;
                 return false;
             }
-            let Some(mime) = m.mime.filter(|mime| mime.starts_with("audio/")) else {
-                return false;
-            };
             let Some(data) = m.data else { return false };
             if data.len() > MAX_SEGMENT_BYTES.div_ceil(3) * 4 {
-                t.error = Some("CAPTURE_CAPACITY: segmento demasiado grande".into());
-                return false;
+                t.fail("CAPTURE_CAPACITY: unidad demasiado grande".into());
+                return true;
             }
             let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(data) else {
                 return false;
             };
-            if bytes.is_empty() {
-                return false;
+            if bytes.len() <= unit.init_bytes || bytes.len() > MAX_SEGMENT_BYTES {
+                t.fail("CAPTURE_PROTOCOL: unidad sin inicialización y audio válidos".into());
+                return true;
             }
-            if t.bytes.saturating_add(bytes.len()) > MAX_BYTES {
-                t.error = Some("CAPTURE_CAPACITY: audio excede el límite de memoria".into());
-                return false;
+            if let Some((known, previous)) = t.units.iter().zip(&t.chunks).find(|(known, _)| {
+                known.generation == unit.generation && known.init_key == unit.init_key
+            }) {
+                if known.mime != unit.mime
+                    || known.timeline_settings != unit.timeline_settings
+                    || known.init_bytes != unit.init_bytes
+                    || previous[..known.init_bytes] != bytes[..unit.init_bytes]
+                {
+                    t.fail("CAPTURE_PROTOCOL: initKey reutilizado con otra configuración".into());
+                    return true;
+                }
             }
-            if t.mime.is_empty() {
-                t.mime = mime.clone();
+            t.proof = None;
+            t.last_unit = Some(unit.unit);
+            t.accepted = Some((t.epoch, unit.source, unit.s));
+            if !covers(&t.ranges, unit.range_start, unit.range_end) {
+                if t.bytes.saturating_add(bytes.len()) > MAX_BYTES
+                    || total_bytes.saturating_add(bytes.len()) > MAX_TOTAL_BYTES
+                {
+                    t.fail("CAPTURE_CAPACITY: audio excede el límite de memoria".into());
+                    return true;
+                }
+                unit.index = t.units.len();
+                t.bytes += bytes.len();
+                union(
+                    &mut t.ranges,
+                    Range {
+                        start: unit.range_start,
+                        end: unit.range_end,
+                    },
+                );
+                t.units.push(unit);
+                t.chunks.push(bytes);
+                t.first_ms.get_or_insert(ms);
             }
-            t.bytes += bytes.len();
-            t.chunks.push(bytes);
-            t.mimes.push(mime);
-            t.first_ms.get_or_insert(ms);
             t.last_progress = now;
+            t.recovering = false;
+            t.soft_error = None;
         }
         "event" => {
             if m.event.as_deref() == Some("diagnostic") {
@@ -800,73 +987,55 @@ fn apply_message(
                     t.last_diagnostic = Some(reason.chars().take(2048).collect());
                 }
             }
-            if let Some(phase) = m.state.filter(|s| {
+            if let Some(phase) = m.state.as_deref().filter(|s| {
                 matches!(
-                    s.as_str(),
+                    *s,
                     "unknown" | "content" | "ad" | "ambiguous" | "interaction"
                 )
             }) {
-                t.phase = phase;
-                if t.phase != "content" {
-                    t.verified = false;
+                t.phase = phase.into();
+                if phase != "content" {
+                    t.proof = None;
                 }
-                if t.phase != "ad" {
+                if phase == "ad" {
+                    t.ads_observations += 1;
+                    if let Some(rate) = m.playback_rate.filter(|r| r.is_finite() && *r > 0.0) {
+                        t.ad_rate_observations += 1;
+                        if (rate - 1.0).abs() > f64::EPSILON {
+                            t.ad_rate_violations += 1;
+                        }
+                    }
+                    if let Some(source) = m.source {
+                        t.ads_sources.insert((generation, t.epoch, source));
+                    }
+                } else {
                     t.ad_observation = None;
                 }
             }
-            if m.source.is_some() && m.source != t.verified_source {
-                t.verified = false;
-            }
-            if m.verified == Some(true)
-                && t.phase == "content"
-                && m.event.as_deref() == Some("diagnostic")
-            {
-                t.verified = false;
-                t.timeline_settings = None;
-                if let (Some(source), Some(buffer), Some(frames), Some(start), Some(end)) =
-                    (m.source, m.s, m.frames, m.range_start, m.range_end)
-                {
-                    if frames > 0
-                        && start.is_finite()
-                        && start >= 0.0
-                        && end.is_finite()
-                        && end > start
-                    {
-                        if let Some(settings) = TimelineSettings::from_message(m.timeline_settings)
-                        {
-                            t.verified = true;
-                            t.verified_source = Some(source);
-                            t.verified_buffer = Some(buffer);
-                            t.timeline_settings = Some(settings);
-                            t.frames = frames;
-                            t.range_start = Some(start);
-                            t.range_end = Some(end);
-                        }
-                    }
-                }
+            if m.event.as_deref() == Some("diagnostic") && m.verified == Some(true) {
+                t.proof = if music && says_content {
+                    Unit::from_message(&m, generation)
+                } else {
+                    None
+                };
             }
             if let Some(bytes) = m.bytes_quarantined {
-                if bytes > t.quarantined && t.phase != "ad" {
-                    t.last_progress = now;
-                }
                 t.quarantined = bytes;
             }
-            let content_metadata = says_content
-                || (!excludes_content
-                    && (matches!(m.event.as_deref(), Some("playing" | "meta"))
-                        || (m.event.as_deref() == Some("diagnostic")
-                            && m.verified == Some(true)
-                            && t.verified)));
-            if music && content_metadata {
+            if music
+                && (says_content
+                    || (m.state.is_none()
+                        && matches!(m.event.as_deref(), Some("playing" | "meta"))))
+            {
                 t.duration = m
                     .duration
                     .filter(|d| d.is_finite() && *d > 0.0)
                     .or(t.duration);
-                if let Some(title) = m.title.filter(|s| !s.is_empty()) {
-                    t.title = title;
+                if let Some(title) = m.title.as_ref().filter(|s| !s.is_empty()) {
+                    t.title = title.clone();
                 }
-                if let Some(author) = m.author.filter(|s| !s.is_empty()) {
-                    t.author = author;
+                if let Some(author) = m.author.as_ref().filter(|s| !s.is_empty()) {
+                    t.author = author.clone();
                 }
             }
             match m.event.as_deref() {
@@ -877,49 +1046,52 @@ fn apply_message(
                     t.meta_ms.get_or_insert(ms);
                 }
                 Some("ended") if music => {
-                    if t.bytes == 0
-                        || t.phase != "content"
-                        || !t.verified
-                        || m.source != t.verified_source
-                        || m.s != t.verified_buffer
+                    if m.eof != Some(true)
+                        || m.end.is_none()
+                        || t.accepted != m.epoch.zip(m.source).zip(m.s).map(|((e, s), b)| (e, s, b))
                     {
-                        t.error = Some(
-                            "CAPTURE_IDENTITY_UNCERTAIN: terminó sin audio de contenido verificado"
-                                .into(),
-                        );
+                        t.fail("CAPTURE_INCOMPLETE: terminó sin EOF oficial válido de la fuente confirmada".into());
                     } else {
-                        t.done_ms = Some(ms);
-                        t.why = m.why;
-                        finished = true;
+                        t.finish(m.end.unwrap(), m.why.clone());
                     }
+                    finished = true;
                 }
                 Some("error") => {
                     let reason = m
                         .reason
+                        .clone()
                         .unwrap_or_else(|| "YouTube no puede reproducirla".into());
-                    t.error = Some(match m.code {
-                        Some(code) if !reason.starts_with(&code) => format!("{code}: {reason}"),
+                    let error = match &m.code {
+                        Some(code) if !reason.starts_with(code) => format!("{code}: {reason}"),
                         _ => reason,
-                    });
+                    };
+                    t.fail(error);
+                    if m.recoverable == Some(true) {
+                        t.recovering = t.resets < MAX_RESETS;
+                    }
+                    finished = true;
                 }
                 Some("interaction") => {
                     t.phase = "interaction".into();
-                    t.error = Some(format!(
+                    let error = format!(
                         "CAPTURE_REQUIRES_INTERACTION: {}",
-                        m.reason
-                            .unwrap_or_else(|| "Abre YouTube para continuar".into())
-                    ));
+                        m.reason.as_deref().unwrap_or("Abre YouTube para continuar")
+                    );
+                    if t.ready() {
+                        t.soft_error = Some(error);
+                    } else {
+                        t.error = Some(error);
+                    }
                 }
                 Some("progress" | "diagnostic") if music => {
                     if let Some(position) = m.position.filter(|p| p.is_finite() && *p >= 0.0) {
                         let advances = if t.phase == "ad" {
-                            says_ad
+                            m.state.as_deref() == Some("ad")
                                 && m.event.as_deref() == Some("diagnostic")
-                                && m.source.is_some_and(|source| {
-                                    t.observe_ad_progress(source, position, now)
-                                })
+                                && m.source
+                                    .is_some_and(|s| t.observe_ad_progress(s, position, now))
                         } else {
-                            position > t.position + 0.05
+                            says_content && position > t.position + 0.05
                         };
                         if advances {
                             t.last_progress = now;
@@ -927,61 +1099,41 @@ fn apply_message(
                         t.position = position;
                     }
                 }
+                Some("seeked") if music => {
+                    t.last_progress = now;
+                }
                 _ => {}
             }
         }
         _ => {}
     }
     #[cfg(debug_assertions)]
-    if previous.0 != t.phase
-        || previous.1 != t.error
-        || previous_ad_credit_step != t.ad_wait_credit.as_secs() / 15
-        || matches!(event.as_deref(), Some("playing" | "ended" | "interaction"))
+    if previous_phase != t.phase
+        || previous_error != (t.error.clone(), t.soft_error.clone())
+        || matches!(
+            m.event.as_deref(),
+            Some("playing" | "ended" | "interaction")
+        )
     {
-        let code = t
-            .error
-            .as_deref()
-            .and_then(|e| e.split(':').next())
-            .unwrap_or("");
-        let code = if code.starts_with("CAPTURE_")
-            && code
-                .bytes()
-                .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
-        {
-            code
+        let reason = t.error.as_deref().or(t.soft_error.as_deref()).unwrap_or("");
+        let reason: String = if reason.contains("://") {
+            String::new()
         } else {
-            ""
-        };
-        let event = match event.as_deref() {
-            Some(
-                event @ ("playing" | "ended" | "interaction" | "diagnostic" | "progress" | "meta"
-                | "error"),
-            ) => event,
-            _ => "unknown",
+            reason.chars().take(2048).collect()
         };
         eprintln!(
-            "[captura] {id} generation={generation} state={} event={} code={code} frames={} bytes={} position={:.3} adWaitMs={} waitBudgetMs={}",
+            "[captura] {id} generation={generation} epoch={} state={} units={} bytes={} position={:.3} complete={} reason={}",
+            t.epoch,
             t.phase,
-            event,
-            t.frames,
+            t.units.len(),
             t.bytes,
             t.position,
-            t.ad_wait_credit.as_millis(),
-            t.wait_budget().as_millis()
+            t.complete,
+            reason.replace(['\r', '\n'], " ")
         );
-        if event == "error" && !code.is_empty() {
-            if let Some(reason) = t.error.as_deref().filter(|reason| !reason.contains("://")) {
-                let detail: String = reason.chars().take(2048).collect();
-                eprintln!(
-                    "[captura] {id} generation={generation} reason={}",
-                    detail.replace(['\r', '\n'], " ")
-                );
-            }
-        }
     }
     finished
 }
-
 fn receive(id: &str, generation: u64, source: &str, data: &str) {
     if source_kind(source).is_none() {
         return;
@@ -993,7 +1145,7 @@ fn receive(id: &str, generation: u64, source: &str, data: &str) {
     let Ok(message) = serde_json::from_str(data) else {
         return;
     };
-    let finished = apply_message(
+    apply_message(
         &mut STATE.lock().unwrap(),
         id,
         generation,
@@ -1001,19 +1153,20 @@ fn receive(id: &str, generation: u64, source: &str, data: &str) {
         message,
         Instant::now(),
     );
-    if finished {
-        close_when_idle(id.to_string(), generation);
-    }
 }
 fn fail_session(id: &str, generation: u64, reason: &str) {
     let mut state = STATE.lock().unwrap();
-    if state.owns(id, generation)
-        && let Some(t) = state.tracks.get_mut(id)
+    if !state.owns(id, generation) {
+        return;
+    }
+    if let Some(t) = state
+        .tracks
+        .get_mut(id)
+        .filter(|t| t.generation == generation)
     {
-        t.error = Some(reason.into());
+        t.fail(reason.into());
     }
 }
-
 fn watchdog(app: &AppHandle) {
     static STARTED: AtomicBool = AtomicBool::new(false);
     if STARTED.swap(true, Ordering::Relaxed) {
@@ -1022,110 +1175,108 @@ fn watchdog(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         loop {
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
             let _guard = TRANSITION.lock().await;
-            let action = {
-                let mut state = STATE.lock().unwrap();
-                let Some(session) = state.session.clone() else {
-                    continue;
-                };
-                let Some(t) = state.tracks.get_mut(&session.id) else {
-                    continue;
-                };
-                if let Err(error) = request_current(session.ticket) {
-                    t.error = Some(error);
-                    t.phase = "cancelled".into();
-                }
-                // El usuario necesita esta misma ventana para iniciar sesión o resolver el reto.
-                if t.phase == "interaction" {
-                    continue;
-                }
-                if t.error.is_some() {
-                    Some((session, false))
-                } else if t.stalled(Instant::now()) {
-                    if t.resets >= MAX_RESETS || !t.chunks.is_empty() {
-                        t.error = Some("CAPTURE_STALLED: el reproductor dejó de avanzar".into());
-                        Some((session, false))
-                    } else {
-                        t.resets += 1;
-                        Some((session, true))
-                    }
-                } else {
-                    None
-                }
-            };
-            let Some((session, restart)) = action else {
-                continue;
-            };
-            if restart {
-                // La cuarentena requiere empezar desde cero; nunca mezcla sesiones parciales.
-                let _ = open_locked(
-                    &app,
-                    &session.id,
-                    None,
-                    true,
-                    session.foreground,
-                    session.ticket,
-                )
-                .await;
-            } else {
-                let old = {
+            let sessions = STATE.lock().unwrap().sessions.clone();
+            for session in sessions {
+                let action = {
                     let mut state = STATE.lock().unwrap();
-                    if state.owns(&session.id, session.generation) {
-                        state.session.take()
-                    } else {
+                    if !state.owns(&session.id, session.generation) {
                         None
+                    } else if session.ticket.is_some_and(|ticket| {
+                        if session.foreground {
+                            !crate::player::resolution_current(ticket.resolution)
+                        } else {
+                            !crate::player::prefetch_current(ticket)
+                        }
+                    }) {
+                        state.release_foreground(&session.id);
+                        if let Some(t) = state.tracks.get_mut(&session.id) {
+                            t.fail("CAPTURE_CANCELLED: petición sustituida".into());
+                        }
+                        Some(None)
+                    } else if let Some(t) = state.tracks.get_mut(&session.id) {
+                        // Una nueva canción actual conserva next para poder promoverla. Otra
+                        // petición next sí sustituye su lease, incluso si su búsqueda tarda.
+                        if t.phase == "interaction" {
+                            None
+                        } else if t.complete {
+                            Some(None)
+                        } else if t.stalled(Instant::now())
+                            || t.session_started.elapsed() > MAX_WAIT
+                        {
+                            t.fail("CAPTURE_STALLED: el reproductor dejó de avanzar".into());
+                            if t.resets < MAX_RESETS {
+                                t.resets += 1;
+                                t.recovering = true;
+                                Some(Some(t.target.max(t.first_gap())))
+                            } else {
+                                Some(None)
+                            }
+                        } else if t.epoch_done {
+                            if t.resets < MAX_RESETS && (t.eof || t.recovering) {
+                                t.resets += 1;
+                                t.recovering = true;
+                                Some(Some(t.first_gap()))
+                            } else {
+                                Some(None)
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        Some(None)
                     }
                 };
-                if let Some(old) = old {
-                    let _ = close_session(&app, &old).await;
+                if let Some(at) = action {
+                    if let Err(error) = retire_locked(&app, &session).await {
+                        fail_session(&session.id, session.generation, &error);
+                        continue;
+                    }
+                    if let Some(at) = at {
+                        let _ = begin_locked(
+                            &app,
+                            &session.id,
+                            false,
+                            session.foreground,
+                            session.ticket,
+                            Some(at),
+                            true,
+                        )
+                        .await;
+                    }
                 }
             }
         }
     });
 }
-
-fn close_when_idle(id: String, generation: u64) {
-    let Some(app) = APP.get().cloned() else {
-        return;
-    };
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        let _guard = TRANSITION.lock().await;
-        let old = {
-            let mut state = STATE.lock().unwrap();
-            if state.owns(&id, generation)
-                && state.tracks.get(&id).is_some_and(|t| t.done_ms.is_some())
-            {
-                state.session.take()
-            } else {
-                None
-            }
-        };
-        if let Some(old) = old {
-            let _ = close_session(&app, &old).await;
-        }
-    });
-}
-
-async fn close_session(app: &AppHandle, session: &Session) -> Result<(), String> {
-    let result = close_window(app, &session.label).await;
-    if let Err(error) = &result {
+async fn retire_locked(app: &AppHandle, session: &Session) -> Result<(), String> {
+    {
         let mut state = STATE.lock().unwrap();
-        if state.session.is_none() {
-            state.session = Some(session.clone());
-        }
-        if let Some(t) = state
-            .tracks
-            .get_mut(&session.id)
-            .filter(|t| t.generation == session.generation)
-        {
-            t.error.get_or_insert_with(|| error.clone());
-        }
+        let Some(current) = state
+            .sessions
+            .iter_mut()
+            .find(|s| s.generation == session.generation)
+        else {
+            return Ok(());
+        };
+        current.active = false;
+    }
+    let result = close_window(app, &session.label).await;
+    let mut state = STATE.lock().unwrap();
+    if result.is_ok() {
+        state
+            .sessions
+            .retain(|s| s.generation != session.generation);
+    } else if let Some(t) = state
+        .tracks
+        .get_mut(&session.id)
+        .filter(|t| t.generation == session.generation)
+    {
+        t.fail(result.as_ref().unwrap_err().clone());
     }
     result
 }
-
 async fn close_window(app: &AppHandle, label: &str) -> Result<(), String> {
     let Some(window) = app.get_webview_window(label) else {
         return Ok(());
@@ -1141,42 +1292,19 @@ async fn close_window(app: &AppHandle, label: &str) -> Result<(), String> {
     }
     Err("CAPTURE_WINDOW_CLOSE: la ventana anterior no se pudo cerrar".into())
 }
-
-async fn cancel(app: &AppHandle, id: &str, generation: Option<u64>) -> Result<(), String> {
-    cancel_matching(app, id, generation, None).await
-}
-
-async fn cancel_matching(
+async fn cancel(
     app: &AppHandle,
     id: &str,
     generation: Option<u64>,
-    before: Option<u64>,
+    mark: bool,
 ) -> Result<(), String> {
     let _guard = TRANSITION.lock().await;
-    {
+    let session = {
         let mut state = STATE.lock().unwrap();
-        if !state.can_cancel(id, generation, before) {
-            return Ok(());
-        }
-        *state.cancellations.entry(id.into()).or_default() += 1;
-    }
-    let old = {
-        let mut state = STATE.lock().unwrap();
-        if state
-            .session
-            .as_ref()
-            .is_some_and(|s| s.id == id && generation.is_none_or(|g| g == s.generation))
-        {
-            if let Some(t) = state.tracks.get_mut(id) {
-                t.mark_cancelled();
-            }
-            state.session.take()
-        } else {
-            None
-        }
+        state.cancel_generation(id, generation, mark)
     };
-    if let Some(old) = old {
-        return close_session(app, &old).await;
+    if let Some(session) = session {
+        retire_locked(app, &session).await?;
     }
     Ok(())
 }
@@ -1189,23 +1317,72 @@ pub async fn capture_cancel(
     if !valid_id(&video_id) {
         return Err("id de vídeo no válido".into());
     }
-    cancel(&app, &video_id, generation).await
+    cancel(&app, &video_id, generation, true).await
 }
-
-/// La comprobación se repite bajo TRANSITION para proteger también una promoción que conserva
-/// la generación. Los benchmarks sin ticket no pertenecen a la cola de resolución del usuario.
+/// Conserva next para promoción; cancelación explícita del lector cancela cualquier generación.
 pub async fn cancel_before(app: &AppHandle, ticket: u64) -> Result<(), String> {
-    let session = STATE
+    let _guard = TRANSITION.lock().await;
+    {
+        let mut state = STATE.lock().unwrap();
+        if state
+            .foreground
+            .as_ref()
+            .is_some_and(|(_, t)| t.is_some_and(|t| t.resolution < ticket))
+        {
+            state.foreground = None;
+        }
+    }
+    let sessions: Vec<_> = STATE
         .lock()
         .unwrap()
-        .session
-        .clone()
-        .filter(|session| session.ticket.is_some_and(|current| current < ticket));
-    if let Some(session) = session {
-        cancel_matching(app, &session.id, Some(session.generation), Some(ticket)).await
-    } else {
-        Ok(())
+        .sessions
+        .iter()
+        .filter(|s| s.foreground && s.ticket.is_some_and(|t| t.resolution < ticket))
+        .cloned()
+        .collect();
+    for session in sessions {
+        {
+            let mut state = STATE.lock().unwrap();
+            *state.cancellations.entry(session.id.clone()).or_default() += 1;
+            if let Some(t) = state
+                .tracks
+                .get_mut(&session.id)
+                .filter(|t| t.generation == session.generation && !t.complete)
+            {
+                t.fail("CAPTURE_CANCELLED: resolución cancelada".into());
+                t.phase = "cancelled".into();
+            }
+        }
+        retire_locked(app, &session).await?;
     }
+    Ok(())
+}
+pub async fn cancel_next_before(app: &AppHandle, prefetch: u64) -> Result<(), String> {
+    let _guard = TRANSITION.lock().await;
+    let sessions: Vec<_> = STATE
+        .lock()
+        .unwrap()
+        .sessions
+        .iter()
+        .filter(|s| {
+            !s.foreground
+                && s.ticket
+                    .and_then(|t| t.prefetch)
+                    .is_some_and(|p| p < prefetch)
+        })
+        .cloned()
+        .collect();
+    for session in sessions {
+        {
+            let mut state = STATE.lock().unwrap();
+            *state.cancellations.entry(session.id.clone()).or_default() += 1;
+            if let Some(t) = state.tracks.get_mut(&session.id).filter(|t| !t.complete) {
+                t.fail("CAPTURE_CANCELLED: precarga cancelada".into());
+            }
+        }
+        retire_locked(app, &session).await?;
+    }
+    Ok(())
 }
 #[tauri::command]
 pub async fn capture_show(app: AppHandle) -> Result<(), String> {
@@ -1214,8 +1391,9 @@ pub async fn capture_show(app: AppHandle) -> Result<(), String> {
     let label = STATE
         .lock()
         .unwrap()
-        .session
-        .as_ref()
+        .sessions
+        .iter()
+        .find(|s| s.active && s.foreground)
         .map(|s| s.label.clone())
         .ok_or("No hay captura activa")?;
     let window = app
@@ -1225,40 +1403,140 @@ pub async fn capture_show(app: AppHandle) -> Result<(), String> {
     window.set_focus().map_err(|e| e.to_string())
 }
 #[tauri::command]
-pub async fn capture_seek(app: AppHandle, video_id: String, at: f64) -> Result<(), String> {
+pub async fn capture_begin(
+    app: AppHandle,
+    video_id: String,
+    foreground: Option<bool>,
+    refresh: Option<bool>,
+) -> Result<Value, String> {
+    begin(
+        &app,
+        &video_id,
+        refresh.unwrap_or(false),
+        foreground.unwrap_or(true),
+        None,
+        None,
+        false,
+    )
+    .await?;
+    status(&video_id).ok_or_else(|| "CAPTURE_CANCELLED: sesión sustituida".into())
+}
+#[tauri::command]
+pub async fn capture_prefetch(app: AppHandle, video_id: String) -> Result<Value, String> {
+    capture_begin(app, video_id, Some(false), Some(false)).await
+}
+/// Ensayos de arranque frío: no equivale a cancelar, que conserva audio reutilizable.
+pub async fn bench_forget(app: &AppHandle, video_id: &str) -> Result<(), String> {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return Err("El banco sólo está disponible en una ejecución de pruebas".into());
+    }
+    if !valid_id(video_id) {
+        return Err("id de vídeo no válido".into());
+    }
+    let _guard = TRANSITION.lock().await;
+    let sessions: Vec<_> = STATE
+        .lock()
+        .unwrap()
+        .sessions
+        .iter()
+        .filter(|s| s.id == video_id)
+        .cloned()
+        .collect();
+    for session in sessions {
+        retire_locked(app, &session).await?;
+    }
+    let mut state = STATE.lock().unwrap();
+    *state.cancellations.entry(video_id.into()).or_default() += 1;
+    state.release_foreground(video_id);
+    state.tracks.remove(video_id);
+    Ok(())
+}
+#[tauri::command]
+pub async fn capture_seek(
+    app: AppHandle,
+    video_id: String,
+    at: f64,
+    generation: Option<u64>,
+    request_id: Option<u64>,
+) -> Result<Value, String> {
     supported()?;
     if !valid_id(&video_id) || !at.is_finite() || at < 0.0 {
         return Err("salto no válido".into());
     }
-    let _guard = TRANSITION.lock().await;
+    let operation = next_id();
     {
         let mut state = STATE.lock().unwrap();
-        let capturing = state.session.as_ref().is_some_and(|s| s.id == video_id);
-        if let Some(t) = state.tracks.get_mut(&video_id) {
-            if t.replay_complete(SEQ.fetch_add(1, Ordering::Relaxed)) {
-                return Ok(());
+        let t = state
+            .tracks
+            .get_mut(&video_id)
+            .ok_or("CAPTURE_CANCELLED: no hay captura")?;
+        if generation.is_some_and(|g| g != t.generation) {
+            return Ok(json!({"requestId":request_id,"stale":true}));
+        }
+        t.seek_operation = operation;
+    }
+    let _guard = TRANSITION.lock().await;
+    let (session, epoch, cached, reopen) = {
+        let mut state = STATE.lock().unwrap();
+        if state
+            .foreground
+            .as_ref()
+            .is_none_or(|(id, _)| id != &video_id)
+        {
+            return Err("CAPTURE_CANCELLED: el lector ya no tiene la captura actual".into());
+        }
+        if state
+            .sessions
+            .iter()
+            .any(|s| s.active && s.foreground && s.id != video_id)
+        {
+            return Err("CAPTURE_CANCELLED: otra canción tiene prioridad".into());
+        }
+        let session = state.session(&video_id).cloned();
+        let t = state
+            .tracks
+            .get_mut(&video_id)
+            .ok_or("CAPTURE_CANCELLED: no hay captura")?;
+        if t.seek_operation != operation || generation.is_some_and(|g| g != t.generation) {
+            return Ok(json!({"requestId":request_id,"stale":true}));
+        }
+        let cached =
+            covers(&t.ranges, at, at + 0.05) || t.complete && t.eof_end.is_some_and(|d| at >= d);
+        if cached {
+            (session, t.epoch, true, false)
+        } else {
+            let reopen = t.epoch_done || t.phase == "interaction";
+            let epoch = next_id();
+            t.begin_epoch(t.generation, epoch, at, true);
+            (session, epoch, false, reopen)
+        }
+    };
+    if !cached {
+        if let Some(session) = session {
+            if let Some(window) = app.get_webview_window(&session.label).filter(|_| !reopen) {
+                let request = json!({"at":at,"epoch":epoch,"requestId":request_id});
+                window
+                    .eval(format!("window.__musifySeek?.({request})"))
+                    .map_err(|e| format!("CAPTURE_SEEK: {e}"))?;
+            } else {
+                retire_locked(&app, &session).await?;
+                begin_locked(&app, &video_id, false, true, session.ticket, Some(at), true).await?;
             }
-            // El gate ya observó la presentación completa o sigue haciéndolo. El lector espera
-            // los bytes de destino; nunca salta el reproductor oficial y rompe su cobertura.
-            if t.error.is_none() && (t.verified || capturing) {
-                return Ok(());
-            }
+        } else {
+            begin_locked(&app, &video_id, false, true, None, Some(at), true).await?;
         }
     }
-    open_locked(
-        &app,
-        &video_id,
-        None,
-        false,
-        true,
-        Some(crate::player::begin_resolution(false)),
+    let state = STATE.lock().unwrap();
+    let t = state
+        .tracks
+        .get(&video_id)
+        .ok_or("CAPTURE_CANCELLED: no hay captura")?;
+    Ok(
+        json!({"requestId":request_id,"generation":t.generation,"epoch":t.epoch,"revision":t.revision,"cached":cached,"from":0}),
     )
-    .await
-    .map(|_| ())
 }
-
 fn read_bounds(t: &Track, from: usize, revision: Option<u64>) -> (usize, usize, bool) {
-    let reset = revision.is_some_and(|revision| revision != t.revision) || from > t.chunks.len();
+    let reset = revision.is_some_and(|r| r != t.revision) || from > t.chunks.len();
     let start = if reset { 0 } else { from };
     let mut end = start;
     let mut bytes = 0;
@@ -1271,8 +1549,6 @@ fn read_bounds(t: &Track, from: usize, revision: Option<u64>) -> (usize, usize, 
     }
     (start, end, reset)
 }
-
-/// Frame: u32 LE longitud JSON, JSON, y pares longitud u32 LE + bytes de cada chunk.
 #[tauri::command]
 pub async fn capture_read(
     video_id: String,
@@ -1292,15 +1568,16 @@ pub async fn capture_read(
             let (start, end, reset) = read_bounds(t, from, revision);
             if end > start
                 || reset
-                || t.done_ms.is_some()
+                || t.complete
                 || t.error.is_some()
+                || t.soft_error.is_some()
                 || Instant::now() > deadline
             {
                 let chunks = &t.chunks[start..end];
-                let head = json!({ "mime": t.mime, "mimes": &t.mimes[start..end], "duration": t.duration,
-                    "timelineSettings": t.timeline_settings,
-                    "done": t.done_ms.is_some() && end == t.chunks.len(), "error": t.error,
-                    "revision": t.revision, "generation": t.generation, "reset": reset, "from": start, "next": end }).to_string();
+                let head=json!({"api":3,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"mimes":t.units[start..end].iter().map(|u|&u.mime).collect::<Vec<_>>(),
+                    "units":&t.units[start..end],"ranges":t.ranges,"duration":t.duration,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"total":t.units.len(),
+                    "done":t.complete&&end==t.chunks.len(),"complete":t.complete,"eof":t.eof,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,
+                    "revision":t.revision,"generation":t.generation,"epoch":t.epoch,"reset":reset,"from":start,"next":end}).to_string();
                 let mut out = Vec::with_capacity(
                     4 + head.len() + chunks.iter().map(|c| c.len() + 4).sum::<usize>(),
                 );
@@ -1313,26 +1590,30 @@ pub async fn capture_read(
                 return Ok(tauri::ipc::Response::new(out));
             }
         }
-        tokio::time::sleep(Duration::from_millis(40)).await;
+        tokio::time::sleep(Duration::from_millis(30)).await;
     }
 }
-
-pub fn status(video_id: &str) -> Option<serde_json::Value> {
+pub fn status(video_id: &str) -> Option<Value> {
     let state = STATE.lock().unwrap();
     let t = state.tracks.get(video_id)?;
-    Some(
-        json!({ "mime": t.mime, "chunks": t.chunks.len(), "bytes": t.bytes, "ads": t.ads,
-        "unknown": t.unknown, "state": t.phase, "bytesQuarantined": t.quarantined,
-        "verified": t.verified, "frames": t.frames, "rangeStart": t.range_start, "rangeEnd": t.range_end,
-        "verifiedSource": t.verified_source, "verifiedBuffer": t.verified_buffer,
-        "timelineSettings": t.timeline_settings,
-        "duration": t.duration, "firstMs": t.first_ms, "playingMs": t.playing_ms, "metaMs": t.meta_ms,
-        "title": t.title, "doneMs": t.done_ms, "error": t.error, "why": t.why, "resets": t.resets,
-        "lastDiagnostic": t.last_diagnostic,
-        "lastPosition": t.position, "adWaitMs": t.ad_wait_credit.as_millis(),
-        "lastProgressAgoMs": t.last_progress.elapsed().as_millis(), "waitBudgetMs": t.wait_budget().as_millis(),
-        "generation": t.generation, "revision": t.revision }),
-    )
+    let captured: f64 = t.ranges.iter().map(|r| r.end - r.start).sum();
+    let session = state.session(video_id);
+    let mut result = json!({"api":3,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"chunks":t.chunks.len(),"units":t.units.len(),"bytes":t.bytes,"ranges":t.ranges,
+        "ads":t.ads_observations,"adObservations":t.ads_observations,"adsSourcesSeen":t.ads_sources.len(),"adsSeen":t.ads_sources.len(),"adsDelivered":t.ads_delivered,"unknown":t.unknown,
+        "state":t.phase,"bytesQuarantined":t.quarantined,"verified":t.ready(),"frames":t.units.iter().map(|u|u.frames).sum::<u64>(),
+        "rangeStart":t.ranges.first().map(|r|r.start),"rangeEnd":t.ranges.last().map(|r|r.end),"duration":t.duration,
+        "firstMs":t.first_ms,"playingMs":t.playing_ms,"metaMs":t.meta_ms,"title":t.title,"doneMs":t.done_ms});
+    let detail = json!({"eof":t.eof,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"complete":t.complete,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,"why":t.why,"resets":t.resets,
+        "lastDiagnostic":t.last_diagnostic,"lastPosition":t.position,"adMs":t.ad_presented.as_millis(),"adWaitMs":t.ad_wait_credit.as_millis(),
+        "adRateViolations":t.ad_rate_violations,"adRateObservations":t.ad_rate_observations,
+        "lastProgressAgoMs":t.last_progress.elapsed().as_millis(),"waitBudgetMs":t.wait_budget().as_millis(),
+        "captureRate":captured/t.opened.elapsed().as_secs_f64().max(0.001),"activeWindows":state.sessions.len(),"foreground":session.map(|s|s.foreground),
+        "generation":t.generation,"epoch":t.epoch,"revision":t.revision});
+    result
+        .as_object_mut()
+        .unwrap()
+        .extend(detail.as_object().unwrap().clone());
+    Some(result)
 }
 fn valid_id(id: &str) -> bool {
     id.len() == 11
@@ -1345,649 +1626,438 @@ fn valid_id(id: &str) -> bool {
 mod tests {
     use super::*;
     const ID: &str = "aaaaaaaaaaa";
-    const SOURCE: &str = "https://music.youtube.com/watch?v=aaaaaaaaaaa";
+    const NEXT: &str = "bbbbbbbbbbb";
+    const MUSIC: &str = "https://music.youtube.com/watch?v=aaaaaaaaaaa";
+    #[test]
+    fn progressive_delivery_needs_explicit_benchmark_and_opt_in() {
+        assert!(!progressive_experiment(false, Some("1")));
+        assert!(!progressive_experiment(true, None));
+        assert!(!progressive_experiment(true, Some("true")));
+        assert!(progressive_experiment(true, Some("1")));
+    }
+    fn session(id: &str, generation: u64, foreground: bool) -> Session {
+        Session {
+            id: id.into(),
+            generation,
+            label: format!("test-{generation}"),
+            foreground,
+            ticket: Some(RequestTicket {
+                resolution: 1,
+                prefetch: None,
+            }),
+            active: true,
+        }
+    }
     fn state() -> Supervisor {
         let mut state = Supervisor::default();
-        state.session = Some(Session {
-            id: ID.into(),
-            generation: 10,
-            label: "test-10".into(),
-            foreground: true,
-            ticket: None,
-        });
-        state.tracks.insert(ID.into(), Track::new(5, 10));
+        state.sessions.push(session(ID, 10, true));
+        state.tracks.insert(ID.into(), Track::new(10, 20, 30));
         state
     }
-    fn message(sequence: u64, fields: serde_json::Value) -> Message {
-        let mut value = json!({ "musify":1, "v":ID, "generation":10, "sequence":sequence });
-        value
-            .as_object_mut()
+    fn message(state: &Supervisor, value: Value) -> Message {
+        let t = &state.tracks[ID];
+        let mut base = json!({"musify":1,"api":3,"v":ID,"generation":t.generation,"epoch":t.epoch,"sequence":t.sequence.unwrap_or(0)+1});
+        base.as_object_mut()
             .unwrap()
-            .extend(fields.as_object().unwrap().clone());
-        serde_json::from_value(value).unwrap()
+            .extend(value.as_object().unwrap().clone());
+        serde_json::from_value(base).unwrap()
     }
-    fn content(sequence: u64) -> Message {
-        message(
-            sequence,
-            json!({ "kind":"seg", "classification":"content", "source":7, "s":3, "mime":"audio/webm", "data":"GkXfow==" }),
-        )
+    fn send(state: &mut Supervisor, value: Value) -> bool {
+        let m = message(state, value);
+        let generation = state.tracks[ID].generation;
+        apply_message(state, ID, generation, MUSIC, m, Instant::now())
     }
-    fn apply(state: &mut Supervisor, message: Message) -> bool {
-        apply_message(state, ID, 10, SOURCE, message, Instant::now())
+    fn unit(number: u64, start: f64, end: f64) -> Value {
+        json!({"kind":"event","type":"diagnostic","state":"content","verified":true,"source":7,"s":3,"unit":number,
+            "initKey":"configuration-1","initBytes":2,"mime":"audio/webm; codecs=opus","frames":10,"rangeStart":start,"rangeEnd":end,
+            "decodeStart":start,"decodeEnd":end,"timelineSettings":{"timestampOffset":0.0,"appendWindowStart":0.0,"appendWindowEnd":null,"mode":"segments"}})
     }
-
-    #[test]
-    fn rejects_obsolete_windows_and_unproven_audio() {
-        let mut state = state();
-        apply(&mut state, content(1));
-        assert_eq!(state.tracks[ID].bytes, 0);
-        apply(
-            &mut state,
-            message(
-                2,
-                json!({"kind":"event","type":"diagnostic","state":"content","source":7,"s":3,"verified":true,"frames":4,"rangeStart":0.0,"rangeEnd":0.08}),
-            ),
+    fn segment(mut proof: Value) -> Value {
+        proof["kind"] = json!("seg");
+        proof["classification"] = json!("content");
+        proof["data"] = json!("AQIDBA==");
+        proof
+    }
+    fn deliver(state: &mut Supervisor, number: u64, start: f64, end: f64) {
+        let proof = unit(number, start, end);
+        send(state, proof.clone());
+        send(state, segment(proof));
+    }
+    fn ended(state: &mut Supervisor, duration: f64) {
+        send(
+            state,
+            json!({"kind":"event","type":"ended","state":"content","source":7,"s":3,"eof":true,"duration":duration,"end":duration}),
         );
-        apply_message(&mut state, ID, 9, SOURCE, content(3), Instant::now());
-        let mut wrong = content(3);
-        wrong.generation = Some(9);
-        apply(&mut state, wrong);
-        let mut wrong = content(3);
-        wrong.v = Some("bbbbbbbbbbb".into());
-        apply(&mut state, wrong);
-        apply_message(
-            &mut state,
+    }
+    #[test]
+    fn progressive_unit_is_ready_before_eof_and_reader_gets_exact_proof() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        let t = &s.tracks[ID];
+        assert!(t.ready());
+        assert!(!t.complete);
+        assert!(!t.eof);
+        assert_eq!(t.units[0].index, 0);
+        let wire = serde_json::to_value(&t.units[0]).unwrap();
+        assert_eq!(wire["verified"], true);
+        assert!(wire["timelineSettings"]["appendWindowEnd"].is_null());
+        ended(&mut s, 1.0);
+        assert!(s.tracks[ID].complete);
+        assert!(s.tracks[ID].done_ms.is_some());
+    }
+    #[test]
+    fn rejects_wrong_window_api_origin_epoch_and_sequence_before_heartbeat() {
+        let mut s = state();
+        let before = s.tracks[ID].last_msg;
+        let future = before + Duration::from_secs(2);
+        for override_value in [
+            json!({"api":2}),
+            json!({"generation":9}),
+            json!({"epoch":19}),
+            json!({"v":NEXT}),
+        ] {
+            let mut value = unit(1, 0.0, 1.0);
+            value
+                .as_object_mut()
+                .unwrap()
+                .extend(override_value.as_object().unwrap().clone());
+            let m = message(&s, value);
+            assert!(!apply_message(&mut s, ID, 10, MUSIC, m, future));
+        }
+        let m = message(&s, unit(1, 0.0, 1.0));
+        assert!(!apply_message(
+            &mut s,
             ID,
             10,
-            "https://consent.youtube.com/",
-            content(3),
-            Instant::now(),
-        );
-        apply_message(
-            &mut state,
-            ID,
-            10,
-            "https://music.youtube.com.evil.test/",
-            content(4),
-            Instant::now(),
-        );
-        assert_eq!(state.tracks[ID].bytes, 0);
-        apply(&mut state, content(4));
-        apply(&mut state, content(4));
-        apply(&mut state, content(2));
-        assert_eq!(state.tracks[ID].chunks, vec![vec![0x1a, 0x45, 0xdf, 0xa3]]);
-        let mut ad = content(5);
-        ad.ad = Some(true);
-        apply(&mut state, ad);
-        assert_eq!(
-            (state.tracks[ID].chunks.len(), state.tracks[ID].ads),
-            (1, 1)
-        );
-    }
-
-    #[test]
-    fn observed_content_cannot_authorize_another_source_or_buffer() {
-        let mut state = state();
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"diagnostic","state":"content","source":7,"s":3}),
-            ),
-        );
-        apply(&mut state, content(2));
-        assert_eq!(state.tracks[ID].bytes, 0);
-        // Incluso verified requiere una cobertura concreta y válida.
-        apply(
-            &mut state,
-            message(
-                3,
-                json!({"kind":"event","type":"diagnostic","state":"content","source":7,"s":3,"verified":true,"frames":4,"rangeStart":2.0,"rangeEnd":1.0}),
-            ),
-        );
-        apply(&mut state, content(4));
-        assert_eq!(state.tracks[ID].bytes, 0);
-        apply(
-            &mut state,
-            message(
-                5,
-                json!({"kind":"event","type":"diagnostic","state":"content","source":7,"s":3,"verified":true,"frames":4,"rangeStart":0.0,"rangeEnd":0.08}),
-            ),
-        );
-        let mut wrong = content(6);
-        wrong.source = Some(8);
-        apply(&mut state, wrong);
-        let mut wrong = content(7);
-        wrong.s = Some(4);
-        apply(&mut state, wrong);
-        assert_eq!(state.tracks[ID].bytes, 0);
-        apply(&mut state, content(8));
-        assert_eq!(state.tracks[ID].bytes, 4);
-        assert!(!apply(
-            &mut state,
-            message(9, json!({"kind":"event","type":"ended","source":8,"s":3}))
+            "https://evil.example",
+            m,
+            future
         ));
-        assert!(state.tracks[ID].done_ms.is_none());
+        assert_eq!(s.tracks[ID].last_msg, before);
+        assert_eq!(s.tracks[ID].sequence, None);
+        send(&mut s, unit(1, 0.0, 1.0));
+        let mut stale = segment(unit(1, 0.0, 1.0));
+        stale["sequence"] = json!(1);
+        send(&mut s, stale);
+        assert!(s.tracks[ID].chunks.is_empty());
+    }
+    #[test]
+    fn observation_is_not_proof_and_each_unit_requires_matching_identity() {
+        let mut s = state();
+        send(
+            &mut s,
+            json!({"kind":"event","type":"diagnostic","state":"content"}),
+        );
+        send(&mut s, segment(unit(1, 0.0, 1.0)));
+        assert!(!s.tracks[ID].ready());
+        send(&mut s, unit(1, 0.0, 1.0));
+        let mut wrong = segment(unit(1, 0.0, 1.0));
+        wrong["source"] = json!(8);
+        send(&mut s, wrong);
+        assert!(!s.tracks[ID].ready());
+        send(&mut s, segment(unit(1, 0.0, 1.0)));
+        assert!(s.tracks[ID].ready());
+        send(&mut s, segment(unit(2, 1.0, 2.0)));
+        assert_eq!(s.tracks[ID].chunks.len(), 1);
+    }
+    #[test]
+    fn malformed_timeline_replaces_old_proof_and_rejects_delivery() {
+        for invalid in [
+            json!(null),
+            json!({"timestampOffset":0,"appendWindowStart":-1,"appendWindowEnd":null,"mode":"segments"}),
+            json!({"timestampOffset":0,"appendWindowStart":0,"appendWindowEnd":0,"mode":"segments"}),
+            json!({"timestampOffset":0,"appendWindowStart":0,"appendWindowEnd":null,"mode":"sequence"}),
+        ] {
+            let mut s = state();
+            send(&mut s, unit(1, 0.0, 1.0));
+            let mut bad = unit(1, 0.0, 1.0);
+            bad["timelineSettings"] = invalid;
+            send(&mut s, bad);
+            send(&mut s, segment(unit(1, 0.0, 1.0)));
+            assert!(!s.tracks[ID].ready());
+        }
+    }
+    #[test]
+    fn eof_with_gap_preserves_audio_and_recovery_merges_without_revision_reset() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        deliver(&mut s, 2, 4.0, 5.0);
+        ended(&mut s, 5.0);
+        let t = s.tracks.get_mut(ID).unwrap();
+        assert!(t.eof);
+        assert!(!t.complete);
+        assert!(t.error.is_none());
+        assert!(t.soft_error.is_some());
+        assert_eq!(t.first_gap(), 1.0);
+        let old = t.chunks.clone();
+        t.begin_epoch(11, 21, 1.0, true);
+        s.sessions[0].generation = 11;
+        deliver(&mut s, 1, 1.0, 4.0);
+        assert!(!s.tracks[ID].complete);
+        ended(&mut s, 5.0);
+        let t = &s.tracks[ID];
+        assert!(t.complete);
+        assert_eq!(t.revision, 30);
+        assert_eq!(&t.chunks[..2], old.as_slice());
+        assert_eq!(
+            t.ranges,
+            vec![Range {
+                start: 0.0,
+                end: 5.0
+            }]
+        );
+        assert_eq!(t.units[2].index, 2);
+        assert_eq!(read_bounds(t, 2, Some(30)), (2, 3, false));
+    }
+    #[test]
+    fn future_tail_without_zero_and_false_eof_never_complete() {
+        let mut s = state();
+        deliver(&mut s, 1, 8.0, 10.0);
+        ended(&mut s, 10.0);
+        assert!(!s.tracks[ID].complete);
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 10.0);
+        send(
+            &mut s,
+            json!({"kind":"event","type":"ended","source":7,"s":3,"eof":false,"duration":10.0}),
+        );
+        assert!(!s.tracks[ID].complete);
+        assert!(!s.tracks[ID].eof);
+        assert!(s.tracks[ID].soft_error.is_some());
+    }
+    #[test]
+    fn seek_epoch_retains_ledger_but_old_messages_cannot_append() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        s.tracks.get_mut(ID).unwrap().begin_epoch(10, 21, 8.0, true);
+        let mut old = segment(unit(2, 1.0, 2.0));
+        old["epoch"] = json!(20);
+        send(&mut s, old);
+        deliver(&mut s, 1, 8.0, 9.0);
+        assert_eq!(s.tracks[ID].chunks.len(), 2);
+        assert_eq!(s.tracks[ID].revision, 30);
+        assert_eq!(s.tracks[ID].units[0].epoch, 20);
+        assert_eq!(s.tracks[ID].units[1].epoch, 21);
+    }
+    #[test]
+    fn repeated_confirmed_ranges_do_not_grow_cache() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        let bytes = s.tracks[ID].bytes;
+        s.tracks.get_mut(ID).unwrap().begin_epoch(10, 21, 0.0, true);
+        deliver(&mut s, 1, 0.0, 1.0);
+        assert_eq!(s.tracks[ID].bytes, bytes);
+        assert_eq!(s.tracks[ID].units.len(), 1);
+    }
+    #[test]
+    fn init_identity_is_scoped_to_window_and_checks_actual_bytes() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        let p = unit(2, 1.0, 2.0);
+        send(&mut s, p.clone());
+        let mut seg = segment(p);
+        seg["data"] = json!("AgIDBA==");
+        send(&mut s, seg);
+        assert_eq!(s.tracks[ID].units.len(), 1);
+        assert!(
+            s.tracks[ID]
+                .soft_error
+                .as_deref()
+                .unwrap()
+                .starts_with("CAPTURE_PROTOCOL")
+        );
+        s.tracks.get_mut(ID).unwrap().begin_epoch(11, 21, 1.0, true);
+        s.sessions[0].generation = 11;
+        let p = unit(1, 1.0, 2.0);
+        send(&mut s, p.clone());
+        let mut seg = segment(p);
+        seg["data"] = json!("AgIDBA==");
+        send(&mut s, seg);
+        assert_eq!(s.tracks[ID].units.len(), 2);
+    }
+    #[test]
+    fn pool_prefetch_replaces_only_next_and_promotion_retains_generation() {
+        let mut s = state();
+        s.sessions.push(session(NEXT, 11, false));
+        s.tracks.insert(NEXT.into(), Track::new(11, 21, 31));
+        assert_eq!(s.victim("ccccccccccc", false).unwrap().id, NEXT);
+        assert_eq!(s.victim("ccccccccccc", true).unwrap().id, ID);
+        s.sessions.retain(|session| session.id != ID);
+        let ticket = Some(RequestTicket {
+            resolution: 9,
+            prefetch: None,
+        });
+        s.promote(NEXT, ticket);
+        let current = s.session(NEXT).unwrap();
+        assert!(current.foreground);
+        assert_eq!(current.generation, 11);
+        assert_eq!(current.ticket, ticket);
+        assert_eq!(s.tracks[NEXT].revision, 31);
+        assert!(s.victim("ccccccccccc", false).is_none());
+    }
+    #[test]
+    fn completed_foreground_cache_survives_idle_window_retirement_and_pressure() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        s.tracks.get_mut(ID).unwrap().complete = true;
+        s.promote(ID, None);
+        let before = s.tracks[ID].chunks.clone();
+        s.sessions.clear(); // Automatic EOF close must not release the reader's cache lease.
+        for n in 0..KEEP + 3 {
+            s.tracks
+                .insert(format!("cache-{n}"), Track::new(100 + n as u64, 1, 1));
+        }
+        s.trim("cache-8", 0);
+        assert_eq!(s.tracks[ID].chunks, before);
+        assert_eq!(s.tracks[ID].revision, 30);
+        assert_eq!(s.tracks.len(), KEEP);
+        assert_eq!(read_bounds(&s.tracks[ID], 0, Some(30)), (0, 1, false));
+        s.cancel_generation(ID, Some(9), true); // Delayed cleanup of an older window.
+        assert!(s.foreground.is_some());
+        s.cancel_generation(ID, Some(10), true);
+        assert!(s.foreground.is_none());
+        s.tracks.insert("later".into(), Track::new(99, 1, 1));
+        s.trim("later", 0);
+        assert!(
+            !s.tracks.contains_key(ID),
+            "explicitly released cache is evictable"
+        );
+    }
+    #[tokio::test]
+    async fn cancel_queued_before_admission_cannot_cancel_the_new_generation() {
+        use std::sync::Arc;
+        let state = Arc::new(Mutex::new(state()));
+        let transition = Arc::new(tokio::sync::Mutex::new(()));
+        let occupied = transition.lock().await;
+        let cancel = {
+            let state = state.clone();
+            let transition = transition.clone();
+            tokio::spawn(async move {
+                let _guard = transition.lock().await;
+                state.lock().unwrap().cancel_generation(ID, Some(10), true);
+            })
+        };
+        tokio::task::yield_now().await;
+        let admit = {
+            let state = state.clone();
+            let transition = transition.clone();
+            tokio::spawn(async move {
+                let _guard = transition.lock().await;
+                let mut state = state.lock().unwrap();
+                state.tracks.insert(ID.into(), Track::new(11, 21, 31));
+                state.sessions = vec![session(ID, 11, true)];
+                state.promote(ID, None);
+                state.cancellation(ID) // Same critical section as admission, as in begin().
+            })
+        };
+        drop(occupied);
+        cancel.await.unwrap();
+        let admitted_cancellation = admit.await.unwrap();
+        let mut state = state.lock().unwrap();
+        assert_eq!(admitted_cancellation, 1);
+        assert_eq!(admitted_cancellation, state.cancellation(ID));
+        assert!(state.owns(ID, 11));
+        state.cancel_generation(ID, Some(10), true);
+        assert_eq!(admitted_cancellation, state.cancellation(ID));
+        assert!(state.foreground.is_some());
+        state.cancel_generation(ID, Some(11), true);
+        assert_ne!(admitted_cancellation, state.cancellation(ID));
+        assert!(state.foreground.is_none());
+    }
+    #[test]
+    fn failed_close_still_occupies_slot_and_cannot_send() {
+        let mut s = state();
+        s.sessions.push(session(NEXT, 11, false));
+        s.sessions[0].active = false;
+        assert_eq!(s.sessions.len(), 2);
+        assert!(!s.owns(ID, 10));
+        assert_eq!(s.victim("ccccccccccc", false).unwrap().generation, 10);
+        let m = message(&s, unit(1, 0.0, 1.0));
+        assert!(!apply_message(&mut s, ID, 10, MUSIC, m, Instant::now()));
+    }
+    #[test]
+    fn reader_batches_keep_units_atomic_and_replay_does_not_change_storage() {
+        let mut t = Track::new(1, 2, 3);
+        t.chunks = vec![vec![0; READ_BYTES + 10], vec![0; READ_BYTES], vec![0; 1]];
+        assert_eq!(read_bounds(&t, 0, Some(3)), (0, 1, false));
+        assert_eq!(read_bounds(&t, 1, Some(3)), (1, 2, false));
+        assert_eq!(read_bounds(&t, 3, Some(2)), (0, 1, true));
+        assert_eq!(read_bounds(&t, 0, Some(3)), (0, 1, false));
+        t.chunks = vec![vec![0]; 40];
+        assert_eq!(read_bounds(&t, 0, None), (0, 32, false));
+    }
+    #[test]
+    fn terminal_error_after_delivery_is_soft_and_never_erases_chunks() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        let before = s.tracks[ID].chunks.clone();
+        send(
+            &mut s,
+            json!({"kind":"event","type":"error","code":"CAPTURE_NETWORK","reason":"offline","recoverable":true}),
+        );
+        let t = &s.tracks[ID];
+        assert!(t.error.is_none());
+        assert!(t.soft_error.is_some());
+        assert!(t.recovering);
+        assert_eq!(t.chunks, before);
+    }
+    #[test]
+    fn ad_clock_credit_is_bounded_but_observed_time_is_not_timeout_budget() {
+        let mut t = Track::new(1, 2, 3);
+        let start = t.opened;
+        assert!(!t.observe_ad_progress(7, 0.0, start));
+        for n in 1..=200 {
+            assert!(t.observe_ad_progress(7, n as f64, start + Duration::from_secs(n)));
+        }
+        assert_eq!(t.ad_wait_credit, Duration::from_secs(180));
+        assert_eq!(t.ad_presented, Duration::from_secs(200));
+        assert!(!t.observe_ad_progress(7, 500.0, start + Duration::from_secs(201)));
+        assert!(!t.observe_ad_progress(8, 1.0, start + Duration::from_secs(202)));
+        assert_eq!(t.ad_presented, Duration::from_secs(200));
+    }
+    #[test]
+    fn ad_diagnostics_do_not_replace_song_metadata_and_bound_details() {
+        let mut s = state();
+        send(
+            &mut s,
+            json!({"kind":"event","type":"meta","state":"content","duration":288.0,"title":"song"}),
+        );
+        send(
+            &mut s,
+            json!({"kind":"event","type":"diagnostic","state":"ad","source":8,"position":0,"duration":11.621,"title":"ad","playbackRate":2,"reason":"ñ".repeat(3000)}),
+        );
+        let t = &s.tracks[ID];
+        assert_eq!(t.duration, Some(288.0));
+        assert_eq!(t.title, "song");
+        assert_eq!(t.ads_sources.len(), 1);
+        assert_eq!(t.last_diagnostic.as_ref().unwrap().chars().count(), 2048);
+        assert_eq!(t.ad_rate_violations, 1);
+        assert_eq!(t.ads_delivered, 0);
     }
     #[test]
     fn heartbeat_alone_does_not_hide_audio_stall() {
-        let mut state = state();
-        let old = Instant::now() - Duration::from_secs(70);
-        state.tracks.get_mut(ID).unwrap().last_progress = old;
-        apply(
-            &mut state,
-            message(1, json!({"kind":"event","type":"progress","position":0})),
-        );
-        assert!(state.tracks[ID].stalled(Instant::now()));
-        apply(
-            &mut state,
-            message(
-                2,
-                json!({"kind":"event","type":"diagnostic","bytesQuarantined":2048}),
-            ),
-        );
-        assert!(!state.tracks[ID].stalled(Instant::now()));
-    }
-
-    #[test]
-    fn moving_advertisement_earns_bounded_time_without_becoming_song_metadata() {
-        let mut state = state();
-        let start = Instant::now();
-        for second in 0..=150 {
-            apply_message(
-                &mut state,
-                ID,
-                10,
-                SOURCE,
-                message(
-                    second + 1,
-                    json!({"kind":"event","type":"diagnostic",
-                    "state":"ad","source":7,"position":second,"duration":300,"title":"Ad"}),
-                ),
-                start + Duration::from_secs(second),
-            );
-        }
-        let t = &state.tracks[ID];
-        assert_eq!(t.ad_wait_credit, Duration::from_secs(150));
-        assert_eq!(t.wait_budget(), Duration::from_secs(270));
-        assert!(!t.stalled(start + Duration::from_secs(151)));
-        assert_eq!(t.duration, None);
-        assert!(t.title.is_empty());
-        assert!(!t.ready());
-        assert!(!t.verified);
-        apply_message(
-            &mut state,
-            ID,
-            10,
-            SOURCE,
-            message(
-                152,
-                json!({"kind":"event","type":"diagnostic",
-                "state":"content","source":8,"position":0,"duration":100}),
-            ),
-            start + Duration::from_secs(151),
-        );
-        let t = &state.tracks[ID];
-        assert!(t.ad_observation.is_none());
-        assert_eq!(t.wait_budget(), Duration::from_secs(370));
-    }
-
-    #[test]
-    fn ad_heartbeats_and_downloaded_bytes_cannot_hide_a_frozen_clock() {
-        let mut state = state();
-        let start = Instant::now();
-        state.tracks.get_mut(ID).unwrap().last_progress = start;
-        for second in 0..=60 {
-            apply_message(
-                &mut state,
-                ID,
-                10,
-                SOURCE,
-                message(
-                    second + 1,
-                    json!({"kind":"event","type":"diagnostic",
-                    "state":"ad","source":7,"position":5,"bytesQuarantined":second*1000}),
-                ),
-                start + Duration::from_secs(second),
-            );
-        }
-        let t = &state.tracks[ID];
-        assert_eq!(t.ad_wait_credit, Duration::ZERO);
-        assert_eq!(t.wait_budget(), Duration::from_secs(120));
-        assert!(t.stalled(start + PROGRESS_STALL));
-        assert_eq!(t.last_msg, start + Duration::from_secs(60));
-    }
-
-    #[test]
-    fn ad_skip_source_changes_and_unobserved_intervals_buy_no_wait_credit() {
-        let mut t = Track::new(1, 1);
-        let start = Instant::now();
-        assert!(!t.observe_ad_progress(1, 0.0, start));
-        assert!(!t.observe_ad_progress(1, 100.0, start + Duration::from_secs(1)));
-        assert!(!t.observe_ad_progress(2, 101.0, start + Duration::from_secs(2)));
-        assert!(!t.observe_ad_progress(2, 0.0, start + Duration::from_secs(3)));
-        assert!(!t.observe_ad_progress(2, 0.0, start + Duration::from_secs(4)));
-        assert!(!t.observe_ad_progress(2, 20.0, start + Duration::from_secs(24)));
-        assert_eq!(t.ad_wait_credit, Duration::ZERO);
-        assert!(t.observe_ad_progress(2, 21.2, start + Duration::from_secs(25)));
-        assert_eq!(t.ad_wait_credit, Duration::from_secs(1));
-    }
-
-    #[test]
-    fn ad_wait_credit_cannot_make_an_endless_ad_session_or_survive_resume() {
-        let mut t = Track::new(1, 1);
-        let start = Instant::now();
-        for second in 0..=600 {
-            t.observe_ad_progress(7, second as f64, start + Duration::from_secs(second));
-        }
-        assert_eq!(t.ad_wait_credit, MAX_AD_WAIT_CREDIT);
-        assert_eq!(t.wait_budget(), Duration::from_secs(300));
-        t.duration = Some(1190.0);
-        assert_eq!(t.wait_budget(), MAX_WAIT);
-        t.resume(2);
-        assert_eq!(t.ad_wait_credit, Duration::ZERO);
-        assert!(t.ad_observation.is_none());
-    }
-
-    #[test]
-    fn latest_diagnostic_reason_is_bounded_separate_from_terminal_reason_and_reset() {
-        let mut state = state();
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"diagnostic",
-            "state":"ad","reason":"paused=true readyState=2 visible=false"}),
-            ),
-        );
-        assert_eq!(
-            state.tracks[ID].last_diagnostic.as_deref(),
-            Some("paused=true readyState=2 visible=false")
-        );
-        apply(
-            &mut state,
-            message(2, json!({"kind":"event","type":"diagnostic","state":"ad"})),
-        );
-        assert!(state.tracks[ID].last_diagnostic.is_some());
-        let reason = "ñ".repeat(3000);
-        apply(
-            &mut state,
-            message(
-                3,
-                json!({"kind":"event","type":"diagnostic","reason":reason}),
-            ),
-        );
-        let t = state.tracks.get_mut(ID).unwrap();
-        assert_eq!(t.last_diagnostic.as_ref().unwrap().chars().count(), 2048);
-        assert!(t.why.is_none());
-        t.mark_cancelled();
-        assert!(
-            t.last_diagnostic.is_some(),
-            "a timeout/cancellation must retain the evidence"
-        );
-        t.resume(11);
-        assert!(t.last_diagnostic.is_none());
-    }
-
-    #[test]
-    fn postroll_and_unknown_observations_do_not_replace_song_metadata() {
-        let mut state = state();
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"diagnostic","state":"ad","duration":11.621,"title":"Anuncio","author":"Marca"}),
-            ),
-        );
-        assert_eq!(state.tracks[ID].duration, None);
-        apply(
-            &mut state,
-            message(
-                2,
-                json!({"kind":"event","type":"playing","duration":288.0,"title":"Airbag","author":"Radiohead"}),
-            ),
-        );
-        for (sequence, phase) in [(3, "ad"), (4, "unknown"), (5, "ambiguous")] {
-            apply(
-                &mut state,
-                message(
-                    sequence,
-                    json!({"kind":"event","type":"diagnostic","state":phase,"duration":11.621,"title":"Anuncio","author":"Marca"}),
-                ),
-            );
-        }
-        let t = &state.tracks[ID];
-        assert_eq!(t.duration, Some(288.0));
-        assert_eq!(t.title, "Airbag");
-        assert_eq!(t.author, "Radiohead");
-        assert_eq!(t.wait_budget(), Duration::from_secs(408));
-    }
-
-    #[test]
-    fn cancellation_preserves_the_timeout_cause() {
-        let mut t = Track::new(1, 1);
-        t.error = Some("CAPTURE_TIMEOUT: no hubo una presentación completa".into());
-        t.mark_cancelled();
-        assert_eq!(
-            t.error.as_deref(),
-            Some("CAPTURE_TIMEOUT: no hubo una presentación completa")
-        );
-        let mut pending = Track::new(2, 2);
-        pending.mark_cancelled();
-        assert!(
-            pending
-                .error
-                .as_deref()
-                .unwrap()
-                .starts_with("CAPTURE_CANCELLED")
-        );
-    }
-
-    #[test]
-    fn interaction_reports_action_without_treating_window_as_stalled() {
-        let mut state = state();
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"interaction","reason":"Inicia sesión"}),
-            ),
-        );
-        let t = &state.tracks[ID];
-        assert_eq!(t.phase, "interaction");
-        assert!(
-            t.error
-                .as_deref()
-                .unwrap()
-                .starts_with("CAPTURE_REQUIRES_INTERACTION")
-        );
-        assert!(!t.stalled(Instant::now() + MAX_WAIT));
-        assert!(state.owns(ID, 10));
-    }
-
-    #[test]
-    fn prefetch_waits_for_quarantine_and_foreground_can_replace_it() {
-        let mut state = state();
-        state.session.as_mut().unwrap().foreground = false;
-        state.tracks.get_mut(ID).unwrap().session_started =
-            Instant::now() - Duration::from_secs(180);
-        // Ningún lector existe todavía: la cuarentena no ha terminado.
-        assert_eq!(
-            state.request("bbbbbbbbbbb", false, false),
-            StartDecision::Wait
-        );
-        assert_eq!(state.request(ID, false, true), StartDecision::Join(10));
-        assert!(state.session.as_ref().unwrap().foreground);
-        assert_eq!(
-            state.request("bbbbbbbbbbb", false, true),
-            StartDecision::Start
-        );
-        state.tracks.get_mut(ID).unwrap().done_ms = Some(180_000);
-        assert_eq!(
-            state.request("bbbbbbbbbbb", false, false),
-            StartDecision::Start
-        );
-    }
-
-    #[test]
-    fn ready_prefetch_adopts_foreground_ticket_before_returning_cached_audio() {
-        for done in [None, Some(180_000)] {
-            let mut state = state();
-            let session = state.session.as_mut().unwrap();
-            session.foreground = false;
-            session.ticket = Some(4);
-            let t = state.tracks.get_mut(ID).unwrap();
-            t.first_ms = Some(179_000);
-            t.done_ms = done;
-            t.chunks = vec![vec![1, 2, 3]];
-            let (decision, cached) = state.prepare(ID, false, true, Some(5));
-            assert!(cached.is_some(), "ready audio must remain available");
-            assert_eq!(decision, StartDecision::Join(10));
-            let session = state.session.as_ref().unwrap();
-            assert!(session.foreground);
-            assert_eq!(session.ticket, Some(5));
-            assert!(!state.can_cancel(ID, Some(10), Some(5)));
-            assert_eq!(state.tracks[ID].chunks, vec![vec![1, 2, 3]]);
-            assert_eq!(state.tracks[ID].revision, 5);
-        }
-        // Reproducir otra entrada de caché no promociona la ventana de un vídeo distinto.
-        let mut state = state();
-        state.session.as_mut().unwrap().ticket = Some(4);
-        let mut other = Track::new(20, 20);
-        other.first_ms = Some(1);
-        other.done_ms = Some(2);
-        state.tracks.insert("bbbbbbbbbbb".into(), other);
-        assert!(
-            state
-                .prepare("bbbbbbbbbbb", false, true, Some(5))
-                .1
-                .is_some()
-        );
-        assert_eq!(state.session.as_ref().unwrap().ticket, Some(4));
-    }
-
-    #[test]
-    fn revision_resets_cursor_but_window_resume_preserves_it() {
-        let mut t = Track::new(5, 10);
-        t.chunks = vec![vec![1], vec![2]];
-        t.mimes = vec!["audio/webm".into(); 2];
-        t.resume(11);
-        assert_eq!(read_bounds(&t, 1, Some(5)), (1, 2, false));
-        assert_eq!(t.generation, 11);
-        let mut fresh = Track::new(12, 12);
-        fresh.chunks = vec![vec![3]];
-        assert_eq!(read_bounds(&fresh, 1, Some(5)), (0, 1, true));
-        assert_eq!(read_bounds(&fresh, usize::MAX, None), (0, 1, true));
-    }
-
-    #[test]
-    fn seek_replays_verified_cache_without_recapture_or_data_loss() {
-        let mut t = Track::new(5, 10);
-        t.chunks = vec![vec![1], vec![2]];
-        t.mimes = vec!["audio/webm".into(); 2];
-        t.duration = Some(180.0);
-        t.done_ms = Some(180_000);
-        t.verified = true;
-        assert!(t.replay_complete(11));
-        assert_eq!(read_bounds(&t, 2, Some(5)), (0, 2, true));
-        assert_eq!(t.generation, 10);
-        assert_eq!(t.duration, Some(180.0));
-        assert_eq!(t.chunks, vec![vec![1], vec![2]]);
-        t.verified = false;
-        assert!(!t.replay_complete(12));
-        assert_eq!(t.revision, 11);
-    }
-
-    #[test]
-    fn cancellation_fence_preserves_new_and_promoted_sessions() {
-        let mut state = state();
-        state.session.as_mut().unwrap().ticket = Some(4);
-        assert!(state.can_cancel(ID, Some(10), Some(5)));
-        // Misma ventana promovida antes de adquirir TRANSITION.
-        state.session.as_mut().unwrap().ticket = Some(5);
-        assert!(!state.can_cancel(ID, Some(10), Some(5)));
-        state.session.as_mut().unwrap().ticket = None;
-        assert!(!state.can_cancel(ID, Some(10), Some(5)));
-        assert!(!state.can_cancel(ID, Some(9), None));
-        assert!(state.can_cancel(ID, Some(10), None));
-    }
-
-    #[test]
-    fn invalid_timeline_settings_revoke_proof_and_reject_delivery() {
-        let proof = json!({"kind":"event","type":"diagnostic","state":"content",
-            "source":7,"s":3,"verified":true,"frames":4,"rangeStart":0.0,"rangeEnd":0.08});
-        let valid = json!({"timestampOffset":-0.021,"appendWindowStart":0.0,
-            "appendWindowEnd":null,"mode":"segments"});
-        let mut invalid = vec![json!(null), json!({}), json!("default")];
-        for (field, value) in [
-            ("timestampOffset", json!(null)),
-            ("timestampOffset", json!("Infinity")),
-            ("appendWindowStart", json!(-0.1)),
-            ("appendWindowStart", json!(null)),
-            ("appendWindowEnd", json!(0)),
-            ("appendWindowEnd", json!(-1)),
-            ("appendWindowEnd", json!("Infinity")),
-            ("mode", json!("sequence")),
-        ] {
-            let mut settings = valid.clone();
-            settings[field] = value;
-            invalid.push(settings);
-        }
-        let mut missing_end = valid;
-        missing_end
-            .as_object_mut()
-            .unwrap()
-            .remove("appendWindowEnd");
-        invalid.push(missing_end);
-        for settings in invalid {
-            let mut state = state();
-            // Un nuevo proof inválido debe revocar incluso el anterior de la misma fuente.
-            apply(&mut state, message(1, proof.clone()));
-            assert!(state.tracks[ID].verified);
-            assert_eq!(
-                state.tracks[ID].timeline_settings,
-                Some(TimelineSettings::default())
-            );
-            let mut bad = proof.clone();
-            bad["timelineSettings"] = settings.clone();
-            apply(&mut state, message(2, bad));
-            apply(&mut state, content(3));
-            let t = &state.tracks[ID];
-            assert!(!t.verified, "{settings}");
-            assert!(t.timeline_settings.is_none(), "{settings}");
-            assert_eq!(t.bytes, 0, "{settings}");
-        }
-    }
-
-    #[test]
-    fn timeline_settings_keep_infinity_and_survive_cached_replay() {
-        let mut state = state();
-        assert!(state.tracks[ID].timeline_settings.is_none());
-        let settings = json!({"timestampOffset":-0.021333,"appendWindowStart":0.0,
-            "appendWindowEnd":null,"mode":"segments"});
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"diagnostic",
-            "state":"content","source":7,"s":3,"verified":true,"frames":4,
-            "rangeStart":0.0,"rangeEnd":0.08,"timelineSettings":settings}),
-            ),
-        );
-        apply(&mut state, content(2));
-        assert!(apply(
-            &mut state,
-            message(
-                3,
-                json!({"kind":"event","type":"ended",
-            "source":7,"s":3})
-            )
-        ));
-        let t = state.tracks.get_mut(ID).unwrap();
-        assert_eq!(
-            serde_json::to_value(&t.timeline_settings).unwrap(),
-            settings
-        );
-        assert_eq!(
-            t.timeline_settings.as_ref().unwrap().append_window_end,
-            None
-        );
-        assert!(t.replay_complete(11));
-        assert_eq!(
-            serde_json::to_value(&t.timeline_settings).unwrap(),
-            settings
-        );
-        assert_eq!(read_bounds(t, 1, Some(5)), (0, 1, true));
-        t.resume(12);
-        assert!(t.timeline_settings.is_none());
-        assert!(!t.verified);
-    }
-
-    #[test]
-    fn timeline_settings_validate_finite_clocks_without_arbitrary_limits() {
-        let settings = TimelineSettings {
-            timestamp_offset: -1e12,
-            append_window_start: 1e12,
-            append_window_end: Some(2e12),
-            ..Default::default()
-        };
-        assert!(settings.valid());
-        for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
-            assert!(
-                !TimelineSettings {
-                    timestamp_offset: value,
-                    ..settings.clone()
-                }
-                .valid()
-            );
-            assert!(
-                !TimelineSettings {
-                    append_window_start: value,
-                    ..settings.clone()
-                }
-                .valid()
-            );
-            assert!(
-                !TimelineSettings {
-                    append_window_end: Some(value),
-                    ..settings.clone()
-                }
-                .valid()
-            );
-        }
-        assert!(
-            !TimelineSettings {
-                append_window_end: Some(settings.append_window_start),
-                ..settings
-            }
-            .valid()
-        );
-    }
-
-    #[test]
-    fn batches_are_bounded_and_capacity_failure_is_explicit() {
-        let mut t = Track::new(1, 1);
-        t.chunks = vec![vec![0; READ_BYTES / 2]; 4];
-        assert_eq!(read_bounds(&t, 0, None), (0, 2, false));
-        t.chunks = vec![vec![0]; READ_CHUNKS + 10];
-        assert_eq!(read_bounds(&t, 0, None), (0, READ_CHUNKS, false));
-        let mut state = state();
-        let t = state.tracks.get_mut(ID).unwrap();
-        t.phase = "content".into();
-        t.verified = true;
-        t.verified_source = Some(7);
-        t.verified_buffer = Some(3);
-        t.bytes = MAX_BYTES;
-        apply(&mut state, content(1));
-        assert!(
-            state.tracks[ID]
-                .error
-                .as_deref()
-                .unwrap()
-                .starts_with("CAPTURE_CAPACITY")
-        );
-        assert!(state.tracks[ID].chunks.is_empty());
+        let mut t = Track::new(1, 2, 3);
+        t.last_msg = t.opened + Duration::from_secs(61);
+        assert!(t.stalled(t.last_msg));
+        t.phase = "interaction".into();
+        assert!(!t.stalled(t.last_msg));
     }
     #[test]
-    fn late_close_cannot_own_replacement_and_errors_are_not_video_deletion() {
-        let mut state = state();
-        state.session.as_mut().unwrap().generation = 11;
-        assert!(!state.owns(ID, 10));
-        assert!(state.owns(ID, 11));
-        let mut state = self::state();
-        apply(
-            &mut state,
-            message(
-                1,
-                json!({"kind":"event","type":"error","code":"CAPTURE_STALLED","reason":"El reproductor dejó de avanzar"}),
-            ),
+    fn eof_audio_end_is_independent_of_video_duration_and_cannot_shrink() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 9.9);
+        send(
+            &mut s,
+            json!({"kind":"event","type":"ended","state":"content","source":7,"s":3,"eof":true,"duration":10.0,"end":9.9}),
         );
-        assert_eq!(
-            state.tracks[ID].error.as_deref(),
-            Some("CAPTURE_STALLED: El reproductor dejó de avanzar")
-        );
-        assert!(!crate::player::is_gone(
-            state.tracks[ID].error.as_ref().unwrap()
-        ));
+        let t = s.tracks.get_mut(ID).unwrap();
+        assert!(t.complete);
+        assert_eq!(t.duration, Some(10.0));
+        assert_eq!(t.eof_end, Some(9.9));
+        t.begin_epoch(10, 21, 8.0, true);
+        deliver(&mut s, 1, 8.0, 9.0);
+        ended(&mut s, 9.0);
+        assert_eq!(s.tracks[ID].eof_end, Some(9.9));
+        assert!(s.tracks[ID].soft_error.is_some());
     }
 }

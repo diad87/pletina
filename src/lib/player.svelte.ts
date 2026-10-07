@@ -1,7 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
-import { setAudioSource, stopCapture } from './extractor/capture'
+import { setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
 import { toast } from './toast.svelte'
 import type { Playable, Track, TrackQuery } from './types'
@@ -92,10 +92,13 @@ class Player {
   captureInteraction = $state<string | null>(null)
 
   #audio = new Audio()
+  #prepared: { id: number; playable: Playable; audio: HTMLAudioElement; stop: (cancelBackend?: boolean) => void } | null = null
+  #prefetchVersion = 0
+  #prefetchId: number | null = null
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
-  #inFlight = new Map<number, { promise: Promise<Playable>; foreground: boolean; token: number }>()
+  #inFlight = new Map<number, { promise: Promise<Playable>; foreground: boolean; token: number; prefetchVersion: number }>()
   /** Una cancelación pendiente siempre termina antes de enviar la siguiente resolución. */
   #cancelPending: Promise<void> = Promise.resolve()
   /** Un vídeo elegido aún no se guarda si YouTube exige interacción antes de capturarlo. */
@@ -107,31 +110,38 @@ class Player {
   #nextKey = 1
 
   constructor() {
-    const a = this.#audio
+    this.#bindAudio(this.#audio)
+    this.#setupMediaSession()
+  }
+
+  #bindAudio(a: HTMLAudioElement) {
+    // Los eventos tardíos del audio anterior o de la precarga nunca cambian el estado actual.
+    const on = (name: string, listener: (event: Event) => void) =>
+      a.addEventListener(name, event => { if (a === this.#audio) listener(event) })
     a.preload = 'auto'
     a.volume = this.volume
-    a.addEventListener('timeupdate', () => {
+    on('timeupdate', () => {
       // Mientras carga la siguiente, el audio aún tiene el tiempo de la anterior: se ignora.
       if (this.status === 'loading') return
       this.time = a.currentTime
       this.#maybeRecord()
     })
-    a.addEventListener('durationchange', () => {
+    on('durationchange', () => {
       if (Number.isFinite(a.duration)) this.duration = a.duration
       this.#syncPosition()
     })
-    a.addEventListener('playing', () => {
+    on('playing', () => {
       this.status = 'playing'
       this.#failures = 0
       this.#syncPosition()
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
     })
-    a.addEventListener('pause', () => {
+    on('pause', () => {
       if (this.status === 'playing') this.status = 'paused'
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
     })
-    a.addEventListener('seeked', () => this.#syncPosition())
-    a.addEventListener('ended', () => {
+    on('seeked', () => this.#syncPosition())
+    on('ended', () => {
       if (this.repeat === 'one') {
         this.#recorded = false
         a.currentTime = 0
@@ -140,8 +150,8 @@ class Player {
         this.next()
       }
     })
-    a.addEventListener('error', () => this.#onAudioError())
-    a.addEventListener('captureerror', (event) => {
+    on('error', () => this.#onAudioError())
+    on('captureerror', (event) => {
       const item = this.current
       if (!item) return
       // La captura comunica fallos de identidad/formato incluso antes de crear un SourceBuffer.
@@ -151,12 +161,22 @@ class Player {
       a.pause()
       this.#fail(item, (event as CustomEvent<string>).detail)
     })
-    this.#setupMediaSession()
+    on('capturewarning', event => {
+      const message = (event as CustomEvent<string>).detail
+      // Una recuperación parcial conserva la canción y sus buffers; no incrementa el ticket.
+      if (message.includes('CAPTURE_REQUIRES_INTERACTION'))
+        this.captureInteraction = message.split('CAPTURE_REQUIRES_INTERACTION:').pop()?.trim() || message
+      toast.show(`La captura se está recuperando: ${message}`)
+    })
   }
 
   get current(): QueueItem | null {
     return this.manual ?? this.queue[this.order[this.pos]] ?? null
   }
+
+  /** Diagnóstico del banco: cambia al promocionar el audio preparado. */
+  get playbackAudio(): HTMLAudioElement { return this.#audio }
+  get preparedAudio(): HTMLAudioElement | null { return this.#prepared?.audio ?? null }
 
   get hasNext() {
     return (
@@ -194,6 +214,7 @@ class Player {
     this.userQueue = [...this.userQueue, ...this.#wrap(items)]
     toast.show(items.length === 1 ? `«${items[0].track.title}» añadida a la cola` : `${items.length} canciones añadidas a la cola`)
     this.#startIfIdle()
+    if (this.status === 'playing') this.#prefetchNext()
   }
 
   /** Al principio de tu cola: suenan justo después de la actual. */
@@ -202,6 +223,7 @@ class Player {
     this.userQueue = [...this.#wrap(items), ...this.userQueue]
     toast.show(items.length === 1 ? `«${items[0].track.title}» sonará a continuación` : `${items.length} canciones sonarán a continuación`)
     this.#startIfIdle()
+    if (this.status === 'playing') this.#prefetchNext()
   }
 
   /** Inserta en tu cola en una posición concreta (al arrastrar al panel de la cola). */
@@ -210,10 +232,12 @@ class Player {
     list.splice(Math.max(0, Math.min(at, list.length)), 0, ...this.#wrap(items))
     this.userQueue = list
     this.#startIfIdle()
+    if (this.status === 'playing') this.#prefetchNext()
   }
 
   removeFromQueue(key: number) {
     this.userQueue = this.userQueue.filter((e) => e.key !== key)
+    this.#prefetchNext()
   }
 
   moveInQueue(key: number, to: number) {
@@ -223,10 +247,12 @@ class Player {
     const [moved] = list.splice(from, 1)
     list.splice(Math.max(0, Math.min(to, list.length)), 0, moved)
     this.userQueue = list
+    this.#prefetchNext()
   }
 
   clearQueue() {
     this.userQueue = []
+    this.#prefetchNext()
   }
 
   /** Reproduce ya una canción de tu cola; las que iban delante se quitan (como en Spotify). */
@@ -257,6 +283,7 @@ class Player {
     ++this.#token
     this.#pendingSource = null
     this.#inFlight.clear()
+    this.#discardPrefetch(true)
     stopCapture()
     this.#audio.pause()
     this.#audio.removeAttribute('src')
@@ -320,8 +347,10 @@ class Player {
   }
 
   seek(seconds: number) {
-    this.#audio.currentTime = seconds
-    this.time = seconds
+    const audio = this.#audio, token = this.#token
+    void seekCapture(audio, seconds).then(ready => {
+      if (ready && token === this.#token && audio === this.#audio) this.time = seconds
+    })
   }
 
   setVolume(v: number) {
@@ -351,6 +380,7 @@ class Player {
   cycleRepeat() {
     this.repeat = this.repeat === 'off' ? 'all' : this.repeat === 'all' ? 'one' : 'off'
     save('musify:repeat', this.repeat)
+    this.#prefetchNext()
   }
 
   /**
@@ -384,6 +414,7 @@ class Player {
       }
     }
 
+    this.#discardPrefetch(true)
     const token = ++this.#token
     this.#pendingSource = null
     this.captureInteraction = null
@@ -399,6 +430,7 @@ class Player {
       this.#retried = false
       setAudioSource(this.#audio, audioSrc(playable))
       await this.#audio.play()
+      this.#prefetchNext()
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
     } catch (e) {
@@ -445,6 +477,9 @@ class Player {
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0) {
+    const prepared = !refresh && this.#prepared?.id === item.track.id ? this.#prepared : null
+    if (!prepared) this.#discardPrefetch(this.#prefetchId !== item.track.id)
+    else { ++this.#prefetchVersion; this.#prefetchId = null; this.#prepared = null }
     const token = ++this.#token
     this.#pendingSource = null
     this.captureInteraction = null
@@ -460,35 +495,84 @@ class Player {
 
     try {
       const playable = await this.#resolve(item, refresh)
-      if (token !== this.#token) return
+      if (token !== this.#token) { prepared?.stop(false); return }
       this.#retried = refresh
-      setAudioSource(this.#audio, audioSrc(playable))
-      if (startAt) this.#audio.currentTime = startAt
+      if (prepared && audioSrc(prepared.playable) === audioSrc(playable)) {
+        // El resolve foreground promociona la sesión nativa; el Audio y su MSE ya están listos.
+        this.#audio = prepared.audio
+        this.#audio.volume = this.volume
+        this.#audio.muted = this.muted
+        adoptAudioSource(prepared.stop)
+        if (Number.isFinite(this.#audio.duration)) this.duration = this.#audio.duration
+      } else {
+        prepared?.stop(false)
+        setAudioSource(this.#audio, audioSrc(playable))
+      }
+      if (startAt) await seekCapture(this.#audio, startAt)
       await this.#audio.play()
       this.#prefetchNext()
     } catch (e) {
+      prepared?.stop(false)
       if (token !== this.#token) return
       if (e instanceof DOMException && e.name === 'AbortError') return
       this.#fail(item, String(e))
     }
   }
 
-  /** Mientras suena una canción, se prepara la siguiente para que no haya espera. */
+  #discardPrefetch(cancelNative = false) {
+    const hadPrefetch = this.#prefetchId !== null || this.#prepared !== null
+    ++this.#prefetchVersion
+    this.#prefetchId = null
+    const previous = this.#prepared
+    this.#prepared = null
+    if (cancelNative && hadPrefetch) {
+      // Serializar con resolve evita que una cancelación tardía retire la siguiente sesión.
+      this.#cancelPending = this.#cancelPending.then(() => api.cancelPrefetch()).catch(() => {})
+    }
+    if (previous) {
+      // El supervisor sustituye la sesión next; no cancelar una generación ya promocionada.
+      previous.stop(false)
+      previous.audio.pause()
+      previous.audio.removeAttribute('src')
+      previous.audio.load()
+    }
+  }
+
+  /** Prepara el decoder/MSE de la siguiente desde que empieza a sonar la actual. */
   #prefetchNext() {
     const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
     const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
-    if (following && following !== this.current) this.#resolve(following, false, false).catch(() => {})
+    if (!following || following === this.current || this.repeat === 'one') { this.#discardPrefetch(true); return }
+    if (this.#prefetchId === following.track.id) return
+    this.#discardPrefetch()
+    this.#prefetchId = following.track.id
+    const version = this.#prefetchVersion
+    this.#resolve(following, false, false).then(playable => {
+      if (version !== this.#prefetchVersion) return
+      // La vía legacy mantiene su política anterior: resolver URL, sin una segunda captura MSE.
+      if (audioSrc(playable).startsWith('musify-capture-legacy:')) return
+      const audio = new Audio()
+      this.#bindAudio(audio)
+      audio.muted = true
+      const stop = prepareAudioSource(audio, audioSrc(playable))
+      this.#prepared = { id: following.track.id, playable, audio, stop }
+      audio.addEventListener('captureerror', () => {
+        if (this.#prepared?.audio === audio) this.#discardPrefetch(true)
+      }, { once: true })
+    }).catch(() => { if (version === this.#prefetchVersion) this.#prefetchId = null })
   }
 
   #resolve(item: QueueItem, refresh: boolean, foreground = true): Promise<Playable> {
     const id = item.track.id
     let pending = this.#inFlight.get(id)
-    if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground)) {
+    if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground) ||
+        (!foreground && pending.prefetchVersion !== this.#prefetchVersion)) {
       // El clic debe llegar al backend para promocionar una precarga; allí se comparte la captura.
       const entry = {
         promise: this.#cancelPending.then(() => api.resolve(toQuery(item), refresh, foreground)),
         foreground,
         token: this.#token,
+        prefetchVersion: this.#prefetchVersion,
       }
       pending = entry
       this.#inFlight.set(id, entry)

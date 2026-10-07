@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 
 const coreCode = readFileSync(new URL('../src-tauri/src/capture-core.js', import.meta.url), 'utf8')
 const mp4Code = readFileSync(new URL('../src-tauri/src/capture-mp4.js', import.meta.url), 'utf8')
@@ -143,6 +144,262 @@ test('repeated initialization, muxed tracks, lacing and truncated data fail expl
 test('unknown-size clusters are bounded by EBML level-one elements', () => {
   const { parseWebMOpus } = load()
   assert.equal(parseWebMOpus(fixture({ unknownCluster: true }).bytes).end, 0.06)
+})
+
+test('WebM progressive inventory waits for complete blocks at every append byte boundary', () => {
+  const { inspectWebMPrefix } = load()
+  for (const unknownCluster of [false, true]) {
+    const f = fixture({ unknownCluster }), complete = inspectWebMPrefix(f.bytes, { final: true })
+    for (let length = 0; length <= f.bytes.length; length++) {
+      const current = inspectWebMPrefix(f.bytes.subarray(0, length))
+      assert.equal(current.samples.length, complete.samples.filter(s => s.offset + s.size <= length).length, `prefix ${length}, unknown=${unknownCluster}`)
+      assert(current.samples.every(s => s.offset + s.size <= length))
+    }
+    assert.throws(() => inspectWebMPrefix(f.bytes.subarray(0, f.bytes.length - 1), { final: true }), codeIs('CAPTURE_UNSUPPORTED_WEBM'))
+  }
+})
+
+test('WebM remux preserves initialization, exact coded payload and time without including future frames', () => {
+  const { inspectWebMPrefix, remuxWebM, parseWebMOpus } = load(), f = fixture()
+  const inventory = inspectWebMPrefix(f.bytes, { final: true })
+  const first = remuxWebM(inventory, 0, 1), tail = remuxWebM(inventory, 1, 2)
+  assert.equal(parseWebMOpus(concat(first.init, first.media)).codedEnd, 0.02)
+  const result = parseWebMOpus(concat(first.init, first.media, tail.media))
+  assert.deepEqual(result.frames, parseWebMOpus(f.bytes).frames)
+  assert.deepEqual(result.codedFrames, parseWebMOpus(f.bytes).codedFrames)
+  assert.deepEqual(first.init, inventory.init)
+  assert.throws(() => remuxWebM(inventory, 0, 4), codeIs('CAPTURE_UNSUPPORTED_WEBM'))
+})
+
+function progressiveSetup() {
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true })
+  const source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  tracker.append(buffer, fixture().bytes)
+  const snapshot = position => ({ source, position, duration: 0.06, seeking: false, paused: false, ended: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: 0.06 }], sourceEnded: false })
+  const observe = (position, now = position * 1000, identity = content) => tracker.observe(source, identity, { position, now, duration: 0.06 })
+  return { tracker, source, buffer, snapshot, observe }
+}
+
+test('progressive units contain only complete samples inside confirmed presentation intervals', () => {
+  const { tracker, source, snapshot, observe } = progressiveSetup(), { parseWebMOpus } = load()
+  assert.equal(tracker.pull(source, snapshot(0.06)).length, 0)
+  observe(0)
+  observe(0.0199)
+  assert.equal(tracker.pull(source, snapshot(0.0199)).length, 0, 'even a sub-quantum future sample stays quarantined')
+  observe(0.02)
+  const [first] = tracker.pull(source, snapshot(0.02))
+  assert(first)
+  assert.equal(first.rangeStart, 0)
+  assert.equal(first.rangeEnd, 0.02)
+  assert.equal(first.frames, 1)
+  assert.equal(parseWebMOpus(first.data).codedEnd, 0.02)
+  assert.equal(tracker.pull(source, snapshot(0.02)).length, 0, 'each unit is emitted once')
+  observe(0.06)
+  const [tail] = tracker.pull(source, snapshot(0.06))
+  assert.equal(tail.frames, 2)
+  assert.equal(tail.initKey, first.initKey)
+  assert.equal(tail.rangeStart, first.rangeEnd)
+  assert.throws(() => tracker.finish(source, snapshot(0.06)), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.equal(tracker.finish(source, { ...snapshot(0.06), sourceEnded: true }).complete, true)
+})
+
+test('seek epochs retain separate coverage islands and EOF never labels a hole complete', () => {
+  const { tracker, source, snapshot, observe } = progressiveSetup()
+  observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))
+  tracker.beginEpoch(2, 0.04)
+  assert.equal(tracker.onTimeAssignment(source, null, 0.04), true)
+  observe(0.04, 100); observe(0.06, 120)
+  const [tail] = tracker.pull(source, snapshot(0.06))
+  assert.equal(tail.epoch, 2)
+  assert.equal(tail.rangeStart, 0.04)
+  const ended = tracker.finish(source, { ...snapshot(0.06), sourceEnded: true })
+  assert.equal(ended.eof, true)
+  assert.equal(ended.complete, false)
+  assert.equal(ended.ranges.length, 2)
+  assert.equal(ended.ranges[0].end, 0.02)
+  assert.equal(ended.ranges[1].start, 0.04)
+  assert.equal(tracker.onTimeAssignment(source, null, 0.04), false, 'seek authorization is not reusable')
+  assert.equal(tracker.onSeekMutation(source.buffers[0], 'abort'), false)
+})
+
+test('coverage never stretches a partially observed packet across a 0.5ms epoch gap', () => {
+  const { tracker, source, snapshot, observe } = progressiveSetup()
+  observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))
+  tracker.beginEpoch(2, 0.0205)
+  observe(0.0205, 100); observe(0.06, 140)
+  const [tail] = tracker.pull(source, snapshot(0.06))
+  assert.equal(tail.rangeStart, 0.04, 'the packet beginning at0.02 was not fully observed in either epoch')
+  assert.equal(tail.frames, 1)
+  assert.equal(tracker.coverage.length, 2)
+  assert.equal(tracker.finish(source, { ...snapshot(0.06), sourceEnded: true }).complete, false)
+})
+
+test('a missing 20ms packet and a quantized 1ms coded gap remain distinct coverage islands', () => {
+  for (const times of [[0, 40], [0, 21, 41]]) {
+    const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource()
+    const f = fixture({ times }), end = f.duration
+    tracker.append(tracker.createBuffer(source, 'audio/webm; codecs="opus"'), f.bytes)
+    tracker.beginEpoch(2, 0) // Byte inventory may contain islands; coverage may not hide them.
+    tracker.observe(source, content, { position: 0, now: 0, duration: end })
+    tracker.observe(source, content, { position: end, now: end * 1000, duration: end })
+    const audioRanges = times[1] === 40 ? [{ start: 0, end: 0.02 }, { start: 0.04, end }] : [{ start: 0, end }]
+    const snapshot = { source, position: end, duration: end, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges, sourceEnded: true }
+    const units = tracker.pull(source, snapshot)
+    assert.equal(units.length, 2)
+    assert.equal(tracker.coverage.length, 2)
+    assert.equal(tracker.finish(source, snapshot).complete, false)
+  }
+})
+
+test('even a tiny explicitly unknown interval remains sticky after content returns', () => {
+  const { tracker, source, snapshot, observe } = progressiveSetup()
+  observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))
+  observe(0.0205, 21, { state: 'unknown', sourceBound: true, signals: [] })
+  observe(0.021, 22); observe(0.06, 61)
+  assert.throws(() => tracker.pull(source, snapshot(0.06)), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
+  assert.equal(tracker.coverage.length, 1)
+  assert.equal(tracker.coverage[0].end, 0.02)
+})
+
+test('post-seek EOF may retain only unchanged old native ranges and never credits them as presented', () => {
+  for (const scenario of ['unchanged', 'expanded', 'new-range', 'different-buffer', 'different-settings']) {
+    const { tracker, source, buffer, snapshot, observe } = progressiveSetup()
+    const native = { buffered: { length: 1, start: () => 0, end: () => 0.06 } }
+    buffer.native = native
+    observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))
+    tracker.beginEpoch(2, 0.08)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.08), true)
+    tracker.append(buffer, fixture({ times: [80, 100, 120] }).bytes)
+    const ranges = [{ start: 0, end: scenario === 'expanded' ? 0.0605 : 0.06 }, ...(scenario === 'new-range' ? [{ start: 0.07, end: 0.075 }] : []), { start: 0.08, end: 0.14 }]
+    if (scenario === 'different-buffer') buffer.native = { ...native }
+    if (scenario === 'different-settings') buffer.timelineSettings = { ...buffer.timelineSettings, appendWindowEnd: 1 }
+    tracker.observe(source, content, { position: 0.08, now: 100, duration: 0.14 })
+    tracker.observe(source, content, { position: 0.14, now: 160, duration: 0.14 })
+    const terminal = { ...snapshot(0.14), duration: 0.14, audioRanges: ranges, sourceEnded: true }
+    tracker.pull(source, terminal)
+    if (scenario === 'unchanged') {
+      const proof = tracker.finish(source, terminal)
+      assert.equal(proof.eof, true)
+      assert.equal(proof.complete, false)
+      assert.equal(proof.ranges[0].end, 0.02, 'prefetched0.02..0.06 stays uncredited')
+      assert.equal(proof.ranges[1].start, 0.08)
+    } else assert.throws(() => tracker.finish(source, terminal), codeIs('CAPTURE_PARTIAL_PRESENTATION'), scenario)
+  }
+})
+
+test('EOF waits for the final sample even when only0.8ms of coded time remains', () => {
+  const { tracker, source, snapshot, observe } = progressiveSetup()
+  observe(0); observe(0.0592)
+  const before = tracker.pull(source, snapshot(0.0592))
+  assert.equal(before.at(-1).rangeEnd, 0.04)
+  assert.throws(() => tracker.finish(source, { ...snapshot(0.0592), sourceEnded: true }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.throws(() => tracker.finish(source, { ...snapshot(0.0592), duration: 0.0592, ended: true, sourceEnded: true }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  observe(0.06)
+  assert.equal(tracker.pull(source, snapshot(0.06)).at(-1).rangeEnd, 0.06)
+  assert.equal(tracker.finish(source, { ...snapshot(0.06), sourceEnded: true }).complete, true)
+})
+
+test('progressive identity ambiguity, buffer mismatch and accelerated presentation cannot release audio', () => {
+  for (const identity of [ad, { state: 'unknown', sourceBound: true, signals: [] }]) {
+    const { tracker, source, snapshot, observe } = progressiveSetup()
+    observe(0); observe(0.02, 20, identity)
+    assert.throws(() => tracker.pull(source, snapshot(0.02)), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
+    assert.equal(tracker.coverage.length, 0)
+  }
+  const { tracker, source, snapshot, observe } = progressiveSetup()
+  observe(0); observe(0.02)
+  assert.equal(tracker.pull(source, { ...snapshot(0.02), audioRanges: [{ start: 0.03, end: 0.06 }] }).length, 0)
+  tracker.observe(source, content, { position: 0.04, now: 30, duration: 0.06, playbackRate: 2 })
+  assert.throws(() => tracker.pull(source, snapshot(0.04)), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+})
+
+test('a late site ad marker is a measured counterexample to unconditional progressive zero-ad attribution', t => {
+  const { ProgressiveTracker, SessionTracker } = load()
+  const delayedMarker = 1.12, trueAdStart = 1, duration = 1.3
+  const bytes = fixture({ times: Array.from({ length: 65 }, (_, i) => i * 20) }).bytes
+  const tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  tracker.append(buffer, bytes)
+  const safe = new ProgressiveTracker({ epoch: 1 }), safeSource = safe.createSource(), safeBuffer = safe.createBuffer(safeSource, 'audio/webm; codecs="opus"')
+  safe.append(safeBuffer, bytes)
+  const whole = new SessionTracker(), wholeSource = whole.createSource(), wholeBuffer = whole.createBuffer(wholeSource, 'audio/webm; codecs="opus"')
+  whole.append(wholeBuffer, bytes)
+  const published = [], safePublished = []
+  for (let ms = 0; ms <= duration * 1000; ms += 20) {
+    const position = ms / 1000, identity = position < delayedMarker ? content : ad
+    const observation = { position, now: ms, duration }
+    tracker.observe(source, identity, observation)
+    safe.observe(safeSource, identity, observation)
+    whole.observe(wholeSource, identity, observation)
+    if (!source.error) published.push(...tracker.pull(source, { source, ...observation, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: duration }] }))
+    if (!safeSource.error) safePublished.push(...safe.pull(safeSource, { source: safeSource, ...observation, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: duration }] }))
+  }
+  const contaminated = published.reduce((seconds, unit) => seconds + Math.max(0, unit.rangeEnd - Math.max(unit.rangeStart, trueAdStart)), 0)
+  assert(contaminated > 0, 'the fixture must expose the missing semantic bound, not hide it')
+  assert.equal(safePublished.length, 0, 'normal mode must not contaminate the native ledger before its complete-source verdict')
+  assert.throws(() => whole.seal(wholeSource), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
+  t.diagnostic(`UNSAFE experimental progressive attribution: actual ad starts ${trueAdStart}s, site marker arrives ${delayedMarker}s, ${Math.round(contaminated * 1000)}ms of referenced advertisement already published at 1x. Complete-source gate publishes zero.`)
+})
+
+test('normal API3 quarantines until full clean history and native EOF pass before publication', () => {
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1 }), source = tracker.createSource()
+  tracker.append(tracker.createBuffer(source, 'audio/webm; codecs="opus"'), fixture().bytes)
+  const snapshot = { source, position: 0.06, duration: 0.06, playbackRate: 1, seeking: false, readyState: 4, updating: false, sourceEnded: true, audioRanges: [{ start: 0, end: 0.06 }] }
+  for (const position of [0, 0.02, 0.04, 0.06]) {
+    tracker.observe(source, content, { position, duration: 0.06, now: position * 1000 })
+    assert.equal(tracker.pull(source, { ...snapshot, position }).length, 0)
+  }
+  assert.throws(() => tracker.finish(source, { ...snapshot, sourceEnded: false }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.equal(tracker.pull(source, snapshot).length, 0)
+  tracker.finish(source, snapshot)
+  const units = tracker.pull(source, snapshot)
+  assert.equal(units.length, 1)
+  assert.equal(units[0].rangeStart, 0)
+  assert.equal(units[0].rangeEnd, 0.06)
+  assert.equal(tracker.finish(source, snapshot).complete, true)
+})
+
+test('seek parser reset accepts either fresh split initialization or media with the preserved initialization', () => {
+  for (const freshInit of [true, false]) {
+    const { tracker, source, buffer } = progressiveSetup()
+    tracker.inventory(source)
+    tracker.beginEpoch(2, 0.04)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.04), true)
+    assert.equal(tracker.onSeekMutation(buffer, 'abort'), true)
+    const f = fixture({ times: [40, 60, 80] }), bytes = freshInit ? f.bytes : f.cluster
+    for (const byte of bytes) tracker.append(buffer, Uint8Array.of(byte))
+    const parsed = tracker.inventory(source, true)
+    assert.equal(parsed.samples.length, 3)
+    assert.equal(parsed.codedStart, 0.04)
+    assert.equal(parsed.codedEnd, 0.1)
+    assert.equal(source.error, null)
+  }
+})
+
+test('real AAC/Opus remux retains the identical decoded PCM across many sample boundaries', t => {
+  const available = spawnSync('ffmpeg', ['-version'], { windowsHide: true, encoding: 'utf8' })
+  if (available.error?.code === 'ENOENT') return t.skip('FFmpeg is not installed; native MSE probes remain a separate required check')
+  const ffmpeg = args => {
+    const result = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', ...args], { windowsHide: true, maxBuffer: 16 * 1024 * 1024 })
+    assert.equal(result.status, 0, result.stderr?.toString())
+    return new Uint8Array(result.stdout)
+  }
+  const decode = bytes => {
+    const result = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-map', '0:a', '-f', 'f32le', 'pipe:1'], { input: bytes, windowsHide: true, maxBuffer: 16 * 1024 * 1024 })
+    assert.equal(result.status, 0, result.stderr?.toString())
+    return result.stdout
+  }
+  for (const format of ['webm', 'mp4']) {
+    // AAC duration is an exact multiple of 1024 samples. A fractional final sample
+    // table duration is outside the deliberately restricted AAC parser, not a remux fix.
+    const source = ffmpeg(['-f', 'lavfi', '-i', `sine=frequency=997:sample_rate=48000:duration=${format === 'mp4' ? 2.048 : 2}`, '-ac', '2', '-c:a', format === 'webm' ? 'libopus' : 'aac', '-b:a', '96k', ...(format === 'mp4' ? ['-movflags', '+frag_keyframe+empty_moov+default_base_moof', '-frag_duration', '500000'] : []), '-f', format, 'pipe:1'])
+    const core = load(), parser = format === 'webm' ? { inspectPrefix: core.inspectWebMPrefix, remux: core.remuxWebM } : core.context.__musifyCaptureMp4
+    const inventory = parser.inspectPrefix(source, { final: true }), media = []
+    for (let first = 0, unit = 1; first < inventory.samples.length; first += 5, unit++) media.push(parser.remux(inventory, first, Math.min(5, inventory.samples.length - first), unit).media)
+    const actual = decode(concat(inventory.init, ...media)), expected = decode(source)
+    assert(expected.length > 48000 * 2 * 4)
+    assert.deepEqual(actual, expected, `${format}: decoded samples must be bit-for-bit identical, including beginning and tail`)
+    t.diagnostic(`${format}: ${inventory.samples.length} coded samples, ${media.length} progressive units, ${actual.length / (2 * 4)} decoded stereo frames identical`)
+  }
 })
 
 test('MSE Segment size is an initialization header; absent file tail is allowed but truncated children are not', () => {
@@ -296,20 +553,75 @@ function browserMocks() {
     removeAttribute(name) { if (name === 'src') { this._src = this.currentSrc = ''; this._currentTime = 0 } }
   }
   class HTMLMediaElement extends Element {
-    constructor() { super(); Object.assign(this, { tagName: 'VIDEO', _currentTime: 0, duration: 0.06, readyState: 4, paused: false, seeking: false, ended: false, playbackRate: 1, currentSrc: '', _src: '', _srcObject: null }) }
+    constructor() { super(); Object.assign(this, { tagName: 'VIDEO', _currentTime: 0, duration: 0.06, readyState: 4, paused: false, seeking: false, ended: false, _playbackRate: 1, _defaultPlaybackRate: 1, nativeRateWrites: [], currentSrc: '', _src: '', _srcObject: null }) }
+    get playbackRate() { if (!(this instanceof HTMLMediaElement)) throw new TypeError('Illegal invocation'); return this._playbackRate }
+    set playbackRate(value) { if (this.rateThrows) throw new Error('NotSupportedError'); this.nativeRateWrites.push(['playbackRate', value]); this._playbackRate = value }
+    get defaultPlaybackRate() { if (!(this instanceof HTMLMediaElement)) throw new TypeError('Illegal invocation'); return this._defaultPlaybackRate }
+    set defaultPlaybackRate(value) { if (this.rateThrows) throw new Error('NotSupportedError'); this.nativeRateWrites.push(['defaultPlaybackRate', value]); this._defaultPlaybackRate = value }
     get src() { return this._src }
     set src(value) { this._src = this.currentSrc = value; this._currentTime = 0 }
     get srcObject() { return this._srcObject }
     set srcObject(value) { this._srcObject = value; this._currentTime = 0 }
     get currentTime() { return this._currentTime }
     set currentTime(value) { this._currentTime = value }
-    load() { this._currentTime = 0 }
+    load() { this._currentTime = 0; this._playbackRate = this._defaultPlaybackRate }
     pause() { this.paused = true }
     play() { this.paused = false; return Promise.resolve() }
   }
   let next = 0
   return { MediaSource, SourceBuffer, Element, HTMLMediaElement, URL: { createObjectURL: () => `blob:test-${++next}`, revokeObjectURL() {} } }
 }
+
+test('dedicated rate guard clamps both setters before native writes and leaves native getters intact', () => {
+  const scope = browserMocks(), { install } = load(), attempts = []
+  const original = Object.getOwnPropertyDescriptor(scope.HTMLMediaElement.prototype, 'playbackRate')
+  const capture = install({ scope, forcePlaybackRateOne: true, onRateAttempt: (element, attempt) => attempts.push({ element, ...attempt }) })
+  const media = new scope.HTMLMediaElement()
+  for (const rate of [2, 4, 16, '2']) {
+    media.playbackRate = rate; media.defaultPlaybackRate = rate
+    assert.equal(media.playbackRate, 1)
+    assert.equal(media.defaultPlaybackRate, 1)
+  }
+  media.load()
+  assert.equal(media.playbackRate, 1, 'load must not restore a stored accelerated default')
+  assert.ok(media.nativeRateWrites.every(([, value]) => value === 1), 'no interval, however short, applies the requested accelerated rate')
+  const guarded = Object.getOwnPropertyDescriptor(scope.HTMLMediaElement.prototype, 'playbackRate')
+  assert.equal(guarded.get, original.get)
+  assert.equal(guarded.enumerable, original.enumerable)
+  assert.equal(guarded.configurable, original.configurable)
+  assert.equal(capture.rateStatistics.attempts, 8)
+  assert.equal(capture.rateStatistics.corrections, 0)
+  assert.ok(attempts.every(a => a.element === media && a.previous === 1 && a.effective === 1 && a.phase === 'setter'))
+  assert.throws(() => guarded.set.call({}, 2), /Illegal invocation/)
+  for (const invalid of [NaN, Infinity, Symbol('rate'), 2n]) assert.throws(() => { media.playbackRate = invalid }, { name: 'TypeError' })
+  media.rateThrows = true
+  assert.throws(() => { media.playbackRate = 2 }, /NotSupportedError/)
+  assert.equal(attempts.length, 8, 'a failed native write never reports a successful clamp')
+})
+
+test('rate guard discloses and synchronously corrects a rate present before installation', () => {
+  const scope = browserMocks(), { install } = load(), media = new scope.HTMLMediaElement(), attempts = []
+  media.playbackRate = 2; media.defaultPlaybackRate = 4
+  scope.document = { querySelectorAll: () => [media] }
+  install({ scope, forcePlaybackRateOne: true, onRateAttempt: (_, attempt) => attempts.push(attempt) })
+  assert.equal(media.playbackRate, 1)
+  assert.equal(media.defaultPlaybackRate, 1)
+  assert.deepEqual(attempts.map(a => [a.property, a.previous, a.effective, a.phase]), [['playbackRate', 2, 1, 'installation'], ['defaultPlaybackRate', 4, 1, 'installation']])
+  assert.equal(attempts.at(-1).corrections, 2)
+  assert.equal(attempts.at(-1).attempts, 0)
+})
+
+test('rate guard is opt-in and refuses a runtime that cannot enforce both native setters', () => {
+  const scope = browserMocks(), { install } = load()
+  install({ scope })
+  const media = new scope.HTMLMediaElement()
+  media.playbackRate = 2; media.defaultPlaybackRate = 4
+  assert.equal(media.playbackRate, 2)
+  media.load(); assert.equal(media.playbackRate, 4)
+  const unsupported = browserMocks()
+  Object.defineProperty(unsupported.HTMLMediaElement.prototype, 'defaultPlaybackRate', { configurable: false })
+  assert.throws(() => install({ scope: unsupported, forcePlaybackRateOne: true }), codeIs('CAPTURE_UNSUPPORTED_RATE_CONTROL'))
+})
 
 test('standard detach hooks snapshot the old source and audio clock before reflected mutation or load', () => {
   for (const operation of ['src', 'srcObject', 'setAttribute', 'removeAttribute', 'load']) {
@@ -562,7 +874,7 @@ test('orchestrator emits versioned generation/sequence and explicit unsupported 
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const document = { querySelectorAll: () => [] }
   const { context } = load({ location, document, performance: { now: () => 0 }, clearInterval() {} })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 7, chrome: { webview: { postMessage: (message) => messages.push(JSON.parse(message.slice('musify:'.length))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 7, chrome: { webview: { postMessage: (message) => messages.push(JSON.parse(message.slice('musify:'.length))) } } }
   vm.runInContext(orchestratorCode, context)
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(messages.length, 1)
@@ -584,7 +896,7 @@ test('authentication requests interaction while preserving the official page and
     setInterval(fn) { callback = fn; return 1 }, clearInterval() {},
     MutationObserver: class { observe() {} },
   })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 7, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 7, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   callback()
   await new Promise((resolve) => setImmediate(resolve))
@@ -594,6 +906,84 @@ test('authentication requests interaction while preserving the official page and
   assert.equal(messages.filter((m) => m.kind === 'seg').length, 0)
   assert.deepEqual(navigations, [])
   assert.ok(messages[1].sequence > messages[0].sequence)
+})
+
+test('capture clamps stored ad rates and reports identity/source transitions immediately before a heartbeat', async () => {
+  const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+  let clock = 0, adShowing = true
+  media.playbackRate = 2; media.defaultPlaybackRate = 2
+  const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => adShowing }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+  const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+  const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
+  const { context } = load({ ...scope, document, location, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 31, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+  vm.runInContext(orchestratorCode, context)
+  assert.equal(media.playbackRate, 1)
+  assert.equal(media.defaultPlaybackRate, 1)
+  media.nativeRateWrites = []
+  const ad = new scope.MediaSource(); ad.addSourceBuffer('audio/webm; codecs="opus"')
+  media.src = scope.URL.createObjectURL(ad)
+  media.dispatchEvent(new Event('playing'))
+  for (const rate of [2, 4, 16]) { media.playbackRate = rate; media.defaultPlaybackRate = rate }
+  clock = 50; media._currentTime = 0.05; media.dispatchEvent(new Event('timeupdate'))
+  clock = 60; media._currentTime = 0.06; media.ended = true; media.paused = true
+  media.dispatchEvent(new Event('ended'))
+  const song = new scope.MediaSource(); song.addSourceBuffer('audio/webm; codecs="opus"')
+  media.src = scope.URL.createObjectURL(song); adShowing = false; clock = 75; media.ended = false; media.paused = false
+  media.dispatchEvent(new Event('playing'))
+  media.dispatchEvent(new Event('timeupdate'))
+  await new Promise(resolve => setImmediate(resolve))
+  assert.ok(media.nativeRateWrites.every(([, value]) => value === 1))
+  const diagnostics = messages.filter(m => m.type === 'diagnostic')
+  const guards = diagnostics.filter(m => m.reason?.includes('rate-guard'))
+  assert.equal(guards.length, 8)
+  assert.ok(guards.every(m => m.playbackRate === 1))
+  assert.equal(guards.filter(m => JSON.parse(m.reason).operation === 'installation').length, 2)
+  assert.equal(guards.filter(m => JSON.parse(m.reason).previous === 2).length, 2, 'pre-installation acceleration is disclosed, never erased retrospectively')
+  const transitions = diagnostics.filter(m => m.reason?.includes('identity-transition'))
+  assert.equal(transitions.length, 2)
+  assert.deepEqual(transitions.map(m => [m.state, m.position, m.browserNow]), [['ad', 0, 0], ['content', 0, 75]])
+  const prior = JSON.parse(transitions[1].reason).previous
+  assert.equal(prior.state, 'ad'); assert.equal(prior.position, 0.06); assert.equal(prior.browserNow, 60)
+  assert.notEqual(transitions[0].source, transitions[1].source)
+  const tail = diagnostics.filter(m => /ad-before-detach|ad-native-ended/.test(m.reason ?? ''))
+  assert.equal(tail.length, 2)
+  assert.ok(tail.every(m => m.state === 'ad' && m.source === transitions[0].source && m.position === 0.06 && m.browserNow === 60))
+  assert.ok(diagnostics.filter(m => m.state === 'ad').every(m => m.playbackRate === 1))
+  assert.equal(messages.some(m => m.kind === 'seg'), false)
+  assert.equal(messages.some(m => m.type === 'error'), false)
+})
+
+test('an initially missed two milliseconds are re-presented from zero before any publication', async () => {
+  const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+  let clock = 0
+  const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+  const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+  const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
+  class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
+  const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 30, __musifyProgressiveExperiment: true, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+  vm.runInContext(orchestratorCode, context)
+  const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+  media.src = scope.URL.createObjectURL(source)
+  buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+  buffer.appendBuffer(fixture().bytes)
+  clock = 2; media._currentTime = 0.002
+  media.dispatchEvent(new Event('playing'))
+  assert.equal(media.currentTime, 0)
+  assert.equal(media.paused, true)
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(messages.some(m => m.kind === 'seg'), false)
+  media.dispatchEvent(new Event('seeked'))
+  clock = 24; media._currentTime = 0.02
+  media.dispatchEvent(new Event('timeupdate'))
+  await new Promise(resolve => setImmediate(resolve))
+  const units = messages.filter(m => m.kind === 'seg')
+  assert.equal(units.length, 1)
+  assert.equal(units[0].rangeStart, 0)
+  assert.equal(units[0].rangeEnd, 0.02)
+  assert.equal(units[0].verified, true)
+  assert.equal(messages.some(m => m.type === 'error'), false)
 })
 
 test('window capture sees ended before YouTube document and target handlers change identity and source', async () => {
@@ -614,7 +1004,7 @@ test('window capture sees ended before YouTube document and target handlers chan
     async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() }
   }
   const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 8, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } }, addEventListener(type, fn, capture) { if (type === 'ended') { assert.equal(capture, true); capturedEnded = fn } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 8, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } }, addEventListener(type, fn, capture) { if (type === 'ended') { assert.equal(capture, true); capturedEnded = fn } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }
@@ -631,16 +1021,20 @@ test('window capture sees ended before YouTube document and target handlers chan
   adShowing = true // YouTube's Document capture listener runs after ours on Window.
   media.dispatchEvent(new Event('ended'))
   await new Promise((resolve) => setImmediate(resolve))
+  media.playbackRate = 2; media.defaultPlaybackRate = 2
+  await new Promise((resolve) => setImmediate(resolve))
   const proofIndex = messages.findIndex((m) => m.type === 'diagnostic' && m.verified)
   const segments = messages.filter((m) => m.kind === 'seg')
   assert.ok(proofIndex >= 0 && proofIndex < messages.findIndex((m) => m.kind === 'seg'))
   assert.deepEqual(messages[proofIndex].timelineSettings, { timestampOffset: 0, appendWindowStart: 0, appendWindowEnd: null, mode: 'segments' })
-  assert.equal(segments.length, 2)
+  assert.equal(segments.length, 1, 'a remuxed unit includes init plus only its selected samples')
   for (const segment of segments) {
     assert.equal(segment.source, messages[proofIndex].source)
     assert.equal(segment.s, messages[proofIndex].s)
     assert.equal(segment.classification, 'content')
     assert.equal(segment.generation, 8)
+    assert.equal(segment.api, 3)
+    assert.equal(segment.epoch, 1)
   }
   assert.deepEqual(Buffer.concat(segments.map((m) => Buffer.from(m.data, 'base64'))), Buffer.from(f.bytes))
   assert.equal(messages.at(-1).type, 'ended')
@@ -648,7 +1042,7 @@ test('window capture sees ended before YouTube document and target handlers chan
   assert.equal(messages.at(-1).source, segments[0].source)
   assert.equal(messages.at(-1).s, segments[0].s)
   assert.ok(messages.every((m, i) => i === 0 || m.sequence > messages[i - 1].sequence))
-  assert.deepEqual(navigations, [{ url: 'about:blank', messages: messages.length }])
+  assert.deepEqual(navigations, [], 'native ownership retains the window for later seeks')
 })
 
 test('orchestrator releases before native source reset only when the old audio is completely presented', async () => {
@@ -661,7 +1055,7 @@ test('orchestrator releases before native source reset only when the old audio i
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyGeneration: 12, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 12, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -698,7 +1092,7 @@ test('capture-phase timeupdate seals full audio after official EOF before postro
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyGeneration: 13, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 13, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -723,7 +1117,12 @@ test('capture-phase timeupdate seals full audio after official EOF before postro
       const verifiedAt = messages.findIndex(m => m.type === 'diagnostic' && m.verified)
       assert.equal(messages.slice(verifiedAt + 1).some(m => m.type === 'diagnostic'), false)
     } else {
-      assert.equal(messages.some(m => m.kind === 'seg'), false)
+      assert.equal(messages.some(m => m.type === 'ended'), false, scenario)
+      const units = messages.filter(m => m.kind === 'seg')
+      if (['short', 'synthetic-ended', 'range-mismatch'].includes(scenario)) {
+        assert.ok(units.length, 'a verified prefix is useful before completion')
+        assert.ok(units.every(m => m.rangeEnd <= (scenario === 'synthetic-ended' ? 0.06 : 0.04)))
+      } else assert.equal(units.length, 0)
       if (!['short', 'synthetic-ended'].includes(scenario)) assert.ok(messages.some(m => m.type === 'error'), scenario)
       else assert.equal(messages.some(m => m.type === 'error'), false)
     }
@@ -739,7 +1138,7 @@ test('native ended may retain the source-bound playing identity but never repair
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyGeneration: 14, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 14, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -763,9 +1162,14 @@ test('native ended may retain the source-bound playing identity but never repair
     if (scenario === 'ended-postroll') {
       assert.ok(messages.some(m => m.kind === 'seg'), scenario)
       assert.equal(messages.at(-1).type, 'ended')
-      assert.ok(messages.at(-1).why.includes('source confirmed before presentation ended'))
-      assert.ok(messages.some(m => m.type === 'diagnostic' && m.reason?.includes('"terminalIdentity":"ad"')))
-    } else { assert.equal(messages.some(m => m.kind === 'seg'), false, scenario); assert.ok(messages.some(m => m.type === 'error'), scenario) }
+      assert.equal(messages.at(-1).eof, true)
+      assert.equal(messages.at(-1).complete, true)
+      assert.ok(messages.some(m => m.type === 'diagnostic' && m.reason?.includes('terminal identity=ad')))
+    } else {
+      assert.equal(messages.some(m => m.type === 'ended'), false, scenario)
+      assert.ok(messages.filter(m => m.kind === 'seg').every(m => m.rangeEnd <= 0.04), 'later ambiguity cannot release a new unconfirmed tail')
+      assert.ok(messages.some(m => m.type === 'error'), scenario)
+    }
   }
 })
 
@@ -777,7 +1181,7 @@ test('source replacement without ended reports prior timing and parsed ranges wi
   const document = { querySelectorAll: () => [media], querySelector: (selector) => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const { context } = load({ ...scope, document, location, performance: { now: () => 0 }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 11, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 11, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   media.currentSrc = scope.URL.createObjectURL(source)
@@ -799,7 +1203,7 @@ test('unrecognized consent keeps the page open and reports the injected target w
   const location = { search: '', hostname: 'consent.youtube.com', replace: (url) => navigations.push(url) }
   const document = { readyState: 'complete', forms: [], querySelectorAll: () => [] }
   const { context } = load({ location, document })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 9, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 9, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(messages[0].type, 'interaction')
@@ -820,7 +1224,7 @@ test('missing initial title pauses at exactly zero and resumes only after eviden
   const document = { querySelectorAll: () => [media], querySelector: (selector) => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: title } : null }
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const { context } = load({ ...scope, document, location, performance: { now: () => clock }, setInterval(fn) { callback = fn; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyGeneration: 10, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 10, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   media.currentSrc = scope.URL.createObjectURL(source)

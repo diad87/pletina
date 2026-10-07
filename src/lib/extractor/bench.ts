@@ -7,9 +7,12 @@ import { playCapture } from './capture'
 import { extractor, type Engine } from './engine.svelte'
 import { host } from './host'
 import { CLIENTS, innertube, setup, stats, stream } from './youtubei'
+import { runCaptureSuite, type CaptureSuitePlan } from './capture-suite'
+import rateFixture from '../../../tests/fixtures/mse-rates.json'
 
 interface Plan {
   videos: { id: string; label: string; duration: number }[]
+  captureSuite?: CaptureSuitePlan
   /** Probar cada cliente de YouTube con los primeros `count` vídeos. */
   survey?: { clients: string[]; count: number }
   /** youtubei.js (con su orden de clientes) con todos los vídeos. */
@@ -26,6 +29,8 @@ interface Plan {
   tier2?: { count: number }
   /** Audio sintético local: comprueba ajustes MSE y su reproducción idéntica en WebView2. */
   mse?: MseProbe[]
+  /** Ensayos de reloj/decodificación y marcador tardío con audio sintético local. */
+  rates?: boolean
   /** Reproducir canciones de verdad con el reproductor de la app y el motor indicado. */
   e2e?: E2E | E2E[]
 }
@@ -61,11 +66,16 @@ export async function runBench(plan: Plan) {
     clients: CLIENTS,
   }
   try {
+    if (plan.captureSuite) {
+      report.captureSuite = await runCaptureSuite(plan.captureSuite, partial =>
+        invoke('capture_bench_checkpoint', { report: { ...report, captureSuite: partial } }))
+    }
     if (plan.mse) {
       const rows = []
       for (const probe of plan.mse) rows.push(await mseProbe(probe))
       report.mse = rows
     }
+    if (plan.rates) report.rates = await rateTrials()
     if (plan.full || plan.survey) {
       const t = performance.now()
       await innertube()
@@ -120,6 +130,8 @@ export async function runBench(plan: Plan) {
   // Los informes antiguos conservan sus datos; ok ahora exige todos los controles solicitados.
   const results = ['survey', 'youtubei', 'ytdlp', 'tier1', 'tier2', 'e2e', 'mse']
     .flatMap((key) => (report[key] as { ok: boolean }[] | undefined) ?? [])
+  if (report.captureSuite) results.push(report.captureSuite as { ok: boolean })
+  if (report.rates) results.push(report.rates as { ok: boolean })
   report.ok = !report.fatal && results.length > 0 && results.every((row) => row.ok)
   await invoke('bench_report', { report })
 }
@@ -165,6 +177,134 @@ async function mseProbe(probe: MseProbe) {
       (probe.settings.appendWindowEnd === null || first.end <= probe.settings.appendWindowEnd + epsilon)
     return { label: probe.label, ok, settings: probe.settings, expected: probe.expected, runs }
   } catch (e) { return { label: probe.label, ok: false, settings: probe.settings, runs, error: String(e) } }
+}
+
+type RateSample = { wallMs: number; mediaTime: number; rate: number }
+type Marker = { at: number; observedAt: number; wallMs: number; previousRate: number }
+
+/** Deriva evidencia del reloj observado; nunca usa duration / playbackRate como medida. */
+export function rateEvidence(samples: RateSample[], adStart: number, adEnd: number) {
+  const first = samples[0], last = samples.at(-1)
+  let adMediaMs = 0, unsafeAdMediaMs = 0, unsafeAdWallMs = 0, maxSampleGapMs = 0
+  let acceleratedAdMediaMs = 0, adClockJumpIntervals = 0
+  const clockJitterMs = 25
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1], b = samples[i], advance = b.mediaTime - a.mediaTime, elapsed = b.wallMs - a.wallMs
+    if (advance < 0 || elapsed < 0) throw new Error('El reloj de la sonda retrocedió')
+    maxSampleGapMs = Math.max(maxSampleGapMs, elapsed)
+    if (!advance) continue
+    const overlap = Math.max(0, Math.min(b.mediaTime, adEnd) - Math.max(a.mediaTime, adStart))
+    adMediaMs += overlap * 1000
+    // playbackRate is a request, not proof that the decoder clock already adopted it.
+    // Allow one AAC frame of clock quantization plus timer jitter, then retain every
+    // reference-ad interval whose observed pace is still incompatible with real time.
+    if (overlap > 0 && advance * 1000 > elapsed + clockJitterMs) {
+      acceleratedAdMediaMs += overlap * 1000
+      adClockJumpIntervals++
+    }
+    if (a.rate !== 1 && overlap > 0) {
+      unsafeAdMediaMs += overlap * 1000
+      // Estimación entre observaciones nativas; se conserva el intervalo máximo para auditar precisión.
+      unsafeAdWallMs += elapsed * overlap / advance
+    }
+  }
+  const wallMs = first && last ? last.wallMs - first.wallMs : 0
+  const mediaSeconds = first && last ? last.mediaTime - first.mediaTime : 0
+  const meanWall = samples.reduce((n, p) => n + p.wallMs, 0) / Math.max(1, samples.length)
+  const meanMedia = samples.reduce((n, p) => n + p.mediaTime, 0) / Math.max(1, samples.length)
+  const variance = samples.reduce((n, p) => n + (p.wallMs - meanWall) ** 2, 0)
+  const slope = variance ? samples.reduce((n, p) => n + (p.wallMs - meanWall) * (p.mediaTime - meanMedia), 0) / variance * 1000 : null
+  // The outside brackets deliberately OVERestimate how much wall time the ad could
+  // have occupied. Even this conservative lower bound can disprove 1x presentation.
+  const adBefore = samples.findLast(p => p.mediaTime <= adStart)
+  const adAfter = samples.find(p => p.mediaTime >= adEnd)
+  const adWallUpperBoundMs = adBefore && adAfter ? adAfter.wallMs - adBefore.wallMs : null
+  const referenceAdMs = (adEnd - adStart) * 1000
+  const adPaceLowerBound = adWallUpperBoundMs !== null && adWallUpperBoundMs > 0 ? referenceAdMs / adWallUpperBoundMs : null
+  const adClockTooFast = adWallUpperBoundMs !== null && referenceAdMs > adWallUpperBoundMs + clockJitterMs || adClockJumpIntervals > 0
+  const adClockStatus = adClockTooFast ? 'incompatible-with-1x' : adPaceLowerBound === null ? 'unobserved' : 'consistent-with-1x-not-proof'
+  return { wallMs, mediaSeconds, measuredRate: wallMs > 0 ? mediaSeconds / (wallMs / 1000) : null,
+    clockSlope: slope, adMediaMs, unsafeAdMediaMs, unsafeAdWallMs, maxSampleGapMs, samples: samples.length,
+    clockJitterMs, adWallUpperBoundMs, adPaceLowerBound, adClockJumpIntervals, acceleratedAdMediaMs, adClockTooFast, adClockStatus }
+}
+
+async function rateTrials() {
+  const probe = rateFixture.probe as MseProbe
+  const rows = []
+  for (const rate of [1, 2, 4, 16]) {
+    rows.push(await rateProbe(probe, rate))
+    rows.push(await rateProbe(probe, rate, 0.9))
+    rows.push(await rateProbe(probe, rate, 1.1))
+  }
+  return { ok: rows.every(row => row.ok), syntheticOnly: true, liveAccelerationEnabled: false,
+    provenance: rateFixture.provenance, referenceAdStart: 1, referenceAdEnd: 1.5,
+    markerModel: 'A reference tone changes at 1.0 s; visible marker arrives at 0.9 or 1.1 media seconds. The native player changes to 1x only when that marker is observed.',
+    interpretation: 'Decode/rate success is not identity safety. unsafeAdMediaMs records reference ad media advanced above 1x. potentialMisclassifiedAdMs also exposes late-label contamination at 1x. No remote audio or real advertisements are accelerated.',
+    rows }
+}
+
+async function rateProbe(probe: MseProbe, rate: number, markerAt?: number) {
+  const audio = new Audio(), source = new MediaSource(), url = URL.createObjectURL(source)
+  const samples: RateSample[] = [], controller = new AbortController()
+  let timer: ReturnType<typeof setInterval> | undefined, marker: Marker | null = null
+  let begin = 0, start = 0, end = 0, audioDuration = 0
+  const waitEvent = (target: EventTarget, name: string, action: () => void, timeout = 10000) => new Promise<void>((resolve, reject) => {
+    const cleanup = () => { clearTimeout(limit); target.removeEventListener(name, done); target.removeEventListener('error', failed); controller.signal.removeEventListener('abort', failed) }
+    const done = () => { cleanup(); resolve() }
+    const failed = () => { cleanup(); reject(new Error(`Rate ${rate}x: error esperando ${name}`)) }
+    const limit = setTimeout(failed, timeout)
+    target.addEventListener(name, done, { once: true }); target.addEventListener('error', failed, { once: true }); controller.signal.addEventListener('abort', failed, { once: true })
+    try { action() } catch (e) { cleanup(); reject(e) }
+  })
+  const observe = () => {
+    if (!begin) return
+    const sample = { wallMs: performance.now() - begin, mediaTime: audio.currentTime, rate: audio.playbackRate }
+    samples.push(sample)
+    if (markerAt !== undefined && !marker && sample.mediaTime >= markerAt) {
+      marker = { at: markerAt, observedAt: sample.mediaTime, wallMs: sample.wallMs, previousRate: sample.rate }
+      audio.playbackRate = 1
+      // Duplicate time/position explicitly separates the two rate intervals.
+      samples.push({ ...sample, rate: audio.playbackRate })
+    }
+  }
+  try {
+    audio.muted = true
+    await waitEvent(source, 'sourceopen', () => { audio.src = url })
+    const sb = source.addSourceBuffer(probe.mime)
+    sb.mode = probe.settings.mode; sb.timestampOffset = probe.settings.timestampOffset
+    sb.appendWindowEnd = probe.settings.appendWindowEnd ?? Infinity; sb.appendWindowStart = probe.settings.appendWindowStart
+    const bytes = Uint8Array.from(atob(probe.base64), c => c.charCodeAt(0))
+    await waitEvent(sb, 'updateend', () => sb.appendBuffer(bytes))
+    if (sb.buffered.length !== 1) throw new Error('La sonda local no tiene cobertura continua')
+    start = sb.buffered.start(0); end = sb.buffered.end(0)
+    source.endOfStream(); audioDuration = audio.duration
+    audio.playbackRate = rate
+    audio.addEventListener('playing', () => { if (!begin) { begin = performance.now(); observe() } }, { once: true, signal: controller.signal })
+    timer = setInterval(observe, 5)
+    await waitEvent(audio, 'ended', () => { void audio.play().catch(() => audio.dispatchEvent(new Event('error'))) }, 10000)
+    observe()
+    const evidence = rateEvidence(samples, 1, 1.5)
+    const epsilon = probe.quantum + 0.000001
+    const coverageOk = Math.abs(start - probe.expected.start) <= epsilon && Math.abs(end - probe.expected.end) <= epsilon
+    const decodedToEnd = !audio.error && audio.ended && audio.currentTime >= end - epsilon
+    const constant = markerAt === undefined
+    const observedRate = evidence.clockSlope
+    const rateHonored = !constant || (observedRate !== null && Math.abs(observedRate - rate) <= rate * 0.25)
+    const markerObserved = constant || marker !== null
+    return { label: probe.label, requestedRate: rate, scenario: constant ? 'constant-clock' : markerAt! < 1 ? 'early-ad-marker' : 'late-ad-marker',
+      markerAt, marker, ok: coverageOk && decodedToEnd && rateHonored && markerObserved && samples.length > 2,
+      coverageOk, decodedToEnd, rateHonored, buffered: { start, end }, duration: audioDuration, finalTime: audio.currentTime,
+      evidence, adRatePreserved: constant ? null : evidence.unsafeAdMediaMs > 0 || evidence.adClockTooFast ? false : null,
+      potentialMisclassifiedAdMs: constant ? null : Math.max(0, Math.min((marker as Marker | null)?.observedAt ?? 1.5, 1.5) - 1) * 1000,
+      identitySafetyVerified: false,
+      liveEligible: false, samples }
+  } catch (e) {
+    return { label: probe.label, requestedRate: rate, markerAt, marker, ok: false, error: String(e),
+      buffered: { start, end }, duration: audioDuration, evidence: rateEvidence(samples, 1, 1.5), liveEligible: false, samples }
+  } finally {
+    if (timer !== undefined) clearInterval(timer)
+    controller.abort(); audio.pause(); audio.removeAttribute('src'); audio.load(); URL.revokeObjectURL(url)
+  }
 }
 
 async function viaYoutubei(videoId: string, plan: Plan, clients?: string[]) {

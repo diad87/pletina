@@ -13,6 +13,7 @@ const playable = url => ({ videoId: 'aaaaaaaaaaa', url, title: 'Title', channel:
 let count = 0
 async function setup(t, methods) {
   let audio
+  const audios = []
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null, setItem() {} } })
   t.after(() => {
@@ -22,7 +23,7 @@ async function setup(t, methods) {
   const previousAudio = globalThis.Audio
   globalThis.Audio = class extends EventTarget {
     src = ''; currentTime = 0; duration = 100; paused = true
-    constructor() { super(); audio = this }
+    constructor() { super(); audio = this; audios.push(this) }
     pause() { this.paused = true; this.dispatchEvent(new Event('pause')) }
     play() { this.paused = false; this.dispatchEvent(new Event('playing')); return Promise.resolve() }
     removeAttribute() { this.src = '' }
@@ -33,17 +34,19 @@ async function setup(t, methods) {
   const toasts = []
   const key = `__playerTest${++count}`
   globalThis[key] = {
-    api: { recordPlay: async () => {}, ...methods },
+    api: { recordPlay: async () => {}, cancelPrefetch: async () => {}, ...methods },
     convertFileSrc: value => value,
     downloads: { done: new Set(), start() {} },
     setAudioSource: (a, url) => { a.src = url }, stopCapture: (...args) => stopped.push(args),
+    prepareAudioSource: (a, url) => { a.src = url; return (...args) => stopped.push(['prepared', a, ...args]) },
+    adoptAudioSource: () => {}, seekCapture: async (a, at) => { a.currentTime = at; return true },
     library: {}, toLib: value => value, toast: { show: message => toasts.push(message) },
   }
   t.after(() => delete globalThis[key])
   // La reactividad no interviene en estas carreras; sí ejecutamos los métodos privados reales.
-  const prelude = `const $state = value => value; const { api, convertFileSrc, downloads, setAudioSource, stopCapture, library, toLib, toast } = globalThis.${key};\n`
+  const prelude = `const $state = value => value; const { api, convertFileSrc, downloads, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
   const { player } = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
-  return { player, audio, stopped, toasts, downloads: globalThis[key].downloads }
+  return { player, audio, audios, stopped, toasts, downloads: globalThis[key].downloads }
 }
 
 test('el clic promociona la precarga pendiente y su resultado tardío no sustituye la canción', async t => {
@@ -272,4 +275,120 @@ test('un fallo de selección obsoleto no sustituye el resultado ni el error del 
   assert.equal(await old, false)
   assert.deepEqual(errors, [])
   assert.equal(env.audio.src, 'new-choice')
+})
+
+test('la precarga prepara un segundo Audio y el fin de canción lo promociona sin reasignar su fuente', async t => {
+  const calls = []
+  const env = await setup(t, { resolve: async (track, refresh, foreground) => {
+    calls.push({ id: track.id, foreground })
+    return playable(`musify-capture:${track.id === 1 ? 'aaaaaaaaaaa' : 'bbbbbbbbbbb'}`)
+  } })
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => env.audios.length === 2)
+  const first = env.player.playbackAudio, prepared = env.audios[1]
+  assert.equal(first, env.audio)
+  assert.equal(prepared.muted, true)
+  assert.equal(prepared.paused, true)
+  assert.equal(prepared.src, 'musify-capture:bbbbbbbbbbb')
+  first.dispatchEvent(new Event('ended'))
+  await settle(() => env.player.current.track.id === 2 && env.player.status === 'playing')
+  assert.equal(env.player.playbackAudio, prepared)
+  assert.equal(prepared.muted, false)
+  assert.equal(env.audios.length, 2)
+  assert.deepEqual(calls, [{ id: 1, foreground: true }, { id: 2, foreground: false }, { id: 2, foreground: true }])
+  // Un evento atrasado del objeto anterior no avanza otra vez ni pausa la canción promovida.
+  first.dispatchEvent(new Event('pause')); first.dispatchEvent(new Event('ended'))
+  first.currentTime = 99; first.dispatchEvent(new Event('timeupdate'))
+  assert.equal(env.player.status, 'playing')
+  assert.equal(env.player.current.track.id, 2)
+  assert.notEqual(env.player.time, 99)
+})
+
+test('cambiar la cola DJ sustituye la precarga sin parar la canción actual', async t => {
+  const calls = []
+  const env = await setup(t, { resolve: async (track, refresh, foreground) => {
+    calls.push({ id: track.id, foreground }); return playable(`track-${track.id}`)
+  } })
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => env.audios.length === 2)
+  const obsolete = env.audios[1]
+  env.player.playNext([item(3)])
+  await settle(() => env.audios.length === 3)
+  assert.equal(env.player.playbackAudio, env.audio)
+  assert.equal(env.player.status, 'playing')
+  assert.equal(obsolete.src, '')
+  assert.equal(env.audios[2].src, 'track-3')
+  env.audio.dispatchEvent(new Event('ended'))
+  await settle(() => env.player.current.track.id === 3 && env.player.status === 'playing')
+  assert.equal(env.player.playbackAudio, env.audios[2])
+  assert(calls.some(call => call.id === 3 && call.foreground))
+})
+
+test('un fallo parcial informa y conserva el audio en reproducción', async t => {
+  const env = await setup(t, { resolve: async () => playable('musify-capture:aaaaaaaaaaa') })
+  env.player.playQueue([item(1)], 0)
+  await settle(() => env.player.status === 'playing')
+  const stops = env.stopped.length
+  env.audio.dispatchEvent(new CustomEvent('capturewarning', { detail: 'CAPTURE_GAP: recuperando un tramo' }))
+  assert.equal(env.player.status, 'playing')
+  assert.equal(env.audio.paused, false)
+  assert.equal(env.stopped.length, stops)
+  assert.equal(env.toasts.length, 1)
+})
+
+test('B → C → B en la cola genera otra petición de precarga B y descarta sus tickets anteriores', async t => {
+  const calls = [], pendingB = deferred(), pendingC = deferred()
+  const env = await setup(t, { resolve: (track, _refresh, foreground) => {
+    calls.push({ id: track.id, foreground })
+    if (foreground) return Promise.resolve(playable(`foreground-${track.id}`))
+    if (track.id === 3) return pendingC.promise
+    return calls.filter(call => call.id === 2).length === 1 ? pendingB.promise : Promise.resolve(playable('latest-B'))
+  } })
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => calls.length === 2)
+  env.player.playNext([item(3)])
+  await settle(() => calls.length === 3)
+  env.player.clearQueue()
+  await settle(() => calls.length === 4 && env.player.preparedAudio !== null)
+  assert.deepEqual(calls.slice(1), [{ id: 2, foreground: false }, { id: 3, foreground: false }, { id: 2, foreground: false }])
+  assert.equal(env.player.preparedAudio.src, 'latest-B')
+  pendingB.resolve(playable('obsolete-B')); pendingC.resolve(playable('obsolete-C'))
+  await tick()
+  assert.equal(env.player.preparedAudio.src, 'latest-B')
+  assert.equal(env.player.playbackAudio.src, 'foreground-1')
+})
+
+test('quitar la siguiente espera a cancelar next antes de crear una nueva precarga', async t => {
+  const cancellation = deferred(), calls = []
+  let cancellations = 0
+  const env = await setup(t, {
+    resolve: async (track, _refresh, foreground) => { calls.push({ id: track.id, foreground }); return playable(`track-${track.id}`) },
+    cancelPrefetch: () => { cancellations++; return cancellation.promise },
+  })
+  env.player.playQueue([item(1)], 0)
+  await settle(() => env.player.status === 'playing')
+  env.player.playNext([item(2)])
+  await settle(() => env.player.preparedAudio !== null)
+  env.player.clearQueue()
+  env.player.playNext([item(3)])
+  await settle(() => cancellations === 1)
+  assert.deepEqual(calls, [{ id: 1, foreground: true }, { id: 2, foreground: false }])
+  assert.equal(env.player.playbackAudio.src, 'track-1')
+  assert.equal(env.player.status, 'playing')
+  cancellation.resolve()
+  await settle(() => env.player.preparedAudio?.src === 'track-3')
+  assert.deepEqual(calls.at(-1), { id: 3, foreground: false })
+})
+
+test('promocionar la siguiente preparada no envía cancel_prefetch que pudiera cerrarla', async t => {
+  let cancellations = 0
+  const env = await setup(t, {
+    resolve: async track => playable(`track-${track.id}`), cancelPrefetch: async () => { cancellations++ },
+  })
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => env.player.preparedAudio !== null)
+  const prepared = env.player.preparedAudio
+  env.player.next()
+  await settle(() => env.player.playbackAudio === prepared && env.player.status === 'playing')
+  assert.equal(cancellations, 0)
 })

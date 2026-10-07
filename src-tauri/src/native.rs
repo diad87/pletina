@@ -2,7 +2,7 @@
 //! programas ni librerías externas. Qué cliente de YouTube se imita y con qué datos va en una
 //! receta (`recipe/youtube.json`): cuando YouTube cambie algo de eso, basta con publicar una
 //! receta nueva (`extractors.rs`), sin sacar otra versión de la app. Si la descargada falla, se
-//! prueba la incluida, y si aun así falla, está la captura oficial experimental (`capture.rs`).
+//! prueba la incluida, y si aun así falla, está la captura histórica (`capture_legacy.rs`).
 
 use crate::ytdlp::{now, query_param};
 use serde::Deserialize;

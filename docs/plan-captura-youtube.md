@@ -4,7 +4,23 @@ El objetivo es que Musify siga obteniendo la canción cuando cambie la API inter
 
 Este documento recoge el plan y su estado de implementación. La primera plataforma es Windows con WebView2. La prioridad es la continuidad de reproducción y la separación correcta de anuncios; después, reducir espera, memoria y CPU.
 
-## Estado de la implementación — 6 de octubre de 2026
+## Evolución API 3 — 7 de octubre de 2026
+
+El trabajo está aislado en `C:\Users\iunan\musify-oficial`, rama `p1-oficial`. El snapshot API 2 se conservó en `f4868be`; la carpeta compartida continúa en `main`. No se han fusionado ramas, hecho push ni publicado extractores.
+
+La implementación nueva incorpora unidades completas de audio con tiempos, inventario de cobertura, lectura progresiva, recuperación sin vaciar el audio verificado, saltos por épocas y dos sesiones de captura con prioridad para la canción actual. La precarga prepara también el `Audio` y su MediaSource, que se promocionan al terminar la canción anterior. El protocolo pasa a API 3 y la captura a versión 2; receta y youtubei.js no cambian.
+
+**La entrega progresiva no está aprobada para uso normal.** Un contraejemplo controlado reproduce un anuncio que empieza en 1,000 s reutilizando la misma fuente, mientras las señales del sitio siguen indicando la canción hasta 1,120 s. El experimento llegó a publicar 100 ms de anuncio a 1×. El cierre completo de API 2 entregó cero. Retener un intervalo fijo sólo desplazaría el límite: no existe un plazo documentado para esas señales. La ruta normal debe conservar la cuarentena hasta EOF e historia completa verificada. El experimento requiere simultáneamente `MUSIFY_BENCH` y `MUSIFY_BENCH_PROGRESSIVE=1`; no puede activarse sólo con la segunda variable.
+
+«Propio» sigue recomendado y conserva su ruta rápida en Rust y el respaldo histórico separado (`capture_legacy.rs` y `capture-legacy.js`). La captura nueva no lo sustituye. yt-dlp sigue siendo el motor predeterminado. No se han añadido cambios en `db.rs` ni `downloads.rs` después del snapshot. En la interfaz sólo se ajusta el texto del selector para reflejar la cuarentena y la recomendación de Propio.
+
+El banco usa `dev.musify.captureofficialtest`, con perfil y base de datos propios. `tests/fixtures/real-albums.capture.json` fija las 30 canciones seleccionadas dentro de la app con la misma lógica de `player::tests::real_albums`. La búsqueda se usa para preparar el corpus; la captura recibe esos IDs y no emplea clientes API propios para extraer audio. Los informes conservan filas fallidas y checkpoints por fase. Los eventos de reproducción del navegador miden inicio y cortes; los contadores de anuncios del adaptador no son una prueba independiente de identidad semántica.
+
+Primer ensayo de desarrollo, conservado como fallo (`result-20261007-080647.json`): Airbag arrancó en 35,834 s, 4,677 s al descontar la publicidad observada hasta ese momento; superó el límite de 3 s. El salto a 230,4 s falló por una inicialización WebM nueva tras el seek. El primer rango empezaba en 0,021 s, por lo que tampoco acreditaba el comienzo completo. Durante toda la prueba se observaron tres episodios de anuncio y cero unidades etiquetadas como anuncio entregadas; esto no subsana el contraejemplo semántico anterior.
+
+Las mediciones finales, los commits y los pendientes se incorporarán aquí al cerrar la batería. Ningún resultado de latencia se considerará aprobación global mientras falle la separación de anuncios.
+
+## Línea base API 2 — 6 de octubre de 2026
 
 La captura oficial tiene un núcleo separado del adaptador YouTube y protocolo API 2. Es una **prueba experimental**, seleccionable como «Oficial (experimental)»: reproduce a 1× dentro de YouTube y retiene la fuente completa antes de entregarla a Musify. El motor predeterminado sigue siendo yt-dlp mientras no se supere la primera fase.
 

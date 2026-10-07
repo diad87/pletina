@@ -4,15 +4,16 @@
 //! - `youtubei`: la librería youtubei.js en la interfaz. Rust le hace las peticiones HTTP
 //!   (`http_fetch`) y le pide las URLs con un evento. Si falla, yt-dlp.
 //! - `propio`: primero el nivel rápido (`native.rs`, una petición desde Rust) y, si falla, el nivel
-//!   experimental (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta).
+//!   histórico (`capture_legacy.rs`, el reproductor de YouTube Music en una ventana oculta).
 //!   `oficial` usa solo la captura oficial (para probarla).
 
 use crate::youtube::BROWSER_UA;
+use crate::player::RequestTicket;
 use crate::ytdlp::{VideoInfo, YtDlp, now, query_param};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::HashMap;
-use crate::{capture, native};
+use crate::{capture, capture_legacy, native};
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::{Duration, Instant};
@@ -56,8 +57,8 @@ pub fn init(app: AppHandle) {
 }
 
 /// Audio de un vídeo con el motor elegido.
-pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
-    if ticket.is_some_and(|t| !crate::player::resolution_current(t)) {
+pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
+    if ticket.is_some_and(|t| !crate::player::request_current(t)) {
         return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
     }
     match ENGINES[ENGINE.load(Ordering::Relaxed) as usize] {
@@ -76,19 +77,24 @@ pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, 
 }
 
 /// Motor propio: el nivel rápido y, si falla por lo que sea, el reproductor oficial.
-async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
+async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
     match native::resolve(video_id, refresh).await {
         Ok(d) => Ok(VideoInfo { url: d.url, title: d.title, channel: d.channel, duration: d.duration }),
         Err(_e) => {
             #[cfg(debug_assertions)]
             eprintln!("[motor propio] {video_id}: {_e} → reproductor oficial");
-            official(video_id, refresh, foreground, ticket).await
+            if ticket.is_some_and(|t| !crate::player::request_current(t)) {
+                return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
+            }
+            let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
+            let meta = capture_legacy::stream(app, video_id, refresh, foreground, ticket).await?;
+            Ok(VideoInfo { url: format!("{}{video_id}", capture_legacy::SCHEME), title: meta.title, channel: meta.channel, duration: meta.duration })
         }
     }
 }
 
-/// Captura oficial experimental: entrega únicamente una fuente completa confirmada.
-async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<u64>) -> Result<VideoInfo, String> {
+/// Captura oficial experimental: empieza con la primera unidad confirmada; EOF se valida aparte.
+async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
     let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
     let meta = capture::stream_with_priority(app, video_id, refresh, foreground, ticket).await?;
     Ok(VideoInfo {
@@ -176,7 +182,9 @@ pub fn engine_stats() -> Value {
         "fast": s.resolved.load(Ordering::Relaxed),
         "fastFailed": s.failed.load(Ordering::Relaxed),
         "replaced": s.replaced.load(Ordering::Relaxed),
-        "official": capture::USED.load(Ordering::Relaxed),
+        "official": capture::USED.load(Ordering::Relaxed) + capture_legacy::USED.load(Ordering::Relaxed),
+        "officialProgressive": capture::USED.load(Ordering::Relaxed),
+        "officialLegacy": capture_legacy::USED.load(Ordering::Relaxed),
     })
 }
 
@@ -283,7 +291,7 @@ pub async fn bench_native(video_id: String) -> Result<Value, String> {
     Ok(json!({ "ms": t.elapsed().as_millis() as u64, "url": d.url, "client": d.client, "itag": d.itag, "mime": d.mime }))
 }
 
-/// Captura oficial, cronometrada hasta que supera el control de presentación completa.
+/// Captura oficial, cronometrada hasta la primera unidad de audio confirmada.
 #[tauri::command]
 pub async fn bench_capture(video_id: String) -> Result<Value, String> {
     let t = Instant::now();

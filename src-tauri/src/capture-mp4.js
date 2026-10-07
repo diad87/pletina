@@ -8,7 +8,7 @@
   const unsupported = message => { const e = new Error(`CAPTURE_UNSUPPORTED_MP4: ${message}`); e.code = 'CAPTURE_UNSUPPORTED_MP4'; throw e }
   const timelineError = message => { const e = new Error(`CAPTURE_AMBIGUOUS_TIMELINE: ${message}`); e.code = 'CAPTURE_AMBIGUOUS_TIMELINE'; throw e }
 
-  function parse(input) {
+  function parse(input, options = {}) {
     if (!(input instanceof Uint8Array)) unsupported('Expected a complete Uint8Array source')
     const bytes = input, view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     let boxesRead = 0
@@ -136,11 +136,33 @@
       return asc(specific[0])
     }
 
-    const top = children({ start: 0, end: bytes.length })
+    // Only a final, top-level box may be incomplete while appendBuffer is streaming.
+    // Complete moof tables can describe a partial mdat; sample ownership is still
+    // checked against its DECLARED bounds and only fully present samples are exposed.
+    const top = []
+    let pending = false
+    for (let at = 0; at < bytes.length;) {
+      if (options.prefix && bytes.length - at < 8) { pending = true; break }
+      const type = fourcc(at + 4)
+      let size = u32(at), header = 8
+      if (size === 1) {
+        if (options.prefix && bytes.length - at < 16) { pending = true; break }
+        size = u64(at + 8); header = 16
+      }
+      if (size < header || !Number.isSafeInteger(at + size)) unsupported(`Invalid ${type} box size`)
+      if (at + size > bytes.length && options.prefix) {
+        pending = true
+        if (type === 'mdat') top.push({ type, at, start: at + header, end: at + size, availableEnd: bytes.length })
+        break
+      }
+      top.push(box(at, bytes.length)); at += size
+    }
+    if (options.prefix && !top.some(b => b.type === 'moov')) return { pending: true, samples: [], init: null }
     if (top[0]?.type !== 'ftyp') unsupported('Missing initial ftyp')
     brand(top[0])
     one(top, 'ftyp'); const moov = one(top, 'moov')
-    if (top.findIndex(b => b.type === 'moof') < top.indexOf(moov)) unsupported('Fragment precedes initialization')
+    const firstFragment = top.findIndex(b => b.type === 'moof')
+    if (firstFragment >= 0 && firstFragment < top.indexOf(moov)) unsupported('Fragment precedes initialization')
     const movie = children(moov)
     only(movie, ['mvhd', 'trak', 'mvex', 'udta', 'iods', 'free'])
     const mvhd = one(movie, 'mvhd'), mvh = full(mvhd, [0, 1])
@@ -226,13 +248,13 @@
     }
 
     let decodeUntil = 0, previousSequence = null, sawFragment = false
-    const rawFrames = []
+    const rawFrames = [], samples = []
     const sampleFlags = flags => { if (flags !== 0 && flags !== 0x02000000) unsupported('Unverified AAC sample flags') }
     const fragment = (moof, mdats) => {
       const contents = children(moof); only(contents, ['mfhd', 'traf'])
       const mfhd = one(contents, 'mfhd'), mh = full(mfhd); exact(mh.at + 4, mfhd)
       const sequence = u32(mh.at)
-      if (previousSequence !== null && sequence !== previousSequence + 1) timelineError('Missing, repeated or reordered fragment sequence')
+      if (previousSequence !== null && sequence !== previousSequence + 1 && !(options.allowGaps && sequence > previousSequence)) timelineError('Missing, repeated or reordered fragment sequence')
       previousSequence = sequence
       const traf = one(contents, 'traf'), parts = children(traf)
       only(parts, ['tfhd', 'tfdt', 'trun'])
@@ -248,7 +270,8 @@
       const tfdt = one(parts, 'tfdt'), td = full(tfdt, [0, 1])
       const clock = td.version ? u64(td.at, tfdt.end) : u32(td.at, tfdt.end)
       exact(td.at + (td.version ? 8 : 4), tfdt)
-      if (clock !== decodeUntil) timelineError('Gap, overlap or overwritten AAC decode timestamps')
+      if (clock !== decodeUntil && !(options.allowGaps && clock > decodeUntil)) timelineError('Gap, overlap or overwritten AAC decode timestamps')
+      decodeUntil = clock
       const runs = parts.filter(b => b.type === 'trun')
       if (!runs.length || parts.indexOf(tfhd) > parts.indexOf(runs[0]) || parts.indexOf(tfdt) > parts.indexOf(runs[0])) unsupported('Missing or unordered fragment timing')
       let previousEnd = null, mdatIndex = 0, payloadAt = mdats[0]?.start
@@ -276,7 +299,11 @@
           if (dataAt !== payloadAt || dataAt + size > mdats[mdatIndex].end) unsupported('Sample data overlaps, leaves gaps or falls outside mdat')
           const end = decodeUntil + duration
           if (!Number.isSafeInteger(end)) unsupported('AAC timeline exceeds exact range')
-          rawFrames.push({ start: decodeUntil / scale, end: end / scale })
+          if (dataAt + size <= bytes.length) {
+            rawFrames.push({ start: decodeUntil / scale, end: end / scale })
+            if (options.inventory) samples.push({ offset: dataAt, size, decodeTime: decodeUntil, duration, flags,
+              start: Math.max(0, (decodeUntil - editStart) / scale), end: Math.min((end - editStart) / scale, editLength ?? Infinity) })
+          } else if (!options.prefix) unsupported('Truncated AAC sample')
           decodeUntil = end; dataAt += size; payloadAt = dataAt
         }
         exact(at, run)
@@ -290,24 +317,25 @@
       if (b.type === 'moof') {
         const mdats = []
         while (top[i + 1]?.type === 'mdat') mdats.push(top[++i])
+        if (options.prefix && !mdats.length && i === top.length - 1) { pending = true; break }
         fragment(b, mdats); sawFragment = true
       } else if (b.type === 'styp') brand(b)
       else if (!['free', 'skip', 'sidx', 'mfra'].includes(b.type)) unsupported(`Unsupported top-level ${b.type}`)
     }
-    if (!sawFragment || !rawFrames.length) unsupported('Source has no complete AAC fragments')
-    const delay = editStart / scale, rawEnd = decodeUntil / scale - delay
+    if ((!sawFragment || !rawFrames.length) && !options.prefix) unsupported('Source has no complete AAC fragments')
+    const delay = editStart / scale, rawEnd = (rawFrames.at(-1)?.end ?? 0) - delay
     const durationMetadata = {
       mdhd: declaredDuration, mediaTimescale: scale, mvhd: movieDuration, tkhd: trackDuration,
       mehd: fragmentDuration, movieTimescale: movieScale, decodedTicks: decodeUntil,
       sampleCount: rawFrames.length, editStartTicks: editStart, editLengthSeconds: editLength,
     }
-    if (editLength !== null && (editLength > rawEnd + 1 / scale || rawEnd - editLength >= frameTicks / scale)) unsupported(`Edit excludes complete frames or extends beyond coded audio: rawEnd=${rawEnd}; durationMetadata=${JSON.stringify(durationMetadata)}`)
+    if (!options.prefix && editLength !== null && (editLength > rawEnd + 1 / scale || rawEnd - editLength >= frameTicks / scale)) unsupported(`Edit excludes complete frames or extends beyond coded audio: rawEnd=${rawEnd}; durationMetadata=${JSON.stringify(durationMetadata)}`)
     const frames = []
     for (const frame of rawFrames) {
       const start = Math.max(0, frame.start - delay), end = Math.min(frame.end - delay, editLength ?? Infinity)
       if (end > start) frames.push({ start, end })
     }
-    if (!frames.length || frames[0].start !== 0) timelineError('No verified audio beginning at zero')
+    if ((!frames.length && !options.prefix) || (frames.length && frames[0].start !== 0 && !options.allowGaps)) timelineError('No verified audio beginning at zero')
     // W3C MSE ISO-BMFF §3 has empty initialization sample tables; tfdt/trun describe
     // appended media. ISO/IEC 14496-12:2015 Annex A.8 says the initial moov does not
     // describe the full fragmented duration. Its mdhd/mvhd/tkhd durations are not an
@@ -317,10 +345,38 @@
     // Exact sample ownership/sequence/timestamps above and the external native EOF,
     // SourceBuffer range and presentation-clock gate still prove completeness of the
     // observed official source, not of a canonical remote recording.
-    const end = frames.at(-1).end
-    if (fragmentDuration && Math.abs(fragmentDuration - end * movieScale) > 1 + 1e-9)
+    const end = frames.at(-1)?.end ?? 0
+    if (!options.prefix && fragmentDuration && Math.abs(fragmentDuration - end * movieScale) > 1 + 1e-9)
       unsupported(`Movie fragment duration conflicts with its presentation: mehd=${fragmentDuration}, movieTimescale=${movieScale}, calculatedRange=0..${end}, calculatedMovieTicks=${end * movieScale}; durationMetadata=${JSON.stringify(durationMetadata)}`)
-    return { frames, start: 0, end, quantum: 1 / scale, codec: 'mp4a.40.2', durationMetadata }
+    const result = { frames, start: frames[0]?.start ?? 0, end, quantum: 1 / scale, codec: 'mp4a.40.2', durationMetadata }
+    if (options.inventory) Object.assign(result, { pending, samples, bytes, init: concatenate([bytes.subarray(top[0].at, top[0].end), bytes.subarray(moov.at, moov.end)]), trackId, timescale: scale })
+    return result
   }
-  globalThis.__musifyCaptureMp4 = { parse }
+  function concatenate(parts) {
+    const out = new Uint8Array(parts.reduce((n, b) => n + b.byteLength, 0))
+    let at = 0
+    for (const part of parts) { out.set(part, at); at += part.byteLength }
+    return out
+  }
+  const word = value => { const out = new Uint8Array(4); new DataView(out.buffer).setUint32(0, value); return out }
+  const boxBytes = (type, ...parts) => {
+    const payload = concatenate(parts)
+    return concatenate([word(payload.length + 8), Uint8Array.from(type, c => c.charCodeAt(0)), payload])
+  }
+  const fullBytes = (type, version, flags, ...parts) => boxBytes(type, word(version * 0x1000000 + flags), ...parts)
+  function remux(inventory, first, count, sequence = 1) {
+    if (!inventory?.init || !Number.isSafeInteger(first) || !Number.isSafeInteger(count) || first < 0 || count <= 0 || first + count > inventory.samples.length || !Number.isSafeInteger(sequence) || sequence < 1 || sequence > 0xffffffff) unsupported('Invalid remux sample selection')
+    const selected = inventory.samples.slice(first, first + count)
+    if (selected.some((s, i) => s.offset + s.size > inventory.bytes.length || (i && s.decodeTime !== selected[i - 1].decodeTime + selected[i - 1].duration))) timelineError('Remux samples are incomplete or discontinuous')
+    const clock = new Uint8Array(8)
+    new DataView(clock.buffer).setBigUint64(0, BigInt(selected[0].decodeTime))
+    const tfhd = fullBytes('tfhd', 0, 0x020000, word(inventory.trackId))
+    const tfdt = fullBytes('tfdt', 1, 0, clock)
+    const table = selected.flatMap(s => [word(s.duration), word(s.size), word(s.flags)])
+    const moof = offset => boxBytes('moof', fullBytes('mfhd', 0, 0, word(sequence)), boxBytes('traf', tfhd, tfdt, fullBytes('trun', 0, 0x000701, word(count), word(offset), ...table)))
+    const header = moof(0), media = concatenate([moof(header.length + 8), boxBytes('mdat', ...selected.map(s => inventory.bytes.subarray(s.offset, s.offset + s.size)))])
+    return { init: inventory.init, media, frames: count, start: selected[0].start, end: selected.at(-1).end }
+  }
+  const inspectPrefix = (bytes, { final = false, allowGaps = false } = {}) => parse(bytes, { prefix: !final, inventory: true, allowGaps })
+  globalThis.__musifyCaptureMp4 = { parse, inspectPrefix, remux }
 })()
