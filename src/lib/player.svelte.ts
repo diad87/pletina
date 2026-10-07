@@ -20,6 +20,7 @@ type Status = 'idle' | 'loading' | 'playing' | 'paused'
 export type Repeat = 'off' | 'all' | 'one'
 type PreparedAudio = { id: number; playable: Playable; audio: HTMLAudioElement; stop: (cancelBackend?: boolean) => void }
 type CapturePromotion = { token: number; audio: HTMLAudioElement; ready: boolean; played: boolean; interrupted: boolean }
+type PrefetchEntry = { item: QueueItem; engine: string; slot: 0 | 1; version: number; pending: boolean; resolved: boolean; prepared: PreparedAudio | null }
 
 /** Tras tantos fallos seguidos se deja de saltar a la siguiente (p. ej. sin conexión). */
 const MAX_FAILURES = 3
@@ -95,17 +96,18 @@ class Player {
   captureInteraction = $state<string | null>(null)
 
   #audio = new Audio()
-  #prepared: PreparedAudio | null = null
+  #source: { trackId: number; videoId: string; kind: 'capture' | 'capture-legacy' | 'local' | 'network' } | null = null
+  #prefetches = new Map<number, PrefetchEntry>()
   /** La sesión preparada sigue siendo next hasta que termina su promoción nativa. */
   #promotion: CapturePromotion | null = null
   #prefetchVersion = 0
-  #prefetchId: number | null = null
+  #prefetchLimit = 2
   #admission: (api.ForegroundAdmission & { token: number; audio: HTMLAudioElement }) | null = null
   #loadingCanPrefetch = false
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
-  #inFlight = new Map<number, { promise: Promise<Playable>; foreground: boolean; token: number; prefetchVersion: number }>()
+  #inFlight = new Map<string, { promise: Promise<Playable>; foreground: boolean; token: number; prefetchVersion: number }>()
   /** Una cancelación pendiente siempre termina antes de enviar la siguiente resolución. */
   #cancelPending: Promise<void> = Promise.resolve()
   /** Un vídeo elegido aún no se guarda si YouTube exige interacción antes de capturarlo. */
@@ -191,7 +193,15 @@ class Player {
 
   /** Diagnóstico del banco: cambia al promocionar el audio preparado. */
   get playbackAudio(): HTMLAudioElement { return this.#audio }
-  get preparedAudio(): HTMLAudioElement | null { return this.#prepared?.audio ?? null }
+  /** Diagnóstico sin URL firmada: permite comprobar el vídeo realmente elegido por búsqueda. */
+  get playbackSource() { return this.#source ? { ...this.#source } : null }
+  get preparedAudio(): HTMLAudioElement | null { return this.preparedAudios[0]?.audio ?? null }
+  get preparedAudios(): { trackId: number; slot: 0 | 1; audio: HTMLAudioElement }[] {
+    return this.#followingItems().flatMap(item => {
+      const entry = this.#prefetches.get(item.track.id)
+      return entry?.prepared ? [{ trackId: item.track.id, slot: entry.slot, audio: entry.prepared.audio }] : []
+    })
+  }
 
   get hasNext() {
     return (
@@ -306,6 +316,7 @@ class Player {
     this.#audio.removeAttribute('src')
     this.#audio.load()
     this.status = 'idle'
+    this.#source = null
     this.captureInteraction = null
     this.#cancelPending = this.#cancelPending.then(() => api.cancelResolve()).catch((e) => {
       toast.show(`No se pudo cancelar la preparación: ${e}`)
@@ -422,7 +433,8 @@ class Player {
     if (item.track.id !== this.current?.track.id) {
       try {
         await api.rememberSource(toQuery(item), videoId)
-        if (this.#prefetchId === item.track.id || this.#prepared?.id === item.track.id) this.#discardPrefetch(true)
+        const prefetched = this.#prefetches.get(item.track.id)
+        if (prefetched) this.#removePrefetch(prefetched, true)
         redownload()
         toast.show(`Hecho: «${item.track.title}» sonará con ese vídeo`)
         return true
@@ -447,6 +459,7 @@ class Player {
       const playable = await api.chooseSource(toQuery(item), videoId, true, this.#admissionOptions(item))
       redownload()
       if (token !== this.#token) return true
+      this.#rememberPlayback(item, playable)
       this.#retried = false
       setAudioSource(this.#audio, audioSrc(playable))
       await this.#audio.play()
@@ -499,13 +512,16 @@ class Player {
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0) {
-    const prepared = !refresh && this.#prepared?.id === item.track.id ? this.#prepared : null
+    const prefetched = this.#prefetches.get(item.track.id)
+    const prepared = !refresh && prefetched?.engine === extractor.engine ? prefetched.prepared : null
     // La señal nativa llega después de asegurar la plaza foreground, incluso si
     // antes era next. Un Audio ya preparado conserva además su barrera de play.
     this.#loadingCanPrefetch = !prepared
     this.#admission = null
-    if (!prepared) this.#discardPrefetch(this.#prefetchId !== item.track.id)
-    else { ++this.#prefetchVersion; this.#prefetchId = null; this.#prepared = null }
+    // La plaza promovida deja de ser next; nunca se cancela por su número después.
+    // Las otras canciones deseadas conservan plaza, lector y Audio.
+    if (prefetched) this.#removePrefetch(prefetched, false, !!prepared)
+    this.#prunePrefetch(this.#followingItems())
     const token = ++this.#token
     this.#promotion = null
     this.#pendingSource = null
@@ -513,6 +529,7 @@ class Player {
     // Recargar la misma canción (URL caducada) no cuenta como otra escucha.
     if (!refresh) this.#recorded = false
     this.status = 'loading'
+    this.#source = null
     this.time = startAt
     this.duration = item.track.duration
     this.#audio.pause()
@@ -524,6 +541,7 @@ class Player {
       // Estos bytes ya están confirmados y aceptados por MSE. El cierre de la ventana
       // anterior no debe retrasar play; el ticket foreground se promociona en paralelo.
       this.#adoptPrepared(prepared)
+      this.#rememberPlayback(item, prepared.playable)
       this.#retried = false
       const pendingPromotion: CapturePromotion = { token, audio: prepared.audio, ready: false, played: false, interrupted: false }
       this.#promotion = pendingPromotion
@@ -568,6 +586,7 @@ class Player {
     try {
       const playable = await this.#resolve(item, refresh)
       if (token !== this.#token) { prepared?.stop(false); return }
+      this.#rememberPlayback(item, playable)
       this.#retried = refresh
       if (prepared && audioSrc(prepared.playable) === audioSrc(playable)) {
         // El resolve foreground promociona la sesión nativa; el Audio y su MSE ya están listos.
@@ -611,66 +630,109 @@ class Player {
     if (Number.isFinite(this.#audio.duration)) this.duration = this.#audio.duration
   }
 
-  #discardPrefetch(cancelNative = false) {
-    const hadPrefetch = this.#prefetchId !== null || this.#prepared !== null
-    ++this.#prefetchVersion
-    this.#prefetchId = null
-    const previous = this.#prepared
-    this.#prepared = null
-    if (cancelNative && hadPrefetch) {
-      // Serializar con resolve evita que una cancelación tardía retire la siguiente sesión.
-      this.#cancelPending = this.#cancelPending.then(() => api.cancelPrefetch()).catch(() => {})
+  #rememberPlayback(item: QueueItem, playable: Playable) {
+    this.#source = { trackId: item.track.id, videoId: playable.videoId,
+      kind: playable.local ? 'local' : playable.url.startsWith(CAPTURE) ? 'capture' :
+        playable.url.startsWith('musify-capture-legacy:') ? 'capture-legacy' : 'network' }
+  }
+
+  #followingItems(): QueueItem[] {
+    if (this.repeat === 'one') return []
+    const limit = extractor.engine === 'oficial' ? this.#prefetchLimit : 2
+    const rest = this.order.slice(this.pos + 1)
+    if (this.repeat === 'all') rest.push(...this.order.slice(0, this.pos + 1))
+    const result: QueueItem[] = [], seen = new Set<number>()
+    for (const item of [...this.userQueue.map(e => e.item), ...rest.map(index => this.queue[index])]) {
+      if (!item || item === this.current || seen.has(item.track.id)) continue
+      seen.add(item.track.id); result.push(item)
+      if (result.length >= limit) break
     }
-    if (previous) {
-      // El supervisor sustituye la sesión next; no cancelar una generación ya promocionada.
-      previous.stop(false)
-      previous.audio.pause()
-      previous.audio.removeAttribute('src')
-      previous.audio.load()
+    return limit ? result : []
+  }
+
+  #removePrefetch(entry: PrefetchEntry, cancelNative: boolean, adopt = false) {
+    if (this.#prefetches.get(entry.item.track.id) !== entry) return
+    this.#prefetches.delete(entry.item.track.id)
+    if (cancelNative)
+      this.#cancelPending = this.#cancelPending.then(() => api.cancelPrefetch(entry.slot)).catch(() => {})
+    if (entry.prepared && !adopt) {
+      entry.prepared.stop(false)
+      entry.prepared.audio.pause()
+      entry.prepared.audio.removeAttribute('src')
+      entry.prepared.audio.load()
     }
   }
 
-  /** Prepara el decoder/MSE de la siguiente desde que empieza a sonar la actual. */
+  #discardPrefetch(cancelNative = false) {
+    const entries = [...this.#prefetches.values()]
+    if (cancelNative && entries.length)
+      this.#cancelPending = this.#cancelPending.then(() => api.cancelPrefetch()).catch(() => {})
+    for (const entry of entries) this.#removePrefetch(entry, false)
+  }
+
+  #prunePrefetch(following: QueueItem[]) {
+    const wanted = new Set(following.map(item => item.track.id))
+    for (const entry of this.#prefetches.values())
+      if (!wanted.has(entry.item.track.id) || entry.engine !== extractor.engine) this.#removePrefetch(entry, true)
+  }
+
+  /** Prepara hasta dos Audio sin cambiar la plaza de una canción todavía deseada. */
   #prefetchNext() {
     if (this.#promotion?.token === this.#token) return
     const admission = this.#currentAdmission()
     if (this.status === 'idle' || (this.status === 'loading' && (!this.#loadingCanPrefetch || !admission))) return
-    const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
-    const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
-    if (!following || following === this.current || this.repeat === 'one') { this.#discardPrefetch(true); return }
-    if (this.#prefetchId === following.track.id) return
-    this.#discardPrefetch()
-    this.#prefetchId = following.track.id
-    const version = this.#prefetchVersion
-    if (admission) this.#audio.dispatchEvent(new CustomEvent('capturehandoff', { detail: {
-      phase: 'prefetch-request', requestId: admission.requestId, resolution: admission.resolution,
-      trackId: admission.trackId, nextTrackId: following.track.id,
-    } }))
-    this.#resolve(following, false, false).then(playable => {
-      if (version !== this.#prefetchVersion) return
-      // La vía legacy mantiene su política anterior: resolver URL, sin una segunda captura MSE.
-      if (audioSrc(playable).startsWith('musify-capture-legacy:')) return
-      const audio = new Audio()
-      this.#bindAudio(audio)
-      audio.muted = true
-      const stop = prepareAudioSource(audio, audioSrc(playable))
-      this.#prepared = { id: following.track.id, playable, audio, stop }
-      audio.addEventListener('captureerror', () => {
-        if (this.#prepared?.audio === audio) this.#discardPrefetch(true)
-      }, { once: true })
-    }).catch(() => { if (version === this.#prefetchVersion) this.#prefetchId = null })
+    const following = this.#followingItems()
+    this.#prunePrefetch(following)
+    for (const item of following) {
+      let entry = this.#prefetches.get(item.track.id)
+      if (entry?.pending || entry?.resolved) continue
+      if (!entry) {
+        const occupied = new Set([...this.#prefetches.values()].map(e => e.slot))
+        const slot = ([0, 1] as const).find(s => !occupied.has(s))
+        if (slot === undefined) break
+        entry = { item, engine: extractor.engine, slot, version: ++this.#prefetchVersion, pending: false, resolved: false, prepared: null }
+        this.#prefetches.set(item.track.id, entry)
+      }
+      const selected = entry, token = this.#token
+      selected.pending = true
+      if (admission) this.#audio.dispatchEvent(new CustomEvent('capturehandoff', { detail: {
+        phase: 'prefetch-request', requestId: admission.requestId, resolution: admission.resolution,
+        trackId: admission.trackId, nextTrackId: item.track.id, nextSlot: selected.slot,
+      } }))
+      this.#resolve(item, false, false, selected).then(playable => {
+        if (this.#prefetches.get(item.track.id) !== selected) return
+        if (selected.engine !== extractor.engine) { this.#removePrefetch(selected, true); return }
+        selected.pending = false
+        selected.resolved = true
+        // Legacy sigue resolviendo su URL sin abrir otro consumidor MSE.
+        if (audioSrc(playable).startsWith('musify-capture-legacy:')) return
+        const audio = new Audio()
+        this.#bindAudio(audio); audio.muted = true
+        const stop = prepareAudioSource(audio, audioSrc(playable))
+        selected.prepared = { id: item.track.id, playable, audio, stop }
+        audio.addEventListener('captureerror', () => {
+          if (this.#prefetches.get(item.track.id) === selected) this.#removePrefetch(selected, true)
+        }, { once: true })
+      }).catch(() => {
+        if (this.#prefetches.get(item.track.id) !== selected) return
+        selected.pending = false
+        if (token !== this.#token) this.#prefetchNext()
+        else this.#removePrefetch(selected, true)
+      })
+    }
   }
 
-  #resolve(item: QueueItem, refresh: boolean, foreground = true): Promise<Playable> {
+  #resolve(item: QueueItem, refresh: boolean, foreground = true, prefetch?: PrefetchEntry): Promise<Playable> {
     const id = item.track.id
-    let pending = this.#inFlight.get(id)
+    const key = `${foreground ? 'foreground' : 'next'}:${id}`
+    let pending = this.#inFlight.get(key)
     if (!pending || refresh || pending.token !== this.#token || (foreground && !pending.foreground) ||
-        (!foreground && pending.prefetchVersion !== this.#prefetchVersion)) {
+        (!foreground && pending.prefetchVersion !== prefetch?.version)) {
       // El clic debe llegar al backend para promocionar una precarga; allí se comparte la captura.
-      const token = this.#token, version = this.#prefetchVersion
       const options = foreground ? this.#admissionOptions(item) : {
         expectedForeground: this.#currentAdmission()?.resolution,
-        isCurrent: () => token === this.#token && version === this.#prefetchVersion && this.#prefetchId === id,
+        nextSlot: prefetch?.slot,
+        isCurrent: () => !!prefetch && prefetch.engine === extractor.engine && this.#prefetches.get(id) === prefetch,
       }
       const entry = {
         promise: this.#cancelPending.then(() => {
@@ -679,11 +741,11 @@ class Player {
         }),
         foreground,
         token: this.#token,
-        prefetchVersion: this.#prefetchVersion,
+        prefetchVersion: prefetch?.version ?? 0,
       }
       pending = entry
-      this.#inFlight.set(id, entry)
-      entry.promise.finally(() => this.#inFlight.get(id) === entry && this.#inFlight.delete(id)).catch(() => {})
+      this.#inFlight.set(key, entry)
+      entry.promise.finally(() => this.#inFlight.get(key) === entry && this.#inFlight.delete(key)).catch(() => {})
     }
     return pending.promise
   }
@@ -704,6 +766,8 @@ class Player {
             admission.trackId !== item.track.id || !Number.isSafeInteger(admission.resolution) || admission.resolution < 0 ||
             !/^[A-Za-z0-9_-]{11}$/.test(admission.videoId)) return
         this.#admission = { ...admission, token, audio }
+        if (Number.isInteger(admission.prefetchSlots) && admission.prefetchSlots! >= 0 && admission.prefetchSlots! <= 2)
+          this.#prefetchLimit = admission.prefetchSlots!
         audio.dispatchEvent(new CustomEvent('capturehandoff', { detail: { ...admission, phase: 'foreground-admitted' } }))
         this.#prefetchNext()
       } } : {}),

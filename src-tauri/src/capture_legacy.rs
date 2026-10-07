@@ -391,11 +391,11 @@ async fn open_locked(
     let start = at.map(|s| format!("#musify-t={s:.1}")).unwrap_or_default();
     let url = format!("https://music.youtube.com/watch?v={video_id}{start}");
     let result = async {
-        let profile = app
-            .path()
-            .app_local_data_dir()
-            .map_err(|e| e.to_string())?
-            .join("yt-engine-legacy");
+        let profile = if std::env::var_os("MUSIFY_BENCH").is_some() {
+            crate::capture::profile_directory(app)?
+        } else {
+            app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("yt-engine-legacy")
+        };
         let window = WebviewWindowBuilder::new(
             app,
             &label,
@@ -923,6 +923,7 @@ mod tests {
         let ticket = Some(RequestTicket {
             resolution: 4,
             prefetch: None,
+            prefetch_slot: None,
         });
         c.promote("bbbbbbbbbbb", ticket);
         assert!(c.owns("bbbbbbbbbbb", 8));

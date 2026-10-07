@@ -30,12 +30,13 @@ const MAX_SIZE: usize = 8 * 1024 * 1024;
 
 /// Versión de la forma de hablar con cada extractor que entiende esta app. Debe coincidir con
 /// `extractors.json` (lo comprueba un test).
-pub const API: [(&str, u32); 3] = [("recipe", 1), ("capture", 3), ("youtubei", 1)];
+pub const API: [(&str, u32); 3] = [("recipe", 1), ("capture", 4), ("youtubei", 1)];
 
 const BUNDLED_META: &str = include_str!("../extractors.json");
 const BUNDLED_RECIPE: &str = include_str!("../recipe/youtube.json");
 const BUNDLED_CAPTURE: &str = concat!(
     include_str!("capture-mp4.js"), "\n;\n",
+    include_str!("capture-audit.js"), "\n;\n",
     include_str!("capture-core.js"), "\n;\n",
     include_str!("capture-youtube.js"), "\n;\n",
     include_str!("capture.js"),

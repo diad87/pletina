@@ -15,10 +15,10 @@ async function settle(predicate) {
 const timeline = { timestampOffset: 0, appendWindowStart: 0, appendWindowEnd: null, mode: 'segments' }
 const unit = (start, end, changes = {}) => ({ epoch: 1, source: 7, s: 2, unit: start, initKey: 'opus-one', initBytes: 1,
   mime: 'audio/webm; codecs="opus"', rangeStart: start, rangeEnd: end, decodeStart: start, decodeEnd: end,
-  frames: 1, verified: true, timelineSettings: timeline, ...changes })
+  frames: 1, firstFrame: start, endFrame: start + 1, verified: true, timelineSettings: timeline, ...changes })
 function packet({ chunks = [], units = chunks.map(c => unit(c.at(-2), c.at(-1))), from = 0, ranges = [], ...changes } = {}) {
   const head = new TextEncoder().encode(JSON.stringify({
-    api: 3, duration: 100, complete: false, error: null, softError: null, recovering: false, revision: 9, generation: 3,
+    api: 4, duration: 100, complete: false, error: null, softError: null, recovering: false, revision: 9, generation: 3,
     units: units.map((u, i) => ({ generation: changes.generation ?? 3, index: from + i, ...u })), ranges, from, next: from + chunks.length, ...changes,
   }))
   const buffer = new ArrayBuffer(4 + head.length + chunks.reduce((n, c) => n + c.length + 4, 0))
@@ -258,6 +258,8 @@ test('AAC restaura offsets y ventanas al pasar de época sin retirar los rangos 
 
 for (const [name, change] of [
   ['unidad no verificada', { verified: false }], ['frames vacío', { frames: 0 }], ['inicio invertido', { rangeStart: 10 }],
+  ['ordinal ausente', { firstFrame: undefined }], ['ordinal fraccionario', { firstFrame: 0.5 }],
+  ['inventario discrepante', { firstFrame: 0, endFrame: 2, frames: 1 }],
   ['init fuera de bytes', { initBytes: 3 }], ['ventana inválida', { timelineSettings: { ...timeline, appendWindowEnd: 0 } }],
   ['timeline ausente', { timelineSettings: undefined }],
 ]) test(`rechaza ${name} antes de append`, async t => {
@@ -426,4 +428,23 @@ test('el lector legacy cancela sólo la generación que llegó a leer', async t 
   stop()
   assert.deepEqual(calls.find(([command]) => command === 'capture_legacy_cancel'),
     ['capture_legacy_cancel', { videoId: 'aaaaaaaaaaa', generation: 7 }])
+})
+
+test('API4 no permite acreditar dos unidades distintas con el mismo ordinal de muestra', async t => {
+  const env = environment(t, (command, args) => command !== 'capture_read' ? Promise.resolve() : Promise.resolve(packet({
+    from: args.from, chunks: args.from === 0 ? [[255, 0, 5], [255, 5, 10]] : [],
+    units: args.from === 0 ? [unit(0, 5), unit(5, 10, { firstFrame: 0, endFrame: 1 })] : [],
+  })))
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => env.audio.warnings.some(message => /Muestras repetidas/.test(message)))
+  assert.equal(env.instances[0].buffers[0].chunks.length, 1)
+  assert.deepEqual(env.instances[0].ends, [])
+})
+
+test('el lector exige API4 y no convierte un header anterior en prueba de inventario', async t => {
+  const env = environment(t, () => Promise.resolve(packet({ api: 3, chunks: [[255, 0, 5]] })))
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => env.audio.errors.length === 1)
+  assert.match(env.audio.errors[0], /Ledger/)
+  assert.equal(env.instances[0].buffers.length, 0)
 })

@@ -82,11 +82,13 @@ pub struct Stats {
 
 pub static STATS: LazyLock<Stats> = LazyLock::new(Stats::default);
 /// La receta incluida en la app y la descargada (si hay una más nueva).
-static BUNDLED: LazyLock<Recipe> =
-    LazyLock::new(|| serde_json::from_str(crate::extractors::bundled_recipe()).expect("receta incluida"));
+static BUNDLED: LazyLock<Recipe> = LazyLock::new(|| {
+    serde_json::from_str(crate::extractors::bundled_recipe()).expect("receta incluida")
+});
 static DOWNLOADED: RwLock<Option<Recipe>> = RwLock::new(None);
 static VISITOR: tokio::sync::Mutex<Option<(String, Instant)>> = tokio::sync::Mutex::const_new(None);
-static CACHE: LazyLock<Mutex<HashMap<String, Direct>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static CACHE: LazyLock<Mutex<HashMap<String, Direct>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 static HTTP: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
@@ -100,7 +102,10 @@ pub fn set_recipe(text: &str) -> Result<(), String> {
     let youtube = |u: &str| {
         reqwest::Url::parse(u)
             .ok()
-            .and_then(|u| u.host_str().map(|h| h == "youtube.com" || h.ends_with(".youtube.com")))
+            .and_then(|u| {
+                u.host_str()
+                    .map(|h| h == "youtube.com" || h.ends_with(".youtube.com"))
+            })
             .unwrap_or(false)
     };
     if !youtube(&r.player) || !youtube(&r.visitor.url) || r.clients.is_empty() {
@@ -113,14 +118,27 @@ pub fn set_recipe(text: &str) -> Result<(), String> {
 /// URL del audio de un vídeo, ya comprobada (YouTube no la va a cortar a mitad).
 pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     if !refresh
-        && let Some(d) = CACHE.lock().unwrap().get(video_id).filter(|d| d.expires > now() + 600)
+        && let Some(d) = CACHE
+            .lock()
+            .unwrap()
+            .get(video_id)
+            .filter(|d| d.expires > now() + 600)
     {
         return Ok(d.clone());
     }
     // Primero la receta descargada y, si con ella no sale, la incluida.
-    let recipes: Vec<Recipe> = DOWNLOADED.read().unwrap().iter().cloned().chain([BUNDLED.clone()]).collect();
+    let recipes: Vec<Recipe> = DOWNLOADED
+        .read()
+        .unwrap()
+        .iter()
+        .cloned()
+        .chain([BUNDLED.clone()])
+        .collect();
     let mut last = Error::Failed("La receta no tiene clientes".into());
-    let clients: Vec<(&Recipe, &Client)> = recipes.iter().flat_map(|r| r.clients.iter().map(move |c| (r, c))).collect();
+    let clients: Vec<(&Recipe, &Client)> = recipes
+        .iter()
+        .flat_map(|r| r.clients.iter().map(move |c| (r, c)))
+        .collect();
     for (recipe, client) in clients {
         // Segundo intento con sesión de visitante nueva y otra URL.
         for attempt in 0..2 {
@@ -135,7 +153,10 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
                 Ok(d) => match validate(&d).await {
                     Ok(()) => {
                         STATS.resolved.fetch_add(1, Ordering::Relaxed);
-                        CACHE.lock().unwrap().insert(video_id.to_string(), d.clone());
+                        CACHE
+                            .lock()
+                            .unwrap()
+                            .insert(video_id.to_string(), d.clone());
                         return Ok(d);
                     }
                     Err(e) => {
@@ -156,14 +177,63 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     Err(last)
 }
 
+/// Referencia independiente del banco. No escribe la caché de reproducción ni usa cookies.
+/// La selección debe coincidir con el contenedor/códec capturado para comparar paquetes exactos.
+pub async fn reference(
+    video_id: &str,
+    mime: Option<&str>,
+    itag: Option<u64>,
+) -> Result<Direct, Error> {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return Err(Error::Failed(
+            "Referencia sólo disponible en pruebas".into(),
+        ));
+    }
+    let recipes: Vec<Recipe> = DOWNLOADED
+        .read()
+        .unwrap()
+        .iter()
+        .cloned()
+        .chain([BUNDLED.clone()])
+        .collect();
+    let mut last = Error::Failed("Sin referencia compatible".into());
+    for recipe in &recipes {
+        for client in &recipe.clients {
+            let visitor = match visitor(recipe, false).await {
+                Ok(v) => v,
+                Err(e) => {
+                    last = Error::Failed(e);
+                    continue;
+                }
+            };
+            match player_with_preference(recipe, client, video_id, &visitor, mime, itag).await {
+                Ok(d) => match validate(&d).await {
+                    Ok(()) => return Ok(d),
+                    Err(e) => last = Error::Failed(e),
+                },
+                Err(e) => last = e,
+            }
+        }
+    }
+    Err(last)
+}
+
+pub fn bench_forget(video_id: &str) -> Result<(), String> {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return Err("Reinicio sólo disponible en pruebas".into());
+    }
+    CACHE.lock().unwrap().remove(video_id);
+    Ok(())
+}
+
 async fn visitor(recipe: &Recipe, fresh: bool) -> Result<String, String> {
     let mut slot = VISITOR.lock().await;
-    if !fresh
-        && let Some((v, _)) = slot.as_ref().filter(|(_, at)| at.elapsed() < VISITOR_TTL)
-    {
+    if !fresh && let Some((v, _)) = slot.as_ref().filter(|(_, at)| at.elapsed() < VISITOR_TTL) {
         return Ok(v.clone());
     }
-    let mut req = HTTP.get(&recipe.visitor.url).header("User-Agent", BROWSER_UA);
+    let mut req = HTTP
+        .get(&recipe.visitor.url)
+        .header("User-Agent", BROWSER_UA);
     for (k, v) in &recipe.visitor.headers {
         req = req.header(k, v);
     }
@@ -184,11 +254,32 @@ async fn visitor(recipe: &Recipe, fresh: bool) -> Result<String, String> {
 /// así que siempre empieza por "Cgt". Buscarla así no depende de en qué posición la ponga YouTube.
 fn find_visitor(text: &str) -> Option<String> {
     text.split('"')
-        .find(|s| s.starts_with("Cgt") && s.len() >= 20 && s.bytes().all(|b| b.is_ascii_alphanumeric() || b"-_%=".contains(&b)))
+        .find(|s| {
+            s.starts_with("Cgt")
+                && s.len() >= 20
+                && s.bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"-_%=".contains(&b))
+        })
         .map(String::from)
 }
 
-async fn player(recipe: &Recipe, c: &Client, video_id: &str, visitor: &str) -> Result<Direct, Error> {
+async fn player(
+    recipe: &Recipe,
+    c: &Client,
+    video_id: &str,
+    visitor: &str,
+) -> Result<Direct, Error> {
+    player_with_preference(recipe, c, video_id, visitor, None, None).await
+}
+
+async fn player_with_preference(
+    recipe: &Recipe,
+    c: &Client,
+    video_id: &str,
+    visitor: &str,
+    mime: Option<&str>,
+    itag: Option<u64>,
+) -> Result<Direct, Error> {
     let mut client = c.context.clone();
     client.insert("clientName".into(), json!(c.name));
     client.insert("clientVersion".into(), json!(c.version));
@@ -216,20 +307,39 @@ async fn player(recipe: &Recipe, c: &Client, video_id: &str, visitor: &str) -> R
         .map_err(|e| Error::Failed(format!("No se pudo conectar con YouTube: {e}")))?;
     let text = res.text().await.map_err(|e| Error::Failed(e.to_string()))?;
     let j: Value = serde_json::from_str(&text).map_err(|e| Error::Failed(e.to_string()))?;
-    pick(recipe, c, &j)
+    pick_with_preference(recipe, c, &j, mime, itag)
 }
 
 /// Elige el audio de la respuesta de YouTube: solo audio, con URL directa, sin compresión de rango
 /// dinámico, en la pista de idioma por defecto, y del tipo preferido con más calidad.
+#[cfg(test)]
 fn pick(recipe: &Recipe, c: &Client, j: &Value) -> Result<Direct, Error> {
+    pick_with_preference(recipe, c, j, None, None)
+}
+
+fn pick_with_preference(
+    recipe: &Recipe,
+    c: &Client,
+    j: &Value,
+    wanted_mime: Option<&str>,
+    wanted_itag: Option<u64>,
+) -> Result<Direct, Error> {
     let status = j["playabilityStatus"]["status"].as_str().unwrap_or("");
-    let reason = j["playabilityStatus"]["reason"].as_str().unwrap_or(status).to_string();
+    let reason = j["playabilityStatus"]["reason"]
+        .as_str()
+        .unwrap_or(status)
+        .to_string();
     match status {
         "OK" => {}
         "UNPLAYABLE" | "ERROR" => return Err(Error::Gone(format!("Video unavailable: {reason}"))),
         _ => return Err(Error::Failed(format!("YouTube: {reason}"))),
     }
-    let rank = |mime: &str| recipe.audio.iter().position(|a| mime.starts_with(a.as_str()));
+    let rank = |mime: &str| {
+        recipe
+            .audio
+            .iter()
+            .position(|a| mime.starts_with(a.as_str()))
+    };
     let best = j["streamingData"]["adaptiveFormats"]
         .as_array()
         .into_iter()
@@ -240,17 +350,28 @@ fn pick(recipe: &Recipe, c: &Client, j: &Value) -> Result<Direct, Error> {
                 && f["url"].is_string()
                 && !f["isDrc"].as_bool().unwrap_or(false)
                 && f["audioTrack"]["audioIsDefault"].as_bool().unwrap_or(true)
+                && wanted_itag.is_none_or(|itag| f["itag"].as_u64() == Some(itag))
+                && wanted_mime.is_none_or(|wanted| mime_family(mime) == mime_family(wanted))
         })
-        .min_by_key(|f| (rank(f["mimeType"].as_str().unwrap_or("")), std::cmp::Reverse(f["bitrate"].as_u64().unwrap_or(0))))
+        .min_by_key(|f| {
+            (
+                rank(f["mimeType"].as_str().unwrap_or("")),
+                std::cmp::Reverse(f["bitrate"].as_u64().unwrap_or(0)),
+            )
+        })
         .ok_or_else(|| Error::Failed(format!("{}: sin audio con URL directa", c.name)))?;
 
     let url = best["url"].as_str().unwrap_or_default().to_string();
     let details = &j["videoDetails"];
     Ok(Direct {
-        expires: query_param(&url, "expire").and_then(|e| e.parse().ok()).unwrap_or(now() + 3 * 3600),
+        expires: query_param(&url, "expire")
+            .and_then(|e| e.parse().ok())
+            .unwrap_or(now() + 3 * 3600),
         title: details["title"].as_str().unwrap_or_default().to_string(),
         channel: details["author"].as_str().map(String::from),
-        duration: details["lengthSeconds"].as_str().and_then(|s| s.parse().ok()),
+        duration: details["lengthSeconds"]
+            .as_str()
+            .and_then(|s| s.parse().ok()),
         client: c.name.clone(),
         itag: best["itag"].as_u64().unwrap_or(0),
         mime: best["mimeType"].as_str().unwrap_or_default().to_string(),
@@ -258,10 +379,21 @@ fn pick(recipe: &Recipe, c: &Client, j: &Value) -> Result<Direct, Error> {
     })
 }
 
+fn mime_family(mime: &str) -> String {
+    mime.to_ascii_lowercase()
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string()
+}
+
 /// Pide 1 KB hacia el 80 % del audio: es donde YouTube corta (403) las URLs que no va a servir
 /// enteras. Así se cambia antes de usarla en vez de a mitad de la canción.
 async fn validate(d: &Direct) -> Result<(), String> {
-    let len: u64 = query_param(&d.url, "clen").and_then(|c| c.parse().ok()).unwrap_or(0);
+    let len: u64 = query_param(&d.url, "clen")
+        .and_then(|c| c.parse().ok())
+        .unwrap_or(0);
     let at = len * 8 / 10;
     let res = HTTP
         .get(&d.url)
@@ -287,8 +419,12 @@ mod tests {
 
     #[test]
     fn finds_visitor_anywhere() {
-        let text = r#")]}'[["a",["Cg","x"],[[["es","ES",null,"CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D",0]]]]]"#;
-        assert_eq!(find_visitor(text).as_deref(), Some("CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D"));
+        let text =
+            r#")]}'[["a",["Cg","x"],[[["es","ES",null,"CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D",0]]]]]"#;
+        assert_eq!(
+            find_visitor(text).as_deref(),
+            Some("CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D")
+        );
         assert_eq!(find_visitor(r#"["Cg","nada"]"#), None);
     }
 
@@ -298,8 +434,26 @@ mod tests {
         let c = &r.clients[0];
         let resp = |formats: Value| json!({ "playabilityStatus": { "status": "OK" }, "streamingData": { "adaptiveFormats": formats }, "videoDetails": { "title": "T", "author": "A", "lengthSeconds": "200" } });
         let f = |itag: u64, mime: &str, bitrate: u64| json!({ "itag": itag, "mimeType": mime, "bitrate": bitrate, "url": format!("https://x.googlevideo.com/videoplayback?itag={itag}&clen=100") });
-        let both = resp(json!([f(140, "audio/mp4; codecs=\"mp4a.40.2\"", 130000), f(251, "audio/webm; codecs=\"opus\"", 140000), f(250, "audio/webm; codecs=\"opus\"", 70000), f(137, "video/mp4", 4000000)]));
+        let both = resp(json!([
+            f(140, "audio/mp4; codecs=\"mp4a.40.2\"", 130000),
+            f(251, "audio/webm; codecs=\"opus\"", 140000),
+            f(250, "audio/webm; codecs=\"opus\"", 70000),
+            f(137, "video/mp4", 4000000)
+        ]));
         assert_eq!(pick(&r, c, &both).unwrap().itag, 251);
+        assert_eq!(
+            pick_with_preference(&r, c, &both, Some("audio/mp4"), None)
+                .unwrap()
+                .itag,
+            140
+        );
+        assert_eq!(
+            pick_with_preference(&r, c, &both, Some("audio/webm"), Some(250))
+                .unwrap()
+                .itag,
+            250
+        );
+        assert!(pick_with_preference(&r, c, &both, Some("audio/mp4"), Some(251)).is_err());
         let m4a = resp(json!([f(140, "audio/mp4; codecs=\"mp4a.40.2\"", 130000)]));
         assert_eq!(pick(&r, c, &m4a).unwrap().itag, 140);
         let gone = json!({ "playabilityStatus": { "status": "ERROR", "reason": "This video is unavailable" } });
@@ -315,7 +469,13 @@ mod tests {
         for id in ["jNY_wLukVW0", "nV-F1WSpJIA", "q9IjQAef8VI", "oolpPmuK2I8"] {
             let t = Instant::now();
             let d = resolve(id, true).await.unwrap();
-            println!("{id}: {:?} {} {} {}", t.elapsed(), d.client, d.itag, d.title);
+            println!(
+                "{id}: {:?} {} {} {}",
+                t.elapsed(),
+                d.client,
+                d.itag,
+                d.title
+            );
         }
         assert!(resolve("xxxxxxxxxxx", true).await.is_err());
     }

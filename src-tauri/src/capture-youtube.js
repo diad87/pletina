@@ -1,7 +1,7 @@
 // Site-specific observations, not a public YouTube contract. Missing signals fail closed.
 (() => {
   const normalized = (value) => String(value ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim()
-  function create({ document = globalThis.document, location = globalThis.location, target, skipDiagnostics = false }) {
+  function create({ document = globalThis.document, location = globalThis.location, target, skipDiagnostics = false, requestSkip = null, skipContext = () => null }) {
     const player = () => document.querySelector('#movie_player')
     const visiblyRendered = (node) => {
       if (!node || node.hidden || !node.getClientRects?.().length) return false
@@ -62,7 +62,13 @@
       if (button) button.click()
       return !!button
     }
-    const clickedAt = new WeakMap()
+    const sessionState = () => {
+      let loggedIn
+      try { loggedIn = globalThis.ytcfg?.get?.('LOGGED_IN') } catch { /* A missing site hint is unknown, not signed out. */ }
+      return { state: loggedIn === true ? 'signed-in' : loggedIn === false ? 'signed-out' : 'unknown', browserNow: Math.round(globalThis.performance?.now?.() ?? 0), evidenceVersion: 1 }
+    }
+    const clickedAt = new WeakMap(), buttonTokens = new WeakMap()
+    let nextRequest = 0, nextButton = 0, pendingSkip = null
     const skipSelectors = ['.ytp-skip-ad-button', '.ytp-ad-skip-button', '.ytp-ad-skip-button-modern']
     const skip = { calls: 0, tries: 0, returned: 0, threw: 0, clickEvents: 0, canceled: 0, result: null, matches: [0, 0, 0], outcomes: { notAd: 0, noMatch: 0, ineligible: 0, cooldown: 0 } }
     let sampledAt = -Infinity, observation = null
@@ -112,42 +118,81 @@
       if (JSON.stringify(summary).length > 1000) return { calls: skip.calls, tries: skip.tries, returned: skip.returned, threw: skip.threw, result: skip.result, detailsOmitted: true }
       return summary
     }
+    const eligibleButton = button => !!button && button.isConnected === true && !button.disabled && button.getAttribute?.('aria-disabled') !== 'true' && visiblyRendered(button)
+    const pointOf = button => {
+      const rect = button.getBoundingClientRect?.(), view = document.defaultView
+      const viewportWidth = view?.innerWidth, viewportHeight = view?.innerHeight
+      if (!rect || ![rect.left, rect.top, rect.width, rect.height, viewportWidth, viewportHeight].every(Number.isFinite) || rect.width <= 0 || rect.height <= 0) return null
+      const x = rect.left + rect.width / 2, y = rect.top + rect.height / 2
+      if (x < 0 || y < 0 || x >= viewportWidth || y >= viewportHeight) return null
+      const hit = document.elementFromPoint?.(x, y)
+      return hit && (hit === button || button.contains?.(hit)) ? { x, y, viewportWidth, viewportHeight } : null
+    }
+    const completeSkip = ({ requestId, epoch, source, ok = false, reason = 'native-result-missing' } = {}) => {
+      if (!pendingSkip || pendingSkip.requestId !== requestId) return false
+      if ((epoch !== undefined && epoch !== pendingSkip.binding.epoch) || (source !== undefined && source !== pendingSkip.binding.source)) return false
+      const pending = pendingSkip; pendingSkip = null
+      pending.button.removeEventListener?.('click', pending.onClick, true)
+      diagnose(() => {
+        const seen = pending.seen, attempt = pending.attempt
+        skip.result = ok ? 'native-returned' : 'native-rejected'
+        if (ok) skip.returned++
+        if (attempt) { attempt.eventSeen = !!seen; attempt.isTrusted = seen ? seen.isTrusted === true : null; attempt.defaultPrevented = seen ? seen.defaultPrevented === true : null; attempt.nativeOk = ok === true; attempt.reason = publicText(reason, 64) }
+        if (seen) { skip.clickEvents++; if (seen.defaultPrevented) skip.canceled++ }
+      })
+      return true
+    }
+    const validateSkip = requestId => {
+      const pending = pendingSkip, invalid = reason => ({ valid: false, requestId, reason })
+      if (!pending || pending.requestId !== requestId) return invalid('stale-request')
+      if (diagnosticNow() - pending.at > 2000) return invalid('request-expired')
+      const current = skipContext(pending.element)
+      if (!current || ['generation', 'epoch', 'source'].some(key => current[key] !== pending.binding[key])) return invalid('source-changed')
+      if (classify(pending.element).state !== 'ad') return invalid('not-ad')
+      if (!player()?.contains(pending.button) || !eligibleButton(pending.button) || !skipSelectors.some(selector => pending.button.matches?.(selector))) return invalid('button-ineligible')
+      const point = pointOf(pending.button)
+      if (!point || Object.keys(point).some(key => point[key] !== pending.point[key])) return invalid('button-moved-or-covered')
+      return { valid: true, requestId, ...pending.binding, buttonToken: pending.buttonToken, ...point }
+    }
     const skipAd = (element) => {
       diagnose(() => { skip.calls++ })
+      if (pendingSkip) {
+        if (!validateSkip(pendingSkip.requestId).valid) completeSkip({ requestId: pendingSkip.requestId, reason: 'request-invalidated' })
+        else { diagnose(() => { skip.result = 'native-pending' }); return false }
+      }
       if (classify(element).state !== 'ad') { diagnose(() => { skip.result = 'not-ad'; skip.outcomes.notAd++ }); return false }
       const p = player()
       const buttons = [...(p?.querySelectorAll?.(skipSelectors.join(', ')) ?? [])]
-      const button = buttons.find((b) => {
-        if (b.disabled || b.hidden || b.getAttribute?.('aria-disabled') === 'true' || !b.getClientRects?.().length) return false
-        const style = document.defaultView?.getComputedStyle?.(b)
-        return !style || (style.display !== 'none' && !['hidden', 'collapse'].includes(style.visibility) && style.opacity !== '0')
-      })
+      const button = buttons.find(eligibleButton)
       sampleControls(p, buttons, button)
       if (!button) { diagnose(() => { skip.result = buttons.length ? 'ineligible' : 'no-match'; skip.outcomes[buttons.length ? 'ineligible' : 'noMatch']++ }); return false }
+      const binding = skipContext(element), point = pointOf(button)
+      if (typeof requestSkip !== 'function' || !binding || !['generation', 'epoch', 'source'].every(key => Number.isSafeInteger(binding[key]) && binding[key] > 0) || !point || !p.contains(button)) { diagnose(() => { skip.result = 'native-unavailable-or-covered' }); return false }
       if (Date.now() - (clickedAt.get(button) ?? -Infinity) < 1000) { diagnose(() => { skip.result = 'cooldown'; skip.outcomes.cooldown++ }); return false }
       clickedAt.set(button, Date.now())
-      let seen = null, listening = false, attempt = null
-      const onClick = event => { seen = event }
+      let attempt = null
       diagnose(() => {
         skip.tries++; attempt = skip.last = { at: diagnosticNow(), source: observation?.source ?? null, epoch: observation?.epoch ?? null, position: element.currentTime, selector: skipSelectors.findIndex(selector => button.matches?.(selector)), eventSeen: false }
-        if (button.addEventListener) { button.addEventListener('click', onClick, { capture: true, passive: true }); listening = true }
       })
+      if (!buttonTokens.has(button)) buttonTokens.set(button, ++nextButton)
+      // The native window can navigate without changing generation. Do not recycle
+      // request1 in its replacement document while an old COM callback is pending.
+      nextRequest = Math.max(nextRequest + 1, Date.now() * 1000)
+      const pending = { requestId: nextRequest, buttonToken: buttonTokens.get(button), button, element, binding: { generation: binding.generation, epoch: binding.epoch, source: binding.source }, point, at: diagnosticNow(), attempt, seen: null }
+      pending.onClick = event => { pending.seen = event }
+      button.addEventListener?.('click', pending.onClick, { capture: true, passive: true })
+      pendingSkip = pending
       try {
-        button.click()
-        diagnose(() => { skip.returned++; skip.result = 'click-returned' })
+        requestSkip({ requestId: pending.requestId, buttonToken: pending.buttonToken, ...pending.binding, ...point })
+        diagnose(() => { skip.result = 'native-requested' })
         return true
       } catch (error) {
-        diagnose(() => { skip.threw++; skip.result = 'click-threw'; if (attempt) attempt.errorName = publicText(error?.name, 32) })
+        completeSkip({ requestId: pending.requestId, reason: 'request-threw' })
+        diagnose(() => { skip.threw++; skip.result = 'request-threw'; if (attempt) attempt.errorName = publicText(error?.name, 32) })
         throw error
-      } finally {
-        diagnose(() => {
-          if (listening) button.removeEventListener('click', onClick, true)
-          if (attempt) { attempt.eventSeen = !!seen; attempt.isTrusted = seen ? seen.isTrusted === true : null; attempt.defaultPrevented = seen ? seen.defaultPrevented === true : null }
-          if (seen) { skip.clickEvents++; if (seen.defaultPrevented) skip.canceled++ }
-        })
       }
     }
-    return { classify, interaction, rejectConsent, skipAd, observeSkip, skipSummary }
+    return { classify, interaction, rejectConsent, sessionState, skipAd, observeSkip, skipSummary, validateSkip, completeSkip }
   }
   globalThis.__musifyCaptureYouTube = { create }
 })()

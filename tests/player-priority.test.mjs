@@ -314,19 +314,20 @@ test('la precarga prepara un segundo Audio y el fin de canción lo promociona si
   assert.notEqual(env.player.time, 99)
 })
 
-test('cambiar la cola DJ sustituye la precarga sin parar la canción actual', async t => {
+test('insertar una canción DJ conserva la anterior siguiente como segunda precarga', async t => {
   const calls = []
   const env = await setup(t, { resolve: async (track, refresh, foreground) => {
     calls.push({ id: track.id, foreground }); return playable(`track-${track.id}`)
   } })
   env.player.playQueue([item(1), item(2)], 0)
   await settle(() => env.audios.length === 2)
-  const obsolete = env.audios[1]
+  const retained = env.audios[1]
   env.player.playNext([item(3)])
   await settle(() => env.audios.length === 3)
   assert.equal(env.player.playbackAudio, env.audio)
   assert.equal(env.player.status, 'playing')
-  assert.equal(obsolete.src, '')
+  assert.equal(retained.src, 'track-2')
+  assert.deepEqual(env.player.preparedAudios.map(entry => entry.trackId), [3, 2])
   assert.equal(env.audios[2].src, 'track-3')
   env.audio.dispatchEvent(new Event('ended'))
   await settle(() => env.player.current.track.id === 3 && env.player.status === 'playing')
@@ -346,23 +347,24 @@ test('un fallo parcial informa y conserva el audio en reproducción', async t =>
   assert.equal(env.toasts.length, 1)
 })
 
-test('B → C → B en la cola genera otra petición de precarga B y descarta sus tickets anteriores', async t => {
-  const calls = [], pendingB = deferred(), pendingC = deferred()
+test('expulsar B con C y D y volver a B descarta los tickets de ambas plazas anteriores', async t => {
+  const calls = [], pendingB = deferred(), pendingC = deferred(), pendingD = deferred()
   const env = await setup(t, { resolve: (track, _refresh, foreground) => {
     calls.push({ id: track.id, foreground })
     if (foreground) return Promise.resolve(playable(`foreground-${track.id}`))
     if (track.id === 3) return pendingC.promise
+    if (track.id === 4) return pendingD.promise
     return calls.filter(call => call.id === 2).length === 1 ? pendingB.promise : Promise.resolve(playable('latest-B'))
   } })
   env.player.playQueue([item(1), item(2)], 0)
   await settle(() => calls.length === 2)
-  env.player.playNext([item(3)])
-  await settle(() => calls.length === 3)
+  env.player.playNext([item(3), item(4)])
+  await settle(() => calls.length === 4)
   env.player.clearQueue()
-  await settle(() => calls.length === 4 && env.player.preparedAudio !== null)
-  assert.deepEqual(calls.slice(1), [{ id: 2, foreground: false }, { id: 3, foreground: false }, { id: 2, foreground: false }])
+  await settle(() => calls.length === 5 && env.player.preparedAudio !== null)
+  assert.deepEqual(calls.slice(1), [2, 3, 4, 2].map(id => ({ id, foreground: false })))
   assert.equal(env.player.preparedAudio.src, 'latest-B')
-  pendingB.resolve(playable('obsolete-B')); pendingC.resolve(playable('obsolete-C'))
+  pendingB.resolve(playable('obsolete-B')); pendingC.resolve(playable('obsolete-C')); pendingD.resolve(playable('obsolete-D'))
   await tick()
   assert.equal(env.player.preparedAudio.src, 'latest-B')
   assert.equal(env.player.playbackAudio.src, 'foreground-1')
@@ -422,7 +424,8 @@ test('el audio API3 preparado suena sin esperar la promoción y sólo después d
   await settle(() => calls.some(call => call.id === 2 && call.foreground))
   env.player.addToQueue([item(4)])
   await tick()
-  assert.equal(calls.some(call => call.id === 3 || call.id === 4), false, 'la cola tampoco invalida el lease next durante la promoción')
+  assert.equal(calls.filter(call => call.id === 3).length, 1, 'la segunda precarga conserva su lease')
+  assert.equal(calls.some(call => call.id === 4), false, 'la cola tampoco invalida el lease next durante la promoción')
   promotion.resolve(captured(2))
   await settle(() => calls.some(call => call.id === 4 && !call.foreground))
   assert.equal(env.player.playbackAudio, prepared)
@@ -433,16 +436,16 @@ test('la precarga posterior espera también la promesa play del audio promovido'
   const env = await setup(t, { resolve: async (track, _refresh, foreground) => {
     calls.push({ id: track.id, foreground }); return captured(track.id)
   } })
-  env.player.playQueue([item(1), item(2), item(3)], 0)
+  env.player.playQueue([item(1), item(2), item(3), item(4)], 0)
   await settle(() => env.player.preparedAudio !== null)
   const prepared = env.player.preparedAudio
   t.mock.method(prepared, 'play', () => { prepared.paused = false; return playing.promise })
   env.player.next()
   await settle(() => calls.some(call => call.id === 2 && call.foreground))
   await tick()
-  assert.equal(calls.some(call => call.id === 3), false)
+  assert.equal(calls.some(call => call.id === 4), false)
   prepared.dispatchEvent(new Event('playing')); playing.resolve()
-  await settle(() => calls.some(call => call.id === 3 && !call.foreground))
+  await settle(() => calls.some(call => call.id === 4 && !call.foreground))
 })
 
 test('pausa y AbortError durante promoción permiten precargar tras reanudar, cualquiera que sea el orden del ack', async t => {
@@ -469,7 +472,8 @@ test('pausa y AbortError durante promoción permiten precargar tras reanudar, cu
     playing.reject(new DOMException('The play request was interrupted by pause()', 'AbortError'))
     await tick()
     env.player.addToQueue([item(4)])
-    assert.equal(calls.some(call => call.id === 3 || call.id === 4), false)
+    assert.equal(calls.filter(call => call.id === 3).length, 1)
+    assert.equal(calls.some(call => call.id === 4), false)
     env.player.toggle()
     assert.equal(env.player.playbackAudio, prepared)
     assert.equal(env.player.status, 'playing')
@@ -505,7 +509,8 @@ test('reanudar tras AbortError no elimina la barrera si la promoción fue rechaz
   await tick()
   assert.equal(env.player.status, 'playing')
   assert.equal(env.player.playbackAudio, prepared)
-  assert.equal(calls.some(call => call.id === 3 || call.id === 4), false)
+  assert.equal(calls.filter(call => call.id === 3).length, 1)
+  assert.equal(calls.some(call => call.id === 4), false)
 })
 
 test('cancelar la carga promovida invalida su éxito de promoción aunque play se resuelva tarde', async t => {
@@ -530,7 +535,8 @@ test('cancelar la carga promovida invalida su éxito de promoción aunque play s
   assert.equal(env.player.status, 'idle')
   assert.equal(prepared.paused, true)
   assert.equal(prepared.src, '')
-  assert.equal(calls.some(call => call.id === 3), false)
+  assert.equal(calls.filter(call => call.id === 3).length, 1)
+  assert.equal(env.player.preparedAudios.length, 0)
 })
 
 test('promoción rechazada o con otro vídeo conserva el audio confirmado y avisa sin saltar', async t => {
@@ -555,7 +561,7 @@ test('promoción rechazada o con otro vídeo conserva el audio confirmado y avis
     assert.equal(prepared.src, src)
     assert.equal(env.stopped.length, stops)
     assert.equal(env.player.current.track.id, 2)
-    assert.equal(calls.some(call => call.id === 3), false)
+    assert.equal(calls.filter(call => call.id === 3).length, 1)
     assert.match(env.toasts[0], /se conserva el audio confirmado/)
     if (!mismatch) assert.equal(env.player.captureInteraction, 'Confirma tu cuenta')
     env.player.addToQueue([item(4)])
@@ -655,6 +661,126 @@ const admit = (options, id, resolution = 42) => options.onAdmitted?.({
   requestId: `request-${resolution}`, resolution, trackId: id, videoId: captured(id).videoId, engine: 'oficial',
 })
 
+test('dos plazas mantienen el Audio de C al promover B y reutilizan sólo la plaza libre para D', async t => {
+  const calls = [], cancellations = []
+  const env = await setup(t, {
+    resolve: async (track, _refresh, foreground, options) => {
+      calls.push({ id: track.id, foreground, slot: options.nextSlot }); return captured(track.id)
+    },
+    cancelPrefetch: async slot => { cancellations.push(slot) },
+  })
+  env.player.playQueue([item(1), item(2), item(3), item(4)], 0)
+  await settle(() => env.player.preparedAudios.length === 2)
+  const [b, c] = env.player.preparedAudios
+  assert.deepEqual([b.slot, c.slot], [0, 1])
+  assert(b.audio.paused && b.audio.muted && c.audio.paused && c.audio.muted)
+  env.player.next()
+  await settle(() => env.player.playbackAudio === b.audio && env.player.preparedAudios.length === 2)
+  assert.deepEqual(env.player.preparedAudios.map(e => [e.trackId, e.slot]), [[3, 1], [4, 0]])
+  assert.equal(env.player.preparedAudios[0].audio, c.audio)
+  assert.deepEqual(cancellations, [])
+  env.player.next()
+  await settle(() => env.player.playbackAudio === c.audio && env.player.status === 'playing')
+  assert.equal(calls.filter(call => call.id === 3 && !call.foreground).length, 1)
+  assert.deepEqual(cancellations, [])
+})
+
+test('reordenar dos siguientes conserva ambos decoders y repetir una canción no ocupa otra plaza', async t => {
+  const calls = [], cancellations = []
+  const env = await setup(t, {
+    resolve: async track => { calls.push(track.id); return captured(track.id) },
+    cancelPrefetch: async slot => { cancellations.push(slot) },
+  })
+  env.player.playQueue([item(1)], 0)
+  await settle(() => env.player.status === 'playing')
+  env.player.playNext([item(2), item(3), item(2)])
+  await settle(() => env.player.preparedAudios.length === 2)
+  const [b, c] = env.player.preparedAudios
+  env.player.moveInQueue(env.player.userQueue[1].key, 0)
+  await tick()
+  assert.deepEqual(env.player.preparedAudios.map(e => e.audio), [c.audio, b.audio])
+  assert.deepEqual(calls, [1, 2, 3])
+  assert.deepEqual(cancellations, [])
+})
+
+test('la capacidad nativa de cero, una o dos precargas se respeta durante el arranque', async t => {
+  for (const prefetchSlots of [0, 1, 2]) {
+    const first = deferred(), calls = []
+    const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
+      calls.push({ id: track.id, foreground, options })
+      return foreground ? first.promise : Promise.resolve(captured(track.id))
+    } })
+    env.extractor.engine = 'oficial'
+    env.player.playQueue([item(1), item(2), item(3)], 0)
+    await settle(() => calls.length === 1)
+    calls[0].options.onAdmitted({ requestId: 'limit', resolution: 42, trackId: 1,
+      videoId: captured(1).videoId, engine: 'oficial', prefetchSlots, maxSessions: prefetchSlots + 1 })
+    await tick(); await tick()
+    assert.equal(calls.length, prefetchSlots + 1)
+    assert.equal(env.player.preparedAudios.length, prefetchSlots)
+    first.resolve(captured(1)); await tick()
+    assert.equal(calls.length, prefetchSlots + 1)
+  }
+})
+
+test('C pendiente rechazada por cambio foreground se vuelve a pedir en su misma plaza sin cancelar B', async t => {
+  const oldC = deferred(), calls = [], cancellations = []
+  const env = await setup(t, {
+    resolve: (track, _refresh, foreground, options) => {
+      calls.push({ id: track.id, foreground, options })
+      if (track.id === 3 && calls.filter(e => e.id === 3).length === 1) return oldC.promise
+      return Promise.resolve(captured(track.id))
+    }, cancelPrefetch: async slot => { cancellations.push(slot) },
+  })
+  env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2), item(3), item(4)], 0)
+  await settle(() => calls.length === 3 && env.player.preparedAudio !== null)
+  env.player.next()
+  await settle(() => calls.some(e => e.id === 2 && e.foreground))
+  admit(calls.find(e => e.id === 2 && e.foreground).options, 2, 43)
+  oldC.reject(new Error('Resolución sustituida'))
+  await settle(() => calls.filter(e => e.id === 3).length === 2 && env.player.preparedAudios.length === 2)
+  const retry = calls.filter(e => e.id === 3).at(-1)
+  assert.equal(retry.options.nextSlot, 1)
+  assert.equal(retry.options.expectedForeground, 43)
+  assert.deepEqual(cancellations, [])
+  assert.equal(env.player.playbackAudio.src, captured(2).url)
+})
+
+test('fallar la segunda precarga sólo cancela su plaza y conserva actual y primera', async t => {
+  const cancellations = []
+  const env = await setup(t, {
+    resolve: async track => captured(track.id), cancelPrefetch: async slot => { cancellations.push(slot) },
+  })
+  env.player.playQueue([item(1), item(2), item(3)], 0)
+  await settle(() => env.player.preparedAudios.length === 2)
+  const current = env.player.playbackAudio, [b, c] = env.player.preparedAudios
+  c.audio.dispatchEvent(new CustomEvent('captureerror', { detail: 'fallo' }))
+  await settle(() => cancellations.length === 1)
+  assert.deepEqual(cancellations, [1])
+  assert.equal(env.player.playbackAudio, current)
+  assert.equal(current.paused, false)
+  assert.equal(env.player.preparedAudio, b.audio)
+  assert.equal(c.audio.src, '')
+})
+
+test('cambiar de motor no adopta los dos Audio preparados por el motor anterior', async t => {
+  const calls = []
+  const env = await setup(t, { resolve: async (track, _refresh, foreground) => {
+    calls.push({ id: track.id, foreground }); return captured(track.id)
+  } })
+  env.player.playQueue([item(1), item(2), item(3)], 0)
+  await settle(() => env.player.preparedAudios.length === 2)
+  const [b, c] = env.player.preparedAudios
+  env.extractor.engine = 'oficial'
+  env.player.next()
+  await settle(() => env.player.status === 'playing' && calls.filter(e => e.id === 3).length === 2)
+  assert.notEqual(env.player.playbackAudio, b.audio)
+  assert.equal(b.audio.src, '')
+  assert.equal(c.audio.src, '')
+  assert.deepEqual(env.player.playbackSource, { trackId: 2, videoId: captured(2).videoId, kind: 'capture' })
+})
+
 test('la admisión oficial prepara next durante el anuncio inicial, antes del primer playing', async t => {
   const first = deferred(), calls = [], events = []
   const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
@@ -717,7 +843,7 @@ test('la admisión tardía no precarga tras cancelar, cambiar canción, motor o 
   }
 })
 
-test('next pendiente sólo precarga C tras la señal postbegin de su nueva plaza foreground', async t => {
+test('B pendiente conserva C y sólo ocupa la plaza libre con D tras su señal postbegin', async t => {
   const first = deferred(), background = deferred(), promotion = deferred(), calls = []
   const env = await setup(t, { resolve: (track, _refresh, foreground, options) => {
     calls.push({ id: track.id, foreground, options })
@@ -726,23 +852,27 @@ test('next pendiente sólo precarga C tras la señal postbegin de su nueva plaza
     return Promise.resolve(captured(track.id))
   } })
   env.extractor.engine = 'oficial'
-  env.player.playQueue([item(1), item(2), item(3)], 0)
+  env.player.playQueue([item(1), item(2), item(3), item(4)], 0)
   await settle(() => calls.length === 1)
   admit(calls[0].options, 1)
-  await settle(() => calls.length === 2)
+  await settle(() => calls.length === 3 && env.player.preparedAudios.length === 1)
+  const retained = env.player.preparedAudios[0]
   first.resolve(captured(1))
   await settle(() => env.player.status === 'playing')
   env.player.next()
-  await settle(() => calls.length === 3)
+  await settle(() => calls.length === 4)
   await tick()
-  assert.equal(calls.some(call => call.id === 3), false)
+  assert.equal(calls.some(call => call.id === 4), false)
   admit(calls[0].options, 1)
   await tick()
-  assert.equal(calls.some(call => call.id === 3), false, 'la señal antigua no autoriza otra precarga')
-  admit(calls[2].options, 2, 43)
-  await settle(() => calls.some(call => call.id === 3))
+  assert.equal(calls.some(call => call.id === 4), false, 'la señal antigua no autoriza otra precarga')
+  admit(calls[3].options, 2, 43)
+  await settle(() => calls.some(call => call.id === 4))
   assert.equal(env.player.status, 'loading', 'B sigue esperando sus primeros bytes o el anuncio')
-  assert.equal(calls.find(call => call.id === 3).options.expectedForeground, 43)
+  assert.equal(calls.find(call => call.id === 4).options.expectedForeground, 43)
+  assert.equal(calls.find(call => call.id === 4).options.nextSlot, 0)
+  assert.equal(env.player.preparedAudios[0].audio, retained.audio)
+  assert.equal(retained.slot, 1)
   promotion.resolve(captured(2))
   await settle(() => env.player.status === 'playing')
   background.resolve(captured(2)); await tick()
@@ -768,7 +898,7 @@ test('el ack de promoción no elude play pendiente ni pausa y AbortError', async
   await settle(() => calls.some(call => call.id === 2 && call.foreground))
   admit(calls.find(call => call.id === 2 && call.foreground).options, 2, 43)
   promotion.resolve(captured(2)); await tick()
-  assert.equal(calls.some(call => call.id === 3), false)
+  assert.equal(calls.filter(call => call.id === 3).length, 1)
   env.player.toggle()
   playing.reject(new DOMException('pause', 'AbortError')); await tick()
   env.player.addToQueue([item(4)])
@@ -778,7 +908,7 @@ test('el ack de promoción no elude play pendiente ni pausa y AbortError', async
   assert.equal(calls.find(call => call.id === 4).options.expectedForeground, 43)
 })
 
-test('la cola cambiante durante loading sólo conserva la última precarga y cancelar elimina next', async t => {
+test('la cola cambiante durante loading conserva sólo sus dos destinos y cancelar elimina ambos', async t => {
   const first = deferred(), backgrounds = [], calls = []
   let cancels = 0
   const env = await setup(t, {
@@ -794,19 +924,21 @@ test('la cola cambiante durante loading sólo conserva la última precarga y can
   await settle(() => calls.length === 1)
   admit(calls[0].options, 1)
   await settle(() => calls.length === 2)
-  env.player.playNext([item(3)])
-  await settle(() => calls.length === 3)
-  env.player.clearQueue()
+  env.player.playNext([item(3), item(4)])
   await settle(() => calls.length === 4)
-  assert.deepEqual(calls.map(call => call.id), [1, 2, 3, 2])
+  env.player.clearQueue()
+  await settle(() => calls.length === 5)
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3, 4, 2])
   assert.equal(calls[1].options.isCurrent(), false)
   assert.equal(calls[2].options.isCurrent(), false)
-  assert.equal(calls[3].options.isCurrent(), true)
-  backgrounds[0].resolve(captured(2)); backgrounds[1].resolve(captured(3)); await tick()
+  assert.equal(calls[3].options.isCurrent(), false)
+  assert.equal(calls[4].options.isCurrent(), true)
+  backgrounds[0].resolve(captured(2)); backgrounds[1].resolve(captured(3)); backgrounds[2].resolve(captured(4)); await tick()
   assert.equal(env.player.preparedAudio, null)
+  const cancelledBeforeStop = cancels
   env.player.toggle()
-  await settle(() => cancels === 1)
-  backgrounds[2].resolve(captured(2)); first.resolve(captured(1)); await tick()
+  await settle(() => cancels === cancelledBeforeStop + 1)
+  backgrounds[3].resolve(captured(2)); first.resolve(captured(1)); await tick()
   assert.equal(env.player.status, 'idle')
   assert.equal(env.player.preparedAudio, null)
 })

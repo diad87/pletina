@@ -1,4 +1,4 @@
-// Capture API 3. No site selectors; normal mode quarantines complete sources until verified.
+// Capture API 4. No site selectors; normal mode quarantines complete sources until verified.
 (() => {
   class CaptureError extends Error {
     constructor(code, message) { super(`${code}: ${message}`); this.name = 'CaptureError'; this.code = code }
@@ -372,18 +372,28 @@
     return result
   }
   const covers = (ranges, start, end, epsilon = 0) => ranges.some(r => start >= r.start - epsilon && end <= r.end + epsilon)
-  // API 3 distinguishes the byte inventory from presentation coverage. A download gap
+  // API 4 distinguishes the byte inventory from presentation coverage. A download gap
   // is permitted in an inventory after an explicit seek, but is never filled in coverage.
   class ProgressiveTracker extends SessionTracker {
-    constructor({ epoch, experimental = false, ...options } = {}) {
+    constructor({ epoch, experimental = false, holdbackSeconds = 1.5, ...options } = {}) {
       super(options)
       if (!Number.isSafeInteger(epoch) || epoch < 1) fail('CAPTURE_PROTOCOL_MISMATCH', 'Missing native capture epoch')
+      if (!Number.isFinite(holdbackSeconds) || holdbackSeconds < 0 || holdbackSeconds > 30) fail('CAPTURE_PROTOCOL_MISMATCH', 'Holdback must be between zero and30 seconds')
       this.epoch = epoch; this.experimental = experimental === true; this.nextUnit = 0; this.coverage = []; this.initializations = []; this.seek = null
+      this.holdbackSeconds = holdbackSeconds
     }
     createSource() {
       const source = super.createSource()
       source.progress = { epoch: this.epoch, ranges: [], emitted: new Set() }
       return source
+    }
+    drop(source) {
+      super.drop(source)
+      // No retained parser view may resurrect quarantined bytes after a conflicting
+      // label. Already published experimental units cannot be recalled: a label
+      // delayed longer than the holdback remains an explicit counterexample.
+      for (const buffer of source.buffers) { buffer.prefix = null; buffer.resetInit = null; buffer.version++ }
+      delete source.completeCertificate; delete source.nativeFinalClock
     }
     createBuffer(source, mime) {
       const buffer = super.createBuffer(source, mime)
@@ -393,6 +403,7 @@
       return buffer
     }
     append(buffer, data, settings) {
+      delete buffer.source.verifiedFinalEpoch
       if (buffer.resetAfterSeek) {
         const init = buffer.prefix?.value?.init
         this.bytes -= buffer.chunks.reduce((n, c) => n + c.byteLength, 0)
@@ -452,7 +463,7 @@
       source.seen.add(state)
       if (state === 'unknown' || source.seen.size > 1) this.reject(source, 'CAPTURE_IDENTITY_UNCERTAIN', `Unconfirmed presentation interval; seen=${[...source.seen]}; evidence=${evidence?.reason ?? JSON.stringify(evidence?.evidence ?? {})}`)
       else if (!source.error) source.state = state
-      if (state === 'ad') this.drop(source)
+      if (state === 'ad' || source.error) this.drop(source)
       if (content && !source.error) {
         const last = source.observations.at(-1)
         if (!Number.isFinite(position) || !Number.isFinite(now) || !Number.isFinite(duration) || duration <= 0 || position < 0 || playbackRate !== 1) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Progressive presentation needs finite timing at rate 1')
@@ -490,7 +501,7 @@
     }
     completeCertificate(source, buffer) {
       const certificate = source.completeCertificate
-      if (!certificate || certificate.epoch !== this.epoch || source.progress.epoch !== this.epoch || certificate.buffer !== buffer || certificate.native !== buffer.native || certificate.version !== buffer.version || certificate.settings !== JSON.stringify(buffer.timelineSettings ?? settingsOf()) || !source.sealed) fail('CAPTURE_PARTIAL_PRESENTATION', 'The complete-source certificate no longer identifies this immutable source and epoch')
+      if (!certificate || certificate.epoch !== this.epoch || source.progress.epoch !== this.epoch || certificate.buffer !== buffer || certificate.native !== buffer.native || certificate.nativeSource !== source.native || certificate.version !== buffer.version || certificate.settings !== JSON.stringify(buffer.timelineSettings ?? settingsOf()) || !source.sealed) fail('CAPTURE_PARTIAL_PRESENTATION', 'The complete-source certificate no longer identifies this immutable source and epoch')
       return certificate
     }
     clockCovers(source, snapshot, end) {
@@ -510,14 +521,19 @@
       const buffer = source.buffers[0], inventory = this.inventory(source)
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
-      const certificate = this.experimental ? null : this.completeCertificate(source, buffer)
-      if (certificate && (!this.clockCovers(source, snapshot, certificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
+      const boundCertificate = source.completeCertificate ? this.completeCertificate(source, buffer) : null
+      const certificate = this.experimental ? null : boundCertificate
+      if (!this.experimental && !certificate) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe publication requires a complete-source certificate')
+      if (boundCertificate && (!this.clockCovers(source, snapshot, boundCertificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - boundCertificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - boundCertificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
       const units = [], available = inventory.samples.map(s => this.sampleRange(s, settings))
+      let frameCount = 0
+      const frameIndices = available.map(r => r.end > r.start ? frameCount++ : null)
       const normalEmitted = []
       for (let first = 0; first < available.length;) {
         const eligible = index => {
           const r = available[index]
-          return r.end > r.start && r.start >= 0 && this.clockCovers(source, snapshot, r.end) && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
+          const retained = this.experimental && source.verifiedFinalEpoch !== this.epoch && !timeAtOrAfter(snapshot.position, r.end + this.holdbackSeconds)
+          return !retained && r.end > r.start && r.start >= 0 && this.clockCovers(source, snapshot, r.end) && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
         }
         if (!eligible(first)) { first++; continue }
         let until = first + 1, bytes = inventory.init.length + inventory.samples[first].size + 128
@@ -551,7 +567,7 @@
         const rangeStart = available[first].start, rangeEnd = available[until - 1].end
         for (let i = first; i < until; i++) { if (certificate) normalEmitted.push(i); else source.progress.emitted.add(i) }
         if (!certificate) this.coverage = mergeRanges([...this.coverage, { start: rangeStart, end: rangeEnd }], coverageEpsilon)
-        units.push({ epoch: this.epoch, source: source.id, s: buffer.id, unit, initKey: this.initializationKey(media.init, settings), initBytes: media.init.length, mime: buffer.mime, rangeStart, rangeEnd, decodeStart: rangeStart, decodeEnd: rangeEnd, frames: until - first, timelineSettings: settings, data })
+        units.push({ epoch: this.epoch, source: source.id, s: buffer.id, unit, initKey: this.initializationKey(media.init, settings), initBytes: media.init.length, mime: buffer.mime, rangeStart, rangeEnd, decodeStart: rangeStart, decodeEnd: rangeEnd, firstFrame: frameIndices[first], endFrame: frameIndices[until - 1] + 1, frames: until - first, timelineSettings: settings, data })
         first = until
       }
       // No units escape this call if a later indivisible chain fails. Do not credit
@@ -576,31 +592,46 @@
       const knownNative = r => covers(ranges, r.start, r.end, codecEpsilon) || covers(knownNativeRanges, r.start, r.end, coverageEpsilon)
       const quantizedFinalClock = !timeAtOrAfter(snapshot.position, end) && nativeFinalClockCandidate(snapshot, end)
       if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || (!timeAtOrAfter(snapshot.position, end) && !quantizedFinalClock) || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, duration=${snapshot.duration}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}, ended=${snapshot.ended}, paused=${snapshot.paused}, sourceReadyState=${snapshot.sourceReadyState}, successfulEndOfStream=${snapshot.successfulEndOfStream}, quantizedFinalClock=${quantizedFinalClock}`)
-      if (!this.experimental) {
+      const wholeObserved = source.observations[0]?.position === 0 && covers(source.progress.ranges, 0, end, coverageEpsilon)
+      // An explicit seek may retain a disjoint parser input. Even a later rewind
+      // cannot turn that epoch's indices into a complete original source proof.
+      const canCertify = wholeObserved && (!this.seek || this.seek.startup) && snapshot.audioRanges.length === 1 && inventory.quantum <= 0.001
+      if (!this.experimental || canCertify) {
         if (source.observations[0]?.position !== 0 || !covers(source.progress.ranges, 0, end, coverageEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe capture requires the whole source presentation from zero; a seek or missing beginning remains incomplete')
         if (!source.completeCertificate) {
           // Seal once, with the original complete-source parser (no seek-gap option),
           // one native audio range and immutable bytes/settings. Observation coverage
           // above remains exact; codec quantum never repairs an unobserved interval.
           const proof = super.seal(source, snapshot)
-          source.completeCertificate = { epoch: this.epoch, buffer, native: buffer.native, version: buffer.version, settings: JSON.stringify(settings), proof }
+          source.completeCertificate = { epoch: this.epoch, buffer, native: buffer.native, nativeSource: source.native, version: buffer.version, settings: JSON.stringify(settings), proof }
         }
         const certificate = this.completeCertificate(source, buffer)
         if (snapshot.audioRanges.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', 'The native audio range changed after complete-source certification')
-        source.verifiedFinalEpoch = this.epoch
       }
+      source.verifiedFinalEpoch = this.epoch
       if (quantizedFinalClock) {
         // Never authorize in pull from an ended-looking snapshot alone. This record
         // is issued only AFTER every final gate above succeeds, and cannot survive
         // another epoch, append, setting, native buffer, clock or range mutation.
         source.nativeFinalClock = { epoch: this.epoch, buffer, native: buffer.native, nativeSource: source.native, version: buffer.version, settings: JSON.stringify(settings), position: snapshot.position, duration: snapshot.duration, ranges: JSON.stringify(snapshot.audioRanges), end }
       }
-      return { eof: true, complete: covers(this.coverage, 0, end, coverageEpsilon), duration: snapshot.duration, end, ranges: this.coverage.map(r => ({ ...r })) }
+      let certificate
+      if (canCertify && source.completeCertificate) {
+        const sealed = this.completeCertificate(source, buffer), presentable = inventory.samples.map((sample, index) => ({ index, ...this.sampleRange(sample, settings) })).filter(r => r.end > r.start)
+        certificate = { kind: 'complete-source-v1', epoch: this.epoch, source: source.id, s: buffer.id, initKey: this.initializationKey(inventory.init, settings), mime: buffer.mime, timelineSettings: settings, frameCount: presentable.length, rangeStart: sealed.proof.timeline.start, rangeEnd: sealed.proof.timeline.end, quantum: inventory.quantum, cleanWholeSource: true, nativeContinuous: true, officialEof: true }
+        // Credit codec timestamp quantization only after every packet in THIS
+        // certified original inventory has been emitted. No other epoch's units
+        // participate, and global interval merging retains the1us boundary.
+        if (presentable.every(r => source.progress.emitted.has(r.index))) this.coverage = mergeRanges([...this.coverage, { start: certificate.rangeStart, end: certificate.rangeEnd }], coverageEpsilon)
+      }
+      return { eof: true, complete: covers(this.coverage, 0, end, coverageEpsilon), duration: snapshot.duration, end, ranges: this.coverage.map(r => ({ ...r })), ...(certificate ? { certificate } : {}) }
     }
   }
 
   function install({ scope = globalThis, tracker = new SessionTracker(), onBeforeDetach = () => {}, forcePlaybackRateOne = false, onRateAttempt = () => {} } = {}) {
     if (!scope.MediaSource || !scope.SourceBuffer) fail('CAPTURE_UNSUPPORTED_PIPELINE', 'Main-thread Media Source is unavailable')
+    let audit = null
+    try { audit = scope.__musifyCaptureAudit?.create({ scope, epoch: () => tracker.epoch ?? scope.__musifyEpoch }) } catch { /* Private benchmark diagnostics cannot change playback. */ }
     const mediaPrototype = scope.HTMLMediaElement?.prototype
     const rateStatistics = { attempts: 0, corrections: 0 }
     if (forcePlaybackRateOne) {
@@ -643,6 +674,7 @@
       const result = originalEnd.apply(this, args)
       const source = sourceFor(this)
       source.successfulEndOfStream = args[0] === undefined && this.readyState === 'ended'
+      for (const buffer of source.buffers) audit?.mutation(buffer, 'endOfStream', { error: args[0] !== undefined })
       if (args[0] !== undefined) tracker.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', `Official source ended with an error: ${String(args[0])}`)
       return result
     }
@@ -651,13 +683,14 @@
       const sb = originalAdd.call(this, mime), source = sourceFor(this)
       if (mime.startsWith('audio/')) { const buffer = tracker.createBuffer(source, mime); buffer.native = sb; buffers.set(sb, buffer) }
       else if (/opus|mp4a|vorbis|flac/i.test(mime)) tracker.reject(source, 'CAPTURE_UNSUPPORTED_MULTIPLEXED', 'Audio and video share a source buffer')
-      sb.addEventListener('error', () => tracker.reject(source, 'CAPTURE_SOURCEBUFFER_ERROR', 'The official SourceBuffer rejected media'))
+      sb.addEventListener('error', () => { audit?.mutation(buffers.get(sb), 'source-buffer-error', { error: true }); tracker.reject(source, 'CAPTURE_SOURCEBUFFER_ERROR', 'The official SourceBuffer rejected media') })
       return sb
     }
     const originalAppend = scope.SourceBuffer.prototype.appendBuffer
     scope.SourceBuffer.prototype.appendBuffer = function (data) {
       const buffer = buffers.get(this), bytes = buffer ? copy(data) : null
       const result = originalAppend.call(this, data)
+      if (buffer) audit?.append(buffer, bytes, this)
       if (buffer) tracker.append(buffer, bytes, this)
       return result
     }
@@ -668,6 +701,7 @@
       // Reject immediately after success, before its queued abort event or a detach can
       // seal that inventory. A native exception did not perform the operation.
       const result = originalAbort.apply(this, args)
+      audit?.mutation(buffer, 'abort')
       if (hadBytes && !tracker.onSeekMutation?.(buffer, 'abort')) tracker.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'SourceBuffer.abort discarded or reset captured parser input')
       return result
     }
@@ -675,6 +709,7 @@
     if (originalChange) scope.SourceBuffer.prototype.changeType = function (mime) {
       const buffer = buffers.get(this)
       const result = originalChange.call(this, mime)
+      audit?.mutation(buffer, 'changeType')
       if (buffer) tracker.reject(buffer.source, 'CAPTURE_UNSUPPORTED_FORMAT_CHANGE', `SourceBuffer changed to ${mime}`)
       return result
     }
@@ -682,6 +717,7 @@
     scope.SourceBuffer.prototype.remove = function (start, end) {
       const buffer = buffers.get(this)
       const result = originalRemove.call(this, start, end)
+      audit?.mutation(buffer, 'remove', { start, end })
       if (buffer && !tracker.onSeekMutation?.(buffer, 'remove')) tracker.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'SourceBuffer ranges were removed or overwritten')
       return result
     }
@@ -693,6 +729,7 @@
       return { source, operation, position: element.currentTime, duration: element.duration, seeking: element.seeking, paused: element.paused, ended: element.ended, readyState: element.readyState, playbackRate: element.playbackRate, updating: native?.updating ?? true, audioRanges: nativeRanges(native), sourceReadyState: source.native?.readyState, successfulEndOfStream: source.successfulEndOfStream, sourceEnded: source.successfulEndOfStream && source.native?.readyState === 'ended' }
     }
     const beforeDetach = (element, operation) => {
+      audit?.clock(element, `before-${operation}`)
       const source = sourceOf(element)
       if (!source || source.sealed || (!source.seen.has('content') && !(source.state === 'ad' && source.seen.size === 1 && source.seen.has('ad')))) return
       onBeforeDetach(element, snapshotOf(element, operation))
@@ -722,7 +759,9 @@
         return original.apply(this, args)
       }
     }
-    return { tracker, sourceOf, snapshotOf, rateStatistics }
+    const result = { tracker, sourceOf, snapshotOf, rateStatistics }
+    try { audit?.attach(result) } catch { /* A failed audit remains unmeasured; it cannot gate playback. */ }
+    return result
   }
   globalThis.__musifyCaptureCore = { CaptureError, timeAtOrAfter, nativeFinalClockCandidate, parseWebMOpus, inspectWebMPrefix, remuxWebM, projectTimeline, SessionTracker, ProgressiveTracker, mergeRanges, install }
 })()

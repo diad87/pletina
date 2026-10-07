@@ -6,8 +6,23 @@ param(
     [ValidateRange(15, 1200)]
     [int]$CaseTimeoutSeconds = 120,
     [switch]$MseOnly,
-    [ValidateSet('smoke', 'catalog', 'album', 'switch', 'latency')]
+    [ValidateSet('smoke', 'catalog', 'album', 'switch', 'latency', 'native-search', 'ad-transitions', 'profile-login')]
     [string]$Suite = 'smoke',
+    [ValidateSet('oficial', 'propio')]
+    [string]$Engine = 'oficial',
+    [ValidateSet('anonymous', 'premium-manual')]
+    [string]$ProfileMode = 'anonymous',
+    [ValidateRange(0, 30)]
+    [double]$HoldbackSeconds = 1.5,
+    [ValidateRange(1, 3)]
+    [int]$MaxSessions = 3,
+    [ValidateRange(16, 4096)]
+    [int]$TrackMemoryMb = 96,
+    [ValidateRange(16, 4096)]
+    [int]$CacheMemoryMb = 288,
+    [ValidateRange(50, 200)]
+    [int]$AdAttempts = 60,
+    [switch]$AuditAllAudio,
     [string]$CorpusPath,
     [switch]$VerifiedOnly,
     [switch]$NoBuild
@@ -34,7 +49,10 @@ $config = @{
 } | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
 $mseFixtures = Get-Content (Join-Path $projectDir 'tests/fixtures/mse-audio.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$suitePlan = @{ mode = $Suite; timeoutSeconds = $CaseTimeoutSeconds }
+$suitePlan = @{ mode = $Suite; timeoutSeconds = $CaseTimeoutSeconds; engine = $Engine; profileMode = $ProfileMode; auditAllAudio = [bool]$AuditAllAudio }
+if ($Suite -eq 'native-search') { $Engine = 'propio'; $suitePlan.engine = $Engine }
+if ($Suite -eq 'profile-login') { $ProfileMode = 'premium-manual'; $suitePlan.profileMode = $ProfileMode }
+if ($Suite -eq 'ad-transitions') { $suitePlan.maxAdAttempts = $AdAttempts; $suitePlan.minimumAdTransitions = 50; $suitePlan.verifyComplete = $false; $suitePlan.seek = $false }
 if ($VerifiedOnly) { $suitePlan.experimental = $false; $suitePlan.seek = $false }
 if ($CorpusPath) {
     $corpus = Get-Content -LiteralPath $CorpusPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -52,7 +70,7 @@ $plan = if ($MseOnly) {
 } | ConvertTo-Json -Depth 20 }
 [IO.File]::WriteAllText($planPath, $plan, [Text.UTF8Encoding]::new($false))
 
-$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE')
+$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE', 'MUSIFY_BENCH_PROFILE_MODE', 'MUSIFY_BENCH_HOLDBACK_SECONDS', 'MUSIFY_CAPTURE_MAX_SESSIONS', 'MUSIFY_CAPTURE_TRACK_MB', 'MUSIFY_CAPTURE_CACHE_MB', 'MUSIFY_BENCH_AUDIT_ALL_AUDIO')
 $savedEnv = @{}
 foreach ($key in $envKeys) { $savedEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process') }
 $testProcess = $null
@@ -72,7 +90,13 @@ try {
     $env:MUSIFY_BENCH_PROGRESSIVE = if ($VerifiedOnly) { $null } else { '1' }
     $env:MUSIFY_BENCH_OUT = $resultPath
     $env:MUSIFY_BENCH_EXIT = '1'
-    $env:MUSIFY_ENGINE = 'oficial'
+    $env:MUSIFY_ENGINE = $Engine
+    $env:MUSIFY_BENCH_PROFILE_MODE = $ProfileMode
+    $env:MUSIFY_BENCH_HOLDBACK_SECONDS = $HoldbackSeconds.ToString([Globalization.CultureInfo]::InvariantCulture)
+    $env:MUSIFY_CAPTURE_MAX_SESSIONS = "$MaxSessions"
+    $env:MUSIFY_CAPTURE_TRACK_MB = "$TrackMemoryMb"
+    $env:MUSIFY_CAPTURE_CACHE_MB = "$CacheMemoryMb"
+    $env:MUSIFY_BENCH_AUDIT_ALL_AUDIO = if ($AuditAllAudio) { '1' } else { $null }
     $metadata = [ordered]@{
         startedAt = (Get-Date).ToString('o')
         branch = (& git branch --show-current)
@@ -81,6 +105,11 @@ try {
         binarySha256 = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
         identifier = 'dev.musify.captureofficialtest'
         suite = if ($MseOnly) { 'mse-and-rates' } else { $Suite }
+        engine = $Engine
+        profileMode = $ProfileMode
+        holdbackSeconds = $HoldbackSeconds
+        rawAudioProbe = [bool]$AuditAllAudio
+        limits = @{ maxSessions = $MaxSessions; trackMemoryMb = $TrackMemoryMb; cacheMemoryMb = $CacheMemoryMb }
         progressiveExperiment = !$VerifiedOnly
         plan = $planPath
         report = $resultPath
@@ -88,7 +117,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $outputDir "metadata-$runId.json"), $metadata, [Text.UTF8Encoding]::new($false))
     $testProcess = Start-Process -FilePath $binaryPath `
         -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
-    $testName = if ($MseOnly) { 'MSE con audio sintético local' } else { 'Captura oficial sin clientes API propios' }
+    $testName = if ($MseOnly) { 'MSE con audio sintético local' } elseif ($Suite -eq 'profile-login') { 'Perfil Premium para acceso manual' } else { "Banco $Suite / $Engine / $ProfileMode" }
     Write-Output "$testName. PID $($testProcess.Id); informe: $resultPath"
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while (!$testProcess.HasExited -and (Get-Date) -lt $deadline) {

@@ -2,7 +2,7 @@
 //! La preparación usa búsqueda para fijar IDs; las mediciones de captura no resuelven URLs.
 use crate::deezer::Deezer;
 use crate::youtube::{self, TrackQuery, YouTubeMusic};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const QUERIES: [&str; 5] = [
     "radiohead ok computer",
@@ -24,6 +24,29 @@ fn benchmark_only() -> Result<(), String> {
 pub async fn capture_bench_forget(app: tauri::AppHandle, video_id: String) -> Result<(), String> {
     benchmark_only()?;
     crate::capture::bench_forget(&app, &video_id).await
+}
+
+/// Quita asociaciones de esta base de datos aislada antes del cronómetro. La resolución
+/// siguiente recorre la búsqueda real y el nivel rápido, sin reutilizar una URL preparada.
+#[tauri::command]
+pub fn capture_bench_native_search(
+    app: tauri::AppHandle,
+    track: TrackQuery,
+    video_id: String,
+    db: tauri::State<'_, crate::db::Db>,
+) -> Result<(), String> {
+    benchmark_only()?;
+    if app.config().identifier != "dev.musify.captureofficialtest" {
+        return Err("La búsqueda fría requiere la base de datos aislada del banco".into());
+    }
+    db.0.lock()
+        .map_err(|_| "Base de datos del banco bloqueada")?
+        .execute(
+            "DELETE FROM sources WHERE track_id = ?1",
+            rusqlite::params![track.id as i64],
+        )
+        .map_err(|_| "No se pudo reiniciar la asociación aislada")?;
+    crate::native::bench_forget(&video_id)
 }
 
 /// Misma selección que player::tests::real_albums: primer disco, seis primeras canciones,

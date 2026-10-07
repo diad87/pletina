@@ -1,4 +1,4 @@
-// API 3: unidades confirmadas con tiempos absolutos; los saltos conservan los buffers.
+// API 4: unidades confirmadas e inventario de muestras; los saltos conservan los buffers.
 import { invoke } from '@tauri-apps/api/core'
 import { playLegacyCapture, CAPTURE as LEGACY_CAPTURE } from './capture-legacy'
 
@@ -16,7 +16,7 @@ interface Unit {
   epoch: number; source: number; s: number; unit: number
   initKey: string; initBytes: number; mime: string
   rangeStart: number; rangeEnd: number; decodeStart: number; decodeEnd: number
-  frames: number; verified: boolean; timelineSettings: TimelineSettings
+  frames: number; firstFrame: number; endFrame: number; verified: boolean; timelineSettings: TimelineSettings
 }
 interface Frame {
   api: number; duration: number | null; audioDuration?: number | null; complete: boolean; recovering: boolean
@@ -26,6 +26,7 @@ interface Frame {
 }
 /** Publicado después de updateend: recibir bytes todavía no prueba que MSE los acepte. */
 export interface CaptureProgress {
+  api: number
   generation: number; revision: number; ranges: Range[]; buffered: Range[]
   duration: number | null; audioDuration: number | null
   complete: boolean; recovering: boolean; softError: string | null
@@ -85,7 +86,7 @@ async function read(videoId: string, from: number, revision: number | undefined,
     if (!n || n > buf.byteLength - at - 4) throw new Error('Unidad de audio incompleta')
     chunks.push(new Uint8Array(buf, at + 4, n)); at += 4 + n
   }
-  if (head.api !== 3 || !integer(head.from) || !integer(head.next) || !integer(head.revision) || !integer(head.generation) ||
+  if (head.api !== 4 || !integer(head.from) || !integer(head.next) || !integer(head.revision) || !integer(head.generation) ||
       !Array.isArray(head.units) || head.units.length !== chunks.length || head.next !== head.from + chunks.length ||
       typeof head.complete !== 'boolean' || !Array.isArray(head.ranges) ||
       (head.duration !== null && (!finite(head.duration) || head.duration <= 0)) ||
@@ -100,6 +101,7 @@ async function read(videoId: string, from: number, revision: number | undefined,
     if (u.index !== head.from + i || !integer(u.generation) || !integer(u.epoch) || !integer(u.source) || !integer(u.s) || !integer(u.unit) ||
         typeof u.initKey !== 'string' || !u.initKey || !integer(u.initBytes) || !u.initBytes || u.initBytes >= chunks[i].length ||
         typeof u.mime !== 'string' || !u.mime || u.verified !== true || !integer(u.frames) || !u.frames ||
+        !integer(u.firstFrame) || !integer(u.endFrame) || u.endFrame - u.firstFrame !== u.frames ||
         !finite(u.rangeStart) || !finite(u.rangeEnd) || u.rangeStart < 0 || u.rangeEnd <= u.rangeStart ||
         !finite(u.decodeStart) || !finite(u.decodeEnd) || u.decodeEnd <= u.decodeStart ||
         u.decodeStart > u.rangeStart + EPSILON || u.decodeEnd < u.rangeEnd - EPSILON)
@@ -152,6 +154,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   let progress: CaptureProgress | null = null, totalUnits = 0, firstAppendMs: number | null = null
   let requestId = 0, cursorVersion = 0, failed = false, stopped = false, notice = '', eof = false
   const metadata = new Map<string, string>(), contexts = new Map<string, TimelineSettings>()
+  const frameEnds = new Map<string, number>()
   const initializations = new Map<string, Uint8Array>()
   let recoveryKey = '', recoveryCount = 0
   const buffered = () => sb ? rangesOf(sb.buffered) : []
@@ -212,7 +215,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
         if (revision !== f.revision) {
           revision = f.revision; from = f.from
           if (installed) installed.context = ''
-          metadata.clear(); contexts.clear(); initializations.clear()
+          metadata.clear(); contexts.clear(); initializations.clear(); frameEnds.clear()
         }
         generation = f.generation
         if (f.from !== from) throw new Error('El cursor de captura perdió unidades')
@@ -222,6 +225,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
           const initKey = `${revision}/${u.generation}/${u.initKey}`
           const key = `${context}/${u.unit}`, value = JSON.stringify(u), previous = metadata.get(key)
           if (previous && previous !== value) throw new Error('Cambió una unidad ya confirmada')
+          if (!previous && u.firstFrame < (frameEnds.get(context) ?? 0)) throw new Error('Muestras repetidas en otra unidad de la misma fuente')
           const timeline = contexts.get(context)
           if (timeline && !sameSettings(timeline, u.timelineSettings)) throw new Error('Los ajustes temporales cambiaron dentro de una época')
           contexts.set(context, u.timelineSettings)
@@ -248,11 +252,12 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
           await append(sb, audio, sameInit ? f.chunks[i].subarray(u.initBytes) : f.chunks[i], signal)
           installed = { initKey, mime: u.mime, context }
           metadata.set(key, value); totalUnits++
+          frameEnds.set(context, Math.max(frameEnds.get(context) ?? 0, u.endFrame))
           firstAppendMs ??= performance.now() - started
         }
         if (version !== cursorVersion) continue
         from = f.next
-        progress = { generation: f.generation, revision: f.revision, ranges: f.ranges, buffered: buffered(),
+        progress = { api: f.api, generation: f.generation, revision: f.revision, ranges: f.ranges, buffered: buffered(),
           duration: f.duration, audioDuration: f.audioDuration ?? null,
           complete: f.complete, recovering: f.recovering, softError: f.softError, units: totalUnits, firstAppendMs }
         audio.dispatchEvent(new CustomEvent('captureprogress', { detail: progress }))

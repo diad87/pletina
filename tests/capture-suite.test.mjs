@@ -19,7 +19,7 @@ const proof = overrides => ({ generation: 3, revision: 1, duration: 1, audioDura
 
 async function setup(t, options = {}) {
   let clock = 0
-  if (options.firstSoundDelay) t.mock.method(performance, 'now', () => clock)
+  if (options.firstSoundDelay || options.verificationDelay) t.mock.method(performance, 'now', () => clock)
   const snapshots = [], progress = new Map(), timers = [], allAudio = [], calls = [], queueCalls = [], forgetEvidence = []
   const lifecycle = { toggles: 0, stops: 0 }
   let statusReads = 0, seeks = 0, forgotten = new Set()
@@ -135,6 +135,20 @@ async function setup(t, options = {}) {
         if (forgotten.has(args.videoId)) return null
         return native(typeof options.native === 'function' ? options.native(statusReads) : options.native)
       }
+      if (command === 'capture_verify_prepare') {
+        if (options.referenceFails) throw new Error('reference unavailable')
+        return { ok: true, anonymousTransport: true, videoId: args.videoId, ...options.reference }
+      }
+      if (command === 'capture_profile_open') return { profileId: 'reference-premium', private: 'must not leak' }
+      if (command === 'capture_profile_status') return { sessionState: { profileId: 'reference-premium', state: 'signed-in' }, loggedIn: true,
+        email: 'must-not-be-recorded@example.test', cookies: ['private'], dataDir: 'private-path' }
+      if (command === 'capture_verify_check') {
+        if (options.verificationRealDelay) await new Promise(resolve => setTimeout(resolve, options.verificationRealDelay))
+        clock += options.verificationDelay ?? 0
+        return { ok: true, anonymous: true, captureAnonymous: true, complete: true, allPublishedUnits: true, mismatchCount: 0, unitsChecked: 4, unitsCheckedSnapshot: 4,
+          comparedPackets: 50, mismatches: [], ...options.verification }
+      }
+      if (command === 'capture_bench_native_search') return { sourceCleared: true, cacheCleared: true, searchIncluded: true }
       if (command === 'capture_bench_forget') {
         forgetEvidence.push({ target: args.videoId, context: video(player.current.track.id).id,
           playing: player.status === 'playing' && !player.playbackAudio.paused, queue: player.items.map(item => item.track.id) })
@@ -147,7 +161,10 @@ async function setup(t, options = {}) {
       if (command === 'capture_begin' || command === 'capture_cancel') return undefined
       throw new Error(`Comando inesperado: ${command}`)
     },
-    api: { rememberSource: async (_item, id) => { if (options.failRemember === id) throw new Error('No se pudo guardar asociación') } },
+    api: { rememberSource: async (_item, id) => {
+      calls.push(['rememberSource', { videoId: id }])
+      if (options.failRemember === id) throw new Error('No se pudo guardar asociación')
+    } },
     player, toQuery: item => item.track, extractor: { engine: 'propio', async set(value) { this.engine = value } },
     captureProgress: audio => progress.get(audio) ?? null,
     playCapture: audio => {
@@ -265,7 +282,7 @@ test('los tiempos correctos no dan aceptación global ni prometen ausencia de an
   const env = await setup(t)
   const report = await env.execute({ mode: 'smoke', videos: [video(1)], seek: false, timeoutSeconds: 1 })
   assert.equal(report.measurementsOk, true)
-  assert.equal(report.ok, false)
+  assert.equal(report.ok, true, 'ok sólo indica éxito de las medidas de este modo')
   assert.equal(report.acceptanceOk, false)
   assert.equal(report.guaranteeAds, false)
   assert.equal(report.experimental, true)
@@ -320,7 +337,8 @@ test('latency declara explícitamente que no ejercitó completitud ni cobertura'
   assert.equal(report.rows[0].completeNotExercised, true)
   assert.equal(report.rows[0].coverageNotExercised, true)
   assert.equal(report.rows[0].tailMs, undefined)
-  assert.equal(report.ok, false)
+  assert.equal(report.ok, true)
+  assert.equal(report.acceptanceOk, false)
 })
 
 test('switch usa expulsión explícita del destino y conserva evidencia de ambas cachés', async t => {
@@ -457,7 +475,8 @@ test('el control de cuarentena verifica EOF sin aplicar el requisito progresivo 
   assert.equal(report.rows[0].coverageOk, true)
   assert.equal(report.rows[0].scope, 'full-quarantine')
   assert.equal(report.measurementsOk, true)
-  assert.equal(report.ok, false)
+  assert.equal(report.ok, true)
+  assert.equal(report.acceptanceOk, false)
   assert.equal(report.guaranteeAds, false)
 })
 
@@ -467,4 +486,103 @@ test('un proceso progresivo no puede etiquetarse como control de cuarentena por 
   assert.equal(report.measurementsOk, false)
   assert.equal(report.rows[0].progressiveExperiment, true)
   assert(report.rows[0].failures.some(reason => /modo experimental efectivo/.test(reason)))
+})
+
+const session = (state = 'signed-out') => ({ state, profileId: 'isolated-capture', observedAt: 1, evidenceVersion: 1 })
+const evidenceRow = () => ({ label: 'verified', videoId: video(1).id, ok: true, failures: [], complete: true, coverageOk: true,
+  status: { units: 4, unknownAuthUnits: 0, signedInUnits: 0 }, reference: { ok: true, anonymousTransport: true },
+  verification: [{ final: true, result: { ok: true, anonymous: true, captureAnonymous: true, mismatchCount: 0, complete: true, allPublishedUnits: true, unitsChecked: 4, unitsCheckedSnapshot: 4, comparedPackets: 50, mismatches: [] } }],
+  sessionObservations: [{ sessionState: session(), sessionStates: [session()] }] })
+
+test('referencia o sesión desconocida conserva tiempos pero bloquea evidencia; login anterior también', async t => {
+  const env = await setup(t)
+  assert.deepEqual(env.evidenceBlockers(evidenceRow()), [])
+  for (const broken of [
+    { reference: { ok: true, anonymousTransport: false } },
+    { sessionObservations: [{ sessionState: session('unknown'), sessionStates: [session()] }] },
+    { sessionObservations: [{ sessionState: session(), sessionStates: [session('signed-in'), session()] }] },
+    { sessionObservations: [{ sessionState: session(), sessionStates: null }] },
+    { status: { units: 5 } },
+    { verification: [{ final: true, result: { ok: true, complete: true, anonymous: true, unitsChecked: 4, comparedPackets: 50, mismatches: ['ad packet'] } }] },
+  ]) assert(env.evidenceBlockers({ ...evidenceRow(), ...broken }).length > 0)
+  for (const override of [{ captureAnonymous: false }, { captureAnonymous: undefined }, { mismatchCount: undefined }, { mismatchCount: 1 }]) {
+    const row = evidenceRow()
+    Object.assign(row.verification[0].result, override)
+    assert(env.evidenceBlockers(row).length > 0, JSON.stringify(override))
+  }
+  const report = await env.execute({ mode: 'smoke', videos: [video(1)], seek: false })
+  assert.equal(report.measurementsOk, true)
+  assert.equal(report.rows[0].evidenceEligible, false)
+  assert.equal(report.acceptanceOk, false)
+})
+
+test('prepare termina antes de capture_begin y la comparación final precede a la siguiente expulsión', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true })
+  await env.execute({ mode: 'switch', videos: [video(1), video(2)] })
+  const firstPrepare = env.calls.findIndex(([name]) => name === 'capture_verify_prepare')
+  const firstForget = env.calls.findIndex(([name]) => name === 'capture_bench_forget')
+  assert(firstPrepare >= 0 && firstPrepare < firstForget)
+  const forget2 = env.calls.findIndex(([name, args]) => name === 'capture_bench_forget' && args.videoId === video(2).id)
+  assert(env.calls.slice(0, forget2).some(([name, args]) => name === 'capture_verify_check' && args.videoId === video(2).id && args.final))
+})
+
+test('Propio busca dentro del flujo normal sin precalentar referencia ni asociar manualmente el ID', async t => {
+  const env = await setup(t)
+  const report = await env.execute({ mode: 'native-search', videos: [video(1), video(2)], timeoutSeconds: 1 })
+  assert.equal(report.rows.length, 2)
+  assert.equal(report.limits.firstSoundMs, 300)
+  assert(report.rows.every(row => row.searchIncluded && Number.isFinite(row.firstSoundMs)))
+  assert.equal(env.calls.filter(([name]) => name === 'capture_bench_native_search').length, 2)
+  assert.equal(env.calls.some(([name]) => name === 'capture_verify_prepare' || name === 'rememberSource'), false)
+  assert.deepEqual(env.queueCalls, [[1], [2]])
+  assert.equal(report.acceptanceOk, false)
+  assert.equal(env.extractor.engine, 'propio')
+})
+
+test('cincuenta observaciones duplicadas no son cincuenta transiciones y una cohorte incompleta no aprueba', async t => {
+  const env = await setup(t)
+  const transition = n => ({ from: 'ad', to: 'content', observed: true, generation: 1, epoch: 1, source: n + 1, sequence: n })
+  const duplicate = { ...evidenceRow(), status: { adTransitions: Array(50).fill(transition(0)) } }
+  assert.equal(env.distinctAdTransitions([duplicate, duplicate]), 1)
+  const rows = Array.from({ length: 30 }, (_, index) => ({ ...evidenceRow(), videoId: video(index).id, evidenceEligible: true,
+    firstSoundMs: 1500, seekOk: true, seekWasCaptured: false, seekMs: 700, ...(index < 25 ? { nextTrackMs: 30 } : {}),
+    status: { adTransitions: index < 25 ? [transition(index * 2), transition(index * 2 + 1)] : [] } }))
+  assert.equal(env.distinctAdTransitions(rows), 50)
+  assert.deepEqual(env.acceptanceCriteria(rows, 30), [])
+  assert(env.acceptanceCriteria(rows.slice(0, 29), 30).length > 0)
+  assert(env.acceptanceCriteria([...rows, { ...rows[0], ok: false }], 30).some(reason => /fallidos/.test(reason)))
+  rows[0].firstSoundMs = 15000; rows[0].startAdMs = 14000
+  assert(env.acceptanceCriteria(rows, 30).some(reason => /no omitible/.test(reason)), 'restar adMs observado no demuestra inevitabilidad')
+})
+
+test('el setup manual espera login y sólo guarda los campos públicos del perfil', async t => {
+  const env = await setup(t)
+  const report = await env.execute({ mode: 'profile-login' })
+  assert.equal(report.ok, true)
+  assert.equal(report.loggedIn, true)
+  assert.equal(report.acceptanceOk, false)
+  assert.deepEqual(env.calls.map(([name]) => name), ['capture_profile_open', 'capture_profile_status'])
+  assert.deepEqual(env.calls[0][1], { mode: 'premium-manual' })
+  const serialized = JSON.stringify(env.snapshots)
+  assert.equal(/must-not|private-path|cookies|email/.test(serialized), false)
+  assert.equal(env.queueCalls.length, 0)
+})
+
+test('el comparador acumulativo no infla el siguiente arranque ni confunde unidades de otras revisiones', async t => {
+  const env = await setup(t, { firstSoundDelay: 100, verificationDelay: 5000 })
+  const report = await env.execute({ mode: 'ad-transitions', videos: [video(1)], maxAdAttempts: 2, seek: false })
+  assert.deepEqual(report.rows.map(row => row.firstSoundMs), [100, 100])
+  const valid = evidenceRow()
+  valid.verification[0].result.unitsChecked = 8
+  assert.deepEqual(env.evidenceBlockers(valid), [], 'el total acumulado puede superar el inventario vigente')
+  valid.verification[0].result.unitsCheckedSnapshot = 3
+  assert(env.evidenceBlockers(valid).some(reason => /ledger final/.test(reason)))
+})
+
+test('una comparación lenta de A no confunde la reproducción ya observada de B y C con pistas saltadas', async t => {
+  const env = await setup(t, { promote: true, verificationRealDelay: 120 })
+  const report = await env.execute({ mode: 'album', videos: [video(1), video(2), video(3)], timeoutSeconds: 1 })
+  assert.equal(report.measurementsOk, true)
+  assert(report.rows.every(row => row.events.some(event => event.type === 'playing') && row.events.some(event => event.type === 'ended')))
+  assert.equal(report.rows.some(row => row.failures.some(reason => /saltó/.test(reason))), false)
 })

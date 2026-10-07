@@ -55,10 +55,13 @@ export const album = (id: number) =>
 // Sin caché aquí: el backend ya guarda el vídeo elegido y la URL mientras no caduque.
 export interface ForegroundAdmission {
   requestId: string; resolution: number; trackId: number; videoId: string; engine: 'oficial'
+  maxSessions?: number; prefetchSlots?: number
 }
 export interface ResolutionOptions {
   onAdmitted?: (admission: ForegroundAdmission) => void
   expectedForeground?: number
+  /** Plazas físicas de precarga: conservar la plaza evita reabrir la segunda al promover la primera. */
+  nextSlot?: 0 | 1
   isCurrent?: () => boolean
 }
 async function resolveInvocation(command: string, args: Record<string, unknown>, options: ResolutionOptions): Promise<Playable> {
@@ -79,13 +82,14 @@ async function resolveInvocation(command: string, args: Record<string, unknown>,
     return await invoke<Playable>(command, {
       ...args, ...(unlisten ? { requestId } : {}),
       ...(options.expectedForeground === undefined ? {} : { expectedForeground: options.expectedForeground }),
+      ...(options.nextSlot === undefined ? {} : { nextSlot: options.nextSlot }),
     })
   } finally { unlisten?.() }
 }
 export const resolve = (track: TrackQuery, refresh = false, foreground = true, options: ResolutionOptions = {}) =>
   resolveInvocation('resolve', { track, refresh, foreground }, options)
 export const cancelResolve = () => invoke<void>('cancel_resolve')
-export const cancelPrefetch = () => invoke<void>('cancel_prefetch')
+export const cancelPrefetch = (nextSlot?: 0 | 1) => invoke<void>('cancel_prefetch', nextSlot === undefined ? undefined : { nextSlot })
 export const showCapture = () => invoke<void>('capture_show')
 
 export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('alternatives', { track })

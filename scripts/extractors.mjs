@@ -64,7 +64,7 @@ async function publish({ dryRun, to }) {
     const { api, version } = meta[name]
     const file = `${name}-api${api}-v${version}.${EXT[name]}`
     const data = name === 'capture'
-      ? Buffer.from(['capture-mp4.js', 'capture-core.js', 'capture-youtube.js', 'capture.js']
+      ? Buffer.from(['capture-mp4.js', 'capture-audit.js', 'capture-core.js', 'capture-youtube.js', 'capture.js']
           .map((part) => readFileSync(join('src-tauri/src', part), 'utf8')).join('\n;\n'))
       : readFileSync(path)
     writeFileSync(join(OUT, file), data)

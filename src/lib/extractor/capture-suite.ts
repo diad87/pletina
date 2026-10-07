@@ -13,7 +13,11 @@ interface Corpus {
   albums: { query: string; albumId?: number; error?: string; expectedTracks: number; rows?: CaptureCase[] }[]
 }
 export interface CaptureSuitePlan {
-  mode: 'catalog' | 'smoke' | 'latency' | 'album' | 'switch'
+  mode: 'catalog' | 'smoke' | 'latency' | 'album' | 'switch' | 'native-search' | 'ad-transitions' | 'profile-login'
+  engine?: 'oficial' | 'propio'
+  /** Cohorte publicitaria acotada; no repetir hasta obtener sólo éxitos. */
+  minimumAdTransitions?: number
+  maxAdAttempts?: number
   corpus?: Corpus
   videos?: CaptureCase[]
   /** Espera operativa, distinta del umbral de éxito de3s. */
@@ -36,7 +40,8 @@ type Row = Record<string, unknown> & { label: string; ok: boolean; failures: str
 const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 const status = (id: string) => invoke<Status | null>('capture_status', { videoId: id })
 const covers = (ranges: Range[], at: number, after = 0) => ranges.some(r => r.start <= at + 0.000001 && r.end >= at + after)
-export const LIMITS = { firstSoundMs: 3000, nextTrackMs: 500, unpreparedMs: 5000, seekMs: 3000 }
+export const LIMITS = { firstSoundMs: 3000, nextTrackMs: 500, unpreparedMs: 3000, seekMs: 1000 }
+export const NATIVE_LIMITS = { firstSoundMs: 300, nextTrackMs: 100 }
 const timingOnly = (plan: CaptureSuitePlan) => plan.experimental !== false && (plan.verifyComplete === false || plan.mode === 'latency')
 
 /** Cero sólo significa cero gaps en el inventario y cero eventos de espera durante escucha. */
@@ -145,7 +150,104 @@ function checkExperiment(row: Row, s: Status | null, plan: CaptureSuitePlan) {
     row.failures.push('El modo experimental efectivo del proceso falta o no coincide con el plan')
 }
 
-async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (row: Row) => Promise<unknown>): Promise<Row> {
+type Verification = { ok?: boolean; complete?: boolean; anonymous?: boolean; unitsChecked?: number; comparedPackets?: number; mismatches?: unknown[]; [key: string]: unknown }
+type Audit = ReturnType<typeof evidenceAudit>
+/** El comparador lee TODO el ledger nativo. Ningún byte se copia a través del frontend. */
+function evidenceAudit() {
+  const references = new Map<string, unknown>(), checks = new Map<string, { at: number; final: boolean; result: Verification }[]>()
+  const active = new Set<string>(), sessions = new Map<string, unknown[]>()
+  let pending: Promise<void> = Promise.resolve(), timer: ReturnType<typeof setInterval> | undefined
+  const check = async (id: string, final: boolean) => {
+    pending = pending.then(async () => {
+      if (!final) {
+        const current = await status(id).catch(() => null)
+        if (!current || !(Number(current.units) > 0 || Number(current.chunks) > 0)) return
+      }
+      let result: Verification
+      try { result = await invoke<Verification>('capture_verify_check', { videoId: id, final }) }
+      catch (error) { result = { ok: false, error: String(error) } }
+      const history = checks.get(id) ?? []
+      history.push({ at: performance.now(), final, result }); checks.set(id, history)
+    })
+    await pending
+  }
+  return {
+    async prepare(videos: CaptureCase[]) {
+      for (const video of videos) if (video.id && !references.has(video.id)) {
+        try { references.set(video.id, await invoke('capture_verify_prepare', { videoId: video.id, mime: null, itag: null })) }
+        catch (error) { references.set(video.id, { ok: false, error: String(error) }) }
+      }
+      timer = setInterval(() => { for (const id of active) void check(id, false) }, 10000)
+    },
+    start(id: string) { active.add(id) },
+    async finish(id: string, row?: Row) {
+      if (active.has(id) || checks.has(id)) { await check(id, true); active.delete(id) }
+      if (row) {
+        row.reference = references.get(id) ?? null
+        row.verification = structuredClone(checks.get(id) ?? [])
+        row.sessionObservations = structuredClone(sessions.get(id) ?? [])
+        row.evidenceBlockers = evidenceBlockers(row)
+        row.evidenceEligible = (row.evidenceBlockers as string[]).length === 0
+      }
+    },
+    observe(id: string, s: Status | null) {
+      if (!s) return
+      const history = sessions.get(id) ?? []
+      const value = { generation: s.generation, revision: s.revision, epoch: s.epoch,
+        sessionState: s.sessionState ?? null, sessionStates: s.sessionStates ?? null }
+      if (JSON.stringify(history.at(-1)) !== JSON.stringify(value)) history.push(value)
+      sessions.set(id, history)
+    },
+    async close() { clearInterval(timer); for (const id of [...active]) await check(id, true); active.clear(); await pending },
+    get references() { return Object.fromEntries(references) },
+  }
+}
+
+/** Estos requisitos pertenecen a esta ejecución; no constituyen garantía universal. */
+export function evidenceBlockers(row: Row): string[] {
+  const reasons: string[] = [], reference = row.reference as Record<string, unknown> | null
+  if (reference?.ok !== true || reference.anonymousTransport !== true) reasons.push('Referencia independiente anónima no verificada')
+  const checks = row.verification as { final: boolean; result: Verification }[] | undefined
+  const last = checks?.at(-1)
+  const nativeUnits = Number((row.status as Status | undefined)?.units)
+  if (!last?.final || last.result.ok !== true || last.result.complete !== true || last.result.anonymous !== true ||
+      last.result.captureAnonymous !== true || last.result.mismatchCount !== 0 ||
+      last.result.allPublishedUnits !== true || !(Number(last.result.unitsChecked) > 0) || !(Number(last.result.comparedPackets) > 0) ||
+      !Array.isArray(last.result.mismatches) || last.result.mismatches.length || checks?.some(check => (check.result.mismatches?.length ?? 0) > 0))
+    reasons.push('No están comparadas todas las unidades entregadas')
+  if (!Number.isSafeInteger(nativeUnits) || nativeUnits <= 0 || last?.result.unitsCheckedSnapshot !== nativeUnits ||
+      Number(last?.result.unitsChecked) < nativeUnits)
+    reasons.push('El total de unidades comparadas no coincide con el ledger final')
+  const observations = row.sessionObservations as { sessionState?: Record<string, unknown> | null; sessionStates?: unknown }[] | undefined
+  if (!observations?.length || observations.some(value => {
+    const s = value.sessionState
+    return !s || s.state !== 'signed-out' || typeof s.profileId !== 'string' || !s.profileId ||
+      typeof s.observedAt !== 'number' || !Number.isFinite(s.observedAt) || s.evidenceVersion !== 1
+  })) reasons.push('Sesión de captura sin prueba de usuario desconectado')
+  // Una foto final no permite acreditar el estado de sesiones anteriores de la misma caché.
+  if (!observations?.length || observations.some(value => !Array.isArray(value.sessionStates) || !value.sessionStates.length ||
+      value.sessionStates.some((s: Record<string, unknown>) => s.state !== 'signed-out')))
+    reasons.push('Historial anónimo de todas las sesiones ausente o inconcluso')
+  const finalStatus = row.status as Status | undefined
+  if (finalStatus?.unknownAuthUnits !== 0 || finalStatus?.signedInUnits !== 0)
+    reasons.push('Unidades entregadas con sesión desconocida o autenticada, o contadores ausentes')
+  if (row.complete !== true || row.coverageOk !== true || row.completeNotExercised === true)
+    reasons.push('EOF y cobertura completa no demostrados')
+  return reasons
+}
+
+function adTelemetry(row: Row, s: Status | null) {
+  let diagnostic: Record<string, unknown> | null = null
+  try { diagnostic = typeof s?.lastDiagnostic === 'string' ? JSON.parse(s.lastDiagnostic) : null } catch { /* Datos opacos preservados en status. */ }
+  row.adTelemetry = {
+    skip: diagnostic?.skip ?? null, holdbackSeconds: s?.holdbackSeconds ?? diagnostic?.holdbackSeconds ?? null,
+    unskippableAdMs: s?.unskippableAdMs ?? null, skippedAds: s?.skippedAds ?? null,
+    adTransitions: s?.adTransitions ?? null, independentSignalDelayMs: null,
+    interpretation: 'Un click confiable confirma entrada nativa; sólo una transición observada confirma el efecto. No-match no demuestra anuncio no omitible.',
+  }
+}
+
+async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (row: Row) => Promise<unknown>, audit: Audit): Promise<Row> {
   const row: Row = { label: video.label, videoId: video.id, ok: false, failures: [], phase: 'starting' }
   await checkpoint(row)
   if (timingOnly(plan)) {
@@ -154,7 +256,8 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
   if (!video.id || video.error) { row.failures.push(video.error ?? 'No hay ID elegido'); row.phase = 'finished'; return row }
   const audio = new Audio(), observed = observeAudio(audio)
   audio.muted = true; audio.preload = 'auto'
-  const t = performance.now(), timeout = (plan.timeoutSeconds ?? 360) * 1000
+  let t = performance.now()
+  const timeout = (plan.timeoutSeconds ?? 360) * 1000
   let stop = () => {}, latest: Status | null = null, readerStarted = false
   const check = () => {
     if (audio.error) throw new Error(`Audio ${audio.error.code}: ${audio.error.message}`)
@@ -162,12 +265,16 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
     if (fatal) throw new Error(String(fatal.detail ?? 'La captura falló'))
   }
   try {
+    await audit.finish(video.id)
+    audit.start(video.id)
+    t = performance.now()
     await within(invoke('capture_begin', { videoId: video.id, refresh: true, foreground: true }), t + timeout)
     stop = playCapture(audio, video.id); readerStarted = true
     const play = audio.play(); play.catch(() => {})
     await until(() => observed.firstPlaying !== null && audio.currentTime > 0, t + timeout, check)
     await play
     latest = await status(video.id)
+    audit.observe(video.id, latest)
     checkExperiment(row, latest, plan)
     const firstSoundMs = observed.firstPlaying! - t, advertisementMs = adTime(latest)
     row.startStatus = structuredClone(latest); row.startAdMs = advertisementMs
@@ -205,7 +312,7 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
       observed.phase('backfill')
       row.phase = 'backfill'; await checkpoint(row)
       if (plan.experimental !== false && wasCaptured) row.failures.push('El caso no ejerció un salto a zona aún no capturada')
-      if (plan.experimental !== false && (row.seekMs as number) > LIMITS.seekMs) row.failures.push('Salto al 80% supera 3 s')
+      if (plan.experimental !== false && (row.seekMs as number) > LIMITS.seekMs) row.failures.push('Salto al 80% supera 1 s')
     }
     if (timingOnly(plan)) {
       row.scope = 'timingOnly'; row.completeNotExercised = true; row.coverageNotExercised = true
@@ -222,6 +329,7 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
     let lastCheckpoint = performance.now()
     while (performance.now() < deadline) {
       check(); latest = await status(video.id)
+      audit.observe(video.id, latest)
       if (!latest) throw new Error('La captura desapareció antes de verificarse')
       if (latest.complete) break
       if (latest.error && !latest.softError) throw new Error(String(latest.error))
@@ -261,6 +369,8 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
     latest = await status(video.id).catch(() => latest)
     row.status = latest; checkAds(row, latest)
   } finally {
+    audit.observe(video.id, latest); adTelemetry(row, latest)
+    await audit.finish(video.id, row)
     row.phase = 'finished'; row.elapsedMs = performance.now() - t; row.events = observed.events; row.gaps = observed.gaps
     row.allPlaybackStalls = observed.allPlaybackStalls
     row.backfillWaiting = observed.events.filter(event => event.type === 'waiting' && (event.phase === 'seek' || event.phase === 'backfill'))
@@ -287,7 +397,8 @@ function queueItem(video: CaptureCase): QueueItem | null {
 function watchPlayerPlay(beforePlay: (audio: HTMLAudioElement) => void) {
   const prototype = HTMLMediaElement.prototype, original = prototype.play
   const wrapped = function (this: HTMLMediaElement) {
-    if (this === player.playbackAudio || this === player.preparedAudio) beforePlay(this as HTMLAudioElement)
+    if (this === player.playbackAudio || player.preparedAudios?.some(entry => entry.audio === this) || this === player.preparedAudio)
+      beforePlay(this as HTMLAudioElement)
     return original.call(this)
   }
   prototype.play = wrapped
@@ -295,14 +406,17 @@ function watchPlayerPlay(beforePlay: (audio: HTMLAudioElement) => void) {
 }
 
 /** Usa el reproductor real, su precarga y ended natural; nunca adelanta una pista correcta. */
-async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>): Promise<Row[]> {
+async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>, audit: Audit): Promise<Row[]> {
   const rows: Row[] = videos.map(v => ({ label: v.label, videoId: v.id, ok: false, failures: [], phase: 'pending' }))
   const playable: { video: CaptureCase & { id: string }; item: QueueItem; index: number }[] = []
   for (const [index, video] of videos.entries()) {
     const item = queueItem(video)
     try {
       if (video.error || !video.id || !item) throw new Error(video.error ?? 'La muestra no contiene una canción reproducible')
-      await api.rememberSource(toQuery(item), video.id)
+      if (plan.engine === 'propio') {
+        rows[index].coldSearchReset = await invoke('capture_bench_native_search', { track: toQuery(item), videoId: video.id })
+        rows[index].searchIncluded = true
+      } else await api.rememberSource(toQuery(item), video.id)
       playable.push({ video: video as CaptureCase & { id: string }, item, index })
     } catch (error) { rows[index].failures.push(String(error)); rows[index].phase = 'finished' }
   }
@@ -325,13 +439,18 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
   }
   const watch = () => {
     if (player.current?.track.id === playable[player.pos]?.item.track.id) install(player.playbackAudio, player.pos)
-    install(player.preparedAudio, player.pos + 1)
+    if (player.preparedAudios) for (const entry of player.preparedAudios) {
+      const position = playable.findIndex((value, index) => index > player.pos && value.item.track.id === entry.trackId)
+      if (position >= 0) install(entry.audio, position)
+    }
+    else install(player.preparedAudio, player.pos + 1)
   }
   const unhook = watchPlayerPlay(audio => install(audio, player.pos))
   const timer = setInterval(watch, 10)
   let previousEnded: number | null = null
   try {
     const albumStart = performance.now()
+    if (plan.engine !== 'propio') for (const entry of playable) audit.start(entry.video.id)
     player.playQueue(playable.map(e => e.item), 0)
     watch()
     for (const [position, entry] of playable.entries()) {
@@ -341,26 +460,35 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
       try {
         await until(() => {
           watch()
-          return player.pos === position && observers.get(position)?.observed.firstPlaying != null
+          // Una comparación de la pista anterior puede terminar después de que ésta
+          // ya haya sonado; el observador enlazado antes de play conserva la prueba.
+          return observers.get(position)?.observed.firstPlaying != null
         }, began + (plan.timeoutSeconds ?? 360) * 1000, () => {
           if (player.pos > position) throw new Error('Musify saltó la pista tras un fallo')
           if (observers.get(position)?.observed.events.some(e => e.type === 'captureerror')) throw new Error('La captura falló antes del primer sonido')
         })
         const { audio, observed } = observers.get(position)!
-        latest = await status(entry.video.id)
-        checkExperiment(row, latest, plan)
+        latest = plan.engine === 'propio' && !captureProgress(audio) ? null : await status(entry.video.id)
+        audit.observe(entry.video.id, latest)
+        if (plan.engine !== 'propio') checkExperiment(row, latest, plan)
         row.startStatus = latest
+        row.selectedSource = player.playbackSource
+        if (plan.engine === 'propio' && player.playbackSource?.trackId === entry.item.track.id &&
+            player.playbackSource.videoId !== entry.video.id)
+          row.failures.push('La búsqueda eligió un vídeo distinto del esperado por el corpus')
         row.firstSoundMs = observed.firstPlaying! - (position === 0 ? albumStart : previousEnded ?? began)
         if (position === 0) {
-          const adMs = adTime(latest)
+          const adMs = plan.engine === 'propio' ? 0 : adTime(latest)
           row.firstSoundWithoutAdMs = adMs === null ? null : (row.firstSoundMs as number) - adMs
           row.startAdMs = adMs
           if (adMs !== null && adMs > (row.firstSoundMs as number) + 1) row.failures.push('El tiempo publicitario excede la ventana medida de primer sonido')
-          if (plan.experimental !== false && (adMs === null || (row.firstSoundWithoutAdMs as number) > LIMITS.firstSoundMs)) row.failures.push('Primer sonido supera 3 s más anuncio medido')
+          const firstLimit = plan.engine === 'propio' ? NATIVE_LIMITS.firstSoundMs : LIMITS.firstSoundMs
+          if (plan.experimental !== false && (adMs === null || (row.firstSoundWithoutAdMs as number) > firstLimit)) row.failures.push(`Primer sonido supera ${firstLimit} ms más anuncio medido`)
         } else {
           row.nextTrackMs = previousEnded === null ? null : observed.firstPlaying! - previousEnded
-          if (previousEnded === null || (row.nextTrackMs as number) < 0 || (plan.experimental !== false && (row.nextTrackMs as number) > LIMITS.nextTrackMs))
-            row.failures.push('Transición natural ausente, solapada o superior a 0,5 s')
+          const nextLimit = plan.engine === 'propio' ? NATIVE_LIMITS.nextTrackMs : LIMITS.nextTrackMs
+          if (previousEnded === null || (row.nextTrackMs as number) < 0 || (plan.experimental !== false && (row.nextTrackMs as number) > nextLimit))
+            row.failures.push(`Transición natural ausente, solapada o superior a ${nextLimit} ms`)
         }
         row.initialProgress = captureProgress(audio) ?? observed.progress
         row.phase = 'listening'; await checkpoint(rows)
@@ -372,18 +500,21 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
           if (observed.events.some(e => e.type === 'captureerror')) throw new Error('Captura detenida antes del final')
           if (player.pos > position && observed.ended === null) throw new Error('Cambio de pista sin ended natural')
         }, async () => {
-          latest = await status(entry.video.id).catch(() => latest)
+          latest = plan.engine === 'propio' && !captureProgress(audio) ? null : await status(entry.video.id).catch(() => latest)
+          audit.observe(entry.video.id, latest)
           row.latestStatus = structuredClone(latest); row.progress = captureProgress(audio) ?? observed.progress
           row.live = liveAudio(audio, began); row.elapsedMs = performance.now() - began
           await checkpoint(rows)
         })
         previousEnded = observed.ended
-        latest = await status(entry.video.id).catch(() => latest)
         const progress = observed.progress ?? captureProgress(audio)
-        const audioDuration = latest?.audioDuration ?? latest?.eofEnd ?? progress?.audioDuration
+        const nativeDirect = plan.engine === 'propio' && !progress
+        latest = nativeDirect ? null : await status(entry.video.id).catch(() => latest)
+        row.nativeDirect = nativeDirect
+        const audioDuration = nativeDirect ? audio.duration : latest?.audioDuration ?? latest?.eofEnd ?? progress?.audioDuration
         row.status = latest; row.coverage = progress; row.audioDuration = audioDuration ?? null
         row.endedPosition = observed.endedPosition; row.endedBuffered = observed.endedBuffered
-        row.complete = latest?.complete === true || progress?.complete === true
+        row.complete = nativeDirect ? observed.ended !== null : latest?.complete === true || progress?.complete === true
         row.coverageOk = continuous(observed.endedBuffered ?? progress?.buffered ?? [], audioDuration ?? NaN)
         if (!row.complete) row.failures.push('EOF sin verificación completa')
         if (!row.coverageOk) row.failures.push('Cobertura final ausente o con huecos')
@@ -392,7 +523,7 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.events = observed.events; row.gaps = observed.gaps
         row.allPlaybackStalls = observed.allPlaybackStalls
         if (observed.gaps.length) row.failures.push(`${observed.gaps.length} cortes durante escucha normal`)
-        checkAds(row, latest)
+        if (!nativeDirect) checkAds(row, latest)
       } catch (error) {
         row.failures.push(String(error)); row.status = latest ?? await status(entry.video.id).catch(() => null)
         const watched = observers.get(position)
@@ -400,10 +531,12 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
         row.allPlaybackStalls = watched?.observed.allPlaybackStalls ?? []
         row.coverage = watched?.observed.progress ?? null
         previousEnded = null
-        checkAds(row, row.status as Status | null)
+        if (plan.engine !== 'propio') checkAds(row, row.status as Status | null)
         // Continuar una fila fallida no permite dar por buena la transición siguiente.
         if (position + 1 < playable.length && player.pos === position) player.next()
       }
+      audit.observe(entry.video.id, row.status as Status | null); adTelemetry(row, row.status as Status | null)
+      await audit.finish(entry.video.id, row)
       row.elapsedMs = performance.now() - began; row.phase = 'finished'; row.ok = row.failures.length === 0
       await checkpoint(rows)
     }
@@ -417,7 +550,7 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
 }
 
 /** El destino se expulsa explícitamente de la caché de banco, conservando la canción de contexto. */
-async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>): Promise<Row[]> {
+async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>, audit: Audit): Promise<Row[]> {
   const rows: Row[] = []
   type Context = { video: CaptureCase; item: QueueItem; audio: HTMLAudioElement }
   let context: Context | null = null
@@ -451,6 +584,7 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
           if (!source?.id || !sourceItem) throw new Error('Se necesitan dos canciones distintas con metadatos')
           row.contextVideoId = source.id; row.contextTrackId = sourceItem.track.id
           await api.rememberSource(toQuery(sourceItem), source.id)
+          audit.start(source.id)
           player.playQueue([sourceItem], 0)
           await until(() => player.current?.track.id === sourceItem.track.id && contextPlaying({ video: source, item: sourceItem, audio: player.playbackAudio }),
             performance.now() + timeout, () => { if (player.playbackAudio.error) throw new Error('El audio de contexto falló') })
@@ -463,6 +597,7 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
         await api.rememberSource(toQuery(item), video.id)
         if (currentContext.video.id === video.id || !contextPlaying(currentContext)) throw new Error('El contexto debe seguir sonando y ser distinto del destino')
         row.destinationBeforeForget = await status(video.id)
+        await audit.finish(video.id)
         await invoke('capture_bench_forget', { videoId: video.id })
         const before = await status(video.id)
         row.destinationBeforeClick = before
@@ -475,6 +610,7 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
         row.contextProgress = captureProgress(currentContext.audio)
         measuring = true
         const started = performance.now()
+        audit.start(video.id)
         player.playQueue([item], 0)
         const checkDestination = () => {
           if (observed?.events.some(event => event.type === 'captureerror')) throw new Error('La captura falló durante el cambio')
@@ -491,7 +627,7 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
         row.unpreparedSwitchMs = observed!.firstPlaying! - started
         row.unpreparedSwitchWithoutAdMs = adMs === null ? null : (row.unpreparedSwitchMs as number) - adMs
         if (adMs !== null && adMs > (row.unpreparedSwitchMs as number) + 1) row.failures.push('El tiempo publicitario excede la ventana medida del cambio')
-        if (plan.experimental !== false && (adMs === null || (row.unpreparedSwitchWithoutAdMs as number) > LIMITS.unpreparedMs)) row.failures.push('Salto a canción no preparada supera 5 s más anuncio')
+        if (plan.experimental !== false && (adMs === null || (row.unpreparedSwitchWithoutAdMs as number) > LIMITS.unpreparedMs)) row.failures.push('Salto a canción no preparada supera 3 s más anuncio')
         row.status = latest; checkAds(row, latest)
         context = { video, item, audio: audio! }
       } catch (error) {
@@ -499,6 +635,8 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
         row.failures.push(String(error)); latest = await status(video.id).catch(() => latest)
         row.status = latest; checkAds(row, latest)
       } finally {
+        audit.observe(video.id, latest); adTelemetry(row, latest)
+        await audit.finish(video.id, row)
         row.phase = 'finished'; row.elapsedMs = performance.now() - began
         row.events = observed?.events ?? []; row.gaps = observed?.gaps ?? []
         row.allPlaybackStalls = observed?.allPlaybackStalls ?? []
@@ -515,21 +653,136 @@ async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpo
   return rows
 }
 
+/** Cada intento usa el player normal y una búsqueda sin asociación ni caché antes del reloj. */
+async function nativeSearch(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>): Promise<Row[]> {
+  const rows: Row[] = []
+  try {
+    for (const video of videos) {
+      const row: Row = { label: video.label, videoId: video.id, ok: false, failures: [], phase: 'resetting-search',
+        searchIncluded: true, completeNotExercised: true, coverageNotExercised: true }
+      rows.push(row); await checkpoint(rows)
+      let observed: ReturnType<typeof observeAudio> | undefined, audio: HTMLAudioElement | null = null
+      let started: number | null = null
+      const unhook = watchPlayerPlay(value => {
+        if (started === null || audio === value) return
+        observed?.close(); audio = value; observed = observeAudio(value)
+      })
+      try {
+        const item = queueItem(video)
+        if (!item || !video.id || video.error) throw new Error(video.error ?? 'Faltan metadatos para la búsqueda')
+        row.coldSearchReset = await invoke('capture_bench_native_search', { track: toQuery(item), videoId: video.id })
+        row.phase = 'searching'; await checkpoint(rows)
+        started = performance.now()
+        player.playQueue([item], 0)
+        await until(() => observed?.firstPlaying != null && audio === player.playbackAudio && !audio.paused && audio.currentTime > 0,
+          started + (plan.timeoutSeconds ?? 120) * 1000, () => {
+            if (audio?.error || observed?.events.some(event => event.type === 'captureerror')) throw new Error('Falló la reproducción tras la búsqueda')
+          })
+        row.firstSoundMs = observed!.firstPlaying! - started
+        row.selectedSource = player.playbackSource
+        if (player.playbackSource?.videoId && player.playbackSource.videoId !== video.id)
+          row.failures.push('La búsqueda eligió un vídeo distinto del esperado por el corpus')
+        row.initialProgress = captureProgress(audio!)
+        row.nativeDirect = !row.initialProgress
+        row.fallbackCapture = !!row.initialProgress
+        if ((row.firstSoundMs as number) > NATIVE_LIMITS.firstSoundMs) row.failures.push('Búsqueda e inicio de audio superan 300 ms')
+        row.status = row.nativeDirect ? null : await status(video.id).catch(() => null)
+        row.phase = 'first-sound'; await checkpoint(rows)
+      } catch (error) { row.failures.push(String(error)) }
+      finally {
+        row.events = observed?.events ?? []; row.gaps = observed?.gaps ?? []; row.allPlaybackStalls = observed?.allPlaybackStalls ?? []
+        row.elapsedMs = started === null ? null : performance.now() - started
+        observed?.close(); unhook()
+        if (player.status === 'playing' || player.status === 'loading') player.toggle()
+        stopCapture()
+      }
+      row.phase = 'finished'; row.ok = row.failures.length === 0
+      row.evidenceEligible = false; row.evidenceBlockers = ['Esta fase sólo mide búsqueda e inicio; no verifica escucha completa ni todos los paquetes']
+      await checkpoint(rows)
+    }
+  } finally {
+    if (player.status === 'playing' || player.status === 'loading') player.toggle()
+    stopCapture()
+  }
+  return rows
+}
+
+/** Se cuentan transiciones identificadas, nunca observaciones repetidas ni adsSeen acumulado. */
+export function distinctAdTransitions(rows: Row[]): number {
+  const identities = new Set<string>()
+  for (const row of rows) {
+    const s = row.status as Status | undefined
+    if (!Array.isArray(s?.adTransitions)) continue
+    for (const transition of s.adTransitions as Record<string, unknown>[]) {
+      if (transition.from !== 'ad' || transition.to !== 'content' || transition.observed !== true ||
+          ![transition.generation, transition.epoch, transition.source, transition.sequence].every(Number.isSafeInteger)) continue
+      identities.add(JSON.stringify([row.videoId, transition.generation, transition.epoch, transition.source, transition.sequence]))
+    }
+  }
+  return identities.size
+}
+
+export function acceptanceCriteria(rows: Row[], expectedTracks: number, requiredAds = 50, engine: 'oficial' | 'propio' = 'oficial'): string[] {
+  const missing: string[] = []
+  const completeIds = new Set(rows.filter(row => row.ok && row.evidenceEligible === true).map(row => row.videoId))
+  if (completeIds.size < Math.max(30, expectedTracks)) missing.push(`Canciones distintas completas y verificadas: ${completeIds.size}/${Math.max(30, expectedTracks)}`)
+  const transitions = distinctAdTransitions(rows)
+  if (transitions < requiredAds) missing.push(`Transiciones publicitarias reales identificadas: ${transitions}/${requiredAds}`)
+  if (!rows.length || rows.some(row => !row.ok)) missing.push('Hay intentos fallidos o no medidos en esta cohorte')
+  if (rows.some(row => row.evidenceEligible !== true)) missing.push('Falta comparación independiente, sesión anónima o cobertura en algún intento')
+  const seekIds = new Set(rows.filter(row => row.seekOk === true && row.seekWasCaptured === false &&
+    typeof row.seekMs === 'number' && row.seekMs <= LIMITS.seekMs).map(row => row.videoId))
+  if (seekIds.size < 30) missing.push(`Saltos a zona no capturada en menos de 1 s: ${seekIds.size}/30 canciones distintas`)
+  const natural = rows.filter(row => typeof row.nextTrackMs === 'number')
+  const nextLimit = engine === 'propio' ? NATIVE_LIMITS.nextTrackMs : LIMITS.nextTrackMs
+  if (natural.length < 25 || natural.some(row => (row.nextTrackMs as number) < 0 || (row.nextTrackMs as number) > nextLimit))
+    missing.push(`Faltan al menos 25 transiciones naturales de ${nextLimit} ms o menos sin solapamiento`)
+  // adMs sólo acredita observación, no que esa espera fuese inevitable.
+  if (rows.some(row => {
+    const elapsed = row.firstSoundMs ?? row.unpreparedSwitchMs
+    if (typeof elapsed !== 'number' || elapsed <= LIMITS.firstSoundMs) return false
+    const credit = (row.adTelemetry as Record<string, unknown> | undefined)?.unskippableAdMs
+    return typeof credit !== 'number' || credit < 0 || credit > elapsed || elapsed - credit > LIMITS.firstSoundMs
+  })) missing.push('Inicio de 3 s más espera publicitaria no omitible no demostrado')
+  return missing
+}
+
 export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (report: Record<string, unknown>) => Promise<unknown>) {
+  if (plan.mode === 'profile-login') {
+    const report: Record<string, unknown> = { mode: plan.mode, scope: 'manual-reference-profile-setup', running: true,
+      ok: false, acceptanceOk: false, profileId: null, state: 'waiting', loggedIn: false }
+    await checkpoint(report)
+    try {
+      await invoke('capture_profile_open', { mode: 'premium-manual' })
+      const deadline = performance.now() + (plan.timeoutSeconds ?? 1200) * 1000
+      let lastCheckpoint = -Infinity
+      while (performance.now() < deadline) {
+        const s = await invoke<{ profileId?: string; state?: string; loggedIn?: boolean; sessionState?: { profileId?: string; state?: string } }>('capture_profile_status')
+        const auth = s.sessionState ?? s
+        report.profileId = typeof auth.profileId === 'string' ? auth.profileId : null
+        report.state = auth.state === 'signed-in' || auth.state === 'signed-out' ? auth.state : 'unknown'
+        report.loggedIn = s.loggedIn === true
+        if (s.loggedIn === true) { report.ok = true; break }
+        if (performance.now() - lastCheckpoint >= 15000) { await checkpoint(report); lastCheckpoint = performance.now() }
+        await sleep(2000)
+      }
+      if (!report.ok) report.state = 'timeout'
+    } catch { report.state = 'unavailable' }
+    report.running = false; await checkpoint(report); return report
+  }
+  if (plan.mode === 'native-search') plan = { ...plan, engine: 'propio' }
   const corpus = plan.corpus ?? (!plan.videos ? await invoke<Corpus>('capture_bench_catalog') : undefined)
   const videos = plan.videos ?? (corpus ? cases(corpus) : [])
   const report: Record<string, unknown> = {
-    mode: plan.mode, corpus, expectedTracks: corpus?.expectedTracks ?? videos.length,
-    limits: plan.experimental === false ? null : LIMITS, timingRequirementsApplied: plan.experimental !== false,
+    schema: 2, mode: plan.mode, engine: plan.engine ?? 'oficial', corpus, expectedTracks: corpus?.expectedTracks ?? videos.length,
+    limits: plan.experimental === false ? null : plan.engine === 'propio' ? NATIVE_LIMITS : LIMITS, timingRequirementsApplied: plan.experimental !== false,
     continuityMethod: 'waiting durante escucha normal y final; seek/backfill queda registrado por separado y no demuestra escucha continua de toda la canción',
     timingMethod: 'Reloj monotónico de eventos HTMLAudioElement en WebView2; audio silenciado durante medición',
-    adMethod: 'Estados observados en reproductor oficial y unidades verificadas; contaminación semántica requiere referencia independiente',
+    adMethod: 'Estados oficiales observados; comparación independiente de todas las unidades publicadas. La demora entre sonido y marcador no se deduce del mismo marcador.',
     rate: 1, rows: [] as Row[], running: true, ok: false,
     experimental: plan.mode !== 'catalog' && plan.experimental !== false, guaranteeAds: false, acceptanceOk: false,
-    scope: plan.mode === 'catalog' ? 'catalog' : plan.experimental === false ? 'full-quarantine' : timingOnly(plan) ? 'timingOnly' : plan.mode === 'switch' ? 'cold-switch' : 'complete',
-    blocking: plan.mode === 'catalog' ? [] : plan.experimental === false
-      ? ['El control de cuarentena valida esta ejecución; no demuestra latencia progresiva ni una garantía publicitaria global.']
-      : ['La identidad publicitaria puede llegar tarde; los tiempos no prueban ausencia de anuncios en unidades ya entregadas.'],
+    scope: plan.mode === 'catalog' ? 'catalog' : plan.mode === 'native-search' ? 'cold-search-and-start' : plan.experimental === false ? 'full-quarantine' : timingOnly(plan) ? 'timingOnly' : plan.mode === 'switch' ? 'cold-switch' : 'complete',
+    blocking: [], referencePreparationOutsidePlaybackTimer: plan.engine !== 'propio',
   }
   await checkpoint(report)
   if (plan.mode === 'catalog') {
@@ -539,34 +792,61 @@ export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (repor
     report.running = false; await checkpoint(report); return report
   }
   const rows = report.rows as Row[]
-  if (plan.mode === 'album' || plan.mode === 'switch') {
+  const audit = evidenceAudit()
+  try {
+  if (plan.engine !== 'propio') {
+    report.phase = 'preparing-independent-references'; await checkpoint(report)
+    await audit.prepare(videos); report.references = audit.references
+    report.phase = 'measuring'; await checkpoint(report)
+  }
+  if (plan.mode === 'album' || plan.mode === 'switch' || plan.mode === 'native-search') {
     const volume = player.volume, engine = extractor.engine, shuffle = player.shuffle, repeat = player.repeat
     try {
       player.setVolume(0); player.shuffle = false; player.repeat = 'off'; player.clearQueue()
-      await extractor.set('oficial')
+      await extractor.set(plan.engine ?? 'oficial')
       if (plan.mode === 'album') {
         const groups = corpus?.albums.map(a => cases({ source: corpus.source, expectedTracks: a.expectedTracks, albums: [a] })) ?? [videos]
         for (const group of groups) {
           const previous = rows.slice()
-          const finished = await album(group, plan, partial => { report.rows = [...previous, ...partial]; return checkpoint(report) })
+          const finished = await album(group, plan, partial => { report.rows = [...previous, ...partial]; return checkpoint(report) }, audit)
           rows.push(...finished); report.rows = rows; await checkpoint(report)
         }
+      } else if (plan.mode === 'native-search') {
+        rows.push(...await nativeSearch(videos, plan, partial => { report.rows = partial; return checkpoint(report) }))
+        report.rows = rows
       } else {
-        rows.push(...await unprepared(videos, plan, partial => { report.rows = partial; return checkpoint(report) }))
+        rows.push(...await unprepared(videos, plan, partial => { report.rows = partial; return checkpoint(report) }, audit))
         report.rows = rows
       }
     } finally {
       player.setVolume(volume); player.shuffle = shuffle; player.repeat = repeat; await extractor.set(engine)
     }
+  } else if (plan.mode === 'ad-transitions') {
+    const attempts = Math.min(200, Math.max(videos.length, Math.floor(plan.maxAdAttempts ?? 60)))
+    report.maximumAttempts = attempts
+    report.requiredAdTransitions = Math.max(50, Math.floor(plan.minimumAdTransitions ?? 50))
+    for (let attempt = 0; videos.length && attempt < attempts; attempt++) {
+      const video = videos[attempt % videos.length], index = rows.length
+      rows[index] = await smoke(video, plan, partial => { rows[index] = partial; return checkpoint(report) }, audit)
+      rows[index].attempt = attempt + 1
+      report.adTransitions = distinctAdTransitions(rows); await checkpoint(report)
+      if (attempt + 1 >= videos.length && (report.adTransitions as number) >= (report.requiredAdTransitions as number)) break
+    }
   } else for (const video of videos) {
     const index = rows.length
-    rows[index] = await smoke(video, plan, partial => { rows[index] = partial; return checkpoint(report) })
+    rows[index] = await smoke(video, plan, partial => { rows[index] = partial; return checkpoint(report) }, audit)
     await checkpoint(report)
   }
+  } finally { await audit.close() }
   report.running = false
-  report.measurementsOk = rows.length === report.expectedTracks && rows.length > 0 && rows.every(row => row.ok)
-  report.ok = false
-  for (const row of rows) { row.measurementOk = row.ok; row.acceptanceOk = false; row.guaranteeAds = false }
+  report.measurementsOk = rows.length >= (report.expectedTracks as number) && rows.length > 0 && rows.every(row => row.ok)
+  report.adTransitions = distinctAdTransitions(rows)
+  report.blocking = acceptanceCriteria(rows, report.expectedTracks as number, Math.max(50, plan.minimumAdTransitions ?? 50), plan.engine)
+  report.missingCriteria = report.blocking
+  report.acceptanceOk = (report.blocking as string[]).length === 0
+  report.ok = report.measurementsOk
+  report.acceptanceScope = 'Sólo esta cohorte observada; no es una garantía universal ni cambia el motor de producción'
+  for (const row of rows) { row.measurementOk = row.ok; row.acceptanceOk = report.acceptanceOk === true && row.evidenceEligible === true; row.guaranteeAds = false }
   await checkpoint(report)
   return report
 }

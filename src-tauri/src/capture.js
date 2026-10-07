@@ -1,4 +1,4 @@
-// Capture API 3. Only remux samples covered by observed content intervals.
+// Capture API 4. Only remux samples covered by observed content intervals.
 // Keep acquisition at 1x: page labels cannot safely predict the next advertisement.
 (() => {
   const bridge = window.chrome?.webview
@@ -7,10 +7,10 @@
   window.__musifyCapture = true
   const target = window.__musifyTarget || new URLSearchParams(location.search).get('v'), generation = window.__musifyGeneration
   let epoch = window.__musifyEpoch, sequence = 0, queue = Promise.resolve(), tick = null
-  let failed = false, started = false, lastBeat = 0, lastDiagnostic = 0, pendingSeek = null, interaction = '', finalizedEpoch = null
+  let failed = false, started = false, lastBeat = 0, lastDiagnostic = 0, pendingSeek = null, interaction = '', finalizedEpoch = null, lastAuth = null
   const post = message => {
     sequence = Math.max(sequence + 1, Date.now() * 1000)
-    bridge.postMessage('musify:' + JSON.stringify({ musify: 1, api: 3, v: target, generation, sequence, epoch, ...message }))
+    bridge.postMessage('musify:' + JSON.stringify({ musify: 1, api: 4, v: target, generation, sequence, epoch, ...message }))
   }
   const enqueue = (message, prepare) => {
     const sentEpoch = message.epoch ?? epoch
@@ -34,8 +34,18 @@
     for (const media of document.querySelectorAll('audio,video')) { media.playbackRate = 1; media.pause() }
     event('error', { code, reason: String(reason).startsWith(`${code}:`) ? String(reason) : `${code}: ${reason}`, recoverable })
   }
-  const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target, skipDiagnostics: true })
-  if (!core?.ProgressiveTracker || !adapter || !target || !Number.isSafeInteger(generation) || !Number.isSafeInteger(epoch) || epoch < 1) return problem('CAPTURE_PROTOCOL_MISMATCH', 'Capture API 3 requires target, generation and native epoch', false)
+  let capture
+  const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target, skipDiagnostics: true,
+    requestSkip: request => event('skip-request', request),
+    skipContext: media => !failed && finalizedEpoch !== epoch ? { generation, epoch, source: capture?.sourceOf(media)?.id } : null,
+  })
+  if (!core?.ProgressiveTracker || !adapter || !target || !Number.isSafeInteger(generation) || !Number.isSafeInteger(epoch) || epoch < 1) return problem('CAPTURE_PROTOCOL_MISMATCH', 'Capture API 4 requires target, generation and native epoch', false)
+  window.__musifyValidateSkip = requestId => failed ? { valid: false, requestId, reason: 'capture-failed' } : adapter.validateSkip(requestId)
+  window.__musifySkipResult = result => {
+    if (!adapter.completeSkip(result)) return false
+    event('diagnostic', { reason: diagnosticReason({ phase: 'native-skip-result', requestId: result.requestId, ok: result.ok === true }) })
+    return true
+  }
   const diagnosticReason = details => {
     const skip = adapter.skipSummary?.()
     if (!skip) return JSON.stringify(details)
@@ -58,13 +68,14 @@
     return
   }
   const experimental = window.__musifyProgressiveExperiment === true
-  const tracker = new core.ProgressiveTracker({ epoch, experimental, onDiagnostic: data => {
+  const holdbackSeconds = experimental && Number.isFinite(window.__musifyHoldbackSeconds) ? window.__musifyHoldbackSeconds : 1.5
+  const maxBytes = Number.isSafeInteger(window.__musifyMaxBytes) && window.__musifyMaxBytes > 0 ? window.__musifyMaxBytes : 96 * 1024 * 1024
+  const tracker = new core.ProgressiveTracker({ epoch, experimental, holdbackSeconds, maxBytes, onDiagnostic: data => {
     if (failed) return
     if (data.source && tracker.sources.get(data.source)?.endedEpoch === epoch) return
     const now = performance.now()
     if (data.code || now - lastDiagnostic >= 1000) { lastDiagnostic = now; event('diagnostic', data) }
   } })
-  let capture
   try { capture = core.install({ tracker, forcePlaybackRateOne: true,
     onBeforeDetach: (media, snapshot) => beforeDetach(media, snapshot),
     onRateAttempt: (media, attempt) => {
@@ -133,6 +144,7 @@
     finalizedEpoch = epoch
     publish(source, snapshot)
     const proof = tracker.finish(source, snapshot)
+    if (proof.certificate) proof.certificate.initKey = `${generation}:${proof.certificate.initKey}`
     media.pause()
     event('coverage', proof)
     event('ended', { ...proof, state: 'content', source: source.id, s: source.buffers[0].id, title: identity.title, author: identity.author, why: 'Official EOF and observed presentation ranges; completeness is the coverage union' })
@@ -241,7 +253,7 @@
       publish(source, snapshot)
       if (snapshot.sourceEnded || snapshot.ended) finish(media, source, snapshot, identity)
     } catch (e) {
-      if (adapter.skipSummary?.()?.result === 'click-threw') event('diagnostic', { reason: diagnosticReason({ phase: 'skip-ad', outcome: 'exception' }) })
+      if (adapter.skipSummary?.()?.result === 'request-threw') event('diagnostic', { reason: diagnosticReason({ phase: 'skip-ad', outcome: 'exception' }) })
       problem(e.code || 'CAPTURE_PROGRESSIVE_ERROR', e.message)
     }
   }
@@ -287,14 +299,17 @@
     }
     if (now - lastBeat >= 1000) {
       lastBeat = now
+      const auth = adapter.sessionState()
+      event('auth', { ...auth, changed: auth.state !== lastAuth }); lastAuth = auth.state
       const states = [...document.querySelectorAll('audio,video')].map(media => ({ media, identity: adapter.classify(media) }))
       const current = states.find(s => s.identity.state === 'content') ?? states.find(s => s.identity.state === 'ad') ?? states[0]
       event('progress', { position: current?.identity.state === 'content' ? current.media.currentTime : null, bytesQuarantined: tracker.bytes, ranges: tracker.coverage })
-      if (current && capture.sourceOf(current.media)?.endedEpoch !== epoch) event('diagnostic', { state: current.identity.state, source: capture.sourceOf(current.media)?.id ?? null, position: current.media.currentTime, duration: current.media.duration, playbackRate: current.media.playbackRate, browserNow: now, bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'progressive', paused: current.media.paused, rate: current.media.playbackRate, rateGuard: capture.rateStatistics, evidence: current.identity.evidence ?? current.identity.reason }) })
+      if (current && capture.sourceOf(current.media)?.endedEpoch !== epoch) event('diagnostic', { state: current.identity.state, source: capture.sourceOf(current.media)?.id ?? null, position: current.media.currentTime, duration: current.media.duration, playbackRate: current.media.playbackRate, browserNow: now, bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'progressive', holdbackSeconds: experimental ? holdbackSeconds : null, paused: current.media.paused, rate: current.media.playbackRate, rateGuard: capture.rateStatistics, evidence: current.identity.evidence ?? current.identity.reason }) })
       if (issue && issue.code !== 'CAPTURE_REQUIRES_INTERACTION') problem(issue.code, issue.reason)
     }
   }, 100)
   const observer = new MutationObserver(() => { for (const media of document.querySelectorAll('audio,video')) attach(media) })
   observer.observe(document, { childList: true, subtree: true })
   for (const media of document.querySelectorAll('audio,video')) attach(media)
+  const auth = adapter.sessionState(); event('auth', auth); lastAuth = auth.state
 })()

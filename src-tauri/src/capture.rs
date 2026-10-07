@@ -13,7 +13,7 @@ pub const LABEL: &str = "yt-engine";
 pub const SCHEME: &str = "musify-capture:";
 const KEEP: usize = 6;
 const MAX_BYTES: usize = 96 * 1024 * 1024;
-const MAX_TOTAL_BYTES: usize = 192 * 1024 * 1024;
+const MAX_TOTAL_BYTES: usize = 288 * 1024 * 1024;
 const MAX_SEGMENT_BYTES: usize = 4 * 1024 * 1024;
 const READ_BYTES: usize = 1024 * 1024;
 const READ_CHUNKS: usize = 32;
@@ -22,8 +22,271 @@ const PROGRESS_STALL: Duration = Duration::from_secs(60);
 const MAX_RESETS: u8 = 2;
 const MAX_WAIT: Duration = Duration::from_secs(20 * 60);
 const MAX_AD_WAIT_CREDIT: Duration = Duration::from_secs(180);
-// Sólo redondeo IEEE754; nunca cubre un frame ausente.
+// Floating point rounding only; this never closes an absent sample.
 const RANGE_EPSILON: f64 = 0.000001;
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureLimits {
+    pub max_sessions: usize,
+    pub prefetch_slots: usize,
+    pub track_bytes: usize,
+    pub total_bytes: usize,
+}
+fn configured_limits(
+    sessions: Option<&str>,
+    track: Option<&str>,
+    total: Option<&str>,
+) -> Result<CaptureLimits, String> {
+    let integer = |value: Option<&str>,
+                   name: &str,
+                   min: usize,
+                   max: usize,
+                   fallback: usize|
+     -> Result<usize, String> {
+        match value {
+            None => Ok(fallback),
+            Some(value) => value
+                .parse::<usize>()
+                .ok()
+                .filter(|v| (min..=max).contains(v))
+                .ok_or_else(|| {
+                    format!("CAPTURE_CONFIG: {name} must be an integer in {min}..={max}")
+                }),
+        }
+    };
+    let max_sessions = integer(sessions, "MUSIFY_CAPTURE_MAX_SESSIONS", 1, 3, 3)?;
+    let track_bytes = integer(
+        track,
+        "MUSIFY_CAPTURE_TRACK_MB",
+        16,
+        4096,
+        MAX_BYTES / 1024 / 1024,
+    )? * 1024
+        * 1024;
+    let total_bytes = integer(
+        total,
+        "MUSIFY_CAPTURE_CACHE_MB",
+        16,
+        4096,
+        MAX_TOTAL_BYTES / 1024 / 1024,
+    )? * 1024
+        * 1024;
+    if total_bytes < track_bytes {
+        return Err("CAPTURE_CONFIG: cache memory cannot be smaller than track memory".into());
+    }
+    Ok(CaptureLimits {
+        max_sessions,
+        prefetch_slots: max_sessions - 1,
+        track_bytes,
+        total_bytes,
+    })
+}
+pub fn limits() -> Result<CaptureLimits, String> {
+    static LIMITS: LazyLock<Result<CaptureLimits, String>> = LazyLock::new(|| {
+        configured_limits(
+            std::env::var("MUSIFY_CAPTURE_MAX_SESSIONS").ok().as_deref(),
+            std::env::var("MUSIFY_CAPTURE_TRACK_MB").ok().as_deref(),
+            std::env::var("MUSIFY_CAPTURE_CACHE_MB").ok().as_deref(),
+        )
+    });
+    LIMITS.clone()
+}
+#[tauri::command]
+pub fn capture_limits() -> Result<CaptureLimits, String> {
+    limits()
+}
+#[derive(Clone, Debug, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct SessionState {
+    state: String,
+    profile_id: String,
+    observed_at: Option<u64>,
+    evidence_version: u8,
+    generation: u64,
+    epoch: u64,
+}
+impl SessionState {
+    fn unknown(generation: u64, epoch: u64) -> Self {
+        Self {
+            state: "unknown".into(),
+            profile_id: String::new(),
+            observed_at: None,
+            evidence_version: 0,
+            generation,
+            epoch,
+        }
+    }
+}
+#[derive(Clone)]
+struct CaptureProfile {
+    id: String,
+    path: std::path::PathBuf,
+}
+static ANONYMOUS_PROFILE: std::sync::OnceLock<CaptureProfile> = std::sync::OnceLock::new();
+static PROFILE_AUTH: LazyLock<Mutex<Option<SessionState>>> = LazyLock::new(|| Mutex::new(None));
+fn unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .min(u64::MAX as u128) as u64
+}
+fn capture_profile(app: &AppHandle, mode: Option<&str>) -> Result<CaptureProfile, String> {
+    let mode = mode.unwrap_or(if std::env::var_os("MUSIFY_BENCH").is_some() {
+        "anonymous"
+    } else {
+        "default"
+    });
+    let base = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    match mode {
+        "anonymous" => {
+            if let Some(profile) = ANONYMOUS_PROFILE.get() {
+                return Ok(profile.clone());
+            }
+            let parent = base.join("capture-profiles");
+            std::fs::create_dir_all(&parent).map_err(|e| format!("CAPTURE_PROFILE: {e}"))?;
+            let id = format!(
+                "anonymous-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            );
+            let profile = CaptureProfile {
+                path: parent.join(&id),
+                id,
+            };
+            // create_dir fails on collision: an anonymous run must never reuse another run's cookies.
+            std::fs::create_dir(&profile.path).map_err(|e| format!("CAPTURE_PROFILE: {e}"))?;
+            let _ = ANONYMOUS_PROFILE.set(profile);
+            Ok(ANONYMOUS_PROFILE.get().unwrap().clone())
+        }
+        "premium-manual" => {
+            let profile = CaptureProfile {
+                id: "premium-manual".into(),
+                path: base.join("capture-profiles").join("premium-manual"),
+            };
+            std::fs::create_dir_all(&profile.path).map_err(|e| format!("CAPTURE_PROFILE: {e}"))?;
+            Ok(profile)
+        }
+        "default" if std::env::var_os("MUSIFY_BENCH").is_none() => Ok(CaptureProfile {
+            id: "default".into(),
+            path: base.join("yt-engine"),
+        }),
+        _ => Err("CAPTURE_PROFILE: modo de perfil no válido".into()),
+    }
+}
+/// Shared by legacy and API4 WebViews; benchmark profiles never reuse app cookies.
+pub fn profile_directory(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(capture_profile(
+        app,
+        std::env::var("MUSIFY_BENCH_PROFILE_MODE").ok().as_deref(),
+    )?
+    .path)
+}
+#[tauri::command]
+pub fn capture_profile_status() -> Value {
+    let auth = PROFILE_AUTH.lock().unwrap().clone();
+    json!({"sessionState":auth,"loggedIn":auth.as_ref().and_then(|s| match s.state.as_str() { "signed-in" => Some(true), "signed-out" => Some(false), _ => None })})
+}
+#[tauri::command]
+pub async fn capture_profile_open(app: AppHandle, mode: String) -> Result<Value, String> {
+    supported()?;
+    if mode != "premium-manual" {
+        return Err("El acceso manual usa exclusivamente el perfil premium-manual".into());
+    }
+    let profile = capture_profile(&app, Some(&mode))?;
+    let label = "capture-premium-manual";
+    if let Some(window) = app.get_webview_window(label) {
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+    } else {
+        *PROFILE_AUTH.lock().unwrap() = Some(SessionState {
+            profile_id: profile.id.clone(),
+            ..SessionState::unknown(0, 0)
+        });
+        let script = "(()=>{const send=()=>{let v;try{v=window.ytcfg?.get?.('LOGGED_IN')}catch{};window.chrome?.webview?.postMessage('musify-profile:'+JSON.stringify({state:v===true?'signed-in':v===false?'signed-out':'unknown',evidenceVersion:1}));};setInterval(send,1000);addEventListener('DOMContentLoaded',send)})();";
+        let window = WebviewWindowBuilder::new(
+            &app,
+            label,
+            WebviewUrl::External("about:blank".parse().unwrap()),
+        )
+        .title("Musify · acceso manual a YouTube Premium")
+        .data_directory(profile.path.clone())
+        .visible(true)
+        .focused(true)
+        .inner_size(1080.0, 780.0)
+        .initialization_script(script)
+        .build()
+        .map_err(|e| format!("CAPTURE_PROFILE: {e}"))?;
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let profile_id = profile.id.clone();
+        window
+            .with_webview(move |pw| {
+                #[cfg(windows)]
+                let result = unsafe { attach_profile(&pw, &profile_id) }.map_err(|e| e.to_string());
+                #[cfg(not(windows))]
+                let result: Result<(), String> = {
+                    let _ = (pw, profile_id);
+                    Err("CAPTURE_UNSUPPORTED_PLATFORM".into())
+                };
+                let _ = tx.send(result);
+            })
+            .map_err(|e| e.to_string())?;
+        tokio::time::timeout(Duration::from_secs(10), rx)
+            .await
+            .map_err(|_| "CAPTURE_PROFILE_TIMEOUT")?
+            .map_err(|_| "CAPTURE_PROFILE_CLOSED")??;
+    }
+    // Only this local setup response includes the private directory; status/evidence never do.
+    Ok(
+        json!({"profileId":profile.id,"privateProfilePath":profile.path,"sessionState":PROFILE_AUTH.lock().unwrap().clone()}),
+    )
+}
+#[cfg(windows)]
+unsafe fn attach_profile(
+    pw: &tauri::webview::PlatformWebview,
+    profile_id: &str,
+) -> windows_core::Result<()> {
+    use webview2_com::{WebMessageReceivedEventHandler, take_pwstr};
+    use windows_core::{HSTRING, PWSTR};
+    let profile_id = profile_id.to_string();
+    unsafe {
+        let core = pw.controller().CoreWebView2()?;
+        let handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
+            let Some(args) = args else { return Ok(()) };
+            let mut source = PWSTR::null();
+            args.Source(&mut source)?;
+            if source_kind(&take_pwstr(source)) != Some(true) {
+                return Ok(());
+            }
+            let mut text = PWSTR::null();
+            if args.TryGetWebMessageAsString(&mut text).is_ok() {
+                if let Some(data) = take_pwstr(text).strip_prefix("musify-profile:") {
+                    if let Ok(value) = serde_json::from_str::<Value>(data) {
+                        let state = value["state"]
+                            .as_str()
+                            .filter(|v| matches!(*v, "signed-in" | "signed-out" | "unknown"))
+                            .unwrap_or("unknown");
+                        *PROFILE_AUTH.lock().unwrap() = Some(SessionState {
+                            state: state.into(),
+                            profile_id: profile_id.clone(),
+                            observed_at: Some(unix_ms()),
+                            evidence_version: 1,
+                            generation: 0,
+                            epoch: 0,
+                        });
+                    }
+                }
+            }
+            Ok(())
+        }));
+        let mut token = 0;
+        core.add_WebMessageReceived(&handler, &mut token)?;
+        core.Navigate(&HSTRING::from("https://music.youtube.com/"))
+    }
+}
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct TimelineSettings {
@@ -73,6 +336,8 @@ struct Unit {
     decode_start: f64,
     decode_end: f64,
     frames: u64,
+    first_frame: u64,
+    end_frame: u64,
     timeline_settings: TimelineSettings,
 }
 impl Unit {
@@ -93,10 +358,13 @@ impl Unit {
             decode_start: m.decode_start?,
             decode_end: m.decode_end?,
             frames: m.frames?,
+            first_frame: m.first_frame?,
+            end_frame: m.end_frame?,
             timeline_settings: TimelineSettings::from_message(m.timeline_settings.as_ref()?)?,
         };
         (m.verified == Some(true)
             && result.frames > 0
+            && result.end_frame.checked_sub(result.first_frame) == Some(result.frames)
             && result.init_bytes > 0
             && !result.init_key.is_empty()
             && result.init_key.len() <= 256
@@ -116,6 +384,82 @@ impl Unit {
             && result.decode_end + RANGE_EPSILON >= result.range_end
             && result.decode_end > result.decode_start)
             .then_some(result)
+    }
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CompleteCertificate {
+    kind: String,
+    epoch: u64,
+    source: u64,
+    s: u64,
+    init_key: String,
+    mime: String,
+    timeline_settings: TimelineSettings,
+    frame_count: u64,
+    range_start: f64,
+    range_end: f64,
+    quantum: f64,
+    clean_whole_source: bool,
+    native_continuous: bool,
+    official_eof: bool,
+}
+impl CompleteCertificate {
+    fn binding(&self, unit: &Unit, generation: u64) -> bool {
+        unit.generation == generation
+            && unit.epoch == self.epoch
+            && unit.source == self.source
+            && unit.s == self.s
+            && unit.init_key == self.init_key
+            && unit.mime == self.mime
+            && unit.timeline_settings == self.timeline_settings
+    }
+    fn validates(&self, track: &Track, end: f64) -> bool {
+        if self.kind != "complete-source-v1"
+            || !self.clean_whole_source
+            || !self.native_continuous
+            || !self.official_eof
+            || self.epoch != track.epoch
+            || track.target != 0.0
+            || self.frame_count == 0
+            || !self.timeline_settings.valid()
+            || !self.range_start.is_finite()
+            || !self.range_end.is_finite()
+            || !self.quantum.is_finite()
+            || self.range_start < 0.0
+            || self.range_start > RANGE_EPSILON
+            || self.range_end <= self.range_start
+            || self.quantum <= 0.0
+            || self.quantum > 0.001
+            || self.range_end != end
+            || track.accepted != Some((self.epoch, self.source, self.s))
+        {
+            return false;
+        }
+        let mut units: Vec<_> = track
+            .units
+            .iter()
+            .filter(|u| self.binding(u, track.generation))
+            .collect();
+        units.sort_by_key(|u| u.first_frame);
+        let mut frame = 0;
+        let mut range_end = self.range_start;
+        for unit in units {
+            // Every presented sample occurs exactly once, in this immutable source. Neither
+            // a later epoch nor a neighbouring source may repair its missing inventory.
+            if unit.first_frame != frame
+                || unit.end_frame > self.frame_count
+                || unit.end_frame - unit.first_frame != unit.frames
+                || unit.range_start + RANGE_EPSILON < range_end
+                || unit.range_start - range_end > self.quantum + RANGE_EPSILON
+                || unit.range_end > self.range_end + RANGE_EPSILON
+            {
+                return false;
+            }
+            frame = unit.end_frame;
+            range_end = unit.range_end;
+        }
+        frame == self.frame_count && (range_end - self.range_end).abs() <= RANGE_EPSILON
     }
 }
 fn union(ranges: &mut Vec<Range>, range: Range) {
@@ -166,7 +510,20 @@ struct Track {
     soft_error: Option<String>,
     why: Option<String>,
     last_diagnostic: Option<String>,
+    session_state: SessionState,
+    session_states: Vec<SessionState>,
+    unknown_auth_units: u64,
+    signed_in_units: u64,
+    ad_source: Option<u64>,
+    native_skip: Option<SkipRequest>,
+    native_skip_started: Option<Instant>,
+    last_skip_request: u64,
+    last_skip_result: Option<Value>,
+    native_skip_requests: u64,
+    native_skip_dispatches: u64,
+    native_skip_trusted_clicks: u64,
     eof: bool,
+    certificates: Vec<Value>,
     eof_end: Option<f64>,
     complete: bool,
     epoch_done: bool,
@@ -183,6 +540,8 @@ struct Track {
     ads_observations: usize,
     ads_sources: HashSet<(u64, u64, u64)>,
     ads_delivered: usize,
+    ad_transitions: Vec<Value>,
+    ad_transitions_total: usize,
     ad_observation: Option<(u64, f64, Instant)>,
     ad_wait_credit: Duration,
     ad_presented: Duration,
@@ -219,7 +578,20 @@ impl Track {
             soft_error: None,
             why: None,
             last_diagnostic: None,
+            session_state: SessionState::unknown(generation, epoch),
+            session_states: Vec::new(),
+            unknown_auth_units: 0,
+            signed_in_units: 0,
+            ad_source: None,
+            native_skip: None,
+            native_skip_started: None,
+            last_skip_request: 0,
+            last_skip_result: None,
+            native_skip_requests: 0,
+            native_skip_dispatches: 0,
+            native_skip_trusted_clicks: 0,
             eof: false,
+            certificates: Vec::new(),
             eof_end: None,
             complete: false,
             epoch_done: false,
@@ -236,6 +608,8 @@ impl Track {
             ads_observations: 0,
             ads_sources: HashSet::new(),
             ads_delivered: 0,
+            ad_transitions: Vec::new(),
+            ad_transitions_total: 0,
             ad_observation: None,
             ad_wait_credit: Duration::ZERO,
             ad_presented: Duration::ZERO,
@@ -252,9 +626,17 @@ impl Track {
     fn begin_epoch(&mut self, generation: u64, epoch: u64, target: f64, recovering: bool) {
         if generation != self.generation {
             self.sequence = None;
+            self.last_skip_request = 0;
+            self.native_skip = None;
+            self.native_skip_started = None;
         }
         self.generation = generation;
         self.epoch = epoch;
+        self.ad_source = None;
+        self.session_state = SessionState {
+            profile_id: self.session_state.profile_id.clone(),
+            ..SessionState::unknown(generation, epoch)
+        };
         self.target = target;
         self.proof = None;
         self.accepted = None;
@@ -361,6 +743,7 @@ struct Session {
     generation: u64,
     label: String,
     foreground: bool,
+    next_slot: Option<u8>,
     ticket: Option<RequestTicket>,
     active: bool,
 }
@@ -387,9 +770,24 @@ impl Supervisor {
     fn total_bytes(&self) -> usize {
         self.tracks.values().map(|t| t.bytes).sum()
     }
+    fn foreground_reserve(&self, incoming_id: &str, limits: CaptureLimits) -> usize {
+        if self
+            .session(incoming_id)
+            .is_some_and(|session| session.foreground)
+        {
+            return 0;
+        }
+        let current_bytes = self
+            .foreground
+            .as_ref()
+            .and_then(|(id, _)| self.tracks.get(id))
+            .map_or(0, |track| track.bytes);
+        limits.track_bytes.saturating_sub(current_bytes)
+    }
     fn trim(&mut self, keep: &str, incoming: usize) {
+        let Ok(limits) = limits() else { return };
         while self.tracks.len() > KEEP
-            || self.total_bytes().saturating_add(incoming) > MAX_TOTAL_BYTES
+            || self.total_bytes().saturating_add(incoming) > limits.total_bytes
         {
             let oldest = self
                 .tracks
@@ -408,16 +806,22 @@ impl Supervisor {
             self.tracks.remove(&oldest);
         }
     }
-    fn victim(&self, id: &str, foreground: bool) -> Option<Session> {
+    fn victim(&self, id: &str, foreground: bool, next_slot: Option<u8>) -> Option<Session> {
         self.sessions
             .iter()
-            .find(|s| !s.active || (s.id != id && s.foreground == foreground))
+            .find(|s| {
+                !s.active
+                    || (s.id != id
+                        && s.foreground == foreground
+                        && (foreground || s.next_slot == next_slot))
+            })
             .cloned()
     }
     fn promote(&mut self, id: &str, ticket: Option<RequestTicket>) {
         self.foreground = Some((id.into(), ticket));
         if let Some(session) = self.sessions.iter_mut().find(|s| s.active && s.id == id) {
             session.foreground = true;
+            session.next_slot = None;
             session.ticket = ticket;
         }
     }
@@ -472,6 +876,7 @@ fn meta(t: &Track) -> Meta {
     }
 }
 fn supported() -> Result<(), String> {
+    limits()?;
     if cfg!(windows) {
         Ok(())
     } else {
@@ -500,12 +905,24 @@ pub async fn stream_with_priority(
         return Err("id de vídeo no válido".into());
     }
     // El contador se toma dentro de la misma admisión serializada que abre/promueve la sesión.
-    let cancellation = begin(app, video_id, refresh, foreground, ticket, None, false).await?;
+    let cancellation = begin(
+        app,
+        video_id,
+        refresh,
+        foreground,
+        ticket,
+        ticket.and_then(|t| t.prefetch_slot),
+        None,
+        false,
+    )
+    .await?;
     request_current(ticket)?;
     // La plaza ya es foreground: next no puede retirar esta sesión al ganar TRANSITION.
     // Emitir antes de begin permitiría que C retirase B cuando B aún era next.
     if foreground {
-        if let Some(admission) = admission { admission.emit(app, ticket, video_id); }
+        if let Some(admission) = admission {
+            admission.emit(app, ticket, video_id);
+        }
     }
     let mut generation;
     let started = Instant::now();
@@ -549,11 +966,15 @@ async fn begin(
     refresh: bool,
     foreground: bool,
     ticket: Option<RequestTicket>,
+    next_slot: Option<u8>,
     at: Option<f64>,
     recovery: bool,
 ) -> Result<u64, String> {
     let _guard = TRANSITION.lock().await;
-    begin_locked(app, id, refresh, foreground, ticket, at, recovery).await?;
+    begin_locked(
+        app, id, refresh, foreground, ticket, next_slot, at, recovery,
+    )
+    .await?;
     Ok(STATE.lock().unwrap().cancellation(id))
 }
 async fn begin_locked(
@@ -562,6 +983,7 @@ async fn begin_locked(
     refresh: bool,
     foreground: bool,
     ticket: Option<RequestTicket>,
+    next_slot: Option<u8>,
     at: Option<f64>,
     recovery: bool,
 ) -> Result<u64, String> {
@@ -571,6 +993,15 @@ async fn begin_locked(
     }
     if !valid_id(id) {
         return Err("id de vídeo no válido".into());
+    }
+    let next_slot = if foreground {
+        None
+    } else {
+        Some(next_slot.unwrap_or(0))
+    };
+    let capture_limits = limits()?;
+    if next_slot.is_some_and(|slot| slot as usize >= capture_limits.prefetch_slots) {
+        return Err("CAPTURE_BUSY: plaza de precarga deshabilitada por la configuración".into());
     }
     let _ = APP.set(app.clone());
     watchdog(app);
@@ -611,6 +1042,7 @@ async fn begin_locked(
                 .find(|s| s.active && s.id == id && !s.foreground)
             {
                 next.ticket = ticket;
+                next.next_slot = next_slot;
             }
         }
         if let Some(t) = state.tracks.get_mut(id) {
@@ -654,7 +1086,7 @@ async fn begin_locked(
         state
             .session(id)
             .cloned()
-            .or_else(|| state.victim(id, foreground))
+            .or_else(|| state.victim(id, foreground, next_slot))
     };
     if let Some(old) = old {
         retire_locked(app, &old).await?;
@@ -662,7 +1094,7 @@ async fn begin_locked(
     if !recovery {
         request_current(ticket)?;
     }
-    if STATE.lock().unwrap().sessions.len() >= 2 {
+    if STATE.lock().unwrap().sessions.len() >= limits()?.max_sessions {
         return Err("CAPTURE_BUSY: las dos plazas de captura están ocupadas".into());
     }
     let generation = next_id();
@@ -686,6 +1118,7 @@ async fn begin_locked(
             generation,
             label: label.clone(),
             foreground,
+            next_slot,
             ticket,
             active: true,
         });
@@ -734,6 +1167,13 @@ fn progressive_experiment_enabled() -> bool {
         std::env::var("MUSIFY_BENCH_PROGRESSIVE").ok().as_deref(),
     )
 }
+fn audit_enabled() -> bool {
+    std::env::var_os("MUSIFY_BENCH").is_some()
+        && std::env::var("MUSIFY_BENCH_AUDIT_ALL_AUDIO")
+            .ok()
+            .as_deref()
+            == Some("1")
+}
 async fn create_window(
     app: &AppHandle,
     id: &str,
@@ -746,22 +1186,41 @@ async fn create_window(
     let url = format!("https://music.youtube.com/watch?v={id}{start}");
     let target = serde_json::to_string(id).map_err(|e| e.to_string())?;
     let progressive = progressive_experiment_enabled();
+    let audit = audit_enabled();
+    let profile = capture_profile(
+        app,
+        std::env::var("MUSIFY_BENCH_PROFILE_MODE").ok().as_deref(),
+    )?;
+    if let Some(track) = STATE
+        .lock()
+        .unwrap()
+        .tracks
+        .get_mut(id)
+        .filter(|t| t.generation == generation)
+    {
+        track.session_state.profile_id = profile.id.clone();
+    }
+    let max_bytes = limits()?.track_bytes;
+    let holdback = if std::env::var_os("MUSIFY_BENCH").is_some() {
+        std::env::var("MUSIFY_BENCH_HOLDBACK_SECONDS")
+            .ok()
+            .and_then(|s| s.parse::<f64>().ok())
+            .filter(|s| s.is_finite() && *s >= 0.0 && *s <= 30.0)
+            .unwrap_or(1.5)
+    } else {
+        1.5
+    };
     let script = format!(
-        "Object.defineProperty(window,'__musifyGeneration',{{value:{generation},writable:false}});Object.defineProperty(window,'__musifyTarget',{{value:{target},writable:false}});Object.defineProperty(window,'__musifyProgressiveExperiment',{{value:{progressive},writable:false}});window.__musifyEpoch={epoch};\n{}",
+        "Object.defineProperty(window,'__musifyGeneration',{{value:{generation},writable:false}});Object.defineProperty(window,'__musifyTarget',{{value:{target},writable:false}});Object.defineProperty(window,'__musifyProgressiveExperiment',{{value:{progressive},writable:false}});Object.defineProperty(window,'__musifyBenchmarkAudit',{{value:{audit},writable:false}});window.__musifyEpoch={epoch};window.__musifyHoldbackSeconds={holdback};window.__musifyMaxBytes={max_bytes};\n{}",
         crate::extractors::capture_script()
     );
-    let profile = app
-        .path()
-        .app_local_data_dir()
-        .map_err(|e| e.to_string())?
-        .join("yt-engine");
     let window = WebviewWindowBuilder::new(
         app,
         label,
         WebviewUrl::External("about:blank".parse().unwrap()),
     )
     .title("Musify · reproductor de YouTube")
-    .data_directory(profile)
+    .data_directory(profile.path)
     .visible(std::env::var("MUSIFY_SHOW_ENGINE").is_ok())
     .skip_taskbar(true)
     .focused(false)
@@ -802,6 +1261,7 @@ unsafe fn attach(
     unsafe {
         let controller = pw.controller();
         let core = controller.CoreWebView2()?;
+        let click_core = core.clone();
         let handler = WebMessageReceivedEventHandler::create(Box::new(move |_, args| {
             let Some(args) = args else { return Ok(()) };
             let mut source = PWSTR::null();
@@ -810,8 +1270,15 @@ unsafe fn attach(
             let mut text = PWSTR::null();
             if args.TryGetWebMessageAsString(&mut text).is_ok() {
                 let text = take_pwstr(text);
+                if let Some(json) = text.strip_prefix("musify-audit:") {
+                    if audit_enabled() {
+                        crate::capture_audit::receive(&id, generation, &source, json);
+                    }
+                }
                 if let Some(json) = text.strip_prefix("musify:") {
-                    receive(&id, generation, &source, json);
+                    if let Some(request) = receive(&id, generation, &source, json) {
+                        native_click::start(click_core.clone(), id.clone(), request);
+                    }
                 }
             }
             Ok(())
@@ -848,6 +1315,9 @@ struct Message {
     verified: Option<bool>,
     timeline_settings: Option<Value>,
     frames: Option<u64>,
+    first_frame: Option<u64>,
+    end_frame: Option<u64>,
+    certificate: Option<CompleteCertificate>,
     range_start: Option<f64>,
     range_end: Option<f64>,
     decode_start: Option<f64>,
@@ -863,6 +1333,200 @@ struct Message {
     end: Option<f64>,
     recoverable: Option<bool>,
     playback_rate: Option<f64>,
+    evidence_version: Option<u8>,
+    request_id: Option<u64>,
+    button_token: Option<u64>,
+    x: Option<f64>,
+    y: Option<f64>,
+    viewport_width: Option<f64>,
+    viewport_height: Option<f64>,
+}
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SkipRequest {
+    request_id: u64,
+    generation: u64,
+    epoch: u64,
+    source: u64,
+    button_token: u64,
+    x: f64,
+    y: f64,
+    viewport_width: f64,
+    viewport_height: f64,
+}
+impl SkipRequest {
+    fn from_message(m: &Message) -> Option<Self> {
+        let request = Self {
+            request_id: m.request_id?,
+            generation: m.generation?,
+            epoch: m.epoch?,
+            source: m.source?,
+            button_token: m.button_token?,
+            x: m.x?,
+            y: m.y?,
+            viewport_width: m.viewport_width?,
+            viewport_height: m.viewport_height?,
+        };
+        let safe = |n| n > 0 && n <= 9_007_199_254_740_991u64;
+        (safe(request.request_id)
+            && safe(request.button_token)
+            && safe(request.source)
+            && [
+                request.x,
+                request.y,
+                request.viewport_width,
+                request.viewport_height,
+            ]
+            .iter()
+            .all(|v| v.is_finite())
+            && request.x >= 0.0
+            && request.y >= 0.0
+            && request.x < request.viewport_width
+            && request.y < request.viewport_height)
+            .then_some(request)
+    }
+    fn validated(&self, value: &Value) -> bool {
+        value["valid"] == true
+            && serde_json::from_value::<Self>(value.clone()).is_ok_and(|actual| actual == *self)
+    }
+}
+fn skip_current(state: &Supervisor, id: &str, request: &SkipRequest) -> bool {
+    state.owns(id, request.generation)
+        && state.tracks.get(id).is_some_and(|t| {
+            t.generation == request.generation
+                && t.epoch == request.epoch
+                && t.phase == "ad"
+                && !t.epoch_done
+                && t.ad_source == Some(request.source)
+                && t.native_skip.as_ref() == Some(request)
+                && t.native_skip_started
+                    .is_some_and(|at| at.elapsed() < Duration::from_secs(2))
+        })
+}
+#[derive(Clone)]
+struct JournalUnit {
+    metadata: Value,
+    path: std::path::PathBuf,
+}
+#[derive(Default)]
+struct BenchLedger {
+    bytes: usize,
+    units: HashMap<String, Vec<JournalUnit>>,
+    states: HashMap<String, Value>,
+    errors: HashMap<String, String>,
+}
+static BENCH_LEDGER: LazyLock<Mutex<BenchLedger>> =
+    LazyLock::new(|| Mutex::new(BenchLedger::default()));
+fn journal_directory() -> Result<&'static std::path::PathBuf, String> {
+    static DIRECTORY: std::sync::OnceLock<Result<std::path::PathBuf, String>> =
+        std::sync::OnceLock::new();
+    DIRECTORY
+        .get_or_init(|| {
+            let parent = std::env::temp_dir().join("musify-capture-journal.local");
+            std::fs::create_dir_all(&parent).map_err(|_| {
+                "CAPTURE_AUDIT_IO: cannot create private journal directory".to_string()
+            })?;
+            let path = parent.join(format!(
+                "{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&path)
+                .map_err(|_| "CAPTURE_AUDIT_IO: cannot create fresh journal".to_string())?;
+            Ok(path)
+        })
+        .as_ref()
+        .map_err(Clone::clone)
+}
+fn journal_unit(
+    id: &str,
+    revision: u64,
+    unit: &Unit,
+    auth: &SessionState,
+    bytes: &[u8],
+) -> Result<(), String> {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return Ok(());
+    }
+    let result = (|| {
+        let cap = match std::env::var("MUSIFY_BENCH_LEDGER_MB").ok() {
+            None => 1024usize,
+            Some(value) => value
+                .parse::<usize>()
+                .ok()
+                .filter(|v| (16..=16384).contains(v))
+                .ok_or("CAPTURE_CONFIG: MUSIFY_BENCH_LEDGER_MB must be16..16384")?,
+        } * 1024
+            * 1024;
+        let directory = journal_directory()?;
+        let mut ledger = BENCH_LEDGER.lock().unwrap();
+        persist_journal_unit(&mut ledger, directory, cap, id, revision, unit, auth, bytes)
+    })();
+    if let Err(error) = &result {
+        BENCH_LEDGER
+            .lock()
+            .unwrap()
+            .errors
+            .insert(id.into(), error.clone());
+    }
+    result
+}
+fn persist_journal_unit(
+    ledger: &mut BenchLedger,
+    directory: &std::path::Path,
+    cap: usize,
+    id: &str,
+    revision: u64,
+    unit: &Unit,
+    auth: &SessionState,
+    bytes: &[u8],
+) -> Result<(), String> {
+    if ledger.bytes.saturating_add(bytes.len()) > cap {
+        return Err("CAPTURE_AUDIT_CAPACITY: persistent published-unit journal is full".into());
+    }
+    let path = directory.join(format!(
+        "{}-{}-{}-{}-{}.unit",
+        unit.generation, unit.epoch, unit.source, unit.s, unit.unit
+    ));
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|_| "CAPTURE_AUDIT_IO: cannot create unique unit")?;
+    file.write_all(bytes)
+        .map_err(|_| "CAPTURE_AUDIT_IO: cannot preserve published bytes")?;
+    file.flush()
+        .map_err(|_| "CAPTURE_AUDIT_IO: cannot flush published bytes")?;
+    let mut metadata =
+        serde_json::to_value(unit).map_err(|_| "CAPTURE_AUDIT_IO: cannot serialize proof")?;
+    metadata["revision"] = json!(revision);
+    metadata["sessionState"] = serde_json::to_value(auth).unwrap();
+    ledger
+        .units
+        .entry(id.into())
+        .or_default()
+        .push(JournalUnit { metadata, path });
+    ledger.bytes += bytes.len();
+    Ok(())
+}
+fn journal_state(id: &str, t: &Track) {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return;
+    }
+    let snapshot = json!({"videoId":id,"api":4,"revision":t.revision,"generation":t.generation,"epoch":t.epoch,
+        "complete":t.complete,"eof":t.eof,"eofEnd":t.eof_end,"duration":t.duration,"ranges":t.ranges,
+        "error":t.error,"softError":t.soft_error,"bytesQuarantined":t.quarantined,"pendingProof":t.proof,
+        "certificates":t.certificates,"sessionState":t.session_state,"sessionStates":t.session_states,
+        "unknownAuthUnits":t.unknown_auth_units,"signedInUnits":t.signed_in_units,"currentUnits":t.units.len(),"allPublishedUnits":true});
+    BENCH_LEDGER
+        .lock()
+        .unwrap()
+        .states
+        .insert(id.into(), snapshot);
 }
 fn source_kind(source: &str) -> Option<bool> {
     let url = reqwest::Url::parse(source).ok()?;
@@ -888,7 +1552,7 @@ fn apply_message(
     };
     if !state.owns(id, generation)
         || m.musify != 1
-        || m.api != Some(3)
+        || m.api != Some(4)
         || m.v.as_deref() != Some(id)
         || m.generation != Some(generation)
     {
@@ -903,9 +1567,14 @@ fn apply_message(
     }) {
         return false;
     }
+    let Ok(limits) = limits() else { return false };
+    let foreground_reserve = state.foreground_reserve(id, limits);
     state.trim(
         id,
-        m.data.as_ref().map_or(0, |d| d.len().saturating_mul(3) / 4),
+        m.data
+            .as_ref()
+            .map_or(0, |d| d.len().saturating_mul(3) / 4)
+            .saturating_add(foreground_reserve),
     );
     let total_bytes = state.total_bytes();
     let t = state.tracks.get_mut(id).unwrap();
@@ -964,14 +1633,32 @@ fn apply_message(
             t.proof = None;
             t.last_unit = Some(unit.unit);
             t.accepted = Some((t.epoch, unit.source, unit.s));
-            if !covers(&t.ranges, unit.range_start, unit.range_end) {
-                if t.bytes.saturating_add(bytes.len()) > MAX_BYTES
-                    || total_bytes.saturating_add(bytes.len()) > MAX_TOTAL_BYTES
+            if t.units.iter().any(|old| {
+                old.generation == unit.generation
+                    && old.epoch == unit.epoch
+                    && old.source == unit.source
+                    && old.s == unit.s
+                    && old.first_frame < unit.end_frame
+                    && unit.first_frame < old.end_frame
+            }) {
+                t.fail("CAPTURE_PROTOCOL: inventario de muestras duplicado en una fuente".into());
+                return true;
+            }
+            {
+                if t.bytes.saturating_add(bytes.len()) > limits.track_bytes
+                    || total_bytes
+                        .saturating_add(bytes.len())
+                        .saturating_add(foreground_reserve)
+                        > limits.total_bytes
                 {
                     t.fail("CAPTURE_CAPACITY: audio excede el límite de memoria".into());
                     return true;
                 }
                 unit.index = t.units.len();
+                if let Err(error) = journal_unit(id, t.revision, &unit, &t.session_state, &bytes) {
+                    t.fail(error);
+                    return true;
+                }
                 t.bytes += bytes.len();
                 union(
                     &mut t.ranges,
@@ -980,6 +1667,11 @@ fn apply_message(
                         end: unit.range_end,
                     },
                 );
+                match t.session_state.state.as_str() {
+                    "signed-in" => t.signed_in_units += 1,
+                    "signed-out" if t.session_state.evidence_version == 1 => {}
+                    _ => t.unknown_auth_units += 1,
+                }
                 t.units.push(unit);
                 t.chunks.push(bytes);
                 t.first_ms.get_or_insert(ms);
@@ -992,19 +1684,47 @@ fn apply_message(
             if m.event.as_deref() == Some("diagnostic") {
                 if let Some(reason) = m.reason.as_deref() {
                     t.last_diagnostic = Some(reason.chars().take(2048).collect());
+                    if let Ok(detail) = serde_json::from_str::<Value>(reason) {
+                        if detail["phase"] == "native-skip-result" {
+                            if let Some(result) = t.last_skip_result.as_mut().filter(|r| {
+                                r["requestId"] == detail["requestId"]
+                                    && r.get("eventSeen").is_none()
+                            }) {
+                                let last = &detail["skip"]["last"];
+                                result["eventSeen"] = last["eventSeen"].clone();
+                                result["isTrusted"] = last["isTrusted"].clone();
+                                result["defaultPrevented"] = last["defaultPrevented"].clone();
+                                if last["eventSeen"] == true && last["isTrusted"] == true {
+                                    t.native_skip_trusted_clicks += 1;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             if let Some(phase) = m.state.as_deref().filter(|s| {
-                matches!(
-                    *s,
-                    "unknown" | "content" | "ad" | "ambiguous" | "interaction"
-                )
+                m.event.as_deref() != Some("auth") && {
+                    matches!(
+                        *s,
+                        "unknown" | "content" | "ad" | "ambiguous" | "interaction"
+                    )
+                }
             }) {
+                if t.phase == "ad" && phase == "content" {
+                    if let Some(ad_source) = t.ad_source {
+                        t.ad_transitions_total += 1;
+                        if t.ad_transitions.len() < 256 {
+                            t.ad_transitions.push(json!({"generation":generation,"epoch":t.epoch,"source":ad_source,"contentSource":m.source,
+                                "sequence":m.sequence,"from":"ad","to":"content","observed":true}));
+                        }
+                    }
+                }
                 t.phase = phase.into();
                 if phase != "content" {
                     t.proof = None;
                 }
                 if phase == "ad" {
+                    t.ad_source = m.source;
                     t.ads_observations += 1;
                     if let Some(rate) = m.playback_rate.filter(|r| r.is_finite() && *r > 0.0) {
                         t.ad_rate_observations += 1;
@@ -1017,6 +1737,7 @@ fn apply_message(
                     }
                 } else {
                     t.ad_observation = None;
+                    t.ad_source = None;
                 }
             }
             if m.event.as_deref() == Some("diagnostic") && m.verified == Some(true) {
@@ -1046,6 +1767,48 @@ fn apply_message(
                 }
             }
             match m.event.as_deref() {
+                Some("skip-request") if music => {
+                    if let Some(request) = SkipRequest::from_message(&m) {
+                        if t.phase == "ad"
+                            && t.ad_source == Some(request.source)
+                            && t.native_skip.is_none()
+                            && request.request_id > t.last_skip_request
+                            && t.native_skip_started.is_none_or(|previous| {
+                                now.duration_since(previous) >= Duration::from_secs(1)
+                            })
+                        {
+                            t.last_skip_request = request.request_id;
+                            t.native_skip_requests += 1;
+                            t.native_skip_started = Some(now);
+                            t.native_skip = Some(request);
+                        }
+                    }
+                }
+                Some("auth") if music => {
+                    let auth = m
+                        .state
+                        .as_deref()
+                        .filter(|state| matches!(*state, "signed-in" | "signed-out" | "unknown"))
+                        .unwrap_or("unknown");
+                    if m.evidence_version == Some(1) {
+                        let observed = SessionState {
+                            state: auth.into(),
+                            profile_id: t.session_state.profile_id.clone(),
+                            observed_at: Some(unix_ms()),
+                            evidence_version: 1,
+                            generation,
+                            epoch: t.epoch,
+                        };
+                        if observed.state != t.session_state.state
+                            || observed.generation != t.session_state.generation
+                            || observed.epoch != t.session_state.epoch
+                            || t.session_state.observed_at.is_none()
+                        {
+                            t.session_states.push(observed.clone());
+                        }
+                        t.session_state = observed;
+                    }
+                }
                 Some("playing") if music => {
                     t.playing_ms.get_or_insert(ms);
                 }
@@ -1059,6 +1822,24 @@ fn apply_message(
                     {
                         t.fail("CAPTURE_INCOMPLETE: terminó sin EOF oficial válido de la fuente confirmada".into());
                     } else {
+                        if let Some(certificate) = &m.certificate {
+                            if !certificate.validates(t, m.end.unwrap()) {
+                                t.fail("CAPTURE_PROTOCOL: certificado EOF no coincide con el inventario íntegro de esta fuente".into());
+                                return true;
+                            }
+                            let mut proof = serde_json::to_value(certificate).unwrap();
+                            proof["generation"] = json!(generation);
+                            t.certificates.push(proof);
+                            // Only this bound complete-source certificate closes codec quantization.
+                            // The general union remains strict for every partial/seek source.
+                            union(
+                                &mut t.ranges,
+                                Range {
+                                    start: certificate.range_start,
+                                    end: certificate.range_end,
+                                },
+                            );
+                        }
                         t.finish(m.end.unwrap(), m.why.clone());
                     }
                     finished = true;
@@ -1139,27 +1920,255 @@ fn apply_message(
             reason.replace(['\r', '\n'], " ")
         );
     }
+    journal_state(id, t);
     finished
 }
-fn receive(id: &str, generation: u64, source: &str, data: &str) {
+fn receive(id: &str, generation: u64, source: &str, data: &str) -> Option<SkipRequest> {
     if source_kind(source).is_none() {
-        return;
+        return None;
     }
     if data.len() > MAX_SEGMENT_BYTES.div_ceil(3) * 4 + 16 * 1024 {
         fail_session(id, generation, "CAPTURE_CAPACITY: mensaje demasiado grande");
-        return;
+        return None;
     }
-    let Ok(message) = serde_json::from_str(data) else {
-        return;
+    let Ok(message) = serde_json::from_str::<Message>(data) else {
+        return None;
     };
-    apply_message(
-        &mut STATE.lock().unwrap(),
-        id,
-        generation,
-        source,
-        message,
-        Instant::now(),
-    );
+    let sequence = message.sequence;
+    let skip = message.event.as_deref() == Some("skip-request");
+    let mut state = STATE.lock().unwrap();
+    let previous = state.tracks.get(id).and_then(|t| t.sequence);
+    let pending = state
+        .tracks
+        .get(id)
+        .is_some_and(|t| t.native_skip.is_some());
+    apply_message(&mut state, id, generation, source, message, Instant::now());
+    if skip && !pending && sequence != previous {
+        state
+            .tracks
+            .get(id)
+            .filter(|t| t.sequence == sequence)
+            .and_then(|t| t.native_skip.clone())
+    } else {
+        None
+    }
+}
+#[cfg(windows)]
+mod native_click {
+    use super::*;
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2;
+    use webview2_com::{CallDevToolsProtocolMethodCompletedHandler, ExecuteScriptCompletedHandler};
+    use windows_core::HSTRING;
+
+    struct Click {
+        core: ICoreWebView2,
+        id: String,
+        request: SkipRequest,
+        pressed: Cell<bool>,
+        released: Cell<bool>,
+        completed: Cell<bool>,
+    }
+    #[derive(Clone, Copy)]
+    enum Stage {
+        BeforePress,
+        BeforeRelease,
+        AfterRelease,
+    }
+
+    pub fn start(core: ICoreWebView2, id: String, request: SkipRequest) {
+        let click = Rc::new(Click {
+            core,
+            id: id.clone(),
+            request: request.clone(),
+            pressed: Cell::new(false),
+            released: Cell::new(false),
+            completed: Cell::new(false),
+        });
+        validate(click, Stage::BeforePress);
+        // A missing COM callback cannot leave a pressed mouse or an immortal lease.
+        // Closing this specific generation releases its input; a replacement is untouched.
+        if let Some(app) = APP.get().cloned() {
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_secs(3)).await;
+                let pending = {
+                    let state = STATE.lock().unwrap();
+                    state.owns(&id, request.generation)
+                        && state
+                            .tracks
+                            .get(&id)
+                            .is_some_and(|t| t.native_skip.as_ref() == Some(&request))
+                };
+                if pending {
+                    fail_session(
+                        &id,
+                        request.generation,
+                        "CAPTURE_NATIVE_SKIP_TIMEOUT: public-control input did not complete",
+                    );
+                    let _ = cancel(&app, &id, Some(request.generation), false).await;
+                }
+            });
+        }
+    }
+    fn current(click: &Click) -> bool {
+        skip_current(&STATE.lock().unwrap(), &click.id, &click.request)
+    }
+    fn validate(click: Rc<Click>, stage: Stage) {
+        if click.completed.get() {
+            return;
+        }
+        if !matches!(stage, Stage::AfterRelease) && !current(&click) {
+            abort(click, "binding-invalidated");
+            return;
+        }
+        let script = format!(
+            "(()=>({{origin:location.origin,validation:window.__musifyValidateSkip?.({})}}))()",
+            click.request.request_id
+        );
+        let callback_click = Rc::clone(&click);
+        let handler = ExecuteScriptCompletedHandler::create(Box::new(move |result, output| {
+            let valid = result.is_ok()
+                && serde_json::from_str::<Value>(&output).is_ok_and(|value| {
+                    value["origin"] == "https://music.youtube.com"
+                        && callback_click.request.validated(&value["validation"])
+                })
+                && current(&callback_click);
+            match stage {
+                Stage::BeforePress if valid => dispatch(callback_click, true, false),
+                Stage::BeforeRelease if valid => dispatch(callback_click, false, false),
+                Stage::AfterRelease => finish(
+                    callback_click,
+                    true,
+                    if valid {
+                        "released-and-revalidated"
+                    } else {
+                        "released-state-changed"
+                    },
+                ),
+                _ => abort(callback_click, "dom-validation-failed"),
+            }
+            Ok(())
+        }));
+        if unsafe { click.core.ExecuteScript(&HSTRING::from(script), &handler) }.is_err() {
+            abort(click, "validation-execution-failed");
+        }
+    }
+    fn dispatch(click: Rc<Click>, press: bool, cleanup: bool) {
+        if click.completed.get() {
+            return;
+        }
+        if !cleanup && !current(&click) {
+            abort(click, "binding-invalidated");
+            return;
+        }
+        // CDP coordinates are CSS viewport pixels. Cleanup releases outside the page;
+        // it is never a second candidate or an unvalidated fallback control.
+        let point = if cleanup {
+            (-100.0, -100.0)
+        } else {
+            (click.request.x, click.request.y)
+        };
+        let parameters = json!({"type":if press {"mousePressed"} else {"mouseReleased"},"x":point.0,"y":point.1,
+            "button":"left","buttons":if press {1} else {0},"clickCount":if cleanup {0} else {1},"pointerType":"mouse"}).to_string();
+        let callback_click = Rc::clone(&click);
+        // After dispatch begins, failure is ambiguous: always release outside the page
+        // on an unsuccessful press callback rather than assuming no input reached it.
+        if press {
+            click.pressed.set(true);
+        }
+        let handler =
+            CallDevToolsProtocolMethodCompletedHandler::create(Box::new(move |result, _| {
+                if press {
+                    if result.is_ok() {
+                        callback_click.pressed.set(true);
+                        validate(callback_click, Stage::BeforeRelease);
+                    } else {
+                        abort(callback_click, "mouse-press-failed");
+                    }
+                } else {
+                    if result.is_ok() {
+                        callback_click.released.set(true);
+                    }
+                    if cleanup || result.is_err() {
+                        finish(
+                            callback_click,
+                            false,
+                            if cleanup {
+                                "released-outside-invalid-control"
+                            } else {
+                                "mouse-release-failed"
+                            },
+                        );
+                    } else {
+                        validate(callback_click, Stage::AfterRelease);
+                    }
+                }
+                Ok(())
+            }));
+        if unsafe {
+            click.core.CallDevToolsProtocolMethod(
+                &HSTRING::from("Input.dispatchMouseEvent"),
+                &HSTRING::from(parameters),
+                &handler,
+            )
+        }
+        .is_err()
+        {
+            if press {
+                abort(click, "mouse-press-call-failed");
+            } else {
+                finish(click, false, "mouse-release-call-failed");
+            }
+        }
+    }
+    fn abort(click: Rc<Click>, reason: &'static str) {
+        if click.pressed.get() && !click.released.get() {
+            dispatch(click, false, true);
+        } else {
+            finish(click, false, reason);
+        }
+    }
+    fn finish(click: Rc<Click>, ok: bool, reason: &'static str) {
+        if click.completed.replace(true) {
+            return;
+        }
+        {
+            let mut state = STATE.lock().unwrap();
+            if let Some(track) = state
+                .tracks
+                .get_mut(&click.id)
+                .filter(|t| t.native_skip.as_ref() == Some(&click.request))
+            {
+                track.native_skip = None;
+                if ok && click.pressed.get() && click.released.get() {
+                    track.native_skip_dispatches += 1;
+                }
+                track.last_skip_result = Some(
+                    json!({"requestId":click.request.request_id,"generation":click.request.generation,"epoch":click.request.epoch,
+                    "source":click.request.source,"pressed":click.pressed.get(),"released":click.released.get(),"ok":ok,"reason":reason}),
+                );
+            }
+        }
+        // CDP success is only input dispatch, never a claim that an ad was skipped.
+        // The JS listener independently records isTrusted/defaultPrevented and later identity.
+        let result = json!({"requestId":click.request.request_id,"epoch":click.request.epoch,"source":click.request.source,"ok":ok,"reason":reason}).to_string();
+        let script = format!(
+            "window.__musifyGeneration==={}&&window.__musifySkipResult?.({result})",
+            click.request.generation
+        );
+        let handler = ExecuteScriptCompletedHandler::create(Box::new(|_, _| Ok(())));
+        let _ = unsafe { click.core.ExecuteScript(&HSTRING::from(script), &handler) };
+        if click.pressed.get() && !click.released.get() {
+            if let Some(app) = APP.get().cloned() {
+                let id = click.id.clone();
+                let generation = click.request.generation;
+                tauri::async_runtime::spawn(async move {
+                    let _ = cancel(&app, &id, Some(generation), false).await;
+                });
+            }
+        }
+    }
 }
 fn fail_session(id: &str, generation: u64, reason: &str) {
     let mut state = STATE.lock().unwrap();
@@ -1247,6 +2256,7 @@ fn watchdog(app: &AppHandle) {
                             false,
                             session.foreground,
                             session.ticket,
+                            session.next_slot,
                             Some(at),
                             true,
                         )
@@ -1270,6 +2280,9 @@ async fn retire_locked(app: &AppHandle, session: &Session) -> Result<(), String>
         current.active = false;
     }
     let result = close_window(app, &session.label).await;
+    if result.is_ok() {
+        crate::capture_audit::close_session(&session.id, session.generation);
+    }
     let mut state = STATE.lock().unwrap();
     if result.is_ok() {
         state
@@ -1364,7 +2377,11 @@ pub async fn cancel_before(app: &AppHandle, ticket: u64) -> Result<(), String> {
     }
     Ok(())
 }
-pub async fn cancel_next_before(app: &AppHandle, prefetch: u64) -> Result<(), String> {
+pub async fn cancel_next_before(
+    app: &AppHandle,
+    prefetch: u64,
+    next_slot: Option<u8>,
+) -> Result<(), String> {
     let _guard = TRANSITION.lock().await;
     let sessions: Vec<_> = STATE
         .lock()
@@ -1373,6 +2390,7 @@ pub async fn cancel_next_before(app: &AppHandle, prefetch: u64) -> Result<(), St
         .iter()
         .filter(|s| {
             !s.foreground
+                && next_slot.is_none_or(|slot| s.next_slot == Some(slot))
                 && s.ticket
                     .and_then(|t| t.prefetch)
                     .is_some_and(|p| p < prefetch)
@@ -1415,6 +2433,7 @@ pub async fn capture_begin(
     video_id: String,
     foreground: Option<bool>,
     refresh: Option<bool>,
+    next_slot: Option<u8>,
 ) -> Result<Value, String> {
     begin(
         &app,
@@ -1422,6 +2441,7 @@ pub async fn capture_begin(
         refresh.unwrap_or(false),
         foreground.unwrap_or(true),
         None,
+        next_slot,
         None,
         false,
     )
@@ -1429,8 +2449,12 @@ pub async fn capture_begin(
     status(&video_id).ok_or_else(|| "CAPTURE_CANCELLED: sesión sustituida".into())
 }
 #[tauri::command]
-pub async fn capture_prefetch(app: AppHandle, video_id: String) -> Result<Value, String> {
-    capture_begin(app, video_id, Some(false), Some(false)).await
+pub async fn capture_prefetch(
+    app: AppHandle,
+    video_id: String,
+    next_slot: Option<u8>,
+) -> Result<Value, String> {
+    capture_begin(app, video_id, Some(false), Some(false), next_slot).await
 }
 /// Ensayos de arranque frío: no equivale a cancelar, que conserva audio reutilizable.
 pub async fn bench_forget(app: &AppHandle, video_id: &str) -> Result<(), String> {
@@ -1527,10 +2551,20 @@ pub async fn capture_seek(
                     .map_err(|e| format!("CAPTURE_SEEK: {e}"))?;
             } else {
                 retire_locked(&app, &session).await?;
-                begin_locked(&app, &video_id, false, true, session.ticket, Some(at), true).await?;
+                begin_locked(
+                    &app,
+                    &video_id,
+                    false,
+                    true,
+                    session.ticket,
+                    session.next_slot,
+                    Some(at),
+                    true,
+                )
+                .await?;
             }
         } else {
-            begin_locked(&app, &video_id, false, true, None, Some(at), true).await?;
+            begin_locked(&app, &video_id, false, true, None, None, Some(at), true).await?;
         }
     }
     let state = STATE.lock().unwrap();
@@ -1581,10 +2615,10 @@ pub async fn capture_read(
                 || Instant::now() > deadline
             {
                 let chunks = &t.chunks[start..end];
-                let head=json!({"api":3,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"mimes":t.units[start..end].iter().map(|u|&u.mime).collect::<Vec<_>>(),
+                let head=json!({"api":4,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"mimes":t.units[start..end].iter().map(|u|&u.mime).collect::<Vec<_>>(),
                     "units":&t.units[start..end],"ranges":t.ranges,"duration":t.duration,"audioDuration":t.eof_end,"eofEnd":t.eof_end,"total":t.units.len(),
                     "done":t.complete&&end==t.chunks.len(),"complete":t.complete,"eof":t.eof,"error":t.error,"softError":t.soft_error,"recovering":t.recovering,
-                    "revision":t.revision,"generation":t.generation,"epoch":t.epoch,"reset":reset,"from":start,"next":end}).to_string();
+                    "sessionState":t.session_state,"revision":t.revision,"generation":t.generation,"epoch":t.epoch,"reset":reset,"from":start,"next":end}).to_string();
                 let mut out = Vec::with_capacity(
                     4 + head.len() + chunks.iter().map(|c| c.len() + 4).sum::<usize>(),
                 );
@@ -1605,7 +2639,7 @@ pub fn status(video_id: &str) -> Option<Value> {
     let t = state.tracks.get(video_id)?;
     let captured: f64 = t.ranges.iter().map(|r| r.end - r.start).sum();
     let session = state.session(video_id);
-    let mut result = json!({"api":3,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"chunks":t.chunks.len(),"units":t.units.len(),"bytes":t.bytes,"ranges":t.ranges,
+    let mut result = json!({"api":4,"progressiveExperiment":progressive_experiment_enabled(),"mime":t.units.first().map(|u|&u.mime),"chunks":t.chunks.len(),"units":t.units.len(),"bytes":t.bytes,"ranges":t.ranges,
         "ads":t.ads_observations,"adObservations":t.ads_observations,"adsSourcesSeen":t.ads_sources.len(),"adsSeen":t.ads_sources.len(),"adsDelivered":t.ads_delivered,"unknown":t.unknown,
         "state":t.phase,"bytesQuarantined":t.quarantined,"verified":t.ready(),"frames":t.units.iter().map(|u|u.frames).sum::<u64>(),
         "rangeStart":t.ranges.first().map(|r|r.start),"rangeEnd":t.ranges.last().map(|r|r.end),"duration":t.duration,
@@ -1615,13 +2649,65 @@ pub fn status(video_id: &str) -> Option<Value> {
         "adRateViolations":t.ad_rate_violations,"adRateObservations":t.ad_rate_observations,
         "lastProgressAgoMs":t.last_progress.elapsed().as_millis(),"waitBudgetMs":t.wait_budget().as_millis(),
         "captureRate":captured/t.opened.elapsed().as_secs_f64().max(0.001),"activeWindows":state.sessions.len(),"foreground":session.map(|s|s.foreground),
-        "generation":t.generation,"epoch":t.epoch,"revision":t.revision});
+        "generation":t.generation,"epoch":t.epoch,"revision":t.revision,
+        "sessionState":t.session_state,"sessionStates":t.session_states,"unknownAuthUnits":t.unknown_auth_units,"signedInUnits":t.signed_in_units,
+        "limits":limits().ok(),"certificates":t.certificates,"nextSlot":session.and_then(|s|s.next_slot),
+        "adTransitions":t.ad_transitions,"adTransitionsTotal":t.ad_transitions_total,"adTransitionsTruncated":t.ad_transitions_total>t.ad_transitions.len(),
+        "lastNativeSkip":t.last_skip_result,"nativeSkipRequests":t.native_skip_requests,"nativeSkipDispatches":t.native_skip_dispatches,
+        "nativeSkipTrustedClicks":t.native_skip_trusted_clicks,"skippedAds":null,"unskippableAdMs":null});
     result
         .as_object_mut()
         .unwrap()
         .extend(detail.as_object().unwrap().clone());
     Some(result)
 }
+/// Private benchmark evidence. No cookies, account strings, signed URLs or unpublished bytes.
+pub fn bench_snapshot(video_id: &str) -> Result<Value, String> {
+    if std::env::var_os("MUSIFY_BENCH").is_none() {
+        return Err("The snapshot is only available in benchmarks".into());
+    }
+    let (mut snapshot, units) = {
+        let ledger = BENCH_LEDGER.lock().unwrap();
+        if let Some(error) = ledger.errors.get(video_id) {
+            return Err(error.clone());
+        }
+        let snapshot = ledger
+            .states
+            .get(video_id)
+            .cloned()
+            .ok_or("No published-unit journal for this video")?;
+        (
+            snapshot,
+            ledger.units.get(video_id).cloned().unwrap_or_default(),
+        )
+    };
+    // Journal files survive cache eviction, refresh and bench_forget. Reading and encoding
+    // bytes happens outside STATE and the journal mutex; no decoder runs under either lock.
+    let mut output = Vec::with_capacity(units.len());
+    for entry in units {
+        let bytes = std::fs::read(&entry.path)
+            .map_err(|_| "CAPTURE_AUDIT_IO: published bytes disappeared")?;
+        let mut value = entry.metadata;
+        value["data"] = json!(base64::engine::general_purpose::STANDARD.encode(bytes));
+        output.push(value);
+    }
+    snapshot["unknownAuthUnits"] = json!(
+        output
+            .iter()
+            .filter(|u| u["sessionState"]["state"] != "signed-out"
+                && u["sessionState"]["state"] != "signed-in")
+            .count()
+    );
+    snapshot["signedInUnits"] = json!(
+        output
+            .iter()
+            .filter(|u| u["sessionState"]["state"] == "signed-in")
+            .count()
+    );
+    snapshot["units"] = Value::Array(output);
+    Ok(snapshot)
+}
+
 fn valid_id(id: &str) -> bool {
     id.len() == 11
         && id
@@ -1636,6 +2722,278 @@ mod tests {
     const NEXT: &str = "bbbbbbbbbbb";
     const MUSIC: &str = "https://music.youtube.com/watch?v=aaaaaaaaaaa";
     #[test]
+    fn next_memory_reserves_the_current_tracks_remaining_capacity() {
+        let mut state = state();
+        state.promote(ID, None);
+        state.tracks.get_mut(ID).unwrap().bytes = 20;
+        state.sessions.push(session(NEXT, 11, false));
+        let limits = CaptureLimits {
+            max_sessions: 3,
+            prefetch_slots: 2,
+            track_bytes: 96,
+            total_bytes: 128,
+        };
+        assert_eq!(state.foreground_reserve(NEXT, limits), 76);
+        assert_eq!(state.foreground_reserve(ID, limits), 0);
+        // Next may use only32 bytes; the remaining76 are kept for current after its20.
+        assert_eq!(
+            limits.total_bytes - state.total_bytes() - state.foreground_reserve(NEXT, limits),
+            32
+        );
+    }
+    #[test]
+    fn benchmark_journal_preserves_units_after_cache_replacement_and_fails_closed_at_its_cap() {
+        let directory = std::env::temp_dir().join(format!(
+            "musify-journal-test-{}-{}",
+            std::process::id(),
+            next_id()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let mut state = state();
+        let proof = Unit::from_message(&message(&state, unit(1, 0.0, 1.0)), 10).unwrap();
+        let auth = SessionState::unknown(10, 20);
+        let mut ledger = BenchLedger::default();
+        persist_journal_unit(
+            &mut ledger,
+            &directory,
+            8,
+            ID,
+            30,
+            &proof,
+            &auth,
+            &[1, 2, 3, 4],
+        )
+        .unwrap();
+        state.tracks.clear();
+        state.sessions.clear();
+        assert_eq!(ledger.units[ID].len(), 1);
+        assert_eq!(
+            std::fs::read(&ledger.units[ID][0].path).unwrap(),
+            vec![1, 2, 3, 4]
+        );
+        let mut next = proof.clone();
+        next.generation = 11;
+        persist_journal_unit(
+            &mut ledger,
+            &directory,
+            8,
+            ID,
+            31,
+            &next,
+            &auth,
+            &[5, 6, 7, 8],
+        )
+        .unwrap();
+        next.generation = 12;
+        assert!(
+            persist_journal_unit(&mut ledger, &directory, 8, ID, 32, &next, &auth, &[9])
+                .unwrap_err()
+                .starts_with("CAPTURE_AUDIT_CAPACITY")
+        );
+        assert_eq!(ledger.units[ID].len(), 2);
+        assert_eq!(ledger.units[ID][0].metadata["revision"], 30);
+        assert_eq!(ledger.units[ID][1].metadata["revision"], 31);
+        for entry in &ledger.units[ID] {
+            std::fs::remove_file(&entry.path).unwrap();
+        }
+        std::fs::remove_dir(&directory).unwrap();
+    }
+    #[test]
+    fn configured_limits_reject_invalid_or_contradictory_memory_without_expanding_it() {
+        let defaults = configured_limits(None, None, None).unwrap();
+        assert_eq!(
+            (
+                defaults.max_sessions,
+                defaults.prefetch_slots,
+                defaults.track_bytes,
+                defaults.total_bytes
+            ),
+            (3, 2, 96 * 1024 * 1024, 288 * 1024 * 1024)
+        );
+        assert_eq!(
+            configured_limits(Some("1"), Some("64"), Some("64"))
+                .unwrap()
+                .prefetch_slots,
+            0
+        );
+        for sessions in ["0", "4", "bad", ""] {
+            assert!(configured_limits(Some(sessions), None, None).is_err());
+        }
+        assert!(configured_limits(None, Some("96"), Some("64")).is_err());
+        assert!(configured_limits(None, Some("NaN"), None).is_err());
+    }
+    fn eof_certificate(count: u64, end: f64) -> Value {
+        json!({"kind":"complete-source-v1","epoch":20,"source":7,"s":3,"initKey":"configuration-1","mime":"audio/webm; codecs=opus",
+            "timelineSettings":{"timestampOffset":0.0,"appendWindowStart":0.0,"appendWindowEnd":null,"mode":"segments"},
+            "frameCount":count,"rangeStart":0.0,"rangeEnd":end,"quantum":0.001,"cleanWholeSource":true,"nativeContinuous":true,"officialEof":true})
+    }
+    #[test]
+    fn complete_source_certificate_closes_only_quantization_with_all_bound_sample_indices() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 0.020);
+        deliver(&mut s, 2, 0.021, 0.040);
+        assert_eq!(s.tracks[ID].ranges.len(), 2);
+        let certificate: CompleteCertificate =
+            serde_json::from_value(eof_certificate(20, 0.040)).unwrap();
+        assert!(certificate.validates(&s.tracks[ID], 0.040));
+        for (field, value) in [
+            ("frameCount", json!(21)),
+            ("epoch", json!(21)),
+            ("source", json!(8)),
+            ("s", json!(4)),
+            ("initKey", json!("different")),
+            ("quantum", json!(0.002)),
+            ("nativeContinuous", json!(false)),
+            ("cleanWholeSource", json!(false)),
+            ("officialEof", json!(false)),
+        ] {
+            let mut bad = eof_certificate(20, 0.040);
+            bad[field] = value;
+            assert!(
+                !serde_json::from_value::<CompleteCertificate>(bad)
+                    .unwrap()
+                    .validates(&s.tracks[ID], 0.040),
+                "{field}"
+            );
+        }
+        let mut missing = s.tracks[ID].units.clone();
+        missing[1].first_frame += 1;
+        missing[1].frames -= 1;
+        let track = s.tracks.get_mut(ID).unwrap();
+        std::mem::swap(&mut track.units, &mut missing);
+        assert!(
+            !certificate.validates(track, 0.040),
+            "a genuine missing sample is not codec quantization"
+        );
+        std::mem::swap(&mut track.units, &mut missing);
+        track.units[1].generation += 1;
+        assert!(
+            !certificate.validates(track, 0.040),
+            "another window cannot complete this inventory"
+        );
+        track.units[1].generation -= 1;
+        send(
+            &mut s,
+            json!({"kind":"event","type":"ended","state":"content","source":7,"s":3,"eof":true,"end":0.040,"certificate":eof_certificate(20,0.040)}),
+        );
+        assert!(s.tracks[ID].complete);
+        assert_eq!(s.tracks[ID].certificates.len(), 1);
+        assert_eq!(
+            s.tracks[ID].ranges,
+            vec![Range {
+                start: 0.0,
+                end: 0.040
+            }]
+        );
+    }
+    #[test]
+    fn partial_source_and_real_timeline_holes_cannot_borrow_a_complete_source_certificate() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 0.020);
+        deliver(&mut s, 2, 0.030, 0.040);
+        let certificate: CompleteCertificate =
+            serde_json::from_value(eof_certificate(20, 0.040)).unwrap();
+        assert!(!certificate.validates(&s.tracks[ID], 0.040));
+        let t = s.tracks.get_mut(ID).unwrap();
+        t.units[1].range_start = 0.021;
+        t.target = 0.01;
+        assert!(
+            !certificate.validates(t, 0.040),
+            "seek epochs cannot certify the original whole source"
+        );
+    }
+    fn skip_request() -> Value {
+        json!({"kind":"event","type":"skip-request","requestId":1,"source":9,"buttonToken":3,"x":200.0,"y":80.0,"viewportWidth":960.0,"viewportHeight":640.0})
+    }
+    #[test]
+    fn native_skip_requires_observed_ad_and_rejects_stale_dom_identity_and_coordinates() {
+        let mut s = state();
+        send(&mut s, skip_request());
+        assert!(s.tracks[ID].native_skip.is_none());
+        send(
+            &mut s,
+            json!({"kind":"event","type":"diagnostic","state":"ad","source":9}),
+        );
+        let mut foreign = skip_request();
+        foreign["source"] = json!(8);
+        send(&mut s, foreign);
+        assert!(s.tracks[ID].native_skip.is_none());
+        send(&mut s, skip_request());
+        let request = s.tracks[ID].native_skip.clone().unwrap();
+        assert!(skip_current(&s, ID, &request));
+        let mut response = serde_json::to_value(&request).unwrap();
+        response["valid"] = json!(true);
+        assert!(request.validated(&response));
+        for (field, value) in [
+            ("x", json!(201.0)),
+            ("buttonToken", json!(4)),
+            ("source", json!(10)),
+            ("epoch", json!(21)),
+            ("generation", json!(11)),
+            ("valid", json!(false)),
+        ] {
+            let mut wrong = response.clone();
+            wrong[field] = value;
+            assert!(!request.validated(&wrong), "{field}");
+        }
+        s.tracks.get_mut(ID).unwrap().epoch += 1;
+        assert!(
+            !skip_current(&s, ID, &request),
+            "an asynchronous callback after seek cannot click"
+        );
+        s.tracks.get_mut(ID).unwrap().epoch -= 1;
+        s.sessions[0].active = false;
+        assert!(
+            !skip_current(&s, ID, &request),
+            "cancel marks ownership false before the native close completes"
+        );
+    }
+    #[test]
+    fn trusted_click_telemetry_is_bound_to_the_native_request_and_counted_once() {
+        let mut s = state();
+        s.tracks.get_mut(ID).unwrap().last_skip_result =
+            Some(json!({"requestId":41,"pressed":true,"released":true}));
+        let report = |request_id| json!({"kind":"event","type":"diagnostic","reason":json!({"phase":"native-skip-result","requestId":request_id,"skip":{"last":{"eventSeen":true,"isTrusted":true,"defaultPrevented":true}}}).to_string()});
+        send(&mut s, report(40));
+        assert_eq!(s.tracks[ID].native_skip_trusted_clicks, 0);
+        send(&mut s, report(41));
+        send(&mut s, report(41));
+        assert_eq!(s.tracks[ID].native_skip_trusted_clicks, 1);
+        assert_eq!(
+            s.tracks[ID].last_skip_result.as_ref().unwrap()["defaultPrevented"],
+            true
+        );
+        assert_eq!(
+            s.tracks[ID].native_skip_dispatches, 0,
+            "a JS event does not invent native dispatch success"
+        );
+    }
+    #[test]
+    fn signed_out_final_state_does_not_hide_earlier_unknown_or_signed_in_delivery() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 1.0);
+        send(
+            &mut s,
+            json!({"kind":"event","type":"auth","state":"signed-in","evidenceVersion":1}),
+        );
+        deliver(&mut s, 2, 1.0, 2.0);
+        send(
+            &mut s,
+            json!({"kind":"event","type":"auth","state":"signed-out","evidenceVersion":1}),
+        );
+        deliver(&mut s, 3, 2.0, 3.0);
+        let t = &s.tracks[ID];
+        assert_eq!(t.session_state.state, "signed-out");
+        assert_eq!((t.unknown_auth_units, t.signed_in_units), (1, 1));
+        assert_eq!(
+            t.session_states
+                .iter()
+                .map(|s| s.state.as_str())
+                .collect::<Vec<_>>(),
+            vec!["signed-in", "signed-out"]
+        );
+    }
+    #[test]
     fn progressive_delivery_needs_explicit_benchmark_and_opt_in() {
         assert!(!progressive_experiment(false, Some("1")));
         assert!(!progressive_experiment(true, None));
@@ -1648,9 +3006,11 @@ mod tests {
             generation,
             label: format!("test-{generation}"),
             foreground,
+            next_slot: (!foreground).then_some(0),
             ticket: Some(RequestTicket {
                 resolution: 1,
                 prefetch: None,
+                prefetch_slot: None,
             }),
             active: true,
         }
@@ -1663,7 +3023,7 @@ mod tests {
     }
     fn message(state: &Supervisor, value: Value) -> Message {
         let t = &state.tracks[ID];
-        let mut base = json!({"musify":1,"api":3,"v":ID,"generation":t.generation,"epoch":t.epoch,"sequence":t.sequence.unwrap_or(0)+1});
+        let mut base = json!({"musify":1,"api":4,"v":ID,"generation":t.generation,"epoch":t.epoch,"sequence":t.sequence.unwrap_or(0)+1});
         base.as_object_mut()
             .unwrap()
             .extend(value.as_object().unwrap().clone());
@@ -1676,7 +3036,7 @@ mod tests {
     }
     fn unit(number: u64, start: f64, end: f64) -> Value {
         json!({"kind":"event","type":"diagnostic","state":"content","verified":true,"source":7,"s":3,"unit":number,
-            "initKey":"configuration-1","initBytes":2,"mime":"audio/webm; codecs=opus","frames":10,"rangeStart":start,"rangeEnd":end,
+            "initKey":"configuration-1","initBytes":2,"mime":"audio/webm; codecs=opus","frames":10,"firstFrame":(number-1)*10,"endFrame":number*10,"rangeStart":start,"rangeEnd":end,
             "decodeStart":start,"decodeEnd":end,"timelineSettings":{"timestampOffset":0.0,"appendWindowStart":0.0,"appendWindowEnd":null,"mode":"segments"}})
     }
     fn segment(mut proof: Value) -> Value {
@@ -1847,14 +3207,29 @@ mod tests {
         assert_eq!(s.tracks[ID].units[1].epoch, 21);
     }
     #[test]
-    fn repeated_confirmed_ranges_do_not_grow_cache() {
+    fn repeated_ranges_keep_each_epochs_inventory_without_changing_timeline_coverage() {
         let mut s = state();
         deliver(&mut s, 1, 0.0, 1.0);
         let bytes = s.tracks[ID].bytes;
         s.tracks.get_mut(ID).unwrap().begin_epoch(10, 21, 0.0, true);
         deliver(&mut s, 1, 0.0, 1.0);
-        assert_eq!(s.tracks[ID].bytes, bytes);
-        assert_eq!(s.tracks[ID].units.len(), 1);
+        assert_eq!(s.tracks[ID].bytes, bytes * 2);
+        assert_eq!(s.tracks[ID].units.len(), 2);
+        assert_eq!(
+            s.tracks[ID]
+                .units
+                .iter()
+                .map(|u| u.epoch)
+                .collect::<Vec<_>>(),
+            vec![20, 21]
+        );
+        assert_eq!(
+            s.tracks[ID].ranges,
+            vec![Range {
+                start: 0.0,
+                end: 1.0
+            }]
+        );
     }
     #[test]
     fn init_identity_is_scoped_to_window_and_checks_actual_bytes() {
@@ -1886,13 +3261,17 @@ mod tests {
     fn pool_prefetch_replaces_only_next_and_promotion_retains_generation() {
         let mut s = state();
         s.sessions.push(session(NEXT, 11, false));
+        let mut second = session("ddddddddddd", 12, false);
+        second.next_slot = Some(1);
+        s.sessions.push(second);
         s.tracks.insert(NEXT.into(), Track::new(11, 21, 31));
-        assert_eq!(s.victim("ccccccccccc", false).unwrap().id, NEXT);
-        assert_eq!(s.victim("ccccccccccc", true).unwrap().id, ID);
+        assert_eq!(s.victim("ccccccccccc", false, Some(0)).unwrap().id, NEXT);
+        assert_eq!(s.victim("ccccccccccc", true, None).unwrap().id, ID);
         s.sessions.retain(|session| session.id != ID);
         let ticket = Some(RequestTicket {
             resolution: 9,
             prefetch: None,
+            prefetch_slot: None,
         });
         s.promote(NEXT, ticket);
         let current = s.session(NEXT).unwrap();
@@ -1900,7 +3279,12 @@ mod tests {
         assert_eq!(current.generation, 11);
         assert_eq!(current.ticket, ticket);
         assert_eq!(s.tracks[NEXT].revision, 31);
-        assert!(s.victim("ccccccccccc", false).is_none());
+        assert!(s.victim("ccccccccccc", false, Some(0)).is_none());
+        assert_eq!(
+            s.victim("ccccccccccc", false, Some(1)).unwrap().generation,
+            12
+        );
+        assert_eq!(s.session("ddddddddddd").unwrap().next_slot, Some(1));
     }
     #[test]
     fn completed_foreground_cache_survives_idle_window_retirement_and_pressure() {
@@ -1978,7 +3362,10 @@ mod tests {
         s.sessions[0].active = false;
         assert_eq!(s.sessions.len(), 2);
         assert!(!s.owns(ID, 10));
-        assert_eq!(s.victim("ccccccccccc", false).unwrap().generation, 10);
+        assert_eq!(
+            s.victim("ccccccccccc", false, Some(0)).unwrap().generation,
+            10
+        );
         let m = message(&s, unit(1, 0.0, 1.0));
         assert!(!apply_message(&mut s, ID, 10, MUSIC, m, Instant::now()));
     }

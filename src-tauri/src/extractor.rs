@@ -91,6 +91,11 @@ async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<
             if ticket.is_some_and(|t| !crate::player::request_current(t)) {
                 return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
             }
+            // La ruta histórica sólo tiene una ventana de precarga. La segunda
+            // plaza sí puede preparar URLs nativas, pero nunca desplaza esa ventana.
+            if !foreground && ticket.and_then(|t| t.prefetch_slot) == Some(1) {
+                return Err("CAPTURE_BUSY: el respaldo histórico sólo admite una precarga".into());
+            }
             let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
             let meta = capture_legacy::stream(app, video_id, refresh, foreground, ticket).await?;
             Ok(VideoInfo { url: format!("{}{video_id}", capture_legacy::SCHEME), title: meta.title, channel: meta.channel, duration: meta.duration })

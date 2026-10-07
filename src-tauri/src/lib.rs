@@ -1,7 +1,10 @@
-mod db;
 mod capture;
-mod capture_legacy;
+mod capture_audit;
 mod capture_bench;
+mod capture_legacy;
+mod capture_pcm;
+mod capture_verify;
+mod db;
 mod deezer;
 mod downloads;
 mod extractor;
@@ -23,31 +26,62 @@ use youtube::{TrackQuery, YouTubeMusic};
 use ytdlp::YtDlp;
 
 #[tauri::command]
-async fn search(query: String, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<SearchResults, String> {
+async fn search(
+    query: String,
+    deezer: State<'_, Deezer>,
+    db: State<'_, Db>,
+) -> Result<SearchResults, String> {
     let query = query.trim();
-    let empty = || SearchResults { artists: vec![], albums: vec![], local_artists: vec![], local_albums: vec![] };
+    let empty = || SearchResults {
+        artists: vec![],
+        albums: vec![],
+        local_artists: vec![],
+        local_albums: vec![],
+    };
     if query.is_empty() {
         return Ok(empty());
     }
     let (local_artists, local_albums) = local::search(&db, query);
     match deezer.search(query).await {
-        Ok(found) => Ok(SearchResults { local_artists, local_albums, ..found }),
+        Ok(found) => Ok(SearchResults {
+            local_artists,
+            local_albums,
+            ..found
+        }),
         // Sin conexión: al menos lo que haya en la música local.
-        Err(_) if !local_artists.is_empty() || !local_albums.is_empty() => {
-            Ok(SearchResults { local_artists, local_albums, ..empty() })
-        }
+        Err(_) if !local_artists.is_empty() || !local_albums.is_empty() => Ok(SearchResults {
+            local_artists,
+            local_albums,
+            ..empty()
+        }),
         Err(e) => Err(e),
     }
 }
 
 #[tauri::command]
-async fn artist(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<ArtistPage, String> {
-    if local::is_local(id) { local::artist(&db, id) } else { deezer.artist(id).await }
+async fn artist(
+    id: u64,
+    deezer: State<'_, Deezer>,
+    db: State<'_, Db>,
+) -> Result<ArtistPage, String> {
+    if local::is_local(id) {
+        local::artist(&db, id)
+    } else {
+        deezer.artist(id).await
+    }
 }
 
 #[tauri::command]
-async fn album(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<AlbumDetail, String> {
-    if local::is_local(id) { local::album(&db, id) } else { deezer.album(id).await }
+async fn album(
+    id: u64,
+    deezer: State<'_, Deezer>,
+    db: State<'_, Db>,
+) -> Result<AlbumDetail, String> {
+    if local::is_local(id) {
+        local::album(&db, id)
+    } else {
+        deezer.album(id).await
+    }
 }
 
 /// Devuelve la URL del audio de una canción. `refresh` fuerza a pedir una URL nueva
@@ -58,16 +92,30 @@ async fn resolve(
     refresh: bool,
     foreground: Option<bool>,
     expected_foreground: Option<u64>,
+    next_slot: Option<u8>,
     request_id: Option<String>,
     db: State<'_, Db>,
     ytm: State<'_, YouTubeMusic>,
     ytdlp: State<'_, YtDlp>,
     app: tauri::AppHandle,
 ) -> Result<Playable, String> {
-    let playable = player::resolve_with_priority(&track, refresh, &db, &ytm, &ytdlp, foreground.unwrap_or(true), expected_foreground, request_id.as_deref()).await?;
+    let playable = player::resolve_with_priority(
+        &track,
+        refresh,
+        &db,
+        &ytm,
+        &ytdlp,
+        foreground.unwrap_or(true),
+        expected_foreground,
+        request_id.as_deref(),
+        next_slot,
+    )
+    .await?;
     // El archivo descargado se sirve por el protocolo de archivos locales: hay que permitirlo.
     if playable.local {
-        app.asset_protocol_scope().allow_file(&playable.url).map_err(|e| e.to_string())?;
+        app.asset_protocol_scope()
+            .allow_file(&playable.url)
+            .map_err(|e| e.to_string())?;
     }
     Ok(playable)
 }
@@ -76,14 +124,24 @@ async fn resolve(
 #[tauri::command]
 async fn cancel_resolve(app: tauri::AppHandle) -> Result<(), String> {
     let epoch = player::begin_resolution(true);
-    let (official, legacy) = tokio::join!(capture::cancel_before(&app, epoch), capture_legacy::cancel_before(&app, epoch));
+    let (official, legacy) = tokio::join!(
+        capture::cancel_before(&app, epoch),
+        capture_legacy::cancel_before(&app, epoch)
+    );
     official.and(legacy)
 }
 
 #[tauri::command]
-async fn cancel_prefetch(app: tauri::AppHandle) -> Result<(), String> {
-    let epoch = player::cancel_prefetch_requests();
-    let (official, legacy) = tokio::join!(capture::cancel_next_before(&app, epoch), capture_legacy::cancel_next_before(&app, epoch));
+async fn cancel_prefetch(app: tauri::AppHandle, next_slot: Option<u8>) -> Result<(), String> {
+    let epoch = player::cancel_prefetch_requests(next_slot)?;
+    let (official, legacy) =
+        tokio::join!(capture::cancel_next_before(&app, epoch, next_slot), async {
+            if next_slot.is_none_or(|slot| slot == 0) {
+                capture_legacy::cancel_next_before(&app, epoch).await
+            } else {
+                Ok(())
+            }
+        });
     official.and(legacy)
 }
 
@@ -101,9 +159,12 @@ async fn alternatives(
 /// La búsqueda se realiza en YouTube Music y el usuario elige el enlace del vídeo.
 #[tauri::command]
 async fn open_youtube_search(track: TrackQuery, app: tauri::AppHandle) -> Result<(), String> {
-    let mut url = reqwest::Url::parse("https://music.youtube.com/search").map_err(|e| e.to_string())?;
+    let mut url =
+        reqwest::Url::parse("https://music.youtube.com/search").map_err(|e| e.to_string())?;
     url.query_pairs_mut().append_pair("q", &track.search_text());
-    app.opener().open_url(url.to_string(), None::<&str>).map_err(|e| e.to_string())
+    app.opener()
+        .open_url(url.to_string(), None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 /// Fija a mano el vídeo de una canción y lo devuelve listo para reproducir.
@@ -116,7 +177,15 @@ async fn choose_source(
     db: State<'_, Db>,
     ytdlp: State<'_, YtDlp>,
 ) -> Result<Playable, String> {
-    player::choose(&track, &video_id, &db, &ytdlp, foreground.unwrap_or(true), request_id.as_deref()).await
+    player::choose(
+        &track,
+        &video_id,
+        &db,
+        &ytdlp,
+        foreground.unwrap_or(true),
+        request_id.as_deref(),
+    )
+    .await
 }
 
 /// Guarda una asociación manual sin abrir el extractor ni modificar la canción actual.
@@ -157,7 +226,10 @@ pub fn run() {
                         let _ = window.hide();
                     }
                     app.dialog()
-                        .message(format!("No se pudo abrir la base de datos.\n\n{e}\n\n{}", path.display()))
+                        .message(format!(
+                            "No se pudo abrir la base de datos.\n\n{e}\n\n{}",
+                            path.display()
+                        ))
                         .title("Musify")
                         .kind(MessageDialogKind::Error)
                         .show(|_| std::process::exit(1));
@@ -234,6 +306,13 @@ pub fn run() {
             extractor::engine_stats,
             extractors::extractor_module,
             capture::capture_read,
+            capture_audit::capture_audit_status,
+            capture::capture_limits,
+            capture::capture_profile_open,
+            capture::capture_profile_status,
+            capture_verify::capture_verify_prepare,
+            capture_verify::capture_verify_check,
+            capture_bench::capture_bench_native_search,
             capture::capture_begin,
             capture::capture_prefetch,
             capture::capture_seek,

@@ -10,53 +10,138 @@ use std::sync::Mutex;
 use tauri::Emitter;
 
 // También invalida búsquedas que todavía no han obtenido un ID de YouTube.
+#[derive(Clone, Copy, Default)]
+struct NextLease {
+    track_id: u64,
+    sequence: u64,
+}
 #[derive(Default)]
-struct EpochState { resolution: u64, prefetch: u64 }
+struct EpochState {
+    resolution: u64,
+    prefetch: u64,
+    next: [Option<NextLease>; 2],
+}
 #[derive(Default)]
-struct RequestEpochs { state: Mutex<EpochState> }
-static REQUESTS: RequestEpochs = RequestEpochs { state: Mutex::new(EpochState { resolution: 0, prefetch: 0 }) };
+struct RequestEpochs {
+    state: Mutex<EpochState>,
+}
+static REQUESTS: RequestEpochs = RequestEpochs {
+    state: Mutex::new(EpochState {
+        resolution: 0,
+        prefetch: 0,
+        next: [None, None],
+    }),
+};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RequestTicket {
     pub resolution: u64,
     pub prefetch: Option<u64>,
+    pub prefetch_slot: Option<u8>,
 }
 pub fn begin_resolution(foreground: bool) -> u64 {
     REQUESTS.begin_resolution(foreground)
 }
-pub fn resolution_current(ticket: u64) -> bool { REQUESTS.state.lock().unwrap().resolution == ticket }
-pub fn cancel_prefetch_requests() -> u64 { REQUESTS.cancel_prefetch() }
+pub fn resolution_current(ticket: u64) -> bool {
+    REQUESTS.state.lock().unwrap().resolution == ticket
+}
+pub fn cancel_prefetch_requests(slot: Option<u8>) -> Result<u64, String> {
+    REQUESTS.cancel_prefetch(slot)
+}
+fn checked_slot(slot: Option<u8>) -> Result<usize, String> {
+    let slot = slot.unwrap_or(0);
+    if slot > 1 {
+        Err("Plaza de precarga no válida".into())
+    } else {
+        Ok(slot as usize)
+    }
+}
 impl RequestEpochs {
     fn begin_resolution(&self, foreground: bool) -> u64 {
         let mut state = self.state.lock().unwrap();
-        if foreground { state.resolution += 1; }
+        if foreground {
+            state.resolution += 1;
+        }
         state.resolution
     }
-    fn cancel_prefetch(&self) -> u64 {
+    fn cancel_prefetch(&self, slot: Option<u8>) -> Result<u64, String> {
+        if let Some(slot) = slot {
+            checked_slot(Some(slot))?;
+        }
         let mut state = self.state.lock().unwrap();
         state.prefetch += 1;
-        state.prefetch
+        if let Some(slot) = slot {
+            state.next[slot as usize] = None;
+        } else {
+            state.next = [None, None];
+        }
+        Ok(state.prefetch)
     }
-    fn begin(&self, foreground: bool, expected_foreground: Option<u64>) -> Result<RequestTicket, String> {
-        // Una señal antigua no puede incrementar next ni retirar la precarga nueva.
-        // La comparación y la admisión comparten el mismo cerrojo con begin/cancel.
+    fn begin(
+        &self,
+        foreground: bool,
+        expected_foreground: Option<u64>,
+        slot: Option<u8>,
+        track_id: u64,
+    ) -> Result<RequestTicket, String> {
+        let slot = checked_slot(slot)?;
+        // La comprobación y el cambio de lease son atómicos respecto a foreground/cancel.
         let mut state = self.state.lock().unwrap();
         if !foreground && expected_foreground.is_some_and(|expected| expected != state.resolution) {
             return Err("CAPTURE_SUPERSEDED: la precarga pertenece a otra canción".into());
         }
-        if foreground { state.resolution += 1; } else { state.prefetch += 1; }
-        Ok(RequestTicket { resolution: state.resolution, prefetch: (!foreground).then_some(state.prefetch) })
+        if foreground {
+            state.resolution += 1;
+            Ok(RequestTicket {
+                resolution: state.resolution,
+                prefetch: None,
+                prefetch_slot: None,
+            })
+        } else {
+            // C conserva su ventana al promover B: re-admitir el mismo ID en la misma plaza
+            // actualiza el epoch de resolución, pero no revoca su lease de captura.
+            let lease = match state.next[slot].filter(|lease| lease.track_id == track_id) {
+                Some(lease) => lease,
+                None => {
+                    state.prefetch += 1;
+                    let lease = NextLease {
+                        track_id,
+                        sequence: state.prefetch,
+                    };
+                    state.next[slot] = Some(lease);
+                    lease
+                }
+            };
+            Ok(RequestTicket {
+                resolution: state.resolution,
+                prefetch: Some(lease.sequence),
+                prefetch_slot: Some(slot as u8),
+            })
+        }
+    }
+    fn lease_current(state: &EpochState, ticket: RequestTicket) -> bool {
+        match (ticket.prefetch, ticket.prefetch_slot) {
+            (None, None) => true,
+            (Some(sequence), Some(slot @ 0..=1)) => {
+                state.next[slot as usize].is_some_and(|lease| lease.sequence == sequence)
+            }
+            _ => false,
+        }
     }
     fn prefetch_current(&self, ticket: RequestTicket) -> bool {
-        let state = self.state.lock().unwrap();
-        ticket.prefetch.is_none_or(|p| state.prefetch == p)
+        Self::lease_current(&self.state.lock().unwrap(), ticket)
     }
     fn current(&self, ticket: RequestTicket) -> bool {
         let state = self.state.lock().unwrap();
-        state.resolution == ticket.resolution && ticket.prefetch.is_none_or(|p| state.prefetch == p)
+        state.resolution == ticket.resolution && Self::lease_current(&state, ticket)
     }
 }
-fn begin_request(foreground: bool, expected_foreground: Option<u64>) -> Result<RequestTicket, String> {
-    REQUESTS.begin(foreground, expected_foreground)
+fn begin_request(
+    foreground: bool,
+    expected_foreground: Option<u64>,
+    slot: Option<u8>,
+    track_id: u64,
+) -> Result<RequestTicket, String> {
+    REQUESTS.begin(foreground, expected_foreground, slot, track_id)
 }
 pub fn prefetch_current(ticket: RequestTicket) -> bool {
     REQUESTS.prefetch_current(ticket)
@@ -65,7 +150,11 @@ pub fn request_current(ticket: RequestTicket) -> bool {
     REQUESTS.current(ticket)
 }
 fn ensure_current(ticket: RequestTicket) -> Result<(), String> {
-    if request_current(ticket) { Ok(()) } else { Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into()) }
+    if request_current(ticket) {
+        Ok(())
+    } else {
+        Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into())
+    }
 }
 
 /// Aviso opcional para comenzar next tras reservar/promover la plaza foreground.
@@ -78,15 +167,35 @@ pub struct ForegroundAdmission {
     track_id: u64,
     video_id: String,
     engine: &'static str,
+    max_sessions: usize,
+    prefetch_slots: usize,
 }
 impl ForegroundAdmission {
-    fn new(request_id: Option<&str>, ticket: RequestTicket, track_id: u64, video_id: &str, engine: &str) -> Option<Self> {
+    fn new(
+        request_id: Option<&str>,
+        ticket: RequestTicket,
+        track_id: u64,
+        video_id: &str,
+        engine: &str,
+    ) -> Option<Self> {
         let request_id = request_id.filter(|id| !id.is_empty())?;
-        if ticket.prefetch.is_some() || engine != "oficial" || !valid_video_id(video_id) { return None; }
-        Some(Self { request_id: request_id.into(), resolution: ticket.resolution, track_id, video_id: video_id.into(), engine: "oficial" })
+        if ticket.prefetch.is_some() || engine != "oficial" || !valid_video_id(video_id) {
+            return None;
+        }
+        Some(Self {
+            request_id: request_id.into(),
+            resolution: ticket.resolution,
+            track_id,
+            video_id: video_id.into(),
+            engine: "oficial",
+            max_sessions: crate::capture::limits().ok()?.max_sessions,
+            prefetch_slots: crate::capture::limits().ok()?.prefetch_slots,
+        })
     }
     fn matches(&self, ticket: RequestTicket, video_id: &str) -> bool {
-        ticket.prefetch.is_none() && ticket.resolution == self.resolution && video_id == self.video_id
+        ticket.prefetch.is_none()
+            && ticket.resolution == self.resolution
+            && video_id == self.video_id
     }
     pub fn emit(&self, app: &tauri::AppHandle, ticket: Option<RequestTicket>, video_id: &str) {
         if ticket.is_some_and(|t| self.matches(t, video_id) && request_current(t)) {
@@ -96,7 +205,10 @@ impl ForegroundAdmission {
     }
 }
 fn valid_video_id(video_id: &str) -> bool {
-    video_id.len() == 11 && video_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    video_id.len() == 11
+        && video_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 #[derive(Serialize)]
@@ -140,7 +252,7 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
-    resolve_with_priority(q, refresh, db, ytm, ytdlp, true, None, None).await
+    resolve_with_priority(q, refresh, db, ytm, ytdlp, true, None, None, None).await
 }
 
 pub async fn resolve_with_priority(
@@ -152,15 +264,22 @@ pub async fn resolve_with_priority(
     foreground: bool,
     expected_foreground: Option<u64>,
     request_id: Option<&str>,
+    next_slot: Option<u8>,
 ) -> Result<Playable, String> {
-    let ticket = begin_request(foreground, expected_foreground)?;
+    let ticket = begin_request(foreground, expected_foreground, next_slot, q.id)?;
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
         if !std::path::Path::new(&path).exists() {
             return Err("No se encuentra el archivo (¿se ha movido o borrado?)".into());
         }
-        return Ok(Playable { video_id: String::new(), url: path, title: q.title.clone(), channel: q.artist.clone(), local: true });
+        return Ok(Playable {
+            video_id: String::new(),
+            url: path,
+            title: q.title.clone(),
+            channel: q.artist.clone(),
+            local: true,
+        });
     }
 
     if let Some(path) = db.download_path(q.id) {
@@ -180,16 +299,50 @@ pub async fn resolve_with_priority(
 
     let mut gone = None;
     if let Some(src) = db.source(q.id) {
-        let admission = ForegroundAdmission::new(request_id, ticket, q.id, &src.video_id, extractor::stream_engine());
-        match extractor::stream_with_admission(ytdlp, &src.video_id, refresh, foreground, Some(ticket), admission).await {
-            Ok(info) => { ensure_current(ticket)?; return Ok(playable(src, info.url)); },
+        let admission = ForegroundAdmission::new(
+            request_id,
+            ticket,
+            q.id,
+            &src.video_id,
+            extractor::stream_engine(),
+        );
+        match extractor::stream_with_admission(
+            ytdlp,
+            &src.video_id,
+            refresh,
+            foreground,
+            Some(ticket),
+            admission,
+        )
+        .await
+        {
+            Ok(info) => {
+                ensure_current(ticket)?;
+                return Ok(playable(src, info.url));
+            }
             // El vídeo ya no existe: se busca otro.
             Err(e) if is_gone(&e) && !src.verified => {
                 ensure_current(ticket)?;
                 if !db.delete_automatic_source(q.id, &src.video_id) {
-                    let chosen = db.source(q.id).ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
-                    let admission = ForegroundAdmission::new(request_id, ticket, q.id, &chosen.video_id, extractor::stream_engine());
-                    let info = extractor::stream_with_admission(ytdlp, &chosen.video_id, false, foreground, Some(ticket), admission).await?;
+                    let chosen = db
+                        .source(q.id)
+                        .ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
+                    let admission = ForegroundAdmission::new(
+                        request_id,
+                        ticket,
+                        q.id,
+                        &chosen.video_id,
+                        extractor::stream_engine(),
+                    );
+                    let info = extractor::stream_with_admission(
+                        ytdlp,
+                        &chosen.video_id,
+                        false,
+                        foreground,
+                        Some(ticket),
+                        admission,
+                    )
+                    .await?;
                     ensure_current(ticket)?;
                     return Ok(playable(chosen, info.url));
                 }
@@ -210,13 +363,18 @@ pub async fn resolve_with_priority(
 
     #[cfg(debug_assertions)]
     for (c, s, _) in candidates.iter().take(3) {
-        eprintln!("[match] {} — {} → {} {:?} {:?}s ({s})", q.artist, q.title, c.title, c.artists, c.duration);
+        eprintln!(
+            "[match] {} — {} → {} {:?} {:?}s ({s})",
+            q.artist, q.title, c.title, c.artists, c.duration
+        );
     }
 
     let mut last_err = None;
     for (c, score, _) in candidates.into_iter().take(MAX_ATTEMPTS) {
         ensure_current(ticket)?;
-        match extractor::stream_with_priority(ytdlp, &c.video_id, refresh, foreground, Some(ticket)).await {
+        match extractor::stream_with_priority(ytdlp, &c.video_id, refresh, foreground, Some(ticket))
+            .await
+        {
             Ok(info) => {
                 ensure_current(ticket)?;
                 let src = Source {
@@ -228,8 +386,17 @@ pub async fn resolve_with_priority(
                     verified: false,
                 };
                 if !db.save_source(q.id, &src) {
-                    let chosen = db.source(q.id).ok_or("No se pudo guardar el vídeo de la canción")?;
-                    let info = extractor::stream_with_priority(ytdlp, &chosen.video_id, false, foreground, Some(ticket)).await?;
+                    let chosen = db
+                        .source(q.id)
+                        .ok_or("No se pudo guardar el vídeo de la canción")?;
+                    let info = extractor::stream_with_priority(
+                        ytdlp,
+                        &chosen.video_id,
+                        false,
+                        foreground,
+                        Some(ticket),
+                    )
+                    .await?;
                     ensure_current(ticket)?;
                     return Ok(playable(chosen, info.url));
                 }
@@ -292,7 +459,12 @@ pub async fn alternatives(
 
 /// Solo el vídeo de una canción, sin pedir la URL del audio (para descargar):
 /// el guardado o la mejor coincidencia, que queda guardada.
-pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtDlp) -> Result<String, String> {
+pub async fn find_video(
+    q: &TrackQuery,
+    db: &Db,
+    ytm: &YouTubeMusic,
+    ytdlp: &YtDlp,
+) -> Result<String, String> {
     if let Some(src) = db.source(q.id) {
         return Ok(src.video_id);
     }
@@ -312,16 +484,39 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
     if db.save_source(q.id, &src) {
         Ok(src.video_id)
     } else {
-        db.source(q.id).map(|chosen| chosen.video_id).ok_or_else(|| "No se pudo guardar el vídeo de la canción".into())
+        db.source(q.id)
+            .map(|chosen| chosen.video_id)
+            .ok_or_else(|| "No se pudo guardar el vídeo de la canción".into())
     }
 }
 
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
-pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, foreground: bool, request_id: Option<&str>) -> Result<Playable, String> {
-    let ticket = begin_request(foreground, None)?;
-    let admission = ForegroundAdmission::new(request_id, ticket, q.id, video_id, extractor::stream_engine());
-    let info = extractor::stream_with_admission(ytdlp, video_id, false, foreground, Some(ticket), admission).await?;
+pub async fn choose(
+    q: &TrackQuery,
+    video_id: &str,
+    db: &Db,
+    ytdlp: &YtDlp,
+    foreground: bool,
+    request_id: Option<&str>,
+) -> Result<Playable, String> {
+    let ticket = begin_request(foreground, None, None, q.id)?;
+    let admission = ForegroundAdmission::new(
+        request_id,
+        ticket,
+        q.id,
+        video_id,
+        extractor::stream_engine(),
+    );
+    let info = extractor::stream_with_admission(
+        ytdlp,
+        video_id,
+        false,
+        foreground,
+        Some(ticket),
+        admission,
+    )
+    .await?;
     ensure_current(ticket)?;
     if let Some(path) = db.download_path(q.id) {
         let _ = std::fs::remove_file(path);
@@ -344,7 +539,11 @@ pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp, fore
 /// Asocia el enlace elegido para otra canción sin preparar audio ni afectar la reproducción.
 /// Los metadatos son los del catálogo; la disponibilidad del vídeo se comprueba al reproducirlo.
 pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), String> {
-    if video_id.len() != 11 || !video_id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_') {
+    if video_id.len() != 11
+        || !video_id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
         return Err("El ID del vídeo de YouTube no es válido".into());
     }
     let src = Source {
@@ -367,7 +566,12 @@ pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), St
 
 /// Candidatos puntuados, de mejor a peor y sin repetidos. Con `everywhere` busca siempre
 /// también en YouTube normal; si no, solo cuando YouTube Music no da una coincidencia clara.
-async fn search(q: &TrackQuery, ytm: &YouTubeMusic, ytdlp: &YtDlp, everywhere: bool) -> Result<Vec<Scored>, String> {
+async fn search(
+    q: &TrackQuery,
+    ytm: &YouTubeMusic,
+    ytdlp: &YtDlp,
+    everywhere: bool,
+) -> Result<Vec<Scored>, String> {
     let text = q.search_text();
     let mut scored: Vec<Scored> = Vec::new();
     let mut errors = Vec::new();
@@ -406,100 +610,158 @@ pub(crate) fn is_gone(err: &str) -> bool {
     let err = err.to_lowercase();
     // Solo desaparición explícita. "webpage" contiene "age" y no significa que el vídeo
     // haya desaparecido; tampoco una restricción de edad o un fallo temporal de captura.
-    ["private video", "video is private", "video has been removed", "video has been deleted", "account has been terminated"]
-        .iter()
-        .any(|w| err.contains(w))
+    [
+        "private video",
+        "video is private",
+        "video has been removed",
+        "video has been deleted",
+        "account has been terminated",
+    ]
+    .iter()
+    .any(|w| err.contains(w))
 }
 
 fn playable(src: Source, url: String) -> Playable {
-    Playable { video_id: src.video_id, url, title: src.title, channel: src.channel, local: false }
+    Playable {
+        video_id: src.video_id,
+        url,
+        title: src.title,
+        channel: src.channel,
+        local: false,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn next_requests_are_latest_wins_without_cancelling_the_current_track() {
+    fn two_next_leases_survive_promotion_and_only_the_replaced_slot_is_revoked() {
         let requests = RequestEpochs::default();
-        let current = requests.begin(true, None).unwrap();
-        let slow_b = requests.begin(false, None).unwrap();
-        let c = requests.begin(false, None).unwrap();
-        assert!(!requests.current(slow_b), "B cannot replace C after a slow search");
-        assert!(requests.current(c));
-        assert!(requests.current(current), "prefetch cannot cancel foreground");
-        let new_b = requests.begin(false, None).unwrap();
+        let current = requests.begin(true, None, None, 1).unwrap();
+        let b = requests
+            .begin(false, Some(current.resolution), Some(0), 2)
+            .unwrap();
+        let c = requests
+            .begin(false, Some(current.resolution), Some(1), 3)
+            .unwrap();
+        assert!(requests.current(b) && requests.current(c) && requests.current(current));
+        let promotion = requests.begin(true, None, None, 2).unwrap();
         assert!(!requests.current(c));
-        assert!(!requests.current(slow_b), "B→C→B needs a new admission");
-        assert!(requests.current(new_b));
-        let promotion = requests.begin(true, None).unwrap();
-        assert!(!requests.current(new_b), "old pending results are obsolete");
-        assert!(requests.prefetch_current(new_b), "already-admitted next survives until promotion");
-        assert!(requests.current(promotion));
-        let cancellation = requests.cancel_prefetch();
-        assert!(!requests.prefetch_current(new_b));
-        let later = requests.begin(false, None).unwrap();
-        assert!(later.prefetch.unwrap() > cancellation, "queued cancel cannot affect a newer next lease");
+        assert!(
+            requests.prefetch_current(c),
+            "admitted C remains alive across B promotion"
+        );
+        let resumed_c = requests
+            .begin(false, Some(promotion.resolution), Some(1), 3)
+            .unwrap();
+        assert_eq!(resumed_c.prefetch, c.prefetch);
+        let d = requests
+            .begin(false, Some(promotion.resolution), Some(0), 4)
+            .unwrap();
+        assert!(!requests.prefetch_current(b));
+        assert!(requests.current(resumed_c) && requests.current(d));
+        let fence = requests.cancel_prefetch(Some(0)).unwrap();
+        assert!(!requests.prefetch_current(d));
+        assert!(requests.current(resumed_c));
+        let new_b = requests
+            .begin(false, Some(promotion.resolution), Some(0), 2)
+            .unwrap();
+        assert!(new_b.prefetch.unwrap() > fence);
+        requests.cancel_prefetch(None).unwrap();
+        assert!(!requests.prefetch_current(new_b) && !requests.prefetch_current(resumed_c));
         assert!(requests.current(promotion));
     }
     #[test]
-    fn a_late_foreground_signal_cannot_replace_the_new_tracks_prefetch() {
+    fn a_late_foreground_signal_cannot_replace_either_new_tracks_prefetch() {
         let requests = RequestEpochs::default();
-        let a = requests.begin(true, None).unwrap();
-        let b = requests.begin(false, Some(a.resolution)).unwrap();
-        let c = requests.begin(true, None).unwrap();
-        let d = requests.begin(false, Some(c.resolution)).unwrap();
-        assert!(requests.begin(false, Some(a.resolution)).is_err());
-        assert!(requests.current(c));
-        assert!(requests.current(d), "the stale signal must not increment next's sequence");
-        assert!(!requests.current(b));
-        let cancellation = requests.begin_resolution(true);
-        assert!(requests.begin(false, Some(c.resolution)).is_err());
-        assert!(requests.prefetch_current(d), "a rejected request cannot cancel an admitted next lease");
-        let next = requests.begin(false, Some(cancellation)).unwrap();
-        assert_eq!(next.prefetch, d.prefetch.map(|n| n + 1));
+        let a = requests.begin(true, None, None, 1).unwrap();
+        let b = requests.begin(true, None, None, 2).unwrap();
+        let c = requests
+            .begin(false, Some(b.resolution), Some(0), 3)
+            .unwrap();
+        let d = requests
+            .begin(false, Some(b.resolution), Some(1), 4)
+            .unwrap();
+        assert!(
+            requests
+                .begin(false, Some(a.resolution), Some(0), 5)
+                .is_err()
+        );
+        assert!(requests.current(c) && requests.current(d));
+        assert!(
+            requests
+                .begin(false, Some(b.resolution), Some(2), 6)
+                .is_err()
+        );
+        assert!(requests.cancel_prefetch(Some(2)).is_err());
+        assert!(requests.current(c) && requests.current(d));
     }
     #[test]
     fn concurrent_foreground_admission_cannot_attach_early_next_to_a_different_track() {
         use std::sync::{Arc, Barrier};
         for _ in 0..32 {
             let requests = Arc::new(RequestEpochs::default());
-            let a = requests.begin(true, None).unwrap();
+            let a = requests.begin(true, None, None, 1).unwrap();
             let barrier = Arc::new(Barrier::new(2));
             let other_requests = Arc::clone(&requests);
             let other_barrier = Arc::clone(&barrier);
             let background = std::thread::spawn(move || {
                 other_barrier.wait();
-                other_requests.begin(false, Some(a.resolution))
+                other_requests.begin(false, Some(a.resolution), Some(1), 3)
             });
             barrier.wait();
-            let current = requests.begin(true, None).unwrap();
+            let current = requests.begin(true, None, None, 2).unwrap();
             let previous_prefetch = background.join().unwrap();
             if let Ok(ticket) = previous_prefetch.as_ref() {
                 assert_eq!(ticket.resolution, a.resolution);
                 assert!(!requests.current(*ticket));
             }
-            let next = requests.begin(false, Some(current.resolution)).unwrap();
-            assert_eq!(next.prefetch, Some(if previous_prefetch.is_ok() { 2 } else { 1 }));
-            assert!(requests.current(next));
-            assert!(requests.current(current));
+            let next = requests
+                .begin(false, Some(current.resolution), Some(1), 3)
+                .unwrap();
+            assert_eq!(next.prefetch, Some(1));
+            assert!(requests.current(next) && requests.current(current));
         }
     }
     #[test]
     fn early_prefetch_notice_requires_an_official_known_foreground_and_matches_its_ticket() {
-        let foreground = RequestTicket { resolution: 7, prefetch: None };
-        let background = RequestTicket { resolution: 7, prefetch: Some(2) };
+        let foreground = RequestTicket {
+            resolution: 7,
+            prefetch: None,
+            prefetch_slot: None,
+        };
+        let background = RequestTicket {
+            resolution: 7,
+            prefetch: Some(2),
+            prefetch_slot: Some(0),
+        };
         let video = "jNY_wLukVW0";
         for engine in ["propio", "youtubei", "ytdlp"] {
-            assert!(ForegroundAdmission::new(Some("play-7"), foreground, 77, video, engine).is_none());
+            assert!(
+                ForegroundAdmission::new(Some("play-7"), foreground, 77, video, engine).is_none()
+            );
         }
         assert!(ForegroundAdmission::new(None, foreground, 77, video, "oficial").is_none());
         assert!(ForegroundAdmission::new(Some(""), foreground, 77, video, "oficial").is_none());
-        assert!(ForegroundAdmission::new(Some("play-7"), background, 77, video, "oficial").is_none());
-        assert!(ForegroundAdmission::new(Some("play-7"), foreground, 77, "not-an-id", "oficial").is_none());
-        let notice = ForegroundAdmission::new(Some("play-7"), foreground, 77, video, "oficial").unwrap();
+        assert!(
+            ForegroundAdmission::new(Some("play-7"), background, 77, video, "oficial").is_none()
+        );
+        assert!(
+            ForegroundAdmission::new(Some("play-7"), foreground, 77, "not-an-id", "oficial")
+                .is_none()
+        );
+        let notice =
+            ForegroundAdmission::new(Some("play-7"), foreground, 77, video, "oficial").unwrap();
         assert!(notice.matches(foreground, video));
         assert!(!notice.matches(background, video));
-        assert!(!notice.matches(RequestTicket { resolution: 8, prefetch: None }, video));
+        assert!(!notice.matches(
+            RequestTicket {
+                resolution: 8,
+                prefetch: None,
+                prefetch_slot: None
+            },
+            video
+        ));
         assert!(!notice.matches(foreground, "abcdefghijk"));
         let payload = serde_json::to_value(notice).unwrap();
         assert_eq!(payload["requestId"], "play-7");
@@ -513,15 +775,31 @@ mod tests {
     #[test]
     fn remembering_a_manual_video_is_independent_of_playback_resolution() {
         let db = Db::open(std::path::Path::new(":memory:")).unwrap();
-        let q = TrackQuery { id: 77, title: "Airbag".into(), artist: "Radiohead".into(), album: "OK Computer".into(), duration: 288 };
+        let q = TrackQuery {
+            id: 77,
+            title: "Airbag".into(),
+            artist: "Radiohead".into(),
+            album: "OK Computer".into(),
+            duration: 288,
+        };
         let playing = begin_resolution(true);
         remember_source(&q, "jNY_wLukVW0", &db).unwrap();
-        assert!(resolution_current(playing), "asociar otra canción no cancela la que suena");
+        assert!(
+            resolution_current(playing),
+            "asociar otra canción no cancela la que suena"
+        );
         begin_resolution(true);
         let remembered = db.source(q.id).unwrap();
         assert!(remembered.verified);
         assert_eq!(remembered.video_id, "jNY_wLukVW0");
-        assert_eq!((remembered.title.as_str(), remembered.channel.as_str(), remembered.duration), ("Airbag", "Radiohead", Some(288)));
+        assert_eq!(
+            (
+                remembered.title.as_str(),
+                remembered.channel.as_str(),
+                remembered.duration
+            ),
+            ("Airbag", "Radiohead", Some(288))
+        );
         for invalid in ["", "jNY_wLukVW0?", "bad/id12345", "á234567890"] {
             assert!(remember_source(&q, invalid, &db).is_err());
         }
@@ -541,8 +819,12 @@ mod tests {
         ] {
             assert!(!is_gone(error), "{error}");
         }
-        assert!(is_gone("ERROR: Video unavailable. This video has been removed"));
-        assert!(is_gone("ERROR: Private video. Sign in if you've been granted access"));
+        assert!(is_gone(
+            "ERROR: Video unavailable. This video has been removed"
+        ));
+        assert!(is_gone(
+            "ERROR: Private video. Sign in if you've been granted access"
+        ));
     }
 
     /// Comprueba la elección de vídeo con discos reales (usa la red):
@@ -554,7 +836,13 @@ mod tests {
         let ytm = YouTubeMusic::new();
         let mut misses = 0;
         let mut total = 0;
-        for query in ["radiohead ok computer", "berri txarrak infrasoinuak", "extremoduro agila", "rosalia el mal querer", "the beatles abbey road"] {
+        for query in [
+            "radiohead ok computer",
+            "berri txarrak infrasoinuak",
+            "extremoduro agila",
+            "rosalia el mal querer",
+            "the beatles abbey road",
+        ] {
             let found = deezer.search(query).await.unwrap();
             let album = deezer.album(found.albums[0].id).await.unwrap();
             println!("\n== {} — {}", album.artist.name, album.title);
@@ -587,7 +875,11 @@ mod tests {
                     ),
                     other => {
                         misses += 1;
-                        println!("  {:<38} SIN COINCIDENCIA ({:?})", q.title, other.map(|(c, s)| (&c.title, s)));
+                        println!(
+                            "  {:<38} SIN COINCIDENCIA ({:?})",
+                            q.title,
+                            other.map(|(c, s)| (&c.title, s))
+                        );
                     }
                 }
             }
@@ -609,7 +901,11 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(std::path::PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(
+            std::path::PathBuf::from(env!("LOCALAPPDATA"))
+                .join("dev.musify.desktop")
+                .join("bin"),
+        );
         let q = TrackQuery {
             id: 138539971,
             title: "Airbag".into(),
@@ -621,7 +917,12 @@ mod resolve_tests {
 
         let t = std::time::Instant::now();
         let first = resolve(&q, false, &db, &ytm, &ytdlp).await.unwrap();
-        println!("primera vez: {:?} → {} ({})", t.elapsed(), first.title, first.video_id);
+        println!(
+            "primera vez: {:?} → {} ({})",
+            t.elapsed(),
+            first.title,
+            first.video_id
+        );
         assert!(first.url.contains("googlevideo.com"));
         assert!(db.source(q.id).is_some(), "se guarda la elección");
 
@@ -641,7 +942,11 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(std::path::PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(
+            std::path::PathBuf::from(env!("LOCALAPPDATA"))
+                .join("dev.musify.desktop")
+                .join("bin"),
+        );
         let q = TrackQuery {
             id: 999_001,
             title: "Zuri".into(),
@@ -664,17 +969,29 @@ mod resolve_tests {
                 a.origin
             );
         }
-        assert_eq!(list.iter().filter(|a| a.current).count(), 1, "una marcada como en uso");
-        assert!(list.iter().any(|a| a.origin == "youtube"), "incluye YouTube normal");
+        assert_eq!(
+            list.iter().filter(|a| a.current).count(),
+            1,
+            "una marcada como en uso"
+        );
+        assert!(
+            list.iter().any(|a| a.origin == "youtube"),
+            "incluye YouTube normal"
+        );
 
         // Elegir a mano un directo: queda guardado como verificado y es lo que suena después.
         let other = list.iter().find(|a| !a.current).unwrap();
-        let chosen = choose(&q, &other.video_id, &db, &ytdlp, true, None).await.unwrap();
+        let chosen = choose(&q, &other.video_id, &db, &ytdlp, true, None)
+            .await
+            .unwrap();
         assert_eq!(chosen.video_id, other.video_id);
         let src = db.source(q.id).unwrap();
         assert!(src.verified);
         let again = resolve(&q, false, &db, &ytm, &ytdlp).await.unwrap();
-        assert_eq!(again.video_id, other.video_id, "se recuerda la elección manual");
+        assert_eq!(
+            again.video_id, other.video_id,
+            "se recuerda la elección manual"
+        );
         println!("elegido a mano: {} ({})", chosen.title, chosen.channel);
         db.delete_source(q.id);
     }

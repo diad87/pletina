@@ -207,7 +207,7 @@ test('WebM remux preserves initialization, exact coded payload and time without 
 })
 
 function progressiveSetup() {
-  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true })
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 0 })
   const source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
   tracker.append(buffer, fixture().bytes)
   const snapshot = position => ({ source, position, duration: 0.06, seeking: false, paused: false, ended: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: 0.06 }], sourceEnded: false })
@@ -271,7 +271,7 @@ test('coverage never stretches a partially observed packet across a 0.5ms epoch 
 
 test('a missing 20ms packet and a quantized 1ms coded gap remain distinct coverage islands', () => {
   for (const times of [[0, 40], [0, 21, 41]]) {
-    const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource()
+    const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 0 }), source = tracker.createSource()
     const f = fixture({ times }), end = f.duration
     tracker.append(tracker.createBuffer(source, 'audio/webm; codecs="opus"'), f.bytes)
     tracker.beginEpoch(2, 0) // Byte inventory may contain islands; coverage may not hide them.
@@ -346,7 +346,7 @@ test('timestamp comparison accepts roundoff at the real failing durations but re
 
 test('real decimal EOF regressions publish the final Opus packet in both modes without normalizing its timestamp', () => {
   for (const duration of [212.981, 223.481]) for (const experimental of [false, true]) for (const short of [false, true]) {
-    const core = load(), tracker = new core.ProgressiveTracker({ epoch: 1, experimental }), source = tracker.createSource()
+    const core = load(), tracker = new core.ProgressiveTracker({ epoch: 1, experimental, holdbackSeconds: 0 }), source = tracker.createSource()
     const f = roundedEndFixture(duration), clock = duration - (short ? 1e-12 : 0)
     tracker.append(tracker.createBuffer(source, 'audio/webm; codecs="opus"'), f.bytes)
     const parsed = tracker.inventory(source, true)
@@ -364,7 +364,7 @@ test('real decimal EOF regressions publish the final Opus packet in both modes w
       const units = tracker.pull(source, terminal)
       assert.equal(units.reduce((count, unit) => count + unit.frames, 0), f.frames)
       assert.equal(units.at(-1).rangeEnd, parsed.codedEnd, 'only comparison changes; stored PTS and byte payload stay intact')
-      assert.equal(tracker.finish(source, terminal).complete, !experimental, 'experimental1ms initial coded gap is intentionally still incomplete')
+      assert.equal(tracker.finish(source, terminal).complete, true, 'complete original inventory certifies only intraframe quantization after EOF')
       if (!experimental) assert.throws(() => tracker.pull(source, { ...terminal, position: duration - 1e-12 }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
     }
   }
@@ -372,7 +372,7 @@ test('real decimal EOF regressions publish the final Opus packet in both modes w
 
 test('AAC native microsecond terminal clock releases its exact last packet only after complete final certification', () => {
   for (const experimental of [false, true]) {
-    const { ProgressiveTracker, timeAtOrAfter } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental }), source = tracker.createSource(), f = nativeFinalAacFixture()
+    const { ProgressiveTracker, timeAtOrAfter } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental, holdbackSeconds: 0 }), source = tracker.createSource(), f = nativeFinalAacFixture()
     const buffer = tracker.createBuffer(source, f.mime)
     buffer.native = {}; source.native = { readyState: 'ended' }
     tracker.append(buffer, f.bytes); source.successfulEndOfStream = true
@@ -444,7 +444,7 @@ test('a late site ad marker is a measured counterexample to unconditional progre
   const { ProgressiveTracker, SessionTracker } = load()
   const delayedMarker = 1.12, trueAdStart = 1, duration = 1.3
   const bytes = fixture({ times: Array.from({ length: 65 }, (_, i) => i * 20) }).bytes
-  const tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  const tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 0 }), source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
   tracker.append(buffer, bytes)
   const safe = new ProgressiveTracker({ epoch: 1 }), safeSource = safe.createSource(), safeBuffer = safe.createBuffer(safeSource, 'audio/webm; codecs="opus"')
   safe.append(safeBuffer, bytes)
@@ -465,6 +465,56 @@ test('a late site ad marker is a measured counterexample to unconditional progre
   assert.equal(safePublished.length, 0, 'normal mode must not contaminate the native ledger before its complete-source verdict')
   assert.throws(() => whole.seal(wholeSource), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
   t.diagnostic(`UNSAFE experimental progressive attribution: actual ad starts ${trueAdStart}s, site marker arrives ${delayedMarker}s, ${Math.round(contaminated * 1000)}ms of referenced advertisement already published at 1x. Complete-source gate publishes zero.`)
+})
+
+test('experimental holdback keeps its newest1.5s quarantined and only certified EOF releases the tail', () => {
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource()
+  const f = fixture({ times: Array.from({ length: 100 }, (_, i) => i * 20) }), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  tracker.append(buffer, f.bytes)
+  const snapshot = position => ({ source, position, duration: 2, playbackRate: 1, seeking: false, readyState: 4, updating: false, sourceEnded: false, audioRanges: [{ start: 0, end: 2 }] })
+  for (let ms = 0; ms <= 1500; ms += 100) {
+    tracker.observe(source, content, { position: ms / 1000, now: ms, duration: 2 })
+    assert.equal(tracker.pull(source, snapshot(ms / 1000)).length, 0)
+  }
+  tracker.observe(source, content, { position: 1.52, now: 1520, duration: 2 })
+  const first = tracker.pull(source, snapshot(1.52))
+  assert.equal(first.length, 1); assert.equal(first[0].rangeEnd, 0.02)
+  assert.equal(first[0].firstFrame, 0); assert.equal(first[0].endFrame, 1)
+  for (let ms = 1600; ms <= 2000; ms += 100) tracker.observe(source, content, { position: ms / 1000, now: ms, duration: 2 })
+  const before = tracker.pull(source, snapshot(2))
+  assert.ok(before.at(-1).rangeEnd <= 0.5)
+  assert.throws(() => tracker.finish(source, snapshot(2)), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.equal(source.verifiedFinalEpoch, undefined)
+  const terminal = { ...snapshot(2), sourceEnded: true }
+  const pendingProof = tracker.finish(source, terminal)
+  assert.equal(pendingProof.complete, false, 'an EOF certificate cannot credit un-emitted packets')
+  assert.equal(pendingProof.certificate.frameCount, 100)
+  const tail = tracker.pull(source, terminal)
+  assert.equal(tail.at(-1).rangeEnd, 2)
+  assert.equal(tail.at(-1).endFrame, 100)
+  assert.equal([...first, ...before, ...tail].reduce((sum, u) => sum + u.frames, 0), 100)
+  assert.equal(tracker.finish(source, terminal).complete, true)
+  for (const holdbackSeconds of [-1, NaN, Infinity, 30.01]) assert.throws(() => new ProgressiveTracker({ epoch: 1, holdbackSeconds }), codeIs('CAPTURE_PROTOCOL_MISMATCH'))
+})
+
+test('holdback drops retained bytes on ad or unknown and explicitly fails to guarantee labels delayed beyond its window', t => {
+  for (const delayedBy of [0.12, 1.7]) for (const contradiction of [ad, { state: 'unknown', sourceBound: true, signals: [] }]) {
+    const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true }), source = tracker.createSource()
+    const duration = 4, trueAdStart = 2, marker = trueAdStart + delayedBy, buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+    tracker.append(buffer, fixture({ times: Array.from({ length: 200 }, (_, i) => i * 20) }).bytes)
+    const published = []
+    for (let ms = 0; ms <= duration * 1000; ms += 20) {
+      const position = ms / 1000
+      tracker.observe(source, position < marker ? content : contradiction, { position, now: ms, duration })
+      if (!source.error) published.push(...tracker.pull(source, { source, position, duration, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: duration }] }))
+    }
+    assert.equal(tracker.bytes, 0); assert.equal(buffer.chunks.length, 0); assert.equal(buffer.prefix, null); assert.equal(buffer.resetInit, null)
+    assert.equal(source.completeCertificate, undefined)
+    assert.throws(() => tracker.pull(source, { source }), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
+    const contaminated = published.reduce((seconds, unit) => seconds + Math.max(0, unit.rangeEnd - Math.max(unit.rangeStart, trueAdStart)), 0)
+    if (delayedBy < tracker.holdbackSeconds) assert.equal(contaminated, 0, 'the tested short delay is discarded before publication')
+    else { assert.ok(contaminated > 0); t.diagnostic(`FINITE HOLDBACK LIMIT: ${delayedBy}s label delay exceeds1.5s retention; ${Math.round(contaminated * 1000)}ms reference-ad audio was already published. This experiment cannot be promoted as semantic zero-ad proof.`) }
+  }
 })
 
 test('normal API3 quarantines until full clean history and native EOF pass before publication', () => {
@@ -520,17 +570,23 @@ test('normal EOF certificate groups codec quantization inside units while every 
   assert.throws(() => tracker.pull(source, { ...snapshot, position: f.duration - 0.0008 }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
 })
 
-test('the same quantized source remains incomplete in experimental progressive mode', () => {
+test('experimental codec quantization stays a hole until original whole-source EOF certifies every emitted packet', () => {
   const { tracker, source, f, snapshot, observe } = normalQuantizedSetup()
   tracker.experimental = true
+  tracker.holdbackSeconds = 0
   observe(0); observe(f.duration)
   const units = tracker.pull(source, snapshot)
   assert.equal(units.length, 2)
   assert.equal(units[0].rangeEnd, 0.02)
   assert.equal(units[1].rangeStart, 0.021)
-  assert.equal(tracker.finish(source, snapshot).complete, false)
-  assert.equal(source.completeCertificate, undefined)
-  assert.equal(source.sealed, false)
+  assert.equal(tracker.coverage.length, 2, 'progressive units cannot hide the1ms boundary')
+  const proof = tracker.finish(source, snapshot)
+  assert.equal(proof.complete, true)
+  assert.equal(proof.certificate.kind, 'complete-source-v1')
+  assert.equal(proof.certificate.frameCount, 3)
+  assert.equal(proof.certificate.quantum, 0.001)
+  assert.deepEqual(Array.from(units, u => [u.firstFrame, u.endFrame]), [[0, 1], [1, 3]])
+  assert.equal(source.sealed, true)
 })
 
 test('normal codec certification never repairs missing packets, partial observation, identity mixing or epoch holes', () => {
@@ -569,16 +625,18 @@ test('normal publication refuses indivisible oversized chains without crediting 
   assert.equal(tracker.finish(source, snapshot).complete, true)
 })
 
-test('a normal complete-source certificate cannot be reused after inventory, source-buffer, settings or epoch changes', () => {
-  for (const change of ['version', 'native', 'settings', 'epoch', 'append']) {
+test('a complete-source certificate cannot be reused after inventory, native-source, buffer, settings or epoch changes', () => {
+  for (const experimental of [false, true]) for (const change of ['version', 'native', 'native-source', 'settings', 'epoch', 'append']) {
     const { tracker, source, buffer, f, snapshot, observe } = normalQuantizedSetup()
+    tracker.experimental = experimental
     observe(0); observe(f.duration); tracker.finish(source, snapshot)
     if (change === 'version') buffer.version++
     else if (change === 'native') buffer.native = {}
+    else if (change === 'native-source') source.native = {}
     else if (change === 'settings') buffer.timelineSettings = { ...buffer.timelineSettings, timestampOffset: 1 }
     else if (change === 'epoch') tracker.beginEpoch(2, 0)
     else tracker.append(buffer, Uint8Array.of(0))
-    if (change === 'epoch') assert.equal(tracker.pull(source, snapshot).length, 0)
+    if (change === 'epoch' && !experimental) assert.equal(tracker.pull(source, snapshot).length, 0)
     else assert.throws(() => tracker.pull(source, snapshot), codeIs(change === 'append' ? 'CAPTURE_AMBIGUOUS_SOURCE' : 'CAPTURE_PARTIAL_PRESENTATION'), change)
     assert.equal(source.progress.emitted.size, 0, change)
     assert.equal(tracker.coverage.length, 0, change)
@@ -1056,103 +1114,119 @@ test('ad diagnostics distinguish hidden persistent nodes from active classes wit
   assert.equal(visible.evidence.adClassShowing, true)
 })
 
-test('only a visible enabled official skip button is clicked during a confirmed ad', () => {
-  const { context } = load()
-  const media = { paused: false, ended: false, readyState: 4 }
-  let marker = true, clicks = 0, visible = true
-  const button = { disabled: false, getClientRects: () => visible ? [{}] : [], getAttribute: () => null, click() { clicks++ } }
-  const p = {
-    contains: (element) => element === media,
-    getVideoData: () => ({ video_id: 'target', title: 'Song' }),
-    classList: { contains: () => marker }, querySelector: () => null,
-    querySelectorAll: (selector) => selector === 'audio,video' ? [media] : [button],
-  }
-  const document = { querySelector: (selector) => selector === '#movie_player' ? p : { textContent: 'Song' } }
-  const adapter = context.__musifyCaptureYouTube.create({ document, location: { search: '?v=target' }, target: 'target' })
-  visible = false
-  assert.equal(adapter.skipAd(media), false)
-  visible = true; button.disabled = true
-  assert.equal(adapter.skipAd(media), false)
-  button.disabled = false; marker = false
-  assert.equal(adapter.skipAd(media), false)
-  marker = true
-  assert.equal(adapter.skipAd(media), true)
-  assert.equal(clicks, 1)
-  assert.equal(adapter.skipAd(media), false, 'do not repeatedly click a skip action still processing')
-  assert.equal(adapter.skipSummary(), null, 'optional diagnostics stay disabled for unchanged adapter clients')
-})
-
-function skipDiagnosticSetup({ behavior = 'no-op', found = true } = {}) {
-  let now = 0, marker = true, scans = 0
-  const failure = new TypeError('native click failure')
+function skipDiagnosticSetup({ behavior = 'no-op', found = true, diagnostics = true } = {}) {
+  let now = 0, marker = true, scans = 0, covered = false
+  const failure = new TypeError('native request failure'), requests = [], binding = { generation: 7, epoch: 1, source: 1 }
   const media = { paused: false, ended: false, seeking: false, readyState: 4, currentTime: 5, duration: 30 }
   class Button extends EventTarget {
     constructor() {
-      super(); this.calls = 0; this.added = 0; this.removed = 0; this.disabled = false; this.hidden = false; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir anuncio'; this.rects = [{}]
+      super(); this.calls = 0; this.added = 0; this.removed = 0; this.disabled = false; this.hidden = false; this.isConnected = true; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir anuncio'; this.rects = [{}]; this.rect = { left: 20, top: 20, width: 100, height: 30 }
     }
     matches(selector) { return selector === '.ytp-ad-skip-button-modern' }
     getAttribute(name) { assert.ok(['aria-disabled', 'aria-label', 'role'].includes(name)); return name === 'role' ? 'button' : name === 'aria-label' ? this.textContent : null }
     getClientRects() { return this.rects }
-    addEventListener(type, fn, options) { if (options?.capture && options?.passive) this.added++; super.addEventListener(type, fn, options) }
+    getBoundingClientRect() { return this.rect }
+    addEventListener(type, fn, options) { if (options?.capture && options?.passive) { this.added++; this.listener = fn }; super.addEventListener(type, fn, options) }
     removeEventListener(type, fn, capture) { this.removed++; super.removeEventListener(type, fn, capture) }
-    click() { this.calls++; if (behavior === 'throw') throw failure; if (behavior !== 'no-op') this.dispatchEvent(new Event('click', { cancelable: true })) }
+    click() { this.calls++; assert.fail('capture must never synthesize button.click') }
     get href() { assert.fail('diagnostic must not read href') }
     get src() { assert.fail('diagnostic must not read src') }
     get outerHTML() { assert.fail('diagnostic must not read markup') }
   }
   const button = new Button(), others = Array.from({ length: 12 }, () => new Button())
   if (behavior === 'cancel') button.addEventListener('click', event => event.preventDefault())
-  const p = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => marker }, querySelector: () => null,
+  const p = { contains: e => e === media || e === button, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => marker }, querySelector: () => null,
     querySelectorAll(selector) { if (selector === 'audio,video') return [media]; if (selector === 'button, [role="button"]') { scans++; return others }; return found ? [button] : [] } }
-  const document = { querySelector: s => s === '#movie_player' ? p : { textContent: 'Song' }, defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
+  const document = { querySelector: s => s === '#movie_player' ? p : { textContent: 'Song' }, elementFromPoint: () => covered ? {} : button, defaultView: { innerWidth: 640, innerHeight: 480, getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
   const { context } = load({ performance: { now: () => now }, Date: { now: () => now } })
-  const adapter = context.__musifyCaptureYouTube.create({ document, location: { search: '?v=target' }, target: 'target', skipDiagnostics: true })
-  return { adapter, media, button, others, failure, time: value => { now = value }, marker: value => { marker = value }, scans: () => scans,
-    observe(state = marker ? 'ad' : 'content', source = 1) { adapter.observeSkip({ state, source, now, position: media.currentTime, paused: media.paused, seeking: media.seeking, readyState: media.readyState }) } }
+  const adapter = context.__musifyCaptureYouTube.create({ document, location: { search: '?v=target' }, target: 'target', skipDiagnostics: diagnostics,
+    skipContext: () => binding, requestSkip: request => { if (behavior === 'throw') throw failure; requests.push(request) } })
+  return { adapter, media, button, others, failure, requests, binding, time: value => { now = value }, marker: value => { marker = value }, covered: value => { covered = value }, scans: () => scans,
+    finish(ok = true) { if (behavior === 'cancel') button.dispatchEvent(new Event('click', { cancelable: true })); return adapter.completeSkip({ requestId: requests.at(-1).requestId, ok, reason: ok ? 'native-complete' : 'native-failed' }) },
+    observe(state = marker ? 'ad' : 'content', source = 1) { adapter.observeSkip({ state, source, epoch: binding.epoch, now, position: media.currentTime, paused: media.paused, seeking: media.seeking, readyState: media.readyState }) } }
 }
 
-test('skip diagnostics distinguish a returned click without effect from an observed later transition', () => {
-  const f = skipDiagnosticSetup()
-  f.observe(); assert.equal(f.adapter.skipAd(f.media), true)
-  let summary = f.adapter.skipSummary()
-  assert.equal(summary.result, 'click-returned'); assert.equal(summary.tries, 1)
-  assert.equal(summary.last.eventSeen, false); assert.equal(summary.last.isTrusted, null)
-  assert.deepEqual(Array.from(summary.matches), [0, 0, 1])
-  f.time(100); f.observe()
-  assert.equal(f.adapter.skipAd(f.media), false)
-  summary = f.adapter.skipSummary()
-  assert.equal(summary.result, 'cooldown'); assert.equal(summary.last.after.state, 'ad'); assert.equal(summary.last.after.delayMs, 100)
-  assert.equal(f.button.calls, 1, 'diagnostics do not add clicks or shorten the original cooldown')
-  f.time(1000); assert.equal(f.adapter.skipAd(f.media), true)
-  f.time(1200); f.marker(false); f.observe('content', 2)
-  summary = f.adapter.skipSummary()
-  assert.equal(summary.tries, 2); assert.equal(summary.transition.from, 'ad'); assert.equal(summary.transition.to, 'content')
-  assert.equal(summary.transition.sinceTryMs, 200)
-  assert.equal(summary.last.after.state, 'content')
-  assert.equal('success' in summary, false, 'a subsequent transition is not proof that the click caused it')
-  summary.tries = 999
-  assert.equal(f.adapter.skipSummary().tries, 2, 'readers cannot mutate retained diagnostics')
+test('only a visible enabled hit-tested official skip button during an ad requests a native click', () => {
+  const f = skipDiagnosticSetup({ diagnostics: false })
+  f.button.rects = []; assert.equal(f.adapter.skipAd(f.media), false)
+  f.button.rects = [{}]; f.button.disabled = true; assert.equal(f.adapter.skipAd(f.media), false)
+  f.button.disabled = false; f.marker(false); assert.equal(f.adapter.skipAd(f.media), false)
+  f.marker(true); f.covered(true); assert.equal(f.adapter.skipAd(f.media), false)
+  f.covered(false); assert.equal(f.adapter.skipAd(f.media), true)
+  assert.equal(f.requests.length, 1); assert.equal(f.button.calls, 0)
+  const request = f.requests[0], proof = f.adapter.validateSkip(request.requestId)
+  assert.equal(proof.valid, true); assert.equal(proof.x, 70); assert.equal(proof.y, 35)
+  assert.equal(proof.buttonToken, request.buttonToken)
+  assert.equal(f.adapter.skipAd(f.media), false, 'one native request in flight')
+  assert.equal(f.adapter.skipSummary(), null)
+  assert.equal(f.finish(), true); assert.equal(f.adapter.validateSkip(request.requestId).valid, false)
+  assert.equal(f.finish(), false, 'a completed native proposal is never recycled')
 })
 
-test('skip diagnostics preserve canceled and throwing click semantics and remove temporary listeners', () => {
-  for (const behavior of ['cancel', 'throw']) {
-    const f = skipDiagnosticSetup({ behavior })
-    f.observe()
-    if (behavior === 'throw') assert.throws(() => f.adapter.skipAd(f.media), error => error === f.failure)
-    else assert.equal(f.adapter.skipAd(f.media), true, 'a canceled event does not change the original boolean return')
-    const summary = f.adapter.skipSummary()
-    assert.equal(f.button.calls, 1); assert.equal(f.button.added, 1); assert.equal(f.button.removed, 1)
-    assert.equal(summary.threw, behavior === 'throw' ? 1 : 0)
-    assert.equal(summary.returned, behavior === 'throw' ? 0 : 1)
-    assert.equal(summary.clickEvents, behavior === 'cancel' ? 1 : 0)
-    assert.equal(summary.canceled, behavior === 'cancel' ? 1 : 0)
-    if (behavior === 'cancel') { assert.equal(summary.last.defaultPrevented, true); assert.equal(summary.last.isTrusted, false) }
-    else { assert.equal(summary.result, 'click-threw'); assert.equal(summary.last.errorName, 'TypeError') }
-    f.time(100); assert.equal(f.adapter.skipAd(f.media), false, 'failed clicks preserve the preexisting cooldown behavior')
+test('native skip revalidation rejects changed binding, moved, hidden, covered, expired and non-ad controls', () => {
+  for (const scenario of ['generation', 'epoch', 'source', 'moved', 'hidden', 'disabled', 'disconnected', 'covered', 'expired', 'not-ad']) {
+    const f = skipDiagnosticSetup(); f.observe(); f.adapter.skipAd(f.media)
+    if (['generation', 'epoch', 'source'].includes(scenario)) f.binding[scenario]++
+    if (scenario === 'moved') f.button.rect.left++
+    if (scenario === 'hidden') f.button.hidden = true
+    if (scenario === 'disabled') f.button.disabled = true
+    if (scenario === 'disconnected') f.button.isConnected = false
+    if (scenario === 'covered') f.covered(true)
+    if (scenario === 'expired') f.time(2001)
+    if (scenario === 'not-ad') f.marker(false)
+    assert.equal(f.adapter.validateSkip(f.requests[0].requestId).valid, false, scenario)
+    assert.equal(f.button.calls, 0, scenario)
   }
 })
 
-test('skip diagnostics bound control probes and public text without acting on unknown controls', () => {
+test('native skip request identities do not restart at one in a replacement document', () => {
+  const before = skipDiagnosticSetup(); before.time(1000); before.adapter.skipAd(before.media)
+  const after = skipDiagnosticSetup(); after.time(1001); after.adapter.skipAd(after.media)
+  assert.ok(after.requests[0].requestId > before.requests[0].requestId)
+  assert.equal(after.adapter.completeSkip({ requestId: before.requests[0].requestId, ok: true }), false)
+  assert.equal(after.adapter.completeSkip({ requestId: after.requests[0].requestId, epoch: 2, source: 1, ok: true }), false)
+  assert.equal(after.adapter.completeSkip({ requestId: after.requests[0].requestId, epoch: 1, source: 2, ok: true }), false)
+  assert.equal(after.adapter.validateSkip(after.requests[0].requestId).valid, true)
+})
+
+test('skip diagnostics distinguish a returned native action without effect from a later transition', () => {
+  const f = skipDiagnosticSetup()
+  f.observe(); assert.equal(f.adapter.skipAd(f.media), true)
+  let summary = f.adapter.skipSummary()
+  assert.equal(summary.result, 'native-requested'); assert.equal(summary.tries, 1)
+  assert.deepEqual(Array.from(summary.matches), [0, 0, 1])
+  f.finish(); summary = f.adapter.skipSummary()
+  assert.equal(summary.result, 'native-returned'); assert.equal(summary.last.eventSeen, false); assert.equal(summary.last.isTrusted, null)
+  f.time(100); f.observe(); assert.equal(f.adapter.skipAd(f.media), false)
+  summary = f.adapter.skipSummary(); assert.equal(summary.result, 'cooldown'); assert.equal(summary.last.after.state, 'ad')
+  f.time(1000); assert.equal(f.adapter.skipAd(f.media), true); f.finish()
+  f.time(1200); f.marker(false); f.observe('content', 2)
+  summary = f.adapter.skipSummary()
+  assert.equal(summary.tries, 2); assert.equal(summary.transition.from, 'ad'); assert.equal(summary.transition.to, 'content')
+  assert.equal(summary.transition.sinceTryMs, 200); assert.equal(summary.last.after.state, 'content')
+  assert.equal('success' in summary, false, 'a subsequent transition does not prove click causality')
+  assert.equal(f.button.calls, 0)
+  summary.tries = 999; assert.equal(f.adapter.skipSummary().tries, 2)
+})
+
+test('native skip diagnostics retain trusted/canceled observations and clean up failed requests', () => {
+  for (const behavior of ['cancel', 'throw', 'trusted']) {
+    const f = skipDiagnosticSetup({ behavior }); f.observe()
+    if (behavior === 'throw') assert.throws(() => f.adapter.skipAd(f.media), error => error === f.failure)
+    else { assert.equal(f.adapter.skipAd(f.media), true); if (behavior === 'trusted') f.button.listener({ isTrusted: true, defaultPrevented: false }); f.finish() }
+    const summary = f.adapter.skipSummary()
+    assert.equal(f.button.calls, 0); assert.equal(f.button.added, 1); assert.equal(f.button.removed, 1)
+    assert.equal(summary.threw, behavior === 'throw' ? 1 : 0)
+    assert.equal(summary.returned, behavior === 'throw' ? 0 : 1)
+    assert.equal(summary.clickEvents, behavior === 'throw' ? 0 : 1)
+    if (behavior === 'cancel') { assert.equal(summary.last.defaultPrevented, true); assert.equal(summary.last.isTrusted, false) }
+    if (behavior === 'trusted') assert.equal(summary.last.isTrusted, true, 'only the event itself supplies this flag')
+    if (behavior === 'throw') { assert.equal(summary.result, 'request-threw'); assert.equal(summary.last.errorName, 'TypeError') }
+    f.time(100); assert.equal(f.adapter.skipAd(f.media), false)
+  }
+})
+
+test('skip diagnostics bound public control probes without acting on unknown controls', () => {
   const f = skipDiagnosticSetup({ found: false })
   for (const control of f.others) { control.textContent = 'https://private.invalid/token ' + 'Omitir '.repeat(200); control.className = 'public-control '.repeat(200) }
   f.observe(); assert.equal(f.adapter.skipAd(f.media), false)
@@ -1160,23 +1234,16 @@ test('skip diagnostics bound control probes and public text without acting on un
   assert.equal(summary.result, 'no-match'); assert.equal(f.scans(), 1)
   assert.ok(summary.controls.length <= 4)
   assert.ok(summary.controls.every(c => c.label.length <= 32 && c.role.length <= 12 && c.classes.length <= 40))
-  assert.ok(JSON.stringify(summary).length <= 1000)
-  assert.ok(!JSON.stringify(summary).includes('private.invalid'))
+  assert.ok(JSON.stringify(summary).length <= 1000); assert.ok(!JSON.stringify(summary).includes('private.invalid'))
   for (let now = 100; now < 5000; now += 100) { f.time(now); f.adapter.skipAd(f.media) }
-  assert.equal(f.scans(), 1)
-  f.time(5000); f.adapter.skipAd(f.media); assert.equal(f.scans(), 2)
-  assert.ok(f.others.every(control => control.calls === 0), 'fallback discovery must never select a new clickable control')
-  const blocked = skipDiagnosticSetup()
-  blocked.button.disabled = true; blocked.button.hidden = true; blocked.button.rects = []
+  assert.equal(f.scans(), 1); f.time(5000); f.adapter.skipAd(f.media); assert.equal(f.scans(), 2)
+  assert.equal(f.requests.length, 0); assert.ok(f.others.every(control => control.calls === 0))
+  const blocked = skipDiagnosticSetup(); blocked.button.disabled = true; blocked.button.hidden = true; blocked.button.rects = []
   assert.equal(blocked.adapter.skipAd(blocked.media), false)
-  summary = blocked.adapter.skipSummary()
-  assert.equal(summary.result, 'ineligible')
-  assert.deepEqual(Array.from(summary.controls[0].blocked), ['disabled', 'hidden', 'no-rect'])
-  assert.equal(blocked.button.calls, 0)
-  const unreadable = skipDiagnosticSetup()
-  unreadable.button.getAttribute = name => { if (name === 'aria-label') throw new Error('optional label unavailable'); return null }
-  assert.equal(unreadable.adapter.skipAd(unreadable.media), true, 'a diagnostic read failure cannot suppress an eligible click')
-  assert.equal(unreadable.button.calls, 1)
+  summary = blocked.adapter.skipSummary(); assert.deepEqual(Array.from(summary.controls[0].blocked), ['disabled', 'hidden', 'no-rect'])
+  const unreadable = skipDiagnosticSetup(); unreadable.button.getAttribute = name => { if (name === 'aria-label') throw new Error('optional label unavailable'); return null }
+  assert.equal(unreadable.adapter.skipAd(unreadable.media), true, 'optional diagnostic failure cannot suppress a valid request')
+  assert.equal(unreadable.button.calls, 0)
 })
 
 test('observed no-bar layout requires both exact player-link and Media Session titles, without bypassing conflicts', () => {
@@ -1207,12 +1274,56 @@ test('observed no-bar layout requires both exact player-link and Media Session t
   assert.equal(adapter.classify(media).state, 'unknown')
 })
 
+test('authentication telemetry reads only a public boolean hint and never guesses from absent or throwing site config', () => {
+  for (const value of [true, false, undefined, 'true', 1, new Error('missing')]) {
+    const reads = [], { context } = load({ performance: { now: () => 123.4 }, ytcfg: { get(key) { reads.push(key); if (value instanceof Error) throw value; return value } } })
+    const adapter = context.__musifyCaptureYouTube.create({ document: {}, location: {}, target: 'target' })
+    const auth = adapter.sessionState()
+    assert.equal(auth.state, value === true ? 'signed-in' : value === false ? 'signed-out' : 'unknown')
+    assert.equal(auth.evidenceVersion, 1); assert.equal(auth.browserNow, 123)
+    assert.deepEqual(reads, ['LOGGED_IN'])
+    assert.deepEqual(Object.keys(auth).sort(), ['browserNow', 'evidenceVersion', 'state'])
+  }
+})
+
+test('API4 orchestration defaults experiment holdback to1.5s and publishes a bound EOF certificate after all units', async () => {
+  const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+  let clock = 0
+  const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+  const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+  const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
+  class FileReader { readAsDataURL(blob) { blob.arrayBuffer().then(buffer => { this.result = 'data:audio/webm;base64,' + Buffer.from(buffer).toString('base64'); this.onload() }) } }
+  const { context } = load({ ...scope, document, location, Blob, FileReader, Date: { now: () => clock }, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 51, __musifyProgressiveExperiment: true, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+  vm.runInContext(orchestratorCode, context)
+  const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"'), bytes = fixture({ times: Array.from({ length: 80 }, (_, i) => i * 20) }).bytes
+  media.src = scope.URL.createObjectURL(source); media.duration = 1.6
+  buffer.appendBuffer(bytes); buffer.buffered = { length: 1, start: () => 0, end: () => 1.6 }
+  media.dispatchEvent(new Event('playing'))
+  for (clock = 100; clock <= 1500; clock += 100) { media._currentTime = clock / 1000; media.dispatchEvent(new Event('timeupdate')) }
+  await new Promise(resolve => setImmediate(resolve))
+  assert.equal(messages.filter(m => m.kind === 'seg').length, 0)
+  clock = 1600; media._currentTime = 1.6; media.dispatchEvent(new Event('timeupdate'))
+  await new Promise(resolve => setImmediate(resolve))
+  assert.ok(messages.filter(m => m.kind === 'seg').every(m => m.rangeEnd <= 0.1 + 1e-12))
+  source.endOfStream(); media.dispatchEvent(new Event('timeupdate'))
+  await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve))
+  const ended = messages.find(m => m.type === 'ended'), units = messages.filter(m => m.kind === 'seg')
+  assert.ok(ended); assert.equal(ended.api, 4); assert.equal(ended.complete, true)
+  assert.equal(ended.certificate.frameCount, 80); assert.equal(ended.certificate.initKey, units[0].initKey)
+  assert.equal(ended.certificate.initKey.startsWith('51:'), true)
+  assert.equal(units.reduce((sum, unit) => sum + unit.frames, 0), 80)
+  assert.equal(units[0].firstFrame, 0); assert.equal(units.at(-1).endFrame, 80)
+  assert.ok(messages.indexOf(ended) > messages.findLastIndex(m => m.kind === 'seg'))
+  assert.equal(messages.some(m => m.type === 'error'), false)
+})
+
 test('orchestrator emits versioned generation/sequence and explicit unsupported pipeline error', async () => {
   const messages = []
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const document = { querySelectorAll: () => [] }
   const { context } = load({ location, document, performance: { now: () => 0 }, clearInterval() {} })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 7, chrome: { webview: { postMessage: (message) => messages.push(JSON.parse(message.slice('musify:'.length))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 7, chrome: { webview: { postMessage: (message) => messages.push(JSON.parse(message.slice('musify:'.length))) } } }
   vm.runInContext(orchestratorCode, context)
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(messages.length, 1)
@@ -1234,7 +1345,7 @@ test('authentication requests interaction while preserving the official page and
     setInterval(fn) { callback = fn; return 1 }, clearInterval() {},
     MutationObserver: class { observe() {} },
   })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 7, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 7, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   callback()
   await new Promise((resolve) => setImmediate(resolve))
@@ -1292,59 +1403,49 @@ test('capture clamps stored ad rates and reports identity/source transitions imm
   assert.equal(messages.some(m => m.type === 'error'), false)
 })
 
-test('orchestrator retains bounded skip diagnostics after content and records a throwing click before the existing error', async () => {
-  for (const throws of [false, true]) {
+test('orchestrator routes native skip proposals and retains bounded results after content', async () => {
+  for (const ok of [false, true]) {
     const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
     let clock = 0, adShowing = true, tick
     const title = 'Public song title '.repeat(12)
     class Button extends EventTarget {
-      constructor() { super(); this.calls = 0; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir '.repeat(100) }
+      constructor() { super(); this.isConnected = true; this.calls = 0; this.tagName = 'BUTTON'; this.className = 'ytp-ad-skip-button-modern'; this.textContent = 'Omitir '.repeat(100) }
       matches(selector) { return selector === '.ytp-ad-skip-button-modern' }
       getAttribute(name) { return name === 'role' ? 'button' : name === 'aria-label' ? this.textContent : null }
       getClientRects() { return [{}] }
-      click() { this.calls++; if (throws) throw new TypeError('native click failure'); this.dispatchEvent(new Event('click', { cancelable: true })) }
+      getBoundingClientRect() { return { left: 20, top: 20, width: 100, height: 30 } }
+      click() { this.calls++; assert.fail('no synthetic ad click permitted') }
     }
     const button = new Button(), other = Array.from({ length: 3 }, () => new Button())
-    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title }), classList: { contains: () => adShowing }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : s.includes('skip') ? [button, ...other] : [] }
-    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: title } : null, defaultView: { getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
+    const player = { contains: e => e === media || e === button, getVideoData: () => ({ video_id: 'target', title }), classList: { contains: () => adShowing }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : s.includes('skip') ? [button, ...other] : [] }
+    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: title } : null, elementFromPoint: () => button, defaultView: { innerWidth: 640, innerHeight: 480, getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }) } }
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
     const { context } = load({ ...scope, document, location, Date: { now: () => clock }, performance: { now: () => clock }, setInterval: fn => { tick = fn; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
     context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 35, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const adSource = new scope.MediaSource(); adSource.addSourceBuffer('audio/webm; codecs="opus"')
-    media.src = scope.URL.createObjectURL(adSource); media.duration = 30
-    media.dispatchEvent(new Event('playing'))
-    if (!throws) {
-      clock = 1000; media._currentTime = 1; tick()
-      const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
-      media.src = scope.URL.createObjectURL(source); adShowing = false; media.duration = 0.06; clock = 1100
-      buffer.appendBuffer(fixture().bytes); buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }
-      media.dispatchEvent(new Event('playing'))
-      clock = 2100; tick()
-    }
+    media.src = scope.URL.createObjectURL(adSource); media.duration = 30; media.dispatchEvent(new Event('playing'))
+    await new Promise(resolve => setImmediate(resolve))
+    const request = messages.find(m => m.type === 'skip-request')
+    assert.ok(request); assert.equal(request.api, 4); assert.equal(request.generation, 35)
+    assert.equal(context.window.__musifyValidateSkip(request.requestId).valid, true)
+    if (ok) button.dispatchEvent(new Event('click', { cancelable: true }))
+    assert.equal(context.window.__musifySkipResult({ requestId: request.requestId, ok, reason: ok ? 'native-complete' : 'native-down-failed' }), true)
+    assert.equal(context.window.__musifyValidateSkip(request.requestId).valid, false)
+    const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(source); adShowing = false; media.duration = 0.06; clock = 1100
+    buffer.appendBuffer(fixture().bytes); buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }; media.dispatchEvent(new Event('playing'))
+    clock = 2100; tick()
     await new Promise(resolve => setImmediate(resolve))
     const diagnostics = messages.filter(m => m.type === 'diagnostic' && m.reason).map(m => ({ ...m, detail: JSON.parse(m.reason) }))
-    assert.ok(diagnostics.every(m => m.reason.length <= 2048), 'skip details must not push these existing phase/evidence diagnostics past the native bound')
-    if (throws) {
-      const diagnostic = diagnostics.find(m => m.detail.phase === 'skip-ad')
-      assert.equal(diagnostic.detail.skip.result, 'click-threw')
-      assert.equal(diagnostic.detail.skip.threw, 1)
-      const failure = messages.find(m => m.type === 'error')
-      assert.equal(failure.code, 'CAPTURE_PROGRESSIVE_ERROR')
-      assert.ok(failure.reason.includes('native click failure'))
-      assert.ok(messages.indexOf(failure) > messages.findIndex(m => m.reason === diagnostic.reason))
-    } else {
-      assert.equal(messages.some(m => m.type === 'error'), false)
-      const latest = diagnostics.findLast(m => m.detail.phase === 'progressive' && m.state === 'content')
-      assert.ok(latest.detail.evidence, 'existing identity evidence must be preserved')
-      assert.equal(latest.detail.skip.tries, 2)
-      assert.equal(latest.detail.skip.clickEvents, 2)
-      assert.equal(latest.detail.skip.last.isTrusted, false)
-      assert.equal(latest.detail.skip.transition.to, 'content')
-      assert.equal(button.calls, 2)
-      assert.ok(other.every(control => control.calls === 0), 'selection remains the first eligible known control')
-    }
-    assert.equal(messages.some(m => m.kind === 'seg'), false)
+    assert.ok(diagnostics.every(m => m.reason.length <= 2048))
+    assert.equal(messages.some(m => m.type === 'error'), false, 'a rejected native ad action is diagnostic, not invented capture success or a fatal error')
+    const latest = diagnostics.findLast(m => m.detail.phase === 'progressive' && m.state === 'content')
+    assert.ok(latest.detail.evidence); assert.equal(latest.detail.skip.tries, 1)
+    assert.equal(latest.detail.skip.clickEvents, ok ? 1 : 0)
+    assert.equal(latest.detail.skip.last.nativeOk, ok); assert.equal(latest.detail.skip.last.isTrusted, ok ? false : null)
+    assert.equal(latest.detail.skip.transition.to, 'content'); assert.equal(button.calls, 0)
+    assert.ok(other.every(control => control.calls === 0)); assert.equal(messages.some(m => m.kind === 'seg'), false)
   }
 })
 
@@ -1356,7 +1457,7 @@ test('an initially missed two milliseconds are re-presented from zero before any
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
   const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 30, __musifyProgressiveExperiment: true, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 30, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   media.src = scope.URL.createObjectURL(source)
@@ -1474,7 +1575,7 @@ test('window capture sees ended before YouTube document and target handlers chan
     async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() }
   }
   const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 8, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } }, addEventListener(type, fn, capture) { if (type === 'ended') { assert.equal(capture, true); capturedEnded = fn } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 8, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } }, addEventListener(type, fn, capture) { if (type === 'ended') { assert.equal(capture, true); capturedEnded = fn } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }
@@ -1503,7 +1604,7 @@ test('window capture sees ended before YouTube document and target handlers chan
     assert.equal(segment.s, messages[proofIndex].s)
     assert.equal(segment.classification, 'content')
     assert.equal(segment.generation, 8)
-    assert.equal(segment.api, 3)
+    assert.equal(segment.api, 4)
     assert.equal(segment.epoch, 1)
   }
   assert.deepEqual(Buffer.concat(segments.map((m) => Buffer.from(m.data, 'base64'))), Buffer.from(f.bytes))
@@ -1525,7 +1626,7 @@ test('orchestrator releases before native source reset only when the old audio i
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 12, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 12, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -1562,7 +1663,7 @@ test('capture-phase timeupdate seals full audio after official EOF before postro
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 13, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 13, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -1608,7 +1709,7 @@ test('native ended may retain the source-bound playing identity but never repair
     const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
     class FileReader { async readAsDataURL(blob) { this.result = 'data:application/octet-stream;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
     const { context } = load({ ...scope, document, location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 14, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 14, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
     vm.runInContext(orchestratorCode, context)
     const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(source)
@@ -1651,7 +1752,7 @@ test('source replacement without ended reports prior timing and parsed ranges wi
   const document = { querySelectorAll: () => [media], querySelector: (selector) => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const { context } = load({ ...scope, document, location, performance: { now: () => 0 }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 11, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 11, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   media.currentSrc = scope.URL.createObjectURL(source)
@@ -1673,7 +1774,7 @@ test('unrecognized consent keeps the page open and reports the injected target w
   const location = { search: '', hostname: 'consent.youtube.com', replace: (url) => navigations.push(url) }
   const document = { readyState: 'complete', forms: [], querySelectorAll: () => [] }
   const { context } = load({ location, document })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 9, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 9, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   await new Promise((resolve) => setImmediate(resolve))
   assert.equal(messages[0].type, 'interaction')
@@ -1694,7 +1795,7 @@ test('missing initial title pauses at exactly zero and resumes only after eviden
   const document = { querySelectorAll: () => [media], querySelector: (selector) => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: title } : null }
   const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com', replace() {} }
   const { context } = load({ ...scope, document, location, performance: { now: () => clock }, setInterval(fn) { callback = fn; return 1 }, clearInterval() {}, MutationObserver: class { observe() {} } })
-  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyGeneration: 10, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
+  context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyProgressiveExperiment: true, __musifyHoldbackSeconds: 0, __musifyGeneration: 10, chrome: { webview: { postMessage: (m) => messages.push(JSON.parse(m.slice(7))) } } }
   vm.runInContext(orchestratorCode, context)
   const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
   media.currentSrc = scope.URL.createObjectURL(source)
