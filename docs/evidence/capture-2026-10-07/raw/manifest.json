@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "hashAlgorithm": "SHA-256",
   "provenanceNote": "Los informes se conservan byte por byte. Sólo los derivados de metadatos/interrupción minimizan rutas y PID; los estados y commits permanecen como constan en los originales. Un informe archivado puede ser parcial o fallido.",
-  "selectionNote": "Siete resultados del 7 de octubre hasta 085653, cuatro históricos API2, metadatos disponibles asociados y la interrupción 085653. Se excluyen 092755 en curso, logs y audio.",
+  "selectionNote": "Nueve resultados del 7 de octubre hasta 101042, cuatro históricos API2, metadatos disponibles asociados y las interrupciones 085653, 092755 y 101042. Los informes interrumpidos conservan su estado original. No se archivan logs completos ni audio; derivedEvidence registra dos extractos de errores de EOF.",
   "files": [
     {
       "kind": "report",
@@ -178,6 +178,146 @@
       ],
       "addedFields": [
         "originalSha256"
+      ]
+    },
+    {
+      "kind": "report",
+      "originalPath": "capture-bench.local/result-20261007-092755.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/result-20261007-092755.json",
+      "originalSha256": "fea63269bd6fe322a95e9a68735fe9790e2c9aa2c98134355aad7387b419e62b",
+      "archivedSha256": "fea63269bd6fe322a95e9a68735fe9790e2c9aa2c98134355aad7387b419e62b",
+      "originalBytes": 122316,
+      "archivedBytes": 122316,
+      "minimizedFields": []
+    },
+    {
+      "kind": "metadata-derivative",
+      "originalPath": "capture-bench.local/metadata-20261007-092755.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/metadata-20261007-092755.json",
+      "originalSha256": "dc2786dce045a3bcce3ff9f82bb347bc7c289577afec938c9bcd6bf9481d4796",
+      "archivedSha256": "a017f12cbe8d6c2db8b7ef6d2d2c0678fb71cb7deee50d1b2ddb9da5fc72a43b",
+      "originalBytes": 709,
+      "archivedBytes": 621,
+      "minimizedFields": [
+        {
+          "field": "plan",
+          "operation": "converted-to-repository-relative-path"
+        },
+        {
+          "field": "report",
+          "operation": "converted-to-repository-relative-path"
+        }
+      ],
+      "addedFields": [
+        "originalSha256"
+      ]
+    },
+    {
+      "kind": "interruption-derivative",
+      "originalPath": "capture-bench.local/interruption-20261007-092755.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/interruption-20261007-092755.json",
+      "originalSha256": "420b9799ee0bcbaeb60368c5175cd4c998103a24c7abc374d9cff237ae1c5b08",
+      "archivedSha256": "9269ccaeeb08edb1510ddd4717c72f1dbdcff832a2f44a24c6c70d680e84b425",
+      "originalBytes": 588,
+      "archivedBytes": 614,
+      "minimizedFields": [
+        {
+          "field": "pid",
+          "operation": "omitted"
+        },
+        {
+          "field": "executable",
+          "operation": "converted-to-repository-relative-path"
+        }
+      ],
+      "addedFields": [
+        "originalSha256"
+      ]
+    },
+    {
+      "kind": "report",
+      "originalPath": "capture-bench.local/result-20261007-101042.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/result-20261007-101042.json",
+      "originalSha256": "045cc418897e551d45f43e2eeae6d768556506f965b63edb7acec855f6ec2980",
+      "archivedSha256": "045cc418897e551d45f43e2eeae6d768556506f965b63edb7acec855f6ec2980",
+      "originalBytes": 114625,
+      "archivedBytes": 114625,
+      "minimizedFields": []
+    },
+    {
+      "kind": "metadata-derivative",
+      "originalPath": "capture-bench.local/metadata-20261007-101042.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/metadata-20261007-101042.json",
+      "originalSha256": "4d48388dd713acb464b56bd69d86123492e9ad0326db6639f0fbec0b458aff39",
+      "archivedSha256": "1ee89a1f61b2e9ee015ec49dd8e6fe7638a5f061d4f96045317106d535ed4c57",
+      "originalBytes": 746,
+      "archivedBytes": 658,
+      "minimizedFields": [
+        {
+          "field": "plan",
+          "operation": "converted-to-repository-relative-path"
+        },
+        {
+          "field": "report",
+          "operation": "converted-to-repository-relative-path"
+        }
+      ],
+      "addedFields": [
+        "originalSha256"
+      ]
+    },
+    {
+      "kind": "interruption-derivative",
+      "originalPath": "capture-bench.local/interruption-20261007-101042.json",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/interruption-20261007-101042.json",
+      "originalSha256": "92bb46afa83fd79d613e93ff350f266fec06deaf14791ed1891cd8f8c0233b58",
+      "archivedSha256": "bd32ec825fb99a9d25e2dbfb534b458bb563ce7e6e94de754ad1935e3a8a26b7",
+      "originalBytes": 614,
+      "archivedBytes": 636,
+      "minimizedFields": [
+        {
+          "field": "processId",
+          "operation": "omitted"
+        },
+        {
+          "field": "executable",
+          "operation": "converted-to-repository-relative-path"
+        }
+      ],
+      "addedFields": [
+        "originalSha256"
+      ]
+    }
+  ],
+  "derivedEvidence": [
+    {
+      "kind": "diagnostic-log-excerpts",
+      "archivedPath": "docs/evidence/capture-2026-10-07/raw/diagnostics-eof.json",
+      "archivedSha256": "e77b9d0d813b3863c0e6cbbc456e2d42cfb6e626d338b6c1487e65b05c1faa03",
+      "archivedBytes": 1389,
+      "sources": [
+        {
+          "originalPath": "capture-bench.local/stderr-20261007-092755.log",
+          "originalSha256": "e53dfa6e9f38bba73b03cf8950200558dd5dbeb3eb68f8fc539f6b750c5dfa50",
+          "originalBytes": 12631,
+          "lines": [
+            79
+          ]
+        },
+        {
+          "originalPath": "capture-bench.local/stderr-20261007-101042.log",
+          "originalSha256": "29f9b1bca13b7827ea25774961512721ff3800acbf85ce2673c14e308da4d558",
+          "originalBytes": 12304,
+          "lines": [
+            79
+          ]
+        }
+      ],
+      "minimizedFields": [
+        {
+          "field": "logContent",
+          "operation": "retained-only-selected-error-lines"
+        }
       ]
     }
   ]
