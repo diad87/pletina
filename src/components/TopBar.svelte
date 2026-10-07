@@ -98,7 +98,7 @@
   </label>
   {/if}
   {#if updates.state === 'ready' && !layout.mobile}
-    <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Musify; pulsa para instalarla ya">
+    <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Pletina; pulsa para instalarla ya">
       <span class="dot"></span> Versión {updates.version} lista · <strong>Reiniciar</strong>
     </button>
   {/if}

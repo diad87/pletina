@@ -241,11 +241,14 @@ fn download_dir(app: &AppHandle, _db: &Db) -> PathBuf {
 #[cfg(desktop)]
 fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
     db.setting(DIR_KEY).map(PathBuf::from).unwrap_or_else(|| {
-        app.path()
+        let music = app
+            .path()
             .audio_dir()
             .or_else(|_| app.path().home_dir().map(|h| h.join("Music")))
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("Musify")
+            .unwrap_or_else(|_| PathBuf::from("."));
+        // Antes se llamaba Musify: quien ya tenga descargas ahí las sigue teniendo en la misma carpeta.
+        let old = music.join("Musify");
+        if old.is_dir() { old } else { music.join("Pletina") }
     })
 }
 

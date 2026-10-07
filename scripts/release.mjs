@@ -1,4 +1,4 @@
-// Prepara una versión para publicar en diad87/musify-releases a partir de los artefactos de GitHub Actions:
+// Prepara una versión para publicar en diad87/pletina-releases a partir de los artefactos de GitHub Actions:
 // copia los instaladores con su nombre final y genera latest.json, el índice que consulta el actualizador.
 //
 //   node scripts/release.mjs <carpeta-de-artefactos> <etiqueta> [notas.md]
@@ -14,7 +14,7 @@ if (!dir || !tag) {
   process.exit(1)
 }
 
-const REPO = 'diad87/musify-releases'
+const REPO = 'diad87/pletina-releases'
 const version = tag.replace(/^v/, '')
 const out = join(dir, '_release')
 mkdirSync(out, { recursive: true })
@@ -56,7 +56,7 @@ if (exe) platforms['windows-x86_64'] = signed(exe)
 // Mac universal: el mismo paquete sirve para chip de Apple e Intel.
 const app = find(/\.app\.tar\.gz$/)
 if (app) {
-  const entry = signed(app, `Musify_${version}_universal.app.tar.gz`)
+  const entry = signed(app, `Pletina_${version}_universal.app.tar.gz`)
   platforms['darwin-aarch64'] = entry
   platforms['darwin-x86_64'] = entry
 }
@@ -72,7 +72,7 @@ for (const re of [/\.dmg$/, /\.deb$/]) {
 
 // Android: lo instala y lo actualiza Obtainium, que busca el `.apk` de la última versión.
 const apk = find(/\.apk$/)
-if (apk) publish(apk, `Musify_${version}_android.apk`)
+if (apk) publish(apk, `Pletina_${version}_android.apk`)
 
 if (!Object.keys(platforms).length) {
   console.error('No se ha encontrado ningún instalador en', dir)
@@ -82,7 +82,7 @@ if (!Object.keys(platforms).length) {
 const notes = notesFile && existsSync(notesFile) ? readFileSync(notesFile, 'utf8').trim() : ''
 writeFileSync(
   join(out, 'latest.json'),
-  JSON.stringify({ version, notes: notes || `Musify ${version}`, pub_date: new Date().toISOString(), platforms }, null, 2),
+  JSON.stringify({ version, notes: notes || `Pletina ${version}`, pub_date: new Date().toISOString(), platforms }, null, 2),
 )
 
 console.log(`Versión ${version} preparada en ${out}:`)

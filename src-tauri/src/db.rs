@@ -143,7 +143,7 @@ impl Db {
         if had_data && tables == 0 {
             return Err(rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CANTOPEN),
-                Some("La base de datos tiene contenido pero se ve vacía; no se toca. Cierra y vuelve a abrir Musify.".into()),
+                Some("La base de datos tiene contenido pero se ve vacía; no se toca. Cierra y vuelve a abrir Pletina.".into()),
             ));
         }
         backup_before_migrating(&conn, path)?;

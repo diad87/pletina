@@ -111,7 +111,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
         return { ...(searchResults as unknown as SearchResults), localArtists: [], localAlbums: localAlbums.slice(0, 2) }
       case 'local_library':
         return {
-          folders: [String.raw`C:\Users\iunan\Music`, String.raw`D:\Música\Vinilos digitalizados`],
+          folders: [String.raw`C:\Users\usuario\Music`, String.raw`D:\Música\Vinilos digitalizados`],
           albums: localAlbums,
           artists: [...new Map(localAlbums.map((a) => [a.artist!.id, a.artist!])).values()].map((ar) => ({
             id: ar.id,
@@ -160,7 +160,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
       case 'downloads_list':
         return []
       case 'download_dir_path':
-        return 'C:\\Users\\iunan\\Music\\Musify'
+        return 'C:\\Users\\usuario\\Music\\Pletina'
       default:
         return null
     }

@@ -173,7 +173,7 @@ pub struct Deezer {
 impl Deezer {
     pub fn new() -> Self {
         let http = reqwest::Client::builder()
-            .user_agent(concat!("Musify/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("Pletina/", env!("CARGO_PKG_VERSION")))
             .timeout(std::time::Duration::from_secs(15))
             .build()
             .expect("cliente HTTP");

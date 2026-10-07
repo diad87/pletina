@@ -282,7 +282,7 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
         val uri = FileProvider.getUriForFile(activity, "${activity.packageName}.fileprovider", file)
         val send = Intent(Intent.ACTION_SEND)
           .setType("text/plain")
-          .putExtra(Intent.EXTRA_SUBJECT, "Musify: registro")
+          .putExtra(Intent.EXTRA_SUBJECT, "Pletina: registro")
           .putExtra(Intent.EXTRA_TEXT, file.readText().takeLast(60_000))
           .putExtra(Intent.EXTRA_STREAM, uri)
           .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

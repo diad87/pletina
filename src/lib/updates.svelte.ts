@@ -23,7 +23,7 @@ class Updates {
     this.current = await getVersion().catch(() => '')
     if (isAndroid) {
       this.available = (await api.newerVersion().catch(() => null)) ?? ''
-      if (this.available) toast.show(`Hay una versión nueva de Musify: ${this.available}`)
+      if (this.available) toast.show(`Hay una versión nueva de Pletina: ${this.available}`)
       return
     }
     await listen<{ state: 'downloading' | 'ready'; version: string }>('update', (e) => {

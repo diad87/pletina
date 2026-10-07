@@ -44,7 +44,7 @@
 <aside class="sidebar">
   <div class="top">
     <div class="brand">
-      <span class="logo"><Icon name="note" size={18} /></span> Musify
+      <span class="logo"><Icon name="note" size={18} /></span> Pletina
       {#if updates.current}
         <button
           class="version"

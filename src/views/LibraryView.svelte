@@ -29,7 +29,7 @@
       <p>Si la instalaste con Obtainium, te avisará y se actualiza desde allí.</p>
     {/if}
     <div class="row">
-      {#if updates.current}<span>Musify {updates.current}</span>{/if}
+      {#if updates.current}<span>Pletina {updates.current}</span>{/if}
       {#if isAndroid}
         <button class="link" onclick={() => api.shareLog().catch((e) => toast.show(String(e)))}>Enviar registro</button>
       {/if}

@@ -90,6 +90,6 @@ pub fn install_update(app: AppHandle) -> Result<(), String> {
 pub fn open_releases(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     app.opener()
-        .open_url("https://github.com/diad87/musify-releases/releases/latest", None::<&str>)
+        .open_url("https://github.com/diad87/pletina-releases/releases/latest", None::<&str>)
         .map_err(|e| e.to_string())
 }

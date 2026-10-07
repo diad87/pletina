@@ -104,7 +104,7 @@ pub fn run() {
     // Solo en escritorio: una sola instancia y el actualizador de Tauri (en Android, Obtainium).
     #[cfg(desktop)]
     let builder = builder
-        // Una sola ventana: abrir Musify otra vez trae al frente la que ya está abierta
+        // Una sola ventana: abrir Pletina otra vez trae al frente la que ya está abierta
         // (si no, sonarían dos reproductores a la vez).
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
@@ -138,7 +138,7 @@ pub fn run() {
                     }
                     app.dialog()
                         .message(format!("No se pudo abrir la base de datos.\n\n{e}\n\n{}", path.display()))
-                        .title("Musify")
+                        .title("Pletina")
                         .kind(MessageDialogKind::Error)
                         .show(|_| std::process::exit(1));
                     return Ok(());
@@ -226,7 +226,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error al arrancar Musify")
+        .expect("error al arrancar Pletina")
         .run(|app, event| {
             // Al cerrar la app se instala la actualización que haya descargada.
             if let tauri::RunEvent::Exit = event {

@@ -6,7 +6,7 @@ use std::time::Duration;
 use tauri::AppHandle;
 
 /// El mismo índice que usa el actualizador de escritorio (ver tauri.conf.json).
-const LATEST: &str = "https://github.com/diad87/musify-releases/releases/latest/download/latest.json";
+const LATEST: &str = "https://github.com/diad87/pletina-releases/releases/latest/download/latest.json";
 
 #[derive(Default)]
 pub struct Pending;
@@ -43,6 +43,6 @@ fn numbers(version: &str) -> Vec<u64> {
 pub fn open_releases(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
     app.opener()
-        .open_url("https://github.com/diad87/musify-releases/releases/latest", None::<&str>)
+        .open_url("https://github.com/diad87/pletina-releases/releases/latest", None::<&str>)
         .map_err(|e| e.to_string())
 }
