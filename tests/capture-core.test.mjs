@@ -30,7 +30,11 @@ function size(number) {
   throw new Error('fixture too large')
 }
 const element = (number, bytes) => concat(id(number), size(bytes.length), bytes)
-const integer = (value) => value <= 255 ? [value] : [value >> 8, value & 255]
+const integer = value => {
+  const bytes = []
+  do { bytes.unshift(value % 256); value = Math.floor(value / 256) } while (value)
+  return bytes
+}
 function fixture({ times = [0, 20, 40], type = 2, codec = 'A_OPUS', lacing = 0, unknownCluster = false } = {}) {
   // Every packet is one 20 ms Opus frame. Packet payload values distinguish our synthetic
   // sources; timeline tests do not claim to replace an audio decoder or a real YouTube trial.
@@ -41,6 +45,23 @@ function fixture({ times = [0, 20, 40], type = 2, codec = 'A_OPUS', lacing = 0, 
   const cluster = unknownCluster ? concat(id(0x1f43b675), [0xff], body) : element(0x1f43b675, body)
   const init = concat(element(0x1a45dfa3, []), id(0x18538067), [0xff], element(0x1549a966, []), tracks)
   return { init, cluster, bytes: concat(init, cluster), duration: (times.at(-1) + 20) / 1000 }
+}
+function roundedEndFixture(duration) {
+  // Preserve the real failing arithmetic: codedStart 212.961 (or 223.461)
+  // plus an Opus20ms packet differs from the native decimal duration by one ULP.
+  const times = [0]
+  for (let at = 21; at <= Math.round(duration * 1000) - 20; at += 20) times.push(at)
+  const clusters = []
+  let clock = -1, blocks = []
+  const flush = () => { if (blocks.length) clusters.push(element(0x1f43b675, concat(element(0xe7, integer(clock)), ...blocks))) }
+  for (const [i, time] of times.entries()) {
+    const nextClock = Math.floor(time / 30000) * 30000
+    if (nextClock !== clock) { flush(); clock = nextClock; blocks = [] }
+    const relative = time - clock
+    blocks.push(element(0xa3, [0x81, relative >> 8, relative & 255, 0x80, 0x98, i & 255]))
+  }
+  flush()
+  return { bytes: concat(fixture().init, ...clusters), frames: times.length, duration }
 }
 const content = { state: 'content', sourceBound: true, signals: ['presented-video-id', 'matching-visible-title'] }
 const ad = { state: 'ad', sourceBound: true, signals: ['ad-marker'] }
@@ -297,6 +318,42 @@ test('EOF waits for the final sample even when only0.8ms of coded time remains',
   observe(0.06)
   assert.equal(tracker.pull(source, snapshot(0.06)).at(-1).rangeEnd, 0.06)
   assert.equal(tracker.finish(source, { ...snapshot(0.06), sourceEnded: true }).complete, true)
+})
+
+test('timestamp comparison accepts roundoff at the real failing durations but rejects a one-picosecond missing tail', () => {
+  const { timeAtOrAfter } = load()
+  for (const [clock, end] of [[212.981, 212.98100000000002], [223.481, 223.48100000000002]]) {
+    assert.equal(timeAtOrAfter(clock, end), true)
+    assert.equal(timeAtOrAfter(clock - 1e-12, end), false)
+    for (const missing of [0.000000001, 0.000001, 0.0005, 0.0008, 0.001]) assert.equal(timeAtOrAfter(clock - missing, end), false)
+  }
+  for (const [clock, end] of [[NaN, 0], [Infinity, 1], [1, Infinity], [1, NaN]]) assert.equal(timeAtOrAfter(clock, end), false)
+})
+
+test('real decimal EOF regressions publish the final Opus packet in both modes without normalizing its timestamp', () => {
+  for (const duration of [212.981, 223.481]) for (const experimental of [false, true]) for (const short of [false, true]) {
+    const core = load(), tracker = new core.ProgressiveTracker({ epoch: 1, experimental }), source = tracker.createSource()
+    const f = roundedEndFixture(duration), clock = duration - (short ? 1e-12 : 0)
+    tracker.append(tracker.createBuffer(source, 'audio/webm; codecs="opus"'), f.bytes)
+    const parsed = tracker.inventory(source, true)
+    assert.equal(parsed.codedEnd, duration === 212.981 ? 212.98100000000002 : 223.48100000000002)
+    for (let position = 0; position < clock; position += 0.25) tracker.observe(source, content, { position, now: position * 1000, duration })
+    tracker.observe(source, content, { position: clock, now: clock * 1000, duration })
+    const terminal = { source, position: clock, duration, playbackRate: 1, seeking: false, readyState: 4, updating: false, sourceEnded: true, audioRanges: [{ start: 0, end: duration }] }
+    if (short) {
+      const units = tracker.pull(source, terminal)
+      assert.equal(source.progress.emitted.has(f.frames - 1), false, 'a1ps short clock cannot release the final packet')
+      assert.ok(units.reduce((count, unit) => count + unit.frames, 0) < f.frames)
+      assert.throws(() => tracker.finish(source, terminal), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+    } else {
+      assert.equal(tracker.finish(source, terminal).eof, true)
+      const units = tracker.pull(source, terminal)
+      assert.equal(units.reduce((count, unit) => count + unit.frames, 0), f.frames)
+      assert.equal(units.at(-1).rangeEnd, parsed.codedEnd, 'only comparison changes; stored PTS and byte payload stay intact')
+      assert.equal(tracker.finish(source, terminal).complete, !experimental, 'experimental1ms initial coded gap is intentionally still incomplete')
+      if (!experimental) assert.throws(() => tracker.pull(source, { ...terminal, position: duration - 1e-12 }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+    }
+  }
 })
 
 test('progressive identity ambiguity, buffer mismatch and accelerated presentation cannot release audio', () => {
@@ -1097,6 +1154,44 @@ test('an initially missed two milliseconds are re-presented from zero before any
   assert.equal(units[0].rangeEnd, 0.02)
   assert.equal(units[0].verified, true)
   assert.equal(messages.some(m => m.type === 'error'), false)
+})
+
+test('orchestrator EOF and normal certificate share the roundoff-only comparison for the two real failing durations', async () => {
+  for (const duration of [212.981, 223.481]) for (const short of [false, true]) {
+    const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = [], f = roundedEndFixture(duration)
+    let clock = 0
+    media.duration = duration
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+    const location = { search: '?v=target', hash: '', hostname: 'music.youtube.com' }
+    class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
+    const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 32, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    vm.runInContext(orchestratorCode, context)
+    const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(source)
+    buffer.buffered = { length: 1, start: () => 0, end: () => duration }
+    buffer.appendBuffer(f.bytes)
+    media.dispatchEvent(new Event('playing'))
+    const position = duration - (short ? 1e-12 : 0)
+    for (let at = 0.25; at < position; at += 0.25) { clock = at * 1000; media._currentTime = at; media.dispatchEvent(new Event('timeupdate')) }
+    source.endOfStream()
+    clock = position * 1000; media._currentTime = position; media.ended = true; media.paused = true
+    media.dispatchEvent(new Event('ended'))
+    for (let attempts = 0; attempts < 10 && !messages.some(m => m.type === 'ended' || m.type === 'error'); attempts++) await new Promise(resolve => setImmediate(resolve))
+    const error = messages.find(m => m.type === 'error'), ended = messages.find(m => m.type === 'ended'), units = messages.filter(m => m.kind === 'seg')
+    if (short) {
+      assert.equal(error?.code, 'CAPTURE_UNPRESENTED_BYTES')
+      assert.equal(ended, undefined)
+      assert.equal(units.length, 0)
+    } else {
+      assert.equal(error, undefined)
+      assert.equal(ended?.eof, true)
+      assert.equal(ended?.complete, true)
+      assert.equal(units.reduce((count, unit) => count + unit.frames, 0), f.frames)
+      assert.equal(units.at(-1).rangeEnd, duration === 212.981 ? 212.98100000000002 : 223.48100000000002)
+    }
+  }
 })
 
 test('window capture sees ended before YouTube document and target handlers change identity and source', async () => {

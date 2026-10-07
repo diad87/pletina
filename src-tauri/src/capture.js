@@ -105,7 +105,7 @@
     const inventory = tracker.inventory(source, true), settings = source.buffers[0].timelineSettings
     const end = inventory.samples.reduce((end, s) => Math.max(end, tracker.sampleRange(s, settings).end), -Infinity)
     if (!Number.isFinite(end)) return false
-    if (snapshot.position < end) {
+    if (!core.timeAtOrAfter(snapshot.position, end)) {
       // Even sub-millisecond codec quantization is not proof of an unpresented tail.
       // A running source may reach it on the next observation. A native terminal
       // clock before it is explicit incompleteness, never silently inferred padding.

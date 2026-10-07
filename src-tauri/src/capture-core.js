@@ -4,6 +4,10 @@
     constructor(code, message) { super(`${code}: ${message}`); this.name = 'CaptureError'; this.code = code }
   }
   const fail = (code, message) => { throw new CaptureError(code, message) }
+  // Comparing two calculations of the same media timestamp needs only floating-
+  // point roundoff, not codec quantum or the ledger's presentation tolerance.
+  const timeAtOrAfter = (actual, expected) => Number.isFinite(actual) && Number.isFinite(expected) &&
+    (actual >= expected || expected - actual <= 4 * Number.EPSILON * Math.max(1, Math.abs(actual), Math.abs(expected)))
   const copy = (data) => ArrayBuffer.isView(data) ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength).slice() : new Uint8Array(data).slice()
   const join = (chunks) => {
     const out = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0))
@@ -483,13 +487,13 @@
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
       const certificate = this.experimental ? null : this.completeCertificate(source, buffer)
-      if (certificate && (snapshot.position < certificate.proof.timeline.end || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
+      if (certificate && (!timeAtOrAfter(snapshot.position, certificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - certificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - certificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
       const units = [], available = inventory.samples.map(s => this.sampleRange(s, settings))
       const normalEmitted = []
       for (let first = 0; first < available.length;) {
         const eligible = index => {
           const r = available[index]
-          return r.end > r.start && r.start >= 0 && r.end <= snapshot.position && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
+          return r.end > r.start && r.start >= 0 && timeAtOrAfter(snapshot.position, r.end) && !source.progress.emitted.has(index) && covers(source.progress.ranges, r.start, r.end, coverageEpsilon) && covers(snapshot.audioRanges ?? [], r.start, r.end, codecEpsilon)
         }
         if (!eligible(first)) { first++; continue }
         let until = first + 1, bytes = inventory.init.length + inventory.samples[first].size + 128
@@ -546,7 +550,7 @@
       const knownNativeRanges = mergeRanges([...ranges, ...previousRanges], coverageEpsilon)
       const nativeEnded = snapshot.ended === true && Math.abs(snapshot.position - snapshot.duration) <= codecEpsilon
       const knownNative = r => covers(ranges, r.start, r.end, codecEpsilon) || covers(knownNativeRanges, r.start, r.end, coverageEpsilon)
-      if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || snapshot.position < end || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}`)
+      if ((!snapshot.sourceEnded && !nativeEnded) || !Number.isFinite(end) || source.observations.at(-1)?.position !== snapshot.position || !timeAtOrAfter(snapshot.position, end) || !snapshot.audioRanges?.length || !snapshot.audioRanges.every(r => Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start && knownNative(r)) || Math.abs(snapshot.audioRanges.at(-1).end - end) > codecEpsilon) fail('CAPTURE_PARTIAL_PRESENTATION', `Final EOF/range proof is incomplete: end=${end}, clock=${snapshot.position}, native=${JSON.stringify(snapshot.audioRanges)}, priorNative=${JSON.stringify(previousRanges)}, eof=${snapshot.sourceEnded}`)
       if (!this.experimental) {
         if (source.observations[0]?.position !== 0 || !covers(source.progress.ranges, 0, end, coverageEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe capture requires the whole source presentation from zero; a seek or missing beginning remains incomplete')
         if (!source.completeCertificate) {
@@ -689,5 +693,5 @@
     }
     return { tracker, sourceOf, snapshotOf, rateStatistics }
   }
-  globalThis.__musifyCaptureCore = { CaptureError, parseWebMOpus, inspectWebMPrefix, remuxWebM, projectTimeline, SessionTracker, ProgressiveTracker, mergeRanges, install }
+  globalThis.__musifyCaptureCore = { CaptureError, timeAtOrAfter, parseWebMOpus, inspectWebMPrefix, remuxWebM, projectTimeline, SessionTracker, ProgressiveTracker, mergeRanges, install }
 })()
