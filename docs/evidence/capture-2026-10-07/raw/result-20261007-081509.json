@@ -1,0 +1,545 @@
+{
+  "captureSuite": {
+    "acceptanceOk": false,
+    "adMethod": "Estados observados en reproductor oficial y unidades verificadas; contaminación semántica requiere referencia independiente",
+    "blocking": [
+      "La identidad publicitaria puede llegar tarde; los tiempos no prueban ausencia de anuncios en unidades ya entregadas."
+    ],
+    "continuityMethod": "waiting durante escucha normal y final; seek/backfill queda registrado por separado y no demuestra escucha continua de toda la canción",
+    "expectedTracks": 1,
+    "experimental": true,
+    "guaranteeAds": false,
+    "limits": {
+      "firstSoundMs": 3000,
+      "nextTrackMs": 500,
+      "seekMs": 3000,
+      "unpreparedMs": 5000
+    },
+    "measurementsOk": false,
+    "mode": "smoke",
+    "ok": false,
+    "rate": 1,
+    "rows": [
+      {
+        "acceptanceOk": false,
+        "adMs": 87686,
+        "adRateObservations": 86,
+        "adRateViolations": 0,
+        "adsDelivered": 0,
+        "adsSeen": 4,
+        "audioDuration": 287.90099999999995,
+        "backfillWaiting": [
+          {
+            "ms": 14446.200000047684,
+            "phase": "seek",
+            "position": 0.220066,
+            "type": "waiting"
+          },
+          {
+            "ms": 14463.200000047684,
+            "phase": "seek",
+            "position": 230.4,
+            "type": "waiting"
+          },
+          {
+            "ms": 72129.29999995232,
+            "phase": "backfill",
+            "position": 287.820169,
+            "type": "waiting"
+          },
+          {
+            "ms": 440141.09999990463,
+            "phase": "seek",
+            "position": 287.400999,
+            "type": "waiting"
+          }
+        ],
+        "complete": true,
+        "completeNotExercised": false,
+        "coverage": {
+          "audioDuration": 287.90099999999995,
+          "buffered": [
+            {
+              "end": 287.901,
+              "start": 0
+            }
+          ],
+          "complete": true,
+          "duration": 287.901,
+          "firstAppendMs": 13658,
+          "generation": 6,
+          "ranges": [
+            {
+              "end": 287.90099999999995,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "revision": 3,
+          "softError": null,
+          "units": 3835
+        },
+        "coverageOk": true,
+        "duration": 288,
+        "elapsedMs": 440667.59999990463,
+        "events": [
+          {
+            "ms": 353.59999990463257,
+            "phase": "startup",
+            "position": 0,
+            "type": "waiting"
+          },
+          {
+            "ms": 14184.700000047684,
+            "phase": "startup",
+            "position": 0.000546,
+            "type": "playing"
+          },
+          {
+            "ms": 14446.200000047684,
+            "phase": "seek",
+            "position": 0.220066,
+            "type": "waiting"
+          },
+          {
+            "ms": 14463.099999904633,
+            "phase": "seek",
+            "position": 230.4,
+            "type": "seeking"
+          },
+          {
+            "ms": 14463.200000047684,
+            "phase": "seek",
+            "position": 230.4,
+            "type": "waiting"
+          },
+          {
+            "ms": 14667.900000095367,
+            "phase": "seek",
+            "position": 230.400282,
+            "type": "seeked"
+          },
+          {
+            "ms": 14667.900000095367,
+            "phase": "seek",
+            "position": 230.400288,
+            "type": "playing"
+          },
+          {
+            "detail": "CAPTURE_PARTIAL_PRESENTATION: Final EOF/range proof is incomplete: end=287.90099999999995, clock=287.90019, native=[{\"start\":0,\"end\":16.181},{\"start\":230.001,\"end\":287.901}], eof=true",
+            "ms": 71895.70000004768,
+            "phase": "backfill",
+            "position": 287.586247,
+            "type": "capturewarning"
+          },
+          {
+            "ms": 72129.29999995232,
+            "phase": "backfill",
+            "position": 287.820169,
+            "type": "waiting"
+          },
+          {
+            "ms": 439951.7000000477,
+            "phase": "backfill",
+            "position": 287.874625,
+            "type": "playing"
+          },
+          {
+            "ms": 440012,
+            "phase": "backfill",
+            "position": 287.901,
+            "type": "ended"
+          },
+          {
+            "ms": 440141,
+            "phase": "seek",
+            "position": 287.400999,
+            "type": "seeking"
+          },
+          {
+            "ms": 440141.09999990463,
+            "phase": "seek",
+            "position": 287.400999,
+            "type": "waiting"
+          },
+          {
+            "ms": 440141.40000009537,
+            "phase": "seek",
+            "position": 287.401034,
+            "type": "seeked"
+          },
+          {
+            "ms": 440141.40000009537,
+            "phase": "seek",
+            "position": 287.401041,
+            "type": "playing"
+          },
+          {
+            "ms": 440662.59999990463,
+            "phase": "tail",
+            "position": 287.901,
+            "type": "ended"
+          }
+        ],
+        "failures": [
+          "Primer sonido supera 3000 ms tras descontar publicidad medida"
+        ],
+        "finalStatus": {
+          "activeWindows": 1,
+          "adMs": 87686,
+          "adObservations": 174,
+          "adRateObservations": 86,
+          "adRateViolations": 0,
+          "adWaitMs": 76659,
+          "ads": 174,
+          "adsDelivered": 0,
+          "adsSeen": 4,
+          "adsSourcesSeen": 4,
+          "api": 3,
+          "audioDuration": 287.90099999999995,
+          "bytes": 5628177,
+          "bytesQuarantined": 4881724,
+          "captureRate": 0.6541212902222944,
+          "chunks": 3835,
+          "complete": true,
+          "doneMs": 439923,
+          "duration": 287.901,
+          "eof": true,
+          "eofEnd": 287.90099999999995,
+          "epoch": 7,
+          "error": null,
+          "firstMs": 13974,
+          "foreground": true,
+          "frames": 14400,
+          "generation": 6,
+          "lastDiagnostic": "{\"phase\":\"progressive\",\"paused\":false,\"rate\":1,\"evidence\":{\"player\":true,\"contains\":true,\"selected\":true,\"mediaCount\":1,\"activeMediaCount\":1,\"mediaSessionTitle\":\"Airbag\",\"playerTitleLinks\":[\"Airbag\"],\"presentedId\":\"jNY_wLukVW0\",\"requestedId\":\"jNY_wLukVW0\",\"pageId\":\"jNY_wLukVW0\",\"playerTitle\":\"Airbag\",\"barTitle\":\"Airbag\",\"adMarker\":false,\"adClassShowing\":false,\"adClassInterrupting\":false,\"adOverlayPresent\":false,\"adOverlayVisible\":false,\"adTextPresent\":false,\"adTextVisible\":false,\"position\":287.240507,\"mediaDuration\":287.901}}",
+          "lastPosition": 287.240507,
+          "lastProgressAgoMs": 210,
+          "metaMs": 13815,
+          "mime": "audio/webm; codecs=\"opus\"",
+          "playingMs": 13785,
+          "rangeEnd": 287.90099999999995,
+          "rangeStart": 0,
+          "ranges": [
+            {
+              "end": 287.90099999999995,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "resets": 1,
+          "revision": 3,
+          "softError": null,
+          "state": "content",
+          "title": "Airbag",
+          "units": 3835,
+          "unknown": 0,
+          "verified": true,
+          "waitBudgetMs": 484560,
+          "why": "Official EOF and observed presentation ranges; completeness is the coverage union"
+        },
+        "firstSoundMs": 14184.700000047684,
+        "firstSoundWithoutAdMs": 3157.7000000476837,
+        "gaps": [],
+        "guaranteeAds": false,
+        "initialProgress": {
+          "audioDuration": null,
+          "buffered": [
+            {
+              "end": 0.281,
+              "start": 0
+            }
+          ],
+          "complete": false,
+          "duration": 288,
+          "firstAppendMs": 13658,
+          "generation": 1,
+          "ranges": [
+            {
+              "end": 0.281,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "revision": 3,
+          "softError": null,
+          "units": 4
+        },
+        "label": "jNY_wLukVW0",
+        "measurementOk": false,
+        "ok": false,
+        "phase": "finished",
+        "scope": "complete",
+        "seekAfter": {
+          "audioDuration": null,
+          "buffered": [
+            {
+              "end": 0.281,
+              "start": 0
+            },
+            {
+              "end": 230.661,
+              "start": 230.301
+            }
+          ],
+          "complete": false,
+          "duration": 288,
+          "firstAppendMs": 13658,
+          "generation": 1,
+          "ranges": [
+            {
+              "end": 0.281,
+              "start": 0
+            },
+            {
+              "end": 230.661,
+              "start": 230.301
+            }
+          ],
+          "recovering": false,
+          "revision": 3,
+          "softError": null,
+          "units": 9
+        },
+        "seekBefore": {
+          "audioDuration": null,
+          "buffered": [
+            {
+              "end": 0.281,
+              "start": 0
+            }
+          ],
+          "complete": false,
+          "duration": 288,
+          "firstAppendMs": 13658,
+          "generation": 1,
+          "ranges": [
+            {
+              "end": 0.281,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "revision": 3,
+          "softError": null,
+          "units": 4
+        },
+        "seekMs": 544.6999998092651,
+        "seekOk": true,
+        "seekStatus": {
+          "activeWindows": 1,
+          "adMs": 11027,
+          "adObservations": 25,
+          "adRateObservations": 12,
+          "adRateViolations": 0,
+          "adWaitMs": 0,
+          "ads": 25,
+          "adsDelivered": 0,
+          "adsSeen": 2,
+          "adsSourcesSeen": 2,
+          "api": 3,
+          "audioDuration": null,
+          "bytes": 9603,
+          "bytesQuarantined": 277387,
+          "captureRate": 0.05021360569699093,
+          "chunks": 10,
+          "complete": false,
+          "doneMs": null,
+          "duration": 288,
+          "eof": false,
+          "eofEnd": null,
+          "epoch": 5,
+          "error": null,
+          "firstMs": 13974,
+          "foreground": true,
+          "frames": 37,
+          "generation": 1,
+          "lastDiagnostic": null,
+          "lastPosition": 230.4,
+          "lastProgressAgoMs": 8,
+          "metaMs": 13815,
+          "mime": "audio/webm; codecs=\"opus\"",
+          "playingMs": 13785,
+          "rangeEnd": 230.761,
+          "rangeStart": 0,
+          "ranges": [
+            {
+              "end": 0.281,
+              "start": 0
+            },
+            {
+              "end": 230.761,
+              "start": 230.301
+            }
+          ],
+          "recovering": false,
+          "resets": 0,
+          "revision": 3,
+          "softError": null,
+          "state": "content",
+          "title": "Airbag",
+          "units": 10,
+          "unknown": 0,
+          "verified": true,
+          "waitBudgetMs": 408000,
+          "why": null
+        },
+        "seekTarget": 230.4,
+        "seekWasCaptured": false,
+        "startAdMs": 11027,
+        "startStatus": {
+          "activeWindows": 1,
+          "adMs": 11027,
+          "adObservations": 25,
+          "adRateObservations": 12,
+          "adRateViolations": 0,
+          "adWaitMs": 11027,
+          "ads": 25,
+          "adsDelivered": 0,
+          "adsSeen": 2,
+          "adsSourcesSeen": 2,
+          "api": 3,
+          "audioDuration": null,
+          "bytes": 894,
+          "bytesQuarantined": 283494,
+          "captureRate": 0.019781249231364716,
+          "chunks": 4,
+          "complete": false,
+          "doneMs": null,
+          "duration": 288,
+          "eof": false,
+          "eofEnd": null,
+          "epoch": 2,
+          "error": null,
+          "firstMs": 13974,
+          "foreground": true,
+          "frames": 14,
+          "generation": 1,
+          "lastDiagnostic": "{\"phase\":\"progressive\",\"paused\":false,\"rate\":1,\"evidence\":{\"player\":true,\"contains\":true,\"selected\":true,\"mediaCount\":1,\"activeMediaCount\":1,\"mediaSessionTitle\":\"Airbag\",\"playerTitleLinks\":[\"Airbag\"],\"presentedId\":\"jNY_wLukVW0\",\"requestedId\":\"jNY_wLukVW0\",\"pageId\":\"jNY_wLukVW0\",\"playerTitle\":\"Airbag\",\"barTitle\":\"Airbag\",\"adMarker\":false,\"adClassShowing\":false,\"adClassInterrupting\":false,\"adOverlayPresent\":false,\"adOverlayVisible\":false,\"adTextPresent\":false,\"adTextVisible\":false,\"position\":0.200902,\"mediaDuration\":288}}",
+          "lastPosition": 0.200902,
+          "lastProgressAgoMs": 56,
+          "metaMs": 13815,
+          "mime": "audio/webm; codecs=\"opus\"",
+          "playingMs": 13785,
+          "rangeEnd": 0.281,
+          "rangeStart": 0,
+          "ranges": [
+            {
+              "end": 0.281,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "resets": 0,
+          "revision": 3,
+          "softError": null,
+          "state": "content",
+          "title": "Airbag",
+          "units": 4,
+          "unknown": 0,
+          "verified": true,
+          "waitBudgetMs": 419027,
+          "why": null
+        },
+        "status": {
+          "activeWindows": 1,
+          "adMs": 87686,
+          "adObservations": 174,
+          "adRateObservations": 86,
+          "adRateViolations": 0,
+          "adWaitMs": 76659,
+          "ads": 174,
+          "adsDelivered": 0,
+          "adsSeen": 4,
+          "adsSourcesSeen": 4,
+          "api": 3,
+          "audioDuration": 287.90099999999995,
+          "bytes": 5628177,
+          "bytesQuarantined": 4881724,
+          "captureRate": 0.6541212902222944,
+          "chunks": 3835,
+          "complete": true,
+          "doneMs": 439923,
+          "duration": 287.901,
+          "eof": true,
+          "eofEnd": 287.90099999999995,
+          "epoch": 7,
+          "error": null,
+          "firstMs": 13974,
+          "foreground": true,
+          "frames": 14400,
+          "generation": 6,
+          "lastDiagnostic": "{\"phase\":\"progressive\",\"paused\":false,\"rate\":1,\"evidence\":{\"player\":true,\"contains\":true,\"selected\":true,\"mediaCount\":1,\"activeMediaCount\":1,\"mediaSessionTitle\":\"Airbag\",\"playerTitleLinks\":[\"Airbag\"],\"presentedId\":\"jNY_wLukVW0\",\"requestedId\":\"jNY_wLukVW0\",\"pageId\":\"jNY_wLukVW0\",\"playerTitle\":\"Airbag\",\"barTitle\":\"Airbag\",\"adMarker\":false,\"adClassShowing\":false,\"adClassInterrupting\":false,\"adOverlayPresent\":false,\"adOverlayVisible\":false,\"adTextPresent\":false,\"adTextVisible\":false,\"position\":287.240507,\"mediaDuration\":287.901}}",
+          "lastPosition": 287.240507,
+          "lastProgressAgoMs": 210,
+          "metaMs": 13815,
+          "mime": "audio/webm; codecs=\"opus\"",
+          "playingMs": 13785,
+          "rangeEnd": 287.90099999999995,
+          "rangeStart": 0,
+          "ranges": [
+            {
+              "end": 287.90099999999995,
+              "start": 0
+            }
+          ],
+          "recovering": false,
+          "resets": 1,
+          "revision": 3,
+          "softError": null,
+          "state": "content",
+          "title": "Airbag",
+          "units": 3835,
+          "unknown": 0,
+          "verified": true,
+          "waitBudgetMs": 484560,
+          "why": "Official EOF and observed presentation ranges; completeness is the coverage union"
+        },
+        "tailMs": 518.7999999523163,
+        "videoId": "jNY_wLukVW0"
+      }
+    ],
+    "running": false,
+    "scope": "complete",
+    "timingMethod": "Reloj monotónico de eventos HTMLAudioElement en WebView2; audio silenciado durante medición"
+  },
+  "clients": [
+    "VISIONOS"
+  ],
+  "engineStats": {
+    "extractors": [
+      {
+        "downloaded": false,
+        "name": "recipe",
+        "version": 1
+      },
+      {
+        "downloaded": false,
+        "name": "capture",
+        "version": 2
+      },
+      {
+        "downloaded": false,
+        "name": "youtubei",
+        "version": 1
+      }
+    ],
+    "fast": 0,
+    "fastFailed": 0,
+    "official": 2,
+    "officialLegacy": 0,
+    "officialProgressive": 2,
+    "replaced": 0
+  },
+  "logs": [],
+  "ok": false,
+  "startedAt": "2026-10-07T06:15:28.025Z",
+  "stats": {
+    "evalAvgMs": 0,
+    "evalMs": 0,
+    "evals": 0,
+    "playerMs": 0,
+    "sessionMs": 0
+  },
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0"
+}
