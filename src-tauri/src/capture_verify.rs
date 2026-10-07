@@ -19,6 +19,14 @@ struct Packet {
     hash: String,
     size: usize,
     position: Option<u64>,
+    aac_clock: Option<AacPacketClock>,
+}
+#[derive(Clone, Debug)]
+struct AacPacketClock {
+    pts: i64,
+    duration: i64,
+    sample_rate: u64,
+    config: String,
 }
 #[derive(Clone, Debug)]
 struct ReferencePresentation {
@@ -111,9 +119,20 @@ fn directory() -> Result<PathBuf, String> {
 struct Probe {
     #[serde(default)]
     packets: Vec<ProbePacket>,
+    #[serde(default)]
+    streams: Vec<PacketStream>,
+}
+#[derive(Deserialize)]
+struct PacketStream {
+    codec_name: Option<String>,
+    time_base: Option<String>,
+    sample_rate: Option<String>,
+    extradata_hash: Option<String>,
 }
 #[derive(Deserialize)]
 struct ProbePacket {
+    pts: Option<i64>,
+    duration: Option<i64>,
     pts_time: Option<String>,
     duration_time: Option<String>,
     size: Option<String>,
@@ -129,8 +148,9 @@ async fn packets(path: &Path) -> Result<Vec<Packet>, String> {
             "-select_streams",
             "a:0",
             "-show_packets",
+            "-show_streams",
             "-show_entries",
-            "packet=pts_time,duration_time,size,data_hash,pos",
+            "packet=pts,pts_time,duration,duration_time,size,data_hash,pos:stream=codec_name,time_base,sample_rate,extradata_hash",
             "-show_data_hash",
             "sha256",
             "-of",
@@ -152,6 +172,20 @@ async fn packets(path: &Path) -> Result<Vec<Packet>, String> {
     }
     let probe: Probe = serde_json::from_slice(&output.stdout)
         .map_err(|_| "ffprobe no devolvió un inventario válido")?;
+    let aac_stream = probe
+        .streams
+        .first()
+        .filter(|_| probe.streams.len() == 1)
+        .and_then(|stream| {
+            let rate = stream.sample_rate.as_deref()?.parse::<u64>().ok()?;
+            let config = stream.extradata_hash.as_ref()?;
+            (stream.codec_name.as_deref() == Some("aac")
+                && rate > 0
+                && stream.time_base.as_deref() == Some(format!("1/{rate}").as_str())
+                && config.starts_with("SHA256:")
+                && config.len() == 71)
+                .then(|| (rate, config.clone()))
+        });
     let result: Vec<_> = probe
         .packets
         .into_iter()
@@ -189,6 +223,15 @@ async fn packets(path: &Path) -> Result<Vec<Packet>, String> {
                 size,
                 hash,
                 position: p.pos.as_deref().and_then(|value| value.parse().ok()),
+                aac_clock: aac_stream.as_ref().and_then(|(sample_rate, config)| {
+                    let duration = p.duration.filter(|duration| *duration > 0)?;
+                    Some(AacPacketClock {
+                        pts: p.pts?,
+                        duration,
+                        sample_rate: *sample_rate,
+                        config: config.clone(),
+                    })
+                }),
             })
         })
         .collect::<Result<_, &str>>()
@@ -259,7 +302,21 @@ fn map_reference_frames(
             .pts
             .ok_or("Reference frame has no exact presentation timestamp")?;
         let start = pts as f64 * time_base.0 as f64 / time_base.1 as f64;
-        let end = start + frame.nb_samples.unwrap() as f64 / sample_rate as f64;
+        let mut end = start + frame.nb_samples.unwrap() as f64 / sample_rate as f64;
+        // AAC may decode a complete 1024-sample frame while the independent
+        // MP4 demuxer declares a shorter final packet (container tail trim).
+        // This boundary comes from the reference, never capture EOF/window.
+        if index + 1 == packets.len() {
+            if let Some(clock) = &packets[index].aac_clock {
+                if clock.sample_rate == sample_rate {
+                    let packet_end = clock
+                        .pts
+                        .checked_add(clock.duration)
+                        .ok_or("Reference final packet clock overflow")?;
+                    end = end.min(packet_end as f64 / sample_rate as f64);
+                }
+            }
+        }
         if !start.is_finite() || !end.is_finite() || end <= start {
             return Err("Reference frame has invalid decoded sample extent".into());
         }
@@ -541,10 +598,66 @@ fn compare(
 ) -> Vec<(usize, Option<usize>, String)> {
     compare_with_origin(captured, reference, Some(timestamp_offset))
 }
+#[cfg(test)]
 fn compare_with_origin(
     captured: &[Packet],
     reference: &[Packet],
     offset: Option<f64>,
+) -> Vec<(usize, Option<usize>, String)> {
+    compare_with_window(captured, reference, offset, (0.0, f64::INFINITY))
+}
+
+// Conversion permits only floating-point representation error at an integer
+// sample boundary, not one sample or the packet-clock quantization tolerance.
+fn exact_sample_boundary(seconds: f64, rate: u64) -> Option<i64> {
+    let samples = seconds * rate as f64;
+    let integer = samples.round();
+    (samples.is_finite()
+        && integer.abs() < i64::MAX as f64
+        && (samples - integer).abs() <= 4.0 * f64::EPSILON * samples.abs().max(1.0))
+    .then_some(integer as i64)
+}
+
+fn matching_packet_duration(
+    captured: &Packet,
+    reference: &Packet,
+    offset: f64,
+    window: (f64, f64),
+    both_last: bool,
+) -> bool {
+    let (Some(c), Some(r)) = (&captured.aac_clock, &reference.aac_clock) else {
+        return (reference.duration - captured.duration).abs() <= PACKET_CLOCK_EPSILON;
+    };
+    if c.sample_rate != r.sample_rate || c.config != r.config {
+        return false;
+    }
+    if c.duration == r.duration {
+        return true;
+    }
+    if !both_last || c.duration <= r.duration {
+        return false;
+    }
+    let Some(offset) = exact_sample_boundary(offset, c.sample_rate) else {
+        return false;
+    };
+    let Some(start) = c.pts.checked_add(offset) else {
+        return false;
+    };
+    let Some(end) = r.pts.checked_add(r.duration) else {
+        return false;
+    };
+    // The whole coded payload must match; ONLY its independently declared
+    // final tail may be excluded by the explicit MSE append window.
+    start == r.pts
+        && exact_sample_boundary(window.1, c.sample_rate) == Some(end)
+        && exact_sample_boundary(window.0, c.sample_rate).is_some_and(|from| from <= start)
+}
+
+fn compare_with_window(
+    captured: &[Packet],
+    reference: &[Packet],
+    offset: Option<f64>,
+    window: (f64, f64),
 ) -> Vec<(usize, Option<usize>, String)> {
     let Some(offset) = offset else {
         return captured
@@ -569,7 +682,13 @@ fn compare_with_origin(
                     previous.is_none_or(|before| *index > before)
                         && r.hash == p.hash
                         && r.size == p.size
-                        && (r.duration - p.duration).abs() <= PACKET_CLOCK_EPSILON
+                        && matching_packet_duration(
+                            p,
+                            r,
+                            offset,
+                            window,
+                            i + 1 == captured.len() && *index + 1 == reference.len(),
+                        )
                 })
                 .map(|(index, _)| index);
             if let Some(index) = matching {
@@ -689,7 +808,8 @@ pub async fn capture_verify_check(video_id: String, r#final: bool) -> Result<Val
                     .ok_or("Offset ausente")?;
                 // Metadato MSE fijado antes de observar los bytes: nunca buscar un hash
                 // posterior para desplazar la canción y ocultar un comienzo omitido.
-                let comparison = compare_with_origin(&captured, &reference.packets, Some(offset));
+                let comparison =
+                    compare_with_window(&captured, &reference.packets, Some(offset), window);
                 let mut pcm_verified = false;
                 if captured.len() == declared_frames as usize
                     && comparison.iter().any(|(_, matched, _)| matched.is_none())
@@ -813,7 +933,103 @@ mod tests {
             hash: hash.into(),
             size: 3,
             position: None,
+            aac_clock: None,
         }
+    }
+    fn aac_packet(pts: i64, duration: i64, hash: &str) -> Packet {
+        Packet {
+            pts: pts as f64 / 44100.0,
+            duration: duration as f64 / 44100.0,
+            hash: hash.into(),
+            size: 349,
+            position: Some(1),
+            aac_clock: Some(AacPacketClock {
+                pts,
+                duration,
+                sample_rate: 44100,
+                config: "same-aac-config".into(),
+            }),
+        }
+    }
+    #[test]
+    fn exact_aac_final_trim_requires_the_reference_tail_and_fixed_sample_boundary() {
+        // Real Sucede clocks: identical AAC bytes carry 1024 coded samples;
+        // the reference final packet and MSE append window present only 344.
+        let reference = vec![aac_packet(8261056, 344, "exact-final-payload")];
+        let captured = vec![aac_packet(8262656, 1024, "exact-final-payload")];
+        let offset = -0.036281179138322;
+        let window = (0.0, 187.33333333333337);
+        let matches = |captured: &[Packet], window| {
+            compare_with_window(captured, &reference, Some(offset), window)[0]
+                .1
+                .is_some()
+        };
+        assert!(matches(&captured, window));
+        for end in [
+            f64::INFINITY,
+            window.1 + 1.0 / 44100.0,
+            window.1 - 1.0 / 44100.0,
+        ] {
+            assert!(
+                !matches(&captured, (0.0, end)),
+                "a single sample cannot disappear into a millisecond tolerance"
+            );
+        }
+        let mut corrupt = captured.clone();
+        corrupt[0].hash = "different-payload".into();
+        assert!(!matches(&corrupt, window));
+        let mut wrong_config = captured.clone();
+        wrong_config[0].aac_clock.as_mut().unwrap().config = "other-config".into();
+        assert!(!matches(&wrong_config, window));
+        assert!(
+            compare_with_window(&captured, &reference, Some(offset + 1.0 / 44100.0), window)[0]
+                .1
+                .is_none()
+        );
+        let mut wrong_duration = captured.clone();
+        wrong_duration[0].aac_clock.as_mut().unwrap().duration = 343;
+        assert!(
+            !matches(&wrong_duration, window),
+            "cannot invent missing samples"
+        );
+    }
+    #[test]
+    fn independent_aac_tail_trim_preserves_required_packet_and_missing_tail_failure() {
+        let mut reference = vec![
+            aac_packet(8260032, 1024, "before"),
+            aac_packet(8261056, 344, "tail"),
+        ];
+        reference[1].position = Some(2);
+        let frames = [
+            PresentationFrame {
+                pkt_pos: Some("1".into()),
+                nb_samples: Some(1024),
+                pts: Some(8260032),
+            },
+            PresentationFrame {
+                pkt_pos: Some("2".into()),
+                nb_samples: Some(1024),
+                pts: Some(8261056),
+            },
+        ];
+        let presentation = map_reference_frames(&reference, &frames, (1, 44100), 44100).unwrap();
+        assert_eq!(presentation.frame_ranges[1].1, 8261400.0 / 44100.0);
+        let mut coverage = ReferenceCoverage {
+            required: presentation.required_packets.clone(),
+            ..Default::default()
+        };
+        add_encoded_coverage(&mut coverage, &presentation, 0, (0.0, f64::INFINITY));
+        assert!(
+            !coverage.complete(),
+            "a missing final packet remains missing"
+        );
+        add_encoded_coverage(&mut coverage, &presentation, 1, (0.0, 8261399.0 / 44100.0));
+        assert!(
+            !coverage.complete(),
+            "one missing presentable sample remains missing"
+        );
+        add_encoded_coverage(&mut coverage, &presentation, 1, (0.0, 8261400.0 / 44100.0));
+        assert!(coverage.complete());
     }
     #[test]
     fn clean_captured_eof_cannot_approve_a_matching_prefix_of_the_complete_reference() {
@@ -993,6 +1209,106 @@ mod tests {
             .is_none(),
             "the same A bytes at B's timestamp are the wrong audio"
         );
+    }
+    #[tokio::test]
+    async fn real_aac_full_coded_tail_matches_only_the_declared_reference_trim() {
+        let directory = std::env::temp_dir().join(format!(
+            "musify-ref-tail-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let reference_path = directory.join("reference.m4a");
+        let captured_path = directory.join("captured.mp4");
+        let mut generate = tokio::process::Command::new("ffmpeg");
+        generate
+            .args([
+                "-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=997:sample_rate=44100:duration=2.013",
+                "-ac",
+                "2",
+                "-c:a",
+                "aac",
+            ])
+            .arg(&reference_path)
+            .kill_on_drop(true);
+        let mut remux = tokio::process::Command::new("ffmpeg");
+        remux
+            .args(["-v", "error", "-i"])
+            .arg(&reference_path)
+            .args([
+                "-c",
+                "copy",
+                "-bsf:a",
+                "setts=duration=1024",
+                "-movflags",
+                "+frag_keyframe+empty_moov+default_base_moof",
+            ])
+            .arg(&captured_path)
+            .kill_on_drop(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            generate.as_std_mut().creation_flags(0x08000000);
+            remux.as_std_mut().creation_flags(0x08000000);
+        }
+        assert!(generate.output().await.unwrap().status.success());
+        assert!(remux.output().await.unwrap().status.success());
+        let reference = packets(&reference_path).await.unwrap();
+        let captured = packets(&captured_path).await.unwrap();
+        assert_eq!(reference.len(), captured.len());
+        let tail = reference.last().unwrap().aac_clock.as_ref().unwrap();
+        assert!(tail.duration < 1024);
+        assert_eq!(
+            captured
+                .last()
+                .unwrap()
+                .aac_clock
+                .as_ref()
+                .unwrap()
+                .duration,
+            1024
+        );
+        let offset = -1024.0 / 44100.0;
+        let window = (0.0, (tail.pts + tail.duration) as f64 / 44100.0);
+        let compared = compare_with_window(&captured, &reference, Some(offset), window);
+        assert!(compared.iter().all(|(_, matched, _)| matched.is_some()));
+        let presentation = reference_presentation(&reference_path, &reference)
+            .await
+            .unwrap();
+        let mut coverage = ReferenceCoverage {
+            required: presentation.required_packets.clone(),
+            ..Default::default()
+        };
+        for (_, index, _) in compared.iter().take(compared.len() - 1) {
+            add_encoded_coverage(&mut coverage, &presentation, index.unwrap(), window);
+        }
+        assert!(!coverage.complete());
+        add_encoded_coverage(&mut coverage, &presentation, reference.len() - 1, window);
+        assert!(coverage.complete());
+        for end in [
+            f64::INFINITY,
+            window.1 - 1.0 / 44100.0,
+            window.1 + 1.0 / 44100.0,
+        ] {
+            assert!(
+                compare_with_window(&captured, &reference, Some(offset), (0.0, end))
+                    .last()
+                    .unwrap()
+                    .1
+                    .is_none()
+            );
+        }
+        std::fs::remove_file(reference_path).unwrap();
+        std::fs::remove_file(captured_path).unwrap();
+        std::fs::remove_dir(directory).unwrap();
     }
     #[tokio::test]
     async fn real_aac_and_opus_reference_inventory_maps_decoder_priming_and_eof() {
