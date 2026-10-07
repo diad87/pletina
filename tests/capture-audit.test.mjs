@@ -241,3 +241,34 @@ test('playback metadata and transport failures never replace a native result or 
   f.media.playError = error
   assert.throws(() => f.media.play(), e => e === error)
 })
+
+test('caller evidence retains at most twelve safe names and restores the native V8 stack limit', () => {
+  const f = setup()
+  f.context.media = f.media
+  vm.runInContext(`
+    globalThis.originalLimit = Object.getOwnPropertyDescriptor(Error, 'stackTraceLimit');
+    Error.stackTraceLimit = 4;
+    globalThis.beforeLimit = Object.getOwnPropertyDescriptor(Error, 'stackTraceLimit');
+    function actor0() { media.pause() }
+    ${Array.from({ length: 15 }, (_, i) => `function actor${i + 1}() { actor${i}() }`).join('\n')}
+    actor15();
+    globalThis.afterLimit = Object.getOwnPropertyDescriptor(Error, 'stackTraceLimit');
+  `, f.context)
+  const sample = playback(f)[0].playback.control
+  assert.equal(sample.stack.length, 12)
+  assert.deepEqual([...sample.stack], Array.from({ length: 12 }, (_, i) => `actor${i}`))
+  assert.deepEqual(f.context.afterLimit, f.context.beforeLimit)
+  assert.equal(f.media.nativeCalls.filter(call => call[0] === 'pause').length, 1)
+  assert.ok(JSON.stringify(playback(f)[0]).length < 2400)
+})
+
+test('failure while capturing a diagnostic stack restores its limit and still calls native pause', () => {
+  const f = setup()
+  f.context.Error = class { constructor() { throw new Error('diagnostic constructor failure') } }
+  Object.defineProperty(f.context.Error, 'stackTraceLimit', { value: 4, writable: true, enumerable: false, configurable: true })
+  const original = Object.getOwnPropertyDescriptor(f.context.Error, 'stackTraceLimit')
+  f.media.pause()
+  assert.deepEqual(Object.getOwnPropertyDescriptor(f.context.Error, 'stackTraceLimit'), original)
+  assert.equal(f.media.nativeCalls.filter(call => call[0] === 'pause').length, 1)
+  assert.deepEqual([...playback(f)[0].playback.control.stack], [])
+})

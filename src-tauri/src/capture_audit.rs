@@ -241,7 +241,7 @@ fn playback_diagnostic(value: &Value) -> Option<Value> {
             }
         }
         if let Some(stack) = control.get("stack") {
-            let names = stack.as_array().filter(|names| names.len() <= 4)?;
+            let names = stack.as_array().filter(|names| names.len() <= 12)?;
             let mut clean_names = Vec::with_capacity(names.len());
             for name in names {
                 let name = name.as_str()?;
@@ -748,6 +748,16 @@ mod tests {
         input["control"]["before"]["path"] = json!("C:/private/profile");
         let clean = playback_diagnostic(&input).unwrap();
         assert_eq!(clean["control"]["stack"][0], "Object.$pause");
+        let mut extended = input.clone();
+        extended["control"]["stack"] =
+            json!((0..12).map(|i| format!("caller{i}")).collect::<Vec<_>>());
+        assert_eq!(
+            playback_diagnostic(&extended).unwrap()["control"]["stack"]
+                .as_array()
+                .unwrap()
+                .len(),
+            12
+        );
         let encoded = clean.to_string();
         for private in [
             "private.invalid",
@@ -760,7 +770,7 @@ mod tests {
         for (pointer, bad) in [
             ("/control/stack", json!(["https://private.invalid/token"])),
             ("/control/stack", json!(["C:\\private\\profile"])),
-            ("/control/stack", json!(["a", "b", "c", "d", "e"])),
+            ("/control/stack", json!(vec!["frame"; 13])),
             ("/control/reason", json!("https://private.invalid/token")),
             ("/control/method", json!("arbitrary-operation")),
             ("/control/origin", json!("private-account")),

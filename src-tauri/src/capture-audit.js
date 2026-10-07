@@ -38,12 +38,22 @@
     const safeStack = () => {
       const names = []
       try {
+        // V8 normally captures ten frames, including these wrappers. Raise that
+        // local diagnostic capture limit briefly, then restore the exact property.
+        const ErrorType = Error, limit = Object.getOwnPropertyDescriptor(ErrorType, 'stackTraceLimit')
+        let raw, raised = false
+        try {
+          if (limit && 'value' in limit && typeof limit.value === 'number' && limit.value < 20 && limit.writable) {
+            Object.defineProperty(ErrorType, 'stackTraceLimit', { ...limit, value: 20 }); raised = true
+          }
+          raw = String(new ErrorType().stack ?? '').slice(0, 8192)
+        } finally { if (raised) Object.defineProperty(ErrorType, 'stackTraceLimit', limit) }
         // Read only bounded function names. Never retain frame locations, URLs,
         // query strings, exception messages, source text or account information.
-        for (const line of String(new Error().stack ?? '').slice(0, 8192).split('\n').slice(1, 17)) {
+        for (const line of raw.split('\n').slice(1, 25)) {
           const name = /^\s*at ([A-Za-z_$][A-Za-z0-9_$.]{0,63})\s*\(/.exec(line)?.[1]
-          if (name && !['safeStack', 'auditedPlayback', 'control', 'controlled'].includes(name)) names.push(name)
-          if (names.length === 4) break
+          if (name && !['safeStack', 'auditedPlayback', 'control', 'controlled'].includes(name.split('.').at(-1))) names.push(name)
+          if (names.length === 12) break
         }
       } catch { /* Optional caller evidence never changes the native call. */ }
       return names

@@ -267,7 +267,7 @@
     } catch (e) {
       const replay = !pendingSeek && current.state === 'content' && e === source.error ? tracker.startupReplayUnpublished(source, snapshot) : null
       if (replay) {
-      controlled('startup-replay', () => media.pause()); presented.delete(source)
+        controlled('startup-replay', () => media.pause()); presented.delete(source)
         pendingSeek = { at: 0, start: 0, startup: true, assigned: true }
         event('diagnostic', { state: 'content', source: source.id, position: snapshot.position, playbackRate: 1, browserNow: performance.now(),
           reason: diagnosticReason({ phase: 'startup-replay-unpublished', ...replay, previousError: e.message }) })
