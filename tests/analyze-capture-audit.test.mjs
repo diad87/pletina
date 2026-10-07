@@ -239,6 +239,40 @@ test('real encoded startup candidate gains a bracket without gaining an observed
   assert.equal(missingAnchor.counts.measuredCandidateTransitions, 0, 'the bracket cannot replace the independent fully observed canonical anchor')
 })
 
+test('exact real packets with an unobserved first ready clock get diagnostics without an anchor or delay credit', t => {
+  const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), external = realTone(join(w.directory, 'external.webm'), 1499)
+  writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
+  const inventory = context.__musifyCaptureCore.inspectWebMPrefix(new Uint8Array(song), { final: true })
+  const b = builder(w.audit)
+  b.append(1, external); allPresented(b, 1, external, 0, 150)
+  b.append(2, song); b.mutation(2, 'endOfStream')
+  const ranges = [{ start: 0, end: inventory.codedEnd }]
+  b.clock(2, 0, 1000, 'content', { phase: 'loadedmetadata', readyState: 1, audioRanges: ranges })
+  b.clock(2, 0.008538, 1015, 'content', { phase: 'playing', readyState: 4, audioRanges: ranges })
+  for (let ms = 50; ms < inventory.codedEnd * 1000; ms += 50) b.clock(2, ms / 1000, 1000 + ms, 'content', { audioRanges: ranges })
+  b.clock(2, inventory.codedEnd, 1000 + inventory.codedEnd * 1000, 'content', { ended: true, paused: true, sourceEnded: true, audioRanges: ranges })
+  b.finish()
+  const report = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle }), run = report.runs[1]
+  assert.deepEqual(run.reasons, ['canonical-inventory-exact-presentation-incomplete'])
+  assert.equal(run.canonicalInventoryDiagnostics.length, 1)
+  const diagnostic = run.canonicalInventoryDiagnostics[0]
+  assert.match(diagnostic.referenceHash, /^[a-f0-9]{64}$/)
+  assert.equal(diagnostic.exactPackets, inventory.samples.length)
+  assert.equal(diagnostic.presentablePackets, inventory.samples.length)
+  assert.equal(diagnostic.observedPresentablePackets, inventory.samples.length - 1)
+  assert.equal(diagnostic.unobservedPacketCount, 1)
+  assert.deepEqual(diagnostic.unobservedPackets, [{ index: 0, start: 0, end: 0.02 }])
+  assert.equal(diagnostic.unobservedPacketsTruncated, false)
+  assert.equal(run.startupOnsetBracket.coverageCredit, false)
+  assert.equal(run.presentedPackets, inventory.samples.length - 1)
+  assert.equal(run.referenceHash, null, 'diagnostic evidence is not an accepted encoding anchor')
+  assert.equal(run.measured, false); assert.equal(run.canonicalPackets, 0)
+  assert.deepEqual(report.runs[0].canonicalInventoryDiagnostics, [], 'different audio does not gain an exact-inventory diagnosis')
+  assert.equal(report.counts.measuredRuns, 0); assert.equal(report.counts.measuredCandidateTransitions, 0)
+  assert.deepEqual(report.candidates, []); assert.equal(report.observedMaximumCandidateDelayMs, null)
+  assert.equal(report.universalHoldbackBound, null)
+})
+
 test('matching codec alone, a missing reference, a partial clock and a missing final marker remain unmeasured', t => {
   const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), different = realTone(join(w.directory, 'different.webm'), 1499)
   writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
@@ -247,6 +281,7 @@ test('matching codec alone, a missing reference, a partial clock and a missing f
   assert.equal(report.counts.measuredCandidateTransitions, 0)
   assert.equal(report.counts.observedSiteAdSignalEpisodes, 1); assert.equal(report.counts.siteAdSignalEpisodesUnmeasured, 1)
   assert.ok(report.runs[0].reasons.includes('no-observed-canonical-payload-anchors-encoding-unverified'))
+  assert.deepEqual(report.runs[0].canonicalInventoryDiagnostics, [])
   const records = structuredClone(b.records).slice(0, -1)
   writeFileSync(join(w.audit, `${ID}-observations.jsonl`), records.map(r => JSON.stringify(r)).join('\n') + '\n')
   const partial = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle })
@@ -287,6 +322,7 @@ test('an EOF-truncated canonical prefix cannot anchor an otherwise compatible en
   const report = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle })
   assert.equal(report.counts.measuredRuns, 0)
   assert.ok(report.runs[0].reasons.includes('no-observed-canonical-payload-anchors-encoding-unverified'))
+  assert.deepEqual(report.runs[0].canonicalInventoryDiagnostics, [])
 })
 
 test('journal filenames cannot choose among parser runs sharing an epoch and source binding', t => {

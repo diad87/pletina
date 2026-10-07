@@ -282,7 +282,7 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
     const initialization = new Map(), runs = [], anchorPools = new Map()
     for (const group of groups) for (const [index, run] of group.runs.entries()) {
       const clocks = group.clocks.filter(c => c.sequence >= run.fromSequence && c.sequence < run.untilSequence)
-      const result = { binding: group.key, run: index, base: group.base, settings: run.settings, errors: [...group.errors], packets: [], candidates: [], offset: null, clocks }
+      const result = { binding: group.key, run: index, base: group.base, settings: run.settings, errors: [...group.errors], packets: [], candidates: [], canonicalInventoryDiagnostics: [], offset: null, clocks }
       runs.push(result)
       try {
         result.offset = offsetFor(group.key, offsets)
@@ -320,6 +320,12 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
           if (run.eof && !inventory.pending && matches.length === reference.packets.length && matches.every((match, i) => match.proof === 'canonical-packet' && match.index === i)) {
             try { const complete = inspect(bytes, run.mime, { final: true, allowGaps: false }); completeInventory = complete.samples.length === result.packets.length } catch { /* Partial runs remain useful only after another source anchors the encoding. */ }
           }
+          if (completeInventory) {
+            const unobserved = result.packets.flatMap((packet, index) => packet.end > packet.start && !packet.presentation ? [{ index, start: packet.start, end: packet.end }] : [])
+            if (unobserved.length) result.canonicalInventoryDiagnostics.push({ referenceHash: reference.hash, exactPackets: matches.length,
+              presentablePackets: presentable.length, observedPresentablePackets: presentable.length - unobserved.length,
+              unobservedPacketCount: unobserved.length, unobservedPackets: unobserved.slice(0, 32), unobservedPacketsTruncated: unobserved.length > 32 })
+          }
           if (completeInventory && presentable.length > 0 && presentable.every(p => p.presentation) && !result.errors.length) {
             const key = [group.base.v, group.base.generation, result.configuration, reference.hash].join('/')
             anchorPools.set(key, (anchorPools.get(key) ?? 0) + presentable.length)
@@ -331,7 +337,14 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
       if (run.errors.length) continue
       const anchored = run.references.filter(ref => anchorPools.has([run.base.v, run.base.generation, run.configuration, ref.hash].join('/')))
       const unique = [...new Map(anchored.map(ref => [ref.hash, ref])).values()]
-      if (unique.length !== 1) { run.errors.push(unique.length ? 'multiple-independently-anchored-reference-encodings' : 'no-observed-canonical-payload-anchors-encoding-unverified'); continue }
+      if (unique.length !== 1) {
+        // Exact bytes do not fill missing presentation. Keep anchors and delay
+        // denied, but distinguish that missing observation from an encoding mismatch.
+        run.errors.push(unique.length ? 'multiple-independently-anchored-reference-encodings'
+          : run.canonicalInventoryDiagnostics.length ? 'canonical-inventory-exact-presentation-incomplete'
+            : 'no-observed-canonical-payload-anchors-encoding-unverified')
+        continue
+      }
       run.reference = unique[0]
       let previousMatch = -1
       for (const packet of run.packets) {
@@ -387,6 +400,7 @@ export function analyzeAudit({ auditDirectory, oracleDirectory, journalDirectory
       observedMaximumCandidateDelayMs: measured.length ? { lower: Math.max(...measured.map(c => c.nonnegativeDelayMs.lower)), upper: Math.max(...measured.map(c => c.nonnegativeDelayMs.upper)) } : null,
       runs: runs.map(run => ({ videoId: run.base.v, binding: run.binding, run: run.run, measured: !run.errors.length, reasons: [...new Set(run.errors)], codec: run.codec ?? null,
         offset: run.offset, parserPackets: run.inventoryPackets ?? null, prefixPending: run.prefixPending ?? null, referenceHash: run.reference?.hash ?? null, startupOnsetBracket: run.startup ?? null,
+        canonicalInventoryDiagnostics: run.canonicalInventoryDiagnostics,
         presentedPackets: run.packets.filter(p => p.presentation).length, canonicalPackets: run.packets.filter(p => p.proof === 'canonical-packet').length, externalCandidatePackets: run.packets.filter(p => p.proof === 'external-candidate').length,
         alignmentUnmeasuredPackets: run.packets.filter(p => p.proof === 'alignment-unmeasured').length, alignmentReasons: [...new Set(run.packets.map(p => p.reason).filter(Boolean))] })), candidates, siteSignals, journal }
     return summary
