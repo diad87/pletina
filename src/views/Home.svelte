@@ -2,7 +2,6 @@
   import Card from '../components/Card.svelte'
   import Collage from '../components/Collage.svelte'
   import Cover from '../components/Cover.svelte'
-  import EngineSwitch from '../components/EngineSwitch.svelte'
   import Icon from '../components/Icon.svelte'
   import Shelf from '../components/Shelf.svelte'
   import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
@@ -12,7 +11,6 @@
   import { fromLib, library } from '../lib/library.svelte'
   import { layout } from '../lib/layout.svelte'
   import { nav, type Route } from '../lib/nav.svelte'
-  import { isAndroid } from '../lib/player-android.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -197,9 +195,6 @@
       <button class="pill" onclick={openSearch}>Buscar</button>
     </div>
   {/if}
-
-  <!-- En el móvil no hay nada que elegir: siempre el motor propio. -->
-  {#if !isAndroid}<EngineSwitch />{/if}
 </section>
 
 <style>

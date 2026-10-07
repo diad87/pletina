@@ -11,7 +11,7 @@ Reproductor de música personal tipo Spotify para Windows, Mac, Linux y Android.
 
 - **Tauri 2** (Rust) + **Svelte 5** + TypeScript. Instalador de unos 2 MB en Windows.
 - Datos en local (SQLite en la carpeta de datos de la app).
-- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige en Inicio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
+- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
 
 El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); lo del móvil, en [docs/plan-mobile.md](docs/plan-mobile.md).
 

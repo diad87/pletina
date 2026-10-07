@@ -163,7 +163,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - `src-tauri/src/`: `extractor.rs` (elige motor, `http_fetch` y las mediciones), `native.rs`, `capture.rs` y `capture.js`; y `extractors.rs`, que actualiza los extractores.
   - `src-tauri/recipe/youtube.json`, `src-tauri/extractors.json` y `src-tauri/windows-app-manifest.xml`.
   - `src/lib/extractor/`: `capture.ts`, `engine.svelte.ts`, `host.ts`, `youtubei.ts`, `fetch.ts`, `eval.worker.ts` y `bench.ts`.
-  - `src/components/EngineSwitch.svelte`.
+  - `src/components/EngineSwitch.svelte` (en la 0.5.0 se quita de Inicio para dejar la interfaz limpia: el motor se elige en el menú del número de versión de la barra lateral).
 - Cambios en archivos que ya existían:
   - `lib.rs`: módulos, arranque, comandos y cerrar la app con la ventana principal.
   - `player.rs`: 3 llamadas a `stream`.

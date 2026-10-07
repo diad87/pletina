@@ -1,6 +1,9 @@
 <script lang="ts">
   import { newPlaylist } from '../lib/actions'
+  import { extractor, type Engine, type EngineStats } from '../lib/extractor/engine.svelte'
+  import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
+  import { toast } from '../lib/toast.svelte'
   import { updates } from '../lib/updates.svelte'
   import Icon from './Icon.svelte'
   import LibraryList from './LibraryList.svelte'
@@ -12,13 +15,44 @@
     nav.focusSearch()
   }
 
+  // De dónde sale el audio de YouTube: se elige en el menú del número de versión, para que la
+  // interfaz quede limpia (ver src/lib/extractor/engine.svelte.ts).
+  const ENGINES: { value: Engine; label: string }[] = [
+    { value: 'ytdlp', label: 'yt-dlp' },
+    { value: 'youtubei', label: 'youtubei.js (prueba)' },
+    { value: 'propio', label: 'Motor propio' },
+  ]
+  const EXTRACTORS = { recipe: 'receta', capture: 'ventana oculta', youtubei: 'youtubei.js' }
+  let stats = $state<EngineStats | null>(null)
+
+  function engineMenu(e: MouseEvent) {
+    const versions = (stats?.extractors ?? []).map((x) => ({
+      label: `${EXTRACTORS[x.name]} v${x.version}${x.downloaded ? ' (actualizado)' : ''}`,
+    }))
+    menu.show(e, [
+      ...ENGINES.map((o) => ({
+        label: `Audio de YouTube: ${o.label}`,
+        icon: extractor.engine === o.value ? ('check' as const) : undefined,
+        action: () => extractor.set(o.value).catch((err) => toast.show(`No se pudo cambiar: ${err}`)),
+      })),
+      ...(versions.length ? [{ label: 'Versiones de los extractores', separated: true, children: versions }] : []),
+    ])
+  }
+
 </script>
 
 <aside class="sidebar">
   <div class="top">
     <div class="brand">
       <span class="logo"><Icon name="note" size={18} /></span> Musify
-      {#if updates.current}<span class="version" title="Versión instalada">{updates.current}</span>{/if}
+      {#if updates.current}
+        <button
+          class="version"
+          title="Versión instalada · de dónde sale el audio"
+          onpointerenter={() => extractor.stats().then((s) => (stats = s)).catch(() => {})}
+          onclick={engineMenu}>{updates.current}</button
+        >
+      {/if}
     </div>
     <nav>
       <button class:active={route.name === 'home'} onclick={() => nav.go({ name: 'home' })}>
@@ -74,6 +108,13 @@
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+  .version:hover {
+    background: rgb(255 255 255 / 0.12);
+    color: var(--muted);
   }
   .logo {
     display: grid;
