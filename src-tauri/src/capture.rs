@@ -1825,6 +1825,7 @@ fn consent_diagnostic(
             "enabledButtons",
             "rejectTextMatches",
             "rejectAriaMatches",
+            "rejectAriaPrefixMatches",
             "ariaDifferent",
             "blockedButtons",
         ] {
@@ -3148,7 +3149,7 @@ mod tests {
             "eligible":false, "attempted":false, "dialogCount":1,
             "buttonCount":2, "nativeButtons":0, "roleButtons":2,
             "renderedButtons":2, "enabledButtons":2,
-            "rejectTextMatches":1, "rejectAriaMatches":0, "ariaDifferent":1,
+            "rejectTextMatches":1, "rejectAriaMatches":0, "rejectAriaPrefixMatches":1, "ariaDifferent":1,
             "blockedButtons":0, "controlsTruncated":false,
             "generation":"private", "epoch":"private", "browserNow":"private",
             "url":"https://example.invalid/?credential=private", "title":"private",
@@ -3156,7 +3157,7 @@ mod tests {
             "consent":{
                 "seenVisible":true, "rejectDispatched":false, "closedAfterAttempt":false,
                 "private":"private", "lastVisible":{
-                    "nativeButtons":0,"roleButtons":2,"buttonCount":2,
+                    "nativeButtons":0,"roleButtons":2,"buttonCount":2,"rejectAriaPrefixMatches":32,
                     "controlsTruncated":false,"label":"private"
                 }
             }
@@ -3169,10 +3170,10 @@ mod tests {
                 "present":true,"visible":true,"eligible":false,"attempted":false,
                 "dialogCount":1,"buttonCount":2,"nativeButtons":0,"roleButtons":2,
                 "renderedButtons":2,"enabledButtons":2,"rejectTextMatches":1,
-                "rejectAriaMatches":0,"ariaDifferent":1,"blockedButtons":0,
+                "rejectAriaMatches":0,"rejectAriaPrefixMatches":1,"ariaDifferent":1,"blockedButtons":0,
                 "controlsTruncated":false,"consent":{
                     "seenVisible":true,"rejectDispatched":false,"closedAfterAttempt":false,
-                    "lastVisible":{"nativeButtons":0,"roleButtons":2,"buttonCount":2,
+                    "lastVisible":{"nativeButtons":0,"roleButtons":2,"buttonCount":2,"rejectAriaPrefixMatches":32,
                         "controlsTruncated":false}
                 }
             })
@@ -3200,6 +3201,10 @@ mod tests {
             ("attempted", json!(1)),
             ("nativeButtons", json!(-1)),
             ("roleButtons", json!(33)),
+            ("rejectAriaPrefixMatches", json!("private")),
+            ("rejectAriaPrefixMatches", json!(-1)),
+            ("rejectAriaPrefixMatches", json!(33)),
+            ("rejectAriaPrefixMatches", json!(0.5)),
             ("buttonCount", json!(0.5)),
             ("controlsTruncated", Value::Null),
         ] {

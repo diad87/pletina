@@ -2089,6 +2089,26 @@ test('inline consent supports visible role buttons, deduplicates nested controls
   assert.equal(conflict.adapter.rejectConsent(), false, 'wrapper cannot bypass conflicting inner native control')
 })
 
+test('inline consent accepts descriptive reject accessibility labels only with an exact visible reject-all action', () => {
+  for (const label of ['Rechazar el uso de cookies opcionales y continuar', 'Rechaza todas las cookies opcionales', 'Reject optional cookies and continue', ' REJECT: optional settings ', 'Rechazar todo — información privada de cuenta']) {
+    const f = inlineConsentFixture(true); f.reject.attributes['aria-label'] = label
+    const state = f.adapter.consentState()
+    assert.equal(state.eligible, true); assert.equal(state.rejectAriaMatches, 0); assert.equal(state.rejectAriaPrefixMatches, 1)
+    assert.equal(f.adapter.rejectConsent(), true); assert.equal(f.reject.calls, 1); assert.equal(f.accept.calls, 0)
+    assert.equal(f.adapter.consentSummary().closedAfterAttempt, false)
+    assert.equal(JSON.stringify(f.adapter.consentSummary()).includes(label), false)
+  }
+  for (const label of ['Aceptar todas las cookies', 'Accept optional cookies', 'Otra acción', 'Rejecting optional cookies', 'Rechazaré después', 'Rechaza2', 'Reject_action', 'Rechazado']) {
+    const f = inlineConsentFixture(true); f.reject.attributes['aria-label'] = label
+    assert.equal(f.adapter.consentState().rejectAriaPrefixMatches, 0)
+    assert.equal(f.adapter.rejectConsent(), false); assert.equal(f.reject.calls + f.accept.calls, 0)
+  }
+  const wrongText = inlineConsentFixture(true)
+  wrongText.reject.textContent = 'Configurar cookies'; wrongText.reject.attributes['aria-label'] = 'Reject optional cookies'
+  assert.equal(wrongText.adapter.consentState().rejectAriaPrefixMatches, 1)
+  assert.equal(wrongText.adapter.rejectConsent(), false, 'descriptive aria cannot replace the exact visible action')
+})
+
 test('benchmark consent counters stay bounded, distinguish roles and retain closure evidence without text', () => {
   const f = inlineConsentFixture(true)
   f.reject.tagName = 'TP-YT-PAPER-BUTTON'; f.reject.attributes.role = 'button'; f.reject.attributes['aria-label'] = 'Different private label'

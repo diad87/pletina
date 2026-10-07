@@ -58,6 +58,9 @@
     let consentAttempts = new WeakSet(), consentWasVisible = false, consentCycleAttempted = false
     const consentEvidence = { seenVisible: false, rejectDispatched: false, closedAfterAttempt: false }
     const consentSelector = 'button, [role="button"]'
+    // The visible action remains exact. Accessibility labels can explain that
+    // action in a sentence; require its first whole word to still mean reject.
+    const rejectAriaPrefix = label => /^(?:rechazar|rechaza|reject)(?![\p{L}\p{N}_])/u.test(label)
     const consentControls = dialog => {
       const controls = [...(dialog.querySelectorAll?.(consentSelector) ?? [])], native = node => node.tagName === 'BUTTON'
       return controls.filter(control => {
@@ -68,7 +71,7 @@
       })
     }
     const consentCounts = dialogs => {
-      const counts = { dialogCount: Math.min(32, dialogs.length), buttonCount: 0, nativeButtons: 0, roleButtons: 0, renderedButtons: 0, enabledButtons: 0, rejectTextMatches: 0, rejectAriaMatches: 0, ariaDifferent: 0, blockedButtons: 0, controlsTruncated: dialogs.length > 32 }
+      const counts = { dialogCount: Math.min(32, dialogs.length), buttonCount: 0, nativeButtons: 0, roleButtons: 0, renderedButtons: 0, enabledButtons: 0, rejectTextMatches: 0, rejectAriaMatches: 0, rejectAriaPrefixMatches: 0, ariaDifferent: 0, blockedButtons: 0, controlsTruncated: dialogs.length > 32 }
       const rejects = new Set(['rechazar todo', 'reject all'])
       for (const dialog of dialogs.slice(0, 32)) {
         const controls = dialog.querySelectorAll?.(consentSelector) ?? []
@@ -83,6 +86,7 @@
           if (!button.disabled && !button.hasAttribute?.('disabled') && normalized(button.getAttribute?.('aria-disabled')).toLowerCase() !== 'true') counts.enabledButtons++
           if (rejects.has(text)) counts.rejectTextMatches++
           if (rejects.has(aria)) counts.rejectAriaMatches++
+          if (rejectAriaPrefix(aria)) counts.rejectAriaPrefixMatches++
           if (aria && aria !== text) counts.ariaDifferent++
           if (button.hidden || button.closest?.('[hidden], [inert], [aria-hidden="true"]')) counts.blockedButtons++
         }
@@ -118,7 +122,7 @@
       const buttons = visible.length === 1 ? consentControls(visible[0]).filter(button => {
         const label = normalized(button.getAttribute?.('aria-label')).toLowerCase()
         return visiblyRendered(button) && button.isConnected !== false && !button.disabled && !button.hasAttribute?.('disabled') && normalized(button.getAttribute?.('aria-disabled')).toLowerCase() !== 'true'
-          && !button.closest?.('[hidden], [inert], [aria-hidden="true"]') && rejects.has(normalized(button.textContent).toLowerCase()) && (!label || rejects.has(label))
+          && !button.closest?.('[hidden], [inert], [aria-hidden="true"]') && rejects.has(normalized(button.textContent).toLowerCase()) && (!label || rejectAriaPrefix(label))
       }) : []
       const button = buttons.length === 1 ? buttons[0] : null
       return { present: roots.length > 0, visible: visible.length > 0, eligible: !!button, attempted: !!button && consentAttempts.has(button), button, counts }
