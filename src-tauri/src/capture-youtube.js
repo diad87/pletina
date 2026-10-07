@@ -1,7 +1,7 @@
 // Site-specific observations, not a public YouTube contract. Missing signals fail closed.
 (() => {
   const normalized = (value) => String(value ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim()
-  function create({ document = globalThis.document, location = globalThis.location, target, skipDiagnostics = false, requestSkip = null, skipContext = () => null }) {
+  function create({ document = globalThis.document, location = globalThis.location, target, skipDiagnostics = false, consentDiagnostics = false, requestSkip = null, skipContext = () => null }) {
     const player = () => document.querySelector('#movie_player')
     const visiblyRendered = (node) => {
       if (!node || node.hidden || !node.getClientRects?.().length) return false
@@ -55,39 +55,85 @@
       const requiresUser = /sign in|log in|inici[ae] sesi[oó]n|iniciar sesi[oó]n|captcha|confirm|verif|comprueba|edad|age|bot/i.test(text)
       return { code: requiresUser ? 'CAPTURE_REQUIRES_INTERACTION' : 'CAPTURE_PLAYBACK_ERROR', reason: text.slice(0, 200) }
     }
-    let consentAttempts = new WeakSet(), consentWasVisible = false
+    let consentAttempts = new WeakSet(), consentWasVisible = false, consentCycleAttempted = false
+    const consentEvidence = { seenVisible: false, rejectDispatched: false, closedAfterAttempt: false }
+    const consentSelector = 'button, [role="button"]'
+    const consentControls = dialog => {
+      const controls = [...(dialog.querySelectorAll?.(consentSelector) ?? [])], native = node => node.tagName === 'BUTTON'
+      return controls.filter(control => {
+        // A renderer and its actual button may both expose role=button. Prefer
+        // the native button, then the deepest role control; separate buttons stay ambiguous.
+        if (!native(control) && controls.some(other => other !== control && native(other) && (control.contains?.(other) || other.contains?.(control)))) return false
+        return !controls.some(other => other !== control && control.contains?.(other) && (native(other) || !native(control)))
+      })
+    }
+    const consentCounts = dialogs => {
+      const counts = { dialogCount: Math.min(32, dialogs.length), buttonCount: 0, nativeButtons: 0, roleButtons: 0, renderedButtons: 0, enabledButtons: 0, rejectTextMatches: 0, rejectAriaMatches: 0, ariaDifferent: 0, blockedButtons: 0, controlsTruncated: dialogs.length > 32 }
+      const rejects = new Set(['rechazar todo', 'reject all'])
+      for (const dialog of dialogs.slice(0, 32)) {
+        const controls = dialog.querySelectorAll?.(consentSelector) ?? []
+        const remaining = 32 - counts.buttonCount
+        if (controls.length > remaining) counts.controlsTruncated = true
+        for (let i = 0; i < Math.min(controls.length, remaining); i++) {
+          const button = controls[i], text = normalized(button.textContent).toLowerCase(), aria = normalized(button.getAttribute?.('aria-label')).toLowerCase()
+          counts.buttonCount++
+          if (button.tagName === 'BUTTON') counts.nativeButtons++
+          if (button.getAttribute?.('role') === 'button') counts.roleButtons++
+          if (visiblyRendered(button)) counts.renderedButtons++
+          if (!button.disabled && !button.hasAttribute?.('disabled') && normalized(button.getAttribute?.('aria-disabled')).toLowerCase() !== 'true') counts.enabledButtons++
+          if (rejects.has(text)) counts.rejectTextMatches++
+          if (rejects.has(aria)) counts.rejectAriaMatches++
+          if (aria && aria !== text) counts.ariaDifferent++
+          if (button.hidden || button.closest?.('[hidden], [inert], [aria-hidden="true"]')) counts.blockedButtons++
+        }
+      }
+      return counts
+    }
     const inlineConsent = () => {
       if (!['www.youtube.com', 'music.youtube.com'].includes(location.hostname)) return { present: false, visible: false, eligible: false, attempted: false }
       const roots = [...(document.querySelectorAll?.('ytd-consent-bump-v2-lightbox') ?? [])]
+      const dialogs = []
       const visible = roots.flatMap(root => {
         const dialog = root.querySelector?.('tp-yt-paper-dialog#dialog')
+        if (dialog) dialogs.push(dialog)
         if (root.hidden || root.isConnected === false || !dialog || !visiblyRendered(dialog) || dialog.closest?.('[hidden], [inert], [aria-hidden="true"]')) return []
         if (document.defaultView?.getComputedStyle?.(root)?.opacity === '0') return []
         return [dialog]
       })
       // A new visible cycle may reuse the same DOM button. Only an observed
       // closed dialog resets attempts; an ignored click while open never does.
-      if (!visible.length && consentWasVisible) consentAttempts = new WeakSet()
+      if (!visible.length && consentWasVisible) {
+        if (consentDiagnostics && consentCycleAttempted) consentEvidence.closedAfterAttempt = true
+        consentAttempts = new WeakSet(); consentCycleAttempted = false
+      }
       consentWasVisible = visible.length > 0
+      let counts
+      if (consentDiagnostics) {
+        try {
+          counts = consentCounts(dialogs)
+          if (visible.length) { consentEvidence.seenVisible = true; consentEvidence.lastVisible = { ...counts } }
+        } catch { /* Optional numeric diagnostics do not select or block a control. */ }
+      }
       const rejects = new Set(['rechazar todo', 'reject all'])
-      const buttons = visible.length === 1 ? [...(visible[0].querySelectorAll?.('button') ?? [])].filter(button => {
+      const buttons = visible.length === 1 ? consentControls(visible[0]).filter(button => {
         const label = normalized(button.getAttribute?.('aria-label')).toLowerCase()
-        return visiblyRendered(button) && button.isConnected !== false && !button.disabled && button.getAttribute?.('aria-disabled') !== 'true'
+        return visiblyRendered(button) && button.isConnected !== false && !button.disabled && !button.hasAttribute?.('disabled') && normalized(button.getAttribute?.('aria-disabled')).toLowerCase() !== 'true'
           && !button.closest?.('[hidden], [inert], [aria-hidden="true"]') && rejects.has(normalized(button.textContent).toLowerCase()) && (!label || rejects.has(label))
       }) : []
       const button = buttons.length === 1 ? buttons[0] : null
-      return { present: roots.length > 0, visible: visible.length > 0, eligible: !!button, attempted: !!button && consentAttempts.has(button), button }
+      return { present: roots.length > 0, visible: visible.length > 0, eligible: !!button, attempted: !!button && consentAttempts.has(button), button, counts }
     }
     const consentState = () => {
-      const { present, visible, eligible, attempted } = inlineConsent()
-      return { present, visible, eligible, attempted }
+      const { present, visible, eligible, attempted, counts } = inlineConsent()
+      return { present, visible, eligible, attempted, ...counts }
     }
+    const consentSummary = () => consentDiagnostics && consentEvidence.seenVisible ? { ...consentEvidence, ...(consentEvidence.lastVisible ? { lastVisible: { ...consentEvidence.lastVisible } } : {}) } : null
     const rejectConsent = () => {
       if (location.hostname !== 'consent.youtube.com') {
         const { button, attempted } = inlineConsent()
         if (!button || attempted) return false
-        consentAttempts.add(button)
-        try { button.click(); return true } catch { return false }
+        consentAttempts.add(button); consentCycleAttempted = true
+        try { button.click(); if (consentDiagnostics) consentEvidence.rejectDispatched = true; return true } catch { return false }
       }
       const form = [...document.forms].find((f) => f.querySelector('input[name="set_eom"][value="true"]'))
       const button = form?.querySelector('button') || [...document.querySelectorAll('button')].find((b) => /rechazar|reject|ablehnen|refuser|rifiuta/i.test(b.textContent || ''))
@@ -240,7 +286,7 @@
         throw error
       }
     }
-    return { classify, interaction, rejectConsent, consentState, sessionState, skipAd, observeSkip, skipSummary, validateSkip, completeSkip }
+    return { classify, interaction, rejectConsent, consentState, consentSummary, sessionState, skipAd, observeSkip, skipSummary, validateSkip, completeSkip }
   }
   globalThis.__musifyCaptureYouTube = { create }
 })()

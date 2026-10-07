@@ -38,6 +38,7 @@
   let capture
   const controlled = (reason, operation) => capture?.control ? capture.control(reason, operation) : operation()
   const core = globalThis.__musifyCaptureCore, adapter = globalThis.__musifyCaptureYouTube?.create({ target, skipDiagnostics: true,
+    consentDiagnostics: window.__musifyBenchmarkAudit === true,
     requestSkip: request => event('skip-request', request),
     skipContext: media => !failed && finalizedEpoch !== epoch ? { generation, epoch, source: capture?.sourceOf(media)?.id } : null,
   })
@@ -49,6 +50,8 @@
     return true
   }
   const diagnosticReason = details => {
+    const consent = adapter.consentSummary?.()
+    if (consent) details = { ...details, consent }
     const skip = adapter.skipSummary?.(details.phase === 'native-skip-result' ? details.requestId : undefined)
     if (!skip) return JSON.stringify(details)
     let result = JSON.stringify({ ...details, skip })

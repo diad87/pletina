@@ -1504,6 +1504,8 @@ struct Message {
     end: Option<f64>,
     recoverable: Option<bool>,
     playback_rate: Option<f64>,
+    // Optional diagnostic data must not change protocol acceptance when malformed.
+    browser_now: Option<Value>,
     evidence_version: Option<u8>,
     request_id: Option<u64>,
     button_token: Option<u64>,
@@ -1783,6 +1785,73 @@ fn source_kind(source: &str) -> Option<bool> {
         _ => None,
     }
 }
+fn consent_diagnostic(
+    enabled: bool,
+    detail: &Value,
+    generation: u64,
+    epoch: u64,
+    browser_now: Option<&Value>,
+) -> Option<Value> {
+    if !enabled {
+        return None;
+    }
+    let phase = detail["phase"]
+        .as_str()
+        .filter(|phase| matches!(*phase, "inline-consent" | "inline-consent-attempt"))?;
+    let copy_fields = |input: &Value| -> Option<Value> {
+        input.as_object()?;
+        let mut output = json!({});
+        for field in [
+            "present",
+            "visible",
+            "eligible",
+            "attempted",
+            "dispatched",
+            "controlsTruncated",
+            "seenVisible",
+            "rejectDispatched",
+            "closedAfterAttempt",
+        ] {
+            if let Some(value) = input.get(field) {
+                output[field] = json!(value.as_bool()?);
+            }
+        }
+        for field in [
+            "dialogCount",
+            "buttonCount",
+            "nativeButtons",
+            "roleButtons",
+            "renderedButtons",
+            "enabledButtons",
+            "rejectTextMatches",
+            "rejectAriaMatches",
+            "ariaDifferent",
+            "blockedButtons",
+        ] {
+            if let Some(value) = input.get(field) {
+                output[field] = json!(value.as_u64().filter(|value| *value <= 32)?);
+            }
+        }
+        Some(output)
+    };
+    let mut output = copy_fields(detail)?;
+    output["phase"] = json!(phase);
+    output["generation"] = json!(generation);
+    output["epoch"] = json!(epoch);
+    if let Some(now) = browser_now {
+        output["browserNow"] = json!(now.as_f64().filter(|value| value.is_finite()
+            && *value >= 0.0
+            && *value <= 9_007_199_254_740_991.0)?);
+    }
+    if let Some(consent) = detail.get("consent") {
+        let mut clean = copy_fields(consent)?;
+        if let Some(last) = consent.get("lastVisible") {
+            clean["lastVisible"] = copy_fields(last)?;
+        }
+        output["consent"] = clean;
+    }
+    Some(output)
+}
 fn apply_message(
     state: &mut Supervisor,
     id: &str,
@@ -1930,6 +1999,15 @@ fn apply_message(
                 if let Some(reason) = m.reason.as_deref() {
                     t.last_diagnostic = Some(reason.chars().take(2048).collect());
                     if let Ok(detail) = serde_json::from_str::<Value>(reason) {
+                        if let Some(diagnostic) = consent_diagnostic(
+                            std::env::var_os("MUSIFY_BENCH").is_some(),
+                            &detail,
+                            generation,
+                            t.epoch,
+                            m.browser_now.as_ref(),
+                        ) {
+                            eprintln!("[capture-consent] {diagnostic}");
+                        }
                         explicit_ad_marker = detail["evidence"]["adMarker"] == true;
                         if detail["phase"] == "native-skip-result" {
                             if let Some(result) = t.last_skip_result.as_mut().filter(|r| {
@@ -3063,6 +3141,99 @@ mod tests {
     const ID: &str = "aaaaaaaaaaa";
     const NEXT: &str = "bbbbbbbbbbb";
     const MUSIC: &str = "https://music.youtube.com/watch?v=aaaaaaaaaaa";
+    #[test]
+    fn consent_diagnostic_logs_only_bounded_public_fields_and_native_binding() {
+        let detail = json!({
+            "phase":"inline-consent", "present":true, "visible":true,
+            "eligible":false, "attempted":false, "dialogCount":1,
+            "buttonCount":2, "nativeButtons":0, "roleButtons":2,
+            "renderedButtons":2, "enabledButtons":2,
+            "rejectTextMatches":1, "rejectAriaMatches":0, "ariaDifferent":1,
+            "blockedButtons":0, "controlsTruncated":false,
+            "generation":"private", "epoch":"private", "browserNow":"private",
+            "url":"https://example.invalid/?credential=private", "title":"private",
+            "account":"private", "stack":"private", "reason":"private",
+            "consent":{
+                "seenVisible":true, "rejectDispatched":false, "closedAfterAttempt":false,
+                "private":"private", "lastVisible":{
+                    "nativeButtons":0,"roleButtons":2,"buttonCount":2,
+                    "controlsTruncated":false,"label":"private"
+                }
+            }
+        });
+        let result = consent_diagnostic(true, &detail, 7, 8, Some(&json!(19.25))).unwrap();
+        assert_eq!(
+            result,
+            json!({
+                "phase":"inline-consent", "generation":7,"epoch":8,"browserNow":19.25,
+                "present":true,"visible":true,"eligible":false,"attempted":false,
+                "dialogCount":1,"buttonCount":2,"nativeButtons":0,"roleButtons":2,
+                "renderedButtons":2,"enabledButtons":2,"rejectTextMatches":1,
+                "rejectAriaMatches":0,"ariaDifferent":1,"blockedButtons":0,
+                "controlsTruncated":false,"consent":{
+                    "seenVisible":true,"rejectDispatched":false,"closedAfterAttempt":false,
+                    "lastVisible":{"nativeButtons":0,"roleButtons":2,"buttonCount":2,
+                        "controlsTruncated":false}
+                }
+            })
+        );
+        assert!(!result.to_string().contains("private"));
+        assert!(consent_diagnostic(false, &detail, 7, 8, None).is_none());
+        assert!(consent_diagnostic(true, &json!({"phase":"heartbeat"}), 7, 8, None).is_none());
+        assert_eq!(
+            consent_diagnostic(
+                true,
+                &json!({"phase":"inline-consent-attempt","dispatched":true}),
+                7,
+                8,
+                None
+            ),
+            Some(
+                json!({"phase":"inline-consent-attempt","dispatched":true,"generation":7,"epoch":8})
+            )
+        );
+    }
+    #[test]
+    fn consent_diagnostic_rejects_malformed_allowed_fields_without_logging() {
+        for (field, value) in [
+            ("visible", json!("private")),
+            ("attempted", json!(1)),
+            ("nativeButtons", json!(-1)),
+            ("roleButtons", json!(33)),
+            ("buttonCount", json!(0.5)),
+            ("controlsTruncated", Value::Null),
+        ] {
+            let mut detail = json!({"phase":"inline-consent"});
+            detail[field] = value;
+            assert!(
+                consent_diagnostic(true, &detail, 7, 8, None).is_none(),
+                "{field}"
+            );
+        }
+        for detail in [
+            json!({"phase":"inline-consent","consent":"private"}),
+            json!({"phase":"inline-consent","consent":{"seenVisible":"private"}}),
+            json!({"phase":"inline-consent","consent":{"lastVisible":{"roleButtons":33}}}),
+            json!({"phase":"inline-consent","consent":{"lastVisible":[]}}),
+            json!({"phase":"inline-consent-attempt","dispatched":"private"}),
+        ] {
+            assert!(consent_diagnostic(true, &detail, 7, 8, None).is_none());
+        }
+        for now in [json!("private"), json!(-1), json!(1e300), Value::Null] {
+            assert!(
+                consent_diagnostic(true, &json!({"phase":"inline-consent"}), 7, 8, Some(&now))
+                    .is_none()
+            );
+        }
+    }
+    #[test]
+    fn malformed_optional_browser_clock_does_not_reject_the_capture_protocol() {
+        let parsed: Message = serde_json::from_value(json!({
+            "musify":1,"api":4,"kind":"event","browserNow":{"private":"ignored"}
+        }))
+        .unwrap();
+        assert!(parsed.browser_now.unwrap().is_object());
+    }
     #[test]
     fn next_memory_reserves_the_current_tracks_remaining_capacity() {
         let mut state = state();

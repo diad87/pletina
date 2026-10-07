@@ -2002,23 +2002,24 @@ test('source replacement without ended reports prior timing and parsed ranges wi
   assert.equal(messages.some((m) => m.kind === 'seg'), false)
 })
 
-function inlineConsentFixture() {
+function inlineConsentFixture(consentDiagnostics = false) {
   const style = { display: 'block', visibility: 'visible', opacity: '1' }
   class Button extends EventTarget {
-    constructor(text) { super(); this.textContent = text; this.calls = 0; this.isConnected = true; this.disabled = false; this.style = { ...style }; this.attributes = {} }
+    constructor(text) { super(); this.tagName = 'BUTTON'; this.textContent = text; this.calls = 0; this.isConnected = true; this.disabled = false; this.style = { ...style }; this.attributes = {} }
     getClientRects() { return this.hidden ? [] : [{}] }
     getAttribute(name) { return this.attributes[name] ?? null }
+    hasAttribute(name) { return Object.hasOwn(this.attributes, name) }
     closest() { return this.blocked ? {} : null }
     click() { this.calls++; if (this.failure) throw this.failure; this.dispatchEvent(new Event('click', { cancelable: true })) }
   }
   const reject = new Button('Rechazar todo'), accept = new Button('Aceptar todo')
   let buttons = [reject, accept]
-  const dialog = { style: { ...style }, hidden: false, getClientRects() { return this.hidden ? [] : [{}] }, closest() { return this.blocked ? {} : null }, querySelectorAll: selector => selector === 'button' ? buttons : [] }
+  const dialog = { style: { ...style }, hidden: false, getClientRects() { return this.hidden ? [] : [{}] }, closest() { return this.blocked ? {} : null }, querySelectorAll: selector => selector === 'button, [role="button"]' ? buttons : [] }
   const root = { style: { ...style }, querySelector: selector => selector === 'tp-yt-paper-dialog#dialog' ? dialog : null }
   const roots = [root], location = { hostname: 'www.youtube.com', search: '?v=target', hash: '' }
   const document = { querySelectorAll: selector => selector === 'ytd-consent-bump-v2-lightbox' ? roots : [], defaultView: { getComputedStyle: element => element.style } }
   const { context } = load()
-  const adapter = context.__musifyCaptureYouTube.create({ document, location, target: 'target' })
+  const adapter = context.__musifyCaptureYouTube.create({ document, location, target: 'target', consentDiagnostics })
   return { Button, adapter, document, location, roots, root, dialog, reject, accept, buttons(value) { buttons = value } }
 }
 
@@ -2067,6 +2068,58 @@ test('inline consent reports a dispatched attempt without claiming closure or le
   assert.equal(failed.adapter.rejectConsent(), false); assert.equal(failed.reject.calls, 1)
 })
 
+test('inline consent supports visible role buttons, deduplicates nested controls and rejects separate alternatives', () => {
+  const custom = inlineConsentFixture()
+  custom.reject.tagName = 'TP-YT-PAPER-BUTTON'; custom.reject.attributes.role = 'button'
+  assert.equal(custom.adapter.rejectConsent(), true); assert.equal(custom.reject.calls, 1)
+  const nested = inlineConsentFixture(), wrapper = new nested.Button('Rechazar todo')
+  wrapper.tagName = 'YTD-BUTTON-RENDERER'; wrapper.attributes.role = 'button'; wrapper.contains = node => node === nested.reject
+  nested.buttons([wrapper, nested.reject, nested.accept])
+  assert.equal(nested.adapter.rejectConsent(), true); assert.equal(nested.reject.calls, 1); assert.equal(wrapper.calls, 0)
+  const ambiguous = inlineConsentFixture(), other = new ambiguous.Button('Reject all')
+  other.tagName = 'TP-YT-PAPER-BUTTON'; other.attributes.role = 'button'; ambiguous.buttons([ambiguous.reject, other])
+  assert.equal(ambiguous.adapter.rejectConsent(), false); assert.equal(other.calls + ambiguous.reject.calls, 0)
+  const disabled = inlineConsentFixture(); disabled.reject.tagName = 'TP-YT-PAPER-BUTTON'; disabled.reject.attributes.role = 'button'; disabled.reject.attributes.disabled = ''
+  assert.equal(disabled.adapter.rejectConsent(), false); assert.equal(disabled.reject.calls, 0)
+  delete disabled.reject.attributes.disabled; disabled.reject.attributes['aria-disabled'] = ' TRUE '
+  assert.equal(disabled.adapter.rejectConsent(), false); assert.equal(disabled.reject.calls, 0)
+  const conflict = inlineConsentFixture(), wrongWrapper = new conflict.Button('Rechazar todo')
+  wrongWrapper.tagName = 'YTD-BUTTON-RENDERER'; wrongWrapper.attributes.role = 'button'; wrongWrapper.contains = node => node === conflict.reject
+  conflict.reject.attributes['aria-label'] = 'Aceptar todo'; conflict.buttons([wrongWrapper, conflict.reject])
+  assert.equal(conflict.adapter.rejectConsent(), false, 'wrapper cannot bypass conflicting inner native control')
+})
+
+test('benchmark consent counters stay bounded, distinguish roles and retain closure evidence without text', () => {
+  const f = inlineConsentFixture(true)
+  f.reject.tagName = 'TP-YT-PAPER-BUTTON'; f.reject.attributes.role = 'button'; f.reject.attributes['aria-label'] = 'Different private label'
+  let state = f.adapter.consentState()
+  assert.equal(state.eligible, false); assert.equal(state.buttonCount, 2); assert.equal(state.nativeButtons, 1); assert.equal(state.roleButtons, 1)
+  assert.equal(state.rejectTextMatches, 1); assert.equal(state.rejectAriaMatches, 0); assert.equal(state.ariaDifferent, 1)
+  assert.equal(state.renderedButtons, 2); assert.equal(state.enabledButtons, 2)
+  delete f.reject.attributes['aria-label']; f.reject.blocked = true
+  state = f.adapter.consentState(); assert.equal(state.blockedButtons, 1); assert.equal(state.eligible, false)
+  f.reject.blocked = false
+  assert.equal(f.adapter.rejectConsent(), true)
+  assert.equal(f.adapter.consentSummary().rejectDispatched, true)
+  assert.equal(f.adapter.consentSummary().closedAfterAttempt, false, 'returned click alone never proves closure')
+  f.dialog.hidden = true; f.adapter.consentState()
+  const summary = f.adapter.consentSummary()
+  assert.equal(summary.seenVisible, true); assert.equal(summary.closedAfterAttempt, true)
+  assert.equal(summary.lastVisible.roleButtons, 1)
+  summary.lastVisible.buttonCount = 999
+  assert.equal(f.adapter.consentSummary().lastVisible.buttonCount, 2, 'caller cannot mutate retained evidence')
+  assert.equal(JSON.stringify(f.adapter.consentSummary()).includes('private'), false)
+  const large = inlineConsentFixture(true)
+  const controls = Array.from({ length: 100 }, (_, i) => new large.Button(i ? 'Private account option' : 'Rechazar todo'))
+  large.buttons(controls)
+  state = large.adapter.consentState()
+  assert.equal(state.buttonCount, 32); assert.equal(state.controlsTruncated, true); assert.equal(state.rejectTextMatches, 1)
+  assert.ok(Object.values(state).every(value => typeof value === 'boolean' || Number.isInteger(value) && value >= 0 && value <= 32))
+  assert.ok(JSON.stringify(state).length < 450); assert.ok(JSON.stringify(f.adapter.consentSummary()).length < 500)
+  const normal = inlineConsentFixture(); normal.adapter.consentState(); normal.adapter.rejectConsent()
+  assert.equal(normal.adapter.consentSummary(), null); assert.equal('buttonCount' in normal.adapter.consentState(), false)
+})
+
 test('orchestration waits for inline consent closure without resume or presentation credit and preserves capture guards', async () => {
   for (const closes of [true, false]) {
     const f = inlineConsentFixture(), scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
@@ -2088,7 +2141,9 @@ test('orchestration waits for inline consent closure without resume or presentat
     assert.equal(f.reject.calls, 1); assert.equal(f.accept.calls, 0)
     assert.equal(messages.some(m => m.kind === 'seg' || m.type === 'playing'), false)
     const before = messages.find(m => m.reason?.includes('"phase":"inline-consent"'))
-    assert.deepEqual(JSON.parse(before.reason), { phase: 'inline-consent', present: true, visible: true, eligible: true, attempted: false })
+    const state = JSON.parse(before.reason)
+    assert.equal(state.phase, 'inline-consent'); assert.equal(state.present, true); assert.equal(state.visible, true); assert.equal(state.eligible, true); assert.equal(state.attempted, false)
+    assert.equal(state.buttonCount, 2); assert.equal(state.rejectTextMatches, 1)
     if (closes) {
       assert.equal(media.currentTime, 0, 'real startup rewind re-presents the unobserved beginning')
       clock = 25; tick(); assert.equal(playCalls, 1)
@@ -2099,6 +2154,10 @@ test('orchestration waits for inline consent closure without resume or presentat
       assert.ok(messages.some(m => m.type === 'ended' && m.complete === true))
       assert.ok(messages.filter(m => m.kind === 'seg').every(m => m.classification === 'content'))
       assert.equal(messages.some(m => m.type === 'error'), false)
+      const persisted = messages.findLast(m => m.reason && JSON.parse(m.reason).consent)
+      assert.ok(persisted); const evidence = JSON.parse(persisted.reason).consent
+      assert.equal(evidence.seenVisible, true); assert.equal(evidence.rejectDispatched, true); assert.equal(evidence.closedAfterAttempt, true)
+      assert.ok(messages.filter(m => m.reason).every(m => m.reason.length <= 2048))
     } else {
       clock = 9999; tick(); await new Promise(resolve => setImmediate(resolve))
       assert.equal(messages.some(m => m.type === 'interaction'), false)
