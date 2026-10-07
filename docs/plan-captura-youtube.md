@@ -2,8 +2,9 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v13 medida, todavía sin aprobar la promoción; los resultados reales están en el
-[informe](informe-captura-youtube-2026-10-07.md).
+API4/captura v20, todavía sin aprobar la promoción; el
+[informe inicial](informe-captura-youtube-2026-10-07.md) y el
+[diagnóstico del 8 de octubre](informe-captura-youtube-2026-10-08.md) conservan los resultados.
 
 ## Decisiones vigentes
 
@@ -66,14 +67,28 @@ observado no queda automáticamente clasificado como imposible de saltar.
    interpreta el cambio como EOF. Una incompatibilidad repetida debe detener las
    recargas automáticas y conservar el audio ya publicado.
 6. **Velocidad.** La captura nueva permanece a1×. Los ensayos controlados a2×/4×/16×
-   encontraron publicidad acelerada con señales tardías incluso tras corregir la
-   propiedad playbackRate. Los12× reales observados históricamente al pedir16× no
+   encontraron publicidad acelerada con señales tardías. A4×/16× también se midió
+   después de volver playbackRate a1; ese tramo posterior a2× quedó sin acreditar.
+   Los12× reales observados históricamente al pedir16× no
    aprobaron esa seguridad. No se repite ese riesgo con anuncios reales: se mantiene1×.
 7. **Silencio nativo.** Rust impone `ICoreWebView2_8.SetIsMuted(true)` y lee `IsMuted`
    antes de registrar el puente y navegar en Oficial, Legacy y el perfil manual.
    Si falla, no navega. El perfil manual se verifica antes de mostrarlo, también
    al reutilizarlo. Esto silencia la ventana de adquisición sin detener ni acelerar
    el anuncio y sin tocar el Audio principal ni el mezclador del sistema.
+8. **Consentimiento dentro de la página.** El diálogo oficial de www/music puede
+   pausar el reproductor cada100ms hasta resolverse. Se pulsa sólo un rechazo
+   visible, habilitado e inequívoco en el componente conocido, con texto ES/EN exacto
+   y etiqueta accesible compatible con rechazo. Mientras esté visible no se fuerza
+   play ni se acredita canción. Si sigue abierto a los10s, se pide interacción.
+   El cierre exige una nueva observación y conserva la verificación de arranque y EOF.
+   Este clic DOM se distingue de la omisión nativa CDP de anuncios. La auditoría
+   opcional conserva contadores y cierre observado, nunca textos de cuenta.
+   El intervalo suspendido no une cobertura ni permite EOF, también si dura menos
+   de500ms o el sitio retira la fuente antes del siguiente callback. Las contradicciones
+   siguen registradas. Sólo sin unidades publicadas y con todos los bindings nativos
+   limpios puede repetirse desde cero, dentro del límite de una repetición. Los bytes
+   ya publicados siguen como parciales si se interrumpe la presentación después.
 
 El banco aislado permite tandas paralelas con identificador propio, SQLite por proceso
 y nombres de informe únicos. La batería de cobertura puede dividirse en los cinco
@@ -159,10 +174,34 @@ El control del silencio nativo confirmó todos los paquetes y EOF, pero sufrió 
 cortes. Premium quedó separado: dos canciones completas sin anuncios, inicio5,391s,
 next8,2ms; seek no capturado2,106s y dos cambios fríos4,135–4,392s. No aprueba la cohorte.
 
+**Continuación del8 de octubre, captura v19.** El control de PRESO cerró con0 cortes,
+2035/2035 paquetes coincidentes y reloj estable1× después de rechazar el consentimiento
+inline. La pausa periódica provenía del diálogo de YouTube; el lector no tenía un
+backoff creciente. El arranque sin anuncios tardó5,575s y sigue fuera de objetivo.
+Los intentos intermedios fallidos y la recuperación de referencia quedan registrados
+en el [diagnóstico](informe-captura-youtube-2026-10-08.md). La escucha consecutiva de
+ROSALÍA cerró6/6 completas,50343/50343 paquetes coincidentes,0 cortes y cinco cambios
+de1,5–3,6ms. Cinco fuentes publicitarias consumieron41,440s en precarga, con4 omisiones
+operativas después de clics confiables; no se restan de los cambios preparados. El
+inicio frío fue6,464s sin anuncio y sigue fallando. Captura v20 protege también los
+callbacks de detach y la suspensión menor de500ms; no cambia1×/N1,5/API4. Las tandas
+siguen siendo el experimento progresivo, no el modo normal promovido.
+
+El control final v20 de Airbag→Preso cerró2/2 completas,16430/16430 paquetes
+coincidentes,0 cortes y transición6,6ms. Airbag inició en6,008s sin anuncio;
+Preso recuperó una fuente descartada antes de publicar y omitió un anuncio tras
+clic nativo, con5,084s consumidos en precarga. Son7 canciones distintas entre ese
+control y ROSALÍA, no8 ni30. Propio resolvió Preso por Rust, sin fallback y con
+búsqueda incluida, en736ms; ended/cobertura y0 cortes, pero falla300ms. Tres
+destinos oficiales sin audio preparado tardaron4,126–4,404s más publicidad
+observada;124/124 paquetes históricos coincidentes, sólo prefijos sin EOF.
+El salto correcto no capturado al80% en v20 tardó2,089s, con100/100 paquetes
+coincidentes,0 anuncios y sin prueba de canción completa; falla1s.
+
 La demora máxima independiente del marcador sigue sin medirse;1,5s conserva su carácter
-experimental. Continúan pendientes el arranque/búsqueda, el seek, la estabilidad del
-productor/entrega y una nueva tanda completa sin fallos. El [informe](informe-captura-youtube-2026-10-07.md)
-contiene la tabla por canción, diagnósticos, procedencia, anuncios y commits.
+experimental. Continúan pendientes el arranque/búsqueda, el seek y una nueva tanda
+completa sin fallos. El [informe inicial](informe-captura-youtube-2026-10-07.md)
+contiene las30 canciones, la campaña publicitaria, Premium y la procedencia anterior.
 
 La entrega progresiva pasa a normal sólo después de30 canciones completas distintas y
 50 transiciones publicitarias reales sin sesión, cero discrepancias, cobertura y tiempos
