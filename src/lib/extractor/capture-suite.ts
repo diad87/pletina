@@ -419,63 +419,98 @@ async function album(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: 
 /** El destino se expulsa explícitamente de la caché de banco, conservando la canción de contexto. */
 async function unprepared(videos: CaptureCase[], plan: CaptureSuitePlan, checkpoint: (rows: Row[]) => Promise<unknown>): Promise<Row[]> {
   const rows: Row[] = []
-  for (const [index, video] of videos.entries()) {
-    const row: Row = { label: video.label, videoId: video.id, ok: false, failures: [], phase: 'context' }
-    rows.push(row); await checkpoint(rows)
-    const source = videos[(index + 1) % videos.length], item = queueItem(video), sourceItem = source && queueItem(source)
-    if (video.error || source?.error || !video.id || !source?.id || !item || !sourceItem || source.id === video.id) {
-      row.failures.push(video.error ?? source?.error ?? 'Se necesitan dos canciones distintas con metadatos')
-      row.phase = 'finished'; await checkpoint(rows); continue
-    }
-    let observed: ReturnType<typeof observeAudio> | undefined, audio: HTMLAudioElement | null = null
-    let latest: Status | null = null, measuring = false
-    const began = performance.now(), timeout = (plan.timeoutSeconds ?? 360) * 1000
-    const unhook = watchPlayerPlay(next => {
-      if (!measuring || player.current?.track.id !== item.track.id || audio === next) return
-      observed?.close(); audio = next; observed = observeAudio(next)
-    })
-    try {
-      await api.rememberSource(toQuery(sourceItem), source.id)
-      await api.rememberSource(toQuery(item), video.id)
-      player.playQueue([sourceItem], 0)
-      await until(() => player.status === 'playing' && player.playbackAudio.currentTime > 0.2, performance.now() + timeout)
-      row.contextPosition = player.playbackAudio.currentTime
-      row.destinationBeforeForget = await status(video.id)
-      await invoke('capture_bench_forget', { videoId: video.id })
-      const before = await status(video.id)
-      row.destinationBeforeClick = before
-      row.destinationWasCached = (before?.ranges?.length ?? 0) > 0 || (typeof before?.bytes === 'number' && before.bytes > 0)
-      if (row.destinationWasCached) row.failures.push('El destino conserva audio en caché: no es una medición en frío')
-      row.phase = 'switching'; await checkpoint(rows)
-      measuring = true
-      const started = performance.now()
-      player.playQueue([item], 0)
-      await until(() => observed?.firstPlaying != null && player.current?.track.id === item.track.id && (audio?.currentTime ?? 0) > 0,
-        started + timeout, () => {
+  type Context = { video: CaptureCase; item: QueueItem; audio: HTMLAudioElement }
+  let context: Context | null = null
+  const contextPlaying = (value: Context, minimumPosition = 0.2) => player.current?.track.id === value.item.track.id && player.playbackAudio === value.audio &&
+    player.status === 'playing' && !value.audio.paused && !value.audio.ended && !value.audio.seeking && !value.audio.error &&
+    value.audio.currentTime > minimumPosition && (captureProgress(value.audio)?.units ?? 0) > 0 && player.upcoming.length === 0 && !player.preparedAudio
+  try {
+    for (const video of videos) {
+      const row: Row = { label: video.label, videoId: video.id, ok: false, failures: [], phase: 'context' }
+      rows.push(row); await checkpoint(rows)
+      const item = queueItem(video)
+      if (video.error || !video.id || !item) {
+        row.failures.push(video.error ?? 'El destino no tiene ID o metadatos reproducibles')
+        row.phase = 'finished'; context = null; await checkpoint(rows); continue
+      }
+      let observed: ReturnType<typeof observeAudio> | undefined, audio: HTMLAudioElement | null = null
+      let latest: Status | null = null, measuring = false
+      const began = performance.now(), timeout = (plan.timeoutSeconds ?? 360) * 1000
+      const unhook = watchPlayerPlay(next => {
+        if (!measuring || player.current?.track.id !== item.track.id || audio === next) return
+        observed?.close(); audio = next; observed = observeAudio(next)
+      })
+      try {
+        // Sólo la primera fila (o un fallo anterior) necesita preparar un contexto.
+        // Una cola de un tema impide que el reproductor precargue el siguiente destino.
+        const reuse = context !== null && context.video.id !== video.id && contextPlaying(context, 0)
+        row.contextReused = reuse
+        if (!reuse) {
+          const source = [...videos].reverse().find(candidate => candidate.id && candidate.id !== video.id && !candidate.error && queueItem(candidate))
+          const sourceItem = source && queueItem(source)
+          if (!source?.id || !sourceItem) throw new Error('Se necesitan dos canciones distintas con metadatos')
+          row.contextVideoId = source.id; row.contextTrackId = sourceItem.track.id
+          await api.rememberSource(toQuery(sourceItem), source.id)
+          player.playQueue([sourceItem], 0)
+          await until(() => player.current?.track.id === sourceItem.track.id && contextPlaying({ video: source, item: sourceItem, audio: player.playbackAudio }),
+            performance.now() + timeout, () => { if (player.playbackAudio.error) throw new Error('El audio de contexto falló') })
+          context = { video: source, item: sourceItem, audio: player.playbackAudio }
+        }
+        const currentContext = context!
+        if (reuse) await until(() => contextPlaying(currentContext), performance.now() + timeout,
+          () => { if (!contextPlaying(currentContext, 0)) throw new Error('El contexto dejó de sonar antes de preparar el cambio') })
+        row.contextVideoId = currentContext.video.id; row.contextTrackId = currentContext.item.track.id
+        await api.rememberSource(toQuery(item), video.id)
+        if (currentContext.video.id === video.id || !contextPlaying(currentContext)) throw new Error('El contexto debe seguir sonando y ser distinto del destino')
+        row.destinationBeforeForget = await status(video.id)
+        await invoke('capture_bench_forget', { videoId: video.id })
+        const before = await status(video.id)
+        row.destinationBeforeClick = before
+        row.destinationWasCached = (before?.ranges?.length ?? 0) > 0 || ['bytes', 'chunks', 'units'].some(key => typeof before?.[key] === 'number' && (before[key] as number) > 0)
+        if (row.destinationWasCached) throw new Error('El destino conserva audio en caché: no es una medición en frío')
+        row.phase = 'switching'; await checkpoint(rows)
+        if (!contextPlaying(currentContext)) throw new Error('El contexto dejó de sonar antes del clic')
+        row.contextPosition = currentContext.audio.currentTime
+        row.contextBeforeClick = liveAudio(currentContext.audio, began)
+        row.contextProgress = captureProgress(currentContext.audio)
+        measuring = true
+        const started = performance.now()
+        player.playQueue([item], 0)
+        const checkDestination = () => {
           if (observed?.events.some(event => event.type === 'captureerror')) throw new Error('La captura falló durante el cambio')
           if (audio?.error) throw new Error(`Audio ${audio.error.code}: ${audio.error.message}`)
-        })
-      latest = await status(video.id)
-      checkExperiment(row, latest, plan)
-      const adMs = adTime(latest)
-      row.startStatus = structuredClone(latest); row.startAdMs = adMs
-      row.unpreparedSwitchMs = observed!.firstPlaying! - started
-      row.unpreparedSwitchWithoutAdMs = adMs === null ? null : (row.unpreparedSwitchMs as number) - adMs
-      if (adMs !== null && adMs > (row.unpreparedSwitchMs as number) + 1) row.failures.push('El tiempo publicitario excede la ventana medida del cambio')
-      if (plan.experimental !== false && (adMs === null || (row.unpreparedSwitchWithoutAdMs as number) > LIMITS.unpreparedMs)) row.failures.push('Salto a canción no preparada supera 5 s más anuncio')
-      row.status = latest; checkAds(row, latest)
-    } catch (error) {
-      row.failures.push(String(error)); latest = await status(video.id).catch(() => latest)
-      row.status = latest; checkAds(row, latest)
-    } finally {
-      row.phase = 'finished'; row.elapsedMs = performance.now() - began
-      row.events = observed?.events ?? []; row.gaps = observed?.gaps ?? []
-      row.allPlaybackStalls = observed?.allPlaybackStalls ?? []
-      observed?.close(); unhook()
-      if (player.status === 'playing' || player.status === 'loading') player.toggle()
-      stopCapture()
+        }
+        await until(() => observed?.firstPlaying != null && player.current?.track.id === item.track.id && player.status === 'playing' &&
+          audio === player.playbackAudio && !audio.paused && !audio.ended && (audio.currentTime ?? 0) > 0, started + timeout, checkDestination)
+        checkDestination()
+        latest = await status(video.id)
+        checkDestination()
+        checkExperiment(row, latest, plan)
+        const adMs = adTime(latest)
+        row.startStatus = structuredClone(latest); row.startAdMs = adMs
+        row.unpreparedSwitchMs = observed!.firstPlaying! - started
+        row.unpreparedSwitchWithoutAdMs = adMs === null ? null : (row.unpreparedSwitchMs as number) - adMs
+        if (adMs !== null && adMs > (row.unpreparedSwitchMs as number) + 1) row.failures.push('El tiempo publicitario excede la ventana medida del cambio')
+        if (plan.experimental !== false && (adMs === null || (row.unpreparedSwitchWithoutAdMs as number) > LIMITS.unpreparedMs)) row.failures.push('Salto a canción no preparada supera 5 s más anuncio')
+        row.status = latest; checkAds(row, latest)
+        context = { video, item, audio: audio! }
+      } catch (error) {
+        row.failedPhase = row.phase
+        row.failures.push(String(error)); latest = await status(video.id).catch(() => latest)
+        row.status = latest; checkAds(row, latest)
+      } finally {
+        row.phase = 'finished'; row.elapsedMs = performance.now() - began
+        row.events = observed?.events ?? []; row.gaps = observed?.gaps ?? []
+        row.allPlaybackStalls = observed?.allPlaybackStalls ?? []
+        observed?.close(); unhook()
+      }
+      row.ok = row.failures.length === 0
+      if (!row.ok) context = null
+      await checkpoint(rows)
     }
-    row.ok = row.failures.length === 0; await checkpoint(rows)
+  } finally {
+    if (player.status === 'playing' || player.status === 'loading') player.toggle()
+    stopCapture()
   }
   return rows
 }

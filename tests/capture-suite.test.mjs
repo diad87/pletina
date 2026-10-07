@@ -20,7 +20,8 @@ const proof = overrides => ({ generation: 3, revision: 1, duration: 1, audioDura
 async function setup(t, options = {}) {
   let clock = 0
   if (options.firstSoundDelay) t.mock.method(performance, 'now', () => clock)
-  const snapshots = [], progress = new Map(), timers = [], allAudio = [], calls = []
+  const snapshots = [], progress = new Map(), timers = [], allAudio = [], calls = [], queueCalls = [], forgetEvidence = []
+  const lifecycle = { toggles: 0, stops: 0 }
   let statusReads = 0, seeks = 0, forgotten = new Set()
   const oldAudio = globalThis.Audio, oldMedia = globalThis.HTMLMediaElement
   class Audio extends EventTarget {
@@ -59,10 +60,16 @@ async function setup(t, options = {}) {
     }
     get buffered() { return { length: this.ranges.length, start: i => this.ranges[i].start, end: i => this.ranges[i].end } }
     play() {
+      if (this.failPlayback) {
+        this.paused = true; this.error = { code: 4, message: 'fixture playback failed' }
+        this.dispatchEvent(new CustomEvent('captureerror', { detail: 'fixture playback failed' }))
+        return Promise.resolve()
+      }
       this.paused = false; this.ended = false
       if (this.currentTime === 0) this.currentTime = options.contextTime ?? 0.01
       this.dispatchEvent(new Event('playing'))
       this.onPlay?.()
+      if (options.advanceContextAfterPlay) timers.push(setTimeout(() => { if (!this.paused) this.currentTime = 0.25 }, 1))
       return Promise.resolve()
     }
     pause() { this.paused = true }
@@ -78,8 +85,9 @@ async function setup(t, options = {}) {
   const current = new Audio()
   const player = {
     playbackAudio: current, preparedAudio: null, current: null, pos: -1, volume: 0.8, shuffle: false, repeat: 'off', status: 'idle', upcoming: [],
-    setVolume(value) { this.volume = value }, clearQueue() {}, toggle() { this.status = 'paused'; this.playbackAudio.pause() },
+    setVolume(value) { this.volume = value }, clearQueue() {}, toggle() { lifecycle.toggles++; this.status = this.status === 'loading' ? 'idle' : 'paused'; this.playbackAudio.pause() },
     playQueue(items) {
+      queueCalls.push(items.map(item => item.track.id))
       this.items = items; this.pos = 0
       this.begin()
     },
@@ -88,12 +96,16 @@ async function setup(t, options = {}) {
       forgotten.delete(video(this.current.track.id).id)
       if (options.promote && this.pos > 0) this.playbackAudio = this.preparedAudio
       const audio = this.playbackAudio
-      audio.currentTime = 0; audio.ended = false
+      audio.currentTime = 0; audio.ended = false; audio.error = null
+      audio.failPlayback = options.failPlayerTrack === this.current.track.id
       this.upcoming = this.items.slice(this.pos + 1).map(item => ({ item }))
       this.preparedAudio = options.promote && this.upcoming.length ? new Audio() : null
       audio.onPlay = () => {
         this.status = 'playing'
         emitProgress(audio, options.progress ?? proof())
+        if (options.errorAfterPlayingTrack === this.current.track.id)
+          audio.dispatchEvent(new CustomEvent('captureerror', { detail: 'fixture failure after playing' }))
+        if (options.holdPlayback) return
         const position = this.pos
         timers.push(setTimeout(() => {
           audio.currentTime = options.endedAt ?? 0.95; audio.ended = true
@@ -123,7 +135,13 @@ async function setup(t, options = {}) {
         if (forgotten.has(args.videoId)) return null
         return native(typeof options.native === 'function' ? options.native(statusReads) : options.native)
       }
-      if (command === 'capture_bench_forget') { forgotten.add(args.videoId); return }
+      if (command === 'capture_bench_forget') {
+        forgetEvidence.push({ target: args.videoId, context: video(player.current.track.id).id,
+          playing: player.status === 'playing' && !player.playbackAudio.paused, queue: player.items.map(item => item.track.id) })
+        if (options.keepCacheId !== args.videoId) forgotten.add(args.videoId)
+        if (options.pauseOnForgetId === args.videoId) { player.status = 'paused'; player.playbackAudio.pause() }
+        return
+      }
       if (command === 'capture_begin' && options.beginHangs) return new Promise(() => {})
       if (command === 'capture_begin' && options.firstSoundDelay) clock += options.firstSoundDelay
       if (command === 'capture_begin' || command === 'capture_cancel') return undefined
@@ -146,15 +164,16 @@ async function setup(t, options = {}) {
       emitProgress(audio)
       if (options.seekFailsOnce && seeks === 1) return false
       audio.currentTime = at; return options.seekFails !== true
-    }, stopCapture() {},
+    }, stopCapture() { lifecycle.stops++ },
   }
   const key = `__captureSuite${++run}`
   globalThis[key] = runtime
   t.after(() => delete globalThis[key])
   const prelude = `const { invoke, api, player, toQuery, extractor, captureProgress, playCapture, seekCapture, stopCapture } = globalThis.${key};\n`
   const module = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
-  return { ...module, player, progress, emitProgress, calls, snapshots, allAudio,
-    execute: plan => module.runCaptureSuite(plan, async report => { snapshots.push(structuredClone(report)) }) }
+  return { ...module, player, progress, emitProgress, calls, snapshots, allAudio, queueCalls, forgetEvidence, lifecycle,
+    extractor: runtime.extractor, originalPlay: Audio.prototype.play,
+    execute: (plan, checkpoint) => module.runCaptureSuite(plan, async report => { snapshots.push(structuredClone(report)); await checkpoint?.(report) }) }
 }
 
 test('álbum conserva progreso y cobertura tras cleanup y captura playing antes del primer poll', async t => {
@@ -313,6 +332,101 @@ test('switch usa expulsión explícita del destino y conserva evidencia de ambas
   assert(report.rows.every(row => row.destinationWasCached === false))
   assert.equal(env.calls.filter(([command]) => command === 'capture_bench_forget').length, 2)
   assert(report.rows.every(row => row.events.some(event => event.type === 'playing')))
+})
+
+test('treinta cambios fríos reutilizan el destino anterior con sólo un contexto inicial y una cola de un tema', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true })
+  const videos = Array.from({ length: 30 }, (_, i) => video(i + 1))
+  const report = await env.execute({ mode: 'switch', videos, timeoutSeconds: 1 })
+  assert.equal(report.rows.length, 30)
+  assert.equal(report.measurementsOk, true)
+  assert.equal(report.acceptanceOk, false)
+  assert.deepEqual(env.queueCalls, [[30], ...videos.map(row => [row.track.id])])
+  assert.deepEqual(env.forgetEvidence.map(entry => entry.target), videos.map(row => row.id))
+  assert.equal(new Set(env.forgetEvidence.map(entry => entry.target)).size, 30)
+  for (const [index, row] of report.rows.entries()) {
+    assert.equal(row.contextVideoId, videos[index === 0 ? 29 : index - 1].id)
+    assert.equal(row.contextReused, index > 0)
+    assert(row.contextPosition > 0.2)
+    assert.equal(row.contextBeforeClick.paused, false)
+    assert.equal(row.contextBeforeClick.ended, false)
+    assert.equal(row.destinationBeforeClick, null)
+    assert.equal(row.destinationWasCached, false)
+  }
+  assert(env.forgetEvidence.every(entry => entry.context !== entry.target && entry.playing && entry.queue.length === 1))
+  assert.deepEqual(env.lifecycle, { toggles: 1, stops: 1 })
+})
+
+test('la espera hasta 0,2s del destino recién iniciado conserva el contexto sin resolverlo de nuevo', async t => {
+  const env = await setup(t, { contextTime: 0.01, advanceContextAfterPlay: true, holdPlayback: true })
+  const report = await env.execute({ mode: 'switch', videos: [video(1), video(2)], timeoutSeconds: 1 })
+  assert.equal(report.measurementsOk, true)
+  assert.equal(report.rows[1].contextReused, true)
+  assert.deepEqual(env.queueCalls, [[2], [1], [2]])
+})
+
+test('un destino idéntico al único contexto disponible no se expulsa ni se mide como cambio frío', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true })
+  const report = await env.execute({ mode: 'switch', videos: [video(1), video(1)], timeoutSeconds: 1 })
+  assert.equal(report.rows.length, 2)
+  assert(report.rows.every(row => row.ok === false && row.failures.some(reason => /distintas/.test(reason))))
+  assert.equal(env.forgetEvidence.length, 0)
+  assert.equal(env.queueCalls.length, 0)
+})
+
+test('caché retenida o contexto pausado tras forget impiden dar por medido un cambio', async t => {
+  for (const failure of [{ keepCacheId: video(1).id }, { pauseOnForgetId: video(1).id }]) {
+    const env = await setup(t, { contextTime: 0.25, holdPlayback: true, ...failure })
+    const report = await env.execute({ mode: 'switch', videos: [video(1), video(2)], timeoutSeconds: 1 })
+    const row = report.rows[0]
+    assert.equal(row.ok, false)
+    assert.equal(row.unpreparedSwitchMs, undefined)
+    assert(row.failures.some(reason => /caché|dejó de sonar/.test(reason)))
+    assert.equal(row.events.some(event => event.type === 'playing'), false)
+  }
+})
+
+test('un cambio fallido conserva su fila y reconstruye contexto antes del siguiente destino', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true, failPlayerTrack: 1 })
+  const report = await env.execute({ mode: 'switch', videos: [video(1), video(2), video(3)], timeoutSeconds: 1 })
+  assert.equal(report.rows.length, 3)
+  assert.equal(report.measurementsOk, false)
+  assert.equal(report.rows[0].ok, false)
+  assert(report.rows[0].failures.some(reason => /captura falló/.test(reason)))
+  assert.equal(report.rows[0].unpreparedSwitchMs, undefined)
+  assert.equal(report.rows[1].ok, true)
+  assert.equal(report.rows[1].contextReused, false)
+  assert.equal(report.rows[2].contextReused, true)
+  assert.deepEqual(env.queueCalls, [[3], [1], [3], [2], [3]])
+  assert.deepEqual(env.lifecycle, { toggles: 1, stops: 1 })
+})
+
+test('playing seguido de captureerror en el mismo turno no vuelve correcto el cambio', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true, errorAfterPlayingTrack: 1 })
+  const report = await env.execute({ mode: 'switch', videos: [video(1), video(2)], timeoutSeconds: 1 })
+  assert.equal(report.rows[0].ok, false)
+  assert(report.rows[0].events.some(event => event.type === 'playing'))
+  assert(report.rows[0].events.some(event => event.type === 'captureerror'))
+  assert(report.rows[0].failures.some(reason => /captura falló/.test(reason)))
+  assert.equal(report.rows[1].ok, true)
+})
+
+test('cancelar checkpoints de switch limpia una sola vez y restaura ajustes y wrapper global', async t => {
+  const env = await setup(t, { contextTime: 0.25, holdPlayback: true })
+  env.player.volume = 0.35; env.player.shuffle = true; env.player.repeat = 'all'; env.extractor.engine = 'youtubei'
+  let cancelled = false
+  await assert.rejects(env.execute({ mode: 'switch', videos: [video(1), video(2)], timeoutSeconds: 1 }, report => {
+    cancelled ||= report.rows.some(row => row.phase === 'switching')
+    if (cancelled) throw new Error('checkpoint cancelled')
+  }), /checkpoint cancelled/)
+  assert.deepEqual(env.lifecycle, { toggles: 1, stops: 1 })
+  assert.equal(env.player.playbackAudio.paused, true)
+  assert.equal(env.player.volume, 0.35)
+  assert.equal(env.player.shuffle, true)
+  assert.equal(env.player.repeat, 'all')
+  assert.equal(env.extractor.engine, 'youtubei')
+  assert.equal(HTMLMediaElement.prototype.play, env.originalPlay)
+  assert(env.allAudio.every(audio => audio.listeners.length === 0))
 })
 
 test('un contador publicitario anterior no convierte un arranque en tiempo cero', async t => {

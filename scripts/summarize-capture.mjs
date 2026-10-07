@@ -13,6 +13,15 @@ const parse = text => JSON.parse(text.replace(/^\uFEFF/, ''))
 const mojibake = text => typeof text === 'string' && /Ã.|Â.|â€|�/.test(text)
 const MAX_AD_EVIDENCE_AGE_MS = 5000
 const plainCorpus = value => value?.captureSuite?.corpus ?? value?.corpus ?? value
+function interruptionEvidence(input) {
+  const value = input.interruption
+  if (value === undefined) return { value: null, warnings: [] }
+  const reject = reason => ({ value: null, warnings: [`Interrupción adjunta ignorada: ${reason} (${input.interruptionSource ?? 'entrada explícita'})`] })
+  if (!value || typeof value !== 'object' || typeof value.report !== 'string' || typeof input.source !== 'string' || !input.source || basename(value.report.replaceAll('\\', '/')) !== basename(input.source)) return reject('el nombre del informe no coincide')
+  if (typeof value.reportSha256 !== 'string' || typeof input.sha256 !== 'string' || !/^[a-f0-9]{64}$/i.test(value.reportSha256) || !/^[a-f0-9]{64}$/i.test(input.sha256) || value.reportSha256.toLowerCase() !== input.sha256.toLowerCase()) return reject('SHA256 no coincide con los bytes del informe')
+  if (typeof value.stoppedAt !== 'string' || !Number.isFinite(Date.parse(value.stoppedAt))) return reject('falta una fecha de interrupción válida')
+  return { value: { ...value, verified: true, verification: 'report-filename+sha256' }, warnings: [] }
+}
 const allCases = corpus => (corpus?.albums ?? []).flatMap((album, albumIndex) =>
   Array.from({ length: Math.max(album.expectedTracks ?? 0, album.rows?.length ?? 0) }, (_, i) => ({
     ...(album.rows?.[i] ?? { error: album.error ?? 'Pista ausente del corpus' }),
@@ -59,6 +68,9 @@ function diagnosticSnapshot(status) {
 
 /** This labels an operational timeout, never a proved content-start latency failure. */
 function inferAdTimeout(row, failures, snapshot, finished) {
+  // A context failure happened before measuring the destination. Cancellation is
+  // also distinct from an operational timeout of an active target measurement.
+  if (row.failedPhase === 'context' || row.aborted === true || row.phase === 'aborted' || row.failedPhase === 'aborted') return null
   const timedOut = failures.some(failure => /espera operativa|operational timeout/i.test(failure))
   const activePosition = snapshot.position !== null && snapshot.mediaDuration !== null && snapshot.position >= 0 &&
     snapshot.mediaDuration > snapshot.position
@@ -74,11 +86,13 @@ function metricRow(row, run, rowIndex) {
   const completeSkipped = row.completeNotExercised === true || row.coverageNotExercised === true || run.scope === 'timingOnly'
   const status = row.status ?? row.finalStatus ?? {}
   const failures = diagnostics(row)
-  const finished = row.phase === 'finished' || (!run.running && row.phase !== 'pending')
+  const finished = row.phase === 'finished' || (!run.running && !run.interrupted && row.phase !== 'pending')
+  const interrupted = run.interrupted && !finished
   const measured = boolean(row.measurementOk) ?? boolean(row.ok)
   const lastDiagnostic = diagnosticSnapshot(status)
   const inference = inferAdTimeout(row, failures, lastDiagnostic, finished)
-  const state = !finished && run.running ? 'in-progress' : inference ? 'unmeasured/ad-timeout' : failures.length || measured === false ? 'failed'
+  const state = interrupted ? row.phase === 'pending' ? 'not-exercised' : 'interrupted'
+    : !finished && run.running ? 'in-progress' : inference ? 'unmeasured/ad-timeout' : failures.length || measured === false ? 'failed'
     : measured === true ? 'measured-pass' : 'not-exercised'
   // An empty normal-gap list after an intentional seek says nothing about full-song continuity.
   const continuityExercised = run.category === 'album' && finished && row.complete === true && row.coverageOk === true &&
@@ -87,6 +101,7 @@ function metricRow(row, run, rowIndex) {
     runId: run.runId, source: run.source, date: run.date, commit: run.commit, category: run.category,
     id: row.videoId ?? row.id ?? null, rowIndex, rawLabel: row.label ?? null, phase: row.phase ?? null,
     state, attemptState: inference ? 'failed' : state, inference, lastDiagnostic,
+    interruption: interrupted ? { stoppedAt: run.interruption.stoppedAt, source: run.interruptionSource, reason: run.interruption.reason ?? null } : null,
     timingCriteria: { firstSound: number(row.firstSoundMs) === null ? 'not-measured' : 'measured', seek: number(row.seekMs ?? row.audio?.seekMs) === null ? 'not-measured' : 'measured' },
     reportedMeasurementOk: measured, acceptanceOk: false, guaranteeAds: false, failures,
     metrics: {
@@ -119,6 +134,7 @@ export function summarize(inputs, { corpus, corpusSource = null, generatedAt = n
     const legacy = !report.captureSuite && Array.isArray(report.tier2)
     const rows = Array.isArray(suite.rows) ? suite.rows : legacy ? report.tier2 : []
     const experiment = effectiveExperiment(suite, input.metadata, rows)
+    const interruption = interruptionEvidence(input)
     const mode = suite.mode ?? (legacy ? 'legacy-quarantine' : report.mse ? 'mse' : 'unknown')
     const category = mode === 'catalog' || mode === 'mse' || mode === 'unknown' ? mode
       : legacy || experiment.value === false || suite.scope === 'full-quarantine' ? 'quarantine'
@@ -128,19 +144,22 @@ export function summarize(inputs, { corpus, corpusSource = null, generatedAt = n
     const run = {
       runId: `${inputIndex + 1}:${basename(input.source ?? 'input')}`, source: input.source ?? null,
       sha256: input.sha256 ?? null, metadataSource: input.metadataSource ?? null,
+      interruptionSource: input.interruptionSource ?? null, interruption: interruption.value, interrupted: !!interruption.value,
       date, dateSource: input.metadata?.startedAt ? 'metadata.startedAt' : date ? 'report.startedAt' : 'unknown',
       commit: input.metadata?.commit ?? report.commit ?? null, branch: input.metadata?.branch ?? null,
       dirtyChanges: input.metadata?.changes ?? null, binarySha256: input.metadata?.binarySha256 ?? null,
       protocol: legacy ? 'legacy-bench' : report.captureSuite || report.mode ? 'capture-suite' : 'other',
       mode, category, scope: suite.scope ?? (legacy ? 'legacy-quarantine' : null),
-      experiment, running: suite.running === true, reportedOk: boolean(report.ok),
+      experiment, running: suite.running === true && !interruption.value, reportedRunning: boolean(suite.running), reportedOk: boolean(report.ok),
       reportedAcceptanceOk: boolean(suite.acceptanceOk), reportedMeasurementsOk: boolean(suite.measurementsOk),
-      fatal: input.error ?? report.fatal ?? null, warnings: [...experiment.conflicts, ...(input.warnings ?? [])],
+      fatal: input.error ?? report.fatal ?? null, warnings: [...experiment.conflicts, ...(input.warnings ?? []), ...interruption.warnings],
       selectionOrder: Number.isFinite(parsedDate) ? parsedDate : inputIndex,
       selectionOrderSource: Number.isFinite(parsedDate) ? 'date' : 'explicit-input-order (date unavailable)',
       inputIndex, rows: [], metadata: input.metadata ?? null,
     }
     run.rows = rows.map((row, i) => metricRow(row, run, i))
+    if (interruption.value?.completedRows !== undefined && interruption.value.completedRows !== rows.filter(row => row.phase === 'finished').length)
+      run.warnings.push('El recuento completedRows de la interrupción no coincide con las filas finished; no se usa para completar ni modificar filas')
     if (!date) run.warnings.push('Fecha no disponible: se conserva el orden explícito de entrada')
     if (rows.some(row => mojibake(row.label))) run.warnings.push('Etiquetas con indicios de decodificación incorrecta; se conserva rawLabel y se muestra el corpus canónico por ID')
     if (rows.some(row => number(row.firstSoundWithoutAdMs) !== null && number(row.startAdMs) === null && number(row.startStatus?.adMs) === null))
@@ -172,12 +191,13 @@ export function summarize(inputs, { corpus, corpusSource = null, generatedAt = n
   return {
     generatedAt, acceptanceOk: false, guaranteeAds: false,
     interpretation: {
-      latestPolicy: 'Última ejecución por fecha/categoría/ID, aunque falle o siga en curso; todos los informes explícitos se conservan en runs',
+      latestPolicy: 'Última ejecución por fecha/categoría/ID, aunque falle, siga en curso o se haya interrumpido; todos los informes explícitos se conservan en runs',
       measurements: 'measured-pass sólo significa que esa fila declaró cumplir sus mediciones; nunca aceptación del extractor',
       ads: 'labelledAdsDelivered cuenta unidades etiquetadas como anuncio; ausencia semántica no verificada',
       continuity: 'Una lista gaps vacía en smoke/latency con seek/backfill no demuestra cero cortes durante la canción completa',
       labels: 'El corpus canónico aporta la etiqueta por videoID; rawLabel y los bytes/errores de origen permanecen en el historial',
       adTimeout: 'unmeasured/ad-timeout es una inferencia de anuncio activo reciente al agotarse la espera: el intento operativo falló, pero el requisito de primer sonido sigue sin medirse',
+      interruption: 'Un auxiliar de interrupción sólo cambia el estado si coincide el nombre y SHA256 del informe; las filas finished conservan resultados, las activas quedan interrumpidas y las pending no ejercitadas',
     },
     corpusSource, expectedTracks, representedTracks: corpusRows.length,
     warnings, cases: corpusRows.map(summarizeCase),
@@ -191,8 +211,9 @@ const escape = value => String(value ?? '—').replaceAll('|', '\\|').replaceAll
 const ms = value => value === null || value === undefined ? 'n/d' : `${Number(value).toFixed(1)} ms`
 function cell(entry) {
   if (!entry) return 'No ejercitado'
+  if (entry.state === 'not-exercised' && entry.interruption) return escape(`No ejercitado: ejecución interrumpida [${entry.runId}]`)
   if (entry.state === 'unmeasured/ad-timeout') return escape(`No medido: timeout durante anuncio (inferencia); intento fallido; criterio pendiente [${entry.runId}]`)
-  const m = entry.metrics, state = { 'measured-pass': 'Medido ✓', failed: 'FALLO', 'in-progress': 'En curso', 'not-exercised': 'No ejercitado' }[entry.state]
+  const m = entry.metrics, state = { 'measured-pass': 'Medido ✓', failed: 'FALLO', 'in-progress': 'En curso', interrupted: 'Interrumpido; medición parcial', 'not-exercised': 'No ejercitado' }[entry.state]
   const values = entry.category === 'latency' ? `inicio ${ms(m.firstSoundMs)}; sin anuncio ${ms(m.firstSoundWithoutAdMs)}; seek ${ms(m.seekMs)}`
     : entry.category === 'switch' ? `cambio ${ms(m.unpreparedSwitchMs)}; sin anuncio ${ms(m.unpreparedSwitchWithoutAdMs)}`
     : entry.category === 'album' ? `transición ${ms(m.nextTrackMs)}; EOF ${m.completeness}; cortes ${m.continuity === 'not-exercised-for-full-song' ? 'no verificados' : m.normalGapCount}`
@@ -213,7 +234,7 @@ export function markdown(summary) {
   const lines = [
     '# Evidencia de captura', '', `Generado: ${summary.generatedAt}. Corpus: ${summary.representedTracks}/${summary.expectedTracks} filas.`, '',
     '**Aceptación: no. Ausencia semántica de anuncios: no verificada.** Los contadores publicitarios son etiquetas observadas, no una garantía.', '',
-    'Se muestra la última ejecución por categoría e ID, incluso si falla o sigue en curso. El JSON conserva todas las ejecuciones y las filas originales.', '',
+    'Se muestra la última ejecución por categoría e ID, incluso si falla, sigue en curso o se interrumpió. El JSON conserva todas las ejecuciones y las filas originales.', '',
     'Las esperas durante seek/backfill se registran aparte. Un smoke con `gaps: []` no demuestra cero cortes durante una canción completa.', '',
     'Un `ad-timeout` inferido conserva el intento fallido, pero no demuestra incumplimiento de los 3 s: el primer sonido queda pendiente de medición.', '',
     '| # | Canción / vídeo | Latencia | Cambio en frío | Álbum natural | Cuarentena | Diagnóstico último intento |',
@@ -225,7 +246,8 @@ export function markdown(summary) {
     for (const row of summary.outsideCorpus) lines.push(`| ${escape(row.label)} / ${escape(row.id)} | ${categories.map(category => cell(row.latest[category])).join(' | ')} |`)
   }
   lines.push('', '## Fuentes y ejecuciones conservadas', '', '| Ejecución | Fecha | Commit | Categoría | Estado | Fuente |', '| --- | --- | --- | --- | --- | --- |')
-  for (const run of summary.runs) lines.push(`| ${escape(run.runId)} | ${escape(run.date)} | ${escape(run.commit)} | ${escape(run.category)} | ${run.fatal ? 'Error de entrada/ejecución' : run.running ? 'En curso' : 'Finalizada'} | ${escape(run.source)} |`)
+  for (const run of summary.runs) lines.push(`| ${escape(run.runId)} | ${escape(run.date)} | ${escape(run.commit)} | ${escape(run.category)} | ${run.fatal ? 'Error de entrada/ejecución' : run.interrupted ? 'Interrumpida' : run.running ? 'En curso' : 'Finalizada'} | ${escape(run.source)} |`)
+  for (const run of summary.runs.filter(run => run.interrupted)) lines.push('', `Interrupción verificada de ${escape(run.runId)}: ${escape(run.interruption.stoppedAt)}. ${escape(run.interruption.reason ?? 'Sin motivo registrado')}. Auxiliar: ${escape(run.interruptionSource)}; SHA256 del informe: ${escape(run.sha256)}.`)
   lines.push('', '## Historial de errores', '')
   const errors = summary.runs.flatMap(run => [
     ...(run.fatal ? [`- ${escape(run.runId)}: ${escape(run.fatal)}`] : []),
@@ -252,11 +274,18 @@ export async function readInputs(paths, metadataPaths = []) {
       warnings.push(`Metadata adjunta de otro informe, sin atribuir fecha/commit: ${metadata.source}`)
       metadata = undefined
     }
+    let interruption, interruptionSource
+    const adjacentInterruption = join(dirname(source), basename(source).replace(/^result-/, 'interruption-'))
+    if (adjacentInterruption !== source) try {
+      const text = await readFile(adjacentInterruption, 'utf8')
+      interruptionSource = adjacentInterruption
+      interruption = parse(text)
+    } catch (error) { if (error.code !== 'ENOENT') warnings.push(`Interrupción adjunta ilegible: ${error.message}`) }
     try {
       const bytes = await readFile(source)
       return { source, report: parse(bytes.toString('utf8')), sha256: hash(bytes), metadata: metadata?.value,
-        metadataSource: metadata?.source, warnings }
-    } catch (error) { return { source, error: error.message, metadata: metadata?.value, metadataSource: metadata?.source, warnings } }
+        metadataSource: metadata?.source, interruption, interruptionSource, warnings }
+    } catch (error) { return { source, error: error.message, metadata: metadata?.value, metadataSource: metadata?.source, interruption, interruptionSource, warnings } }
   }))
 }
 
@@ -266,7 +295,7 @@ async function main(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--help') {
-      process.stdout.write('Uso: node scripts/summarize-capture.mjs [--corpus corpus.json] [--metadata metadata.json] [--json salida.json] [--markdown salida.md] informe1.json informe2.json ...\nSin salidas explícitas imprime Markdown. No descubre ni modifica informes; adjunta metadata hermana cuando existe.\n')
+      process.stdout.write('Uso: node scripts/summarize-capture.mjs [--corpus corpus.json] [--metadata metadata.json] [--json salida.json] [--markdown salida.md] informe1.json informe2.json ...\nSin salidas explícitas imprime Markdown. No descubre ni modifica informes; lee metadata e interruption hermanas cuando existen y verifica nombre/SHA256 de las interrupciones.\n')
       return
     }
     if (['--corpus', '--metadata', '--json', '--markdown'].includes(arg)) {
@@ -284,8 +313,8 @@ async function main(args) {
   for (const output of [jsonPath, markdownPath].filter(Boolean)) if (protectedPaths.has(resolve(output))) throw new Error('La salida no puede reemplazar una entrada')
   if (jsonPath && markdownPath && resolve(jsonPath) === resolve(markdownPath)) throw new Error('JSON y Markdown necesitan salidas distintas')
   const inputs = await readInputs(paths, metadataPaths)
-  for (const input of inputs) if (input.metadataSource) protectedPaths.add(resolve(input.metadataSource))
-  for (const output of [jsonPath, markdownPath].filter(Boolean)) if (protectedPaths.has(resolve(output))) throw new Error('La salida no puede reemplazar metadata adjunta')
+  for (const input of inputs) for (const source of [input.metadataSource, input.interruptionSource].filter(Boolean)) protectedPaths.add(resolve(source))
+  for (const output of [jsonPath, markdownPath].filter(Boolean)) if (protectedPaths.has(resolve(output))) throw new Error('La salida no puede reemplazar evidencia adjunta')
   const summary = summarize(inputs, { corpus: corpusPath ? parse(await readFile(corpusPath, 'utf8')) : undefined,
     corpusSource: corpusPath ? resolve(corpusPath) : null })
   if (jsonPath) await writeFile(jsonPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
