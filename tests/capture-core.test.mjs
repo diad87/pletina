@@ -440,6 +440,86 @@ test('progressive identity ambiguity, buffer mismatch and accelerated presentati
   assert.throws(() => tracker.pull(source, snapshot(0.04)), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
 })
 
+function startupReplaySetup({ publish = false, gapPosition = 1.108845, gapNow = 2737.5, bytes = fixture({ times: Array.from({ length: 100 }, (_, i) => i * 20) }).bytes } = {}) {
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: publish ? 0 : 1.5 })
+  const source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"'), media = {}
+  source.native = { readyState: 'open' }; source.element = media
+  buffer.native = { timestampOffset: 0, appendWindowStart: 0, appendWindowEnd: Infinity, mode: 'segments', updating: false, buffered: { length: 1, start: () => 0, end: () => 2 } }
+  tracker.append(buffer, bytes)
+  const snapshot = position => ({ source, position, duration: 2, seeking: false, paused: false, ended: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: 2 }], sourceEnded: false })
+  const observe = (position, now, evidence = content) => tracker.observe(source, evidence, { position, now, duration: 2, element: media })
+  observe(0, 1600); observe(0.25, 1850); observe(0.564168, 2192.5)
+  if (publish) assert.ok(tracker.pull(source, snapshot(0.564168)).length)
+  observe(gapPosition, gapNow)
+  return { tracker, source, buffer, media, snapshot, observe, bytes, gapPosition }
+}
+
+test('one unpublished scheduling gap can replay the immutable buffered source from zero and certifies only its fresh history', () => {
+  const f = startupReplaySetup(), { tracker, source, buffer, media, observe, snapshot } = f
+  assert.equal(source.error.code, 'CAPTURE_PARTIAL_PRESENTATION')
+  const copied = concat(...buffer.chunks), bytes = tracker.bytes
+  const replay = tracker.startupReplayUnpublished(source, snapshot(f.gapPosition))
+  assert.equal(replay.elapsedMs, 545); assert.equal(replay.replayCount, 1)
+  assert.equal(source.error, null); assert.equal(source.observations.length, 0); assert.equal(source.progress.ranges.length, 0)
+  assert.equal(tracker.coverage.length, 0); assert.equal(tracker.bytes, bytes); assert.deepEqual(concat(...buffer.chunks), copied)
+  assert.equal(buffer.preSeekRanges, undefined); assert.equal(buffer.resetAfterSeek, undefined)
+  assert.equal(tracker.pull(source, snapshot(f.gapPosition)).length, 0, 'the previous prefix has no surviving observation credit')
+  assert.throws(() => tracker.finish(source, { ...snapshot(2), sourceEnded: true }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.equal(tracker.onTimeAssignment(source, media, 0.000001), false)
+  assert.equal(tracker.onTimeAssignment(source, {}, 0), false)
+  assert.equal(tracker.onTimeAssignment(source, media, 0), true)
+  assert.equal(tracker.onSeekMutation(buffer, 'abort'), false); assert.equal(tracker.onSeekMutation(buffer, 'remove'), false)
+  observe(0, 3000)
+  for (let ms = 200; ms <= 2000; ms += 200) observe(ms / 1000, 3000 + ms)
+  source.successfulEndOfStream = true; source.native.readyState = 'ended'
+  const terminal = { ...snapshot(2), sourceEnded: true, sourceReadyState: 'ended', successfulEndOfStream: true }
+  const proof = tracker.finish(source, terminal)
+  assert.equal(proof.certificate.frameCount, 100); assert.equal(proof.certificate.cleanWholeSource, true)
+  assert.equal(source.observations[0].position, 0); assert.equal(source.observations[0].now, 3000)
+  const units = tracker.pull(source, terminal)
+  assert.equal(units[0].firstFrame, 0); assert.equal(units.at(-1).endFrame, 100)
+  assert.equal(units.reduce((count, unit) => count + unit.frames, 0), 100)
+  assert.equal(tracker.finish(source, terminal).complete, true)
+})
+
+test('unpublished replay never repairs published audio, mixed identity, seek, timing direction, changed inventory or source settings', () => {
+  for (const scenario of ['published', 'mixed', 'unknown', 'timeline', 'backward', 'accelerated', 'rate', 'explicit-seek', 'changed-version', 'native-settings', 'native-source', 'native-buffer', 'prefix-evicted', 'native-gap', 'borrowed-ranges', 'updating', 'ended', 'missing-init']) {
+    const f = startupReplaySetup({ publish: scenario === 'published', ...(scenario === 'backward' ? { gapPosition: 0.3 } : {}), ...(scenario === 'accelerated' ? { gapPosition: 1.8 } : {}) })
+    const { tracker, source, buffer } = f, snapshot = f.snapshot(f.gapPosition)
+    if (scenario === 'mixed') source.seen.add('ad')
+    if (scenario === 'unknown') tracker.observe(source, { state: 'unknown', sourceBound: true, signals: [] }, { position: f.gapPosition, now: 2740, duration: 2 })
+    if (scenario === 'timeline') tracker.reject(source, 'CAPTURE_UNSUPPORTED_TIMELINE', 'a later settings mutation is a different failure')
+    if (scenario === 'rate') snapshot.playbackRate = 2
+    if (scenario === 'explicit-seek') tracker.beginEpoch(2, 0)
+    if (scenario === 'changed-version') buffer.version++
+    if (scenario === 'native-settings') buffer.native.timestampOffset = 1
+    if (scenario === 'native-source') source.native = { readyState: 'open' }
+    if (scenario === 'native-buffer') buffer.native = { ...buffer.native }
+    if (scenario === 'prefix-evicted') { buffer.native.buffered.start = () => 0.02; snapshot.audioRanges[0].start = 0.02 }
+    if (scenario === 'native-gap') snapshot.audioRanges = [{ start: 0, end: 0.4 }, { start: 0.6, end: 2 }]
+    if (scenario === 'borrowed-ranges') buffer.preSeekRanges = { ranges: [{ start: 0, end: 2 }] }
+    if (scenario === 'updating') snapshot.updating = true
+    if (scenario === 'ended') snapshot.ended = true
+    if (scenario === 'missing-init') { buffer.chunks = [fixture().cluster]; buffer.prefix = null }
+    const error = source.error
+    assert.equal(tracker.startupReplayUnpublished(source, snapshot), null, scenario)
+    assert.equal(source.error, error, scenario); assert.equal(tracker.startupReplayCount, 0, scenario)
+  }
+})
+
+test('unpublished replay requires a new exact zero observation and cannot be repeated after a second clock gap', () => {
+  for (const scenario of ['unassigned', 'nonzero', 'second-gap']) {
+    const f = startupReplaySetup(), { tracker, source, media, observe, snapshot } = f
+    assert.ok(tracker.startupReplayUnpublished(source, snapshot(f.gapPosition)))
+    if (scenario !== 'unassigned') assert.equal(tracker.onTimeAssignment(source, media, 0), true)
+    observe(scenario === 'nonzero' ? 0.001 : 0, 3000)
+    if (scenario === 'second-gap') observe(0.6, 3601)
+    assert.ok(source.error, scenario)
+    assert.equal(tracker.startupReplayUnpublished(source, snapshot(scenario === 'second-gap' ? 0.6 : 0)), null, scenario)
+    assert.equal(tracker.nextUnit, 0, scenario)
+  }
+})
+
 test('a late site ad marker is a measured counterexample to unconditional progressive zero-ad attribution', t => {
   const { ProgressiveTracker, SessionTracker } = load()
   const delayedMarker = 1.12, trueAdStart = 1, duration = 1.3
@@ -1542,6 +1622,45 @@ test('orchestrator reports the trusted result of ad A while ad B is the current 
   assert.equal(f.adapter.skipSummary().last.requestId, second.requestId)
   assert.equal(context.window.__musifyValidateSkip(second.requestId).valid, true)
   assert.equal(f.button.calls, 0)
+})
+
+test('orchestrator replays one unpublished WWW startup gap inside the same source and delivers only after new presentation', async () => {
+  for (const experimental of [false, true]) {
+    const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+    let clock = 1600
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+    const document = { querySelectorAll: () => [media], querySelector: s => s === '#movie_player' ? player : s === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+    const location = { search: '?v=target', hash: '', hostname: 'www.youtube.com' }
+    class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
+    const { context } = load({ ...scope, document, location, Blob, FileReader, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 61, __musifyProgressiveExperiment: experimental, __musifyHoldbackSeconds: 1.5, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    vm.runInContext(orchestratorCode, context)
+    const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+    const url = scope.URL.createObjectURL(source); media.src = url; media.duration = 2
+    buffer.buffered = { length: 1, start: () => 0, end: () => 2 }; buffer.appendBuffer(fixture({ times: Array.from({ length: 100 }, (_, i) => i * 20) }).bytes)
+    media.dispatchEvent(new Event('playing'))
+    for (const [now, position] of [[1850, 0.25], [2192.5, 0.564168], [2737.5, 1.108845]]) { clock = now; media._currentTime = position; media.dispatchEvent(new Event('timeupdate')) }
+    assert.equal(media.currentTime, 0, 'the standard currentTime setter rewinds the existing media')
+    assert.equal(media.currentSrc, url); assert.equal(media.paused, true)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(messages.some(m => m.type === 'error' || m.kind === 'seg'), false)
+    const replays = messages.filter(m => m.type === 'diagnostic' && m.reason?.includes('startup-replay-unpublished'))
+    assert.equal(replays.length, 1); assert.equal(JSON.parse(replays[0].reason).elapsedMs, 545)
+    assert.equal(replays[0].generation, 61); assert.equal(replays[0].epoch, 1)
+    clock = 3000; media.dispatchEvent(new Event('seeked'))
+    assert.equal(media.paused, false)
+    for (let ms = 200; ms <= 1400; ms += 200) { clock = 3000 + ms; media._currentTime = ms / 1000; media.dispatchEvent(new Event('timeupdate')) }
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(messages.some(m => m.kind === 'seg'), false, 'the old prefix never bypasses the full fresh holdback')
+    for (let ms = 1600; ms <= 2000; ms += 200) { clock = 3000 + ms; media._currentTime = ms / 1000; media.dispatchEvent(new Event('timeupdate')) }
+    source.endOfStream(); media.ended = true; media.paused = true; media.dispatchEvent(new Event('ended'))
+    await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve))
+    const units = messages.filter(m => m.kind === 'seg'), ended = messages.find(m => m.type === 'ended')
+    assert.equal(messages.some(m => m.type === 'error'), false)
+    assert.ok(ended); assert.equal(ended.complete, true); assert.equal(ended.certificate.frameCount, 100)
+    assert.equal(units.reduce((sum, unit) => sum + unit.frames, 0), 100)
+    assert.ok(units.every(unit => unit.epoch === 1 && unit.source === replays[0].source))
+  }
 })
 
 test('an initially missed two milliseconds are re-presented from zero before any publication', async () => {

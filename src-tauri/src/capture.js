@@ -256,6 +256,15 @@
       publish(source, snapshot)
       if (snapshot.sourceEnded || snapshot.ended) finish(media, source, snapshot, identity)
     } catch (e) {
+      const replay = !pendingSeek && current.state === 'content' && e === source.error ? tracker.startupReplayUnpublished(source, snapshot) : null
+      if (replay) {
+        media.pause(); presented.delete(source)
+        pendingSeek = { at: 0, start: 0, startup: true, assigned: true }
+        event('diagnostic', { state: 'content', source: source.id, position: snapshot.position, playbackRate: 1, browserNow: performance.now(),
+          reason: diagnosticReason({ phase: 'startup-replay-unpublished', ...replay, previousError: e.message }) })
+        try { media.currentTime = 0 } catch (error) { problem('CAPTURE_SEEK_FAILED', String(error)) }
+        return
+      }
       if (adapter.skipSummary?.()?.result === 'request-threw') event('diagnostic', { reason: diagnosticReason({ phase: 'skip-ad', outcome: 'exception' }) })
       problem(e.code || 'CAPTURE_PROGRESSIVE_ERROR', e.message)
     }

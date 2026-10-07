@@ -1,6 +1,6 @@
 # P1 — Captura oficial, 7 de octubre de2026
 
-Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v11 en validación. No se ha hecho
+Trabajo en `p1-oficial`, worktree `musify-oficial`. API4/captura v12 en validación. No se ha hecho
 push, fusión ni publicación. Propio conserva el nivel rápido y el respaldo histórico;
 yt-dlp sigue predeterminado. La promoción progresiva depende de la batería nueva.
 
@@ -16,8 +16,8 @@ de la referencia no se denomina anuncio automáticamente.
 
 | Comprobación de código | Resultado |
 |---|---|
-| JavaScript | 296 correctas,0 omitidas; suite posterior41/41 correcta |
-| Rust | 87 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
+| JavaScript | 300 correctas,0 omitidas;110 núcleo/MP4 posteriores correctas |
+| Rust | 90 correctas,13 integraciones ignoradas; descarga CDN real comprobada aparte |
 | TypeScript/Svelte | 0 errores y0 avisos |
 | Compilación Rust de producción | Correcta |
 
@@ -60,7 +60,7 @@ No aprueba tiempos ni continuidad. Se corrige el lector para esperar0,5s continu
 por MSE, y el clic nativo para aceptar enteros seguros que WebView2 serializa como decimal.
 El siguiente ensayo debe comprobar ambos arreglos en la app.
 
-Pendientes: medir v11 en la app, completar30 canciones/50 transiciones anónimas y las pocas
+Pendientes: medir v12 en la app, completar30 canciones/50 transiciones anónimas y las pocas
 referencias Premium, medir señales con referencia externa y evaluar velocidad segura.
 Esta tabla es provisional y conserva también los intentos fallidos.
 

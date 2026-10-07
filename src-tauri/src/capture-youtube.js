@@ -187,7 +187,7 @@
       clickedAt.set(button, Date.now())
       let attempt = null
       diagnose(() => {
-        skip.tries++; attempt = skip.last = { at: diagnosticNow(), source: observation?.source ?? null, epoch: observation?.epoch ?? null, position: element.currentTime, selector: skipSelectors.findIndex(selector => button.matches?.(selector)), eventSeen: false }
+        skip.tries++; attempt = skip.last = { at: diagnosticNow(), source: observation?.source ?? null, epoch: observation?.epoch ?? null, position: element.currentTime, duration: Number.isFinite(element.duration) ? element.duration : null, adMarker: classify(element).evidence?.adMarker === true, selector: skipSelectors.findIndex(selector => button.matches?.(selector)), eventSeen: false }
       })
       if (!buttonTokens.has(button)) buttonTokens.set(button, ++nextButton)
       // The native window can navigate without changing generation. Do not recycle

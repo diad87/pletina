@@ -381,13 +381,19 @@
       if (!Number.isFinite(holdbackSeconds) || holdbackSeconds < 0 || holdbackSeconds > 30) fail('CAPTURE_PROTOCOL_MISMATCH', 'Holdback must be between zero and30 seconds')
       this.epoch = epoch; this.experimental = experimental === true; this.nextUnit = 0; this.coverage = []; this.initializations = []; this.seek = null
       this.holdbackSeconds = holdbackSeconds
+      this.startupReplayCount = 0
     }
     createSource() {
       const source = super.createSource()
       source.progress = { epoch: this.epoch, ranges: [], emitted: new Set() }
       return source
     }
+    reject(source, code, reason) {
+      delete source.startupGap
+      super.reject(source, code, reason)
+    }
     drop(source) {
+      delete source.startupGap
       super.drop(source)
       // No retained parser view may resurrect quarantined bytes after a conflicting
       // label. Already published experimental units cannot be recalled: a label
@@ -433,8 +439,32 @@
       if (source.error || source.observations.length || source.progress.emitted.size) fail('CAPTURE_PARTIAL_PRESENTATION', 'Cannot repair an already observed presentation by rewinding')
       this.seek = { at: 0, assigned: false, active: true, startup: true }
     }
+    startupReplayUnpublished(source, snapshot) {
+      const gap = source?.startupGap, buffer = source?.buffers[0]
+      if (!gap || source.error !== gap.error || this.startupReplayCount !== 0 || this.nextUnit !== 0 || this.coverage.length || source.progress.emitted.size ||
+        source.sealed || source.seen.size !== 1 || !source.seen.has('content') || (this.seek && !this.seek.startup) || source.buffers.length !== 1 ||
+        gap.epoch !== this.epoch || source.progress.epoch !== this.epoch || gap.buffer !== buffer || gap.native !== buffer.native || gap.nativeSource !== source.native || gap.version !== buffer.version ||
+        gap.settings !== JSON.stringify(buffer.timelineSettings) || !buffer.native || !source.native || gap.settings !== JSON.stringify(settingsOf(buffer.native)) ||
+        buffer.preSeekRanges || buffer.resetAfterSeek || buffer.awaitingStart || buffer.resetInit || snapshot?.source !== source || snapshot.position !== gap.current.position ||
+        snapshot.seeking !== false || snapshot.ended !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false ||
+        snapshot.audioRanges?.length !== 1 || snapshot.audioRanges[0].start !== 0 || !Number.isFinite(snapshot.audioRanges[0].end) || snapshot.audioRanges[0].end < snapshot.position ||
+        JSON.stringify(snapshot.audioRanges) !== JSON.stringify(nativeRanges(buffer.native))) return null
+      let inventory
+      try { inventory = this.inventory(source) } catch { return null }
+      const beginning = inventory.samples?.map(sample => this.sampleRange(sample, buffer.timelineSettings)).find(range => range.end > range.start)
+      if (inventory.pending || !inventory.init?.length || !beginning || beginning.start !== 0 || beginning.end > snapshot.audioRanges[0].end) return null
+      const detail = { previous: gap.previous, current: gap.current, elapsedMs: gap.elapsedMs, advancedSeconds: gap.advancedSeconds, replayCount: ++this.startupReplayCount }
+      // These same copied bytes remain quarantined. None of the old observations
+      // survive, and only a fresh presentation beginning at exactly zero can certify EOF.
+      delete source.startupGap; source.error = null; source.state = 'content'
+      source.observations = []; source.progress = { epoch: this.epoch, ranges: [], emitted: new Set() }
+      delete source.completeCertificate; delete source.nativeFinalClock; delete source.verifiedFinalEpoch; delete source.lastPullAt
+      this.seek = { at: 0, assigned: false, active: true, startup: true, replay: true, source }
+      return detail
+    }
     onTimeAssignment(source, element, value) {
       if (!this.seek?.active || this.seek.assigned || source?.error || Math.abs(value - this.seek.at) > 0.000001) return false
+      if (this.seek.replay && (source !== this.seek.source || element !== source.element || value !== 0)) return false
       if (!this.seek.startup) {
         try { this.inventory(source) } catch { return false }
         for (const buffer of source.buffers) {
@@ -447,6 +477,7 @@
     }
     onSeekMutation(buffer, operation) {
       if (!this.seek?.active || !this.seek.assigned || buffer.source.error || !['abort', 'remove'].includes(operation)) return false
+      if (this.seek.replay) return false // Replaying the already buffered prefix cannot borrow a reset parser inventory.
       // A successful abort can discard the tail of the official parser input. Keep a
       // previous complete inventory available for a buffered seek; rebuild from init if
       // the site subsequently appends a new range. No partial parser input is reused.
@@ -467,7 +498,17 @@
       if (content && !source.error) {
         const last = source.observations.at(-1)
         if (!Number.isFinite(position) || !Number.isFinite(now) || !Number.isFinite(duration) || duration <= 0 || position < 0 || playbackRate !== 1) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Progressive presentation needs finite timing at rate 1')
-        else if (last && (position < last.position - 0.001 || position - last.position > (now - last.now) / 1000 + 0.15 || (position > last.position && now - last.now > 500))) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', `Unrequested seek or unobserved progressive interval: ${JSON.stringify({ previous: { now: last.now, position: last.position }, current: { now, position }, elapsedMs: now - last.now, advancedSeconds: position - last.position })}`)
+        else if (this.seek?.replay && this.seek.active && !last && (!this.seek.assigned || position !== 0)) this.reject(source, 'CAPTURE_UNOBSERVED_BEGINNING', 'An unpublished replay must be assigned and observed at exactly zero')
+        else if (last && (position < last.position - 0.001 || position - last.position > (now - last.now) / 1000 + 0.15 || (position > last.position && now - last.now > 500))) {
+          const timing = { previous: { now: last.now, position: last.position }, current: { now, position }, elapsedMs: now - last.now, advancedSeconds: position - last.position }
+          this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', `Unrequested seek or unobserved progressive interval: ${JSON.stringify(timing)}`)
+          // A replay never repairs seeks, acceleration or contradictory identity.
+          // Bind this specific scheduling gap before another append/rejection can occur.
+          if (timing.elapsedMs > 500 && timing.advancedSeconds > 0 && timing.advancedSeconds <= timing.elapsedMs / 1000 + 0.15) {
+            const buffer = source.buffers[0]
+            source.startupGap = { ...timing, error: source.error, epoch: this.epoch, buffer, native: buffer?.native, nativeSource: source.native, version: buffer?.version, settings: JSON.stringify(buffer?.timelineSettings) }
+          }
+        }
         else {
           if (last && position > last.position) source.progress.ranges = mergeRanges([...source.progress.ranges, { start: last.position, end: position }])
           source.observations.push({ position, now, duration })

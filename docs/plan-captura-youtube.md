@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v11 en validación; los resultados reales estarán en el
+API4/captura v12 en validación; los resultados reales estarán en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes
@@ -68,6 +68,10 @@ carga concurrente y no sustituye la medición normal de arranque.
 Cada proceso ejecuta una copia inmutable del binario, con SHA y procedencia de compilación.
 La observación funciona cada25ms y conserva el límite máximo de500ms entre relojes;
 la publicación agrupa tramos durante75ms y el EOF válido libera siempre la cola final.
+Si el arranque pierde un intervalo antes de preparar cualquier unidad, se permite
+una sola repetición desde cero en la misma ventana. Se descarta toda la historia
+anterior; identidad incierta, cambios MSE, seeks previos y un segundo fallo siguen
+rechazándose. Sólo la nueva presentación entera puede certificar el final.
 6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
    puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
    históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.
