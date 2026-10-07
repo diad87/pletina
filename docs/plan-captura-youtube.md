@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v13 en validación; los resultados reales estarán en el
+API4/captura v13 medida, todavía sin aprobar la promoción; los resultados reales están en el
 [informe](informe-captura-youtube-2026-10-07.md).
 
 ## Decisiones vigentes
@@ -15,8 +15,10 @@ La aprobación se mide **sin iniciar sesión**. Premium sólo sirve como referen
 en un perfil separado y con acceso manual del usuario. Ningún agente introduce
 credenciales. Perfiles, cookies, tokens, medios y volcados quedan fuera de Git.
 
-Los anuncios se reproducen a1× y se saltan únicamente mediante el botón oficial visible
-y habilitado, igual que una persona. No se bloquean ni aceleran. Un anuncio sin botón
+La captura nueva API4 permanece a1× y salta anuncios únicamente mediante el botón oficial visible
+y habilitado, igual que una persona. No los bloquea ni acelera. Legacy conserva su
+limitación histórica ante marcadores tardíos, descrita en PLAN y sin aprobación API4.
+Un anuncio sin botón
 observado no queda automáticamente clasificado como imposible de saltar.
 
 ## Implementación
@@ -45,6 +47,9 @@ observado no queda automáticamente clasificado como imposible de saltar.
    simultáneos, conservando un mismo validador HTTP. El final exige todos los paquetes
    que producen muestras, incluidos los recortes por appendWindow; no basta con
    que los paquetes recibidos sean correctos. PCM usa el desplazamiento declarado.
+   El recorte del último AAC se admite sólo con muestras enteras exactas, el mismo
+   payload/configuración/origen y appendWindowEnd igual al final independiente:
+   no amplía tolerancias ni oculta una muestra final ausente.
 4. **Precarga de dos canciones.** Tres ventanas como máximo: actual y dos siguientes.
    Los Audio preparados se conservan por canción/plaza al avanzar; promocionar B no
    cancela C. El supervisor da prioridad a la actual y limita memoria total y por pista.
@@ -60,6 +65,15 @@ observado no queda automáticamente clasificado como imposible de saltar.
    los ajustes MSE para anticipar otro vídeo. No se mezcla ese inventario ni se
    interpreta el cambio como EOF. Una incompatibilidad repetida debe detener las
    recargas automáticas y conservar el audio ya publicado.
+6. **Velocidad.** La captura nueva permanece a1×. Los ensayos controlados a2×/4×/16×
+   encontraron publicidad acelerada con señales tardías incluso tras corregir la
+   propiedad playbackRate. Los12× reales observados históricamente al pedir16× no
+   aprobaron esa seguridad. No se repite ese riesgo con anuncios reales: se mantiene1×.
+7. **Silencio nativo.** Rust impone `ICoreWebView2_8.SetIsMuted(true)` y lee `IsMuted`
+   antes de registrar el puente y navegar en Oficial, Legacy y el perfil manual.
+   Si falla, no navega. El perfil manual se verifica antes de mostrarlo, también
+   al reutilizarlo. Esto silencia la ventana de adquisición sin detener ni acelerar
+   el anuncio y sin tocar el Audio principal ni el mezclador del sistema.
 
 El banco aislado permite tandas paralelas con identificador propio, SQLite por proceso
 y nombres de informe únicos. La batería de cobertura puede dividirse en los cinco
@@ -72,9 +86,6 @@ Si el arranque pierde un intervalo antes de preparar cualquier unidad, se permit
 una sola repetición desde cero en la misma ventana. Se descarta toda la historia
 anterior; identidad incierta, cambios MSE, seeks previos y un segundo fallo siguen
 rechazándose. Sólo la nueva presentación entera puede certificar el final.
-6. **Velocidad.** La protección nativa mantiene1×. Se estudian2×/4×/16× sólo cuando
-   puedan verificarse identidad, cobertura y anuncios a1×. Los12× reales observados
-   históricamente al pedir16× no aprobaron esa seguridad. Si no se demuestra, se mantiene1×.
 
 Retener1,5s no es una prueba universal: el ensayo controlado con marcador retrasado1,7s
 conserva180ms de anuncio entregado en el experimento. La admisión será empírica y
@@ -126,6 +137,33 @@ periódicas se agrupan por vídeo; la final toma un snapshot nuevo y conserva lo
 
 ## Promoción y mantenimiento
 
+**Validación cerrada, no aprobada (7–8 de octubre).** Propio resolvió30 búsquedas
+frías por Rust, sin fallback, en445–1.649ms (mediana698): no cumple300ms.
+En la escucha completa de los cinco discos hubo29 resoluciones rápidas y un respaldo
+Legacy por sesión de visitante ausente;30 finales naturales y0 esperas durante escucha.
+Las25 transiciones tardaron3,7–13,2ms: cumplen100ms. Se corrigió el diagnóstico del
+banco que confundía Legacy con URL directa y priming AAC negativo con inicio ausente;
+los informes históricos permanecen intactos.
+
+La campaña específica anónima alcanzó50 transiciones publicitarias acreditadas en55
+intentos:13 clics confiables y12 omisiones correlacionadas antes del final conocido.
+Espera publicitaria5,035–20,520s;0 discrepancias en todas las unidades publicadas.
+Pero los arranques residuales tardaron3,634–6,014s; los30 seeks no capturados tardaron
+2,003–2,270s y los30 cambios fríos4,103–4,972s más publicidad. Los cinco discos Oficiales
+bajo estrés tuvieron25 esperas y cuatro plazos agotados;25 canciones tuvieron a la vez
+ended y verificación independiente completa, frente a26 de cada contador por separado.
+Sólo20 filas carecieron de fallos al considerar también tiempos y continuidad.
+El falso rechazo final AAC de Sucede se
+corrigió y una repetición real cerró8069/8069 paquetes, sin cortes ni discrepancias.
+El control del silencio nativo confirmó todos los paquetes y EOF, pero sufrió cinco
+cortes. Premium quedó separado: dos canciones completas sin anuncios, inicio5,391s,
+next8,2ms; seek no capturado2,106s y dos cambios fríos4,135–4,392s. No aprueba la cohorte.
+
+La demora máxima independiente del marcador sigue sin medirse;1,5s conserva su carácter
+experimental. Continúan pendientes el arranque/búsqueda, el seek, la estabilidad del
+productor/entrega y una nueva tanda completa sin fallos. El [informe](informe-captura-youtube-2026-10-07.md)
+contiene la tabla por canción, diagnósticos, procedencia, anuncios y commits.
+
 La entrega progresiva pasa a normal sólo después de30 canciones completas distintas y
 50 transiciones publicitarias reales sin sesión, cero discrepancias, cobertura y tiempos
 correctos. Los informes parciales pueden superar sus medidas y seguir pendientes de
@@ -145,3 +183,4 @@ Las evidencias históricas detalladas y sus32 hashes se trasladaron a
 Referencias de implementación: [WebView2 CallDevToolsProtocolMethod](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.3296.44),
 [CDP Input](https://chromedevtools.github.io/devtools-protocol/tot/Input/) y
 [ffprobe: hashes de paquetes](https://ffmpeg.org/ffprobe-all.html).
+Silencio del motor: [WebView2 ICoreWebView2_8](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2_8?view=webview2-1.0.3967.48).
