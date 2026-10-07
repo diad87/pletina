@@ -4,6 +4,9 @@ mod db;
 #[cfg_attr(mobile, path = "capture_mobile.rs")]
 mod capture;
 mod deezer;
+// Descargas con el motor propio: las usa el móvil (en el escritorio, de momento, yt-dlp).
+#[cfg_attr(desktop, allow(dead_code))]
+mod direct;
 mod downloads;
 mod extractor;
 mod extractors;

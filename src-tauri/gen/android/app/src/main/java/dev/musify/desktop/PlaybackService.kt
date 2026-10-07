@@ -75,6 +75,7 @@ class PlaybackService : MediaSessionService() {
     super.onCreate()
     MusifyLog.init(this)
     MusifyCore.init(dataDir.absolutePath)
+    coversDir = covers(this)
     MusifyLog.log("servicio: creado")
 
     val http = DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true)
@@ -235,8 +236,19 @@ class PlaybackService : MediaSessionService() {
       when {
         error.errorCode !in 2000..2999 -> skip("no se puede reproducir")
         network() == "sin red" -> {
-          waitingForNetwork = true
-          MusifyLog.log("esperando a que vuelva la red")
+          val next = nextOffline()
+          if (next != null) {
+            // Sin conexión solo suenan las descargadas: a la siguiente que lo esté.
+            MusifyLog.log("sin red y «${item.mediaMetadata.title}» no está descargada: a la siguiente descargada (${next + 1})")
+            MusifyCore.emit("player-error", JSONObject().put("message", "Sin conexión: suenan solo las canciones descargadas").toString())
+            retries = 0
+            player.seekTo(next, 0)
+            player.prepare()
+            player.play()
+          } else {
+            waitingForNetwork = true
+            MusifyLog.log("esperando a que vuelva la red")
+          }
         }
         retries < 3 -> {
           retries++
@@ -245,6 +257,21 @@ class PlaybackService : MediaSessionService() {
         else -> skip("no sale después de 3 intentos")
       }
     }
+  }
+
+  /** Sin red: la siguiente canción de la cola que está descargada, o null si no hay ninguna. */
+  private fun nextOffline(): Int? {
+    val timeline = player.currentTimeline
+    if (timeline.isEmpty) return null
+    val repeat = if (player.repeatMode == Player.REPEAT_MODE_ONE) Player.REPEAT_MODE_ALL else player.repeatMode
+    val start = player.currentMediaItemIndex
+    var i = timeline.getNextWindowIndex(start, repeat, player.shuffleModeEnabled)
+    while (i != C.INDEX_UNSET && i != start) {
+      val id = trackId(player.getMediaItemAt(i))?.toLongOrNull()
+      if (id != null && MusifyCore.isDownloaded(id)) return i
+      i = timeline.getNextWindowIndex(i, repeat, player.shuffleModeEnabled)
+    }
+    return null
   }
 
   /** Sigue en la misma canción y el mismo segundo. */
@@ -387,6 +414,11 @@ class PlaybackService : MediaSessionService() {
     /** Prueba de la fase 0: solo la consulta, en `requestMetadata.extras`. */
     const val EXTRA_QUERY = "query"
 
+    /** Carátulas de los discos descargados (las guarda src-tauri/src/downloads.rs). */
+    @Volatile var coversDir: File? = null
+
+    fun covers(context: Context) = File(context.dataDir, "descargas/_portadas")
+
     /** Canciones (id de Deezer) cuya URL hay que pedir de nuevo; también la usa PlayerPlugin ("reload"). */
     val refresh: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
@@ -408,8 +440,14 @@ class PlaybackService : MediaSessionService() {
         .setArtist(track.optJSONObject("artist")?.optString("name"))
         .setAlbumTitle(item.optString("albumTitle"))
         .setExtras(Bundle().apply { putString(EXTRA_ENTRY, entry.toString()) })
-      item.optString("cover").takeIf { it.isNotEmpty() && it != "null" }?.let {
-        meta.setArtworkUri(if (it.startsWith("http")) Uri.parse(it) else Uri.fromFile(File(it)))
+      // La carátula guardada al descargar, si la hay: así se ve también sin conexión.
+      val saved = coversDir?.let { File(it, "${item.optLong("albumId")}.jpg") }?.takeIf { it.exists() }
+      if (saved != null) {
+        meta.setArtworkUri(Uri.fromFile(saved))
+      } else {
+        item.optString("cover").takeIf { it.isNotEmpty() && it != "null" }?.let {
+          meta.setArtworkUri(if (it.startsWith("http")) Uri.parse(it) else Uri.fromFile(File(it)))
+        }
       }
       val id = entry.getJSONObject("query").getLong("id")
       return MediaItem.Builder()

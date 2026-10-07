@@ -2,6 +2,8 @@
 // Biblioteca), minirreproductor y menús que salen desde abajo. El escritorio no cambia.
 
 const query = typeof matchMedia === 'function' ? matchMedia('(max-width: 720px)') : null
+/** La app de Android (en el navegador de la vista previa, no). */
+const android = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window && /Android/i.test(navigator.userAgent)
 
 class Layout {
   mobile = $state(query?.matches ?? false)
@@ -11,9 +13,9 @@ class Layout {
   get canImportLocal() {
     return !this.mobile
   }
-  /** Descargas para escuchar sin conexión: en el móvil todavía no (usan yt-dlp). */
+  /** Descargas para escuchar sin conexión: en el escritorio (yt-dlp) y en Android (motor propio). */
   get canDownload() {
-    return !this.mobile
+    return !this.mobile || android
   }
 
   constructor() {

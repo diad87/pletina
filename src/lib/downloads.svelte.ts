@@ -2,6 +2,7 @@ import { listen } from './events'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import { toLib } from './library.svelte'
+import { isAndroid } from './player-android.svelte'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
 import type { DownloadProgress } from './types'
@@ -37,6 +38,8 @@ class Downloads {
       for (const item of todo) this.#forget(item.track.id)
       toast.show(`No se pudo empezar la descarga: ${e}`)
     })
+    // En Android, sin esto la descarga se congela al salir de la app.
+    if (isAndroid) api.androidDownloadsStarted().catch(() => {})
   }
 
   async remove(ids: number[]) {

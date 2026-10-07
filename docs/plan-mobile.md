@@ -181,6 +181,24 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 - Descargas sin yt-dlp: el núcleo baja por trozos la URL del motor propio a la carpeta de la app. Sirve también para el PC (está pendiente en P1).
 - Modo avión: biblioteca, música local y descargas.
 
+**Hecho, descargas y sin conexión (7 oct 2026, sale en la 0.6.0):**
+- **Descargar sin yt-dlp** (`direct.rs`): la URL del motor propio, a trozos de 10 MB (YouTube frena las descargas de una sola petición), en un `.part` que se retoma donde iba. Si la URL caduca o YouTube la corta, se pide otra y se sigue en el mismo byte. El formato es el que da YouTube, normalmente opus en `.webm`. En el escritorio sigue yt-dlp.
+- **Dónde:** `descargas/Artista/Disco/Canción.webm` dentro de la carpeta de la app (sin permisos; se borra al desinstalar), y la carátula de cada disco en `descargas/_portadas/<disco>.jpg`.
+- **Con la app cerrada** (`DownloadService.kt`): mientras hay descargas, un servicio en primer plano (tipo `dataSync`) mantiene viva la app y enseña el progreso en una notificación. Pregunta cada segundo al núcleo cómo van (`MusifyCore.downloads()`) y se para solo al acabar. La primera vez se pide permiso para las notificaciones.
+- **Sin conexión:**
+  - `resolve` ya daba el archivo descargado antes que nada;
+  - si una canción no está descargada y no hay red, el servicio salta a la siguiente descargada (`MusifyCore.isDownloaded`) y avisa, en vez de esperar a la red;
+  - la notificación y la pantalla de bloqueo usan la carátula guardada;
+  - en la interfaz, las carátulas salen de la caché del WebView (Deezer las deja guardar 150 días), y lo que necesita internet dice «Sin conexión» con un botón a Descargas.
+- **En la interfaz:** lo mismo que en el escritorio (⬇ en discos y playlists, «Descargar» en el menú de cada canción, «Descargas» en Tu biblioteca), sin lo de elegir o abrir carpeta.
+- **Probado en el emulador:**
+  - dos discos (27 canciones, 79 MB) con la app en segundo plano: 26 s el primero, y el servicio se para solo;
+  - en modo avión, desde cero: arranca, «Descargas» suena;
+  - una playlist mezclada salta a las descargadas;
+  - la pantalla de bloqueo, con carátula;
+  - buscar dice «Sin conexión».
+- **Falta:** la música guardada en el teléfono (`MediaStore`) y, quizá, descargar solo con wifi.
+
 ## Pruebas antes de darla por buena
 
 | Prueba | Tiene que pasar |

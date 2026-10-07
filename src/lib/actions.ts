@@ -71,10 +71,9 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
     // Música local: ya está en el equipo y no viene de YouTube.
     items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealLocal(id).catch(() => {}) })
   } else if (downloads.done.has(id)) {
-    items.push(
-      { label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) },
-      { label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) },
-    )
+    items.push({ label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) })
+    // En el móvil las descargas están dentro de la app: no hay carpeta que enseñar.
+    if (!layout.mobile) items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) })
   } else if (!downloads.active.has(id) && layout.canDownload) {
     items.push({ label: 'Descargar', icon: 'download', action: () => downloads.start([item]) })
   }

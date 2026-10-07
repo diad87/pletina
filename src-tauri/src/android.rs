@@ -12,7 +12,7 @@ use crate::youtube::{TrackQuery, YouTubeMusic};
 use crate::ytdlp::YtDlp;
 use jni::JNIEnv;
 use jni::objects::{JClass, JString};
-use jni::sys::{jboolean, jstring};
+use jni::sys::{jboolean, jlong, jstring};
 use serde_json::{Value, json};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -154,4 +154,19 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_emit<'l>(
         let value: Value = serde_json::from_str(&payload).unwrap_or(Value::Null);
         let _ = app.emit(&event, value);
     }
+}
+
+/// `MusifyCore.downloads()`: cómo van las descargas, `{"pending", "title", "progress"}`, para la
+/// notificación de `DownloadService.kt`. Sin la app abierta no hay descargas.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_downloads<'l>(mut env: JNIEnv<'l>, _class: JClass<'l>) -> jstring {
+    let out = APP.get().map(crate::downloads::status).unwrap_or_else(|| json!({ "pending": 0 }));
+    to_java(&mut env, out.to_string())
+}
+
+/// `MusifyCore.isDownloaded(trackId)`: si la canción se puede escuchar sin conexión (descargada).
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_isDownloaded<'l>(_env: JNIEnv<'l>, _class: JClass<'l>, id: jlong) -> jboolean {
+    let Ok(core) = core() else { return 0 };
+    u8::from(core.db.download_path(id as u64).is_some_and(|p| Path::new(&p).exists()))
 }

@@ -116,5 +116,7 @@ export const installUpdate = () => invoke<void>('install_update')
 /** Móvil: versión publicada más nueva que la instalada, o null. */
 export const newerVersion = () => invoke<string | null>('newer_version')
 export const openReleases = () => invoke<void>('open_releases')
+/** Android: que el servicio de descargas mantenga viva la app hasta que acaben (ver DownloadService.kt). */
+export const androidDownloadsStarted = () => invoke<void>('player_native', { cmd: 'downloadsStarted', args: {} })
 /** Móvil: «Compartir» con el registro del servicio de música (ver MusifyLog.kt). */
 export const shareLog = () => invoke<void>('player_native', { cmd: 'shareLog', args: {} })

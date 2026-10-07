@@ -39,6 +39,7 @@ const STREAM_FORMAT: &str = "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio";
 #[cfg(target_os = "linux")]
 const DOWNLOAD_FORMAT: &str = "bestaudio[ext=webm]/bestaudio";
 #[cfg(not(target_os = "linux"))]
+#[cfg_attr(mobile, allow(dead_code))]
 const DOWNLOAD_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
 const UPDATE_EVERY: u64 = 24 * 3600;
 
@@ -136,6 +137,8 @@ impl YtDlp {
 
     /// Descarga el audio de un vídeo. `target` es la ruta sin extensión (yt-dlp pone la suya:
     /// m4a si existe, que se reproduce en cualquier sitio). `progress` recibe valores de 0 a 1.
+    /// En el móvil no se usa (allí descarga el motor propio, ver direct.rs).
+    #[cfg_attr(mobile, allow(dead_code))]
     pub async fn download(&self, video_id: &str, target: &Path, mut progress: impl FnMut(f32)) -> Result<PathBuf, String> {
         let ready = self.ready().await?;
         let watch = format!("https://music.youtube.com/watch?v={video_id}");

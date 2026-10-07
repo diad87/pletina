@@ -21,4 +21,10 @@ object MusifyCore {
 
   /** Aviso a la interfaz, si la app está abierta (evento de Tauri con datos en JSON). */
   external fun emit(event: String, payload: String)
+
+  /** Cómo van las descargas: `{pending, title, progress}` (ver DownloadService). */
+  external fun downloads(): String
+
+  /** La canción (id de Deezer) está descargada: se puede escuchar sin conexión. */
+  external fun isDownloaded(trackId: Long): Boolean
 }

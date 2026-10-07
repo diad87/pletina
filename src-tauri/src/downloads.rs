@@ -3,6 +3,10 @@
 //! Cola con dos descargas a la vez; el progreso llega a la interfaz con el evento "download".
 //! Los archivos se guardan como `Carpeta/Artista/Disco/Canción.m4a` y la base de datos
 //! recuerda dónde está cada uno (`resolve` lo reproduce en lugar del streaming).
+//!
+//! En el escritorio descarga yt-dlp, en la carpeta que elijas. En el móvil, que no tiene yt-dlp,
+//! el motor propio (`direct.rs`), en la carpeta de la app; allí un servicio de Android
+//! (`DownloadService.kt`) mantiene viva la app mientras descarga y enseña el progreso.
 
 use crate::db::Db;
 use crate::library::{LibTrack, upsert_track};
@@ -57,6 +61,8 @@ pub struct Downloads {
     /// Canciones en cola o descargándose.
     pending: Mutex<HashSet<u64>>,
     generation: AtomicU64,
+    /// La última que ha avanzado y cuánto lleva (para la notificación del móvil).
+    last: Mutex<(String, f32)>,
 }
 
 impl Downloads {
@@ -74,8 +80,17 @@ impl Downloads {
                 });
             }
         });
-        Self { tx, pending: Mutex::new(HashSet::new()), generation: AtomicU64::new(0) }
+        Self { tx, pending: Mutex::new(HashSet::new()), generation: AtomicU64::new(0), last: Mutex::new((String::new(), 0.0)) }
     }
+}
+
+/// Cómo van las descargas: `{"pending", "title", "progress"}` (lo lee `DownloadService.kt`).
+#[cfg_attr(not(target_os = "android"), allow(dead_code))]
+pub fn status(app: &AppHandle) -> serde_json::Value {
+    let downloads = app.state::<Downloads>();
+    let pending = downloads.pending.lock().unwrap().len();
+    let (title, progress) = downloads.last.lock().unwrap().clone();
+    serde_json::json!({ "pending": pending, "title": title, "progress": progress })
 }
 
 fn emit(app: &AppHandle, track_id: u64, state: &'static str, progress: f32, error: Option<String>) {
@@ -102,15 +117,29 @@ async fn run(app: &AppHandle, job: Job) {
 async fn download_one(app: &AppHandle, t: &LibTrack) -> Res<()> {
     let db = app.state::<Db>();
     let dir = download_dir(app, &db);
+    let downloads = app.state::<Downloads>();
     // Avisa a la interfaz cada 2 % como mucho.
     let mut last = 0.0;
     let report = |p: f32| {
         if p - last >= 0.02 || p >= 1.0 {
             last = p;
             emit(app, t.id, "downloading", p, None);
+            *downloads.last.lock().unwrap() = (t.title.clone(), p);
         }
     };
     fetch(t, &dir, &db, &app.state::<YouTubeMusic>(), &app.state::<YtDlp>(), report).await
+}
+
+/// Baja el audio del vídeo a `target` (más la extensión). En el escritorio, yt-dlp.
+#[cfg(desktop)]
+async fn get(video_id: &str, target: &Path, ytdlp: &YtDlp, report: impl FnMut(f32)) -> Res<PathBuf> {
+    ytdlp.download(video_id, target, report).await
+}
+
+/// En el móvil no hay yt-dlp: el motor propio.
+#[cfg(mobile)]
+async fn get(video_id: &str, target: &Path, _ytdlp: &YtDlp, report: impl FnMut(f32)) -> Res<PathBuf> {
+    crate::direct::download(video_id, target, report).await
 }
 
 /// Busca el vídeo de la canción, lo descarga en `dir` y lo apunta en la base de datos.
@@ -136,16 +165,21 @@ async fn fetch(
     let target = target_path(dir, t)?;
 
     let mut video_id = player::find_video(&q, db, ytm, ytdlp).await?;
-    let file = match ytdlp.download(&video_id, &target, &mut report).await {
+    let file = match get(&video_id, &target, ytdlp, &mut report).await {
         Ok(file) => file,
         // El vídeo guardado ya no existe: se busca otro una vez.
         Err(e) if player::is_gone(&e) => {
             db.delete_source(t.id);
             video_id = player::resolve(&q, false, db, ytm, ytdlp).await?.video_id;
-            ytdlp.download(&video_id, &target, &mut report).await?
+            get(&video_id, &target, ytdlp, &mut report).await?
         }
         Err(e) => return Err(e),
     };
+    // Móvil: la carátula, para la pantalla de bloqueo sin conexión.
+    #[cfg(mobile)]
+    if let Some(url) = &t.cover {
+        crate::direct::save_cover(url, &cover_path(dir, t.album_id)).await;
+    }
 
     let size = std::fs::metadata(&file).map(|m| m.len()).unwrap_or(0);
     let conn = db.0.lock().unwrap();
@@ -192,6 +226,19 @@ fn safe_name(name: &str) -> String {
     }
 }
 
+/// Carátula guardada de un disco descargado (móvil). `PlaybackService.kt` la busca ahí.
+#[cfg(mobile)]
+fn cover_path(dir: &Path, album_id: u64) -> PathBuf {
+    dir.join("_portadas").join(format!("{album_id}.jpg"))
+}
+
+/// Móvil: dentro de la carpeta de la app (no hace falta pedir permisos y se borra al desinstalar).
+#[cfg(mobile)]
+fn download_dir(app: &AppHandle, _db: &Db) -> PathBuf {
+    app.path().app_local_data_dir().unwrap_or_else(|_| PathBuf::from(".")).join("descargas")
+}
+
+#[cfg(desktop)]
 fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
     db.setting(DIR_KEY).map(PathBuf::from).unwrap_or_else(|| {
         app.path()

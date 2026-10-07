@@ -1,6 +1,6 @@
 # Musify
 
-Reproductor de música personal tipo Spotify para Windows, Mac, Linux y Android. Busca grupos y discos en Deezer (carátulas y listas de canciones), encuentra cada canción en YouTube Music y la reproduce en streaming de solo audio, sin anuncios. Biblioteca, playlists, historial, cola tipo DJ y actualizaciones automáticas; en el PC, además, descargas para escuchar sin conexión y tu propia música.
+Reproductor de música personal tipo Spotify para Windows, Mac, Linux y Android. Busca grupos y discos en Deezer (carátulas y listas de canciones), encuentra cada canción en YouTube Music y la reproduce en streaming de solo audio, sin anuncios. Biblioteca, playlists, historial, cola tipo DJ, descargas para escuchar sin conexión (también en el móvil) y actualizaciones automáticas; en el PC, además, tu propia música.
 
 ![Inicio](docs/screenshots/inicio.png)
 
@@ -13,7 +13,7 @@ Reproductor de música personal tipo Spotify para Windows, Mac, Linux y Android.
 
 ### En el móvil
 
-La misma app, pensada para el dedo. La música suena en un servicio de Android: sigue con la pantalla apagada y se maneja desde la pantalla de bloqueo, la notificación y los auriculares.
+La misma app, pensada para el dedo. La música suena en un servicio de Android: sigue con la pantalla apagada y se maneja desde la pantalla de bloqueo, la notificación y los auriculares. Los discos y playlists se descargan para escucharlos sin conexión, y siguen bajando aunque salgas de la app.
 
 <table>
   <tr>
@@ -41,7 +41,7 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
 - **Tauri 2** (Rust) + **Svelte 5** + TypeScript. Instalador de unos 3 MB en Windows; el APK de Android, 12 MB.
 - Datos en local (SQLite en la carpeta de datos de la app). El PC y el móvil tienen cada uno los suyos: todavía no se sincronizan.
 - El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
-- En Android, la música la reproduce un servicio nativo (Media3/ExoPlayer) que pide el audio directamente al núcleo de Rust; la interfaz es el mando.
+- En Android, la música la reproduce un servicio nativo (Media3/ExoPlayer) que pide el audio directamente al núcleo de Rust; la interfaz es el mando. Las descargas usan el motor propio (allí no hay yt-dlp).
 
 El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); lo del móvil, en [docs/plan-mobile.md](docs/plan-mobile.md).
 
@@ -55,7 +55,7 @@ No está en Google Play: se instala y se actualiza con [Obtainium](https://githu
 
 A partir de ahí, Obtainium avisa cuando hay versión nueva y la instala encima, sin perder la biblioteca. La app también lo dice en «Tu biblioteca». Sin Obtainium, el APK se puede bajar de la [última versión](https://github.com/diad87/musify-releases/releases/latest) e instalar a mano.
 
-En el móvil todavía no hay música guardada en el teléfono ni descargas (fase 4 del plan).
+Para escuchar sin conexión: ⬇ en un disco o una playlist, o «Descargar» en el menú ⋯ de una canción. Lo descargado está en Tu biblioteca → Descargas, y sin conexión suena también desde su disco o su playlist (lo que no está descargado se salta). Todavía no se puede escuchar la música guardada en el teléfono (fase 4 del plan).
 
 ## Desarrollo
 

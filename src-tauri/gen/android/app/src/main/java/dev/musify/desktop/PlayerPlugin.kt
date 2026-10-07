@@ -1,13 +1,17 @@
 package dev.musify.desktop
 
+import android.Manifest
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.webkit.WebView
 import androidx.annotation.OptIn
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.media3.common.C
@@ -41,6 +45,7 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
   private val waiting = mutableListOf<(MediaController) -> Unit>()
 
   override fun load(webView: WebView) {
+    PlaybackService.coversDir = PlaybackService.covers(activity)
     main.post { connect() }
   }
 
@@ -241,6 +246,27 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     c.prepare()
     c.play()
     null
+  }
+
+  /**
+   * La interfaz ha pedido descargas: el servicio de descargas mantiene viva la app hasta que acaben
+   * (ver DownloadService). La primera vez se pide permiso para enseñar su notificación.
+   */
+  @Command
+  fun downloadsStarted(invoke: Invoke) {
+    main.post {
+      try {
+        if (Build.VERSION.SDK_INT >= 33 &&
+          ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+          ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+        ContextCompat.startForegroundService(activity, Intent(activity, DownloadService::class.java))
+        invoke.resolve()
+      } catch (e: Exception) {
+        invoke.reject(e.message ?: e.toString())
+      }
+    }
   }
 
   /** Abre «Compartir» con el registro (MusifyLog), para mandarlo por correo, WhatsApp... */
