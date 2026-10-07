@@ -482,6 +482,77 @@ test('one unpublished scheduling gap can replay the immutable buffered source fr
   assert.equal(tracker.finish(source, terminal).complete, true)
 })
 
+test('short clean consent suspension never joins its sides and certifies only a complete fresh replay', () => {
+  const prefix = fixture({ times: Array.from({ length: 40 }, (_, i) => i * 20) })
+  const f = startupReplaySetup({ gapPosition: 0.7, gapNow: 2330, bytes: prefix.bytes }), { tracker, source, buffer, media, snapshot, observe } = f
+  assert.equal(source.error, null)
+  tracker.suspendConsent(source, content, { ...snapshot(0.72), now: 2350, element: media })
+  assert.ok(source.consentSuspension); assert.equal(source.observations.length, 0); assert.equal(source.progress.ranges.length, 0)
+  const suffix = fixture({ times: Array.from({ length: 60 }, (_, i) => (i + 40) * 20) }).cluster
+  tracker.append(buffer, suffix)
+  assert.equal(tracker.bytes, prefix.bytes.length + suffix.length, 'later unchanged appends remain quarantined instead of being lost while suspended')
+  observe(0.74, 2370)
+  assert.equal(source.observations.length, 0); assert.equal(source.progress.ranges.length, 0)
+  assert.equal(tracker.pull(source, snapshot(0.74)).length, 0)
+  assert.throws(() => tracker.finish(source, { ...snapshot(2), sourceEnded: true }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  const replay = tracker.resumeConsent(source, content, { ...snapshot(0.74), now: 2370, element: media })
+  assert.equal(replay.cause, 'visible-consent'); assert.equal(replay.elapsedMs, 40, 'the short interruption is recorded honestly, not as a fictitious500ms gap')
+  assert.equal(source.error, null); assert.equal(source.consentSuspension, undefined)
+  assert.equal(tracker.pull(source, snapshot(0.74)).length, 0)
+  assert.equal(tracker.onTimeAssignment(source, media, 0), true)
+  observe(0, 2400)
+  for (let ms = 200; ms <= 2000; ms += 200) observe(ms / 1000, 2400 + ms)
+  source.successfulEndOfStream = true; source.native.readyState = 'ended'
+  const terminal = { ...snapshot(2), sourceEnded: true, sourceReadyState: 'ended', successfulEndOfStream: true }
+  const proof = tracker.finish(source, terminal)
+  assert.equal(proof.certificate.frameCount, 100); assert.equal(source.observations[0].now, 2400)
+  const units = tracker.pull(source, terminal)
+  assert.equal(units.reduce((n, unit) => n + unit.frames, 0), 100); assert.equal(tracker.finish(source, terminal).complete, true)
+})
+
+test('consent contradictions and changed bindings cannot replay or revive retained audio', () => {
+  for (const scenario of ['ad', 'unknown', 'published', 'tuple', 'native-tuple', 'source', 'epoch', 'ended', 'explicit-seek']) {
+    const f = startupReplaySetup({ gapPosition: 0.7, gapNow: 2330, publish: scenario === 'published' }), { tracker, source, buffer, media, snapshot } = f
+    const coverage = JSON.stringify(tracker.coverage), units = tracker.nextUnit
+    tracker.suspendConsent(source, content, { ...snapshot(0.72), now: 2350, element: media })
+    if (scenario === 'ad' || scenario === 'unknown') tracker.suspendConsent(source, scenario === 'ad' ? ad : { state: 'unknown' }, { ...snapshot(0.74), now: 2370, element: media })
+    if (scenario === 'tuple') tracker.append(buffer, fixture().cluster, { timestampOffset: 1 })
+    if (scenario === 'native-tuple') buffer.native.timestampOffset = 1
+    if (scenario === 'source') source.native = { readyState: 'open' }
+    if (scenario === 'epoch') tracker.beginEpoch(2, 0)
+    if (scenario === 'explicit-seek') tracker.seek = { active: true, at: 0, assigned: false }
+    const terminal = { ...snapshot(0.74), now: 2370, element: media, ...(scenario === 'ended' ? { ended: true, paused: true, sourceEnded: true } : {}) }
+    assert.equal(tracker.resumeConsent(source, content, terminal), null, scenario)
+    assert.ok(source.error, scenario); assert.equal(tracker.startupReplayCount, 0, scenario)
+    assert.throws(() => tracker.pull(source, terminal), undefined, scenario)
+    assert.throws(() => tracker.finish(source, terminal), undefined, scenario)
+    assert.equal(JSON.stringify(tracker.coverage), coverage, 'already published prefix is retained, never upgraded or erased')
+    assert.equal(tracker.nextUnit, units)
+    if (scenario === 'ad' || scenario === 'unknown') assert.ok(source.seen.has(scenario))
+  }
+})
+
+test('consent before any native audio data stays unbound; presented unknown or ad is never erased', () => {
+  const { ProgressiveTracker } = load(), tracker = new ProgressiveTracker({ epoch: 1 }), source = tracker.createSource()
+  const initial = { source, position: 0, now: 0, duration: 2, readyState: 1, paused: true }
+  tracker.suspendConsent(source, { state: 'unknown' }, initial)
+  assert.equal(source.seen.size, 0); assert.equal(source.consentSuspension, undefined); assert.equal(source.error, null)
+  const buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"'); buffer.native = {}
+  tracker.suspendConsent(source, content, { ...initial, readyState: 2 })
+  assert.equal(source.consentSuspension, undefined, 'ready video without an audio tuple cannot freeze an undefined audio binding')
+  tracker.append(buffer, fixture().bytes)
+  tracker.suspendConsent(source, content, { ...initial, readyState: 2 })
+  assert.ok(source.consentSuspension); assert.equal(source.consentSuspension.settings, JSON.stringify(buffer.timelineSettings))
+  for (const evidence of [ad, { state: 'unknown' }]) {
+    const f = startupReplaySetup({ gapPosition: 0.7, gapNow: 2330 })
+    f.source.observations = []; f.source.seen.clear()
+    f.tracker.suspendConsent(f.source, evidence, { ...f.snapshot(0), now: 2400, element: f.media })
+    assert.ok(f.source.seen.has(evidence.state)); assert.equal(f.buffer.chunks.length, 0)
+    f.tracker.observe(f.source, content, { position: 0, now: 2500, duration: 2, element: f.media })
+    assert.equal(f.source.error.code, 'CAPTURE_IDENTITY_UNCERTAIN')
+  }
+})
+
 test('unpublished replay never repairs published audio, mixed identity, seek, timing direction, changed inventory or source settings', () => {
   for (const scenario of ['published', 'mixed', 'unknown', 'timeline', 'backward', 'accelerated', 'rate', 'explicit-seek', 'changed-version', 'native-settings', 'native-source', 'native-buffer', 'prefix-evicted', 'native-gap', 'borrowed-ranges', 'updating', 'ended', 'missing-init']) {
     const f = startupReplaySetup({ publish: scenario === 'published', ...(scenario === 'backward' ? { gapPosition: 0.3 } : {}), ...(scenario === 'accelerated' ? { gapPosition: 1.8 } : {}) })
@@ -1886,6 +1957,42 @@ test('orchestrator releases before native source reset only when the old audio i
   }
 })
 
+test('visible consent blocks the pre-detach EOF path in normal and progressive capture without repairing the lost source', async () => {
+  for (const experimental of [false, true]) for (const visibleAtDetach of [false, true]) {
+    const f = inlineConsentFixture(), scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
+    let clock = 0
+    f.dialog.hidden = true
+    const player = { contains: e => e === media, getVideoData: () => ({ video_id: 'target', title: 'Song' }), classList: { contains: () => false }, querySelector: () => null, querySelectorAll: s => s === 'audio,video' ? [media] : [] }
+    const document = { ...f.document, querySelectorAll: selector => selector === 'audio,video' ? [media] : f.document.querySelectorAll(selector), querySelector: selector => selector === '#movie_player' ? player : selector === 'ytmusic-player-bar .title' ? { textContent: 'Song' } : null }
+    class FileReader { async readAsDataURL(blob) { this.result = 'data:audio/webm;base64,' + Buffer.from(await blob.arrayBuffer()).toString('base64'); this.onload() } }
+    const { context } = load({ ...scope, document, location: f.location, FileReader, Blob, performance: { now: () => clock }, setInterval: () => 1, clearInterval() {}, MutationObserver: class { observe() {} } })
+    context.window = { __musifyTarget: 'target', __musifyEpoch: 1, __musifyGeneration: 80, __musifyProgressiveExperiment: experimental, chrome: { webview: { postMessage: m => messages.push(JSON.parse(m.slice(7))) } } }
+    vm.runInContext(orchestratorCode, context)
+    const source = new scope.MediaSource(), buffer = source.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(source); buffer.buffered = { length: 1, start: () => 0, end: () => 0.06 }; buffer.appendBuffer(fixture().bytes)
+    media.dispatchEvent(new Event('playing'))
+    clock = 40; media._currentTime = 0.04; media.dispatchEvent(new Event('timeupdate'))
+    f.dialog.hidden = !visibleAtDetach
+    clock = 50; media._currentTime = 0.05; media.dispatchEvent(new Event('timeupdate'))
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(messages.some(m => m.kind === 'seg'), false, 'normal quarantine and progressive1.5s holdback are intact')
+    clock = 60; media._currentTime = 0.06; source.endOfStream(); media.src = 'blob:postroll'
+    await new Promise(resolve => setImmediate(resolve)); await new Promise(resolve => setImmediate(resolve))
+    if (!visibleAtDetach) {
+      assert.ok(messages.some(m => m.kind === 'seg')); assert.ok(messages.some(m => m.type === 'ended' && m.complete === true))
+    } else {
+      assert.equal(messages.some(m => m.kind === 'seg' || m.type === 'ended'), false)
+      f.dialog.hidden = true
+      const replacement = new scope.MediaSource(); replacement.addSourceBuffer('audio/webm; codecs="opus"')
+      media.src = scope.URL.createObjectURL(replacement); clock = 70; media.dispatchEvent(new Event('playing'))
+      await new Promise(resolve => setImmediate(resolve))
+      assert.equal(messages.some(m => m.kind === 'seg' || m.type === 'ended'), false, 'closing consent cannot certify the unobserved detached source')
+      assert.equal(messages.find(m => m.type === 'error')?.code, 'CAPTURE_PARTIAL_PRESENTATION')
+    }
+    assert.equal(media.playbackRate, 1)
+  }
+})
+
 test('capture-phase timeupdate seals full audio after official EOF before postroll metadata changes', async () => {
   for (const scenario of ['short', 'full', 'ad-before-full', 'range-mismatch', 'eof-error', 'synthetic-ended']) {
     const scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
@@ -2140,8 +2247,8 @@ test('benchmark consent counters stay bounded, distinguish roles and retain clos
   assert.equal(normal.adapter.consentSummary(), null); assert.equal('buttonCount' in normal.adapter.consentState(), false)
 })
 
-test('orchestration waits for inline consent closure without resume or presentation credit and preserves capture guards', async () => {
-  for (const closes of [true, false]) {
+test('orchestration waits for inline consent closure without resume or presentation credit, including closure before the first append', async () => {
+  for (const [closes, deferredAppend] of [[true, false], [false, false], [true, true]]) {
     const f = inlineConsentFixture(), scope = browserMocks(), media = new scope.HTMLMediaElement(), messages = []
     let clock = 0, tick, playCalls = 0
     media.paused = true; media.play = () => { playCalls++; media.paused = false; return Promise.resolve() }
@@ -2154,7 +2261,7 @@ test('orchestration waits for inline consent closure without resume or presentat
     vm.runInContext(orchestratorCode, context)
     const mse = new scope.MediaSource(), sb = mse.addSourceBuffer('audio/webm; codecs="opus"')
     media.src = scope.URL.createObjectURL(mse); media._currentTime = 0.004
-    sb.appendBuffer(fixture().bytes); sb.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+    if (!deferredAppend) { sb.appendBuffer(fixture().bytes); sb.buffered = { length: 1, start: () => 0, end: () => 0.06 } }
     media.dispatchEvent(new Event('timeupdate'))
     assert.equal(playCalls, 0)
     tick(); await new Promise(resolve => setImmediate(resolve))
@@ -2166,6 +2273,10 @@ test('orchestration waits for inline consent closure without resume or presentat
     assert.equal(state.buttonCount, 2); assert.equal(state.rejectTextMatches, 1)
     if (closes) {
       assert.equal(media.currentTime, 0, 'real startup rewind re-presents the unobserved beginning')
+      if (deferredAppend) {
+        sb.appendBuffer(fixture().bytes); sb.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+        assert.equal(messages.some(m => m.type === 'error'), false, 'an absent audio tuple before consent closure is not a changed tuple')
+      }
       clock = 25; tick(); assert.equal(playCalls, 1)
       clock = 50; media._currentTime = 0.025; tick()
       await new Promise(resolve => setImmediate(resolve)); assert.equal(messages.some(m => m.kind === 'seg'), false, 'default1.5s holdback is unchanged')

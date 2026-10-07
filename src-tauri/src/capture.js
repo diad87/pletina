@@ -100,6 +100,13 @@
   const attached = new WeakSet(), waiting = new WeakMap(), presented = new WeakMap(), lastIdentity = new WeakMap()
   let previousSources = new WeakMap()
   let unsupportedAt = null
+  const suspendForConsent = (media, snapshot = capture.snapshotOf(media)) => {
+    const source = snapshot?.source
+    if (!source || source.endedEpoch === epoch) return
+    tracker.suspendConsent(source, adapter.classify(media), { ...snapshot, now: performance.now(), element: media })
+    if (source.seen.has('content')) previousSources.set(media, source)
+    presented.delete(source)
+  }
   const publish = (source, snapshot) => {
     const now = performance.now()
     if (source.verifiedFinalEpoch !== epoch && now - (source.lastPullAt ?? -Infinity) < 75) return
@@ -162,6 +169,10 @@
   const beforeDetach = (media, snapshot) => {
     const source = snapshot?.source
     if (failed || finalizedEpoch === epoch || pendingSeek || !source || source.endedEpoch === epoch) return
+    // A source reset can run before the next media event. It must respect the
+    // same visible-consent suspension as observe(), including terminal EOF.
+    if (adapter.consentState?.().visible) { suspendForConsent(media, snapshot); return }
+    if (source.consentSuspension) return problem('CAPTURE_PARTIAL_PRESENTATION', 'Source detached after consent suspension before a fresh complete replay')
     if (source.state === 'ad' && source.seen.size === 1 && source.seen.has('ad')) {
       event('diagnostic', { state: 'ad', source: source.id, position: snapshot.position, duration: snapshot.duration, playbackRate: snapshot.playbackRate, browserNow: performance.now(), bytesQuarantined: tracker.bytes, reason: diagnosticReason({ phase: 'ad-before-detach', operation: snapshot.operation, nativeEnded: snapshot.ended, sourceEnded: snapshot.sourceEnded }) })
       return
@@ -202,7 +213,7 @@
     if (failed || finalizedEpoch === epoch || (endedEvent && media.ended !== true)) return
     // The official consent dialog intentionally pauses its player. Do not fight
     // its pause timer or certify presentation until that visible dialog closes.
-    if (adapter.consentState?.().visible) return
+    if (adapter.consentState?.().visible) { suspendForConsent(media); return }
     const source = capture.sourceOf(media)
     if (source?.endedEpoch === epoch) return
     const previous = previousSources.get(media)
@@ -214,6 +225,16 @@
     }
     const current = adapter.classify(media)
     let snapshot = capture.snapshotOf(media)
+    if (source?.consentSuspension) {
+      if (!source.error && (snapshot.seeking || snapshot.readyState < 2 || snapshot.updating)) return
+      const replay = tracker.resumeConsent(source, current, { ...snapshot, now: performance.now(), element: media })
+      if (!replay) return problem(source.error?.code || 'CAPTURE_PARTIAL_PRESENTATION', source.error?.message || 'Consent suspension cannot be safely replayed')
+      controlled('consent-replay', () => media.pause()); presented.delete(source)
+      pendingSeek = { at: 0, start: 0, startup: true, assigned: true }
+      event('diagnostic', { state: 'content', source: source.id, position: snapshot.position, playbackRate: 1, browserNow: performance.now(), reason: diagnosticReason({ phase: 'consent-replay-unpublished', ...replay }) })
+      try { media.currentTime = 0 } catch (error) { problem('CAPTURE_SEEK_FAILED', String(error)) }
+      return
+    }
     const identity = source ? terminalIdentity(media, source, snapshot, current) : current
     reportIdentity(media, source, identity)
     if (current.ambiguous) return problem('CAPTURE_IDENTITY_UNCERTAIN', current.reason)
@@ -316,18 +337,19 @@
     const now = performance.now()
     const consent = adapter.consentState?.()
     inlineConsentVisible = consent?.visible === true
+    if (inlineConsentVisible) for (const media of document.querySelectorAll('audio,video')) suspendForConsent(media)
     if (now - lastConsentCheck >= 500) {
       lastConsentCheck = now
       if (consent) {
         const state = JSON.stringify(consent)
         if (window.__musifyBenchmarkAudit === true && state !== lastConsentState) event('diagnostic', { browserNow: now, reason: JSON.stringify({ phase: 'inline-consent', ...consent }) })
         lastConsentState = state
-        if (consent.eligible && !consent.attempted) {
-          const dispatched = adapter.rejectConsent()
-          if (window.__musifyBenchmarkAudit === true) event('diagnostic', { browserNow: now, reason: JSON.stringify({ phase: 'inline-consent-attempt', dispatched }) })
-        }
-        inlineConsentVisible = adapter.consentState().visible
       }
+    }
+    if (consent?.eligible && !consent.attempted) {
+      const dispatched = adapter.rejectConsent()
+      if (window.__musifyBenchmarkAudit === true) event('diagnostic', { browserNow: now, reason: JSON.stringify({ phase: 'inline-consent-attempt', dispatched }) })
+      inlineConsentVisible = adapter.consentState().visible
     }
     if (inlineConsentVisible) inlineConsentSince ??= now
     else inlineConsentSince = null
@@ -341,7 +363,7 @@
         attach(media); controlled('tick', () => { media.muted = true; if (media.playbackRate !== 1) media.playbackRate = 1 })
         observe(media)
         if (failed) return
-        if (!pendingSeek?.startup && !waiting.has(media) && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) controlled('resume', () => media.play()).catch(() => {})
+        if (!pendingSeek?.startup && !waiting.has(media) && !capture.sourceOf(media)?.consentSuspension && capture.sourceOf(media)?.endedEpoch !== epoch && media.paused && !media.ended) controlled('resume', () => media.play()).catch(() => {})
       }
     }
     if (now - lastBeat >= 1000) {

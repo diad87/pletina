@@ -485,8 +485,8 @@
       if (operation === 'abort') buffer.resetAfterSeek = true
       return true
     }
-    observe(source, evidence, { position, now, duration, element = null, playbackRate = 1, seeking = false } = {}) {
-      if (!source || source.sealed || seeking) return
+    observeIdentity(source, evidence, element = null) {
+      if (!source || source.sealed) return false
       if (element && source.element && source.element !== element) this.reject(source, 'CAPTURE_AMBIGUOUS_SOURCE', 'One source was presented by multiple elements')
       source.element ||= element
       const content = evidence?.state === 'content' && evidence.sourceBound === true && evidence.signals?.length >= 2
@@ -495,7 +495,54 @@
       if (state === 'unknown' || source.seen.size > 1) this.reject(source, 'CAPTURE_IDENTITY_UNCERTAIN', `Unconfirmed presentation interval; seen=${[...source.seen]}; evidence=${evidence?.reason ?? JSON.stringify(evidence?.evidence ?? {})}`)
       else if (!source.error) source.state = state
       if (state === 'ad' || source.error) this.drop(source)
-      if (content && !source.error) {
+      return content && !source.error
+    }
+    suspendConsent(source, evidence, snapshot) {
+      if (!source || source.sealed) return
+      if (!source.seen.size && !source.observations.length && snapshot.position === 0 && snapshot.readyState < 2) return
+      const initialBuffer = source.buffers[0]
+      // Before the first audio append there is no audio tuple or presented
+      // inventory to bind. A video element's readyState can precede its audio.
+      if (!source.seen.size && !source.observations.length && (!initialBuffer?.native || !initialBuffer.timelineSettings || !initialBuffer.chunks.length)) return
+      if (!this.observeIdentity(source, evidence, snapshot.element)) return
+      if (this.nextUnit || this.coverage.length || source.progress.emitted.size) {
+        this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Visible consent interrupted a published source; prior units remain partial')
+        this.drop(source); return
+      }
+      if (!source.consentSuspension) {
+        const buffer = source.buffers[0]
+        source.consentSuspension = { epoch: this.epoch, buffer, native: buffer?.native, nativeSource: source.native, element: source.element,
+          settings: JSON.stringify(buffer?.timelineSettings), previous: source.observations.at(-1) ?? { now: snapshot.now, position: snapshot.position } }
+        // A known suspension is not ordinary sampling jitter. Its two sides must
+        // never become a continuous observed range, even when it lasts under500ms.
+        source.observations = []; source.progress.ranges = []
+        delete source.completeCertificate; delete source.nativeFinalClock; delete source.verifiedFinalEpoch
+      }
+    }
+    resumeConsent(source, evidence, snapshot) {
+      const suspended = source?.consentSuspension, buffer = source?.buffers[0]
+      if (!suspended) return null
+      const clean = this.observeIdentity(source, evidence, snapshot.element)
+      if (!clean || !Number.isFinite(snapshot.now) || snapshot.now < suspended.previous.now || suspended.epoch !== this.epoch || suspended.buffer !== buffer || suspended.native !== buffer?.native ||
+        suspended.nativeSource !== source.native || suspended.element !== source.element || suspended.settings !== JSON.stringify(buffer?.timelineSettings)) {
+        this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Consent suspension no longer identifies a clean unchanged source')
+        this.drop(source); return null
+      }
+      // Appends stayed quarantined during consent. Reuse the existing strict
+      // unpublished-replay gate with the actual current clock, not a fabricated
+      // scheduling gap. Parser/init, native ranges, tuple and one-replay limit apply.
+      const timing = { cause: 'visible-consent', previous: suspended.previous, current: { now: snapshot.now, position: snapshot.position },
+        elapsedMs: snapshot.now - suspended.previous.now, advancedSeconds: snapshot.position - suspended.previous.position }
+      this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Visible consent interrupted presentation; a fresh complete replay is required')
+      source.startupGap = { ...timing, error: source.error, epoch: this.epoch, buffer, native: buffer?.native, nativeSource: source.native, version: buffer?.version, settings: JSON.stringify(buffer?.timelineSettings) }
+      const replay = this.startupReplayUnpublished(source, snapshot)
+      if (replay) { delete source.consentSuspension; return { ...replay, cause: timing.cause } }
+      this.drop(source); return null
+    }
+    observe(source, evidence, { position, now, duration, element = null, playbackRate = 1, seeking = false } = {}) {
+      if (!source || source.sealed || seeking) return
+      const content = this.observeIdentity(source, evidence, element)
+      if (content && !source.consentSuspension) {
         const last = source.observations.at(-1)
         if (!Number.isFinite(position) || !Number.isFinite(now) || !Number.isFinite(duration) || duration <= 0 || position < 0 || playbackRate !== 1) this.reject(source, 'CAPTURE_PARTIAL_PRESENTATION', 'Progressive presentation needs finite timing at rate 1')
         else if (this.seek?.replay && this.seek.active && !last && (!this.seek.assigned || position !== 0)) this.reject(source, 'CAPTURE_UNOBSERVED_BEGINNING', 'An unpublished replay must be assigned and observed at exactly zero')
@@ -557,6 +604,7 @@
     }
     pull(source, snapshot, { maxSeconds = 0.5, maxBytes = 4 * 1024 * 1024 } = {}) {
       if (!source || source.error) { if (source?.error) throw source.error; return [] }
+      if (source.consentSuspension) return []
       if (source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false) return []
       if (!this.experimental && source.verifiedFinalEpoch !== this.epoch) return []
       const buffer = source.buffers[0], inventory = this.inventory(source)
@@ -621,6 +669,7 @@
     }
     finish(source, snapshot) {
       if (source?.error) throw source.error
+      if (source?.consentSuspension) fail('CAPTURE_PARTIAL_PRESENTATION', 'Visible consent interrupted this source; EOF cannot bridge the suspended interval')
       if (!source || source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.updating !== false || snapshot.readyState < 2) fail('CAPTURE_PARTIAL_PRESENTATION', 'Native final state does not identify the captured source')
       const buffer = source.buffers[0], inventory = this.inventory(source, true), settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
       // Codec quantization can explain native buffered bounds. It cannot fill an
