@@ -81,8 +81,8 @@ function observeAudio(audio: HTMLAudioElement, closeOnEnd = false) {
   let lastProgress = captureProgress(audio), endedPosition: number | null = null
   let endedBuffered: Range[] | null = null
   let waiting: (typeof gaps)[number] | null = null
-  const listeners: [string, EventListener][] = []
-  const close = () => { for (const [name, listener] of listeners) audio.removeEventListener(name, listener) }
+  const listeners: [string, EventListener, boolean][] = []
+  const close = () => { for (const [name, listener, capture] of listeners) audio.removeEventListener(name, listener, capture) }
   for (const name of ['playing', 'ended', 'waiting', 'stalled', 'seeking', 'seeked', 'error', 'capturewarning', 'captureerror', 'captureprogress']) {
     const listener: EventListener = e => {
       const now = performance.now()
@@ -114,7 +114,9 @@ function observeAudio(audio: HTMLAudioElement, closeOnEnd = false) {
         waiting = { startMs: now - started, position: audio.currentTime, phase }; gaps.push(waiting)
       }
     }
-    listeners.push([name, listener]); audio.addEventListener(name, listener)
+    // DOM dispatch invokes target capture listeners before onended can advance or rewind the player.
+    const capture = name === 'ended'
+    listeners.push([name, listener, capture]); audio.addEventListener(name, listener, capture)
   }
   return {
     events, gaps, allPlaybackStalls, close,

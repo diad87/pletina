@@ -33,14 +33,14 @@ $config = @{
     bundle = @{ active = $false; createUpdaterArtifacts = $false }
 } | ConvertTo-Json -Depth 8
 [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
-$mseFixtures = Get-Content (Join-Path $projectDir 'tests/fixtures/mse-audio.json') -Raw | ConvertFrom-Json
+$mseFixtures = Get-Content (Join-Path $projectDir 'tests/fixtures/mse-audio.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $suitePlan = @{ mode = $Suite; timeoutSeconds = $CaseTimeoutSeconds }
 if ($VerifiedOnly) { $suitePlan.experimental = $false; $suitePlan.seek = $false }
 if ($CorpusPath) {
-    $corpus = Get-Content -LiteralPath $CorpusPath -Raw | ConvertFrom-Json
+    $corpus = Get-Content -LiteralPath $CorpusPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($corpus.captureSuite) { $corpus = $corpus.captureSuite.corpus }
     $suitePlan.corpus = $corpus
-} elseif ($Suite -eq 'smoke') {
+} elseif ($Suite -eq 'smoke' -or ($Suite -eq 'latency' -and $PSBoundParameters.ContainsKey('VideoId'))) {
     $suitePlan.videos = @($VideoId | ForEach-Object { @{ id = $_; label = $_; duration = 0 } })
 }
 $plan = if ($MseOnly) {
@@ -97,7 +97,7 @@ try {
     }
     if (!$testProcess.HasExited) { throw "La prueba agotó $TimeoutSeconds segundos. Diagnóstico: $stderrPath" }
     if (!(Test-Path -LiteralPath $resultPath)) { throw "La app terminó sin informe. Diagnóstico: $stderrPath" }
-    $report = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+    $report = Get-Content -LiteralPath $resultPath -Raw -Encoding UTF8 | ConvertFrom-Json
     Write-Output ($report | Select-Object ok, fatal, startedAt | ConvertTo-Json)
     if ($report.captureSuite) {
         Write-Output ($report.captureSuite.rows | Select-Object label, ok, firstSoundMs, nextTrackMs, seekMs, adsSeen, adsDelivered, failures | ConvertTo-Json -Depth 5)

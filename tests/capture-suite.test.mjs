@@ -26,12 +26,36 @@ async function setup(t, options = {}) {
   class Audio extends EventTarget {
     currentTime = 0; duration = 0.95; paused = true; ended = false; seeking = false; error = null; src = ''
     ranges = [{ start: 0, end: 0.95 }]
+    listeners = []
     constructor() {
       super(); allAudio.push(this)
+      // Player binds its ordinary ended handler before the benchmark observes the Audio.
+      if (options.rewindOnEnded) this.addEventListener('ended', () => { this.currentTime = 0 })
       if (options.advance) {
         let at = 0
         Object.defineProperty(this, 'currentTime', { get: () => at += options.advance, set: value => { at = value } })
       }
+    }
+    addEventListener(name, listener, options = false) {
+      const capture = typeof options === 'boolean' ? options : !!options.capture
+      if (!this.listeners.some(entry => entry.name === name && entry.listener === listener && entry.capture === capture))
+        this.listeners.push({ name, listener, capture, once: !!options?.once })
+    }
+    removeEventListener(name, listener, options = false) {
+      const capture = typeof options === 'boolean' ? options : !!options.capture
+      this.listeners = this.listeners.filter(entry => entry.name !== name || entry.listener !== listener || entry.capture !== capture)
+    }
+    dispatchEvent(event) {
+      // Node EventTarget does not model DOM's at-target capture phase ordering.
+      // https://dom.spec.whatwg.org/#concept-event-dispatch (steps 13–14).
+      const snapshot = this.listeners.filter(entry => entry.name === event.type)
+      for (const capture of [true, false]) for (const entry of snapshot) {
+        if (entry.capture !== capture || !this.listeners.includes(entry)) continue
+        if (entry.once) this.removeEventListener(entry.name, entry.listener, entry.capture)
+        if (typeof entry.listener === 'function') entry.listener.call(this, event)
+        else entry.listener.handleEvent(event)
+      }
+      return !event.defaultPrevented
     }
     get buffered() { return { length: this.ranges.length, start: i => this.ranges[i].start, end: i => this.ranges[i].end } }
     play() {
@@ -154,6 +178,17 @@ test('la promoción de otro Audio entre polls conserva la transición natural', 
   assert.equal(report.measurementsOk, true)
   assert.equal(report.rows[1].events.filter(event => event.type === 'playing').length, 1)
   assert(report.rows[1].nextTrackMs < 500)
+})
+
+test('ended conserva la posición final antes de que el handler del reproductor rebobine a cero', async t => {
+  const env = await setup(t, { rewindOnEnded: true })
+  const report = await env.execute({ mode: 'album', videos: [video(1)], timeoutSeconds: 1 })
+  assert.equal(env.player.playbackAudio.currentTime, 0)
+  assert.equal(report.measurementsOk, true)
+  assert.equal(report.rows[0].endedPosition, 0.95)
+  assert.equal(report.rows[0].events.find(event => event.type === 'ended').position, 0.95)
+  assert.equal(env.player.playbackAudio.listeners.filter(entry => entry.name === 'ended').length, 1,
+    'el observador se retira con el mismo capture; sólo permanece el handler del reproductor')
 })
 
 test('complete nativo no vuelve correcto un ended anterior al último frame', async t => {
