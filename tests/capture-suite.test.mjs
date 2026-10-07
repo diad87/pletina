@@ -604,6 +604,65 @@ const evidenceRow = () => ({ label: 'verified', videoId: video(1).id, ok: true, 
   status: { units: 4, unknownAuthUnits: 0, signedInUnits: 0 }, reference: { ok: true, anonymousTransport: true },
   verification: [{ final: true, result: { ok: true, anonymous: true, captureAnonymous: true, mismatchCount: 0, complete: true, allPublishedUnits: true, unitsChecked: 4, unitsCheckedSnapshot: 4, comparedPackets: 50, mismatches: [] } }],
   sessionObservations: [{ sessionState: session(), sessionStates: [session()] }] })
+const recoveredReferenceCheck = (id = video(1).id) => ({ videoId: id, pending: false, referenceComplete: true,
+  referenceHash: 'a'.repeat(64), referenceHashes: ['a'.repeat(64)], matchedPackets: 50 })
+
+test('referencia recuperada al verificar conserva el intento inicial y el fallo de primer sonido', async t => {
+  const env = await setup(t, { referenceFails: true, firstSoundDelay: 5575,
+    native: { units: 4, unknownAuthUnits: 0, signedInUnits: 0, sessionState: session(), sessionStates: [session()] },
+    verification: recoveredReferenceCheck() })
+  const report = await env.execute({ mode: 'smoke', videos: [video(1)], seek: false })
+  const row = report.rows[0]
+  assert.equal(row.reference.ok, false)
+  assert.match(row.reference.error, /reference unavailable/)
+  assert.deepEqual(row.reference, report.references[video(1).id], 'no se reescribe el resultado de preparación')
+  assert.equal(row.referenceEvidence.source, 'final-verification')
+  assert.equal(row.referenceEvidence.videoId, video(1).id)
+  assert.equal(row.referenceEvidence.referenceHash, 'a'.repeat(64))
+  assert.equal(row.referenceEvidence.anonymousTransport, true)
+  assert.equal(row.verification.at(-1).final, true)
+  assert.deepEqual(row.evidenceBlockers, [])
+  assert.equal(row.evidenceEligible, true)
+  assert.equal(row.firstSoundMs, 5575)
+  assert(row.failures.some(reason => /Primer sonido supera 3000/.test(reason)))
+  assert.equal(row.ok, false); assert.equal(report.measurementsOk, false); assert.equal(report.acceptanceOk, false)
+})
+
+test('recuperar referencia exige el último check completo del mismo vídeo sin ocultar discrepancias ni autenticación', async t => {
+  const env = await setup(t)
+  const recovered = () => {
+    const row = evidenceRow()
+    row.reference = { ok: false, error: 'initial prepare failed' }
+    Object.assign(row.verification[0].result, recoveredReferenceCheck())
+    return row
+  }
+  assert.deepEqual(env.evidenceBlockers(recovered()), [])
+  for (const broken of [
+    { ok: false }, { pending: true }, { complete: false }, { referenceComplete: false },
+    { videoId: video(2).id }, { videoId: undefined }, { anonymous: false }, { captureAnonymous: false },
+    { allPublishedUnits: false }, { unitsCheckedSnapshot: 3 }, { matchedPackets: 49 },
+    { mismatchCount: 1 }, { mismatches: ['different audio'] }, { referenceHash: '' },
+    { referenceHashes: ['b'.repeat(64)] },
+  ]) {
+    const row = recovered()
+    row.referenceEvidence = { source: 'final-verification', anonymousTransport: true, complete: true }
+    Object.assign(row.verification[0].result, broken)
+    assert(env.evidenceBlockers(row).some(reason => /Referencia independiente/.test(reason)), JSON.stringify(broken))
+  }
+  const periodic = recovered(); periodic.verification[0].final = false
+  assert(env.evidenceBlockers(periodic).some(reason => /Referencia independiente/.test(reason)))
+  const failedAfterSuccess = recovered()
+  failedAfterSuccess.verification.push({ final: true, result: { ok: false, error: 'final snapshot unavailable' } })
+  assert(env.evidenceBlockers(failedAfterSuccess).some(reason => /Referencia independiente/.test(reason)))
+  for (const previous of [{ mismatchCount: 1, mismatches: [] }, { mismatches: ['old packet mismatch'] }]) {
+    const row = recovered(); row.verification.unshift({ final: false, result: previous })
+    assert(env.evidenceBlockers(row).some(reason => /todas las unidades/.test(reason)), 'un check posterior no borra discrepancias')
+  }
+  const signedIn = recovered(); signedIn.sessionObservations[0].sessionStates.unshift(session('signed-in'))
+  assert(env.evidenceBlockers(signedIn).some(reason => /Historial anónimo/.test(reason)))
+  const unknownUnits = recovered(); unknownUnits.status.unknownAuthUnits = 1
+  assert(env.evidenceBlockers(unknownUnits).some(reason => /Unidades entregadas/.test(reason)))
+})
 
 test('referencia o sesión desconocida conserva tiempos pero bloquea evidencia; login anterior también', async t => {
   const env = await setup(t)

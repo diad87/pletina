@@ -218,6 +218,7 @@ function evidenceAudit() {
         row.reference = references.get(id) ?? null
         row.verification = structuredClone(checks.get(id) ?? [])
         row.sessionObservations = structuredClone(sessions.get(id) ?? [])
+        row.referenceEvidence = finalReferenceEvidence(row)
         row.evidenceBlockers = evidenceBlockers(row)
         row.evidenceEligible = (row.evidenceBlockers as string[]).length === 0
       }
@@ -241,17 +242,39 @@ function evidenceAudit() {
   }
 }
 
+/** La preparación puede fallar y recuperarse al conocer el MIME. Conservamos ambos resultados. */
+function finalReferenceEvidence(row: Row) {
+  const checks = row.verification as { at?: number; final: boolean; result: Verification }[] | undefined
+  const last = checks?.at(-1), result = last?.result
+  const hashes = result?.referenceHashes, nativeUnits = Number((row.status as Status | undefined)?.units)
+  const hash = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value)
+  if (!last?.final || !result || typeof row.videoId !== 'string' || result.videoId !== row.videoId ||
+      result.ok !== true || result.pending !== false || result.complete !== true || result.referenceComplete !== true ||
+      result.anonymous !== true || result.captureAnonymous !== true || result.allPublishedUnits !== true || result.mismatchCount !== 0 ||
+      !Array.isArray(result.mismatches) || result.mismatches.length ||
+      checks?.some(check => (check.result.mismatches?.length ?? 0) > 0 || Number(check.result.mismatchCount) > 0) ||
+      !hash(result.referenceHash) || !Array.isArray(hashes) || !hashes.length || !hashes.every(hash) || !hashes.includes(result.referenceHash) ||
+      !Number.isSafeInteger(result.comparedPackets) || !(Number(result.comparedPackets) > 0) || result.matchedPackets !== result.comparedPackets ||
+      !Number.isSafeInteger(nativeUnits) || nativeUnits <= 0 || result.unitsCheckedSnapshot !== nativeUnits ||
+      !Number.isSafeInteger(result.unitsChecked) || Number(result.unitsChecked) < nativeUnits) return null
+  return { source: 'final-verification', checkedAt: last.at ?? null, videoId: row.videoId,
+    referenceHash: result.referenceHash, referenceHashes: [...hashes], anonymousTransport: true, complete: true }
+}
+
 /** Estos requisitos pertenecen a esta ejecución; no constituyen garantía universal. */
 export function evidenceBlockers(row: Row): string[] {
   const reasons: string[] = [], reference = row.reference as Record<string, unknown> | null
-  if (reference?.ok !== true || reference.anonymousTransport !== true) reasons.push('Referencia independiente anónima no verificada')
+  // Recalcular desde el último check evita aceptar un referenceEvidence obsoleto o de otra fila.
+  if ((reference?.ok !== true || reference.anonymousTransport !== true) && !finalReferenceEvidence(row))
+    reasons.push('Referencia independiente anónima no verificada')
   const checks = row.verification as { final: boolean; result: Verification }[] | undefined
   const last = checks?.at(-1)
   const nativeUnits = Number((row.status as Status | undefined)?.units)
   if (!last?.final || last.result.ok !== true || last.result.complete !== true || last.result.anonymous !== true ||
       last.result.captureAnonymous !== true || last.result.mismatchCount !== 0 ||
       last.result.allPublishedUnits !== true || !(Number(last.result.unitsChecked) > 0) || !(Number(last.result.comparedPackets) > 0) ||
-      !Array.isArray(last.result.mismatches) || last.result.mismatches.length || checks?.some(check => (check.result.mismatches?.length ?? 0) > 0))
+      !Array.isArray(last.result.mismatches) || last.result.mismatches.length ||
+      checks?.some(check => (check.result.mismatches?.length ?? 0) > 0 || Number(check.result.mismatchCount) > 0))
     reasons.push('No están comparadas todas las unidades entregadas')
   if (!Number.isSafeInteger(nativeUnits) || nativeUnits <= 0 || last?.result.unitsCheckedSnapshot !== nativeUnits ||
       Number(last?.result.unitsChecked) < nativeUnits)
