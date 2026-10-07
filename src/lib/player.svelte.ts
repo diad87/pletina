@@ -1,7 +1,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
-import { setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
+import { CAPTURE, captureProgress, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
 import { toast } from './toast.svelte'
 import type { Playable, Track, TrackQuery } from './types'
@@ -17,6 +17,8 @@ export interface QueueItem {
 
 type Status = 'idle' | 'loading' | 'playing' | 'paused'
 export type Repeat = 'off' | 'all' | 'one'
+type PreparedAudio = { id: number; playable: Playable; audio: HTMLAudioElement; stop: (cancelBackend?: boolean) => void }
+type CapturePromotion = { token: number; audio: HTMLAudioElement; ready: boolean; played: boolean; interrupted: boolean }
 
 /** Tras tantos fallos seguidos se deja de saltar a la siguiente (p. ej. sin conexión). */
 const MAX_FAILURES = 3
@@ -92,7 +94,9 @@ class Player {
   captureInteraction = $state<string | null>(null)
 
   #audio = new Audio()
-  #prepared: { id: number; playable: Playable; audio: HTMLAudioElement; stop: (cancelBackend?: boolean) => void } | null = null
+  #prepared: PreparedAudio | null = null
+  /** La sesión preparada sigue siendo next hasta que termina su promoción nativa. */
+  #promotion: CapturePromotion | null = null
   #prefetchVersion = 0
   #prefetchId: number | null = null
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
@@ -135,6 +139,12 @@ class Player {
       this.#failures = 0
       this.#syncPosition()
       if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
+      if (this.#promotion) {
+        // Un nuevo playing después de pause/AbortError completa la reproducción
+        // pendiente; no convierte un rechazo de promoción en éxito.
+        if (this.#promotion.interrupted) this.#promotion.played = true
+        this.#completePromotion(this.#promotion)
+      }
     })
     on('pause', () => {
       if (this.status === 'playing') this.status = 'paused'
@@ -166,7 +176,9 @@ class Player {
       // Una recuperación parcial conserva la canción y sus buffers; no incrementa el ticket.
       if (message.includes('CAPTURE_REQUIRES_INTERACTION'))
         this.captureInteraction = message.split('CAPTURE_REQUIRES_INTERACTION:').pop()?.trim() || message
-      toast.show(`La captura se está recuperando: ${message}`)
+      toast.show(message.startsWith('CAPTURE_PROMOTION_FAILED:')
+        ? `No se pudo promover la captura; se conserva el audio confirmado: ${message.slice('CAPTURE_PROMOTION_FAILED:'.length).trim()}`
+        : `La captura se está recuperando: ${message}`)
     })
   }
 
@@ -405,6 +417,7 @@ class Player {
     if (item.track.id !== this.current?.track.id) {
       try {
         await api.rememberSource(toQuery(item), videoId)
+        if (this.#prefetchId === item.track.id || this.#prepared?.id === item.track.id) this.#discardPrefetch(true)
         redownload()
         toast.show(`Hecho: «${item.track.title}» sonará con ese vídeo`)
         return true
@@ -481,6 +494,7 @@ class Player {
     if (!prepared) this.#discardPrefetch(this.#prefetchId !== item.track.id)
     else { ++this.#prefetchVersion; this.#prefetchId = null; this.#prepared = null }
     const token = ++this.#token
+    this.#promotion = null
     this.#pendingSource = null
     this.captureInteraction = null
     // Recargar la misma canción (URL caducada) no cuenta como otra escucha.
@@ -493,17 +507,58 @@ class Player {
     stopCapture()
     this.#updateMediaSession(item)
 
+    if (!refresh && prepared && startAt === 0 && this.#readyCapture(prepared)) {
+      // Estos bytes ya están confirmados y aceptados por MSE. El cierre de la ventana
+      // anterior no debe retrasar play; el ticket foreground se promociona en paralelo.
+      this.#adoptPrepared(prepared)
+      this.#retried = false
+      const pendingPromotion: CapturePromotion = { token, audio: prepared.audio, ready: false, played: false, interrupted: false }
+      this.#promotion = pendingPromotion
+      const current = () => token === this.#token && this.#audio === prepared.audio
+      const phase = (phase: string, error?: string) => prepared.audio.dispatchEvent(new CustomEvent('capturehandoff', {
+        detail: { phase, ...(error ? { error } : {}) },
+      }))
+      phase('promotion-request')
+      const promotion = this.#resolve(item, false).then(playable => {
+        if (!current()) return false
+        if (audioSrc(playable) !== audioSrc(prepared.playable) || playable.videoId !== prepared.playable.videoId)
+          throw new Error('La resolución ya no coincide con el vídeo preparado')
+        pendingPromotion.ready = true
+        phase('promotion-ready')
+        this.#completePromotion(pendingPromotion)
+        return true
+      }).catch(error => {
+        if (current()) {
+          phase('promotion-failed', String(error))
+          prepared.audio.dispatchEvent(new CustomEvent('capturewarning', { detail: `CAPTURE_PROMOTION_FAILED: ${error}` }))
+        }
+        return false
+      })
+      try {
+        phase('play-request')
+        await prepared.audio.play()
+        pendingPromotion.played = true
+        if (await promotion) this.#completePromotion(pendingPromotion)
+      } catch (error) {
+        if (!current()) return
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          pendingPromotion.interrupted = true
+          pendingPromotion.played = false
+          return
+        }
+        prepared.stop(false)
+        this.#fail(item, String(error))
+      }
+      return
+    }
+
     try {
       const playable = await this.#resolve(item, refresh)
       if (token !== this.#token) { prepared?.stop(false); return }
       this.#retried = refresh
       if (prepared && audioSrc(prepared.playable) === audioSrc(playable)) {
         // El resolve foreground promociona la sesión nativa; el Audio y su MSE ya están listos.
-        this.#audio = prepared.audio
-        this.#audio.volume = this.volume
-        this.#audio.muted = this.muted
-        adoptAudioSource(prepared.stop)
-        if (Number.isFinite(this.#audio.duration)) this.duration = this.#audio.duration
+        this.#adoptPrepared(prepared)
       } else {
         prepared?.stop(false)
         setAudioSource(this.#audio, audioSrc(playable))
@@ -517,6 +572,30 @@ class Player {
       if (e instanceof DOMException && e.name === 'AbortError') return
       this.#fail(item, String(e))
     }
+  }
+
+  #readyCapture(prepared: PreparedAudio): boolean {
+    const { audio, playable } = prepared
+    if (playable.local || !/^[A-Za-z0-9_-]{11}$/.test(playable.videoId) || playable.url !== `${CAPTURE}${playable.videoId}` ||
+        !audio.paused || audio.currentTime !== 0 || audio.error || audio.readyState < 2 || !(captureProgress(audio)?.units)) return false
+    for (let i = 0; i < audio.buffered.length; i++)
+      if (audio.buffered.start(i) <= 0.000001 && audio.buffered.end(i) > 0) return true
+    return false
+  }
+
+  #completePromotion(promotion: CapturePromotion) {
+    if (this.#promotion !== promotion || promotion.token !== this.#token || promotion.audio !== this.#audio ||
+        !promotion.ready || !promotion.played || promotion.audio.paused) return
+    this.#promotion = null
+    this.#prefetchNext()
+  }
+
+  #adoptPrepared(prepared: PreparedAudio) {
+    this.#audio = prepared.audio
+    this.#audio.volume = this.volume
+    this.#audio.muted = this.muted
+    adoptAudioSource(prepared.stop)
+    if (Number.isFinite(this.#audio.duration)) this.duration = this.#audio.duration
   }
 
   #discardPrefetch(cancelNative = false) {
@@ -540,6 +619,7 @@ class Player {
 
   /** Prepara el decoder/MSE de la siguiente desde que empieza a sonar la actual. */
   #prefetchNext() {
+    if (this.#promotion?.token === this.#token) return
     const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
     const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
     if (!following || following === this.current || this.repeat === 'one') { this.#discardPrefetch(true); return }

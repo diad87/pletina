@@ -83,7 +83,7 @@ function observeAudio(audio: HTMLAudioElement, closeOnEnd = false) {
   let waiting: (typeof gaps)[number] | null = null
   const listeners: [string, EventListener, boolean][] = []
   const close = () => { for (const [name, listener, capture] of listeners) audio.removeEventListener(name, listener, capture) }
-  for (const name of ['playing', 'ended', 'waiting', 'stalled', 'seeking', 'seeked', 'error', 'capturewarning', 'captureerror', 'captureprogress']) {
+  for (const name of ['playing', 'ended', 'waiting', 'stalled', 'seeking', 'seeked', 'error', 'capturewarning', 'captureerror', 'captureprogress', 'capturehandoff']) {
     const listener: EventListener = e => {
       const now = performance.now()
       if (name === 'captureprogress') {
