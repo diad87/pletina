@@ -1,6 +1,10 @@
 package dev.musify.desktop
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -53,6 +57,13 @@ class PlaybackService : MediaSessionService() {
   private var waitingForNetwork = false
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
+  /** Pantalla encendida / apagada, para saber en qué condiciones pasa cada cosa. */
+  private val screen = object : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+      Fase0Log.log(if (intent.action == Intent.ACTION_SCREEN_OFF) "pantalla apagada" else "pantalla encendida")
+    }
+  }
+
   override fun onCreate() {
     super.onCreate()
     Fase0Log.init(this)
@@ -73,6 +84,13 @@ class PlaybackService : MediaSessionService() {
     session = MediaSession.Builder(this, player).setCallback(callback).build()
     watchNetwork()
     heartbeat()
+    registerReceiver(screen, IntentFilter().apply {
+      addAction(Intent.ACTION_SCREEN_OFF)
+      addAction(Intent.ACTION_SCREEN_ON)
+    })
+    val power = getSystemService(PowerManager::class.java)
+    val free = power?.isIgnoringBatteryOptimizations(packageName) == true
+    Fase0Log.log("ahorro de batería de Android: ${if (free) "sin restricciones" else "con restricciones (lo normal)"}")
   }
 
   override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
@@ -85,6 +103,7 @@ class PlaybackService : MediaSessionService() {
   override fun onDestroy() {
     Fase0Log.log("servicio: destruido")
     main.removeCallbacksAndMessages(null)
+    runCatching { unregisterReceiver(screen) }
     networkCallback?.let { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(it) }
     session?.run {
       player.release()
@@ -136,6 +155,29 @@ class PlaybackService : MediaSessionService() {
         else -> "repetir"
       }
       Fase0Log.log("suena (${player.currentMediaItemIndex + 1}/${player.mediaItemCount}, $why): ${item?.mediaMetadata?.artist} — ${item?.mediaMetadata?.title}")
+    }
+
+    /** Por qué se pausa o se reanuda (botón, otra app, auriculares...). */
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+      val why = when (reason) {
+        Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST -> "pedido (botón, notificación, bloqueo o auriculares)"
+        Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS -> "otra app o una llamada se ha quedado el sonido"
+        Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY -> "se han desconectado los auriculares"
+        Player.PLAY_WHEN_READY_CHANGE_REASON_REMOTE -> "desde otro dispositivo"
+        Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM -> "fin de la canción"
+        Player.PLAY_WHEN_READY_CHANGE_REASON_SUPPRESSED_TOO_LONG -> "demasiado rato en silencio"
+        else -> "otro motivo ($reason)"
+      }
+      Fase0Log.log("${if (playWhenReady) "reanudar" else "pausa"}: $why")
+    }
+
+    /** Silencios cortos sin pausar: una notificación, el timbre de una llamada... */
+    override fun onPlaybackSuppressionReasonChanged(reason: Int) {
+      when (reason) {
+        Player.PLAYBACK_SUPPRESSION_REASON_NONE -> Fase0Log.log("vuelve el sonido")
+        Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS -> Fase0Log.log("en silencio un momento: otro sonido (notificación, llamada...)")
+        else -> Fase0Log.log("en silencio un momento (motivo $reason)")
+      }
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -193,7 +235,8 @@ class PlaybackService : MediaSessionService() {
   private fun heartbeat() {
     main.postDelayed({
       if (player.mediaItemCount > 0) {
-        Fase0Log.log("vivo: ${player.currentMediaItemIndex + 1}/${player.mediaItemCount} en ${player.currentPosition / 1000} s, ${if (player.isPlaying) "sonando" else state()} (${network()})")
+        val doze = getSystemService(PowerManager::class.java)?.isDeviceIdleMode == true
+        Fase0Log.log("vivo: ${player.currentMediaItemIndex + 1}/${player.mediaItemCount} en ${player.currentPosition / 1000} s, ${if (player.isPlaying) "sonando" else state()} (${network()}${if (doze) ", reposo profundo" else ""})")
       }
       heartbeat()
     }, 60_000)
