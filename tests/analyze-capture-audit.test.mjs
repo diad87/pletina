@@ -273,7 +273,7 @@ test('exact real packets with an unobserved first ready clock get diagnostics wi
   assert.equal(report.universalHoldbackBound, null)
 })
 
-test('a real ready unpaused zero followed by advance observes the first packet without weakening the independent full anchor', t => {
+for (const readyPhase of ['play-call', 'loadeddata', 'canplay']) test(`a real ready unpaused zero at ${readyPhase} observes the first packet without weakening the independent full anchor`, t => {
   const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), external = realTone(join(w.directory, 'external.webm'), 1499)
   writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
   const inventory = context.__musifyCaptureCore.inspectWebMPrefix(new Uint8Array(song), { final: true })
@@ -282,7 +282,7 @@ test('a real ready unpaused zero followed by advance observes the first packet w
   b.append(2, song); b.mutation(2, 'endOfStream')
   const ranges = [{ start: 0, end: inventory.codedEnd }]
   b.clock(2, 0, 1000, 'content', { phase: 'loadedmetadata', readyState: 1, paused: true, audioRanges: ranges })
-  b.clock(2, 0, 1002, 'content', { phase: 'play-call', readyState: 4, audioRanges: ranges })
+  b.clock(2, 0, 1002, 'content', { phase: readyPhase, readyState: readyPhase === 'loadeddata' ? 2 : 3, audioRanges: ranges })
   b.clock(2, 0.008538, 1015, 'content', { phase: 'playing', readyState: 4, audioRanges: ranges })
   for (let ms = 50; ms < inventory.codedEnd * 1000; ms += 50) b.clock(2, ms / 1000, 1000 + ms, 'content', { audioRanges: ranges })
   b.clock(2, inventory.codedEnd, 1000 + inventory.codedEnd * 1000, 'content', { ended: true, paused: true, sourceEnded: true, audioRanges: ranges })

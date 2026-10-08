@@ -218,6 +218,51 @@ test('play clocks keep missing data, nonzero positions, rejection and later paus
   assert.equal(f.messages.filter(m => m.phase === 'play-call').length, before)
 })
 
+test('readiness events observe an actual post-ad source zero before playing without changing playback or the gate', () => {
+  for (const phase of ['loadeddata', 'canplay']) {
+    const f = setup(), oldSource = f.capture.sourceOf(f.media)
+    f.media.currentTime = 3; f.media.paused = true; f.media.ended = true; f.time(4000); f.event('ended')
+    const next = new f.context.MediaSource(), sb = next.addSourceBuffer('audio/webm; codecs="opus"')
+    f.media.src = f.context.URL.createObjectURL(next)
+    sb.buffered = { length: 1, start: () => 0, end: () => 1 }
+    f.media.currentTime = 0; f.media.paused = false; f.media.ended = false; f.media.readyState = phase === 'loadeddata' ? 2 : 3
+    f.time(4100); f.event(phase)
+    const zero = f.messages.find(m => m.kind === 'clock' && m.phase === phase), source = f.capture.sourceOf(f.media)
+    assert.ok(zero); assert.notEqual(source.id, oldSource.id); assert.equal(zero.source, source.id)
+    assert.equal(zero.position, 0); assert.equal(zero.readyState, phase === 'loadeddata' ? 2 : 3)
+    assert.equal(zero.paused, false); assert.equal(zero.browserNow, 4100)
+    assert.deepEqual(presentationIntervals([zero]), [], 'ready data alone is not an observed interval')
+    f.time(4125); f.media.currentTime = 0.02; f.media.readyState = 4; f.event('playing')
+    const clocks = f.messages.filter(m => m.kind === 'clock' && m.source === source.id)
+    assert.deepEqual(presentationIntervals(clocks), [{ start: 0, end: 0.02, wallStart: 4100, wallEnd: 4125 }])
+    assert.equal(source.observations.length, 0); assert.equal(f.tracker.bytes, 0)
+    assert.deepEqual(f.media.nativeCalls, [], 'the observation never invokes play/pause/rate setters')
+  }
+})
+
+test('readiness event names never fabricate zero, ready data, unpaused state, or an unobserved beginning', () => {
+  for (const phase of ['loadeddata', 'canplay']) for (const change of [{ paused: true }, { readyState: 1 }, { seeking: true }, { currentTime: 0.006 }]) {
+    const f = setup()
+    Object.assign(f.media, { paused: false, readyState: 4, seeking: false, currentTime: 0 }, change)
+    f.time(100); f.event(phase)
+    const zero = f.messages.find(m => m.kind === 'clock' && m.phase === phase)
+    assert.equal(zero.position, change.currentTime ?? 0); assert.equal(zero.readyState, change.readyState ?? 4)
+    assert.equal(zero.paused, change.paused ?? false); assert.equal(zero.seeking, change.seeking ?? false)
+    f.time(125); Object.assign(f.media, { paused: false, seeking: false, readyState: 4, currentTime: 0.02 }); f.event('playing')
+    const intervals = presentationIntervals(f.messages.filter(m => m.kind === 'clock'))
+    if (change.currentTime) assert.deepEqual(intervals, [{ start: 0.006, end: 0.02, wallStart: 100, wallEnd: 125 }])
+    else assert.deepEqual(intervals, [])
+    assert.equal(intervals.some(i => i.start === 0 && i.end >= 0.02), false)
+    assert.deepEqual(f.media.nativeCalls, [])
+  }
+  const disabled = setup(false); disabled.event('loadeddata'); disabled.event('canplay')
+  assert.equal(disabled.messages.length, 0); assert.equal(disabled.listeners.size, 0)
+  const closed = setup(); closed.context.__musifyCaptureAudit.finalize({ generation: 12, requestId: 'close-readiness' })
+  const count = closed.messages.length
+  closed.event('loadeddata'); closed.event('canplay')
+  assert.equal(closed.messages.length, count, 'readiness listeners are removed before final counters')
+})
+
 test('property diagnostics do not coerce input twice and count redundant writes against each native getter', () => {
   const f = setup(); let conversions = 0
   const value = { valueOf() { conversions++; return 2 } }

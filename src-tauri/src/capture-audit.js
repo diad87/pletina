@@ -210,7 +210,10 @@
       if (frozen || capture) return
       capture = value
       installPlayback()
-      for (const type of ['timeupdate', 'play', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata']) {
+      // Readiness transitions can expose the real zero before `playing` arrives.
+      // These are queued events: record current native state, never assume zero,
+      // readiness, or presentation from the event name alone.
+      for (const type of ['timeupdate', 'play', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata', 'loadeddata', 'canplay']) {
         const listener = event => { if (event.target instanceof scope.HTMLMediaElement) clock(event.target, type) }
         listeners.push([type, listener]); scope.addEventListener?.(type, listener, true)
       }
