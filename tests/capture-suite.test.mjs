@@ -28,7 +28,7 @@ async function setup(t, options = {}) {
   let statusReads = 0, seeks = 0, forgotten = new Set()
   const oldAudio = globalThis.Audio, oldMedia = globalThis.HTMLMediaElement
   class Audio extends EventTarget {
-    currentTime = 0; duration = 0.95; paused = true; ended = false; seeking = false; error = null; src = ''
+    currentTime = 0; duration = 0.95; paused = true; ended = false; seeking = false; error = null; src = ''; playbackRate = 1
     ranges = [{ start: 0, end: 0.95 }]
     listeners = []
     constructor() {
@@ -180,10 +180,12 @@ async function setup(t, options = {}) {
           audio.currentTime = options.endedAt ?? 0.95; audio.ended = true; audio.dispatchEvent(new Event('ended'))
         }
       }
+      options.captureAudio?.(audio, emitProgress)
       return () => progress.delete(audio)
     },
     seekCapture: async (audio, at) => {
       seeks++
+      if (options.seekHook) return options.seekHook(audio, at, seeks, emitProgress)
       emitProgress(audio)
       if (options.seekFailsOnce && seeks === 1) return false
       audio.currentTime = at; return options.seekFails !== true
@@ -411,6 +413,64 @@ test('latency declara explícitamente que no ejercitó completitud ni cobertura'
   assert.equal(report.rows[0].tailMs, undefined)
   assert.equal(report.ok, true)
   assert.equal(report.acceptanceOk, false)
+})
+
+for (const outcome of ['replanned', 'stuck', 'adopted', 'return-wait']) test(`cachedSeekReturn conserva evidencia y distingue productor ${outcome}`, async t => {
+  let phase = 'initial', finishAway
+  const range = end => [{ start: 0, end }]
+  const partial = end => proof({ duration: 40, audioDuration: null, complete: false, ranges: range(end), buffered: range(end) })
+  const env = await setup(t, {
+    advance: 0.2, initialProgress: partial(5),
+    captureAudio: audio => { audio.ranges = range(5); audio.onPlay = () => {} },
+    native: () => ({ duration: 40, audioDuration: null, complete: false,
+      epoch: phase === 'initial' ? 1 : phase === 'away' || outcome === 'stuck' ? 2 : 3,
+      lastPosition: phase === 'initial' ? 5 : phase === 'away' || outcome === 'stuck' ? 32 : 12,
+      ranges: range(phase === 'returned' ? 12 : 5) }),
+    seekHook: (audio, at, call, emit) => {
+      if (call === 1) {
+        phase = 'away'; audio.dispatchEvent(new Event('waiting'))
+        if (outcome === 'adopted') { audio.currentTime = at; return true }
+        return new Promise(resolve => { finishAway = resolve })
+      }
+      assert.equal(at, 0.1)
+      phase = 'returned'; audio.currentTime = at; audio.ranges = range(12); emit(audio, partial(12))
+      audio.seeking = true; audio.dispatchEvent(new Event('seeking')); audio.dispatchEvent(new Event('waiting'))
+      audio.seeking = false; audio.dispatchEvent(new Event('seeked'))
+      if (outcome === 'return-wait') audio.dispatchEvent(new Event('waiting'))
+      audio.dispatchEvent(new Event('playing'))
+      finishAway(false)
+      return true
+    },
+  })
+  const report = await env.execute({ mode: 'latency', videos: [video(1, { duration: 40 })], cachedSeekReturn: true,
+    timeoutSeconds: outcome === 'stuck' ? 0.2 : 2 })
+  const row = report.rows[0]
+  assert.equal(report.scope, 'timingOnly'); assert.equal(report.cachedSeekReturn, true)
+  assert.equal(row.completeNotExercised, true); assert.equal(row.coverageNotExercised, true)
+  assert.equal(row.seekMs, undefined); assert.equal(row.seekOk, undefined)
+  assert.equal(row.tailMs, undefined); assert.equal(report.acceptanceOk, false)
+  assert(row.allPlaybackStalls.some(stall => stall.phase === 'seek'), 'no se borra la espera del origen ni la preparación del regreso')
+  assert(env.calls.some(([command, args]) => command === 'capture_verify_check' && args.final === true))
+  if (outcome === 'replanned') {
+    assert.equal(row.ok, true); assert.equal(row.cachedSeekReturn.ok, true)
+    assert.equal(row.oldSeekAdopted, false); assert.equal(row.producerReplanned, true)
+    assert(Number.isFinite(row.cachedReturnMs)); assert(row.cachedReturnPlayingMs >= row.cachedReturnMs)
+    assert(row.cachedReturnProgressSeconds >= 8)
+    assert.deepEqual(row.cachedSeekReturn.playbackWaiting, [])
+    assert.equal(row.cachedSeekReturn.returnWaiting[0].classification, 'waiting-during-seek')
+    assert(Number.isFinite(row.cachedSeekReturn.returnWaiting[0].sinceReturnMs))
+    assert(env.snapshots.some(s => s.rows[0]?.phase === 'cached-return-listening'))
+  } else {
+    assert.equal(row.ok, false); assert.equal(row.cachedSeekReturn.ok, false)
+    assert.equal(row.oldSeekAdopted, outcome === 'adopted')
+    assert.equal(row.producerReplanned, outcome === 'return-wait')
+    assert(row.failures.some(reason => /regres|seek de ida/.test(reason)))
+    if (outcome === 'return-wait') {
+      assert.equal(row.cachedSeekReturn.playbackWaiting.length, 1)
+      assert.equal(row.cachedSeekReturn.playbackWaiting[0].phase, 'seek', 'el waiting previo a listening también hace fallar el ensayo')
+      assert.equal(row.cachedSeekReturn.returnWaiting.length, 2)
+    }
+  }
 })
 
 test('switch usa expulsión explícita del destino y conserva evidencia de ambas cachés', async t => {

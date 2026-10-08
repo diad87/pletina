@@ -24,6 +24,8 @@ export interface CaptureSuitePlan {
   timeoutSeconds?: number
   /** Smoke observa reproducción desde cero y después salta a una zona no capturada. */
   seek?: boolean
+  /** Latency: sustituye el seek normal por ida pendiente y regreso a caché; sólo acredita prefijo. */
+  cachedSeekReturn?: boolean
   /** false mide tiempos; declara explícitamente que no ejercitó EOF/cobertura completa. */
   verifyComplete?: boolean
   /** false controla la cuarentena completa: mide su tiempo sin exigir latencia progresiva. */
@@ -143,6 +145,7 @@ function observeAudio(audio: HTMLAudioElement, closeOnEnd = false) {
   }
   return {
     events, gaps, allPlaybackStalls, close,
+    get startedAtMs() { return started },
     get firstPlaying() { return firstPlaying }, get ended() { return ended },
     get progress() { return lastProgress }, get endedBuffered() { return endedBuffered }, get endedPosition() { return endedPosition },
     phase(value: Phase) { phase = value; waiting = null },
@@ -312,6 +315,104 @@ function adTelemetry(row: Row, s: Status | null) {
   }
 }
 
+async function cachedSeekReturnCheck(audio: HTMLAudioElement, videoId: string, duration: number, row: Row,
+  timeout: number, observed: ReturnType<typeof observeAudio>, audit: Audit,
+  checkpoint: (row: Row) => Promise<unknown>, check: () => void): Promise<Status | null> {
+  const started = performance.now(), deadline = started + Math.min(timeout, 30000)
+  const target = duration * 0.8, returnTarget = 0.1, listeningSeconds = 8
+  const detail: Record<string, unknown> = { scope: 'prefix-only', target, returnTarget, listeningSeconds,
+    requiredPrefill: { start: 0.05, end: 3.05 }, deadlineMs: deadline - started, ok: false }
+  row.cachedSeekReturn = detail; row.oldSeekAdopted = null; row.producerReplanned = false
+  if (target <= returnTarget + listeningSeconds + 1) throw new Error('Pista demasiado corta para el regreso a caché de ocho segundos')
+  let latest: Status | null = null, expectedRevision: number | null = null
+  const sample = async () => {
+    check()
+    if (audio.playbackRate !== 1) throw new Error('La prueba de regreso necesita reproducción a 1×')
+    latest = await status(videoId); audit.observe(videoId, latest)
+    if (expectedRevision !== null && latest?.revision !== expectedRevision) throw new Error('El ledger cambió durante el regreso a caché')
+    const terminal = terminalCaptureFailure(latest)
+    if (terminal) throw new Error(terminal)
+    detail.lastStatus = structuredClone(latest)
+    detail.live = liveAudio(audio, started); detail.progress = captureProgress(audio)
+    return latest
+  }
+  const accepted = (at: number, length: number) => {
+    const progress = captureProgress(audio)
+    const actual = Array.from({ length: audio.buffered.length }, (_, i) => ({ start: audio.buffered.start(i), end: audio.buffered.end(i) }))
+    return covers(progress?.ranges ?? [], at, length) && covers(progress?.buffered ?? [], at, length) && covers(actual, at, length)
+  }
+  const poll = async (condition: (current: Status | null) => boolean) => {
+    while (true) {
+      if (performance.now() >= deadline) throw new Error('Se agotó la espera operativa del regreso a caché')
+      const current = await sample()
+      if (condition(current)) return current
+      await sleep(20)
+    }
+  }
+  observed.phase('listening'); row.phase = 'cached-return-prefill'; await checkpoint(row)
+  latest = await poll(() => !audio.paused && accepted(0.05, 3))
+  detail.prefillMs = performance.now() - started; detail.before = structuredClone(latest)
+  detail.beforeProgress = captureProgress(audio); detail.beforeAudio = liveAudio(audio, started)
+  if (!latest || !Number.isSafeInteger(latest.epoch)) throw new Error('Falta la época inicial del productor')
+  expectedRevision = latest.revision
+  if (covers(latest.ranges ?? [], target, 0.1) || accepted(target, 0.1))
+    throw new Error('El destino de ida ya estaba capturado; no se ejerció la carrera')
+  const previousEpoch = latest.epoch
+  let oldSettled = false
+  observed.phase('seek'); row.phase = 'cached-return-away'; await checkpoint(row)
+  detail.awayRequestedMs = performance.now() - started
+  const away = seekCapture(audio, target).then(adopted => {
+    oldSettled = true; row.oldSeekAdopted = adopted
+    return adopted
+  }, error => {
+    oldSettled = true; detail.oldSeekError = String(error); throw error
+  })
+  away.catch(() => {})
+  latest = await poll(current => {
+    if (oldSettled || audio.currentTime >= target - 0.2) throw new Error('El seek de ida terminó antes de poder probar el regreso pendiente')
+    return !!current && current.epoch !== previousEpoch && typeof current.lastPosition === 'number' && current.lastPosition >= target - 0.2
+  })
+  detail.away = structuredClone(latest); detail.awayObservedMs = performance.now() - started
+  const awayEpoch = latest!.epoch
+  if (!accepted(returnTarget, 0.5)) throw new Error('El destino de regreso no conserva reserva aceptada')
+  row.phase = 'cached-return-local'; await checkpoint(row)
+  const returnStarted = performance.now(), returnEvent = observed.events.length, returnStall = observed.allPlaybackStalls.length
+  const recordReturnEvents = () => {
+    detail.returnEvents = observed.events.slice(returnEvent).map(event => ({ ...event, sinceReturnMs: event.ms + observed.startedAtMs - returnStarted }))
+    const waiting = observed.allPlaybackStalls.slice(returnStall).map(stall => ({ ...stall,
+      sinceReturnMs: stall.ms + observed.startedAtMs - returnStarted,
+      classification: stall.seeking ? 'waiting-during-seek' : stall.paused ? 'waiting-while-paused' : 'playback-wait',
+    }))
+    detail.returnWaiting = waiting
+    detail.playbackWaiting = waiting.filter(stall => !stall.seeking && !stall.paused && !stall.ended)
+  }
+  try {
+    const ready = await within(seekCapture(audio, returnTarget), deadline)
+    row.cachedReturnMs = performance.now() - returnStarted
+    if (!ready) throw new Error('El regreso a caché no pudo adoptar el destino')
+    if (await within(away, deadline) !== false) throw new Error('El seek anterior terminó adoptando su destino')
+    await until(() => !audio.seeking && audio.currentTime > returnTarget + 0.04, deadline, check)
+    row.cachedReturnPlayingMs = performance.now() - returnStarted
+    const playbackStart = audio.currentTime
+    detail.returnAudio = liveAudio(audio, started)
+    observed.phase('listening'); row.phase = 'cached-return-listening'; await checkpoint(row)
+    latest = await poll(current => {
+      if (audio.currentTime >= target - 0.2) throw new Error('Una respuesta tardía movió el reloj al destino de ida')
+      if (current && current.epoch !== awayEpoch && typeof current.lastPosition === 'number' && current.lastPosition < target - 0.2)
+        row.producerReplanned = true
+      return row.producerReplanned === true && audio.currentTime >= playbackStart + listeningSeconds &&
+        accepted(0.05, playbackStart + listeningSeconds - 0.05)
+    })
+    row.cachedReturnProgressSeconds = audio.currentTime - playbackStart
+    detail.after = structuredClone(latest); detail.afterProgress = captureProgress(audio)
+    detail.elapsedMs = performance.now() - started
+    recordReturnEvents()
+    if ((detail.playbackWaiting as unknown[]).length) throw new Error('Hubo waiting de reproducción tras regresar a caché')
+    detail.ok = true
+    return latest
+  } finally { recordReturnEvents() }
+}
+
 async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (row: Row) => Promise<unknown>, audit: Audit): Promise<Row> {
   const row: Row = { label: video.label, videoId: video.id, ok: false, failures: [], phase: 'starting' }
   await checkpoint(row)
@@ -355,7 +456,10 @@ async function smoke(video: CaptureCase, plan: CaptureSuitePlan, checkpoint: (ro
     const duration = latest?.duration ?? audio.duration
     if (!Number.isFinite(duration) || duration <= 0) throw new Error('Duración nativa no disponible')
     row.duration = duration
-    if (plan.seek !== false) {
+    if (plan.cachedSeekReturn) {
+      if (plan.mode !== 'latency' || plan.experimental === false) throw new Error('cachedSeekReturn sólo se admite en latency experimental')
+      latest = await cachedSeekReturnCheck(audio, video.id, duration, row, timeout, observed, audit, checkpoint, check)
+    } else if (plan.seek !== false) {
       const target = duration * 0.8
       const before = captureProgress(audio)
       const wasCaptured = covers(before?.ranges ?? [], target, 0.1)
@@ -911,6 +1015,10 @@ export async function runCaptureSuite(plan: CaptureSuitePlan, checkpoint: (repor
     adMethod: 'Estados oficiales observados; comparación independiente de todas las unidades publicadas. La demora entre sonido y marcador no se deduce del mismo marcador.',
     adTransitionMethod: 'adTransitions cuenta sólo transiciones únicas con marcador publicitario nativo ligado a su fuente, secuencia anterior válida y velocidad 1×. adTransitionsObserved incluye también estados sin ese marcador; no demuestra semántica del audio.',
     rate: 1, rows: [] as Row[], running: true, ok: false,
+    ...(plan.cachedSeekReturn ? { cachedSeekReturn: true,
+      seekMethod: 'Ida al 80% interrumpida por regreso a 0,1 s en caché; mide prefijo y replanificación, no el umbral de seek de 1 s',
+      cachedReturnTimingMethod: 'cachedReturnMs mide adopción local; cachedReturnPlayingMs incluye fin de seeking y avance de reloj mayor de40 ms desde la misma petición; no es medición acústica',
+    } : {}),
     experimental: plan.mode !== 'catalog' && plan.experimental !== false, guaranteeAds: false, acceptanceOk: false,
     scope: plan.mode === 'catalog' ? 'catalog' : plan.mode === 'native-search' ? 'cold-search-and-start' : plan.experimental === false ? 'full-quarantine' : timingOnly(plan) ? 'timingOnly' : plan.mode === 'switch' ? 'cold-switch' : 'complete',
     blocking: [], referencePreparationOutsidePlaybackTimer: plan.engine !== 'propio',

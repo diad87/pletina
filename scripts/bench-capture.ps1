@@ -28,6 +28,7 @@ param(
     [string]$CorpusPath,
     [switch]$VerifiedOnly,
     [switch]$NoSeek,
+    [switch]$CachedSeekReturn,
     [switch]$NoBuild
 )
 
@@ -59,6 +60,12 @@ if ($Suite -eq 'profile-login') { $ProfileMode = 'premium-manual'; $suitePlan.pr
 if ($Suite -eq 'ad-transitions') { $suitePlan.maxAdAttempts = $AdAttempts; $suitePlan.minimumAdTransitions = 50; $suitePlan.verifyComplete = $false; $suitePlan.seek = $false }
 if ($VerifiedOnly) { $suitePlan.experimental = $false; $suitePlan.seek = $false }
 if ($NoSeek) { $suitePlan.seek = $false }
+if ($CachedSeekReturn) {
+    if ($Suite -ne 'latency' -or $Engine -ne 'oficial' -or $NoSeek -or $VerifiedOnly -or $MseOnly) {
+        throw 'CachedSeekReturn requiere latency, oficial y captura progresiva con seek.'
+    }
+    $suitePlan.cachedSeekReturn = $true
+}
 if ($CorpusPath) {
     $corpus = Get-Content -LiteralPath $CorpusPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($corpus.captureSuite) { $corpus = $corpus.captureSuite.corpus }
