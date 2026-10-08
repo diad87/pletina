@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v20, todavía sin aprobar la promoción; el
+API4/captura v21, todavía sin aprobar la promoción; el
 [informe inicial](informe-captura-youtube-2026-10-07.md) y el
 [diagnóstico del 8 de octubre](informe-captura-youtube-2026-10-08.md) conservan los resultados.
 
@@ -37,7 +37,13 @@ observado no queda automáticamente clasificado como imposible de saltar.
    y una contradicción descarta la cuarentena. El EOF válido libera la cola retenida.
    El modo normal conserva la cuarentena completa hasta terminar las pruebas reales.
    El lector espera0,5s continuos aceptados por MSE antes de reproducir; el margen
-   evita arrancar al borde del buffer. Los resultados tardíos de clic conservan
+   evita arrancar al borde del buffer. También exige esa reserva al adoptar un salto,
+   en el ledger nativo, el lote MSE terminado y el buffer real. Sólo el extremo de
+   audio validado por EOF permite una cola menor; la duración nominal no la recorta.
+   Una respuesta antigua no vuelve a mover el reloj tras un salto ya preparado;
+   eso invalida la adopción local, no cancela trabajo nativo previamente enviado.
+   Si el origen se agota mientras su captor prepara el destino, la espera sigue
+   siendo visible en el banco. Los resultados tardíos de clic conservan
    su solicitud original aunque ya haya comenzado otro anuncio.
 3. **Verificación independiente.** Para el mismo vídeo se descarga el audio nativo sin
    cookies, preferentemente con el mismo formato/itag. El banco compara todos los
@@ -89,6 +95,15 @@ observado no queda automáticamente clasificado como imposible de saltar.
    siguen registradas. Sólo sin unidades publicadas y con todos los bindings nativos
    limpios puede repetirse desde cero, dentro del límite de una repetición. Los bytes
    ya publicados siguen como parciales si se interrumpe la presentación después.
+9. **Trabajo y cierre sin esperas ciegas.** Se reutilizan sólo rangos e índices
+   calculados a partir del inventario inmutable, ligados a versión, tupla, fuente,
+   época y buffers nativos. Identidad, reloj, retención, cobertura y EOF se comprueban
+   de nuevo. El cierre revoca la sesión, finaliza la auditoría y confirma destrucción;
+   ya no añade300ms fijos. Si no desaparece en5s, conserva la plaza y comunica fallo.
+   La auditoría privada registra el estado real al terminar play() y en el evento
+   play; no convierte la llamada en presentación ni inventa posición cero. Esto
+   permite observar el primer paquete cuando el navegador realmente expone cero
+   con datos listos y luego avanza; las puertas del análisis independiente no cambian.
 
 El banco aislado permite tandas paralelas con identificador propio, SQLite por proceso
 y nombres de informe únicos. La batería de cobertura puede dividirse en los cinco
@@ -202,6 +217,15 @@ La demora máxima independiente del marcador sigue sin medirse;1,5s conserva su 
 experimental. Continúan pendientes el arranque/búsqueda, el seek y una nueva tanda
 completa sin fallos. El [informe inicial](informe-captura-youtube-2026-10-07.md)
 contiene las30 canciones, la campaña publicitaria, Premium y la procedencia anterior.
+
+El control v21 del 8 de octubre
+cerró Preso verificada (2035/2035, 0 cortes) y De Aquí sin cortes pero sin referencia
+independiente: no aprueba esa segunda canción. Inicio 5,535 s, siguiente 2,1 ms,
+seek no capturado 2,375 s y retiros confirmados de 30,3/31,0 ms. La auditoría ya
+observa el primer paquete completo de Preso, pero todavía no acredita retraso de
+anuncio ni permite reducir N. También falta conservar producción del origen en
+un seek temprano y replanificar el motor al volver a caché parcial tras enviar otro
+salto; invalidar el reply sólo protege el reloj del lector.
 
 La entrega progresiva pasa a normal sólo después de30 canciones completas distintas y
 50 transiciones publicitarias reales sin sesión, cero discrepancias, cobertura y tiempos

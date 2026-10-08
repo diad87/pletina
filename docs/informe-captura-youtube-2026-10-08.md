@@ -278,3 +278,94 @@ pero tampoco sustituyen esa cota. Premium no se ha utilizado en esta continuaci�
 las pocas medidas anteriores están separadas en el informe del 7–8 de octubre.
 El modo normal continúa reteniendo la fuente completa y la nueva captura no
 sustituye todavía el respaldo de Propio.
+
+## Continuación de latencia: API4/v21
+
+Se reutilizan sólo proyecciones aritméticas del inventario, ligadas a versión,
+configuración, época y objetos nativos. Identidad, reloj, retención, cobertura y
+EOF siguen comprobándose cada vez. La auditoría privada observa el reloj real
+después del play() nativo y en el evento play. No inventa cero ni concede
+presentación a la llamada; el analizador mantiene sus puertas independientes.
+
+El cierre revoca la sesión y confirma la auditoría y la destrucción, sin esperar
+300 ms fijos. Un fallo conserva la plaza. El lector exige 0,5 s continuos en ledger
+y MSE antes de adoptar un salto; sólo EOF validado permite una cola corta. Conserva
+buffers y reloj mientras espera. Un salto preparado invalida replies antiguos
+sólo en el lector: no cancela ni replanifica trabajo nativo ya enviado.
+
+### Escucha completa sin sesión
+
+`result-20261008-090356-02582bed.json`: una instancia, WWW, 1×, N=1,5 s,
+máximo tres ventanas y 96/288 MiB por pista/total. No se compiló ni se ejecutaron
+otros bancos durante la escucha. Ambas terminaron sin cortes observados, pero
+**sólo Preso tiene comparación independiente completa**.
+
+| Canción | Inicio frío / siguiente ms | Final natural / EOF / MSE continuo | Comparación independiente | Anuncios vistos / entregados | Espera publicitaria ms |
+|---|---:|---|---|---:|---:|
+| Preso | 5535,3 frío | Sí, 0–40,701 s | 2035/2035 paquetes; 448 unidades; 0 discrepancias | 0/0 | 0 |
+| De Aquí No Sales | 2,1 siguiente | Sí, 0–144,561 s | No acreditada: falta referencia compatible sin sesión | 1/0 | 5238 en precarga |
+
+De Aquí conserva sus 20 verificaciones fallidas, incluida la final. Sus 1620
+unidades y 7228 frames locales no sustituyen la referencia. La causa nativa
+específica no quedó registrada; no se atribuye a bloqueo o cambio de YouTube
+por conjetura. La cohorte falla por inicio superior a 3 s y referencia ausente.
+
+Un clic nativo confiable a posición publicitaria 5,210631 s, frente a 29,941 s
+nominales, precedió una nueva fuente de contenido 96 ms después. Es una omisión
+temprana correlacionada. Sus 5238 ms sucedieron en precarga y no se descuentan de
+la transición de 2,1 ms. La espera inevitable no quedó determinada.
+
+Las ventanas se crearon en 350,644/124,237 ms hasta devolver Navigate, sin medir
+carga de página. Sus retiros confirmados tardaron 30,308/31,041 ms: finalización
+15,101/15,511 y cierre 15,207/15,530 ms. Ambas auditorías terminaron sin pérdidas
+ni errores. Dos controles no atribuyen todo el cambio de arranque a esta mejora.
+
+### Salto sin sesión
+
+`result-20261008-090902-0090d305.json`: inicio de Preso en 5643 ms; salto correcto
+al 80 % aún no capturado en 2374,7 ms, fuera de la meta de 1 s. Sus 27 unidades
+históricas contienen 111/111 paquetes coincidentes, sin discrepancias y con
+transporte/captura anónimos. Es una prueba de prefijos: no acredita EOF ni canción
+completa. Al adoptar 32,5608 s, MSE ya cubría hasta 33,101 s: 540,2 ms por delante,
+frente a 0,2 ms en v20. El waiting del destino dura 0,6 ms hasta seeked/playing,
+frente a 233,2 ms antes. Se conservan los dos waiting del ensayo: el origen se
+agota mientras se prepara el destino y el seek nativo emite otro. No se afirma
+cero cortes. N=1,5 s sigue imponiendo un mínimo incompatible con 1 s para bytes
+todavía no presentados.
+
+### Medición independiente del marcador
+
+`preso-disputa-v21-independent-delay.json` acredita ahora todos los 2035 paquetes
+presentados de Preso, incluido el primero. Esa fuente no tuvo anuncios. Las
+fuentes de De Aquí carecen de referencia compatible en este proceso; además,
+su canción mantiene un primer paquete sin presentación observada en la auditoría.
+Los seis episodios observados de señal no son seis anuncios únicos. Hay **cero
+transiciones con retraso independiente medido**; el máximo sigue null. N no
+cambia ni se promueve el experimento por esta medición.
+
+### Comprobación y pendientes
+
+343/343 pruebas JavaScript, 100 Rust aprobadas y 13 ignoradas, Svelte/TypeScript
+sin errores ni avisos y build Windows correcto. Compilación limpia de
+`308be5760ab5bd0a96de143d71dd9b09b5a8c197`, binario SHA256
+`c0239dc2e497a63edd7b64acad32e80eb8b2d72c51e9dd4f05ba76fa93d3a7a9`.
+El segundo control sólo tenía documentación modificada y usó el mismo binario.
+
+| Artefacto local | SHA256 |
+|---|---|
+| Escucha `090356-02582bed` | `4590c724a41ca47333ea361040e747c9c190a38d9759c66949ddc1f27ea5854d` |
+| Salto `090902-0090d305` | `3caa531e230a2edd5dcba91f03c9a4b7a666a395a54d62a82c683490345b0bab` |
+| Análisis independiente v21 | `07e1302552bdfa22ac175be320a651bae9904d309076f21da4e0169aee606db1` |
+
+Commits: `62726d5` (proyecciones y reloj de auditoría), `6a608bb` (cierre) y
+`308be57` (reserva al adoptar seeks). Captura v21, API4 sin cambio. Receta,
+youtubei, db.rs, downloads.rs y la interfaz visual no cambiaron. No hubo Premium,
+push, fusión ni publicación; las referencias Premium anteriores siguen separadas.
+
+Siguen pendientes las metas frías, la cota independiente del marcador y una
+cohorte nueva de 30 canciones completamente verificadas. También la continuidad
+del origen durante un seek temprano y la replanificación del productor al volver
+a caché parcial después de enviar otro salto: ignorar el reply local impide mover
+otra vez el reloj, pero el prefijo puede agotarse mientras el motor va al destino
+previo. Estos límites no mezclan identidad ni acreditan huecos; impiden dar por
+acabado el objetivo.
