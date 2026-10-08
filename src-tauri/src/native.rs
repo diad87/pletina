@@ -395,15 +395,31 @@ async fn visitor(recipe: &Recipe, fresh: bool) -> Result<String, String> {
     Ok(v)
 }
 
-/// La sesión de visitante es un protobuf en base64 cuyo primer campo es un id de 11 caracteres,
-/// así que siempre empieza por "Cgt". Buscarla así no depende de en qué posición la ponga YouTube.
+/// El primer campo del protobuf de visitante es un identificador de 11 caracteres.
+/// Su base64 puede empezar por Cgs o Cgt según el primer carácter: validar el campo
+/// decodificado evita rechazar identificadores que empiezan por dígito o guion.
 fn find_visitor(text: &str) -> Option<String> {
+    use base64::Engine;
     text.split('"')
         .find(|s| {
-            s.starts_with("Cgt")
-                && s.len() >= 20
-                && s.bytes()
+            if s.len() < 20
+                || !s
+                    .bytes()
                     .all(|b| b.is_ascii_alphanumeric() || b"-_%=".contains(&b))
+            {
+                return false;
+            }
+            let encoded = s.replace("%3D", "=").replace("%3d", "=");
+            base64::engine::general_purpose::URL_SAFE
+                .decode(&encoded)
+                .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&encoded))
+                .is_ok_and(|bytes| {
+                    bytes.get(..2) == Some(&[0x0a, 11])
+                        && bytes.get(2..13).is_some_and(|id| {
+                            id.iter()
+                                .all(|b| b.is_ascii_alphanumeric() || b"-_".contains(b))
+                        })
+                })
         })
         .map(String::from)
 }
@@ -634,13 +650,57 @@ mod tests {
 
     #[test]
     fn finds_visitor_anywhere() {
-        let text =
-            r#")]}'[["a",["Cg","x"],[[["es","ES",null,"CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D",0]]]]]"#;
+        let text = r#")]}'[["a",["Cg","x"],[[["es","ES",null,"CgtBQkNERUZHSElKSxABGAE%3D",0]]]]]"#;
         assert_eq!(
             find_visitor(text).as_deref(),
-            Some("CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D")
+            Some("CgtBQkNERUZHSElKSxABGAE%3D")
         );
         assert_eq!(find_visitor(r#"["Cg","nada"]"#), None);
+    }
+
+    #[test]
+    fn visitor_identifiers_accept_every_url_safe_initial_and_padding_form() {
+        use base64::Engine;
+        for first in b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_" {
+            let mut bytes = vec![0x0a, 11, *first];
+            bytes.extend_from_slice(b"bcdefghijk");
+            bytes.extend_from_slice(&[0x10, 1, 0x18, 1]);
+            let unpadded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&bytes);
+            let padded = base64::engine::general_purpose::URL_SAFE.encode(&bytes);
+            for token in [
+                &unpadded,
+                &padded,
+                &padded.replace('=', "%3D"),
+                &padded.replace('=', "%3d"),
+            ] {
+                assert_eq!(
+                    find_visitor(&format!(r#"["ignored","{token}",null]"#)).as_deref(),
+                    Some(token.as_str())
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn visitor_detection_rejects_prefix_lookalikes_and_malformed_identifier_fields() {
+        use base64::Engine;
+        for bytes in [
+            vec![0x0a, 11],
+            b"\x12\x0babcdefghijk\x10\x01".to_vec(),
+            b"\x0a\x0aabcdefghijk\x10\x01".to_vec(),
+            b"\x0a\x0babc!efghijk\x10\x01".to_vec(),
+        ] {
+            let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
+            assert!(find_visitor(&format!(r#"["{token}"]"#)).is_none());
+        }
+        for token in [
+            "Cgt_this_is_not_a_visitor",
+            "CgtAAAAAAAAAAAAAAAAAAA%XX",
+            "CgsAAAAAAAAAAAAAAAAAAA",
+            "CgtBQkNERUZHSElKSyiAgICAgICA%3D%3D",
+        ] {
+            assert!(find_visitor(&format!(r#"["{token}"]"#)).is_none());
+        }
     }
 
     #[test]
