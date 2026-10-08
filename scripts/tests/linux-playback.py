@@ -225,8 +225,10 @@ def run(image, output):
                 connection.execute("INSERT OR REPLACE INTO settings(key,value) VALUES (?,?)", ("local_folders", json.dumps([str(fixture)])))
                 connection.execute("INSERT OR REPLACE INTO tracks(id,title,duration,explicit,artist_id,artist_name,album_id,album_title,album_artist_id,cover) VALUES (?,?,?,?,?,?,?,?,?,?)",
                                    (DOWNLOAD_ID, "Downloaded WebM fixture", 12, 0, DOWNLOAD_ID, "Pletina QA", DOWNLOAD_ID, "Offline QA", DOWNLOAD_ID, None))
-                connection.execute("INSERT OR REPLACE INTO downloads(track_id,path,size,video_id) VALUES (?,?,?,?)",
-                                   (DOWNLOAD_ID, str(fixture / "tone.webm"), (fixture / "tone.webm").stat().st_size, "fixture"))
+                # Python on Ubuntu 22.04 uses SQLite < 3.38, without unixepoch().
+                # Supply the timestamp instead of invoking the app schema's default.
+                connection.execute("INSERT OR REPLACE INTO downloads(track_id,path,size,video_id,downloaded_at) VALUES (?,?,?,?,?)",
+                                   (DOWNLOAD_ID, str(fixture / "tone.webm"), (fixture / "tone.webm").stat().st_size, "fixture", int(time.time())))
             driver.start(appdir / "AppRun")
             report["playback"] = driver.execute(PLAYBACK, asynchronous=True)
             driver.screenshot(output / "playback.png")
