@@ -1,4 +1,6 @@
-# Musify — Plan
+# Pletina — Plan
+
+Pletina se llamaba Musify hasta la 0.7.0 (7 oct 2026); los repositorios pasaron a `diad87/pletina` y `diad87/pletina-releases`, y GitHub redirige las direcciones viejas. Los nombres internos (identificador `dev.musify.desktop`, `musify.db`, el crate `musify`) no cambian, para que las instalaciones sigan actualizándose sin perder la biblioteca.
 
 Reproductor tipo Spotify para PC (Windows), 100% de uso personal. La prioridad es que sea **muy ligero**.
 
@@ -72,7 +74,7 @@ Tres capas:
 2. **Contenido (la interfaz):** se descargaría de GitHub en segundo plano y se aplicaría al volver a abrir la app. Requiere servir la interfaz desde una carpeta local en lugar de llevarla dentro del ejecutable; está sin hacer.
 3. **Cascarón (el ejecutable, cuando cambia la parte de Rust):**
    - Windows, Mac, Linux (AppImage): actualizador oficial de Tauri. Descarga en segundo plano e instala al cerrar la app. Totalmente silencioso.
-   - Android: sin Google Play (decidido; además incumple sus normas por usar YouTube). APK firmado con clave propia y publicado en musify-releases; **Obtainium** lo vigila y lo instala. En Android 12 o superior puede actualizar sin preguntar; está por comprobar en el móvil.
+   - Android: sin Google Play (decidido; además incumple sus normas por usar YouTube). APK firmado con clave propia y publicado en pletina-releases; **Obtainium** lo vigila y lo instala. En Android 12 o superior puede actualizar sin preguntar; está por comprobar en el móvil.
    - iOS (más adelante): sin App Store ni cuenta de pago (decidido). Con **SideStore** y un Apple ID gratis, la firma dura 7 días y se renueva desde el propio iPhone. Actualizar el cascarón pide un toque.
 
 ### Extractores que se actualizan solos
@@ -85,7 +87,7 @@ Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el res
 | Receta del motor propio | este repositorio (`src-tauri/recipe/youtube.json`) | se publica al subir el cambio a `main` |
 | Script de la ventana oculta | este repositorio (`src-tauri/src/capture.js`) | se publica al subir el cambio a `main` |
 
-- **Publicación** (`.github/workflows/extractors.yml` y `scripts/extractors.mjs`): en la versión `extractores` de diad87/musify-releases (marcada como "pre-release" para que no la tome el actualizador de la app). Cada extractor va como `<nombre>-api<api>-v<versión>.<ext>`, firmado con la misma clave que las actualizaciones de la app, y un índice, `extractores.json`.
+- **Publicación** (`.github/workflows/extractors.yml` y `scripts/extractors.mjs`): en la versión `extractores` de diad87/pletina-releases (marcada como "pre-release" para que no la tome el actualizador de la app). Cada extractor va como `<nombre>-api<api>-v<versión>.<ext>`, firmado con la misma clave que las actualizaciones de la app, y un índice, `extractores.json`.
 - **En la app** (`src-tauri/src/extractors.rs`): al arrancar y cada 6 horas mira el índice. Si hay un extractor con la `api` que entiende y una versión mayor que la suya, lo baja, comprueba el resumen y la firma, y lo usa desde ese momento: la receta y el script en la siguiente canción, y youtubei.js en cuanto vuelve a hacer falta. Lo guarda para los siguientes arranques.
 - **Seguridad:** la firma cubre también el nombre del archivo (extractor, api y versión). Nadie puede hacer pasar un extractor viejo por uno nuevo tocando el índice, ni colar uno sin la clave.
 - **Si el nuevo falla**, se sigue funcionando:
@@ -227,12 +229,12 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 - [ ] **Fase 6: Linux y Mac** (en curso)
   - [x] Código adaptado: yt-dlp de cada sistema, formato de audio según el motor web (m4a en Mac, opus en Linux), firma ad hoc en Mac.
   - [x] GitHub Actions compila Windows (.exe), Mac universal (.dmg) y Linux (.AppImage y .deb) al subir una etiqueta `v*` o a mano. Tarda unos 10 minutos (Mac 4, Windows 7, Linux 9). Ojo: el repositorio de código es privado y los minutos de Actions gratuitos son 2.000 al mes; los de Mac cuentan ×10 y los de Windows ×2, así que cada versión gasta unos 65 minutos (unas 30 versiones al mes).
-  - [x] Versión 0.1.0 publicada en `musify-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
+  - [x] Versión 0.1.0 publicada en `pletina-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
   - [ ] Probar los de Mac y Linux en un equipo real (están compilados, pero no probados).
-  - [x] Actualizaciones automáticas (desde la 0.2.0): la app busca versión nueva al arrancar y cada 6 horas en `musify-releases/releases/latest/download/latest.json`, la descarga en segundo plano y la instala al cerrarse (en Windows, instalador silencioso). Si hay una lista, la barra superior muestra «Versión X lista · Reiniciar».
+  - [x] Actualizaciones automáticas (desde la 0.2.0): la app busca versión nueva al arrancar y cada 6 horas en `pletina-releases/releases/latest/download/latest.json`, la descarga en segundo plano y la instala al cerrarse (en Windows, instalador silencioso). Si hay una lista, la barra superior muestra «Versión X lista · Reiniciar».
     - Firmadas con una clave propia (minisign). La privada está en `%USERPROFILE%\.musify\` (clave + contraseña) y como secretos `TAURI_SIGNING_PRIVATE_KEY*` en el repositorio de código. **Si se pierde, las apps instaladas no aceptarán más versiones**: hay que guardarla en un sitio seguro.
-    - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `musify-releases`.
-    - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `musify-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
+    - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `pletina-releases`.
+    - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `pletina-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
     - Compilar en local sin firmar: `npm run build:local`.
     - **Probado de principio a fin en Windows (6 oct 2026), pero dentro del entorno aislado de Claude (ver más abajo):** la 0.2.0 instalada encontró la 0.2.1, la descargó en segundo plano y, al cerrarla, se instaló sola en silencio y volvió a abrirse ya en 0.2.1. Falta verlo con el Musify que abre el usuario desde el menú Inicio.
 - [x] **Música local** (0.3.0): «Tu música» en la barra lateral → «Añadir carpeta» (una o varias). Se leen las etiquetas (título, artista, artista del disco, disco, pista, año, duración, carátula) de mp3, m4a, flac, ogg, opus y wav; si faltan, se sacan del nombre del archivo y de las carpetas (Artista/Disco/01 Canción). Carátulas: la incrustada, la imagen de la carpeta (cover.jpg, folder.jpg…) o la de Deezer; fotos de artista de Deezer. Discos y artistas locales funcionan como los de Deezer (páginas, búsqueda «En tu música», playlists, historial, cola) y suenan desde el archivo, sin YouTube. Escaneo incremental al arrancar; quitar una carpeta quita lo suyo.
@@ -242,12 +244,12 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
   - 0.3.1: una base de datos con solo la cabecera (4 KB, sin tablas) cuenta como vacía y se usa; antes la protección la rechazaba y la app se cerraba al arrancar sin decir nada. Si la base de datos no se puede abrir, ahora sale un aviso con el error y la ruta.
   - **Ojo al probar desde Claude (app de escritorio):** los comandos que lanza Claude corren dentro de su paquete MSIX, y lo que escriben en `%LOCALAPPDATA%` va a `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\…`. Lo que se instale, actualice o se pruebe desde ahí usa otra carpeta de datos que el Musify que abres desde el menú Inicio. Las actualizaciones automáticas de 0.2.0 → 0.2.1 → 0.3.0 se probaron en esa copia aislada; en el equipo real todavía no.
 - [x] **Motor de audio propio y extractores que se actualizan solos** (0.4.0): el trabajo de P1 integrado (selector en Inicio: yt-dlp, youtubei.js o Propio; yt-dlp sigue por defecto). La receta y el script del motor propio y youtubei.js se publican y se actualizan por separado, sin reinstalar la app; youtubei.js nuevo se coge solo de npm. Ver "Extractores que se actualizan solos".
-  - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en musify-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
+  - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en pletina-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
 - [ ] **Fase 7: móvil, empezando por Android.** Plan en [docs/plan-mobile.md](docs/plan-mobile.md). Hechas las fases 0 a 3 (0.5.0): suena con la pantalla apagada en un servicio nativo, interfaz táctil, y APK firmado que se instala y se actualiza con Obtainium. De la 4, hechas las descargas y escuchar sin conexión (0.6.0); falta la música guardada en el teléfono.
 
 ## Repositorios
 - Código (privado): https://github.com/diad87/musify — rama `main`.
-- Versiones (público): https://github.com/diad87/musify-releases — instaladores y canal de actualizaciones automáticas.
+- Versiones (público): https://github.com/diad87/pletina-releases — instaladores y canal de actualizaciones automáticas.
 
 ## Desarrollo
 - Requisitos: Node 24, Rust (rustup, toolchain MSVC), Visual Studio Build Tools 2022 (C++) y WebView2 (viene con Windows 11).

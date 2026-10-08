@@ -5,6 +5,7 @@
 //
 // Deja todo en <carpeta-de-artefactos>/_release, listo para `gh release create`.
 
+import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 
@@ -84,6 +85,14 @@ writeFileSync(
   join(out, 'latest.json'),
   JSON.stringify({ version, notes: notes || `Pletina ${version}`, pub_date: new Date().toISOString(), platforms }, null, 2),
 )
+
+// Huellas de todo lo publicado, para comprobar una descarga (`sha256sum -c SHA256SUMS.txt`, o
+// `Get-FileHash` en Windows). La procedencia la certifica GitHub aparte (ver build.yml).
+const sums = readdirSync(out)
+  .filter((name) => name !== 'SHA256SUMS.txt')
+  .sort()
+  .map((name) => `${createHash('sha256').update(readFileSync(join(out, name))).digest('hex')}  ${name}`)
+writeFileSync(join(out, 'SHA256SUMS.txt'), sums.join('\n') + '\n')
 
 console.log(`Versión ${version} preparada en ${out}:`)
 for (const name of readdirSync(out)) console.log('  ' + name)

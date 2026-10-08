@@ -83,6 +83,16 @@ Para escuchar sin conexión: ⬇ en un disco o una playlist, o «Descargar» en 
 
 En el PC, la app busca versiones nuevas al arrancar y cada pocas horas, las descarga en segundo plano y las instala al cerrarse (en Linux, con el AppImage). En Android, Obtainium avisa de cada versión y la instala encima sin perder la biblioteca. Todas las actualizaciones van firmadas: la app de escritorio no instala nada que no lleve nuestra firma, y Android no deja instalar encima un APK firmado por otro.
 
+### Comprobar que una descarga es auténtica
+
+Desde la 0.8.0, cada archivo de una versión lleva un certificado de procedencia de GitHub: demuestra que sale de este código y de su compilación en GitHub Actions, sin pasar por el ordenador de nadie. Con la [CLI de GitHub](https://cli.github.com):
+
+```bash
+gh attestation verify Pletina_0.8.0_x64-setup.exe --repo diad87/pletina
+```
+
+Cada versión trae además `SHA256SUMS.txt` con la huella de cada archivo: `sha256sum -c SHA256SUMS.txt` en Linux o Mac, o en Windows `Get-FileHash Pletina_0.8.0_x64-setup.exe` y compararla con la de la lista.
+
 ## Privacidad
 
 Pletina no tiene cuentas, ni analíticas, ni servidores propios. Tu biblioteca, tus playlists y tu historial se guardan solo en tu equipo. Se conecta a:

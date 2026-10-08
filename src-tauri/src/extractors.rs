@@ -4,7 +4,7 @@
 //! `extractors.json`. yt-dlp no está aquí: se actualiza él solo desde su propio GitHub (`ytdlp.rs`).
 //!
 //! Se publican firmados, con la misma clave que las actualizaciones de la app, en la versión
-//! `extractores` de diad87/musify-releases (`scripts/extractors.mjs`). La app mira al arrancar y
+//! `extractores` de diad87/pletina-releases (`scripts/extractors.mjs`). La app mira al arrancar y
 //! cada 6 horas: si hay uno con la api que entiende y una versión mayor que la que tiene, lo baja,
 //! comprueba la firma y lo usa desde ese momento. Si no hay nada descargado, o no vale, se usa el
 //! que trae la app.
@@ -23,7 +23,8 @@ use std::sync::{Arc, LazyLock, OnceLock, RwLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
-const MANIFEST_URL: &str = "https://github.com/diad87/musify-releases/releases/download/extractores/extractores.json";
+// Antes musify-releases: GitHub redirige la dirección vieja, así que las versiones anteriores siguen recibiendo extractores.
+const MANIFEST_URL: &str = "https://github.com/diad87/pletina-releases/releases/download/extractores/extractores.json";
 const FIRST_CHECK: Duration = Duration::from_secs(5);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 3600);
 const MAX_SIZE: usize = 8 * 1024 * 1024;

@@ -1,10 +1,10 @@
-# Musify en el móvil: primero Android
+# Pletina en el móvil: primero Android
 
 Estado: sin empezar. Plan del 6 de octubre de 2026.
 
 ## Decisiones
 - **Primero Android.** iPhone, más adelante (ver al final).
-- **Sin tiendas oficiales ni cuentas de pago.** El APK lo firmamos nosotros, se publica en [musify-releases](https://github.com/diad87/musify-releases) y se instala y actualiza con **Obtainium**.
+- **Sin tiendas oficiales ni cuentas de pago.** El APK lo firmamos nosotros, se publica en [pletina-releases](https://github.com/diad87/pletina-releases) y se instala y actualiza con **Obtainium**.
 - **Android Auto y CarPlay, fuera por ahora.** No hay acceso a corto plazo. Se diseña de forma que Android Auto se pueda añadir después sin rehacer nada; CarPlay exige una cuenta de pago de Apple, así que queda descartado.
 - **Uso personal**, como el resto del proyecto.
 
@@ -154,15 +154,15 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 
 ### Fase 3: instalar y actualizar
 - Clave de firma propia para Android, guardada como la de escritorio (`~/.musify` y secretos de GitHub).
-- GitHub Actions compila el APK en cada versión y lo publica en musify-releases (`Musify_X.Y.Z_android.apk`).
-- Obtainium apunta a musify-releases y se queda con el `.apk`. En Android 12 o superior puede actualizar sin preguntar; hay que comprobarlo en el móvil.
+- GitHub Actions compila el APK en cada versión y lo publica en pletina-releases (`Pletina_X.Y.Z_android.apk`).
+- Obtainium apunta a pletina-releases y se queda con el `.apk`. En Android 12 o superior puede actualizar sin preguntar; hay que comprobarlo en el móvil.
 - Comprobar que actualizar conserva la base de datos.
 
 **Hecho (7 oct 2026, sale en la 0.5.0):**
 - **Clave de firma:** `~/.musify/android.jks` (RSA 4096, válida 100 años, alias `musify`) y su contraseña en `android.password`, junto a las del actualizador. En GitHub, secretos `ANDROID_KEYSTORE` (el archivo en base64) y `ANDROID_KEYSTORE_PASSWORD`. Gradle firma las versiones con ella; si falta, el APK sale sin firmar. **Si se pierde, los móviles no aceptan la versión siguiente sin desinstalar**: hay que guardar una copia de `~/.musify`.
 - **R8** (reduce el APK de las versiones): reglas para no tocar lo que se busca por nombre (funciones nativas de Rust, el plugin del reproductor y el puente con la interfaz).
-- **GitHub Actions** (`build.yml`, trabajo `android`): en cada etiqueta compila el APK, solo ARM de 64 bits (12 MB), y `release.mjs` lo publica como `Musify_X.Y.Z_android.apk`. Si falla solo el APK, lo de escritorio se publica igual.
-- **Obtainium:** instrucciones en el README. Basta con la dirección de musify-releases: hay un solo `.apk` por versión y la de los extractores es una versión previa, así que no la toma.
+- **GitHub Actions** (`build.yml`, trabajo `android`): en cada etiqueta compila el APK, solo ARM de 64 bits (12 MB), y `release.mjs` lo publica como `Pletina_X.Y.Z_android.apk`. Si falla solo el APK, lo de escritorio se publica igual.
+- **Obtainium:** instrucciones en el README. Basta con la dirección de pletina-releases: hay un solo `.apk` por versión y la de los extractores es una versión previa, así que no la toma.
 - **En la app:**
   - icono propio, también en escritorio, que hasta ahora llevaba el de Tauri;
   - un solo icono en el móvil: fuera la pantalla de prueba de la fase 0;
@@ -172,7 +172,7 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 - **Probado en el emulador:**
   - la versión firmada desde cero: arranca, busca, suena en el servicio y comparte el registro;
   - el APK de GitHub instalado encima del firmado en el PC: Android lo acepta como actualización y conserva historial y cola;
-  - con la 0.5.0 ya publicada, la 0.4.0 avisa de que hay versión nueva, y el APK de musify-releases se instala encima conservando historial y cola;
+  - con la 0.5.0 ya publicada, la 0.4.0 avisa de que hay versión nueva, y el APK de pletina-releases se instala encima conservando historial y cola;
   - en escritorio, la app de verdad (con otro identificador para no tocar la instalada): busca y suena.
 - **Falta en el móvil:** instalar Obtainium, añadir la app y comprobar que la versión siguiente se instala sola.
 

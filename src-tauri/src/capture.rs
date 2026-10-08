@@ -251,7 +251,7 @@ async fn open(app: &AppHandle, video_id: &str, at: Option<f64>) -> Result<(), St
     let label = format!("{LABEL}-{}", SEQ.fetch_add(1, Ordering::Relaxed));
     let profile = app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("yt-engine");
     let window = WebviewWindowBuilder::new(app, &label, WebviewUrl::External("about:blank".parse().unwrap()))
-        .title("Musify · reproductor de YouTube")
+        .title("Pletina · reproductor de YouTube")
         .data_directory(profile)
         .visible(std::env::var("MUSIFY_SHOW_ENGINE").is_ok())
         .skip_taskbar(true)

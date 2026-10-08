@@ -72,6 +72,8 @@ pub struct PodcastSearchResults {
 #[serde(rename_all = "camelCase")]
 struct DirectoryEntry {
     feed_url: Option<String>,
+    /// Portada de 600 px: la del RSS puede ser de 3000 px, demasiado para una cuadrícula en el móvil.
+    artwork_url600: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -157,9 +159,9 @@ impl Podcasts {
         let entries = self.directory(query).await?;
         self.check_generation(generation)?;
         let mut seen = HashSet::new();
-        let urls: Vec<_> = entries.into_iter().filter_map(|e| e.feed_url)
-            .filter_map(|u| web_url(&u).map(|url| url.to_string()))
-            .filter(|u| seen.insert(u.clone())).take(30).collect();
+        let (urls, artworks): (Vec<_>, Vec<_>) = entries.into_iter()
+            .filter_map(|e| Some((web_url(e.feed_url.as_deref()?)?.to_string(), e.artwork_url600)))
+            .filter(|(u, _)| seen.insert(u.clone())).take(30).unzip();
         let total = urls.len();
         let mut pending = urls.into_iter().enumerate();
         let mut tasks = JoinSet::new();
@@ -179,6 +181,10 @@ impl Podcasts {
                     if matches_language(detail.podcast.language.as_deref(), language.as_deref()) {
                         let mut podcast = detail.podcast;
                         save_show(db, &mut podcast)?;
+                        // En la lista, la portada pequeña del catálogo; el programa guarda la del RSS.
+                        if let Some(small) = artworks[index].clone().filter(|u| u.starts_with("https://")) {
+                            podcast.image = Some(small);
+                        }
                         found.push((index, podcast));
                     }
                 }
@@ -539,7 +545,7 @@ mod tests {
             let mut detail = parse_feed(FEED, &url).unwrap();
             detail.podcast.language = language.map(String::from);
             put_cached(&client.feeds, url.clone(), detail, 32);
-            directory.push(DirectoryEntry { feed_url: Some(url) });
+            directory.push(DirectoryEntry { feed_url: Some(url), artwork_url600: None });
         }
         put_cached(&client.searches, "offline".into(), directory, 24);
         let spanish = client.search("offline", "es-MX", &db).await.unwrap();
@@ -560,6 +566,7 @@ mod tests {
         // TCP port zero cannot host a feed. No connection to an external service is made.
         put_cached(&client.searches, "offline-failure".into(), vec![DirectoryEntry {
             feed_url: Some("http://127.0.0.1:0/rss".into()),
+            artwork_url600: None,
         }], 24);
         let error = client.search("offline-failure", "es", &db).await.unwrap_err();
         assert!(error.contains("no se pudo leer ningún podcast"), "{error}");
