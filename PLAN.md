@@ -132,6 +132,8 @@ Propio/v25 resolvió 30/30 búsquedas frías por Rust con vídeo esperado y ning
 
 **Integración con main 0.9.1 (8 de octubre):** tipos y build Vite correctos, 374/374 pruebas JavaScript y 139 Rust aprobadas/19 ignoradas en Windows; `cargo check --lib` y `--tests` Android x86_64 offline correctos. Las reaperturas JNI de ExoPlayer no cancelan la selección manual ni la precarga P1, comprobado con una regresión sin red. No se repitieron campañas reales ni Premium ni se preparó un instalador. La integración no promueve la progresiva ni aprueba los objetivos pendientes.
 
+**Propio adaptativo (8 de octubre, en validación):** el usuario aprobó descubrir y renovar la configuración publicada por YouTube, probar alternativas verificadas y conservar la receta como reparación excepcional. La búsqueda usa WEB_REMIX descubierto; el audio conserva su ruta rápida y añade WEB descubierto antes de Legacy. El [diseño y límites](docs/propio-adaptativo.md) distinguen esta adaptación de cambios de protocolo y de la promoción de Oficial. Las comprobaciones y mediciones nuevas se registrarán al cerrar el trabajo.
+
 La descripción y las mediciones siguientes corresponden al prototipo histórico; «nivel garantizado» era su denominación, no una garantía frente a cualquier cambio de plataforma. Sus tiempos no describen la nueva captura experimental a velocidad normal.
 
 #### Motor propio

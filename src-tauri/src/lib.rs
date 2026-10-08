@@ -29,6 +29,7 @@ mod podcasts;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
+mod youtube_session;
 mod youtube_podcasts;
 mod ytdlp;
 
@@ -290,6 +291,11 @@ pub fn run() {
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     handle.state::<YtDlp>().warm_up().await;
+                });
+                // La configuración vigente se descubre fuera del camino de reproducción.
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    handle.state::<YouTubeMusic>().warmup().await;
                 });
             }
             Ok(())

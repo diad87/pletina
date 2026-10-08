@@ -9,6 +9,14 @@ API4/captura v25, todavía sin aprobar la promoción; el
 
 ## Decisiones vigentes
 
+El 8 de octubre el usuario aprobó reducir el mantenimiento del camino rápido:
+descubrir la configuración que publica YouTube, renovar datos obsoletos sin
+publicar una receta y probar alternativas verificadas antes del respaldo.
+Rust conserva su prioridad; la receta firmada queda como reparación excepcional.
+La configuración web no se atribuye al cliente VISIONOS y los cambios de
+protocolo o descifrado todavía pueden requerir código. Esto no promueve la
+captura progresiva ni cambia sus criterios de aprobación.
+
 El camino recomendado es **Propio**: nivel rápido en Rust, sin sesión y sin anuncios,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
