@@ -153,4 +153,3 @@ export function playLegacyCapture(audio: HTMLAudioElement, videoId: string): () 
     if (generation !== undefined) void invoke('capture_legacy_cancel', { videoId, generation }).catch(() => {})
   }
 }
-

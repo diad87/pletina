@@ -2,7 +2,7 @@
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
   import { library } from '../lib/library.svelte'
-  import { mediaUrl } from '../lib/media'
+  import { isLocal, isPodcast, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -11,11 +11,59 @@
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
+  const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
   const upcoming = $derived(player.upcoming.slice(0, 40))
   const queued = $derived(player.userQueue)
   // Carátula grande: la de 1000 px si es de Deezer.
-  const big = $derived(current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
+  const big = $derived(!podcast && current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
+
+  /**
+   * Deslizar hacia abajo para cerrar (con el dedo). No cuenta si empieza en un botón o en la barra
+   * de progreso. Si se suelta antes de 120 px (o despacio), vuelve a su sitio.
+   */
+  function swipeDown(node: HTMLElement) {
+    let start: { y: number; t: number } | null = null
+    let dy = 0
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch' || (e.target as HTMLElement).closest('button, input, a, .queue')) return
+      start = { y: e.clientY, t: performance.now() }
+      dy = 0
+      node.style.transition = 'none'
+    }
+    const move = (e: PointerEvent) => {
+      if (!start) return
+      dy = Math.max(0, e.clientY - start.y)
+      node.style.transform = `translateY(${dy}px)`
+    }
+    const up = () => {
+      if (!start) return
+      const fast = dy / Math.max(1, performance.now() - start.t) > 0.6
+      start = null
+      node.style.transition = 'transform 0.25s var(--ease)'
+      if (dy > 120 || (fast && dy > 40)) {
+        node.style.transform = 'translateY(100%)'
+        setTimeout(() => (theme.nowPlaying = false), 200)
+      } else {
+        node.style.transform = ''
+      }
+    }
+    // Si no, el navegador se queda el gesto vertical (pointercancel) y la pantalla no llega a moverse.
+    // La cola de al lado (escritorio) sigue con su scroll: tiene su propio contenedor.
+    node.style.touchAction = 'none'
+    node.addEventListener('pointerdown', down)
+    node.addEventListener('pointermove', move)
+    node.addEventListener('pointerup', up)
+    node.addEventListener('pointercancel', up)
+    return {
+      destroy() {
+        node.removeEventListener('pointerdown', down)
+        node.removeEventListener('pointermove', move)
+        node.removeEventListener('pointerup', up)
+        node.removeEventListener('pointercancel', up)
+      },
+    }
+  }
 
   function go(route: Parameters<typeof nav.go>[0]) {
     theme.nowPlaying = false
@@ -24,7 +72,7 @@
 </script>
 
 {#if theme.nowPlaying && current}
-  <div class="np" role="dialog" aria-label="Sonando ahora">
+  <div class="np" role="dialog" aria-label="Sonando ahora" use:swipeDown>
     <div class="bg" aria-hidden="true">
       {#if current.cover}<img src={mediaUrl(current.cover)} alt="" />{/if}
     </div>
@@ -35,7 +83,7 @@
       </button>
       <div class="from">
         <span>Sonando desde</span>
-        <button class="link" onclick={() => go({ name: 'album', id: current.albumId })}>{current.albumTitle}</button>
+        <button class="link" onclick={() => go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
       </div>
       <span class="spacer"></span>
     </header>
@@ -48,7 +96,7 @@
         <div class="meta">
           <div class="text">
             <h1>{current.track.title}</h1>
-            <button class="link artist" onclick={() => go({ name: 'artist', id: current.track.artist.id })}
+            <button class="link artist" onclick={() => go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
               >{current.track.artist.name}</button
             >
           </div>
@@ -62,6 +110,17 @@
           </button>
         </div>
         <Transport big />
+        <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
+        <div class="extras">
+          {#if !podcast}
+            <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
+              <Icon name="swap" size={20} /> ¿No es esta canción?
+            </button>
+          {/if}
+          <button onclick={() => (theme.queueSheet = true)}>
+            <Icon name="queue" size={20} /> Cola{#if queued.length}&nbsp;· {queued.length}{/if}
+          </button>
+        </div>
       </section>
 
       <aside class="queue">
@@ -323,5 +382,48 @@
   .empty {
     margin: 12px;
     color: rgb(255 255 255 / 0.6);
+  }
+
+  .extras {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    header {
+      padding: calc(8px + var(--safe-top)) 12px 4px;
+    }
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 4px 24px calc(20px + var(--safe-bottom));
+    }
+    .queue {
+      display: none;
+    }
+    .art,
+    .meta {
+      width: min(100%, 44vh);
+    }
+    .stage {
+      gap: 20px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    .extras {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .extras button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 4px;
+      color: rgb(255 255 255 / 0.75);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .extras button:disabled {
+      opacity: 0.4;
+    }
   }
 </style>

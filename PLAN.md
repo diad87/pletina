@@ -1,4 +1,6 @@
-# Musify — Plan
+# Pletina — Plan
+
+Pletina se llamaba Musify hasta la 0.7.0 (7 oct 2026); los repositorios pasaron a `diad87/pletina` y `diad87/pletina-releases`, y GitHub redirige las direcciones viejas. Los nombres internos (identificador `dev.musify.desktop`, `musify.db`, el crate `musify`) no cambian, para que las instalaciones sigan actualizándose sin perder la biblioteca.
 
 Reproductor tipo Spotify para PC (Windows), 100% de uso personal. La prioridad es que sea **muy ligero**.
 
@@ -72,7 +74,7 @@ Tres capas:
 2. **Contenido (la interfaz):** se descargaría de GitHub en segundo plano y se aplicaría al volver a abrir la app. Requiere servir la interfaz desde una carpeta local en lugar de llevarla dentro del ejecutable; está sin hacer.
 3. **Cascarón (el ejecutable, cuando cambia la parte de Rust):**
    - Windows, Mac, Linux (AppImage): actualizador oficial de Tauri. Descarga en segundo plano e instala al cerrar la app. Totalmente silencioso.
-   - Android: sin Google Play (decidido; además incumple sus normas por usar YouTube). APK firmado con clave propia y publicado en musify-releases; **Obtainium** lo vigila y lo instala. En Android 12 o superior puede actualizar sin preguntar; está por comprobar en el móvil.
+   - Android: sin Google Play (decidido; además incumple sus normas por usar YouTube). APK firmado con clave propia y publicado en pletina-releases; **Obtainium** lo vigila y lo instala. En Android 12 o superior puede actualizar sin preguntar; está por comprobar en el móvil.
    - iOS (más adelante): sin App Store ni cuenta de pago (decidido). Con **SideStore** y un Apple ID gratis, la firma dura 7 días y se renueva desde el propio iPhone. Actualizar el cascarón pide un toque.
 
 ### Extractores que se actualizan solos
@@ -85,7 +87,7 @@ Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el res
 | Receta del motor propio | este repositorio (`src-tauri/recipe/youtube.json`) | se publica al subir el cambio a `main` |
 | Script de la ventana oculta | este repositorio (`src-tauri/src/capture.js`) | se publica al subir el cambio a `main` |
 
-- **Publicación** (`.github/workflows/extractors.yml` y `scripts/extractors.mjs`): en la versión `extractores` de diad87/musify-releases (marcada como "pre-release" para que no la tome el actualizador de la app). Cada extractor va como `<nombre>-api<api>-v<versión>.<ext>`, firmado con la misma clave que las actualizaciones de la app, y un índice, `extractores.json`.
+- **Publicación** (`.github/workflows/extractors.yml` y `scripts/extractors.mjs`): en la versión `extractores` de diad87/pletina-releases (marcada como "pre-release" para que no la tome el actualizador de la app). Cada extractor va como `<nombre>-api<api>-v<versión>.<ext>`, firmado con la misma clave que las actualizaciones de la app, y un índice, `extractores.json`.
 - **En la app** (`src-tauri/src/extractors.rs`): al arrancar y cada 6 horas mira el índice. Si hay un extractor con la `api` que entiende y una versión mayor que la suya, lo baja, comprueba el resumen y la firma, y lo usa desde ese momento: la receta y el script en la siguiente canción, y youtubei.js en cuanto vuelve a hacer falta. Lo guarda para los siguientes arranques.
 - **Seguridad:** la firma cubre también el nombre del archivo (extractor, api y versión). Nadie puede hacer pasar un extractor viejo por uno nuevo tocando el índice, ni colar uno sin la clave.
 - **Si el nuevo falla**, se sigue funcionando:
@@ -104,13 +106,13 @@ Cada extractor se actualiza desde su fuente, sin reinstalar ni actualizar el res
 
 ### Proyecto paralelo P1: extractor de YouTube sin yt-dlp
 yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS. Hay que llevar su trabajo (buscar y sacar la URL del audio) a algo que funcione en todas partes. Se desarrolla en paralelo, en su propia rama, sin bloquear las fases 4–6.
-- **Estado (7 de octubre de 2026):** el prototipo 0.4.0 está integrado en `main`; la evolución de captura está aislada en `p1-oficial`, worktree `C:\Users\iunan\musify-oficial`, con snapshot API 2 en `f4868be`. En Inicio se elige entre yt-dlp, youtubei.js, Propio (recomendado) y Oficial (experimental). yt-dlp sigue siendo el predeterminado. No se ha publicado ni fusionado esta evolución.
+- **Estado (8 de octubre de 2026):** la evolución de captura está aislada en `p1-oficial`, worktree `C:\Users\iunan\musify-oficial`, e integra `origin/main` en `b1733bb` (Pletina 0.9.1). El snapshot inicial API 2 fue `f4868be`; ahora captura usa v25/API4. Se elige entre yt-dlp, youtubei.js, Propio (recomendado) y Oficial (experimental). yt-dlp sigue siendo el predeterminado en escritorio. La rama se sube para revisión; no se fusiona a main ni se publica esta evolución.
 
 #### Plan de evolución del motor propio
 
 La prioridad acordada es que **Propio siga como camino recomendado**, con el nivel rápido Rust sin sesión ni anuncios y la captura oficial como respaldo frente a cambios de la API. yt-dlp sigue predeterminado. El [plan de captura oficial](docs/plan-captura-youtube.md) recoge las decisiones y criterios nuevos, todos medidos sin Premium; Premium se usa sólo como referencia en un perfil separado y con acceso manual del usuario.
 
-La app puede publicarse con Oficial experimental antes de cumplir las metas de promoción; la progresiva nueva continúa limitada al banco y Propio conserva Legacy. El empaquetado local v25/API4 se comprobó sin firmar ni publicar. La rama principal revisada `4a69d84` ya es Pletina 0.6.0/API1, frente a la base Musify 0.4.0/API4 de `p1-oficial`: hace falta integrar el código Rust/lector y la captura en una nueva app compatible, conservando el nombre y canal actuales. Publicar sólo el script no lleva la mejora a una app API1. Los [detalles](docs/informe-captura-youtube-2026-10-08.md) separan esta preparación de la promoción y de un instalador listo para distribuir.
+La app puede publicarse con Oficial experimental antes de cumplir las metas de promoción; la progresiva nueva continúa limitada al banco y Propio conserva Legacy. El empaquetado local v25/API4 se comprobó sin firmar ni publicar. La integración con `origin/main` conserva Pletina 0.9.1, el canal `diad87/pletina-releases`, Spotify, podcasts, Android y SHA256SUMS/procedencia. Adapta la coordinación P1 a la cola y reproducción móvil de main; en móvil la captura oficial responde explícitamente que no está disponible. Publicar sólo el script no lleva la mejora Rust/lector a una app API1. Los [detalles](docs/informe-captura-youtube-2026-10-08.md) separan esta integración de la promoción y de un instalador listo para distribuir.
 
 API4/captura v25 incorpora clic nativo WebView2 sobre el botón oficial revalidado, retención experimental configurable de1,5s, dos precargas paralelas con prioridad para la actual y límites de memoria explícitos. El certificado EOF y los índices de paquetes distinguen la cuantización de1ms de un paquete perdido sin rellenar huecos entre saltos. El banco compara todos los bytes publicados con audio nativo del mismo vídeo, mediante paquetes exactos o PCM estricto con FFmpeg; conserva el diario fuera de Git incluso al expulsar caché. Receta y youtubei.js no cambian. La captura nueva permanece a1×; los anuncios se omiten con el botón, sin bloquearlos ni acelerarlos. Rust impone y confirma el silencio nativo de cada ventana de adquisición antes de navegar, también en Legacy y el acceso manual, sin silenciar el reproductor principal. Si el arranque pierde una observación antes de publicar audio, sólo se permite una repetición en la misma fuente: se descarta la cobertura anterior, se espera pausado un cero nativo estable y se verifica de nuevo todo el recorrido.
 
@@ -127,6 +129,8 @@ Para promover quedan pendientes30 canciones completas sin discrepancias ni corte
 **Continuación v22–v25 del 8 de octubre:** el supervisor replanifica el productor al volver a caché parcial y bloquea respuestas obsoletas. El núcleo conserva los bytes originales entre seeks, incluyendo clusters pendientes y relleno WebM fuera de orden con duplicados idénticos. Tras tres fallos registrados, v25 mantuvo 8,002 s continuos al volver: adopción local 0,6 ms, reloj retomado 90,7 ms, 121 unidades/528 paquetes coincidentes, sin espera de escucha. La vista parcial ingirió el relleno pero el ensayo no llegó a escuchar sus paquetes nuevos; tampoco acredita EOF ni permite liberar la cola de N. El control completo Preso→De Aquí v25 cerró 9263/9263 paquetes, cero discrepancias y cortes, siguiente 4,6 ms e inicio frío 6074 ms; no tuvo anuncios. El control v24 de ambas vio dos fuentes publicitarias, una transición acreditada y una omisión correlacionada tras clic confiable, con 11019 ms en precarga. La cota independiente del marcador sigue sin medirse.
 
 Propio/v25 resolvió 30/30 búsquedas frías por Rust con vídeo esperado y ningún respaldo: mínimo 435,7 ms, mediana 548,9 ms, máximo 1318,4 ms; ninguna cumple 300 ms y esta tanda no prueba 30 canciones hasta EOF. Rust valida ahora la estructura del visitante, admitiendo los tokens válidos que no empiezan por `Cgt`; no se atribuye a este bug el fallo histórico sin diagnóstico específico. El salto al 80 % no preparado tardó 2461,7 ms, con 560 ms de reserva en destino y 117/117 paquetes de prefijos, pero cortó el origen durante 1916,1 ms. 374/374 tests JavaScript, 109 Rust aprobados/13 ignorados, tipos y build Windows correctos. El [informe actualizado](docs/informe-captura-youtube-2026-10-08.md) conserva fallos, límites y commits. Faltan las metas frías, continuidad del origen, cierre verificable de la vista parcial y la cohorte conjunta de 30 canciones/50 transiciones. Sin uso nuevo de Premium, promoción, push, fusión ni publicación; N=1,5 s, 1×, yt-dlp predeterminado y Rust→Legacy en Propio se conservan.
+
+**Integración con main 0.9.1 (8 de octubre):** tipos y build Vite correctos, 374/374 pruebas JavaScript y 139 Rust aprobadas/19 ignoradas en Windows; `cargo check --lib` y `--tests` Android x86_64 offline correctos. Las reaperturas JNI de ExoPlayer no cancelan la selección manual ni la precarga P1, comprobado con una regresión sin red. No se repitieron campañas reales ni Premium ni se preparó un instalador. La integración no promueve la progresiva ni aprueba los objetivos pendientes.
 
 La descripción y las mediciones siguientes corresponden al prototipo histórico; «nivel garantizado» era su denominación, no una garantía frente a cualquier cambio de plataforma. Sus tiempos no describen la nueva captura experimental a velocidad normal.
 
@@ -187,7 +191,7 @@ La descripción y las mediciones siguientes corresponden al prototipo histórico
   - `src-tauri/src/`: `extractor.rs` (elige motor, `http_fetch` y las mediciones), `native.rs`, `capture.rs` y `capture.js`; y `extractors.rs`, que actualiza los extractores.
   - `src-tauri/recipe/youtube.json`, `src-tauri/extractors.json` y `src-tauri/windows-app-manifest.xml`.
   - `src/lib/extractor/`: `capture.ts`, `engine.svelte.ts`, `host.ts`, `youtubei.ts`, `fetch.ts`, `eval.worker.ts` y `bench.ts`.
-  - `src/components/EngineSwitch.svelte`.
+  - `src/components/EngineSwitch.svelte` (en la 0.5.0 se quita de Inicio para dejar la interfaz limpia: el motor se elige en el menú del número de versión de la barra lateral).
 - Cambios en archivos que ya existían:
   - `lib.rs`: módulos, arranque, comandos y cerrar la app con la ventana principal.
   - `player.rs`: 3 llamadas a `stream`.
@@ -251,12 +255,12 @@ La descripción y las mediciones siguientes corresponden al prototipo histórico
 - [ ] **Fase 6: Linux y Mac** (en curso)
   - [x] Código adaptado: yt-dlp de cada sistema, formato de audio según el motor web (m4a en Mac, opus en Linux), firma ad hoc en Mac.
   - [x] GitHub Actions compila Windows (.exe), Mac universal (.dmg) y Linux (.AppImage y .deb) al subir una etiqueta `v*` o a mano. Tarda unos 10 minutos (Mac 4, Windows 7, Linux 9). Ojo: el repositorio de código es privado y los minutos de Actions gratuitos son 2.000 al mes; los de Mac cuentan ×10 y los de Windows ×2, así que cada versión gasta unos 65 minutos (unas 30 versiones al mes).
-  - [x] Versión 0.1.0 publicada en `musify-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
+  - [x] Versión 0.1.0 publicada en `pletina-releases` con los cuatro instaladores: Windows `.exe` (2 MB), Mac universal `.dmg` (6 MB), Linux `.AppImage` (80 MB, lleva el motor web dentro) y `.deb` (3 MB).
   - [ ] Probar los de Mac y Linux en un equipo real (están compilados, pero no probados).
-  - [x] Actualizaciones automáticas (desde la 0.2.0): la app busca versión nueva al arrancar y cada 6 horas en `musify-releases/releases/latest/download/latest.json`, la descarga en segundo plano y la instala al cerrarse (en Windows, instalador silencioso). Si hay una lista, la barra superior muestra «Versión X lista · Reiniciar».
+  - [x] Actualizaciones automáticas (desde la 0.2.0): la app busca versión nueva al arrancar y cada 6 horas en `pletina-releases/releases/latest/download/latest.json`, la descarga en segundo plano y la instala al cerrarse (en Windows, instalador silencioso). Si hay una lista, la barra superior muestra «Versión X lista · Reiniciar».
     - Firmadas con una clave propia (minisign). La privada está en `%USERPROFILE%\.musify\` (clave + contraseña) y como secretos `TAURI_SIGNING_PRIVATE_KEY*` en el repositorio de código. **Si se pierde, las apps instaladas no aceptarán más versiones**: hay que guardarla en un sitio seguro.
-    - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `musify-releases`.
-    - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `musify-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
+    - Publicar una versión: subir la versión en `package.json` (y `Cargo.toml`), commit y etiqueta anotada `vX.Y.Z` cuyo mensaje son las notas. GitHub Actions compila, firma, genera `latest.json` (`scripts/release.mjs`) y publica en `pletina-releases`.
+    - Para que publique solo necesita el secreto `RELEASES_TOKEN` (token con permiso de escritura solo sobre `pletina-releases`). Sin él, compila pero no publica, y hay que publicar a mano con `scripts/release.mjs` y `gh release create`.
     - Compilar en local sin firmar: `npm run build:local`.
     - **Probado de principio a fin en Windows (6 oct 2026), pero dentro del entorno aislado de Claude (ver más abajo):** la 0.2.0 instalada encontró la 0.2.1, la descargó en segundo plano y, al cerrarla, se instaló sola en silencio y volvió a abrirse ya en 0.2.1. Falta verlo con el Musify que abre el usuario desde el menú Inicio.
 - [x] **Música local** (0.3.0): «Tu música» en la barra lateral → «Añadir carpeta» (una o varias). Se leen las etiquetas (título, artista, artista del disco, disco, pista, año, duración, carátula) de mp3, m4a, flac, ogg, opus y wav; si faltan, se sacan del nombre del archivo y de las carpetas (Artista/Disco/01 Canción). Carátulas: la incrustada, la imagen de la carpeta (cover.jpg, folder.jpg…) o la de Deezer; fotos de artista de Deezer. Discos y artistas locales funcionan como los de Deezer (páginas, búsqueda «En tu música», playlists, historial, cola) y suenan desde el archivo, sin YouTube. Escaneo incremental al arrancar; quitar una carpeta quita lo suyo.
@@ -266,12 +270,12 @@ La descripción y las mediciones siguientes corresponden al prototipo histórico
   - 0.3.1: una base de datos con solo la cabecera (4 KB, sin tablas) cuenta como vacía y se usa; antes la protección la rechazaba y la app se cerraba al arrancar sin decir nada. Si la base de datos no se puede abrir, ahora sale un aviso con el error y la ruta.
   - **Ojo al probar desde Claude (app de escritorio):** los comandos que lanza Claude corren dentro de su paquete MSIX, y lo que escriben en `%LOCALAPPDATA%` va a `%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Local\…`. Lo que se instale, actualice o se pruebe desde ahí usa otra carpeta de datos que el Musify que abres desde el menú Inicio. Las actualizaciones automáticas de 0.2.0 → 0.2.1 → 0.3.0 se probaron en esa copia aislada; en el equipo real todavía no.
 - [x] **Motor de audio propio y extractores que se actualizan solos** (0.4.0): el trabajo de P1 integrado (selector en Inicio: yt-dlp, youtubei.js o Propio; yt-dlp sigue por defecto). La receta y el script del motor propio y youtubei.js se publican y se actualizan por separado, sin reinstalar la app; youtubei.js nuevo se coge solo de npm. Ver "Extractores que se actualizan solos".
-  - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en musify-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
-- [ ] **Fase 7: móvil, empezando por Android.** Plan en [docs/plan-mobile.md](docs/plan-mobile.md). Lo primero es la fase 0: comprobar en un móvil de verdad que el motor propio sigue preparando canciones con la pantalla apagada.
+  - **Falta para que sea automático del todo:** el secreto `RELEASES_TOKEN` en GitHub. Sin él, GitHub Actions no puede publicar en pletina-releases y hay que publicar a mano (`node scripts/extractors.mjs`, con `gh` y la clave en `~/.musify`).
+- [ ] **Fase 7: móvil, empezando por Android.** Plan en [docs/plan-mobile.md](docs/plan-mobile.md). Hechas las fases 0 a 3 (0.5.0): suena con la pantalla apagada en un servicio nativo, interfaz táctil, y APK firmado que se instala y se actualiza con Obtainium. De la 4, hechas las descargas y escuchar sin conexión (0.6.0); falta la música guardada en el teléfono.
 
 ## Repositorios
 - Código (privado): https://github.com/diad87/musify — rama `main`.
-- Versiones (público): https://github.com/diad87/musify-releases — instaladores y canal de actualizaciones automáticas.
+- Versiones (público): https://github.com/diad87/pletina-releases — instaladores y canal de actualizaciones automáticas.
 
 ## Desarrollo
 - Requisitos: Node 24, Rust (rustup, toolchain MSVC), Visual Studio Build Tools 2022 (C++) y WebView2 (viene con Windows 11).

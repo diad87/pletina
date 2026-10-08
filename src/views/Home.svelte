@@ -2,14 +2,15 @@
   import Card from '../components/Card.svelte'
   import Collage from '../components/Collage.svelte'
   import Cover from '../components/Cover.svelte'
-  import EngineSwitch from '../components/EngineSwitch.svelte'
   import Icon from '../components/Icon.svelte'
   import Shelf from '../components/Shelf.svelte'
-  import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { albumCardMenu, albumPlaying, playAlbum, trackMenu } from '../lib/actions'
   import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
   import { songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
+  import { layout } from '../lib/layout.svelte'
+  import { isPodcast } from '../lib/media'
   import { nav, type Route } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -69,13 +70,19 @@
         key: `a${t.albumId}`,
         title: t.albumTitle,
         image: t.cover,
-        route: { name: 'album', id: t.albumId },
-        play: () => playAlbum(t.albumId),
+        route: { name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId },
+        play: () => playRecent(t),
         playing: albumPlaying(t.albumId),
       })
     }
     return list
   })
+
+  function playRecent(t: LibTrack) {
+    if (!isPodcast(t.id)) return playAlbum(t.albumId)
+    if (player.current?.albumId === t.albumId && player.status !== 'idle') return player.toggle()
+    player.playQueue([fromLib(t)], 0, t.albumTitle)
+  }
 
   async function playLiked() {
     const entries = await api.likedTracks()
@@ -89,6 +96,12 @@
 
   const tilePlay = (t: Tile) =>
     t.play ?? (t.liked ? playLiked : t.route.name === 'playlist' ? () => playPlaylist((t.route as { id: number }).id) : undefined)
+
+  /** En el móvil, el cuadro de búsqueda solo está en la pantalla de Buscar. */
+  function openSearch() {
+    if (layout.mobile) nav.go({ name: 'search', query: '' })
+    requestAnimationFrame(() => nav.focusSearch())
+  }
 </script>
 
 <section class="page home">
@@ -128,9 +141,9 @@
           title={t.albumTitle}
           subtitle={t.artistName}
           playing={albumPlaying(t.albumId)}
-          onclick={() => nav.go({ name: 'album', id: t.albumId })}
-          onplay={() => playAlbum(t.albumId)}
-          oncontext={(e) => menu.show(e, albumCardMenu(t.albumId))}
+          onclick={() => nav.go({ name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId })}
+          onplay={() => playRecent(t)}
+          oncontext={(e) => menu.show(e, isPodcast(t.id) ? trackMenu(fromLib(t)) : albumCardMenu(t.albumId))}
         />
       {/each}
     </Shelf>
@@ -186,11 +199,9 @@
       <Icon name="search" size={40} />
       <strong>Empieza buscando un grupo</strong>
       <p>Encuentra sus discos, elige uno y dale a reproducir.</p>
-      <button class="pill" onclick={() => nav.focusSearch()}>Buscar</button>
+      <button class="pill" onclick={openSearch}>Buscar</button>
     </div>
   {/if}
-
-  <EngineSwitch />
 </section>
 
 <style>
@@ -279,5 +290,40 @@
   .tile-play.show {
     opacity: 1;
     transform: none;
+  }
+  @media (hover: none) {
+    .tile-play:not(.show) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .home {
+      padding-top: calc(60px + var(--safe-top));
+    }
+    .tiles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 4px 12px;
+    }
+    .tile {
+      height: 56px;
+      gap: 10px;
+    }
+    .tile-art {
+      width: 56px;
+      height: 56px;
+    }
+    .tile-title {
+      font-size: 13px;
+    }
+    /* El botón de lo que suena va sobre la carátula: al lado, el título no cabría. */
+    .tile-play {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      width: 32px;
+      height: 32px;
+    }
   }
 </style>

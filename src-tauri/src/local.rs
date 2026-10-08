@@ -19,7 +19,6 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, State};
-use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
 type Res<T> = Result<T, String>;
@@ -575,13 +574,10 @@ pub fn local_library(db: State<'_, Db>, scanner: State<'_, Scanner>) -> Res<Loca
 /// Abre el selector de carpetas, la añade y la escanea.
 #[tauri::command]
 pub async fn add_local_folder(app: AppHandle, db: State<'_, Db>) -> Res<Vec<String>> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog().file().set_title("Carpeta con tu música").pick_folder(move |folder| {
-        let _ = tx.send(folder);
-    });
+    let picked = crate::downloads::pick_folder(&app, "Carpeta con tu música", None).await?;
     let mut list = folders(&db);
-    if let Some(folder) = rx.await.map_err(|e| e.to_string())? {
-        let path = folder.into_path().map_err(|e| e.to_string())?.to_string_lossy().into_owned();
+    if let Some(folder) = picked {
+        let path = folder.to_string_lossy().into_owned();
         if !list.contains(&path) {
             list.push(path);
             save_folders(&db, &list);

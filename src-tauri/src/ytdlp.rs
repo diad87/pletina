@@ -24,6 +24,9 @@ const RELEASE_ASSET: (&str, &str) = ("yt-dlp_macos", "yt-dlp");
 const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux_aarch64", "yt-dlp");
 #[cfg(all(target_os = "linux", not(target_arch = "aarch64")))]
 const RELEASE_ASSET: (&str, &str) = ("yt-dlp_linux", "yt-dlp");
+// En el móvil no hay yt-dlp (ver docs/plan-mobile.md): `ready` responde que no está.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+const RELEASE_ASSET: (&str, &str) = ("", "");
 
 /// Formato del audio en streaming: el motor web de Mac (WebKit) va mejor con m4a;
 /// Windows y Linux, con webm/opus (en Linux, m4a puede necesitar códecs que no vienen instalados).
@@ -36,6 +39,7 @@ const STREAM_FORMAT: &str = "bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio";
 #[cfg(target_os = "linux")]
 const DOWNLOAD_FORMAT: &str = "bestaudio[ext=webm]/bestaudio";
 #[cfg(not(target_os = "linux"))]
+#[cfg_attr(mobile, allow(dead_code))]
 const DOWNLOAD_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
 const UPDATE_EVERY: u64 = 24 * 3600;
 
@@ -70,6 +74,9 @@ impl YtDlp {
     /// Deja yt-dlp listo: lo descarga si falta y lo actualiza si hace más de un día.
     /// Si falla (p. ej. sin conexión), se reintenta en la siguiente llamada.
     async fn ready(&self) -> Result<&Ready, String> {
+        if cfg!(mobile) {
+            return Err("yt-dlp no existe en el móvil".into());
+        }
         self.ready
             .get_or_try_init(|| async {
                 std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
@@ -130,6 +137,8 @@ impl YtDlp {
 
     /// Descarga el audio de un vídeo. `target` es la ruta sin extensión (yt-dlp pone la suya:
     /// m4a si existe, que se reproduce en cualquier sitio). `progress` recibe valores de 0 a 1.
+    /// En el móvil no se usa (allí descarga el motor propio, ver direct.rs).
+    #[cfg_attr(mobile, allow(dead_code))]
     pub async fn download(&self, video_id: &str, target: &Path, mut progress: impl FnMut(f32)) -> Result<PathBuf, String> {
         let ready = self.ready().await?;
         let watch = format!("https://music.youtube.com/watch?v={video_id}");

@@ -32,6 +32,9 @@ static REQUESTS: RequestEpochs = RequestEpochs {
         next: [None, None],
     }),
 };
+// Sólo los tests que ejercitan el resolvedor global comparten este cerrojo.
+#[cfg(test)]
+static RESOLUTION_TEST_LOCK: Mutex<()> = Mutex::new(());
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RequestTicket {
     pub resolution: u64,
@@ -149,8 +152,8 @@ pub fn prefetch_current(ticket: RequestTicket) -> bool {
 pub fn request_current(ticket: RequestTicket) -> bool {
     REQUESTS.current(ticket)
 }
-fn ensure_current(ticket: RequestTicket) -> Result<(), String> {
-    if request_current(ticket) {
+fn ensure_current(ticket: impl Into<Option<RequestTicket>>) -> Result<(), String> {
+    if ticket.into().is_none_or(request_current) {
         Ok(())
     } else {
         Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into())
@@ -173,11 +176,12 @@ pub struct ForegroundAdmission {
 impl ForegroundAdmission {
     fn new(
         request_id: Option<&str>,
-        ticket: RequestTicket,
+        ticket: impl Into<Option<RequestTicket>>,
         track_id: u64,
         video_id: &str,
         engine: &str,
     ) -> Option<Self> {
+        let ticket = ticket.into()?;
         let request_id = request_id.filter(|id| !id.is_empty())?;
         if ticket.prefetch.is_some() || engine != "oficial" || !valid_video_id(video_id) {
             return None;
@@ -244,7 +248,7 @@ const MAX_ATTEMPTS: usize = 3;
 
 type Scored = (Candidate, i32, &'static str);
 
-#[cfg(test)]
+#[cfg(any(test, target_os = "android"))]
 pub async fn resolve(
     q: &TrackQuery,
     refresh: bool,
@@ -252,7 +256,9 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
-    resolve_with_priority(q, refresh, db, ytm, ytdlp, true, None, None, None).await
+    // ExoPlayer abre y reintenta cada MediaPeriod por su cuenta. Una apertura JNI
+    // no sustituye una elección manual ni otra carga de audio del servicio.
+    resolve_with_ticket(q, refresh, db, ytm, ytdlp, true, None, None).await
 }
 
 pub async fn resolve_with_priority(
@@ -267,6 +273,69 @@ pub async fn resolve_with_priority(
     next_slot: Option<u8>,
 ) -> Result<Playable, String> {
     let ticket = begin_request(foreground, expected_foreground, next_slot, q.id)?;
+    resolve_with_ticket(q, refresh, db, ytm, ytdlp, foreground, Some(ticket), request_id).await
+}
+
+async fn resolve_with_ticket(
+    q: &TrackQuery,
+    refresh: bool,
+    db: &Db,
+    ytm: &YouTubeMusic,
+    ytdlp: &YtDlp,
+    foreground: bool,
+    ticket: Option<RequestTicket>,
+    request_id: Option<&str>,
+) -> Result<Playable, String> {
+    // Episodios: el audio publicado en el RSS, también desde el servicio nativo de Android.
+    if crate::podcasts::is_podcast(q.id) {
+        let audio = crate::podcasts::audio(db, q.id)?;
+        // Episodio de YouTube Music: es un vídeo, suena con el motor de siempre (o descargado).
+        if let Some(video_id) = audio.strip_prefix(crate::youtube_podcasts::PREFIX) {
+            if let Some(path) = db
+                .download_path(q.id)
+                .filter(|p| std::path::Path::new(p).exists())
+            {
+                return Ok(Playable {
+                    video_id: video_id.to_string(),
+                    url: path,
+                    title: q.title.clone(),
+                    channel: q.artist.clone(),
+                    local: true,
+                });
+            }
+            let admission = ForegroundAdmission::new(
+                request_id,
+                ticket,
+                q.id,
+                video_id,
+                extractor::stream_engine(),
+            );
+            let info = extractor::stream_with_admission(
+                ytdlp,
+                video_id,
+                refresh,
+                foreground,
+                ticket,
+                admission,
+            )
+            .await?;
+            ensure_current(ticket)?;
+            return Ok(Playable {
+                video_id: video_id.to_string(),
+                url: info.url,
+                title: q.title.clone(),
+                channel: q.artist.clone(),
+                local: false,
+            });
+        }
+        return Ok(Playable {
+            video_id: String::new(),
+            url: audio,
+            title: q.title.clone(),
+            channel: q.artist.clone(),
+            local: false,
+        });
+    }
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
@@ -311,7 +380,7 @@ pub async fn resolve_with_priority(
             &src.video_id,
             refresh,
             foreground,
-            Some(ticket),
+            ticket,
             admission,
         )
         .await
@@ -339,7 +408,7 @@ pub async fn resolve_with_priority(
                         &chosen.video_id,
                         false,
                         foreground,
-                        Some(ticket),
+                        ticket,
                         admission,
                     )
                     .await?;
@@ -381,7 +450,7 @@ pub async fn resolve_with_priority(
     let mut last_err = None;
     for (c, score, _) in candidates.into_iter().take(MAX_ATTEMPTS) {
         ensure_current(ticket)?;
-        match extractor::stream_with_priority(ytdlp, &c.video_id, refresh, foreground, Some(ticket))
+        match extractor::stream_with_priority(ytdlp, &c.video_id, refresh, foreground, ticket)
             .await
         {
             Ok(info) => {
@@ -403,7 +472,7 @@ pub async fn resolve_with_priority(
                         &chosen.video_id,
                         false,
                         foreground,
-                        Some(ticket),
+                        ticket,
                     )
                     .await?;
                     ensure_current(ticket)?;
@@ -424,6 +493,9 @@ pub async fn alternatives(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Vec<Alternative>, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
     let current = db.source(q.id);
     let found = if extractor::stream_engine() == "oficial" {
         Vec::new()
@@ -474,6 +546,10 @@ pub async fn find_video(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<String, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return crate::podcasts::youtube_video(db, q.id)
+            .ok_or_else(|| "La descarga de episodios todavía no está disponible".into());
+    }
     if let Some(src) = db.source(q.id) {
         return Ok(src.video_id);
     }
@@ -509,6 +585,9 @@ pub async fn choose(
     foreground: bool,
     request_id: Option<&str>,
 ) -> Result<Playable, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
     let ticket = begin_request(foreground, None, None, q.id)?;
     let admission = ForegroundAdmission::new(
         request_id,
@@ -548,6 +627,9 @@ pub async fn choose(
 /// Asocia el enlace elegido para otra canción sin preparar audio ni afectar la reproducción.
 /// Los metadatos son los del catálogo; la disponibilidad del vídeo se comprueba al reproducirlo.
 pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
     if video_id.len() != 11
         || !video_id
             .bytes()
@@ -783,6 +865,7 @@ mod tests {
 
     #[test]
     fn remembering_a_manual_video_is_independent_of_playback_resolution() {
+        let _requests = RESOLUTION_TEST_LOCK.lock().unwrap();
         let db = Db::open(std::path::Path::new(":memory:")).unwrap();
         let q = TrackQuery {
             id: 77,
@@ -900,6 +983,106 @@ mod tests {
 #[cfg(test)]
 mod resolve_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn native_reopens_do_not_supersede_ui_selection_or_prefetch() {
+        let _requests = RESOLUTION_TEST_LOCK.lock().unwrap();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.0.lock().unwrap().execute_batch(
+            "INSERT INTO podcast_shows (id, feed_url, title, author, description)
+             VALUES (1, 'https://example.org/feed.xml', 'Podcast', 'Autora', '');
+             INSERT INTO podcast_episodes (id, show_id, guid, audio_url)
+             VALUES (1, 1, 'episode', 'https://audio.example.org/episode.mp3');",
+        ).unwrap();
+        let q = TrackQuery {
+            id: 750_000_000_000_001,
+            title: "Episodio".into(),
+            artist: "Autora".into(),
+            album: "Podcast".into(),
+            duration: 60,
+        };
+        let ytm = YouTubeMusic::new();
+        let ytdlp = YtDlp::new(std::path::PathBuf::new());
+        let selection = begin_request(true, None, None, 77).unwrap();
+        let next = begin_request(false, Some(selection.resolution), Some(1), 78).unwrap();
+
+        // Las aperturas y reintentos JNI no revocan las operaciones de la interfaz.
+        for refresh in [false, true] {
+            let audio = resolve(&q, refresh, &db, &ytm, &ytdlp).await.unwrap();
+            assert_eq!(audio.url, "https://audio.example.org/episode.mp3");
+            assert!(ensure_current(selection).is_ok());
+            assert!(ensure_current(next).is_ok());
+        }
+
+        // Una nueva intención de la interfaz sigue invalidando sus tickets anteriores.
+        let replacement = begin_request(true, None, None, 79).unwrap();
+        assert!(ensure_current(selection).is_err());
+        assert!(ensure_current(next).is_err());
+        assert!(ensure_current(None).is_ok());
+        assert!(ForegroundAdmission::new(Some("native"), None, q.id, "jNY_wLukVW0", "oficial").is_none());
+        resolve(&q, true, &db, &ytm, &ytdlp).await.unwrap();
+        assert!(ensure_current(replacement).is_ok());
+    }
+
+    /// El mismo resolvedor sirve al escritorio y a Android, sin buscar el episodio en YouTube.
+    #[tokio::test]
+    async fn podcast_uses_persisted_audio_and_rejects_music_sources() {
+        let _requests = RESOLUTION_TEST_LOCK.lock().unwrap();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.0.lock().unwrap().execute_batch(
+            "INSERT INTO podcast_shows (id, feed_url, title, author, description)
+             VALUES (1, 'https://example.org/feed.xml', 'Un podcast', 'Autora', '');
+             INSERT INTO podcast_episodes (id, show_id, guid, audio_url)
+             VALUES (1, 1, 'episodio-1', 'https://audio.example.org/episode.mp3');",
+        ).unwrap();
+        let q = TrackQuery {
+            id: 750_000_000_000_001,
+            title: "Un episodio".into(),
+            artist: "Autora".into(),
+            album: "Un podcast".into(),
+            duration: 3600,
+        };
+        let ytm = YouTubeMusic::new();
+        let ytdlp = YtDlp::new(std::path::PathBuf::new());
+        for refresh in [false, true] {
+            let playable = resolve(&q, refresh, &db, &ytm, &ytdlp).await.unwrap();
+            assert_eq!(playable.url, "https://audio.example.org/episode.mp3");
+            assert_eq!(playable.title, q.title);
+            assert_eq!(playable.channel, q.artist);
+            assert!(playable.video_id.is_empty());
+            assert!(!playable.local);
+        }
+        assert!(db.source(q.id).is_none());
+        assert_eq!(
+            alternatives(&q, &db, &ytm, &ytdlp).await.err().as_deref(),
+            Some("Los episodios usan el audio original del podcast"),
+        );
+        assert_eq!(
+            choose(&q, "video", &db, &ytdlp, true, None)
+                .await
+                .err()
+                .as_deref(),
+            Some("Los episodios usan el audio original del podcast"),
+        );
+        assert_eq!(
+            remember_source(&q, "jNY_wLukVW0", &db).err().as_deref(),
+            Some("Los episodios usan el audio original del podcast"),
+        );
+        assert!(db.source(q.id).is_none());
+        assert_eq!(
+            find_video(&q, &db, &ytm, &ytdlp).await.err().as_deref(),
+            Some("La descarga de episodios todavía no está disponible"),
+        );
+        db.0.lock().unwrap().execute(
+            "UPDATE podcast_episodes SET audio_url='youtube:jNY_wLukVW0' WHERE id=1",
+            [],
+        ).unwrap();
+        assert_eq!(find_video(&q, &db, &ytm, &ytdlp).await.unwrap(), "jNY_wLukVW0");
+        assert!(db.source(q.id).is_none(), "el episodio conserva su fuente propia");
+        let missing = TrackQuery { id: q.id + 1, ..q };
+        assert!(resolve(&missing, false, &db, &ytm, &ytdlp).await.is_err());
+        assert!(db.source(missing.id).is_none());
+    }
 
     /// Resolución completa (búsqueda + yt-dlp + base de datos), con red:
     /// `cargo test real_resolve -- --ignored --nocapture`

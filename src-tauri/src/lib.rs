@@ -1,6 +1,10 @@
+#[cfg(target_os = "android")]
+mod android;
+#[cfg_attr(mobile, path = "capture_mobile.rs")]
 mod capture;
 mod capture_audit;
 mod capture_bench;
+#[cfg_attr(mobile, path = "capture_legacy_mobile.rs")]
 mod capture_legacy;
 mod capture_mute;
 mod capture_pcm;
@@ -8,15 +12,24 @@ mod capture_reference;
 mod capture_verify;
 mod db;
 mod deezer;
+// Descargas con el motor propio: las usa el móvil (en el escritorio, de momento, yt-dlp).
+#[cfg_attr(desktop, allow(dead_code))]
+mod direct;
 mod downloads;
 mod extractor;
 mod extractors;
 mod library;
+mod playlist_import;
+mod spotify;
 mod local;
 mod native;
+mod native_player;
 mod player;
+mod podcasts;
+#[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
+mod youtube_podcasts;
 mod ytdlp;
 
 use db::Db;
@@ -198,26 +211,37 @@ fn remember_source(track: TrackQuery, video_id: String, db: State<'_, Db>) -> Re
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "android")]
+    android::install_panic_hook();
     let context = tauri::generate_context!();
-    let isolated_bench = std::env::var_os("MUSIFY_BENCH").is_some()
+    let isolated_bench = cfg!(desktop) && std::env::var_os("MUSIFY_BENCH").is_some()
         && context.config().identifier == "dev.musify.captureofficialtest";
-    let mut builder = tauri::Builder::default();
-    if !isolated_bench {
-        // Una sola ventana: abrir Musify otra vez trae al frente la que ya está abierta
-        // (si no, sonarían dos reproductores a la vez).
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        }));
-    }
+    let builder = tauri::Builder::default();
+    // Solo en escritorio: una sola instancia y el actualizador de Tauri (en Android, Obtainium).
+    #[cfg(desktop)]
+    let builder = {
+        let mut builder = builder;
+        if !isolated_bench {
+            // Una sola ventana: abrir Pletina otra vez trae al frente la que ya está abierta
+            // (si no, sonarían dos reproductores a la vez).
+            builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }));
+        }
+        builder.plugin(tauri_plugin_updater::Builder::new().build())
+    };
+    // Android: el reproductor nativo (servicio de música), al que la interfaz manda órdenes.
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(native_player::plugin());
     builder
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Deezer::new())
+        .manage(podcasts::Podcasts::new())
         .manage(updater::Pending::default())
         .manage(local::Scanner::default())
         .manage(YouTubeMusic::new())
@@ -242,12 +266,15 @@ pub fn run() {
                             "No se pudo abrir la base de datos.\n\n{e}\n\n{}",
                             path.display()
                         ))
-                        .title("Musify")
+                        .title("Pletina")
                         .kind(MessageDialogKind::Error)
                         .show(|_| std::process::exit(1));
                     return Ok(());
                 }
             };
+            // Android: el servicio de música usa la misma base de datos (ver android.rs).
+            #[cfg(target_os = "android")]
+            android::attach(app.handle(), &db, &dir);
             app.manage(db);
             app.manage(YtDlp::new(dir.join("bin")));
             extractor::init(app.handle().clone());
@@ -269,6 +296,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            podcasts::podcast_search,
+            podcasts::podcast_detail,
+            podcasts::podcast_feed_url,
             artist,
             album,
             resolve,
@@ -281,6 +311,9 @@ pub fn run() {
             library::liked_tracks,
             library::set_album_saved,
             library::create_playlist,
+            playlist_import::read_spotify_playlist,
+            playlist_import::read_playlist_csv,
+            playlist_import::match_import_track,
             library::rename_playlist,
             library::delete_playlist,
             library::playlist,
@@ -299,6 +332,8 @@ pub fn run() {
             downloads::open_download_dir,
             downloads::reveal_download,
             updater::install_update,
+            updater::newer_version,
+            updater::open_releases,
             local::local_library,
             local::add_local_folder,
             local::remove_local_folder,
@@ -317,6 +352,7 @@ pub fn run() {
             extractor::capture_status,
             extractor::engine_stats,
             extractors::extractor_module,
+            native_player::player_native,
             capture::capture_read,
             capture_audit::capture_audit_status,
             capture::capture_limits,
@@ -347,7 +383,7 @@ pub fn run() {
             }
         })
         .build(context)
-        .expect("error al arrancar Musify")
+        .expect("error al arrancar Pletina")
         .run(|app, event| {
             // Al cerrar la app se instala la actualización que haya descargada.
             if let tauri::RunEvent::Exit = event {

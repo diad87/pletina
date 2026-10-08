@@ -4,7 +4,7 @@
 //! `extractors.json`. yt-dlp no está aquí: se actualiza él solo desde su propio GitHub (`ytdlp.rs`).
 //!
 //! Se publican firmados, con la misma clave que las actualizaciones de la app, en la versión
-//! `extractores` de diad87/musify-releases (`scripts/extractors.mjs`). La app mira al arrancar y
+//! `extractores` de diad87/pletina-releases (`scripts/extractors.mjs`). La app mira al arrancar y
 //! cada 6 horas: si hay uno con la api que entiende y una versión mayor que la que tiene, lo baja,
 //! comprueba la firma y lo usa desde ese momento. Si no hay nada descargado, o no vale, se usa el
 //! que trae la app.
@@ -23,7 +23,8 @@ use std::sync::{Arc, LazyLock, OnceLock, RwLock};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 
-const MANIFEST_URL: &str = "https://github.com/diad87/musify-releases/releases/download/extractores/extractores.json";
+// Antes musify-releases: GitHub redirige la dirección vieja, así que las versiones anteriores siguen recibiendo extractores.
+const MANIFEST_URL: &str = "https://github.com/diad87/pletina-releases/releases/download/extractores/extractores.json";
 const FIRST_CHECK: Duration = Duration::from_secs(5);
 const CHECK_EVERY: Duration = Duration::from_secs(6 * 3600);
 const MAX_SIZE: usize = 8 * 1024 * 1024;
@@ -34,6 +35,7 @@ pub const API: [(&str, u32); 3] = [("recipe", 1), ("capture", 4), ("youtubei", 1
 
 const BUNDLED_META: &str = include_str!("../extractors.json");
 const BUNDLED_RECIPE: &str = include_str!("../recipe/youtube.json");
+#[cfg_attr(mobile, allow(dead_code))]
 const BUNDLED_CAPTURE: &str = concat!(
     include_str!("capture-mp4.js"), "\n;\n",
     include_str!("capture-audit.js"), "\n;\n",
@@ -117,11 +119,13 @@ pub fn status() -> Vec<Status> {
         .collect()
 }
 
+#[cfg_attr(mobile, allow(dead_code))]
 fn active(name: &str) -> Option<Arc<str>> {
     ACTIVE.read().unwrap().get(name).map(|(_, code)| code.clone())
 }
 
 /// Script de captura oficial que se mete en la ventana oculta.
+#[cfg_attr(mobile, allow(dead_code))]
 pub fn capture_script() -> Arc<str> {
     active("capture").unwrap_or_else(|| BUNDLED_CAPTURE.into())
 }
@@ -150,13 +154,7 @@ pub fn extractor_module(name: String) -> Option<Module> {
 /// Carga los extractores ya descargados y empieza a mirar si hay nuevos.
 pub fn start(app: &AppHandle) {
     let Ok(dir) = app.path().app_local_data_dir().map(|d| d.join("extractors")) else { return };
-    let _ = std::fs::create_dir_all(&dir);
-    for (name, _) in API {
-        if let Err(e) = load(&dir, name) {
-            eprintln!("[extractores] {name}: se queda el incluido ({e})");
-        }
-    }
-    let _ = DIR.set(dir);
+    load_saved(&dir);
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         tokio::time::sleep(FIRST_CHECK).await;
@@ -167,6 +165,18 @@ pub fn start(app: &AppHandle) {
             tokio::time::sleep(CHECK_EVERY).await;
         }
     });
+}
+
+/// Usa los extractores ya descargados, sin mirar si hay nuevos. También lo usa el servicio de
+/// música de Android cuando arranca sin la app.
+pub fn load_saved(dir: &Path) {
+    let _ = std::fs::create_dir_all(dir);
+    for (name, _) in API {
+        if let Err(e) = load(dir, name) {
+            eprintln!("[extractores] {name}: se queda el incluido ({e})");
+        }
+    }
+    let _ = DIR.set(dir.to_path_buf());
 }
 
 /// Usa el extractor guardado si sigue valiendo: misma api, más nuevo que el incluido, intacto y

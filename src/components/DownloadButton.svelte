@@ -1,14 +1,16 @@
 <script lang="ts">
   // Descargar un disco o una lista entera: descarga / progreso / descargado.
   import { downloads } from '../lib/downloads.svelte'
-  import { isLocal } from '../lib/media'
+  import { layout } from '../lib/layout.svelte'
+  import { isLocal, isPodcast } from '../lib/media'
+  import { youtubeEpisodes } from '../lib/podcasts'
   import { menu } from '../lib/menu.svelte'
   import type { QueueItem } from '../lib/player.svelte'
   import Icon from './Icon.svelte'
 
   let { items: all }: { items: QueueItem[] } = $props()
-  // La música local ya está en el equipo.
-  const items = $derived(all.filter((i) => !isLocal(i.track.id)))
+  // La música local ya está en el equipo; de los episodios, solo los de YouTube se descargan.
+  const items = $derived(all.filter((i) => !isLocal(i.track.id) && (!isPodcast(i.track.id) || youtubeEpisodes.has(i.track.id))))
 
   const done = $derived(items.filter((i) => downloads.done.has(i.track.id)).length)
   const busy = $derived(items.some((i) => downloads.active.has(i.track.id)))
@@ -44,7 +46,7 @@
   )
 </script>
 
-{#if items.length}
+{#if items.length && layout.canDownload}
   <button class="action" class:on={complete} {onclick} {title}>
     {#if busy}
       <svg class="ring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">

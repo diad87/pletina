@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { downloads } from '../lib/downloads.svelte'
-  import { songs } from '../lib/format'
-  import { library } from '../lib/library.svelte'
-  import { local } from '../lib/local.svelte'
+  import { newPlaylist } from '../lib/actions'
+  import { extractor, type Engine, type EngineStats } from '../lib/extractor/engine.svelte'
+  import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
+  import { toast } from '../lib/toast.svelte'
   import { updates } from '../lib/updates.svelte'
-  import { justCreated } from '../views/PlaylistView.svelte'
-  import Collage from './Collage.svelte'
-  import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import LibraryList from './LibraryList.svelte'
 
   const route = $derived(nav.route)
 
@@ -17,19 +15,49 @@
     nav.focusSearch()
   }
 
-  async function newPlaylist() {
-    const created = await library.createPlaylist()
-    if (!created) return
-    justCreated.add(created.id)
-    nav.go({ name: 'playlist', id: created.id })
+  // De dónde sale el audio de YouTube: se elige en el menú del número de versión, para que la
+  // interfaz quede limpia (ver src/lib/extractor/engine.svelte.ts).
+  const ENGINES: { value: Engine; label: string }[] = [
+    { value: 'ytdlp', label: 'yt-dlp' },
+    { value: 'youtubei', label: 'youtubei.js (prueba)' },
+    { value: 'propio', label: 'Propio (recomendado)' },
+    { value: 'oficial', label: 'Oficial (experimental, Windows)' },
+  ]
+  const EXTRACTORS = { recipe: 'receta', capture: 'ventana oculta', youtubei: 'youtubei.js' }
+  let stats = $state<EngineStats | null>(null)
+
+  function engineMenu(e: MouseEvent) {
+    const versions = (stats?.extractors ?? []).map((x) => ({
+      label: `${EXTRACTORS[x.name]} v${x.version}${x.downloaded ? ' (actualizado)' : ''}`,
+    }))
+    menu.show(e, [
+      ...ENGINES.map((o) => ({
+        label: `Audio de YouTube: ${o.label}`,
+        icon: extractor.engine === o.value ? ('check' as const) : undefined,
+        action: () => extractor.set(o.value).catch((err) => toast.show(`No se pudo cambiar: ${err}`)),
+      })),
+      ...(extractor.engine === 'oficial' ? [{
+        label: 'Oficial verifica la canción completa antes de reproducirla; la entrega progresiva sigue en pruebas',
+        separated: true,
+      }] : []),
+      ...(versions.length ? [{ label: 'Versiones de los extractores', separated: true, children: versions }] : []),
+    ])
   }
+
 </script>
 
 <aside class="sidebar">
   <div class="top">
     <div class="brand">
-      <span class="logo"><Icon name="note" size={18} /></span> Musify
-      {#if updates.current}<span class="version" title="Versión instalada">{updates.current}</span>{/if}
+      <span class="logo"><Icon name="note" size={18} /></span> Pletina
+      {#if updates.current}
+        <button
+          class="version"
+          title="Versión instalada · de dónde sale el audio"
+          onpointerenter={() => extractor.stats().then((s) => (stats = s)).catch(() => {})}
+          onclick={engineMenu}>{updates.current}</button
+        >
+      {/if}
     </div>
     <nav>
       <button class:active={route.name === 'home'} onclick={() => nav.go({ name: 'home' })}>
@@ -37,6 +65,9 @@
       </button>
       <button class:active={route.name === 'search'} onclick={openSearch}>
         <Icon name="search" size={24} /> Buscar
+      </button>
+      <button class:active={route.name === 'podcasts' || route.name === 'podcast'} onclick={() => nav.go({ name: 'podcasts', query: '' })}>
+        <Icon name="podcast" size={24} /> Podcasts
       </button>
     </nav>
   </div>
@@ -47,71 +78,10 @@
       <button class="add" onclick={newPlaylist} title="Crear playlist"><Icon name="plus" size={20} /></button>
     </header>
 
-    <div class="items">
-      <button class="item" class:active={route.name === 'liked'} onclick={() => nav.go({ name: 'liked' })}>
-        <span class="art liked"><Icon name="heartFilled" size={20} /></span>
-        <span class="text">
-          <span class="title">Canciones que te gustan</span>
-          <span class="sub">Playlist · {songs(library.liked.size)}</span>
-        </span>
-      </button>
-
-      <button class="item" class:active={route.name === 'history'} onclick={() => nav.go({ name: 'history' })}>
-        <span class="art plain"><Icon name="clock" size={20} /></span>
-        <span class="text">
-          <span class="title">Historial</span>
-          <span class="sub">Lo que has escuchado</span>
-        </span>
-      </button>
-
-      <button class="item" class:active={route.name === 'local'} onclick={() => nav.go({ name: 'local' })}>
-        <span class="art plain mine" class:busy={!!local.scan}><Icon name="folder" size={20} /></span>
-        <span class="text">
-          <span class="title">Tu música</span>
-          <span class="sub">
-            {#if local.scan}Leyendo tus carpetas…{:else if local.data?.tracks}{songs(local.data.tracks)} en tus carpetas{:else}Importa tus mp3{/if}
-          </span>
-        </span>
-      </button>
-
-      <button class="item" class:active={route.name === 'downloads'} onclick={() => nav.go({ name: 'downloads' })}>
-        <span class="art plain" class:busy={downloads.active.size > 0}><Icon name="download" size={20} /></span>
-        <span class="text">
-          <span class="title">Descargas</span>
-          <span class="sub">
-            {#if downloads.active.size}Descargando {downloads.active.size}…{:else}{songs(downloads.done.size)} sin conexión{/if}
-          </span>
-        </span>
-      </button>
-
-      {#each library.playlists as p (p.id)}
-        <button
-          class="item"
-          class:active={route.name === 'playlist' && route.id === p.id}
-          onclick={() => nav.go({ name: 'playlist', id: p.id })}
-        >
-          <span class="art"><Collage covers={p.covers} /></span>
-          <span class="text">
-            <span class="title">{p.name}</span>
-            <span class="sub">Playlist · {songs(p.count)}</span>
-          </span>
-        </button>
-      {/each}
-
-      {#each library.albums as a (a.id)}
-        <button
-          class="item"
-          class:active={route.name === 'album' && route.id === a.id}
-          onclick={() => nav.go({ name: 'album', id: a.id })}
-        >
-          <span class="art"><Cover src={a.cover} /></span>
-          <span class="text">
-            <span class="title">{a.title}</span>
-            <span class="sub">Disco · {a.artistName}</span>
-          </span>
-        </button>
-      {/each}
-    </div>
+    <button class="import" class:active={route.name === 'import-playlist'} onclick={() => nav.go({ name: 'import-playlist' })}>
+      <Icon name="download" size={18} /> Importar de Spotify
+    </button>
+    <LibraryList />
   </section>
 </aside>
 
@@ -149,6 +119,13 @@
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0;
+    transition:
+      background 0.15s,
+      color 0.15s;
+  }
+  .version:hover {
+    background: rgb(255 255 255 / 0.12);
+    color: var(--muted);
   }
   .logo {
     display: grid;
@@ -218,81 +195,22 @@
     background: var(--elevated);
     color: var(--text);
   }
-  .items {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-  }
-  .item {
+  .import {
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 6px 8px;
-    border-radius: 6px;
+    gap: 10px;
+    flex: none;
+    margin: 0 4px 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
     text-align: left;
   }
-  .item:hover {
+  .import:hover,
+  .import.active {
     background: var(--hover);
-  }
-  .item {
-    transition: background 0.15s;
-  }
-  .item.active {
-    background: rgb(255 255 255 / 0.09);
-    box-shadow: inset 3px 0 0 var(--accent);
-  }
-  .art {
-    flex: none;
-    width: 44px;
-  }
-  .art :global(.cover),
-  .art :global(.collage) {
-    border-radius: 6px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
-  }
-  .liked,
-  .plain {
-    display: grid;
-    place-items: center;
-    height: 44px;
-    border-radius: 6px;
-  }
-  .liked {
-    background: linear-gradient(135deg, #4b2fc9 0%, #8f6cff 55%, #e2d6ff 100%);
-    color: #fff;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
-  }
-  .plain {
-    background: var(--elevated);
-    color: var(--muted);
-  }
-  .plain.busy {
     color: var(--accent);
-  }
-  .plain.mine {
-    background: linear-gradient(135deg, #7a4a1f, #d9a066);
-    color: #fff;
-  }
-  .text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .title,
-  .sub {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .title {
-    color: var(--text);
-  }
-  .active .title {
-    color: var(--accent);
-  }
-  .sub {
-    font-size: 13px;
-    color: var(--muted);
   }
 </style>

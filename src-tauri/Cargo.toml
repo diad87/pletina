@@ -1,7 +1,9 @@
 [package]
 name = "musify"
-version = "0.4.0"
-description = "Reproductor de música personal"
+version = "0.9.1"
+description = "Pletina: reproductor de música tipo Spotify"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/diad87/pletina"
 edition = "2024"
 rust-version = "1.90"
 
@@ -16,17 +18,28 @@ tauri-build = { version = "2.7.1", features = [] }
 tauri = { version = "2.12.1", features = ["protocol-asset"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.12", features = ["gzip"] }
+csv = "1.3"
+roxmltree = "0.21"
+encoding_rs = "0.8"
+# rustls en todas partes: el TLS del sistema obligaría a compilar OpenSSL para Android.
+reqwest = { version = "0.12", default-features = false, features = ["gzip", "rustls-tls", "charset", "http2"] }
 tokio = { version = "1", features = ["macros", "process", "sync", "time", "io-util"] }
 rusqlite = { version = "0.40", features = ["bundled"] }
-tauri-plugin-single-instance = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
-tauri-plugin-updater = "2"
 lofty = "0.25.4"
 base64 = "0.22"
 sha2 = "0.10"
 minisign-verify = "0.2"
+
+# Solo en escritorio: una sola instancia y el actualizador de Tauri (en Android, Obtainium).
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+
+# Android: el servicio de música llama al núcleo Rust por JNI (ver android.rs).
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
 
 # Canal nativo con la ventana oculta del reproductor oficial (motor propio).
 [target.'cfg(windows)'.dependencies]

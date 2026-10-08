@@ -3,7 +3,10 @@
   import { trackMenu } from '../lib/actions'
   import { downloads } from '../lib/downloads.svelte'
   import { duration } from '../lib/format'
+  import { layout } from '../lib/layout.svelte'
+  import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
+  import { isPodcast } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
@@ -33,6 +36,7 @@
   const disc = (i: number) => items[i].track.diskNumber || 1
   const multiDisc = $derived(variant === 'album' && items.some((_, i) => disc(i) !== disc(0)))
   const reorderable = $derived(playlistId != null && entryIds != null)
+  const hasPodcasts = $derived(items.some((item) => isPodcast(item.track.id)))
 
   function play(i: number) {
     if (isCurrent(items[i])) player.toggle()
@@ -41,7 +45,12 @@
 
   function openMenu(e: MouseEvent, i: number) {
     const inPlaylist = playlistId != null && entryIds ? { id: playlistId, entryId: entryIds[i] } : undefined
-    menu.show(e, trackMenu(items[i], inPlaylist))
+    const item = items[i]
+    menu.show(e, trackMenu(item, inPlaylist), {
+      title: item.track.title,
+      subtitle: item.track.artist.name,
+      cover: item.cover,
+    })
   }
 
   function go(e: MouseEvent, route: Parameters<typeof nav.go>[0]) {
@@ -70,11 +79,19 @@
   }
 </script>
 
-<ol class="tracks {variant}" class:with-meta={!!meta}>
+<ol
+  class="tracks {variant}"
+  class:with-meta={!!meta}
+  class:grips={reorderable && layout.mobile}
+  use:reorder={{
+    enabled: reorderable && layout.mobile,
+    onMove: (from, to) => playlistId != null && entryIds && library.moveInPlaylist(playlistId, entryIds[from], to),
+  }}
+>
   <li class="row head">
     <span class="num">#</span>
     <span>Título</span>
-    {#if variant === 'list'}<span>Disco</span>{/if}
+    {#if variant === 'list'}<span>{hasPodcasts ? 'Disco / podcast' : 'Disco'}</span>{/if}
     {#if meta}<span>{metaLabel}</span>{/if}
     <span></span>
     <span class="dur"><Icon name="clock" size={16} /></span>
@@ -83,6 +100,7 @@
 
   {#each items as item, i (entryIds?.[i] ?? `${item.track.id}-${i}`)}
     {@const current = isCurrent(item)}
+    {@const podcast = isPodcast(item.track.id)}
     {@const liked = library.liked.has(item.track.id)}
     {@const downloaded = downloads.done.has(item.track.id)}
     {@const progress = downloads.active.get(item.track.id)}
@@ -90,7 +108,7 @@
     {#if multiDisc && (i === 0 || disc(i) !== disc(i - 1))}
       <li class="disc">Disco {disc(i)}</li>
     {/if}
-    <li>
+    <li data-reorder-index={i}>
       <div
         class="row"
         class:current
@@ -99,7 +117,7 @@
         class:drop-after={dragFrom !== null && dropAt === items.length && i === items.length - 1}
         role="button"
         tabindex="0"
-        draggable="true"
+        draggable={!layout.mobile}
         onclick={() => play(i)}
         onkeydown={(e) => e.key === 'Enter' && play(i)}
         oncontextmenu={(e) => openMenu(e, i)}
@@ -112,6 +130,9 @@
         ondrop={onDrop}
         ondragend={() => (dragFrom = dropAt = null)}
       >
+        {#if reorderable && layout.mobile}
+          <span class="grip" data-reorder-handle aria-label="Arrastrar para mover"><Icon name="grip" size={20} /></span>
+        {/if}
         <span class="num">
           {#if current && player.status === 'playing'}
             <span class="eq" aria-label="Sonando"><i></i><i></i><i></i></span>
@@ -134,7 +155,7 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
-                  <button class="link" onclick={(e) => go(e, { name: 'artist', id: item.track.artist.id })}
+                  <button class="link" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >
                 {/if}
@@ -145,12 +166,12 @@
 
         {#if variant === 'list'}
           <span class="album">
-            <button class="link" onclick={(e) => go(e, { name: 'album', id: item.albumId })}>{item.albumTitle}</button>
+            <button class="link" onclick={(e) => go(e, { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
           </span>
         {/if}
         {#if meta}<span class="meta">{meta(i)}</span>{/if}
 
-        <span>
+        <span class="like-cell">
           <button
             class="icon heart"
             class:on={liked}
@@ -162,7 +183,7 @@
           >
         </span>
         <span class="dur">{duration(item.track.duration)}</span>
-        <span>
+        <span class="more-cell">
           <button class="icon more" title="Más opciones" onclick={(e) => openMenu(e, i)}>
             <Icon name="more" size={18} />
           </button>
@@ -372,6 +393,67 @@
     }
     to {
       height: 14px;
+    }
+  }
+
+  /* Móvil: título y artista, y el botón "⋯" siempre visible. */
+  @media (max-width: 720px) {
+    .head,
+    .row > .num,
+    .row > .album,
+    .row > .meta,
+    .row > .dur,
+    .row > .like-cell {
+      display: none;
+    }
+    .row,
+    .list .row,
+    .list.with-meta .row {
+      grid-template-columns: minmax(0, 1fr) 40px;
+      gap: 8px;
+      min-height: 58px;
+      padding: 0 0 0 8px;
+      -webkit-touch-callout: none;
+    }
+    .more {
+      opacity: 1;
+    }
+    /* Tocar una fila no la deja marcada (en el móvil no hay ratón ni teclado). */
+    .row:hover,
+    .row:focus-visible {
+      background: none;
+    }
+    .row.current {
+      background: rgb(255 255 255 / 0.04);
+    }
+    .row:active {
+      background: var(--press);
+    }
+  }
+
+  .grip {
+    display: none;
+  }
+  @media (max-width: 720px) {
+    /* Playlists: asa a la izquierda para reordenar con el dedo (ver lib/reorder.ts). */
+    .tracks.grips .row,
+    .list.with-meta.grips .row {
+      grid-template-columns: 36px minmax(0, 1fr) 40px;
+      padding-left: 0;
+    }
+    .grip {
+      display: grid;
+      place-items: center;
+      align-self: stretch;
+      color: var(--faint);
+      touch-action: none;
+    }
+    :global(li.reordering) {
+      position: relative;
+      z-index: 2;
+      border-radius: 8px;
+      background: var(--elevated);
+      box-shadow: var(--shadow-2);
     }
   }
 </style>

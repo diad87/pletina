@@ -1,8 +1,13 @@
 import '@fontsource-variable/figtree'
 import { mount } from 'svelte'
 import './app.css'
-import App from './App.svelte'
+import { ipcReady } from './lib/api'
 import { extractor } from './lib/extractor/engine.svelte'
+
+// Antes de nada, que Rust conteste (en Android tarda un instante al arrancar). La app se carga
+// después: así el reproductor y las pantallas ya pueden pedirle cosas.
+await ipcReady
+const { default: App } = await import('./App.svelte')
 
 // En la app instalada, sin el menú contextual del navegador (salvo en campos de texto).
 if (!import.meta.env.DEV) {

@@ -9,6 +9,7 @@ import album3 from './fixtures/album-3.json'
 import album4 from './fixtures/album-4.json'
 import artistPage from './fixtures/artist.json'
 import searchResults from './fixtures/search.json'
+import { podcastFixture, podcastFixtures } from './podcasts'
 
 const albums = [album1, album2, album3, album4] as unknown as AlbumDetail[]
 
@@ -102,16 +103,66 @@ function silentAudio(): string {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
+function importExample(name: string) {
+  const tracks = [lib(albums[0], 0), lib(albums[0], 1), lib(albums[0], 0)]
+  return {
+    name,
+    tracks: [
+      ...tracks.map((t) => ({ title: t.title, artists: [t.artistName], durationMs: t.duration * 1000, isrc: null })),
+      { title: 'Sin coincidencia (ejemplo)', artists: ['Artista de ejemplo'], durationMs: 180000, isrc: null },
+    ],
+    skipped: 1,
+    warnings: ['Spotify puede mostrar solo parte de una lista pública, hasta 100 canciones. Usa un CSV para importar una lista completa.'],
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
+  // Tauri cruza una frontera JSON. Evita guardar proxies de $state en el backend de prueba.
+  args = JSON.parse(JSON.stringify(args))
   await wait(cmd === 'resolve' ? 600 : 120)
   const out = ((): unknown => {
     switch (cmd) {
+      case 'read_spotify_playlist': {
+        const input = String(args.url ?? '').trim()
+        if (!/^spotify:playlist:[A-Za-z0-9]{22}$/.test(input) &&
+            !/^https:\/\/open\.spotify\.com\/(?:intl-[a-zA-Z-]+\/)?(?:embed\/)?playlist\/[A-Za-z0-9]{22}\/?(?:[?#].*)?$/.test(input)) {
+          throw new Error('Pega el enlace de una playlist de Spotify (https://open.spotify.com/playlist/…).')
+        }
+        return importExample('Desde Spotify · ejemplo')
+      }
+      case 'read_playlist_csv':
+        if (!String(args.content ?? '').trim()) throw new Error('El CSV está vacío.')
+        return importExample(String(args.name ?? 'Importada').replace(/\.csv$/i, ''))
+      case 'match_import_track': {
+        for (const album of albums) {
+          const index = album.tracks.findIndex((t) => t.title === args.track.title && args.track.artists.includes(t.artist.name))
+          if (index >= 0) return lib(album, index)
+        }
+        return null
+      }
+      case 'podcast_search': {
+        const query = String(args.query ?? '').trim().toLocaleLowerCase('es')
+        return {
+          podcasts: podcastFixtures.filter((p) =>
+            (!query || `${p.title} ${p.author}`.toLocaleLowerCase('es').includes(query)) &&
+            (args.language === 'all' || p.language?.split(/[-_]/)[0] === args.language)),
+          youtube: [],
+          failedFeeds: 0,
+        }
+      }
+      case 'podcast_detail':
+        return podcastFixture(args.feedUrl)
+      case 'podcast_feed_url': {
+        const podcast = podcastFixtures.find((p) => p.id === args.id)
+        if (!podcast) throw new Error('No se encuentra este podcast de ejemplo')
+        return podcast.feedUrl
+      }
       case 'search':
         return { ...(searchResults as unknown as SearchResults), localArtists: [], localAlbums: localAlbums.slice(0, 2) }
       case 'local_library':
         return {
-          folders: [String.raw`C:\Users\iunan\Music`, String.raw`D:\Música\Vinilos digitalizados`],
+          folders: [String.raw`C:\Users\usuario\Music`, String.raw`D:\Música\Vinilos digitalizados`],
           albums: localAlbums,
           artists: [...new Map(localAlbums.map((a) => [a.artist!.id, a.artist!])).values()].map((ar) => ({
             id: ar.id,
@@ -160,7 +211,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
       case 'downloads_list':
         return []
       case 'download_dir_path':
-        return 'C:\\Users\\iunan\\Music\\Musify'
+        return 'C:\\Users\\usuario\\Music\\Pletina'
       default:
         return null
     }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layout } from '../lib/layout.svelte'
   import { nav } from '../lib/nav.svelte'
   import { theme } from '../lib/theme.svelte'
   import { updates } from '../lib/updates.svelte'
@@ -12,11 +13,15 @@
   // Se va volviendo opaca al bajar; pasada la cabecera, aparecen el título y el botón de reproducir.
   const solid = $derived(Math.min(1, Math.max(0, (scrollY - 40) / 180)))
   const compact = $derived(scrollY > 300 && !!theme.title)
+  // En Podcasts, el buscador consulta el catálogo de programas.
+  const podcasts = $derived(nav.route.name === 'podcasts' || nav.route.name === 'podcast')
+  const root = $derived(['home', 'search', 'podcasts', 'library'].includes(nav.route.name))
+  const showSearch = $derived(!layout.mobile || nav.route.name === 'search' || nav.route.name === 'podcasts')
 
   // Al volver atrás a una búsqueda, el cuadro muestra su texto; fuera de búsqueda, vacío.
   $effect(() => {
     const route = nav.route
-    value = route.name === 'search' ? route.query : ''
+    value = route.name === 'search' || route.name === 'podcasts' ? route.query : ''
   })
 
   nav.focusSearch = () => {
@@ -25,8 +30,8 @@
   }
 
   function onInput() {
-    const route = { name: 'search' as const, query: value }
-    if (nav.route.name === 'search') nav.replace(route)
+    const route = { name: podcasts ? 'podcasts' as const : 'search' as const, query: value }
+    if (nav.route.name === route.name) nav.replace(route)
     else nav.go(route)
   }
 
@@ -41,15 +46,21 @@
   }
 </script>
 
-<header class="topbar" style:--solid={solid}>
-  <div class="arrows">
-    <button class="round" onclick={() => nav.back()} disabled={!nav.canBack} title="Atrás (Alt+←)">
-      <Icon name="back" />
-    </button>
-    <button class="round" onclick={() => nav.forward()} disabled={!nav.canForward} title="Adelante (Alt+→)">
-      <Icon name="forward" />
-    </button>
-  </div>
+<header class="topbar" class:mobile={layout.mobile} style:--solid={solid}>
+  {#if layout.mobile}
+    {#if !root && nav.canBack}
+      <button class="round" onclick={() => nav.back()} title="Atrás"><Icon name="back" /></button>
+    {/if}
+  {:else}
+    <div class="arrows">
+      <button class="round" onclick={() => nav.back()} disabled={!nav.canBack} title="Atrás (Alt+←)">
+        <Icon name="back" />
+      </button>
+      <button class="round" onclick={() => nav.forward()} disabled={!nav.canForward} title="Adelante (Alt+→)">
+        <Icon name="forward" />
+      </button>
+    </div>
+  {/if}
 
   {#if compact}
     <div class="compact">
@@ -62,6 +73,7 @@
     </div>
   {/if}
 
+  {#if showSearch}
   <label class="search" class:shrink={compact}>
     <Icon name="search" />
     <input
@@ -69,7 +81,8 @@
       bind:value
       oninput={onInput}
       onkeydown={onKeydown}
-      placeholder="¿Qué quieres escuchar?"
+      placeholder={podcasts ? 'Buscar podcasts' : '¿Qué quieres escuchar?'}
+      aria-label={podcasts ? 'Buscar podcasts' : 'Buscar música'}
       spellcheck="false"
       autocomplete="off"
     />
@@ -85,9 +98,9 @@
       >
     {/if}
   </label>
-
-  {#if updates.state === 'ready'}
-    <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Musify; pulsa para instalarla ya">
+  {/if}
+  {#if updates.state === 'ready' && !layout.mobile}
+    <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Pletina; pulsa para instalarla ya">
       <span class="dot"></span> Versión {updates.version} lista · <strong>Reiniciar</strong>
     </button>
   {/if}
@@ -258,5 +271,20 @@
   }
   .clear:hover {
     color: var(--text);
+  }
+
+  /* Móvil: más baja, por debajo de la barra de estado. */
+  .topbar.mobile {
+    height: calc(56px + var(--safe-top));
+    padding: var(--safe-top) 12px 0;
+    gap: 12px;
+  }
+  .mobile .search {
+    width: 100%;
+    height: 42px;
+    margin: 0;
+  }
+  .mobile .compact .title {
+    font-size: 17px;
   }
 </style>

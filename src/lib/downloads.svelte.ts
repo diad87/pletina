@@ -1,7 +1,10 @@
-import { listen } from '@tauri-apps/api/event'
+import { listen } from './events'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import { toLib } from './library.svelte'
+import { isLocal, isPodcast } from './media'
+import { isAndroid } from './player-android.svelte'
+import { youtubeEpisodes } from './podcasts'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
 import type { DownloadProgress } from './types'
@@ -26,7 +29,14 @@ class Downloads {
 
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */
   start(items: QueueItem[]) {
-    const todo = items.filter((i) => !this.done.has(i.track.id) && !this.active.has(i.track.id))
+    // Los episodios, solo los de YouTube (son vídeos); la música local ya está en el equipo.
+    const todo = items.filter(
+      (i) =>
+        !isLocal(i.track.id) &&
+        (!isPodcast(i.track.id) || youtubeEpisodes.has(i.track.id)) &&
+        !this.done.has(i.track.id) &&
+        !this.active.has(i.track.id),
+    )
     if (!todo.length) return
     for (const item of todo) {
       this.active.set(item.track.id, 0)
@@ -37,6 +47,14 @@ class Downloads {
       for (const item of todo) this.#forget(item.track.id)
       toast.show(`No se pudo empezar la descarga: ${e}`)
     })
+    // En Android, sin esto la descarga se congela al salir de la app.
+    if (isAndroid) api.androidDownloadsStarted().catch(() => {})
+    // Las carátulas (la de las listas y la grande de «Sonando ahora»), a la caché del WebView: así se
+    // ven también sin conexión (Deezer deja guardarlas 150 días).
+    const covers = new Set(todo.map((i) => i.cover).filter((c): c is string => !!c?.startsWith('http')))
+    for (const cover of covers) {
+      for (const url of [cover, cover.replace(/\/\d+x\d+-/, '/1000x1000-')]) new Image().src = url
+    }
   }
 
   async remove(ids: number[]) {

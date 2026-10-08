@@ -621,10 +621,58 @@ El código revisado es `7433dba`; los tests y build Windows son los ya registrad
 No se han repetido las pruebas de latencia ni preparado/verificado instalación,
 actualización o builds de otras plataformas en este paso.
 
-`main` local revisada en `4a69d84` ya contiene **Pletina 0.6.0** y captura API1.
-`p1-oficial` sigue en la base Musify 0.4.0 con captura API4. La app sólo acepta
+En esa revisión previa, `main` local en `4a69d84` contenía **Pletina 0.6.0** y captura API1.
+`p1-oficial` seguía en la base Musify 0.4.0 con captura API4. La app sólo acepta
 extractores de su API exacta: una publicación API4 no llega a una app API1 ni
 añade la coordinación Rust/lector. La entrega requiere una nueva app compatible,
-con el nombre, versión y canal actuales; la configuración antigua de esta rama
-todavía apunta al canal de Musify. Falta la integración y el instalador de esa
-versión; no se ha fusionado ni publicado durante esta revisión.
+con el nombre, versión y canal actuales. La integración posterior se recoge a
+continuación; no se ha preparado ni publicado un instalador en estos pasos.
+
+## Integración con origin/main para revisión
+
+Por petición del usuario, se incorporó `origin/main` en `b1733bb`
+(`b1733bbb997f0a70807a5e2a36f1cb57da562af1`, Pletina 0.9.1) a `p1-oficial`.
+El trabajo separado de favoritos, canciones de YouTube y Android Auto quedó
+en `codex/favoritos-youtube-android-auto`, commit `de300d3`, sobre esa misma base.
+Se conservan las ramas y cambios de otras sesiones; no se escribe en el main
+local desfasado ni se usan `pletina` o `android-fase0` como base.
+
+Se mantienen Spotify, podcasts RSS/YouTube y su aviso de anuncios, descargas,
+la cola y el reproductor nativo Android. Se conserva Pletina como nombre visible,
+`dev.musify.desktop`, paquete Android, `musify.db`, crate `musify` y clases `Musify*`.
+Las ventanas de captura nueva e histórica se titulan «Pletina · reproductor de
+YouTube»; manifiesto y publicación mantienen `diad87/pletina-releases`, SHA256SUMS
+y certificados de procedencia de main.
+
+Los conflictos se resolvieron conservando la admisión y prioridad P1 en el
+reproductor y las rutas de podcasts/descargas de main. La reproducción Android
+usa su servicio nativo y no crea otro Audio. Las aperturas y reintentos JNI de
+ExoPlayer resuelven sin invalidar los tickets de selección manual o precarga;
+una nueva intención de la interfaz conserva su cancelación P1. Una regresión
+sin red comprueba esa separación. Sus adaptadores de captura exponen
+capacidad cero y errores explícitos, sin ventanas, perfiles ni EOF fabricado.
+Se adaptaron las pruebas de IPC a la lectura inicial de versión, el banco de
+colas a los helpers de main y una fixture Db a su Arc compartido; no se cambiaron
+por ello migraciones ni criterios de admisión. En la interfaz se conserva el
+menú de motores de main y las acciones de interacción P1 de PlayerBar; estas
+últimas siguen sin aparecer en el reproductor compacto.
+
+La integración conserva captura v25/API4, receta v1/API1 y youtubei v1/API1.
+yt-dlp sigue predeterminado en escritorio; Android mantiene Propio. Propio de
+escritorio conserva Rust→Legacy y Oficial mantiene cuarentena completa en uso
+normal; la progresiva nueva exige banco y opt-in. No se han repetido las campañas
+reales ni accedido a Premium: las latencias y anuncios anteriores siguen siendo
+resultados históricos, no una aprobación de esta integración.
+
+Comprobaciones de código: Svelte/TypeScript con cero errores y avisos, build Vite
+correcto (aviso habitual por tamaño de youtubei), 374/374 pruebas JavaScript y
+139 pruebas Rust aprobadas/19 ignoradas/0 fallos en Windows. `cargo check --lib`
+y `--tests` para Android x86_64 pasan offline con NDK 27.3; incluyen los contratos
+y pruebas de los adaptadores móviles, pero no ejecutan esas pruebas en Android.
+En la rama de favoritos pasan tipos, build, 57 pruebas Rust/19 ignoradas,
+el check Rust Android x86_64 y la compilación Kotlin de app y AndroidTest.
+No se ha instalado APK ni ejecutado Android Auto o pruebas instrumentadas en un
+dispositivo en este paso. Los tests ignorados no cuentan como éxitos.
+Logs, perfiles y medios permanecen fuera de Git.
+Se suben sólo las dos ramas de trabajo para revisión; no main, etiquetas,
+extractores ni versiones de la app.

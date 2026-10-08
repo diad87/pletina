@@ -1,4 +1,4 @@
-import { listen } from '@tauri-apps/api/event'
+import { listen } from './events'
 import * as api from './api'
 import { toast } from './toast.svelte'
 import type { LocalLibrary } from './types'

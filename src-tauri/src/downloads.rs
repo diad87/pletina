@@ -3,6 +3,10 @@
 //! Cola con dos descargas a la vez; el progreso llega a la interfaz con el evento "download".
 //! Los archivos se guardan como `Carpeta/Artista/Disco/Canción.m4a` y la base de datos
 //! recuerda dónde está cada uno (`resolve` lo reproduce en lugar del streaming).
+//!
+//! En el escritorio descarga yt-dlp, en la carpeta que elijas. En el móvil, que no tiene yt-dlp,
+//! el motor propio (`direct.rs`), en la carpeta de la app; allí un servicio de Android
+//! (`DownloadService.kt`) mantiene viva la app mientras descarga y enseña el progreso.
 
 use crate::db::Db;
 use crate::library::{LibTrack, upsert_track};
@@ -16,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, State};
+#[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 use tokio::sync::{Semaphore, mpsc};
@@ -56,6 +61,8 @@ pub struct Downloads {
     /// Canciones en cola o descargándose.
     pending: Mutex<HashSet<u64>>,
     generation: AtomicU64,
+    /// La última que ha avanzado y cuánto lleva (para la notificación del móvil).
+    last: Mutex<(String, f32)>,
 }
 
 impl Downloads {
@@ -73,8 +80,17 @@ impl Downloads {
                 });
             }
         });
-        Self { tx, pending: Mutex::new(HashSet::new()), generation: AtomicU64::new(0) }
+        Self { tx, pending: Mutex::new(HashSet::new()), generation: AtomicU64::new(0), last: Mutex::new((String::new(), 0.0)) }
     }
+}
+
+/// Cómo van las descargas: `{"pending", "title", "progress"}` (lo lee `DownloadService.kt`).
+#[cfg_attr(not(target_os = "android"), allow(dead_code))]
+pub fn status(app: &AppHandle) -> serde_json::Value {
+    let downloads = app.state::<Downloads>();
+    let pending = downloads.pending.lock().unwrap().len();
+    let (title, progress) = downloads.last.lock().unwrap().clone();
+    serde_json::json!({ "pending": pending, "title": title, "progress": progress })
 }
 
 fn emit(app: &AppHandle, track_id: u64, state: &'static str, progress: f32, error: Option<String>) {
@@ -101,15 +117,29 @@ async fn run(app: &AppHandle, job: Job) {
 async fn download_one(app: &AppHandle, t: &LibTrack) -> Res<()> {
     let db = app.state::<Db>();
     let dir = download_dir(app, &db);
+    let downloads = app.state::<Downloads>();
     // Avisa a la interfaz cada 2 % como mucho.
     let mut last = 0.0;
     let report = |p: f32| {
         if p - last >= 0.02 || p >= 1.0 {
             last = p;
             emit(app, t.id, "downloading", p, None);
+            *downloads.last.lock().unwrap() = (t.title.clone(), p);
         }
     };
     fetch(t, &dir, &db, &app.state::<YouTubeMusic>(), &app.state::<YtDlp>(), report).await
+}
+
+/// Baja el audio del vídeo a `target` (más la extensión). En el escritorio, yt-dlp.
+#[cfg(desktop)]
+async fn get(video_id: &str, target: &Path, ytdlp: &YtDlp, report: impl FnMut(f32)) -> Res<PathBuf> {
+    ytdlp.download(video_id, target, report).await
+}
+
+/// En el móvil no hay yt-dlp: el motor propio.
+#[cfg(mobile)]
+async fn get(video_id: &str, target: &Path, _ytdlp: &YtDlp, report: impl FnMut(f32)) -> Res<PathBuf> {
+    crate::direct::download(video_id, target, report).await
 }
 
 /// Busca el vídeo de la canción, lo descarga en `dir` y lo apunta en la base de datos.
@@ -135,16 +165,21 @@ async fn fetch(
     let target = target_path(dir, t)?;
 
     let mut video_id = player::find_video(&q, db, ytm, ytdlp).await?;
-    let file = match ytdlp.download(&video_id, &target, &mut report).await {
+    let file = match get(&video_id, &target, ytdlp, &mut report).await {
         Ok(file) => file,
         // El vídeo guardado ya no existe: se busca otro una vez.
         Err(e) if player::is_gone(&e) && !db.source(t.id).is_some_and(|source| source.verified) => {
             db.delete_automatic_source(t.id, &video_id);
             video_id = player::find_video(&q, db, ytm, ytdlp).await?;
-            ytdlp.download(&video_id, &target, &mut report).await?
+            get(&video_id, &target, ytdlp, &mut report).await?
         }
         Err(e) => return Err(e),
     };
+    // Móvil: la carátula, para la pantalla de bloqueo sin conexión.
+    #[cfg(mobile)]
+    if let Some(url) = &t.cover {
+        crate::direct::save_cover(url, &cover_path(dir, t.album_id)).await;
+    }
 
     let size = std::fs::metadata(&file).map(|m| m.len()).unwrap_or(0);
     let conn = db.0.lock().unwrap();
@@ -191,18 +226,38 @@ fn safe_name(name: &str) -> String {
     }
 }
 
+/// Carátula guardada de un disco descargado (móvil). `PlaybackService.kt` la busca ahí.
+#[cfg(mobile)]
+fn cover_path(dir: &Path, album_id: u64) -> PathBuf {
+    dir.join("_portadas").join(format!("{album_id}.jpg"))
+}
+
+/// Móvil: dentro de la carpeta de la app (no hace falta pedir permisos y se borra al desinstalar).
+#[cfg(mobile)]
+fn download_dir(app: &AppHandle, _db: &Db) -> PathBuf {
+    app.path().app_local_data_dir().unwrap_or_else(|_| PathBuf::from(".")).join("descargas")
+}
+
+#[cfg(desktop)]
 fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
     db.setting(DIR_KEY).map(PathBuf::from).unwrap_or_else(|| {
-        app.path()
+        let music = app
+            .path()
             .audio_dir()
             .or_else(|_| app.path().home_dir().map(|h| h.join("Music")))
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("Musify")
+            .unwrap_or_else(|_| PathBuf::from("."));
+        // Antes se llamaba Musify: quien ya tenga descargas ahí las sigue teniendo en la misma carpeta.
+        let old = music.join("Musify");
+        if old.is_dir() { old } else { music.join("Pletina") }
     })
 }
 
 #[tauri::command]
 pub fn download(tracks: Vec<LibTrack>, app: AppHandle, db: State<'_, Db>, downloads: State<'_, Downloads>) -> Res<()> {
+    // Los episodios de YouTube Music son vídeos y se descargan como las canciones; los del RSS, no.
+    if tracks.iter().any(|t| crate::podcasts::is_podcast(t.id) && crate::podcasts::youtube_video(&db, t.id).is_none()) {
+        return Err("Solo se pueden descargar los episodios de los pódcasts de YouTube".into());
+    }
     let generation = downloads.generation.load(Ordering::SeqCst);
     // La música local ya está en el equipo: no se descarga.
     for track in tracks.into_iter().filter(|t| !crate::local::is_local(t.id)) {
@@ -272,19 +327,35 @@ pub fn download_dir_path(app: AppHandle, db: State<'_, Db>) -> String {
 /// las anteriores se quedan donde están.
 #[tauri::command]
 pub async fn choose_download_dir(app: AppHandle, db: State<'_, Db>) -> Res<Option<String>> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog()
-        .file()
-        .set_title("Carpeta para las descargas")
-        .set_directory(download_dir(&app, &db))
-        .pick_folder(move |folder| {
-            let _ = tx.send(folder);
-        });
-    let Some(folder) = rx.await.map_err(|e| e.to_string())? else { return Ok(None) };
-    let path = folder.into_path().map_err(|e| e.to_string())?;
+    let Some(path) = pick_folder(&app, "Carpeta para las descargas", Some(download_dir(&app, &db))).await? else {
+        return Ok(None);
+    };
     let path = path.to_string_lossy().into_owned();
     db.set_setting(DIR_KEY, &path);
     Ok(Some(path))
+}
+
+/// Selector de carpetas del sistema.
+#[cfg(desktop)]
+pub(crate) async fn pick_folder(app: &AppHandle, title: &str, start: Option<PathBuf>) -> Res<Option<PathBuf>> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    let mut dialog = app.dialog().file().set_title(title);
+    if let Some(dir) = start {
+        dialog = dialog.set_directory(dir);
+    }
+    dialog.pick_folder(move |folder| {
+        let _ = tx.send(folder);
+    });
+    match rx.await.map_err(|e| e.to_string())? {
+        Some(folder) => Ok(Some(folder.into_path().map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+/// En el móvil, todavía no (ver docs/plan-mobile.md).
+#[cfg(mobile)]
+pub(crate) async fn pick_folder(_app: &AppHandle, _title: &str, _start: Option<PathBuf>) -> Res<Option<PathBuf>> {
+    Err("En el móvil todavía no se puede elegir carpeta".into())
 }
 
 #[tauri::command]

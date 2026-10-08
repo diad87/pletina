@@ -60,6 +60,25 @@ impl YouTubeMusic {
         Self { http }
     }
 
+    /// Llamada a la API interna de YouTube Music (`search`, `browse`...), con el contexto de su web.
+    pub(crate) async fn api(&self, endpoint: &str, mut body: Value) -> Result<Value, String> {
+        body["context"] = json!({ "client": { "clientName": "WEB_REMIX", "clientVersion": CLIENT_VERSION, "hl": "es", "gl": "ES" } });
+        let res = self
+            .http
+            .post(format!("https://music.youtube.com/youtubei/v1/{endpoint}?prettyPrint=false"))
+            .header("Content-Type", "application/json")
+            .header("Origin", "https://music.youtube.com")
+            .body(body.to_string())
+            .send()
+            .await
+            .map_err(|e| format!("No se pudo conectar con YouTube Music: {e}"))?;
+        if !res.status().is_success() {
+            return Err(format!("YouTube Music respondió {}", res.status()));
+        }
+        let bytes = res.bytes().await.map_err(|e| e.to_string())?;
+        serde_json::from_slice(&bytes).map_err(|e| e.to_string())
+    }
+
     pub async fn search_songs(&self, query: &str) -> Result<Vec<Candidate>, String> {
         let body = json!({
             "context": { "client": { "clientName": "WEB_REMIX", "clientVersion": CLIENT_VERSION, "hl": "es", "gl": "ES" } },

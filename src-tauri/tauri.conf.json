@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Musify",
+  "productName": "Pletina",
   "version": "../package.json",
   "identifier": "dev.musify.desktop",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Musify",
+        "title": "Pletina",
         "width": 1280,
         "height": 820,
         "minWidth": 900,
@@ -23,12 +23,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' blob:; img-src 'self' data: https://*.dzcdn.net https://i.ytimg.com asset: http://asset.localhost; media-src https://*.googlevideo.com asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost",
+      "csp": "default-src 'self'; script-src 'self' blob:; img-src 'self' data: https: http: asset: http://asset.localhost; media-src https: http: asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost",
       "assetProtocol": {
         "enable": true,
         "scope": []
       },
-      "devCsp": "default-src 'self'; script-src 'self' blob:; img-src 'self' data: https://*.dzcdn.net https://i.ytimg.com asset: http://asset.localhost; media-src https://*.googlevideo.com asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost ws://localhost:1420"
+      "devCsp": "default-src 'self'; script-src 'self' blob:; img-src 'self' data: https: http: asset: http://asset.localhost; media-src https: http: asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost ws://localhost:1420"
     }
   },
   "bundle": {
@@ -46,6 +46,9 @@
     "windows": {
       "webviewInstallMode": {
         "type": "skip"
+      },
+      "nsis": {
+        "installerHooks": "installer-hooks.nsh"
       }
     },
     "macOS": {
@@ -53,6 +56,9 @@
       "minimumSystemVersion": "11.0"
     },
     "category": "Music",
+    "publisher": "Pletina",
+    "homepage": "https://github.com/diad87/pletina",
+    "copyright": "© 2026 diad87 · GPL-3.0-or-later",
     "shortDescription": "Reproductor de música personal",
     "createUpdaterArtifacts": true
   },
@@ -60,7 +66,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEzMDQ1MTA4RDJFRjczRUUKUldUdWMrL1NDRkVFRTQ5N1JmL3hWd3JxL1VHNUpqeHljdWI0cWkrY0I4TGxqZS9ZOHljUlpkRWcK",
       "endpoints": [
-        "https://github.com/diad87/musify-releases/releases/latest/download/latest.json"
+        "https://github.com/diad87/pletina-releases/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "quiet"

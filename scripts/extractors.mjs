@@ -8,7 +8,7 @@
 //                                                sube la versión del extractor (lo usa la revisión diaria)
 //   node scripts/extractors.mjs smoke <módulo>   prueba un youtubei.js empaquetado con vídeos de verdad
 //
-// Se publican en la versión "extractores" de diad87/musify-releases: cada extractor como
+// Se publican en la versión "extractores" de diad87/pletina-releases: cada extractor como
 // <nombre>-api<api>-v<versión>.<ext>, firmado con la clave de las actualizaciones de la app, y el
 // índice extractores.json. Para firmar hacen falta TAURI_SIGNING_PRIVATE_KEY (o _PATH) y
 // TAURI_SIGNING_PRIVATE_KEY_PASSWORD; si no están, se usan ~/.musify/updater.key y updater.password.
@@ -20,7 +20,7 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-const REPO = 'diad87/musify-releases'
+const REPO = 'diad87/pletina-releases'
 const TAG = 'extractores'
 const MANIFEST = 'extractores.json'
 const MANIFEST_URL = `https://github.com/${REPO}/releases/download/${TAG}/${MANIFEST}`
@@ -126,7 +126,7 @@ async function publish({ dryRun, to }) {
     exec('gh', ['release', 'view', TAG, '-R', REPO], { stdio: 'ignore' })
   } catch {
     run('gh', ['release', 'create', TAG, '-R', REPO, '--prerelease', '--latest=false', '--title', 'Extractores', '--notes',
-      'Extractores de audio que Musify baja y cambia solo, sin reinstalar. No hace falta descargar nada de aquí.'])
+      'Extractores de audio que Pletina baja y cambia solo, sin reinstalar. No hace falta descargar nada de aquí.'])
   }
   // Primero los extractores y después el índice, para que nunca apunte a algo que aún no está.
   run('gh', ['release', 'upload', TAG, ...files, '--clobber', '-R', REPO])

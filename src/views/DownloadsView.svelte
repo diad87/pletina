@@ -6,6 +6,7 @@
   import * as api from '../lib/api'
   import { downloads } from '../lib/downloads.svelte'
   import { songs } from '../lib/format'
+  import { layout } from '../lib/layout.svelte'
   import { fromLib } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
@@ -39,7 +40,7 @@
     }
   })
 
-  api.downloadDirPath().then((dir) => (folder = dir))
+  if (!layout.mobile) api.downloadDirPath().then((dir) => (folder = dir))
 
   const items = $derived((entries ?? []).map((e) => fromLib(e.track)))
   const totalSize = $derived((entries ?? []).reduce((sum, e) => sum + e.size, 0))
@@ -67,12 +68,15 @@
 <section class="page top">
   <h1 class="page-title">Descargas</h1>
 
-  <div class="folder">
-    <Icon name="folder" size={20} />
-    <span class="path" title={folder}>{folder}</span>
-    <button class="ghost" onclick={() => api.openDownloadDir().catch((e) => toast.show(String(e)))}>Abrir</button>
-    <button class="ghost" onclick={changeFolder}>Cambiar…</button>
-  </div>
+  <!-- En el móvil se guardan dentro de la app: no hay carpeta que elegir ni abrir. -->
+  {#if !layout.mobile}
+    <div class="folder">
+      <Icon name="folder" size={20} />
+      <span class="path" title={folder}>{folder}</span>
+      <button class="ghost" onclick={() => api.openDownloadDir().catch((e) => toast.show(String(e)))}>Abrir</button>
+      <button class="ghost" onclick={changeFolder}>Cambiar…</button>
+    </div>
+  {/if}
 
   {#if pending.length}
     <h2 class="section-title">Descargando · {pending.length}</h2>
@@ -99,7 +103,7 @@
     <Status />
   {:else if items.length}
     <div class="summary">
-      <h2 class="section-title">En este equipo · {songs(items.length)} · {mb(totalSize)}</h2>
+      <h2 class="section-title">{layout.mobile ? 'En el móvil' : 'En este equipo'} · {songs(items.length)} · {mb(totalSize)}</h2>
       {#if !confirmRemoveAll}
         <button class="ghost" onclick={() => (confirmRemoveAll = true)}><Icon name="trash" size={16} /> Quitar todas</button>
       {/if}
@@ -236,5 +240,16 @@
   }
   .danger {
     background: #ff8a80;
+  }
+
+  @media (max-width: 720px) {
+    /* Móvil: el resumen más pequeño y «Quitar todas» en una línea. */
+    .summary .section-title {
+      font-size: 17px;
+    }
+    .summary .ghost {
+      flex: none;
+      white-space: nowrap;
+    }
   }
 </style>

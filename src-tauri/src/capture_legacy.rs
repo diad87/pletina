@@ -401,7 +401,7 @@ async fn open_locked(
             &label,
             WebviewUrl::External("about:blank".parse().unwrap()),
         )
-        .title("Musify · reproductor de YouTube")
+        .title("Pletina · reproductor de YouTube")
         .data_directory(profile)
         .visible(std::env::var("MUSIFY_SHOW_ENGINE").is_ok())
         .skip_taskbar(true)

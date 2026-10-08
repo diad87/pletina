@@ -28,6 +28,9 @@
   --shadow-2: 0 12px 32px rgb(0 0 0 / 0.5);
   --shadow-3: 0 24px 64px rgb(0 0 0 / 0.6);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Zonas seguras del móvil (barra de estado, barra de gestos); 0 en el PC. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   color-scheme: dark;
   font-family: 'Figtree Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
@@ -91,7 +94,9 @@ button {
 
 /* Entrada suave de cada pantalla. */
 .view {
-  animation: enter 0.35s var(--ease) both;
+  /* backwards y no both: al acabar no queda ninguna animación pegada (el WebView de Android dejaba
+     la página sin pintar si nada más cambiaba). */
+  animation: enter 0.35s var(--ease) backwards;
 }
 @keyframes enter {
   from {
@@ -303,5 +308,67 @@ button {
   }
   to {
     background-position: 0 0;
+  }
+}
+
+/* --- Móvil (ver src/lib/layout.svelte.ts): misma app, pensada para el dedo --- */
+@media (max-width: 720px) {
+  :root {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Sin barras de desplazamiento visibles, como en el resto de apps del móvil. */
+  * {
+    scrollbar-width: none;
+  }
+  /* El WebView de Android no entiende scrollbar-width (Chrome 124 incluido). */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  .page {
+    padding: 4px 12px 32px;
+  }
+  .page.top {
+    padding-top: calc(60px + var(--safe-top));
+  }
+  .page-title {
+    margin: 4px 4px 16px;
+    font-size: 28px;
+  }
+  .section-title {
+    margin: 24px 4px 8px;
+    font-size: 20px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  /* Cabecera de disco / playlist: carátula centrada y el texto debajo. */
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: calc(60px + var(--safe-top)) 16px 4px;
+  }
+  .hero .art {
+    align-self: center;
+    width: min(64vw, 260px);
+  }
+  .hero h1 {
+    margin: 2px 0 8px;
+    font-size: 26px;
+    letter-spacing: -0.03em;
+  }
+  .hero .meta {
+    font-size: 13px;
+  }
+  .actions {
+    gap: 20px;
+    padding: 12px 4px;
+  }
+  .big-play {
+    width: 52px;
+    height: 52px;
+  }
+  .link:hover {
+    text-decoration: none;
   }
 }

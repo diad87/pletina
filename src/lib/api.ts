@@ -6,10 +6,14 @@ import type {
   ArtistPage,
   DownloadEntry,
   Entry,
+  ImportSource,
+  ImportTrack,
   LibraryData,
   LocalLibrary,
   LibTrack,
   Playable,
+  PodcastDetail,
+  PodcastSearchResults,
   PlaylistDetail,
   PlaylistSummary,
   SavedAlbum,
@@ -19,6 +23,23 @@ import type {
 
 /** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
 export const inTauri = '__TAURI_INTERNALS__' in window
+
+/**
+ * La comunicación con Rust, lista. En Android, lo que se pide en los primeros instantes de arrancar
+ * la app se rechaza (Tauri aún está preparando los permisos de la ventana): main.ts espera a esto.
+ */
+export const ipcReady: Promise<void> = inTauri
+  ? (async () => {
+      for (let i = 0; i < 50; i++) {
+        try {
+          await tauriInvoke('plugin:app|version')
+          return
+        } catch {
+          await new Promise((r) => setTimeout(r, 100))
+        }
+      }
+    })()
+  : Promise.resolve()
 
 // En un navegador normal (solo desarrollo) se usa un backend falso con datos guardados,
 // para poder ver y ajustar la interfaz. En la app compilada siempre es Tauri.
@@ -42,6 +63,12 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
 }
 
 export const search = (query: string) => invoke<SearchResults>('search', { query })
+
+// Los episodios cambian con cada publicación: el backend limita la caché de las fuentes.
+export const podcastSearch = (query: string, language: string) =>
+  invoke<PodcastSearchResults>('podcast_search', { query, language })
+export const podcastDetail = (feedUrl: string) => invoke<PodcastDetail>('podcast_detail', { feedUrl })
+export const podcastFeedUrl = (id: number) => invoke<string>('podcast_feed_url', { id })
 
 // La música local cambia al reescanear: sin caché (además es instantánea).
 const LOCAL_BASE = 1_000_000_000_000_000
@@ -109,6 +136,9 @@ export const likedTracks = () => invoke<Entry[]>('liked_tracks')
 export const setAlbumSaved = (album: SavedAlbum, saved: boolean) => invoke<void>('set_album_saved', { album, saved })
 export const createPlaylist = (name: string, tracks: LibTrack[] = []) =>
   invoke<PlaylistSummary>('create_playlist', { name, tracks })
+export const readSpotifyPlaylist = (url: string) => invoke<ImportSource>('read_spotify_playlist', { url })
+export const readPlaylistCsv = (content: string, name: string) => invoke<ImportSource>('read_playlist_csv', { content, name })
+export const matchImportTrack = (track: ImportTrack) => invoke<LibTrack | null>('match_import_track', { track })
 export const renamePlaylist = (id: number, name: string) => invoke<void>('rename_playlist', { id, name })
 export const deletePlaylist = (id: number) => invoke<void>('delete_playlist', { id })
 export const playlist = (id: number) => invoke<PlaylistDetail>('playlist', { id })
@@ -139,3 +169,10 @@ export const revealLocal = (trackId: number) => invoke<void>('reveal_local', { t
 
 // Actualizaciones.
 export const installUpdate = () => invoke<void>('install_update')
+/** Móvil: versión publicada más nueva que la instalada, o null. */
+export const newerVersion = () => invoke<string | null>('newer_version')
+export const openReleases = () => invoke<void>('open_releases')
+/** Android: que el servicio de descargas mantenga viva la app hasta que acaben (ver DownloadService.kt). */
+export const androidDownloadsStarted = () => invoke<void>('player_native', { cmd: 'downloadsStarted', args: {} })
+/** Móvil: «Compartir» con el registro del servicio de música (ver MusifyLog.kt). */
+export const shareLog = () => invoke<void>('player_native', { cmd: 'shareLog', args: {} })

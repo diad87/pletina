@@ -3,7 +3,7 @@
 
 use rusqlite::{Connection, OptionalExtension, params};
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 /// Migraciones en orden; `PRAGMA user_version` guarda cuántas se han aplicado.
 const MIGRATIONS: &[&str] = &[
@@ -117,6 +117,25 @@ const MIGRATIONS: &[&str] = &[
     CREATE INDEX local_tracks_album ON local_tracks(album_id);
     CREATE INDEX local_tracks_artist ON local_tracks(artist_id);
     ",
+    // 5: podcasts RSS. Las URLs se conservan para reproducir favoritos e historial al reiniciar.
+    "
+    CREATE TABLE podcast_shows (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        feed_url TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        author TEXT NOT NULL,
+        description TEXT NOT NULL,
+        image TEXT,
+        language TEXT
+    );
+    CREATE TABLE podcast_episodes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        show_id INTEGER NOT NULL REFERENCES podcast_shows(id),
+        guid TEXT NOT NULL,
+        audio_url TEXT NOT NULL,
+        UNIQUE(show_id, guid)
+    );
+    ",
 ];
 
 #[derive(Debug, Clone)]
@@ -130,7 +149,9 @@ pub struct Source {
     pub verified: bool,
 }
 
-pub struct Db(pub(crate) Mutex<Connection>);
+/// Una conexión compartida: clonarla no abre otra (en Android la usan Tauri y el servicio de música).
+#[derive(Clone)]
+pub struct Db(pub(crate) Arc<Mutex<Connection>>);
 
 impl Db {
     pub fn open(path: &Path) -> rusqlite::Result<Self> {
@@ -142,12 +163,12 @@ impl Db {
         if had_data && tables == 0 {
             return Err(rusqlite::Error::SqliteFailure(
                 rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_CANTOPEN),
-                Some("La base de datos tiene contenido pero se ve vacía; no se toca. Cierra y vuelve a abrir Musify.".into()),
+                Some("La base de datos tiene contenido pero se ve vacía; no se toca. Cierra y vuelve a abrir Pletina.".into()),
             ));
         }
         backup_before_migrating(&conn, path)?;
         migrate(&mut conn)?;
-        Ok(Self(Mutex::new(conn)))
+        Ok(Self(Arc::new(Mutex::new(conn))))
     }
 
     pub fn source(&self, track_id: u64) -> Option<Source> {
@@ -307,7 +328,7 @@ mod tests {
     fn a_late_search_preserves_the_manual_video() {
         let mut conn = Connection::open_in_memory().unwrap();
         migrate(&mut conn).unwrap();
-        let db = Db(Mutex::new(conn));
+        let db = Db(Arc::new(Mutex::new(conn)));
         let manual = Source { video_id: "chosenvideo".into(), title: "Chosen".into(), channel: "Artist".into(),
             duration: Some(180), score: 100, verified: true };
         let automatic = Source { video_id: "oldsearchid".into(), verified: false, ..manual.clone() };

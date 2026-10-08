@@ -77,6 +77,41 @@ export interface SearchResults {
   localAlbums: Album[]
 }
 
+/** Catálogo de podcasts y episodios publicados en sus fuentes RSS. */
+export interface Podcast {
+  id: number
+  title: string
+  author: string
+  description: string
+  image: string | null
+  feedUrl: string
+  language: string | null
+  episodeCount: number
+}
+
+export interface PodcastEpisode {
+  id: number
+  title: string
+  description: string
+  publishedAt: string | null
+  duration: number
+  audioUrl: string
+  image: string | null
+  explicit: boolean
+}
+
+export interface PodcastSearchResults {
+  podcasts: Podcast[]
+  /** Los de YouTube Music: sin idioma declarado, se enseñan aparte (ver src-tauri/src/youtube_podcasts.rs). */
+  youtube: Podcast[]
+  failedFeeds: number
+}
+
+export interface PodcastDetail {
+  podcast: Podcast
+  episodes: PodcastEpisode[]
+}
+
 /** Tu música local (carpetas importadas). */
 export interface LocalLibrary {
   folders: string[]
@@ -155,6 +190,21 @@ export interface PlaylistSummary {
   count: number
   duration: number
   covers: string[]
+}
+
+/** Metadatos de una lista externa, antes de buscar sus canciones en el catálogo. */
+export interface ImportTrack {
+  title: string
+  artists: string[]
+  durationMs: number | null
+  isrc: string | null
+}
+
+export interface ImportSource {
+  name: string
+  tracks: ImportTrack[]
+  skipped: number
+  warnings: string[]
 }
 
 export interface Entry {

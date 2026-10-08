@@ -5,6 +5,12 @@ import ts from 'typescript'
 
 const source = await readFile(new URL('../src/lib/player.svelte.ts', import.meta.url), 'utf8')
 const javascript = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText.replace(/^import[^\n]+\n/gm, '')
+const queueSource = await readFile(new URL('../src/lib/queue.ts', import.meta.url), 'utf8')
+const queueJavascript = ts.transpileModule(queueSource, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText
+const queueHelpers = await import(`data:text/javascript;base64,${Buffer.from(queueJavascript).toString('base64')}`)
+const mediaSource = await readFile(new URL('../src/lib/media.ts', import.meta.url), 'utf8')
+const mediaJavascript = ts.transpileModule(mediaSource, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText.replace(/^import[^\n]+\n/gm, '')
+const { isPodcast } = await import(`data:text/javascript;base64,${Buffer.from('const inTauri = false; const convertFileSrc = value => value;\n' + mediaJavascript).toString('base64')}`)
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); return { promise, resolve, reject } }
 async function settle(predicate) { for (let i = 0; i < 50; i++) { if (predicate()) return; await tick() } assert.fail('La operación no terminó') }
@@ -38,6 +44,7 @@ async function setup(t, methods) {
   const toasts = []
   const key = `__playerTest${++count}`
   globalThis[key] = {
+    ...queueHelpers, isPodcast, isAndroid: false,
     api: { recordPlay: async () => {}, cancelPrefetch: async () => {}, ...methods },
     extractor: { engine: 'ytdlp' },
     convertFileSrc: value => value,
@@ -56,7 +63,7 @@ async function setup(t, methods) {
   }
   t.after(() => delete globalThis[key])
   // La reactividad no interviene en estas carreras; sí ejecutamos los métodos privados reales.
-  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast } = globalThis.${key};\n`
+  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast, load, playOrder, save, toQuery, isPodcast, isAndroid } = globalThis.${key};\n`
   const { player } = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
   return { player, audio, audios, stopped, toasts, progress, downloads: globalThis[key].downloads, extractor: globalThis[key].extractor }
 }

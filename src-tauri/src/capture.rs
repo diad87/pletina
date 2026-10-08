@@ -220,7 +220,7 @@ pub async fn capture_profile_open(app: AppHandle, mode: String) -> Result<Value,
             label,
             WebviewUrl::External("about:blank".parse().unwrap()),
         )
-        .title("Musify · acceso manual a YouTube Premium")
+        .title("Pletina · acceso manual a YouTube Premium")
         .data_directory(profile.path.clone())
         .additional_browser_args(CAPTURE_BROWSER_ARGS)
         .visible(false)
@@ -1512,7 +1512,7 @@ async fn create_window(
         label,
         WebviewUrl::External("about:blank".parse().unwrap()),
     )
-    .title("Musify · reproductor de YouTube")
+    .title("Pletina · reproductor de YouTube")
     .data_directory(profile.path)
     .additional_browser_args(CAPTURE_BROWSER_ARGS)
     .visible(std::env::var("MUSIFY_SHOW_ENGINE").is_ok())

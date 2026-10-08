@@ -224,4 +224,10 @@
     opacity: 1;
     margin-top: -4px;
   }
+  /* Con el dedo, el punto siempre a la vista para saber de dónde tirar. */
+  @media (hover: none) {
+    .slider:not(:disabled)::-webkit-slider-thumb {
+      opacity: 1;
+    }
+  }
 </style>

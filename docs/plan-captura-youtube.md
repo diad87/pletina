@@ -1,7 +1,8 @@
 # Captura oficial de YouTube — P1
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
-fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
+fusionar a main ni hacer push a main. Está autorizada la integración de `origin/main`
+en esta rama y su push para revisión. Estado: implementación
 API4/captura v25, todavía sin aprobar la promoción; el
 [informe inicial](informe-captura-youtube-2026-10-07.md) y el
 [diagnóstico del 8 de octubre](informe-captura-youtube-2026-10-08.md) conservan los resultados.
@@ -192,14 +193,19 @@ motores automáticamente. La entrega progresiva nueva sigue restringida al banco
 con opt-in; el uso normal de Oficial retiene la fuente completa hasta validarla.
 Publicar esa versión no equivale a activar progresiva ni sustituir Legacy.
 
-**Empaquetado revisado el 8 de octubre:** el paquete local v25/API4 coincide
+**Empaquetado revisado el 8 de octubre, antes de la integración:** el paquete local v25/API4 coincide
 con el bundle incluido y ambos scripts pasan comprobación de sintaxis. No está
-firmado ni publicado. `main` revisada en `4a69d84` ya es Pletina 0.6.0 y acepta
-captura API1: publicar el script API4 no actualiza esa app ni sus partes Rust/lector.
-La publicación requiere integrar los cambios en una nueva app compatible y
-conservar el nombre, versión y canal actuales. `p1-oficial` todavía contiene la
-configuración Musify 0.4.0. El [informe](informe-captura-youtube-2026-10-08.md)
-recoge los límites del candidato; no se ha fusionado, subido ni publicado.
+firmado ni publicado. Una app API1 no acepta el script API4 ni recibe por él las
+mejoras Rust/lector: la entrega requiere una nueva app compatible.
+
+**Integración del 8 de octubre:** `p1-oficial` incorpora `origin/main` en `b1733bb`,
+Pletina 0.9.1, por petición del usuario. Conserva su nombre visible, canal
+`diad87/pletina-releases`, Spotify, podcasts y su aviso de anuncios, Android y las
+comprobaciones SHA256SUMS/procedencia. Los identificadores y nombres internos
+Musify permanecen. Captura mantiene v25/API4; receta y youtubei v1/API1.
+El [informe](informe-captura-youtube-2026-10-08.md) separa esta integración y las
+comprobaciones de código de las mediciones históricas y la promoción pendiente.
+Se sube la rama para revisión; no se publica la app ni los extractores.
 
 **Validación cerrada, no aprobada (7–8 de octubre).** Propio resolvió30 búsquedas
 frías por Rust, sin fallback, en445–1.649ms (mediana698): no cumple300ms.

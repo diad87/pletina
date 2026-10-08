@@ -9,7 +9,10 @@ let serial = 0
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); return { promise, resolve, reject } }
 async function setup(t, tauriInvoke, listen) {
   const key = `__admissionApi${++serial}`
-  globalThis[key] = { tauriInvoke, listen }
+  globalThis[key] = {
+    tauriInvoke: (command, args) => command === 'plugin:app|version' ? Promise.resolve('0.9.1') : tauriInvoke(command, args),
+    listen,
+  }
   t.after(() => delete globalThis[key])
   const prelude = `const window = { __TAURI_INTERNALS__: {} }; const { tauriInvoke, listen } = globalThis.${key};\n`
   return import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)

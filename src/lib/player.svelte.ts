@@ -4,20 +4,14 @@ import { downloads } from './downloads.svelte'
 import { CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
 import { extractor } from './extractor/engine.svelte'
 import { library, toLib } from './library.svelte'
+import { isPodcast } from './media'
 import { toast } from './toast.svelte'
-import type { Playable, Track, TrackQuery } from './types'
+import { AndroidPlayer, isAndroid } from './player-android.svelte'
+import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
+import type { Playable } from './types'
 
-/** Una canción en la cola, con lo necesario para mostrarla y buscarla. */
-export interface QueueItem {
-  track: Track
-  albumId: number
-  albumTitle: string
-  artistId: number
-  cover: string | null
-}
+export { toQuery, type QueueItem, type Repeat }
 
-type Status = 'idle' | 'loading' | 'playing' | 'paused'
-export type Repeat = 'off' | 'all' | 'one'
 type PreparedAudio = { id: number; playable: Playable; audio: HTMLAudioElement; stop: (cancelBackend?: boolean) => void }
 type CapturePromotion = { token: number; audio: HTMLAudioElement; ready: boolean; played: boolean; interrupted: boolean }
 type PrefetchEntry = { item: QueueItem; engine: string; slot: 0 | 1; version: number; pending: boolean; resolved: boolean; prepared: PreparedAudio | null }
@@ -25,50 +19,11 @@ type PrefetchEntry = { item: QueueItem; engine: string; slot: 0 | 1; version: nu
 /** Tras tantos fallos seguidos se deja de saltar a la siguiente (p. ej. sin conexión). */
 const MAX_FAILURES = 3
 
-function load<T>(key: string, fallback: T, valid: (v: unknown) => boolean): T {
-  try {
-    const raw = localStorage.getItem(key)
-    const v = raw === null ? fallback : JSON.parse(raw)
-    return valid(v) ? v : fallback
-  } catch {
-    return fallback
-  }
-}
-
-function save(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // Sin almacenamiento: vale para esta sesión.
-  }
-}
-
-/** Orden de reproducción: en aleatorio, `first` primero y el resto barajado. */
-function playOrder(length: number, first: number, shuffle: boolean): number[] {
-  const order = Array.from({ length }, (_, i) => i)
-  if (!shuffle) return order
-  const rest = order.filter((i) => i !== first)
-  for (let i = rest.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[rest[i], rest[j]] = [rest[j], rest[i]]
-  }
-  return [first, ...rest]
-}
-
 /** Lo que se pone en el `<audio>`: el archivo descargado (protocolo local) o la URL del stream. */
 const audioSrc = (p: Playable) => (p.local ? convertFileSrc(p.url) : p.url)
 
-export function toQuery(item: QueueItem): TrackQuery {
-  return {
-    id: item.track.id,
-    title: item.track.title,
-    artist: item.track.artist.name,
-    album: item.albumTitle,
-    duration: item.track.duration,
-  }
-}
-
-class Player {
+/** El reproductor de escritorio: un `<audio>` en la interfaz. */
+class Player implements PlayerApi {
   /** Lo que se está reproduciendo "de fondo": un disco, una playlist… */
   queue = $state<QueueItem[]>([])
   /** Posiciones de `queue` en el orden en que van a sonar. */
@@ -416,7 +371,7 @@ class Player {
    * si no, solo se guarda para la próxima vez.
    */
   async useSource(videoId: string, item: QueueItem | null = this.current, onError?: (message: string) => void): Promise<boolean> {
-    if (!item) return false
+    if (!item || isPodcast(item.track.id)) return false
     const reportError = (e: unknown) => {
       const message = `No se pudo usar ese vídeo: ${e}`
       if (onError) onError(message)
@@ -851,4 +806,5 @@ class Player {
   }
 }
 
-export const player = new Player()
+/** En Android suena el servicio nativo (sigue con la pantalla apagada); en escritorio, la interfaz. */
+export const player: PlayerApi = isAndroid ? new AndroidPlayer() : new Player()

@@ -3,13 +3,18 @@ import { untrack } from 'svelte'
 export type Route =
   | { name: 'home' }
   | { name: 'search'; query: string }
+  | { name: 'podcasts'; query: string }
+  | { name: 'podcast'; id: number; feedUrl?: string }
   | { name: 'artist'; id: number }
   | { name: 'album'; id: number }
   | { name: 'liked' }
   | { name: 'playlist'; id: number }
+  | { name: 'import-playlist' }
   | { name: 'history' }
   | { name: 'downloads' }
   | { name: 'local' }
+  /** "Tu biblioteca" como página (en el móvil; en escritorio está en la barra lateral). */
+  | { name: 'library' }
 
 const sameRoute = (a: Route, b: Route) => JSON.stringify(a) === JSON.stringify(b)
 

@@ -352,8 +352,13 @@ fn move_entry(c: &Connection, playlist: i64, entry_id: i64, to: usize) -> rusqli
 /// Apunta una escucha en el historial (la llama el reproductor tras ~30 s de canción).
 #[tauri::command]
 pub fn record_play(track: LibTrack, db: State<'_, Db>) -> Res<()> {
-    with_tx(&db, |c| {
-        upsert_track(c, &track)?;
+    record(&db, &track)
+}
+
+/// Lo mismo, para quien no es la interfaz (el servicio de música de Android).
+pub(crate) fn record(db: &Db, track: &LibTrack) -> Res<()> {
+    with_tx(db, |c| {
+        upsert_track(c, track)?;
         c.execute("INSERT INTO history (track_id) VALUES (?1)", params![track.id as i64])?;
         Ok(())
     })
