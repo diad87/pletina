@@ -52,6 +52,24 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
   </tr>
 </table>
 
+### Android Auto (en desarrollo)
+
+El servicio multimedia ofrece **Favoritos**, **Playlists**, **Descargas** y **YouTube** a Android Auto. Al elegir una canción, continúa con el resto de su lista; los mandos del coche permiten pausar, reanudar y cambiar de canción. Puede arrancar sin abrir antes la pantalla de Pletina. La búsqueda consulta las canciones guardadas en tu biblioteca.
+
+Esta integración todavía no está publicada ni validada en un coche. Para probar un APK instalado fuera de Google Play, activa **Orígenes desconocidos** en las opciones de desarrollador de Android Auto. Consulta las [instrucciones y pruebas de Android Auto](docs/android-auto.md).
+
+### Artistas favoritos
+
+En la página de un artista, pulsa **Añadir a favoritos**. Aparecerá en **Tu biblioteca → Artistas favoritos**, tanto en el ordenador como en el móvil. Puedes quitarlo desde su página o con el corazón de la biblioteca. Los favoritos se guardan en el dispositivo y se conservan al cerrar la app.
+
+### Canciones de YouTube
+
+En **Tu biblioteca → Canciones de YouTube**, pega el enlace de un vídeo de YouTube o YouTube Music y pulsa **Continuar**. Revisa el título y el artista o canal, corrígelos si hace falta y pulsa **Guardar canción**. También se admiten enlaces compartidos de `youtu.be` y enlaces de Shorts. No hace falta que la canción esté en el catálogo de Deezer.
+
+Las canciones guardadas se pueden reproducir, añadir a la cola, favoritos y playlists, y descargar para escucharlas sin conexión, también en Android. Guardar otra vez el mismo vídeo actualiza sus datos sin duplicarlo. **Quitar de Canciones de YouTube**, en el menú ⋯, lo oculta de esa sección: conserva sus apariciones en playlists, favoritos, historial y descargas. Pegar de nuevo su enlace vuelve a mostrarlo.
+
+Para añadir un vídeo nuevo hace falta conexión y que esté disponible públicamente; si requiere una cuenta o ya no está disponible, la app muestra el error y no lo sustituye por otro vídeo.
+
 ### Importar playlists de Spotify
 
 En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.

@@ -1,4 +1,4 @@
-//! Biblioteca: canciones que te gustan, discos guardados, playlists e historial.
+//! Biblioteca: canciones que te gustan, discos y artistas guardados, playlists e historial.
 //! Todo se guarda en la base de datos local; las canciones se copian de Deezer
 //! para poder mostrar la biblioteca sin volver a preguntar.
 
@@ -38,6 +38,14 @@ pub struct SavedAlbum {
     pub record_type: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedArtist {
+    pub id: u64,
+    pub name: String,
+    pub picture: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaylistSummary {
@@ -74,6 +82,7 @@ pub struct LibraryData {
     pub liked_ids: Vec<u64>,
     pub downloaded_ids: Vec<u64>,
     pub albums: Vec<SavedAlbum>,
+    pub artists: Vec<SavedArtist>,
     pub playlists: Vec<PlaylistSummary>,
 }
 
@@ -96,6 +105,18 @@ pub(crate) fn track_at(r: &Row, i: usize) -> rusqlite::Result<LibTrack> {
 }
 
 pub(crate) fn upsert_track(conn: &Connection, t: &LibTrack) -> rusqlite::Result<()> {
+    // La cola, favoritos e historial pueden llevar una copia anterior a una edición. Para
+    // enlaces de YouTube manda la ficha guardada; solo su editor puede cambiar los metadatos.
+    if crate::youtube_tracks::is_youtube(t.id)
+        && conn.query_row("SELECT EXISTS(SELECT 1 FROM tracks WHERE id = ?1)", params![t.id as i64], |r| r.get::<_, bool>(0))?
+    {
+        return Ok(());
+    }
+    save_track_metadata(conn, t)
+}
+
+/// Escritura explícita desde el editor; los consumidores de biblioteca usan `upsert_track`.
+pub(crate) fn save_track_metadata(conn: &Connection, t: &LibTrack) -> rusqlite::Result<()> {
     conn.execute(
         "INSERT INTO tracks (id, title, duration, explicit, artist_id, artist_name, album_id, album_title, album_artist_id, cover)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
@@ -216,7 +237,41 @@ pub fn library(db: State<'_, Db>) -> Res<LibraryData> {
                 })
             })?
             .collect::<rusqlite::Result<_>>()?;
-        Ok(LibraryData { liked_ids, downloaded_ids, albums, playlists: summaries(c, None)? })
+        Ok(LibraryData { liked_ids, downloaded_ids, albums, artists: saved_artists(c)?, playlists: summaries(c, None)? })
+    })
+}
+
+fn saved_artists(conn: &Connection) -> rusqlite::Result<Vec<SavedArtist>> {
+    conn.prepare("SELECT id, name, picture FROM saved_artists ORDER BY added_at DESC, id DESC")?
+        .query_map([], |r| Ok(SavedArtist { id: r.get::<_, i64>(0)? as u64, name: r.get(1)?, picture: r.get(2)? }))?
+        .collect()
+}
+
+#[tauri::command]
+pub fn set_artist_saved(artist: SavedArtist, saved: bool, db: State<'_, Db>) -> Res<()> {
+    save_artist(&db, &artist, saved)
+}
+
+fn save_artist(db: &Db, artist: &SavedArtist, saved: bool) -> Res<()> {
+    if artist.id == 0 || artist.id > 9_007_199_254_740_991 {
+        return Err("El identificador del artista no es válido".into());
+    }
+    let name = artist.name.trim();
+    if saved && (name.is_empty() || name.len() > 2000) {
+        return Err("El nombre del artista no es válido".into());
+    }
+    with_tx(db, |c| {
+        if saved {
+            // Repetir el guardado actualiza los datos sin duplicar ni cambiar la fecha original.
+            c.execute(
+                "INSERT INTO saved_artists (id, name, picture) VALUES (?1, ?2, ?3)
+                 ON CONFLICT(id) DO UPDATE SET name = excluded.name, picture = excluded.picture",
+                params![artist.id as i64, name, artist.picture],
+            )?;
+        } else {
+            c.execute("DELETE FROM saved_artists WHERE id = ?1", params![artist.id as i64])?;
+        }
+        Ok(())
     })
 }
 
@@ -443,6 +498,40 @@ mod tests {
         assert_eq!(s[0].count, 3);
         assert_eq!(s[0].duration, 600);
         assert_eq!(s[0].covers.len(), 3);
+    }
+
+    #[test]
+    fn saved_artists_survive_restart_and_repeated_save_remove() {
+        let path = std::env::temp_dir().join(format!("musify-artists-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let artist = SavedArtist { id: 17, name: "  Björk  ".into(), picture: None };
+        {
+            let db = Db::open(&path).unwrap();
+            save_artist(&db, &artist, true).unwrap();
+            with_tx(&db, |c| {
+                c.execute("UPDATE saved_artists SET added_at = 123 WHERE id = 17", [])?;
+                Ok(())
+            }).unwrap();
+            let updated = SavedArtist { picture: Some("https://example.com/artist.jpg".into()), ..artist.clone() };
+            save_artist(&db, &updated, true).unwrap();
+            let artists = with_tx(&db, saved_artists).unwrap();
+            assert_eq!(artists.len(), 1);
+            assert_eq!(artists[0].name, "Björk");
+            assert_eq!(artists[0].picture, updated.picture);
+            let at: i64 = with_tx(&db, |c| c.query_row("SELECT added_at FROM saved_artists WHERE id = 17", [], |r| r.get(0))).unwrap();
+            assert_eq!(at, 123);
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            assert_eq!(with_tx(&db, saved_artists).unwrap()[0].id, artist.id);
+            save_artist(&db, &artist, false).unwrap();
+            save_artist(&db, &artist, false).unwrap();
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            assert!(with_tx(&db, saved_artists).unwrap().is_empty());
+        }
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

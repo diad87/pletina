@@ -6,7 +6,7 @@
   import { layout } from '../lib/layout.svelte'
   import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
-  import { isPodcast } from '../lib/media'
+  import { isPodcast, isYouTubeTrack } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
@@ -101,6 +101,7 @@
   {#each items as item, i (entryIds?.[i] ?? `${item.track.id}-${i}`)}
     {@const current = isCurrent(item)}
     {@const podcast = isPodcast(item.track.id)}
+    {@const youtube = isYouTubeTrack(item.track.id)}
     {@const liked = library.liked.has(item.track.id)}
     {@const downloaded = downloads.done.has(item.track.id)}
     {@const progress = downloads.active.get(item.track.id)}
@@ -155,9 +156,11 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
+                  {#if youtube}<span>{item.track.artist.name}</span>{:else}
                   <button class="link" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >
+                  {/if}
                 {/if}
               </span>
             {/if}
@@ -166,7 +169,7 @@
 
         {#if variant === 'list'}
           <span class="album">
-            <button class="link" onclick={(e) => go(e, { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
+            <button class="link" onclick={(e) => go(e, youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
           </span>
         {/if}
         {#if meta}<span class="meta">{meta(i)}</span>{/if}

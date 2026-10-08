@@ -20,6 +20,7 @@ export async function apply() {
   else if (view === 'podcast') nav.go({ name: 'podcast', id: id || 500_000_000_000_001 })
   else if (view === 'playlist') nav.go({ name: 'playlist', id: id || 1 })
   else if (view === 'import-playlist') nav.go({ name: 'import-playlist' })
+  else if (view === 'youtube-tracks') nav.go({ name: 'youtube-tracks' })
   else if (view === 'library') nav.go({ name: 'library' })
   else if (view === 'liked') nav.go({ name: 'liked' })
   else if (view === 'local') nav.go({ name: 'local' })

@@ -10,7 +10,7 @@
   import { songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
   import { layout } from '../lib/layout.svelte'
-  import { isPodcast } from '../lib/media'
+  import { isPodcast, isYouTubeTrack } from '../lib/media'
   import { nav, type Route } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -68,9 +68,9 @@
       if (list.length >= 8) break
       list.push({
         key: `a${t.albumId}`,
-        title: t.albumTitle,
+        title: isYouTubeTrack(t.id) ? t.title : t.albumTitle,
         image: t.cover,
-        route: { name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId },
+        route: recentRoute(t),
         play: () => playRecent(t),
         playing: albumPlaying(t.albumId),
       })
@@ -78,8 +78,12 @@
     return list
   })
 
+  function recentRoute(t: LibTrack): Route {
+    return isYouTubeTrack(t.id) ? { name: 'youtube-tracks' } : { name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId }
+  }
+
   function playRecent(t: LibTrack) {
-    if (!isPodcast(t.id)) return playAlbum(t.albumId)
+    if (!isPodcast(t.id) && !isYouTubeTrack(t.id)) return playAlbum(t.albumId)
     if (player.current?.albumId === t.albumId && player.status !== 'idle') return player.toggle()
     player.playQueue([fromLib(t)], 0, t.albumTitle)
   }
@@ -138,12 +142,12 @@
       {#each played as t (t.albumId)}
         <Card
           image={t.cover}
-          title={t.albumTitle}
+          title={isYouTubeTrack(t.id) ? t.title : t.albumTitle}
           subtitle={t.artistName}
           playing={albumPlaying(t.albumId)}
-          onclick={() => nav.go({ name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId })}
+          onclick={() => nav.go(recentRoute(t))}
           onplay={() => playRecent(t)}
-          oncontext={(e) => menu.show(e, isPodcast(t.id) ? trackMenu(fromLib(t)) : albumCardMenu(t.albumId))}
+          oncontext={(e) => menu.show(e, isPodcast(t.id) || isYouTubeTrack(t.id) ? trackMenu(fromLib(t)) : albumCardMenu(t.albumId))}
         />
       {/each}
     </Shelf>

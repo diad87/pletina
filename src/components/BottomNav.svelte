@@ -11,7 +11,7 @@
     { tab: 'podcasts', label: 'Podcasts', icon: 'podcast', route: { name: 'podcasts', query: '' } },
     { tab: 'library', label: 'Tu biblioteca', icon: 'library', route: { name: 'library' } },
   ]
-  const LIBRARY = ['library', 'liked', 'history', 'local', 'downloads', 'playlist', 'import-playlist']
+  const LIBRARY = ['library', 'liked', 'history', 'local', 'downloads', 'playlist', 'import-playlist', 'youtube-tracks']
 
   let active = $state<Tab>('home')
   $effect(() => {

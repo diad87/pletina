@@ -23,6 +23,7 @@
   import DownloadsView from './views/DownloadsView.svelte'
   import HistoryView from './views/HistoryView.svelte'
   import ImportPlaylist from './views/ImportPlaylist.svelte'
+  import YouTubeTracks from './views/YouTubeTracks.svelte'
   import LibraryView from './views/LibraryView.svelte'
   import Home from './views/Home.svelte'
   import LikedView from './views/LikedView.svelte'
@@ -111,6 +112,8 @@
         <PlaylistView id={route.id} />
       {:else if route.name === 'import-playlist'}
         <ImportPlaylist />
+      {:else if route.name === 'youtube-tracks'}
+        <YouTubeTracks />
       {:else if route.name === 'downloads'}
         <DownloadsView />
       {:else if route.name === 'local'}

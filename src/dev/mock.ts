@@ -2,7 +2,8 @@
 // Solo se carga en desarrollo y fuera de la app; usa respuestas reales guardadas en ./fixtures
 // (se regeneran con `cargo test write_fixtures -- --ignored` en src-tauri).
 
-import type { Album, AlbumDetail, ArtistPage, Entry, LibTrack, PlaylistSummary, SavedAlbum, SearchResults } from '../lib/types'
+import type { Album, AlbumDetail, ArtistPage, Entry, LibTrack, PlaylistSummary, SavedAlbum, SavedArtist, SearchResults } from '../lib/types'
+import { YOUTUBE_BASE } from '../lib/media'
 import album1 from './fixtures/album-1.json'
 import album2 from './fixtures/album-2.json'
 import album3 from './fixtures/album-3.json'
@@ -49,6 +50,25 @@ const entries = (tracks: LibTrack[], step = 3600): Entry[] =>
   tracks.map((track, i) => ({ entryId: i + 1, track, at: now - i * step }))
 
 const liked = new Map<number, LibTrack>([0, 2, 4, 6].map((i) => [lib(albums[0], i).id, lib(albums[0], i)]))
+const savedArtists = new Map<number, SavedArtist>()
+const youtubeTracks = new Map<string, { track: LibTrack; saved: boolean }>()
+
+function youtubeId(input: string): string {
+  const text = input.trim()
+  let id = /^[\w-]{11}$/.test(text) ? text : ''
+  if (!id) {
+    try {
+      const url = new URL(text)
+      if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error()
+      if (url.hostname === 'youtu.be') id = url.pathname.slice(1)
+      else if (['youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com'].includes(url.hostname)) {
+        id = url.pathname === '/watch' ? url.searchParams.get('v') ?? '' : url.pathname.match(/^\/(?:shorts|embed|live)\/([\w-]{11})\/?$/)?.[1] ?? ''
+      }
+    } catch { /* El mismo mensaje de validación que en la app. */ }
+  }
+  if (!/^[\w-]{11}$/.test(id)) throw new Error('Pega un enlace de un vídeo de YouTube o YouTube Music.')
+  return id
+}
 const saved: SavedAlbum[] = albums.slice(1, 3).map((a) => ({
   id: a.id,
   title: a.title,
@@ -123,6 +143,24 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
   await wait(cmd === 'resolve' ? 600 : 120)
   const out = ((): unknown => {
     switch (cmd) {
+      case 'preview_youtube_track': {
+        const videoId = youtubeId(String(args.url ?? ''))
+        return { videoId, title: 'Canción de YouTube · ejemplo', artist: 'Canal de ejemplo', duration: 214, cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }
+      }
+      case 'save_youtube_track': {
+        const videoId = youtubeId(String(args.videoId ?? ''))
+        const id = youtubeTracks.get(videoId)?.track.id ?? YOUTUBE_BASE + youtubeTracks.size + 1
+        const track: LibTrack = { id, title: args.title, artistName: args.artist, duration: args.duration,
+          explicit: false, artistId: 0, albumId: id, albumTitle: 'YouTube', albumArtistId: 0,
+          cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }
+        youtubeTracks.set(videoId, { track, saved: true })
+        return track
+      }
+      case 'youtube_tracks':
+        return entries([...youtubeTracks.values()].filter((row) => row.saved).map((row) => row.track).reverse())
+      case 'remove_youtube_track':
+        for (const row of youtubeTracks.values()) if (row.track.id === args.id) row.saved = false
+        return null
       case 'read_spotify_playlist': {
         const input = String(args.url ?? '').trim()
         if (!/^spotify:playlist:[A-Za-z0-9]{22}$/.test(input) &&
@@ -189,6 +227,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
           likedIds: [...liked.keys()],
           downloadedIds: [],
           albums: saved,
+          artists: [...savedArtists.values()],
           playlists: [...playlists.keys()].map(summary),
         }
       case 'set_liked':
@@ -199,6 +238,10 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
         return entries([...liked.values()], 86400)
       case 'set_album_saved':
         return null
+      case 'set_artist_saved':
+        if (args.saved) savedArtists.set(args.artist.id, args.artist)
+        else savedArtists.delete(args.artist.id)
+        return null
       case 'create_playlist': {
         const id = Math.max(0, ...playlists.keys()) + 1
         playlists.set(id, { name: args.name, tracks: args.tracks ?? [] })
@@ -206,6 +249,11 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
       }
       case 'playlist':
         return { ...summary(args.id), entries: entries(playlists.get(args.id)?.tracks ?? [], 86400) }
+      case 'add_to_playlist': {
+        const list = playlists.get(args.id)
+        if (list) list.tracks.push(...args.tracks)
+        return null
+      }
       case 'history':
         return history
       case 'downloads_list':

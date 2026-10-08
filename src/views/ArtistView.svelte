@@ -9,6 +9,7 @@
   import * as api from '../lib/api'
   import { fans, recordType, songs, year } from '../lib/format'
   import { isLocal, mediaUrl } from '../lib/media'
+  import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -75,6 +76,8 @@
   })
 
   const mine = $derived(isLocal(id))
+  const saved = $derived(library.isArtistSaved(id))
+  const saving = $derived(library.savingArtists.has(id))
 
   const kindOf = (t: string | null) => (t === 'single' || t === 'ep' ? 'single' : t === 'compile' ? 'compile' : 'album')
   const counts = $derived({
@@ -114,6 +117,18 @@
       <button class="big-play" onclick={playTop} disabled={!top.length} title={playing ? 'Pausa' : 'Reproducir lo más escuchado'}>
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <button
+        class="favorite"
+        class:on={saved}
+        disabled={saving}
+        aria-pressed={saved}
+        aria-busy={saving}
+        title={saved ? 'Quitar de artistas favoritos' : 'Añadir a artistas favoritos'}
+        onclick={() => data && library.toggleArtist({ id: data.artist.id, name: data.artist.name, picture: data.artist.pictureMedium ?? data.artist.pictureXl })}
+      >
+        <Icon name={saved ? 'heartFilled' : 'heart'} size={22} />
+        {saving ? 'Guardando…' : saved ? 'En favoritos' : 'Añadir a favoritos'}
+      </button>
     </div>
 
     {#if top.length}
@@ -151,6 +166,24 @@
 {/if}
 
 <style>
+  .favorite {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .favorite:hover,
+  .favorite.on {
+    color: var(--accent);
+    border-color: currentColor;
+  }
+  .favorite:disabled { opacity: 0.6; }
+
   /* Cabecera con la foto del artista a todo lo ancho, fundida con el color de la página. */
   .banner {
     position: relative;

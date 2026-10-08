@@ -5,7 +5,7 @@ Estado: sin empezar. Plan del 6 de octubre de 2026.
 ## Decisiones
 - **Primero Android.** iPhone, más adelante (ver al final).
 - **Sin tiendas oficiales ni cuentas de pago.** El APK lo firmamos nosotros, se publica en [pletina-releases](https://github.com/diad87/pletina-releases) y se instala y actualiza con **Obtainium**.
-- **Android Auto y CarPlay, fuera por ahora.** No hay acceso a corto plazo. Se diseña de forma que Android Auto se pueda añadir después sin rehacer nada; CarPlay exige una cuenta de pago de Apple, así que queda descartado.
+- **Android Auto en desarrollo**, con servicio multimedia y validación en un paquete de prueba aislado. La prueba con Android Auto y coche sigue pendiente; ver [integración y validación](android-auto.md). CarPlay queda fuera de este trabajo.
 - **Uso personal**, como el resto del proyecto.
 
 ## Qué tiene que hacer la primera versión
@@ -214,10 +214,7 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 | Modo avión | Música local y descargada sonando, biblioteca navegable |
 
 ## Más adelante
-- **Android Auto**, cuando haya acceso: el servicio ya será un `MediaLibraryService`. Faltaría:
-  - publicar la biblioteca por carpetas (Favoritos, Playlists, Recientes, Descargadas);
-  - declarar el soporte en el manifiesto;
-  - con un APK que no viene de Google Play, activar «Orígenes desconocidos» en los ajustes de desarrollador de Android Auto.
+- **Android Auto:** integración en desarrollo y prueba con coche pendiente. Los requisitos del servicio, compilación, pruebas aisladas y configuración para APK fuera de Play están en [Android Auto: integración y validación](android-auto.md).
 - **iPhone, gratis:**
   - Se instala con **SideStore** y un Apple ID normal: la app se firma en el propio iPhone. Con una cuenta gratis la firma dura 7 días; SideStore la renueva desde el propio iPhone y se puede automatizar con Atajos.
   - El audio con la pantalla apagada no necesita cuenta de pago: es un permiso normal de la app. Con AVPlayer y el mismo núcleo Rust, pidiendo m4a, porque AVPlayer no reproduce opus/webm.

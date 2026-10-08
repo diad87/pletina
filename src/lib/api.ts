@@ -16,6 +16,8 @@ import type {
   PlaylistDetail,
   PlaylistSummary,
   SavedAlbum,
+  SavedArtist,
+  YouTubeTrackPreview,
   SearchResults,
   TrackQuery,
 } from './types'
@@ -91,6 +93,11 @@ export const library = () => invoke<LibraryData>('library')
 export const setLiked = (track: LibTrack, liked: boolean) => invoke<void>('set_liked', { track, liked })
 export const likedTracks = () => invoke<Entry[]>('liked_tracks')
 export const setAlbumSaved = (album: SavedAlbum, saved: boolean) => invoke<void>('set_album_saved', { album, saved })
+export const setArtistSaved = (artist: SavedArtist, saved: boolean) => invoke<void>('set_artist_saved', { artist, saved })
+export const previewYouTubeTrack = (url: string) => invoke<YouTubeTrackPreview>('preview_youtube_track', { url })
+export const saveYouTubeTrack = (track: YouTubeTrackPreview) => invoke<LibTrack>('save_youtube_track', { ...track })
+export const youtubeTracks = () => invoke<Entry[]>('youtube_tracks')
+export const removeYouTubeTrack = (id: number) => invoke<void>('remove_youtube_track', { id })
 export const createPlaylist = (name: string, tracks: LibTrack[] = []) =>
   invoke<PlaylistSummary>('create_playlist', { name, tracks })
 export const readSpotifyPlaylist = (url: string) => invoke<ImportSource>('read_spotify_playlist', { url })

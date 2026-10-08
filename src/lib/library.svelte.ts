@@ -2,7 +2,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
-import type { AlbumDetail, LibraryData, LibTrack, PlaylistSummary, SavedAlbum } from './types'
+import type { AlbumDetail, LibraryData, LibTrack, PlaylistSummary, SavedAlbum, SavedArtist } from './types'
 
 /** De canción en la cola a canción de biblioteca. */
 export function toLib(item: QueueItem): LibTrack {
@@ -56,6 +56,8 @@ export function albumToSaved(album: AlbumDetail): SavedAlbum {
 class Library {
   liked = new SvelteSet<number>()
   albums = $state<SavedAlbum[]>([])
+  artists = $state<SavedArtist[]>([])
+  savingArtists = new SvelteSet<number>()
   playlists = $state<PlaylistSummary[]>([])
   /** Sube con cada cambio; las vistas de biblioteca lo leen para recargarse. */
   version = $state(0)
@@ -68,6 +70,7 @@ class Library {
       this.liked.clear()
       for (const id of data.likedIds) this.liked.add(id)
       this.albums = data.albums
+      this.artists = data.artists
       this.playlists = data.playlists
       return data
     } catch (e) {
@@ -78,6 +81,27 @@ class Library {
 
   isSaved(albumId: number) {
     return this.albums.some((a) => a.id === albumId)
+  }
+
+  isArtistSaved(artistId: number) {
+    return this.artists.some((artist) => artist.id === artistId)
+  }
+
+  async toggleArtist(artist: SavedArtist) {
+    if (this.savingArtists.has(artist.id)) return
+    const saved = !this.isArtistSaved(artist.id)
+    this.savingArtists.add(artist.id)
+    try {
+      await api.setArtistSaved(artist, saved)
+      this.artists = this.artists.filter((item) => item.id !== artist.id)
+      if (saved) this.artists.unshift(artist)
+      this.version++
+      toast.show(saved ? 'Artista añadido a favoritos' : 'Artista quitado de favoritos')
+    } catch (e) {
+      toast.show(`No se pudo guardar el artista: ${e}`)
+    } finally {
+      this.savingArtists.delete(artist.id)
+    }
   }
 
   async toggleLike(item: QueueItem) {

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
-  import { isLocal, isPodcast } from '../lib/media'
+  import { isLocal, isPodcast, isYouTubeTrack } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -12,6 +12,7 @@
 
   const current = $derived(player.current)
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
+  const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
 
   // La barra se tiñe con el color de la carátula que suena.
@@ -36,12 +37,14 @@
         <span class="expand"><Icon name="chevronUp" size={22} /></span>
       </button>
       <div class="info">
-        <button class="link title" onclick={() => nav.go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}
+        <button class="link title" onclick={() => nav.go(youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: current.albumId })}
           >{current.track.title}</button
         >
+        {#if youtube}<span class="artist">{current.track.artist.name}</span>{:else}
         <button class="link artist" onclick={() => nav.go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
           >{current.track.artist.name}</button
         >
+        {/if}
         {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Buscando en YouTube…'}</span>{/if}
       </div>
       <button
@@ -58,7 +61,7 @@
   <div class="center"><Transport /></div>
 
   <div class="side">
-    {#if !podcast}
+    {#if !podcast && !youtube}
       <button
         class="icon"
         onclick={() => current && (player.picking = current)}

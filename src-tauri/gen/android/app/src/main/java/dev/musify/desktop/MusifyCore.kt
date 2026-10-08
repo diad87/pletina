@@ -27,4 +27,13 @@ object MusifyCore {
 
   /** La canción (id de Deezer) está descargada: se puede escuchar sin conexión. */
   external fun isDownloaded(trackId: Long): Boolean
+
+  /** Catálogo Android Auto, sin interfaz: `{items: [...]}` o `{error}`. Bloquea mientras lee SQLite. */
+  external fun browse(parentId: String): String
+
+  /** Un nodo del catálogo: `{item: {...}}` o `{error}`. */
+  external fun mediaItem(mediaId: String): String
+
+  /** Búsqueda en las canciones guardadas de la biblioteca: `{items: [...]}` o `{error}`. */
+  external fun search(query: String): String
 }

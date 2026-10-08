@@ -2,7 +2,7 @@
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
   import { library } from '../lib/library.svelte'
-  import { isLocal, isPodcast, mediaUrl } from '../lib/media'
+  import { isLocal, isPodcast, isYouTubeTrack, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -12,6 +12,7 @@
 
   const current = $derived(player.current)
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
+  const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
   const upcoming = $derived(player.upcoming.slice(0, 40))
   const queued = $derived(player.userQueue)
@@ -83,7 +84,7 @@
       </button>
       <div class="from">
         <span>Sonando desde</span>
-        <button class="link" onclick={() => go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
+        <button class="link" onclick={() => go(youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
       </div>
       <span class="spacer"></span>
     </header>
@@ -96,9 +97,11 @@
         <div class="meta">
           <div class="text">
             <h1>{current.track.title}</h1>
+            {#if youtube}<span class="artist">{current.track.artist.name}</span>{:else}
             <button class="link artist" onclick={() => go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
               >{current.track.artist.name}</button
             >
+            {/if}
           </div>
           <button
             class="heart"
@@ -112,7 +115,7 @@
         <Transport big />
         <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
         <div class="extras">
-          {#if !podcast}
+          {#if !podcast && !youtube}
             <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
               <Icon name="swap" size={20} /> ¿No es esta canción?
             </button>
