@@ -192,6 +192,20 @@ export interface PlaylistSummary {
   covers: string[]
 }
 
+export interface SavedArtist {
+  id: number
+  name: string
+  picture: string | null
+}
+
+export interface YouTubeTrackPreview {
+  videoId: string
+  title: string
+  artist: string
+  duration: number
+  cover: string | null
+}
+
 /** Metadatos de una lista externa, antes de buscar sus canciones en el catálogo. */
 export interface ImportTrack {
   title: string
@@ -222,6 +236,7 @@ export interface LibraryData {
   likedIds: number[]
   downloadedIds: number[]
   albums: SavedAlbum[]
+  artists: SavedArtist[]
   playlists: PlaylistSummary[]
 }
 

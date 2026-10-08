@@ -66,7 +66,7 @@ function harness({ resolve = async (track) => playable(track.id), play, mediaSes
       setAudioSource: (audio, src) => { audio.src = src; sources.push(src) },
     },
     './library.svelte': { library: { historyVersion: 0 }, toLib: (value) => value },
-    './media': { isPodcast: () => false, mediaUrl: (value) => value },
+    './media': { isPodcast: () => false, isYouTubeTrack: () => false, mediaUrl: (value) => value },
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
     './player-android.svelte': { isAndroid: false },
     './queue': {

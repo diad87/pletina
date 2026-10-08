@@ -10,7 +10,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from './events'
 import * as api from './api'
 import { library, toLib } from './library.svelte'
-import { isPodcast } from './media'
+import { isPodcast, isYouTubeTrack } from './media'
 import { load, playOrder, save, shuffled, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import { toast } from './toast.svelte'
 import type { LibTrack, TrackQuery } from './types'
@@ -281,7 +281,7 @@ export class AndroidPlayer implements PlayerApi {
   }
 
   async useSource(videoId: string, item: QueueItem | null = this.current): Promise<boolean> {
-    if (!item || isPodcast(item.track.id)) return false
+    if (!item || isPodcast(item.track.id) || isYouTubeTrack(item.track.id)) return false
     try {
       await api.chooseSource(toQuery(item), videoId)
       if (item.track.id === this.current?.track.id) {

@@ -168,7 +168,7 @@ async fn fetch(
     let file = match get(&video_id, &target, ytdlp, &mut report).await {
         Ok(file) => file,
         // El vídeo guardado ya no existe: se busca otro una vez.
-        Err(e) if player::is_gone(&e) => {
+        Err(e) if player::is_gone(&e) && !crate::youtube_tracks::is_youtube(t.id) => {
             db.delete_source(t.id);
             video_id = player::resolve(&q, false, db, ytm, ytdlp).await?.video_id;
             get(&video_id, &target, ytdlp, &mut report).await?
@@ -197,6 +197,11 @@ fn target_path(dir: &Path, t: &LibTrack) -> Res<PathBuf> {
     let folder = dir.join(safe_name(&t.artist_name)).join(safe_name(&t.album_title));
     std::fs::create_dir_all(&folder).map_err(|e| format!("No se pudo crear la carpeta {}: {e}", folder.display()))?;
     let stem = safe_name(&t.title);
+    // Dos enlaces distintos pueden tener idénticos título y canal, y empezar a la vez.
+    // Un nombre estable por ID evita que compartan también el archivo parcial.
+    if crate::youtube_tracks::is_youtube(t.id) {
+        return Ok(folder.join(format!("{stem} ({})", t.id)));
+    }
     let taken = std::fs::read_dir(&folder)
         .map(|entries| {
             entries.flatten().any(|e| e.path().file_stem().is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case(&stem)))
@@ -437,5 +442,24 @@ mod tests {
         assert_eq!(safe_name("COM1"), "_COM1");
         assert_eq!(safe_name("   "), "Sin título");
         assert_eq!(safe_name("Canción Ñandú"), "Canción Ñandú");
+    }
+
+    #[test]
+    fn separate_youtube_links_never_share_a_download_path() {
+        let unique = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let root = std::env::temp_dir().join(format!("pletina-youtube-paths-{}-{unique}", std::process::id()));
+        let track = LibTrack {
+            id: crate::youtube_tracks::YOUTUBE_BASE + 1,
+            title: "Una canción".into(), duration: 200, explicit: false, artist_id: 0,
+            artist_name: "Un canal".into(), album_id: 0, album_title: "YouTube".into(),
+            album_artist_id: 0, cover: None,
+        };
+        let first = target_path(&root, &track).unwrap();
+        let second = target_path(&root, &LibTrack { id: track.id + 1, ..track.clone() }).unwrap();
+        assert_ne!(first, second);
+        assert_eq!(first, target_path(&root, &track).unwrap());
+        std::fs::remove_dir(first.parent().unwrap()).unwrap();
+        std::fs::remove_dir(root.join("Un canal")).unwrap();
+        std::fs::remove_dir(root).unwrap();
     }
 }

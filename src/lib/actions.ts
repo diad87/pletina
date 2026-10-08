@@ -6,7 +6,7 @@ import { toast } from './toast.svelte'
 import type { AlbumDetail } from './types'
 import { layout } from './layout.svelte'
 import { library } from './library.svelte'
-import { isLocal, isPodcast } from './media'
+import { isLocal, isPodcast, isYouTubeTrack } from './media'
 import { youtubeEpisodes } from './podcasts'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
@@ -69,6 +69,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
   ]
   const id = item.track.id
   const podcast = isPodcast(id)
+  const youtube = isYouTubeTrack(id)
   if (isLocal(id)) {
     // Música local: ya está en el equipo y no viene de YouTube.
     items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealLocal(id).catch(() => {}) })
@@ -86,7 +87,19 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       action: () => library.removeFromPlaylist(playlist.id, playlist.entryId),
     })
   }
-  if (podcast) {
+  if (youtube) {
+    items.push({ label: 'Ir a Canciones de YouTube', icon: 'note', separated: true, action: () => nav.go({ name: 'youtube-tracks' }) })
+    items.push({
+      label: 'Quitar de Canciones de YouTube', icon: 'trash',
+      action: async () => {
+        try {
+          await api.removeYouTubeTrack(id)
+          library.version++
+          toast.show('Quitada de Canciones de YouTube. Se conserva en tus playlists y favoritos.')
+        } catch (e) { toast.show(`No se pudo quitar: ${e}`) }
+      },
+    })
+  } else if (podcast) {
     items.push({ label: 'Ir al podcast', icon: 'disc', separated: true, action: () => nav.go({ name: 'podcast', id: item.albumId }) })
   } else {
     items.push(
@@ -99,7 +112,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: item.albumId }) },
     )
   }
-  if (!isLocal(id) && !podcast) {
+  if (!isLocal(id) && !podcast && !youtube) {
     items.push({ label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) })
   }
   return items

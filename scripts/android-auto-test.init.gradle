@@ -1,0 +1,21 @@
+// Isolated debug package for Android Auto checks. Invoke with Gradle -I <this file>.
+// This changes the APK applicationId only; Kotlin namespace and JNI symbols stay intact.
+gradle.beforeProject { targetProject ->
+    targetProject.pluginManager.withPlugin('com.android.application') {
+        def androidExtension = targetProject.extensions.getByName('android')
+        androidExtension.buildTypes.named('debug') { debugType ->
+            debugType.applicationIdSuffix = '.autotest'
+        }
+        targetProject.tasks.register('printAutoTestApplicationIds') {
+            group = 'verification'
+            description = 'Print final debug package IDs without installing the app.'
+            doLast {
+                androidExtension.applicationVariants.all { variant ->
+                    if (variant.buildType.name == 'debug') {
+                        println("${variant.name}: ${variant.applicationId}")
+                    }
+                }
+            }
+        }
+    }
+}

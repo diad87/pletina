@@ -26,14 +26,22 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaConstants
+import androidx.media3.session.MediaLibraryService
+import androidx.media3.session.MediaLibraryService.LibraryParams
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionError
+import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicLong
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -48,11 +56,14 @@ import org.json.JSONObject
  * La cola se guarda en files/cola.json para seguir donde estaba aunque Android cierre la app.
  */
 @OptIn(UnstableApi::class)
-class PlaybackService : MediaSessionService() {
-  private var session: MediaSession? = null
+class PlaybackService : MediaLibraryService() {
+  private var session: MediaLibrarySession? = null
   private lateinit var player: ExoPlayer
   private val main = Handler(Looper.getMainLooper())
   private val worker = Executors.newSingleThreadExecutor()
+  private val carLibrary = CarLibrary()
+  private val librarySnapshots = ConcurrentHashMap<String, CarLibrary.Snapshot>()
+  private val carQueueSequence = AtomicLong(System.currentTimeMillis())
 
   /** Canción (id de Deezer) → consulta para el núcleo (TrackQuery en JSON). */
   private val queries = ConcurrentHashMap<String, String>()
@@ -92,11 +103,12 @@ class PlaybackService : MediaSessionService() {
       .setWakeMode(C.WAKE_MODE_NETWORK)
       .build()
     player.addListener(listener)
-    session = MediaSession.Builder(this, player).setCallback(callback).build()
+    session = MediaLibrarySession.Builder(this, player, callback).build()
     restore()
     watchNetwork()
     tick()
     heartbeat()
+    watchLibrary()
     registerReceiver(screen, IntentFilter().apply {
       addAction(Intent.ACTION_SCREEN_OFF)
       addAction(Intent.ACTION_SCREEN_ON)
@@ -105,7 +117,7 @@ class PlaybackService : MediaSessionService() {
     MusifyLog.log("ahorro de batería de Android: ${if (free) "sin restricciones" else "con restricciones (lo normal)"}")
   }
 
-  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
+  override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
   override fun onTaskRemoved(rootIntent: Intent?) {
     MusifyLog.log("app quitada de recientes; sonando=${player.isPlaying}")
@@ -128,25 +140,114 @@ class PlaybackService : MediaSessionService() {
     super.onDestroy()
   }
 
-  private val callback = object : MediaSession.Callback {
+  private val callback = object : MediaLibrarySession.Callback {
+    override fun onGetLibraryRoot(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<MediaItem>> {
+      // El navegador legacy espera en el hilo principal: la raíz debe responder inmediatamente.
+      val resultParams = LibraryParams.Builder().setExtras(Bundle().apply {
+        putBoolean("android.media.browse.SEARCH_SUPPORTED", true)
+        putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_BROWSABLE, MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM)
+        putInt(MediaConstants.EXTRAS_KEY_CONTENT_STYLE_PLAYABLE, MediaConstants.EXTRAS_VALUE_CONTENT_STYLE_LIST_ITEM)
+      }).build()
+      return Futures.immediateFuture(LibraryResult.ofItem(carLibrary.root(), resultParams))
+    }
+
+    override fun onGetChildren(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      parentId: String,
+      page: Int,
+      pageSize: Int,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = libraryTask {
+      LibraryResult.ofItemList(carLibrary.children(parentId, page, pageSize), params)
+    }
+
+    override fun onGetItem(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      mediaId: String,
+    ): ListenableFuture<LibraryResult<MediaItem>> = libraryTask {
+      LibraryResult.ofItem(carLibrary.item(mediaId), null)
+    }
+
+    override fun onSubscribe(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      parentId: String,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> = libraryTask {
+      val snapshot = carLibrary.snapshot(parentId)
+      librarySnapshots[parentId] = snapshot
+      main.post { if (this@PlaybackService.session === session) session.notifyChildrenChanged(browser, parentId, snapshot.count, params) }
+      LibraryResult.ofVoid(params)
+    }
+
+    override fun onSearch(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      query: String,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> = libraryTask {
+      val count = carLibrary.count(CarLibrary.searchParent(query))
+      main.post { if (this@PlaybackService.session === session) session.notifySearchResultChanged(browser, query, count, params) }
+      LibraryResult.ofVoid(params)
+    }
+
+    override fun onGetSearchResult(
+      session: MediaLibrarySession,
+      browser: MediaSession.ControllerInfo,
+      query: String,
+      page: Int,
+      pageSize: Int,
+      params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = libraryTask {
+      LibraryResult.ofItemList(carLibrary.search(query, page, pageSize), params)
+    }
+
     /** Canciones que manda un controlador (Media3 les quita la URI): se les vuelve a poner. */
     override fun onAddMediaItems(
       mediaSession: MediaSession,
       controller: MediaSession.ControllerInfo,
       mediaItems: MutableList<MediaItem>,
     ): ListenableFuture<MutableList<MediaItem>> {
-      val items = mediaItems.map { item ->
-        val entry = entryOf(item)
-        if (entry != null) {
-          remember(entry)
-          itemFromEntry(entry)
-        } else {
-          // Sin entrada de la interfaz (no debería pasar): se busca con la consulta, si la trae.
-          item.requestMetadata.extras?.getString(EXTRA_QUERY)?.let { queries[item.mediaId] = it }
-          item.buildUpon().setUri("musify://track/${item.mediaId}").build()
-        }
+      // ctx identifica una aparición en la cola de fondo de la app. Las adiciones externas
+      // necesitan posiciones nuevas incluso si añaden dos veces la misma canción.
+      val entries = (0 until player.mediaItemCount).mapNotNull { entryOf(player.getMediaItemAt(it)) }
+      val nextContext = (entries.filter { !it.optBoolean("user") }.maxOfOrNull { it.optInt("ctx", -1) } ?: -1) + 1
+      val context = entries.firstOrNull { !it.optBoolean("user") }?.optString("context")
+      return background {
+        mediaItems.mapIndexed { index, item ->
+          if (controller.packageName == packageName) nativeItem(item, controller)
+          else carQueueItem(item, nextContext + index, context)
+        }.toMutableList()
       }
-      return Futures.immediateFuture(items.toMutableList())
+    }
+
+    /** Android Auto (también legacy) pide una canción por ID, sin abrir antes la app. */
+    override fun onSetMediaItems(
+      mediaSession: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      mediaItems: MutableList<MediaItem>,
+      startIndex: Int,
+      startPositionMs: Long,
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = background {
+      val fromApp = controller.packageName == packageName && mediaItems.all {
+        entryOf(it) != null || it.requestMetadata.extras?.getString(EXTRA_QUERY) != null
+      }
+      if (!fromApp && mediaItems.size == 1) {
+        val selected = carLibrary.selection(mediaItems[0])
+        selected.items.forEach { entryOf(it)?.let(::remember) }
+        MediaSession.MediaItemsWithStartPosition(selected.items, selected.index, startPositionMs.takeIf { it >= 0 } ?: 0)
+      } else {
+        val items = mediaItems.mapIndexed { index, item ->
+          if (fromApp) nativeItem(item, controller) else carQueueItem(item, index, null)
+        }
+        MediaSession.MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+      }
     }
 
     /** "Play" en los auriculares o en la tarjeta de Android con la app cerrada: la última cola. */
@@ -156,6 +257,50 @@ class PlaybackService : MediaSessionService() {
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
       val saved = loadSaved() ?: return Futures.immediateFailedFuture(UnsupportedOperationException("no hay cola guardada"))
       return Futures.immediateFuture(saved)
+    }
+  }
+
+  /** La app aporta su cola completa; los controladores externos solo eligen IDs de SQLite. */
+  private fun nativeItem(item: MediaItem, controller: MediaSession.ControllerInfo): MediaItem {
+    if (controller.packageName == packageName) {
+      entryOf(item)?.let {
+        remember(it)
+        return itemFromEntry(it)
+      }
+      // Compatibilidad con la prueba nativa inicial, que mandaba únicamente la consulta.
+      item.requestMetadata.extras?.getString(EXTRA_QUERY)?.let { query ->
+        val id = JSONObject(query).getLong("id").toString()
+        queries[id] = query
+        return item.buildUpon().setUri("musify://track/$id").build()
+      }
+    }
+    return carLibrary.single(item).also { entryOf(it)?.let(::remember) }
+  }
+
+  private fun carQueueItem(item: MediaItem, contextIndex: Int, context: String?): MediaItem {
+    val resolved = carLibrary.single(item)
+    val entry = requireNotNull(entryOf(resolved))
+      .put("uid", "car-queue:${carQueueSequence.incrementAndGet()}")
+      .put("ctx", contextIndex)
+    if (context != null) entry.put("context", context)
+    remember(entry)
+    return itemFromEntry(entry)
+  }
+
+  private fun <T> background(block: () -> T): ListenableFuture<T> {
+    val future = SettableFuture.create<T>()
+    worker.execute {
+      if (!future.isCancelled) {
+        try { future.set(block()) } catch (error: Exception) { future.setException(error) }
+      }
+    }
+    return future
+  }
+
+  private fun <T : Any> libraryTask(block: () -> LibraryResult<T>): ListenableFuture<LibraryResult<T>> = background {
+    try { block() } catch (error: Exception) {
+      MusifyLog.log("biblioteca del coche: ${error.message}")
+      LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
     }
   }
 
@@ -376,6 +521,36 @@ class PlaybackService : MediaSessionService() {
     }, 60_000)
   }
 
+  /** La app puede editar SQLite mientras el coche conserva una carpeta en pantalla. */
+  private fun watchLibrary() {
+    main.postDelayed({
+      val current = session
+      if (current != null) {
+        val parents = librarySnapshots.keys.filter { parent ->
+          val subscribed = current.getSubscribedControllers(parent).isNotEmpty()
+          if (!subscribed) librarySnapshots.remove(parent)
+          subscribed
+        }
+        if (parents.isNotEmpty()) worker.execute {
+          for (parent in parents) {
+            val previous = librarySnapshots[parent] ?: continue
+            val next = try { carLibrary.snapshot(parent) } catch (error: Exception) {
+              // Un fallo temporal no cancela la suscripción: se reintenta en el siguiente ciclo.
+              MusifyLog.log("biblioteca del coche: no se pudo actualizar $parent: ${error.message}")
+              continue
+            }
+            if (next == previous) continue
+            librarySnapshots[parent] = next
+            main.post {
+              if (session === current) current.notifyChildrenChanged(parent, next.count, null)
+            }
+          }
+        }
+      }
+      watchLibrary()
+    }, 5_000)
+  }
+
   private fun network(): String {
     val cm = getSystemService(ConnectivityManager::class.java) ?: return "?"
     val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return "sin red"
@@ -439,6 +614,9 @@ class PlaybackService : MediaSessionService() {
         .setTitle(track.optString("title"))
         .setArtist(track.optJSONObject("artist")?.optString("name"))
         .setAlbumTitle(item.optString("albumTitle"))
+        .setIsBrowsable(false)
+        .setIsPlayable(true)
+        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
         .setExtras(Bundle().apply { putString(EXTRA_ENTRY, entry.toString()) })
       // La carátula guardada al descargar, si la hay: así se ve también sin conexión.
       val saved = coversDir?.let { File(it, "${item.optLong("albumId")}.jpg") }?.takeIf { it.exists() }

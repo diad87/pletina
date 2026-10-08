@@ -136,6 +136,21 @@ const MIGRATIONS: &[&str] = &[
         UNIQUE(show_id, guid)
     );
     ",
+    // 6: artistas favoritos y canciones añadidas directamente desde YouTube.
+    "
+    CREATE TABLE saved_artists (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        picture TEXT,
+        added_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE youtube_tracks (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id),
+        video_id TEXT NOT NULL UNIQUE,
+        added_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        saved INTEGER NOT NULL DEFAULT 1
+    );
+    ",
 ];
 
 pub struct Source {

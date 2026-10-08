@@ -11,6 +11,8 @@ mod downloads;
 mod extractor;
 mod extractors;
 mod library;
+#[cfg(any(target_os = "android", test))]
+mod media_library;
 mod playlist_import;
 mod spotify;
 mod local;
@@ -24,6 +26,7 @@ mod podcasts;
 mod updater;
 mod youtube;
 mod youtube_podcasts;
+mod youtube_tracks;
 mod ytdlp;
 
 use db::Db;
@@ -196,6 +199,11 @@ pub fn run() {
             library::set_liked,
             library::liked_tracks,
             library::set_album_saved,
+            library::set_artist_saved,
+            youtube_tracks::preview_youtube_track,
+            youtube_tracks::save_youtube_track,
+            youtube_tracks::youtube_tracks,
+            youtube_tracks::remove_youtube_track,
             library::create_playlist,
             playlist_import::read_spotify_playlist,
             playlist_import::read_playlist_csv,

@@ -7,6 +7,10 @@ export const LOCAL_BASE = 1_000_000_000_000_000
 /** Podcasts y episodios guardados desde RSS (ver src-tauri/src/podcasts.rs). */
 export const PODCAST_BASE = 500_000_000_000_000
 
+/** Canciones independientes de YouTube (ver youtube_tracks.rs). */
+export const YOUTUBE_BASE = 250_000_000_000_000
+export const isYouTubeTrack = (id: number) => id >= YOUTUBE_BASE && id < PODCAST_BASE
+
 export const isLocal = (id: number) => id >= LOCAL_BASE
 export const isPodcast = (id: number) => id >= PODCAST_BASE && id < LOCAL_BASE
 

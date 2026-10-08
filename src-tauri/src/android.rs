@@ -170,3 +170,36 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_isDownloaded<'l>(_env:
     let Ok(core) = core() else { return 0 };
     u8::from(core.db.download_path(id as u64).is_some_and(|p| Path::new(&p).exists()))
 }
+
+/// Catálogo navegable: solo SQLite, también cuando Android Auto inicia el servicio sin la app.
+/// `browse(parentId)` y `search(query)` devuelven {items:[...]}; `mediaItem(id)`, {item:{...}}.
+/// Los tres devuelven {error:"..."} si la petición no se puede completar.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_browse<'l>(
+    mut env: JNIEnv<'l>, _class: JClass<'l>, parent_id: JString<'l>,
+) -> jstring {
+    let parent_id = from_java(&mut env, &parent_id);
+    let result = core().and_then(|core| crate::media_library::browse(&core.db, &parent_id));
+    let out = result.map(|items| json!({ "items": items })).unwrap_or_else(|error| json!({ "error": error }));
+    to_java(&mut env, out.to_string())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_mediaItem<'l>(
+    mut env: JNIEnv<'l>, _class: JClass<'l>, media_id: JString<'l>,
+) -> jstring {
+    let media_id = from_java(&mut env, &media_id);
+    let result = core().and_then(|core| crate::media_library::media_item(&core.db, &media_id));
+    let out = result.map(|item| json!({ "item": item })).unwrap_or_else(|error| json!({ "error": error }));
+    to_java(&mut env, out.to_string())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_search<'l>(
+    mut env: JNIEnv<'l>, _class: JClass<'l>, query: JString<'l>,
+) -> jstring {
+    let query = from_java(&mut env, &query);
+    let result = core().and_then(|core| crate::media_library::search(&core.db, &query));
+    let out = result.map(|items| json!({ "items": items })).unwrap_or_else(|error| json!({ "error": error }));
+    to_java(&mut env, out.to_string())
+}
