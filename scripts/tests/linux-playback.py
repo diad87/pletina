@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import socket
 import sqlite3
 import subprocess
@@ -54,14 +55,14 @@ class Driver:
         # Ignore shell proxy variables for our private WebDriver connection.
         self.http = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
-    def request(self, method, path, data=None):
+    def request(self, method, path, data=None, timeout=120):
         request = urllib.request.Request(
             self.address + path,
             data=None if data is None else json.dumps(data).encode(),
             headers={"Content-Type": "application/json"}, method=method,
         )
         try:
-            with self.http.open(request, timeout=120) as response:
+            with self.http.open(request, timeout=timeout) as response:
                 result = json.load(response)["value"]
         except urllib.error.HTTPError as error:
             raise RuntimeError(error.read().decode()) from error
@@ -77,7 +78,7 @@ class Driver:
 
     def stop(self):
         if self.session:
-            self.request("DELETE", f"/session/{self.session}")
+            self.request("DELETE", f"/session/{self.session}", timeout=10)
             self.session = None
 
     def execute(self, script, args=None, asynchronous=False):
@@ -87,7 +88,7 @@ class Driver:
         })
 
     def screenshot(self, destination):
-        encoded = self.request("GET", f"/session/{self.session}/screenshot")
+        encoded = self.request("GET", f"/session/{self.session}/screenshot", timeout=10)
         destination.write_bytes(base64.b64decode(encoded))
 
 
@@ -154,7 +155,8 @@ def run(image, output):
         def launch(name, command, env, **options):
             log = (output / f"{name}.log").open("wb")
             logs.append(log)
-            child = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT, **options)
+            child = subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                     start_new_session=True, **options)
             processes.append(child)
             return child
 
@@ -234,10 +236,15 @@ def run(image, output):
                                    (DOWNLOAD_ID, str(fixture / "tone.webm"), (fixture / "tone.webm").stat().st_size, "fixture", int(time.time())))
             driver.start(appdir / "AppRun")
             report["playback"] = driver.execute(PLAYBACK, asynchronous=True)
-            driver.screenshot(output / "playback.png")
             if not report["playback"]["pass"]:
                 raise AssertionError("Packaged WebKit playback regression failed")
             report["pass"] = True
+            try:
+                driver.screenshot(output / "playback.png")
+            except Exception as error:
+                # Some headless WebKit versions hang while capturing a window.
+                # Screenshots are diagnostics, not the playback assertion.
+                report["screenshotWarning"] = str(error)
         except Exception as error:
             report["pass"] = False
             report["error"] = str(error)
@@ -255,11 +262,17 @@ def run(image, output):
                 except Exception:
                     pass
             for child in reversed(processes):
-                child.terminate()
+                try:
+                    os.killpg(child.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
                 try:
                     child.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    child.kill()
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                     child.wait()
             for log in logs:
                 log.close()
