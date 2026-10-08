@@ -10,8 +10,10 @@
   import { longDuration } from '../lib/format'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
+  import { adPlatform } from '../lib/podcast-ads'
   import { episodeQueue, noteYoutubeEpisodes, podcastLanguage } from '../lib/podcasts'
   import { theme } from '../lib/theme.svelte'
+  import { toast } from '../lib/toast.svelte'
   import type { PodcastDetail } from '../lib/types'
 
   let { id, feedUrl }: { id: number; feedUrl?: string } = $props()
@@ -49,6 +51,10 @@
   })
 
   const queue = $derived(data ? episodeQueue(data) : [])
+  const ads = $derived(data ? adPlatform(data) : null)
+  const adsNote = $derived(
+    `Este pódcast está en ${ads}, que puede meter anuncios en el audio al reproducirlo o descargarlo. Van dentro del episodio y Pletina no puede quitarlos.`,
+  )
   const isThisPodcast = $derived(queue.length > 0 && player.current?.albumId === queue[0].albumId)
   const playing = $derived(isThisPodcast && player.status !== 'paused' && player.status !== 'idle')
 
@@ -89,6 +95,9 @@
         {#if data.podcast.author}<span class="strong">{data.podcast.author}</span>{/if}
         <span class:dot={!!data.podcast.author}>{data.podcast.feedUrl.startsWith('youtube:') ? 'YouTube' : podcastLanguage(data.podcast.language)}</span>
         <span class="dot">{data.episodes.length} {data.episodes.length === 1 ? 'episodio' : 'episodios'}</span>
+        {#if ads}
+          <button class="ads" title={adsNote} onclick={() => toast.show(adsNote)}>Puede contener anuncios</button>
+        {/if}
       </div>
     </div>
   </header>
@@ -163,6 +172,17 @@
 
 <style>
   .play-hint { color: var(--muted); }
+  .ads {
+    margin-left: 4px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 35%);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .ads:hover { background: rgb(0 0 0 / 50%); }
   .about {
     margin: 12px 12px 24px;
     max-width: 860px;

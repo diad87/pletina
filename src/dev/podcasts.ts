@@ -40,7 +40,10 @@ export function podcastFixture(feedUrl: string): PodcastDetail {
         : 'Nos sentamos a conversar sobre las pequeñas ideas que cambian nuestra manera de entender el día a día.',
       publishedAt: `2026-10-0${7 - episode * 2}T08:00:00Z`,
       duration: 2460 - episode * 270,
-      audioUrl: `https://example.com/audio/${index}-${episode}.mp3`,
+      // El primero, alojado en una plataforma con anuncios (detrás de un medidor), para ver el aviso.
+      audioUrl: index === 0
+        ? `https://dts.podtrac.com/redirect.mp3/traffic.megaphone.fm/EJEMPLO${episode}.mp3`
+        : `https://example.com/audio/${index}-${episode}.mp3`,
       image: null,
       explicit: false,
     })),
