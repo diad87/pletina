@@ -146,7 +146,8 @@ def run(image, output):
     )}
     processes, logs = [], []
     driver = None
-    report = {"appimage": str(image), "sha256": hashlib.sha256(image.read_bytes()).hexdigest()}
+    report = {"appimage": str(image), "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
+              "systemSqlite": sqlite3.sqlite_version}
     with tempfile.TemporaryDirectory(prefix="pletina-linux-playback-") as temporary:
         root = Path(temporary)
 
@@ -222,11 +223,13 @@ def run(image, output):
             wait_for(database.exists)
             driver.stop()
             with sqlite3.connect(database) as connection:
+                # Ubuntu 22.04's Python uses SQLite < 3.38. It validates the app
+                # schema's defaults even when an INSERT supplies every value.
+                if sqlite3.sqlite_version_info < (3, 38, 0):
+                    connection.create_function("unixepoch", 0, lambda: int(time.time()))
                 connection.execute("INSERT OR REPLACE INTO settings(key,value) VALUES (?,?)", ("local_folders", json.dumps([str(fixture)])))
                 connection.execute("INSERT OR REPLACE INTO tracks(id,title,duration,explicit,artist_id,artist_name,album_id,album_title,album_artist_id,cover) VALUES (?,?,?,?,?,?,?,?,?,?)",
                                    (DOWNLOAD_ID, "Downloaded WebM fixture", 12, 0, DOWNLOAD_ID, "Pletina QA", DOWNLOAD_ID, "Offline QA", DOWNLOAD_ID, None))
-                # Python on Ubuntu 22.04 uses SQLite < 3.38, without unixepoch().
-                # Supply the timestamp instead of invoking the app schema's default.
                 connection.execute("INSERT OR REPLACE INTO downloads(track_id,path,size,video_id,downloaded_at) VALUES (?,?,?,?,?)",
                                    (DOWNLOAD_ID, str(fixture / "tone.webm"), (fixture / "tone.webm").stat().st_size, "fixture", int(time.time())))
             driver.start(appdir / "AppRun")
