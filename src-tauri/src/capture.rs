@@ -1343,6 +1343,7 @@ async fn create_window(
     label: &str,
     at: Option<f64>,
 ) -> Result<(), String> {
+    let started = Instant::now();
     let start = at.map(|s| format!("#musify-t={s:.6}")).unwrap_or_default();
     let surface = STATE
         .lock()
@@ -1383,6 +1384,7 @@ async fn create_window(
         "Object.defineProperty(window,'__musifyGeneration',{{value:{generation},writable:false}});Object.defineProperty(window,'__musifyTarget',{{value:{target},writable:false}});Object.defineProperty(window,'__musifyProgressiveExperiment',{{value:{progressive},writable:false}});Object.defineProperty(window,'__musifyBenchmarkAudit',{{value:{audit},writable:false}});window.__musifyEpoch={epoch};window.__musifyHoldbackSeconds={holdback};window.__musifyMaxBytes={max_bytes};\n{}",
         crate::extractors::capture_script()
     );
+    let prepared = started.elapsed();
     let window = WebviewWindowBuilder::new(
         app,
         label,
@@ -1398,7 +1400,9 @@ async fn create_window(
     .initialization_script(script)
     .build()
     .map_err(|e| format!("CAPTURE_WINDOW: {e}"))?;
+    let built = started.elapsed();
     let id = id.to_string();
+    let diagnostic_id = id.clone();
     let (tx, rx) = tokio::sync::oneshot::channel();
     window
         .with_webview(move |pw| {
@@ -1413,10 +1417,22 @@ async fn create_window(
             let _ = tx.send(result);
         })
         .map_err(|e| format!("CAPTURE_BRIDGE: {e}"))?;
-    tokio::time::timeout(Duration::from_secs(10), rx)
+    let result = tokio::time::timeout(Duration::from_secs(10), rx)
         .await
         .map_err(|_| "CAPTURE_BRIDGE_TIMEOUT".to_string())?
-        .map_err(|_| "CAPTURE_BRIDGE_CLOSED".to_string())?
+        .map_err(|_| "CAPTURE_BRIDGE_CLOSED".to_string())?;
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        let elapsed = started.elapsed();
+        eprintln!(
+            "[capture-window] {diagnostic_id} generation={generation} phase=create prepareMs={:.3} buildMs={:.3} attachNavigateMs={:.3} totalMs={:.3} ok={}",
+            prepared.as_secs_f64() * 1000.0,
+            (built - prepared).as_secs_f64() * 1000.0,
+            (elapsed - built).as_secs_f64() * 1000.0,
+            elapsed.as_secs_f64() * 1000.0,
+            result.is_ok()
+        );
+    }
+    result
 }
 #[cfg(windows)]
 unsafe fn attach(
@@ -2653,6 +2669,7 @@ fn watchdog(app: &AppHandle) {
     });
 }
 async fn retire_locked(app: &AppHandle, session: &Session) -> Result<(), String> {
+    let started = Instant::now();
     {
         let mut state = STATE.lock().unwrap();
         let Some(current) = state
@@ -2695,7 +2712,20 @@ async fn retire_locked(app: &AppHandle, session: &Session) -> Result<(), String>
             crate::capture_audit::finalization_failed(&session.id, session.generation, &request);
         }
     }
+    let finalized = started.elapsed();
     let result = close_window(app, &session.label).await;
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        let elapsed = started.elapsed();
+        eprintln!(
+            "[capture-window] {} generation={} phase=retire finalizeMs={:.3} closeMs={:.3} totalMs={:.3} ok={}",
+            session.id,
+            session.generation,
+            finalized.as_secs_f64() * 1000.0,
+            (elapsed - finalized).as_secs_f64() * 1000.0,
+            elapsed.as_secs_f64() * 1000.0,
+            result.is_ok()
+        );
+    }
     if result.is_ok() {
         crate::capture_audit::close_session(&session.id, session.generation);
     }
@@ -2717,14 +2747,21 @@ async fn close_window(app: &AppHandle, label: &str) -> Result<(), String> {
     let Some(window) = app.get_webview_window(label) else {
         return Ok(());
     };
+    let deadline = Instant::now() + Duration::from_secs(5);
+    // Ownership is already revoked and the benchmark probe finalized. Blank
+    // navigation is only defensive: actual destruction, not elapsed time,
+    // determines when this slot can be released.
     let _ = window.navigate("about:blank".parse().unwrap());
-    tokio::time::sleep(Duration::from_millis(300)).await;
     let _ = window.destroy();
-    for _ in 0..50 {
+    loop {
         if app.get_webview_window(label).is_none() {
             return Ok(());
         }
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            break;
+        }
+        tokio::time::sleep(remaining.min(Duration::from_millis(10))).await;
     }
     Err("CAPTURE_WINDOW_CLOSE: la ventana anterior no se pudo cerrar".into())
 }
