@@ -1,8 +1,9 @@
-//! Biblioteca: canciones que te gustan, discos y artistas guardados, playlists e historial.
+//! Biblioteca: canciones que te gustan, discos, artistas y podcasts guardados, playlists e historial.
 //! Todo se guarda en la base de datos local; las canciones se copian de Deezer
 //! para poder mostrar la biblioteca sin volver a preguntar.
 
 use crate::db::Db;
+use crate::podcasts::{self, Podcast};
 use rusqlite::{Connection, Row, params};
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -83,6 +84,7 @@ pub struct LibraryData {
     pub downloaded_ids: Vec<u64>,
     pub albums: Vec<SavedAlbum>,
     pub artists: Vec<SavedArtist>,
+    pub podcasts: Vec<Podcast>,
     pub playlists: Vec<PlaylistSummary>,
 }
 
@@ -237,7 +239,10 @@ pub fn library(db: State<'_, Db>) -> Res<LibraryData> {
                 })
             })?
             .collect::<rusqlite::Result<_>>()?;
-        Ok(LibraryData { liked_ids, downloaded_ids, albums, artists: saved_artists(c)?, playlists: summaries(c, None)? })
+        Ok(LibraryData {
+            liked_ids, downloaded_ids, albums, artists: saved_artists(c)?,
+            podcasts: podcasts::saved_shows(c)?, playlists: summaries(c, None)?,
+        })
     })
 }
 

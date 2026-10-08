@@ -15,7 +15,7 @@ const programs = [
   ['Voces por descubrir', 'Archivo sonoro', null, '#765057'],
 ] as const
 
-export const podcastFixtures: Podcast[] = programs.map(([title, author, language, color], index) => ({
+export const podcastFixtures: Podcast[] = [...programs.map(([title, author, language, color], index) => ({
   id: 500_000_000_000_001 + index,
   title,
   author,
@@ -24,7 +24,25 @@ export const podcastFixtures: Podcast[] = programs.map(([title, author, language
   image: artwork(title, color),
   feedUrl: `https://example.com/podcasts/${index + 1}.xml`,
   episodeCount: 3,
-}))
+})), {
+  id: 500_000_000_000_009,
+  title: 'Un programa por estrenar',
+  author: 'Próximamente',
+  language: 'es',
+  description: 'El primer episodio llegará pronto. Puedes guardar el programa desde ahora.',
+  image: artwork('Un programa por estrenar', '#385565'),
+  feedUrl: 'https://example.com/podcasts/9.xml',
+  episodeCount: 0,
+}, {
+  id: 500_000_000_000_010,
+  title: 'Charlas en vídeo',
+  author: 'Estudio abierto',
+  language: null,
+  description: 'Conversaciones que también puedes escuchar desde YouTube.',
+  image: artwork('Charlas en vídeo', '#814b45'),
+  feedUrl: 'youtube:MPSPPLpodcastPreview',
+  episodeCount: 3,
+}]
 
 export function podcastFixture(feedUrl: string): PodcastDetail {
   const podcast = podcastFixtures.find((item) => item.feedUrl === feedUrl)
@@ -32,7 +50,7 @@ export function podcastFixture(feedUrl: string): PodcastDetail {
   const index = podcastFixtures.indexOf(podcast)
   return {
     podcast,
-    episodes: ['El valor de escuchar', 'Una pregunta puede cambiarlo todo', 'Volver a empezar'].map((title, episode) => ({
+    episodes: ['El valor de escuchar', 'Una pregunta puede cambiarlo todo', 'Volver a empezar'].slice(0, podcast.episodeCount).map((title, episode) => ({
       id: 750_000_000_000_001 + index * 10 + episode,
       title,
       description: episode === 0
@@ -41,7 +59,9 @@ export function podcastFixture(feedUrl: string): PodcastDetail {
       publishedAt: `2026-10-0${7 - episode * 2}T08:00:00Z`,
       duration: 2460 - episode * 270,
       // El primero, alojado en una plataforma con anuncios (detrás de un medidor), para ver el aviso.
-      audioUrl: index === 0
+      audioUrl: podcast.feedUrl.startsWith('youtube:')
+        ? `youtube:preview000${episode + 1}`
+        : index === 0
         ? `https://dts.podtrac.com/redirect.mp3/traffic.megaphone.fm/EJEMPLO${episode}.mp3`
         : `https://example.com/audio/${index}-${episode}.mp3`,
       image: null,

@@ -151,6 +151,13 @@ const MIGRATIONS: &[&str] = &[
         saved INTEGER NOT NULL DEFAULT 1
     );
     ",
+    // 7: programas de podcasts favoritos. Sus metadatos siguen en podcast_shows.
+    "
+    CREATE TABLE saved_podcasts (
+        show_id INTEGER PRIMARY KEY REFERENCES podcast_shows(id),
+        added_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    ",
 ];
 
 pub struct Source {
@@ -342,6 +349,77 @@ mod tests {
         assert!(has_content(&path));
         assert_eq!(Db::open(&path).unwrap().setting("k").as_deref(), Some("v"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn migration_seven_preserves_version_six_library_and_podcast_data() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-migration-seven-{}-{nonce}.db", std::process::id()));
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+            for migration in &MIGRATIONS[..6] {
+                conn.execute_batch(migration).unwrap();
+            }
+            conn.execute_batch(
+                "PRAGMA user_version = 6;
+                 INSERT INTO sources (track_id, video_id, title, channel, score) VALUES (7, 'video', 'Canción', 'Artista', 90);
+                 INSERT INTO tracks (id, title, duration, artist_id, artist_name, album_id, album_title, album_artist_id)
+                    VALUES (7, 'Canción', 120, 1, 'Artista', 2, 'Disco', 1);
+                 INSERT INTO liked_tracks (track_id) VALUES (7);
+                 INSERT INTO saved_albums (id, title, artist_id, artist_name) VALUES (2, 'Disco', 1, 'Artista');
+                 INSERT INTO saved_artists (id, name) VALUES (1, 'Artista');
+                 INSERT INTO playlists (id, name) VALUES (1, 'Mi lista');
+                 INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 7, 0);
+                 INSERT INTO history (track_id) VALUES (7);
+                 INSERT INTO downloads (track_id, path, size, video_id) VALUES (7, 'audio.webm', 42, 'video');
+                 INSERT INTO settings (key, value) VALUES ('keep', 'value');
+                 INSERT INTO youtube_tracks (track_id, video_id, saved) VALUES (7, 'video', 1);
+                 INSERT INTO local_artists (id, name, key) VALUES (1, 'Local', 'local');
+                 INSERT INTO local_albums (id, title, artist_id, key) VALUES (1, 'Disco local', 1, 'local-album');
+                 INSERT INTO local_tracks (path, title, artist_id, album_id, duration, mtime, size)
+                    VALUES ('local.flac', 'Canción local', 1, 1, 10, 100, 200);
+                 INSERT INTO podcast_shows (id, feed_url, title, author, description, language)
+                    VALUES (1, 'https://feed.example/rss', 'Programa RSS', 'Autora', 'Descripción', 'es'),
+                           (2, 'youtube:MPSPtest', 'Programa YouTube', 'Canal', 'Vídeos', NULL);
+                 INSERT INTO podcast_episodes (show_id, guid, audio_url)
+                    VALUES (1, 'rss-episode', 'https://audio.example/episode.mp3'), (2, 'video', 'youtube:video');",
+            ).unwrap();
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            assert_eq!(db.source(7).unwrap().video_id, "video");
+            assert_eq!(db.setting("keep").as_deref(), Some("value"));
+            assert_eq!(db.download_path(7).as_deref(), Some("audio.webm"));
+            let conn = db.0.lock().unwrap();
+            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), 7);
+            for table in ["sources", "tracks", "liked_tracks", "saved_albums", "saved_artists", "playlists",
+                "playlist_tracks", "history", "downloads", "settings", "youtube_tracks", "local_artists", "local_albums", "local_tracks"]
+            {
+                assert_eq!(conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get::<_, i64>(0)).unwrap(), 1, "{table}");
+            }
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_shows", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            let audio: String = conn.query_row("SELECT audio_url FROM podcast_episodes WHERE guid = 'rss-episode'", [], |r| r.get(0)).unwrap();
+            assert_eq!(audio, "https://audio.example/episode.mp3");
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_episodes", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            assert!(crate::podcasts::saved_shows(&conn).unwrap().is_empty());
+            assert!(conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (999)", []).is_err());
+            conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (1), (2)", []).unwrap();
+            let saved = crate::podcasts::saved_shows(&conn).unwrap();
+            assert_eq!(saved.len(), 2);
+            assert_eq!(saved[0].feed_url, "youtube:MPSPtest");
+            assert_eq!(saved[1].title, "Programa RSS");
+        }
+        // La copia previa sigue siendo v6 y conserva los datos originales.
+        let backup = path.with_extension("db.antes-de-v7");
+        {
+            let conn = Connection::open(&backup).unwrap();
+            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), 6);
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_episodes", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            assert!(conn.prepare("SELECT * FROM saved_podcasts").is_err());
+        }
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_file(backup).unwrap();
     }
 }
 

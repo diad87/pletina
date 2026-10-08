@@ -52,6 +52,16 @@ const entries = (tracks: LibTrack[], step = 3600): Entry[] =>
 const liked = new Map<number, LibTrack>([0, 2, 4, 6].map((i) => [lib(albums[0], i).id, lib(albums[0], i)]))
 const savedArtists = new Map<number, SavedArtist>()
 const youtubeTracks = new Map<string, { track: LibTrack; saved: boolean }>()
+const savedPodcastsKey = 'pletina:preview:saved-podcasts'
+function readSavedPodcasts(): number[] {
+  try {
+    const ids: unknown = JSON.parse(localStorage.getItem(savedPodcastsKey) ?? '[]')
+    return Array.isArray(ids) ? ids.filter((id) => podcastFixtures.some((podcast) => podcast.id === id)) : []
+  } catch { return [] }
+}
+let savedPodcasts = new Set(readSavedPodcasts())
+const podcastPreviewError = (name: string) =>
+  typeof location !== 'undefined' && new URLSearchParams(location.search).get(name) === '1'
 
 function youtubeId(input: string): string {
   const text = input.trim()
@@ -180,16 +190,20 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
         return null
       }
       case 'podcast_search': {
+        if (podcastPreviewError('podcastSearchError')) throw new Error('No se pudo conectar con el buscador de pódcasts (vista previa).')
         const query = String(args.query ?? '').trim().toLocaleLowerCase('es')
+        const matches = (podcast: typeof podcastFixtures[number]) =>
+          !query || `${podcast.title} ${podcast.author}`.toLocaleLowerCase('es').includes(query)
         return {
           podcasts: podcastFixtures.filter((p) =>
-            (!query || `${p.title} ${p.author}`.toLocaleLowerCase('es').includes(query)) &&
+            !p.feedUrl.startsWith('youtube:') && matches(p) &&
             (args.language === 'all' || p.language?.split(/[-_]/)[0] === args.language)),
-          youtube: [],
+          youtube: podcastFixtures.filter((p) => p.feedUrl.startsWith('youtube:') && matches(p)),
           failedFeeds: 0,
         }
       }
       case 'podcast_detail':
+        if (podcastPreviewError('podcastDetailError')) throw new Error('No se pudo conectar con este pódcast (vista previa).')
         return podcastFixture(args.feedUrl)
       case 'podcast_feed_url': {
         const podcast = podcastFixtures.find((p) => p.id === args.id)
@@ -228,6 +242,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
           downloadedIds: [],
           albums: saved,
           artists: [...savedArtists.values()],
+          podcasts: [...savedPodcasts].reverse().map((id) => podcastFixtures.find((podcast) => podcast.id === id)!),
           playlists: [...playlists.keys()].map(summary),
         }
       case 'set_liked':
@@ -242,6 +257,16 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
         if (args.saved) savedArtists.set(args.artist.id, args.artist)
         else savedArtists.delete(args.artist.id)
         return null
+      case 'set_podcast_saved': {
+        if (podcastPreviewError('podcastSaveError')) throw new Error('No se pudo guardar el pódcast (vista previa).')
+        if (!podcastFixtures.some((podcast) => podcast.id === args.id)) throw new Error('No se encuentra este podcast de ejemplo')
+        const next = new Set(savedPodcasts)
+        if (args.saved) next.add(args.id)
+        else next.delete(args.id)
+        localStorage.setItem(savedPodcastsKey, JSON.stringify([...next]))
+        savedPodcasts = next
+        return null
+      }
       case 'create_playlist': {
         const id = Math.max(0, ...playlists.keys()) + 1
         playlists.set(id, { name: args.name, tracks: args.tracks ?? [] })

@@ -2,7 +2,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
-import type { AlbumDetail, LibraryData, LibTrack, PlaylistSummary, SavedAlbum, SavedArtist } from './types'
+import type { AlbumDetail, LibraryData, LibTrack, PlaylistSummary, Podcast, SavedAlbum, SavedArtist } from './types'
 
 /** De canción en la cola a canción de biblioteca. */
 export function toLib(item: QueueItem): LibTrack {
@@ -58,6 +58,10 @@ class Library {
   albums = $state<SavedAlbum[]>([])
   artists = $state<SavedArtist[]>([])
   savingArtists = new SvelteSet<number>()
+  podcasts = $state<Podcast[]>([])
+  savingPodcasts = new SvelteSet<number>()
+  #podcastRevision = 0
+  #podcastChanges = new Map<number, number>()
   playlists = $state<PlaylistSummary[]>([])
   /** Sube con cada cambio; las vistas de biblioteca lo leen para recargarse. */
   version = $state(0)
@@ -65,12 +69,23 @@ class Library {
   historyVersion = $state(0)
 
   async load(): Promise<LibraryData | null> {
+    const podcastRevision = this.#podcastRevision
     try {
       const data = await api.library()
       this.liked.clear()
       for (const id of data.likedIds) this.liked.add(id)
       this.albums = data.albums
       this.artists = data.artists
+      // Una lectura anterior no debe deshacer un guardado, ni adelantar su resultado.
+      // Los demás programas sí se cargan, también durante el arranque de la app.
+      const protectedPodcasts = new Set(this.savingPodcasts)
+      for (const [id, revision] of this.#podcastChanges) {
+        if (revision > podcastRevision) protectedPodcasts.add(id)
+      }
+      this.podcasts = [
+        ...this.podcasts.filter((podcast) => protectedPodcasts.has(podcast.id)),
+        ...data.podcasts.filter((podcast) => !protectedPodcasts.has(podcast.id)),
+      ]
       this.playlists = data.playlists
       return data
     } catch (e) {
@@ -85,6 +100,28 @@ class Library {
 
   isArtistSaved(artistId: number) {
     return this.artists.some((artist) => artist.id === artistId)
+  }
+
+  isPodcastSaved(podcastId: number) {
+    return this.podcasts.some((podcast) => podcast.id === podcastId)
+  }
+
+  async togglePodcast(podcast: Podcast) {
+    if (this.savingPodcasts.has(podcast.id)) return
+    const saved = !this.isPodcastSaved(podcast.id)
+    this.savingPodcasts.add(podcast.id)
+    try {
+      await api.setPodcastSaved(podcast.id, saved)
+      this.podcasts = this.podcasts.filter((item) => item.id !== podcast.id)
+      if (saved) this.podcasts.unshift(podcast)
+      this.#podcastChanges.set(podcast.id, ++this.#podcastRevision)
+      this.version++
+      toast.show(saved ? 'Programa añadido a Tus pódcasts' : 'Programa quitado de Tus pódcasts')
+    } catch (e) {
+      toast.show(`No se pudo guardar el pódcast: ${e}`)
+    } finally {
+      this.savingPodcasts.delete(podcast.id)
+    }
   }
 
   async toggleArtist(artist: SavedArtist) {

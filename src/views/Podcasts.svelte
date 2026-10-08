@@ -4,6 +4,7 @@
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import * as api from '../lib/api'
+  import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { PODCAST_LANGUAGES, podcastLanguage } from '../lib/podcasts'
   import { load, save } from '../lib/queue'
@@ -68,6 +69,40 @@
       <h1 class="page-title">Pódcasts</h1>
       <p class="hint">Encuentra tu próxima conversación. Busca un nombre o un tema en la barra de arriba.</p>
     </div>
+  </div>
+
+  <section class="saved-podcasts" aria-labelledby="saved-podcasts-title">
+    <h2 class="section-title" id="saved-podcasts-title">Tus pódcasts</h2>
+    {#if library.podcasts.length}
+      <div class="grid" aria-label="Tus pódcasts">
+        {#each library.podcasts as podcast (podcast.id)}
+          <div class="saved-podcast">
+            <Card
+              image={podcast.image}
+              title={podcast.title}
+              subtitle={[podcast.author, podcast.feedUrl.startsWith('youtube:') ? 'YouTube' : podcastLanguage(podcast.language)].filter(Boolean).join(' · ')}
+              onclick={() => nav.go({ name: 'podcast', id: podcast.id, feedUrl: podcast.feedUrl })}
+            />
+            <button
+              class="remove-saved"
+              disabled={library.savingPodcasts.has(podcast.id)}
+              aria-busy={library.savingPodcasts.has(podcast.id)}
+              aria-label={`Quitar ${podcast.title} de Tus pódcasts`}
+              title="Quitar de Tus pódcasts"
+              onclick={() => library.togglePodcast(podcast)}
+            >
+              <Icon name="heartFilled" size={20} />
+            </button>
+          </div>
+        {/each}
+      </div>
+    {:else}
+      <p class="saved-hint">Guarda tus programas favoritos para encontrarlos siempre aquí.</p>
+    {/if}
+  </section>
+
+  <div class="heading discovery">
+    <h2 class="section-title">{query.trim() ? 'Resultados de búsqueda' : 'Descubre pódcasts'}</h2>
     <label class="language-filter">
       <span>Idioma</span>
       <select bind:value={language} aria-label="Idioma de los pódcasts">
@@ -140,6 +175,28 @@
     margin-bottom: 24px;
   }
   .page-title { margin-bottom: 4px; }
+  .saved-podcasts { margin-bottom: 32px; }
+  .saved-hint { margin: 0 12px; color: var(--muted); }
+  .saved-podcast { position: relative; min-width: 0; }
+  .remove-saved {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--panel);
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 25%);
+  }
+  .remove-saved:hover { background: var(--panel-2); }
+  .remove-saved:disabled { opacity: 0.6; }
+  .discovery { margin-bottom: 12px; }
+  .discovery .section-title { margin-bottom: 0; }
   .hint {
     margin: 0 12px;
     color: var(--muted);
@@ -183,7 +240,7 @@
   }
   @media (max-width: 720px) {
     .heading { gap: 18px; }
-    .hint, .language-filter, .result-status, .partial { margin-left: 4px; margin-right: 4px; }
+    .hint, .saved-hint, .language-filter, .result-status, .partial { margin-left: 4px; margin-right: 4px; }
   }
 
   .section-title.youtube {

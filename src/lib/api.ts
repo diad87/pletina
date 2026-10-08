@@ -94,6 +94,7 @@ export const setLiked = (track: LibTrack, liked: boolean) => invoke<void>('set_l
 export const likedTracks = () => invoke<Entry[]>('liked_tracks')
 export const setAlbumSaved = (album: SavedAlbum, saved: boolean) => invoke<void>('set_album_saved', { album, saved })
 export const setArtistSaved = (artist: SavedArtist, saved: boolean) => invoke<void>('set_artist_saved', { artist, saved })
+export const setPodcastSaved = (id: number, saved: boolean) => invoke<void>('set_podcast_saved', { id, saved })
 export const previewYouTubeTrack = (url: string) => invoke<YouTubeTrackPreview>('preview_youtube_track', { url })
 export const saveYouTubeTrack = (track: YouTubeTrackPreview) => invoke<LibTrack>('save_youtube_track', { ...track })
 export const youtubeTracks = () => invoke<Entry[]>('youtube_tracks')

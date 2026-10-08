@@ -190,6 +190,7 @@ pub fn run() {
             podcasts::podcast_search,
             podcasts::podcast_detail,
             podcasts::podcast_feed_url,
+            podcasts::set_podcast_saved,
             artist,
             album,
             resolve,

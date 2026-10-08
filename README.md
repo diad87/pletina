@@ -82,6 +82,8 @@ No hace falta iniciar sesión en Spotify. La importación copia las canciones en
 
 La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
 
+En la ficha de cada programa puedes **añadirlo a favoritos**, tanto si procede de RSS como de YouTube. Queda anclado en **Tus pódcasts**, al principio de la sección, y se conserva al reiniciar. Tus programas siguen visibles al cambiar de búsqueda o idioma y aunque falle el catálogo. Puedes quitarlos desde su ficha o desde esa sección; los episodios que hayas marcado como favoritos, añadido a playlists o descargado se conservan.
+
 Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
 
 Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.

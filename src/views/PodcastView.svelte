@@ -6,6 +6,7 @@
   import Status from '../components/Status.svelte'
   import * as api from '../lib/api'
   import { trackMenu } from '../lib/actions'
+  import { library } from '../lib/library.svelte'
   import { menu } from '../lib/menu.svelte'
   import { longDuration } from '../lib/format'
   import { nav } from '../lib/nav.svelte'
@@ -57,6 +58,8 @@
   )
   const isThisPodcast = $derived(queue.length > 0 && player.current?.albumId === queue[0].albumId)
   const playing = $derived(isThisPodcast && player.status !== 'paused' && player.status !== 'idle')
+  const saved = $derived(data ? library.isPodcastSaved(data.podcast.id) : false)
+  const saving = $derived(data ? library.savingPodcasts.has(data.podcast.id) : false)
 
   function playPodcast() {
     if (!queue.length) return
@@ -103,16 +106,30 @@
   </header>
 
   <section class="page">
-    {#if data.episodes.length}
-      <div class="actions">
+    <div class="actions">
+      {#if data.episodes.length}
         <button class="big-play" onclick={playPodcast} title={playing ? 'Pausar pódcast' : 'Reproducir pódcast'} aria-label={playing ? 'Pausar pódcast' : 'Reproducir pódcast'}>
           <Icon name={playing ? 'pause' : 'play'} size={26} />
         </button>
         <!-- Solo aparece en los de YouTube: los del RSS no se descargan. -->
         <DownloadButton items={queue} />
+      {/if}
+      <button
+        class="favorite"
+        class:on={saved}
+        disabled={saving}
+        aria-pressed={saved}
+        aria-busy={saving}
+        title={saved ? 'Quitar de Tus pódcasts' : 'Guardar programa en Tus pódcasts'}
+        onclick={() => data && library.togglePodcast(data.podcast)}
+      >
+        <Icon name={saved ? 'heartFilled' : 'heart'} size={22} />
+        {saving ? 'Guardando…' : saved ? 'En Tus pódcasts' : 'Guardar pódcast'}
+      </button>
+      {#if data.episodes.length}
         <span class="play-hint">{isThisPodcast ? 'Continúa escuchando' : 'Reproducir episodios'}</span>
-      </div>
-    {/if}
+      {/if}
+    </div>
 
     {#if data.podcast.description}
       <details class="about">
@@ -171,6 +188,19 @@
 {/if}
 
 <style>
+  .favorite {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .favorite:hover, .favorite.on { color: var(--accent); border-color: currentColor; }
+  .favorite:disabled { opacity: 0.6; }
   .play-hint { color: var(--muted); }
   .ads {
     margin-left: 4px;

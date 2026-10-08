@@ -508,9 +508,60 @@ pub fn youtube_video(db: &Db, id: u64) -> Option<String> {
 }
 
 pub fn feed_url(db: &Db, id: u64) -> Result<String, String> {
-    if !(PODCAST_BASE..EPISODE_BASE).contains(&id) { return Err("El identificador no corresponde a un podcast".into()); }
-    db.0.lock().unwrap().query_row("SELECT feed_url FROM podcast_shows WHERE id=?1", params![(id - PODCAST_BASE) as i64], |r| r.get(0))
+    let show_id = show_id(id)?;
+    db.0.lock().unwrap().query_row("SELECT feed_url FROM podcast_shows WHERE id=?1", params![show_id], |r| r.get(0))
         .optional().map_err(|e| e.to_string())?.ok_or_else(|| "No se encuentra este podcast en la biblioteca".into())
+}
+
+fn show_id(id: u64) -> Result<i64, String> {
+    if id <= PODCAST_BASE || id >= EPISODE_BASE {
+        return Err("El identificador no corresponde a un programa de podcast".into());
+    }
+    Ok((id - PODCAST_BASE) as i64)
+}
+
+/// Fichas actuales de los programas guardados, disponibles también sin conexión.
+/// El recuento solo incluye episodios conocidos: una ficha de búsqueda puede tener cero.
+pub(crate) fn saved_shows(conn: &rusqlite::Connection) -> rusqlite::Result<Vec<Podcast>> {
+    conn.prepare(
+        "SELECT p.id, p.title, p.author, p.description, p.image, p.feed_url, p.language,
+                (SELECT COUNT(*) FROM podcast_episodes e WHERE e.show_id = p.id)
+         FROM saved_podcasts s JOIN podcast_shows p ON p.id = s.show_id
+         ORDER BY s.added_at DESC, s.show_id DESC",
+    )?.query_map([], |r| Ok(Podcast {
+        id: PODCAST_BASE + r.get::<_, i64>(0)? as u64,
+        title: r.get(1)?,
+        author: r.get(2)?,
+        description: r.get(3)?,
+        image: r.get(4)?,
+        feed_url: r.get(5)?,
+        language: r.get(6)?,
+        episode_count: r.get::<_, u32>(7)? as usize,
+    }))?.collect()
+}
+
+fn save_favorite(db: &Db, id: u64, saved: bool) -> Result<(), String> {
+    let show_id = show_id(id)?;
+    let conn = db.0.lock().unwrap();
+    let exists: bool = conn.query_row(
+        "SELECT EXISTS(SELECT 1 FROM podcast_shows WHERE id = ?1)", params![show_id], |r| r.get(0),
+    ).map_err(|e| format!("No se pudo consultar el podcast: {e}"))?;
+    if !exists {
+        return Err("No se encuentra este podcast en la biblioteca".into());
+    }
+    // No se aceptan metadatos de la interfaz ni se cambia la fecha al guardar otra vez.
+    // Quitar un favorito conserva el programa y sus episodios, favoritos e historial.
+    conn.execute(if saved {
+        "INSERT INTO saved_podcasts (show_id) VALUES (?1) ON CONFLICT(show_id) DO NOTHING"
+    } else {
+        "DELETE FROM saved_podcasts WHERE show_id = ?1"
+    }, params![show_id]).map_err(|e| format!("No se pudo guardar el favorito de podcast: {e}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_podcast_saved(id: u64, saved: bool, db: State<'_, Db>) -> Result<(), String> {
+    save_favorite(&db, id, saved)
 }
 
 #[tauri::command]
@@ -695,6 +746,126 @@ mod tests {
         assert!(audio(&db, show).is_err());
         drop(db);
         let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn saved_programs_survive_restart_and_removal_preserves_episode_library() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-saved-podcasts-{}-{nonce}.db", std::process::id()));
+        let mut rss = parse_feed(FEED, "https://feed.example/rss").unwrap();
+        let mut youtube = from_youtube(youtube_podcasts::ShowPage {
+            show: youtube_podcasts::Show {
+                browse_id: "MPSPtest".into(), title: "En vídeo".into(), author: "Autora".into(),
+                image: Some("https://image.example/podcast.jpg".into()),
+            },
+            description: "Un programa de YouTube".into(),
+            episodes: vec![youtube_podcasts::Episode {
+                video_id: "dQw4w9WgXcQ".into(), title: "Conversación".into(), description: String::new(),
+                published: None, duration: 120, image: None,
+            }],
+        }, "youtube:MPSPtest");
+        {
+            let db = Db::open(&path).unwrap();
+            save_detail(&db, &mut rss).unwrap();
+            save_detail(&db, &mut youtube).unwrap();
+            save_favorite(&db, rss.podcast.id, true).unwrap();
+            save_favorite(&db, youtube.podcast.id, true).unwrap();
+            {
+                let conn = db.0.lock().unwrap();
+                conn.execute("UPDATE saved_podcasts SET added_at = 123 WHERE show_id = ?1",
+                    params![show_id(rss.podcast.id).unwrap()]).unwrap();
+                // Un episodio puede tener favoritos e historial independientes del programa.
+                let episode = &rss.episodes[0];
+                crate::library::upsert_track(&conn, &crate::library::LibTrack {
+                    id: episode.id, title: episode.title.clone(), duration: episode.duration, explicit: episode.explicit,
+                    artist_id: rss.podcast.id, artist_name: rss.podcast.author.clone(), album_id: rss.podcast.id,
+                    album_title: rss.podcast.title.clone(), album_artist_id: rss.podcast.id, cover: rss.podcast.image.clone(),
+                }).unwrap();
+                conn.execute("INSERT INTO liked_tracks (track_id) VALUES (?1)", params![episode.id as i64]).unwrap();
+                conn.execute("INSERT INTO history (track_id) VALUES (?1)", params![episode.id as i64]).unwrap();
+            }
+            save_favorite(&db, rss.podcast.id, true).unwrap();
+            let conn = db.0.lock().unwrap();
+            let saved = saved_shows(&conn).unwrap();
+            assert_eq!(saved.len(), 2);
+            assert_eq!(saved[0].id, youtube.podcast.id);
+            assert_eq!(saved[1].id, rss.podcast.id);
+            let added: i64 = conn.query_row("SELECT added_at FROM saved_podcasts WHERE show_id = ?1",
+                params![show_id(rss.podcast.id).unwrap()], |r| r.get(0)).unwrap();
+            assert_eq!(added, 123);
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            let saved = saved_shows(&db.0.lock().unwrap()).unwrap();
+            assert_eq!(saved.len(), 2);
+            assert_eq!(saved[0].feed_url, "youtube:MPSPtest");
+            assert_eq!(saved[0].episode_count, 1);
+            assert_eq!(saved[1].feed_url, "https://feed.example/rss");
+            assert_eq!(saved[1].episode_count, 2);
+            save_favorite(&db, rss.podcast.id, false).unwrap();
+            save_favorite(&db, rss.podcast.id, false).unwrap();
+            assert_eq!(audio(&db, rss.episodes[0].id).unwrap(), rss.episodes[0].audio_url);
+            assert_eq!(youtube_video(&db, youtube.episodes[0].id).as_deref(), Some("dQw4w9WgXcQ"));
+            let conn = db.0.lock().unwrap();
+            assert_eq!(saved_shows(&conn).unwrap().len(), 1);
+            for (table, expected) in [("podcast_shows", 2), ("podcast_episodes", 3), ("liked_tracks", 1), ("history", 1)] {
+                let count: i64 = conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap();
+                assert_eq!(count, expected, "{table}");
+            }
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            let saved = saved_shows(&db.0.lock().unwrap()).unwrap();
+            assert_eq!(saved.len(), 1);
+            assert_eq!(saved[0].id, youtube.podcast.id);
+        }
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn saved_programs_read_updated_metadata_and_known_episode_counts() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let mut detail = parse_feed(FEED, "https://feed.example/rss").unwrap();
+        // La búsqueda ya persiste la ficha, aunque aún no se hayan guardado episodios.
+        save_show(&db, &mut detail.podcast).unwrap();
+        save_favorite(&db, detail.podcast.id, true).unwrap();
+        let before = saved_shows(&db.0.lock().unwrap()).unwrap();
+        assert_eq!(before[0].episode_count, 0);
+        let id = detail.podcast.id;
+        detail.podcast.title = "Nuevo nombre".into();
+        detail.podcast.author = "Nueva autora".into();
+        detail.podcast.description = "Nueva descripción".into();
+        detail.podcast.image = Some("https://image.example/new.jpg".into());
+        detail.podcast.language = Some("en".into());
+        save_detail(&db, &mut detail).unwrap();
+        let after = saved_shows(&db.0.lock().unwrap()).unwrap();
+        assert_eq!(after.len(), 1);
+        let podcast = &after[0];
+        assert_eq!(podcast.id, id);
+        assert_eq!(podcast.title, detail.podcast.title);
+        assert_eq!(podcast.author, detail.podcast.author);
+        assert_eq!(podcast.description, detail.podcast.description);
+        assert_eq!(podcast.image, detail.podcast.image);
+        assert_eq!(podcast.language, detail.podcast.language);
+        assert_eq!(podcast.feed_url, detail.podcast.feed_url);
+        assert_eq!(podcast.episode_count, 2);
+    }
+
+    #[test]
+    fn saved_programs_reject_episode_and_unknown_ids() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let mut detail = parse_feed(FEED, "https://feed.example/rss").unwrap();
+        save_detail(&db, &mut detail).unwrap();
+        for id in [0, 1, PODCAST_BASE - 1, PODCAST_BASE, PODCAST_BASE + 999, EPISODE_BASE,
+            detail.episodes[0].id, PODCAST_END, crate::local::LOCAL_BASE, u64::MAX]
+        {
+            for saved in [true, false] {
+                assert!(save_favorite(&db, id, saved).is_err(), "id={id}, saved={saved}");
+            }
+        }
+        assert!(saved_shows(&db.0.lock().unwrap()).unwrap().is_empty());
+        save_favorite(&db, detail.podcast.id, true).unwrap();
+        assert_eq!(saved_shows(&db.0.lock().unwrap()).unwrap()[0].id, detail.podcast.id);
     }
 
     #[tokio::test]

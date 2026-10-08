@@ -64,6 +64,9 @@ jobs:
       - name: Comprobar el reproductor
         run: node --test scripts/tests/player.test.mjs
 
+      - name: Comprobar favoritos de pódcasts
+        run: node --test scripts/tests/podcast-favorites.test.mjs
+
       - name: Compilar y firmar
         run: npm run tauri build -- --bundles ${{ matrix.bundles }} ${{ matrix.args }}
         env:

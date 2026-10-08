@@ -237,6 +237,7 @@ export interface LibraryData {
   downloadedIds: number[]
   albums: SavedAlbum[]
   artists: SavedArtist[]
+  podcasts: Podcast[]
   playlists: PlaylistSummary[]
 }
 
