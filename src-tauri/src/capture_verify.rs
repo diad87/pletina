@@ -544,7 +544,11 @@ async fn prepare(
     }
     let direct = crate::native::reference(id, mime, itag)
         .await
-        .map_err(|_| "El nivel rápido no pudo obtener una referencia compatible sin sesión")?;
+        .map_err(|diagnostic| {
+            format!(
+                "El nivel rápido no pudo obtener una referencia compatible sin sesión: {diagnostic}"
+            )
+        })?;
     let expected_length = crate::ytdlp::query_param(&direct.url, "clen")
         .and_then(|n| n.parse::<usize>().ok())
         .filter(|n| *n > 0 && *n <= MAX_REFERENCE)

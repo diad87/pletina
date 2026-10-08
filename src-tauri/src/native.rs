@@ -5,7 +5,7 @@
 //! prueba la incluida, y si aun así falla, está la captura histórica (`capture_legacy.rs`).
 
 use crate::ytdlp::{now, query_param};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -209,17 +209,67 @@ pub async fn warm_visitor() {
     let _ = visitor(&recipe, false).await;
 }
 
+#[derive(Debug, Serialize)]
+struct ReferenceAttempt {
+    recipe: usize,
+    client: usize,
+    attempt: usize,
+    stage: &'static str,
+    code: String,
+}
+
+// Native transport errors may contain a signed URL, and server reasons may contain
+// arbitrary text. Only these local categories cross into benchmark evidence.
+fn reference_code(stage: &str, error: &str, gone: bool) -> String {
+    if gone {
+        return "video-unavailable".into();
+    }
+    if stage == "visitor" {
+        return if error == "YouTube no dio sesión de visitante" {
+            "visitor-missing"
+        } else {
+            "visitor-transport"
+        }
+        .into();
+    }
+    if stage == "validation" {
+        if let Some(status) = error
+            .strip_prefix("YouTube cortaría el audio (")
+            .and_then(|s| s.strip_suffix(')'))
+            .filter(|s| s.len() == 3 && s.bytes().all(|b| b.is_ascii_digit()))
+        {
+            return format!("cdn-http-{status}");
+        }
+        return "cdn-transport".into();
+    }
+    if error.ends_with(": sin audio con URL directa") {
+        "no-compatible-direct-audio"
+    } else if error.starts_with("YouTube:") {
+        "player-playability-rejected"
+    } else {
+        "player-response-or-transport"
+    }
+    .into()
+}
+
+fn reference_failure(attempts: &[ReferenceAttempt]) -> String {
+    // Report bounded, safe metadata, never visitor data, recipe names or raw errors.
+    let last = &attempts[attempts.len().saturating_sub(8)..];
+    format!(
+        "REFERENCE_RESOLUTION_FAILED {}",
+        json!({ "totalAttempts": attempts.len(), "truncated": attempts.len() > 8, "attempts": last })
+    )
+}
+
 /// Referencia independiente del banco. No escribe la caché de reproducción ni usa cookies.
 /// La selección debe coincidir con el contenedor/códec capturado para comparar paquetes exactos.
 pub async fn reference(
     video_id: &str,
     mime: Option<&str>,
     itag: Option<u64>,
-) -> Result<Direct, Error> {
+) -> Result<Direct, String> {
     if std::env::var_os("MUSIFY_BENCH").is_none() {
-        return Err(Error::Failed(
-            "Referencia sólo disponible en pruebas".into(),
-        ));
+        return Err("Referencia sólo disponible en pruebas".into());
     }
     let recipes: Vec<Recipe> = DOWNLOADED
         .read()
@@ -228,26 +278,53 @@ pub async fn reference(
         .cloned()
         .chain([BUNDLED.clone()])
         .collect();
-    let mut last = Error::Failed("Sin referencia compatible".into());
-    for recipe in &recipes {
-        for client in &recipe.clients {
-            let visitor = match visitor(recipe, false).await {
-                Ok(v) => v,
-                Err(e) => {
-                    last = Error::Failed(e);
-                    continue;
+    let mut attempts = Vec::new();
+    for (recipe_index, recipe) in recipes.iter().enumerate() {
+        for (client_index, client) in recipe.clients.iter().enumerate() {
+            // Match the fast resolver's bounded retry with a fresh anonymous
+            // visitor. A stale visitor or failed URL cannot poison every check.
+            for attempt in 0..2 {
+                let mut record = |stage, error: &str, gone| {
+                    attempts.push(ReferenceAttempt {
+                        recipe: recipe_index,
+                        client: client_index,
+                        attempt,
+                        stage,
+                        code: reference_code(stage, error, gone),
+                    })
+                };
+                let visitor = match visitor(recipe, attempt > 0).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        record("visitor", &e, false);
+                        continue;
+                    }
+                };
+                match player_with_preference(recipe, client, video_id, &visitor, mime, itag).await {
+                    Ok(d) => match validate(&d).await {
+                        Ok(()) => {
+                            eprintln!(
+                                "[reference-resolution] {}",
+                                json!({
+                                    "recipe": recipe_index, "client": client_index, "attempt": attempt,
+                                    "previousFailureCount": attempts.len(), "truncated": attempts.len() > 8,
+                                    "previousFailures": &attempts[attempts.len().saturating_sub(8)..],
+                                })
+                            );
+                            return Ok(d);
+                        }
+                        Err(e) => record("validation", &e, false),
+                    },
+                    Err(Error::Gone(e)) => {
+                        record("player", &e, true);
+                        break;
+                    }
+                    Err(e) => record("player", &e.to_string(), false),
                 }
-            };
-            match player_with_preference(recipe, client, video_id, &visitor, mime, itag).await {
-                Ok(d) => match validate(&d).await {
-                    Ok(()) => return Ok(d),
-                    Err(e) => last = Error::Failed(e),
-                },
-                Err(e) => last = e,
             }
         }
     }
-    Err(last)
+    Err(reference_failure(&attempts))
 }
 
 pub fn bench_forget(video_id: &str) -> Result<(), String> {
@@ -447,6 +524,76 @@ mod tests {
     fn bundled_recipe_parses() {
         let r: Recipe = serde_json::from_str(crate::extractors::bundled_recipe()).unwrap();
         assert!(!r.clients.is_empty());
+    }
+
+    #[test]
+    fn reference_diagnostics_keep_categories_without_transport_or_account_data() {
+        let sensitive = "https://x.googlevideo.com/videoplayback?token=private-account-token";
+        let inputs = [
+            (
+                "visitor",
+                "YouTube no dio sesión de visitante",
+                false,
+                "visitor-missing",
+            ),
+            ("visitor", sensitive, false, "visitor-transport"),
+            (
+                "player",
+                "private-client: sin audio con URL directa",
+                false,
+                "no-compatible-direct-audio",
+            ),
+            (
+                "player",
+                "YouTube: private-account-token",
+                false,
+                "player-playability-rejected",
+            ),
+            ("player", sensitive, false, "player-response-or-transport"),
+            ("player", sensitive, true, "video-unavailable"),
+            (
+                "validation",
+                "YouTube cortaría el audio (403)",
+                false,
+                "cdn-http-403",
+            ),
+            (
+                "validation",
+                "YouTube cortaría el audio (403) private-account-token",
+                false,
+                "cdn-transport",
+            ),
+            ("validation", sensitive, false, "cdn-transport"),
+        ];
+        let attempts: Vec<_> = inputs
+            .into_iter()
+            .enumerate()
+            .map(|(i, (stage, error, gone, expected))| {
+                let code = reference_code(stage, error, gone);
+                assert_eq!(code, expected);
+                ReferenceAttempt {
+                    recipe: 0,
+                    client: 0,
+                    attempt: i,
+                    stage,
+                    code,
+                }
+            })
+            .collect();
+        let diagnostic = reference_failure(&attempts);
+        assert!(!diagnostic.contains("private-"));
+        assert!(!diagnostic.contains("https://"));
+        let report: Value = serde_json::from_str(
+            diagnostic
+                .strip_prefix("REFERENCE_RESOLUTION_FAILED ")
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(report["attempts"].as_array().unwrap().len(), 8);
+        assert_eq!(report["totalAttempts"], 9);
+        assert_eq!(report["truncated"], true);
+        assert_eq!(report["attempts"][0]["attempt"], 1);
+        assert_eq!(report["attempts"][7]["code"], "cdn-transport");
     }
 
     #[test]
