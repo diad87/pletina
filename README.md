@@ -4,22 +4,6 @@ Reproductor de música tipo Spotify para Windows, Mac, Linux y Android. Busca gr
 
 Software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
 
-### Importar playlists de Spotify
-
-En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.
-
-La vista pública de Spotify puede devolver solo parte de una lista (habitualmente hasta las primeras 100 canciones) y no permite consultar listas privadas. Para esas listas, importa un **CSV que ya hayas exportado**, de hasta 10 MB y 10.000 filas. Se admiten columnas `Track Name` y `Artist Name(s)` (o `Title` y `Artist`), y opcionalmente `Duration (ms)` e `ISRC`; los artistas múltiples se separan con punto y coma. Se leen archivos separados por comas, punto y coma o tabuladores. Los episodios, archivos locales y filas sin título o artista se omiten con aviso.
-
-No hace falta iniciar sesión en Spotify. La importación copia las canciones encontradas al catálogo local de Pletina; no sincroniza cambios posteriores. Las listas originales de Spotify no se modifican. La disponibilidad depende de la vista pública de Spotify y de las coincidencias del catálogo.
-
-### Podcasts
-
-La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
-
-Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
-
-Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
-
 ![Inicio](docs/screenshots/inicio.png)
 
 | | |
@@ -28,6 +12,8 @@ Debajo salen también los programas de **YouTube Music**, en su propia sección 
 | **Disco:** la portada tiñe toda la pantalla | **Artista:** foto de cabecera y sus canciones más escuchadas |
 | ![Sonando ahora](docs/screenshots/sonando.png) | ![Playlist](docs/screenshots/playlist.png) |
 | **Sonando ahora:** pantalla completa con la cola | **Playlist:** se ordena arrastrando |
+| ![Podcasts](docs/screenshots/podcasts.png) | ![Un programa de podcast](docs/screenshots/podcast.png) |
+| **Podcasts:** también los de YouTube Music (en la captura, programas de ejemplo) | **Un programa:** sus episodios comparten cola, favoritos e historial con la música |
 
 ### En el móvil
 
@@ -55,6 +41,22 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
     <td><b>Pantalla de bloqueo</b>: sigue sonando con la pantalla apagada</td>
   </tr>
 </table>
+
+### Importar playlists de Spotify
+
+En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.
+
+La vista pública de Spotify puede devolver solo parte de una lista (habitualmente hasta las primeras 100 canciones) y no permite consultar listas privadas. Para esas listas, importa un **CSV que ya hayas exportado**, de hasta 10 MB y 10.000 filas. Se admiten columnas `Track Name` y `Artist Name(s)` (o `Title` y `Artist`), y opcionalmente `Duration (ms)` e `ISRC`; los artistas múltiples se separan con punto y coma. Se leen archivos separados por comas, punto y coma o tabuladores. Los episodios, archivos locales y filas sin título o artista se omiten con aviso.
+
+No hace falta iniciar sesión en Spotify. La importación copia las canciones encontradas al catálogo local de Pletina; no sincroniza cambios posteriores. Las listas originales de Spotify no se modifican. La disponibilidad depende de la vista pública de Spotify y de las coincidencias del catálogo.
+
+### Podcasts
+
+La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
+
+Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
+
+Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
 
 ## Instalar
 
