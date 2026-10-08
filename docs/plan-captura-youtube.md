@@ -2,7 +2,7 @@
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
 fusionar ni hacer push a main. Sólo se permite push a esta rama. Estado: implementación
-API4/captura v21, todavía sin aprobar la promoción; el
+API4/captura v25, todavía sin aprobar la promoción; el
 [informe inicial](informe-captura-youtube-2026-10-07.md) y el
 [diagnóstico del 8 de octubre](informe-captura-youtube-2026-10-08.md) conservan los resultados.
 
@@ -40,8 +40,21 @@ observado no queda automáticamente clasificado como imposible de saltar.
    evita arrancar al borde del buffer. También exige esa reserva al adoptar un salto,
    en el ledger nativo, el lote MSE terminado y el buffer real. Sólo el extremo de
    audio validado por EOF permite una cola menor; la duración nominal no la recorta.
-   Una respuesta antigua no vuelve a mover el reloj tras un salto ya preparado;
-   eso invalida la adopción local, no cancela trabajo nativo previamente enviado.
+   Los saltos tienen IDs monótonos y admisión nativa antes de operar. Una respuesta
+   antigua no mueve el reloj ni adopta otra generación. Volver a caché parcial
+   reorienta el productor hacia el extremo útil sin esperar el IPC para sonar.
+   El banco comprueba también ocho segundos de continuidad tras cancelar el salto
+   anterior, conservando las esperas reales, incluidas las anteriores al regreso.
+   Las continuaciones mantienen los bytes originales; un bloque incompleto queda
+   retenido hasta terminar. Sólo en el experimento WebM, los huecos y las nuevas
+   inicializaciones pueden conservar una vista de paquetes originales ordenados.
+   Las repeticiones deben ser idénticas en configuración, metadatos y bloque entero;
+   los índices publicados y todos los bytes copiados son inmutables. Un paquete
+   nuevo no puede aprovechar observaciones anteriores a su llegada. La vista
+   derivada nunca acredita EOF, certificado completo ni libera la última cola N;
+   su final requiere una recaptura original limpia. Los bytes retenidos de todos
+   los fragmentos y sus copias del parser cuentan en el límite; éste no mide el
+   heap JavaScript exacto ni el pico temporal del parseo.
    Si el origen se agota mientras su captor prepara el destino, la espera sigue
    siendo visible en el banco. Los resultados tardíos de clic conservan
    su solicitud original aunque ya haya comenzado otro anuncio.
@@ -50,6 +63,11 @@ observado no queda automáticamente clasificado como imposible de saltar.
    paquetes publicados, incluidos los anteriores a saltos y recuperaciones, mediante
    hashes de contenido y tiempos; si no coincide, intenta PCM estricto con FFmpeg.
    Una discrepancia, paquete omitido o alineación no verificable impide aprobar.
+   La resolución anónima realiza como máximo dos intentos por cliente, solicitando
+   visitante fresco en el segundo intento. Los fallos conservan categorías por
+   etapa, sin URLs firmadas, visitantes ni datos de cuenta. El nivel rápido usa el
+   mismo diagnóstico privado del banco y valida el campo del visitante decodificado:
+   los identificadores que empiezan por dígito o guion no se rechazan por `Cgs`.
    La referencia se descarga por rangos verificados de256KiB, como máximo cuatro
    simultáneos, conservando un mismo validador HTTP. El final exige todos los paquetes
    que producen muestras, incluidos los recortes por appendWindow; no basta con
@@ -226,6 +244,37 @@ observa el primer paquete completo de Preso, pero todavía no acredita retraso d
 anuncio ni permite reducir N. También falta conservar producción del origen en
 un seek temprano y replanificar el motor al volver a caché parcial tras enviar otro
 salto; invalidar el reply sólo protege el reloj del lector.
+
+**Continuación v22–v25 del 8 de octubre.** Las intenciones crecientes y las
+comprobaciones nativas de propietario impiden que un salto antiguo adopte de nuevo
+el reloj. Volver a caché parcial replanifica ahora el productor hacia el borde útil
+del origen. Después de tres intentos fallidos conservados, v25 mantuvo 8,002 s
+continuos: adopción local 0,6 ms, reloj retomado 90,7 ms, 121 unidades y 528/528
+paquetes históricos coincidentes, sin espera de escucha. La vista parcial WebM
+ingirió relleno fuera de orden y 500 bloques repetidos sin perder el prefijo;
+el ensayo no llegó a reproducir esos paquetes nuevos. La vista sigue sin poder
+certificar EOF ni liberar la cola retenida: falta su cierre mediante recaptura
+limpia y recuperación sin cortes.
+
+El control completo v25 Preso→De Aquí cerró 2/2, 9263/9263 paquetes, cero
+discrepancias y cortes; siguiente 4,6 ms, inicio frío 6074 ms. No tuvo publicidad.
+El control completo v24 de esas dos canciones también cerró verificado y sin
+cortes; sus dos fuentes publicitarias produjeron una transición acreditada y una
+omisión temprana correlacionada tras clic nativo, con 11019 ms en precarga.
+El análisis independiente aún no mide demora del marcador: N permanece 1,5 s.
+
+Propio/v25 resolvió las 30 búsquedas frías por Rust, vídeo correcto y ningún
+respaldo: mínimo 435,7 ms, mediana 548,9 ms, máximo 1318,4 ms; ninguna cumple
+300 ms. Se corrigió la validación del visitante decodificado, que ya no exige
+un prefijo base64 fijo; no se atribuye a esa corrección el fallo histórico cuya
+causa faltaba. Son arranques, no 30 escuchas completas. El seek al 80 % no
+preparado tardó 2461,7 ms con 560 ms de reserva de destino y 117/117 paquetes
+de prefijos, pero el origen se agotó durante 1916,1 ms. Sigue pendiente.
+374 pruebas JavaScript y 109 Rust aprobadas, 13 Rust ignoradas; tipos y build
+Windows correctos. Premium no se utilizó; sus referencias históricas están
+separadas en el [informe](informe-captura-youtube-2026-10-08.md), junto con todos
+los fallos, hashes y commits. Propio conserva Rust→Legacy, yt-dlp predeterminado,
+la nueva progresiva experimental a 1×, sin promoción ni publicación.
 
 La entrega progresiva pasa a normal sólo después de30 canciones completas distintas y
 50 transiciones publicitarias reales sin sesión, cero discrepancias, cobertura y tiempos

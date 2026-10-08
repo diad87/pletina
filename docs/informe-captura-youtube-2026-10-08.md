@@ -1,4 +1,12 @@
-# Captura oficial: diagnóstico de pausas y consentimiento
+# Captura oficial: diagnóstico, continuidad y latencia
+
+**Último estado: API4/captura v25, sin promoción.** La vuelta a caché parcial
+mantiene 8 s de reproducción continua, con todas las unidades publicadas
+comparadas. El control completo Preso→De Aquí cerró 9263/9263 paquetes, cero
+discrepancias y cero cortes: siguiente en 4,6 ms, pero inicio frío en 6074 ms.
+Propio resolvió las 30 búsquedas frías por Rust, sin respaldo, con mediana
+548,9 ms; ninguna cumple 300 ms. El detalle de esta continuación está al final.
+Los controles anteriores conservan sus versiones, fallos y alcance originales.
 
 La captura API4/v20 cerró Airbag y PRESO completas, sin cortes y con16430/16430
 paquetes coincidentes con el audio original obtenido sin sesión. El arranque de
@@ -369,3 +377,218 @@ a caché parcial después de enviar otro salto: ignorar el reply local impide mo
 otra vez el reloj, pero el prefijo puede agotarse mientras el motor va al destino
 previo. Estos límites no mezclan identidad ni acreditan huecos; impiden dar por
 acabado el objetivo.
+
+## Continuación de seguridad y continuidad: API4/v22–v25
+
+Trabajo aislado en `p1-oficial`, sin modificar la carpeta compartida de `main`.
+Todas las tandas nuevas se midieron sin sesión. La nueva captura oficial usó
+WWW, 1×, N=1,5 s, reserva continua de 0,5 s, dos precargas y límites de
+96 MiB por pista/288 MiB total. No hubo otros bancos, builds ni tests concurrentes
+durante las mediciones de latencia.
+La primera señal de sonido se mide por el evento del reproductor de Musify;
+el avance de reloj se comprueba aparte, sin presentarlo como medición acústica.
+
+### Cambios y límites
+
+- El supervisor admite intenciones de salto con identificadores crecientes y
+  vuelve a comprobar propiedad, generación, revisión y cancelación al completar
+  operaciones asíncronas. Volver a caché parcial replanifica el productor al
+  borde útil del origen; las respuestas del destino abandonado no mueven el reloj.
+- El núcleo conserva continuaciones exactas del append original, incluso cuando
+  su último cluster está pendiente. La nueva vista experimental WebM mantiene
+  paquetes originales de varios runs, admite relleno fuera de orden y elimina
+  sólo duplicados idénticos en bytes, configuración y metadatos. No altera los
+  bytes anteriores ni los índices ya publicados; tampoco concede presentación
+  previa a paquetes nuevos que llegan tarde. Una contradicción bloquea entrega.
+- Esa vista es **parcial**: no puede emitir EOF, certificado ni liberar los
+  últimos N segundos, ni siquiera mediante una llamada directa al sellado.
+  Completar una captura que la haya usado requiere una recaptura limpia; todavía
+  falta resolver ese cierre y recuperación sin interrumpir la escucha.
+- El presupuesto cuenta los bytes originales y las copias retenidas del parser.
+  No equivale a medir todo el heap JavaScript ni los picos transitorios de parseo.
+- La referencia independiente realiza como máximo dos intentos por cliente;
+  el segundo intento solicita un visitante anónimo fresco. Los diagnósticos
+  contienen categorías acotadas, sin URLs firmadas ni datos de cuenta.
+- Rust valida la estructura decodificada del visitante en lugar de exigir `Cgt`:
+  tokens válidos pueden empezar por `Cgs`. Se probó con los 64 caracteres
+  iniciales posibles del identificador decodificado. No se atribuye a este bug
+  el fallo histórico de De Aquí,
+  cuya causa específica no quedó registrada. La receta no cambió.
+
+### Vuelta a caché: intentos conservados
+
+El banco llena 3 s del origen, envía un salto al 80 % y vuelve a 0,1 s después
+de observar que el motor recibió el primer salto. Exige 8 s posteriores de reloj
+en reproducción, crecimiento del ledger/MSE y rechazo de la respuesta antigua.
+El alcance es siempre **prefijos sin EOF**, también cuando el subtest pasa.
+
+| Versión / informe local | Inicio frío ms | Adopción local / reloj retomado ms | Resultado de continuidad | Paquetes comparados / discrepancias |
+|---|---:|---:|---|---:|
+| v22 `100630-52c7c77d` | 5696,8 | 0,5 / 91,4 | Fallo: prefijo agotado a 3,080 s; deadline 30 s | 157 / 0 |
+| v23 `101900-4864e748` | 5122,5 | 0,6 / 95,9 | Fallo: ordinal reiniciado mientras el cluster seguía pendiente; corte a 3,920 s | 595 / 0 |
+| v24 `103439-3095cde1` | 5811,9 | 0,6 / 86,4 | Fallo: relleno 20–30 s tras 30–40 s, con repetición de bloques; timeline ambiguo | 202 / 0 |
+| v25 `111240-90adaff4` | — | — | Fallo de arranque: consentimiento visible interrumpió presentación; 0 unidades entregadas | 0 / no ejercitado |
+| v25 `111353-71a63979` | 5715,9 | 0,6 / 90,7 | Pasa vuelta: 8,002 s continuos; respuesta antigua rechazada, productor replanificado | 528 / 0 |
+
+El éxito v25 compara las 121 unidades históricas publicadas, con transporte y
+captura anónimos. MSE crece de 0–3,081 a 0–9,421 s durante el criterio, y el
+ledger final llega a 10,481 s. No hay esperas de escucha; se conserva el waiting
+durante el seek de 0,8 ms, seguido por playing a 1,4 ms. Los 90,7 ms exigen además
+seek terminado y avance de reloj superior a 40 ms. La fila global sigue fallando
+por el inicio frío. La vista derivada sí ingirió el mismo relleno 20–30 s y
+los 500 bloques repetidos del fallo v24, pero la escucha quedó antes de 20 s:
+no demuestra reproducción de esos paquetes nuevos ni cierre completo.
+La recuperación del intento v24 vio un anuncio y esperó
+19,633 s, sin clic nativo y sin publicidad entregada según el contador local;
+no se convierte en aprobación de una transición independiente.
+
+### Escucha completa y publicidad sin sesión
+
+| Control / canción | Inicio frío / siguiente ms | EOF, referencia y MSE completos | Paquetes / unidades | Cortes | Fuentes publicitarias / entregadas; espera ms |
+|---|---:|---|---:|---:|---|
+| v24 `104241-ffa95d55` / Preso | 5809,5 frío | Sí, 0–40,701 s | 2035 / 446 | 0 | 0 / 0; 0 |
+| v24 `104241-ffa95d55` / De Aquí | 3,1 siguiente | Sí, 0–144,561 s | 7228 / 1634 | 0 | 2 / 0; 11019 en precarga |
+| v25 `112042-76cc0021` / Preso | 6074 frío | Sí, 0–40,701 s | 2035 / 452 | 0 | 0 / 0; 0 |
+| v25 `112042-76cc0021` / De Aquí | 4,6 siguiente | Sí, 0–144,561 s | 7228 / 1628 | 0 | 0 / 0; 0 |
+
+Cada tanda contiene 9263 paquetes y 2080 unidades, sin discrepancias, conservando
+todas las unidades históricas. En v25 los 25 controles del oráculo, incluidos
+ambos finales, mantienen `allPublishedUnits=true`; captura y referencia finales
+acreditan anonimato. Ambas tandas fallan únicamente el tiempo del primer sonido
+en sus filas; dos canciones repetidas no constituyen la cohorte de 30 distintas.
+
+En v24 hay dos identidades de fuente publicitaria pero **una** transición
+publicitaria acreditada, con marcador y tasa 1×. Un request y dispatch nativo
+produjeron un clic confiable a posición 5,039168 s de 109,261 s nominales; el
+contenido apareció 46 ms después. Cuenta como una omisión temprana correlacionada,
+no como dos anuncios saltados. Las 39 observaciones de tasa no tienen violaciones.
+Los 11019 ms de publicidad ocurrieron en precarga y no se restan del cambio
+de 3,1 ms. La parte inevitable del anuncio permanece sin determinar.
+En v25 no hubo anuncios ni clics: esa tanda no valida su comportamiento.
+
+`preso-disputa-v24-independent-delay.json` acredita los 2035 paquetes presentados
+de Preso, incluido el primero, pero esa fuente no tuvo publicidad. Los cuatro
+runs de De Aquí siguen sin medida: tres carecen de anclas de payload canónico y
+uno tiene inventario coincidente pero presentación incompleta del primer paquete.
+Ocho episodios de señal no son ocho anuncios únicos. Hay cero transiciones con
+retraso independiente medido; el máximo es null. **N permanece en 1,5 s** y la
+entrega progresiva sigue exclusivamente experimental.
+
+### Propio: camino principal conservado
+
+El control completo v24 `104744-6cde322c` terminó ambas canciones naturalmente,
+con cobertura del consumidor y cero cortes. Preso resolvió por Rust en 697,9 ms
+con búsqueda incluida (búsqueda 411,0; resolución 125,6); falla 300 ms. De Aquí
+usó **Legacy** y cambió en 254,1 ms: falla 100 ms. Para Legacy, publicidad,
+tasa, EOF y comparación API4 no están acreditados; `complete=false` se conserva.
+Los dos fallos rápidos del contador son intentos, no dos canciones fallidas.
+
+Tras la corrección del visitante, v25 `111625-e0978fa6` resolvió las **30/30**
+búsquedas frías de `real_albums` por Rust: vídeo esperado en todas, ningún
+respaldo Legacy ni nueva captura oficial. Mínimo 435,7 ms, mediana 548,9 ms,
+máximo 1318,4 ms; 29/30 por debajo de 1 s, **0/30 dentro de 300 ms**.
+Un 403 de validación CDN se recuperó dentro del nivel rápido. No se atribuye
+causalmente la mediana al cambio de parser a partir de una sola tanda.
+Son arranques con búsqueda y caché reseteadas, no 30 canciones escuchadas hasta
+EOF ni comparación independiente de canciones completas. La telemetría
+publicitaria de captura no aplica a esta ruta directa.
+
+| Canción | Primer sonido con búsqueda ms | Ruta / criterio |
+|---|---:|---|
+| Radiohead — Airbag | 1318,4 | Rust; falla ≤300 ms |
+| Radiohead — Paranoid Android | 539,0 | Rust; falla ≤300 ms |
+| Radiohead — Subterranean Homesick Alien | 626,6 | Rust; falla ≤300 ms |
+| Radiohead — Exit Music (For A Film) | 641,9 | Rust; falla ≤300 ms |
+| Radiohead — Let Down | 553,2 | Rust; falla ≤300 ms |
+| Radiohead — Karma Police | 564,1 | Rust; falla ≤300 ms |
+| Berri Txarrak — Dardararen Bat | 643,5 | Rust; falla ≤300 ms |
+| Berri Txarrak — Zuri | 496,0 | Rust; falla ≤300 ms |
+| Berri Txarrak — Infrasoinuak | 507,4 | Rust; falla ≤300 ms |
+| Berri Txarrak — Spoiler! | 602,9 | Rust; falla ≤300 ms |
+| Berri Txarrak — Zaldi Zauritua | 498,0 | Rust; falla ≤300 ms |
+| Berri Txarrak — Beude | 523,4 | Rust; falla ≤300 ms |
+| Extremoduro — Buscando una luna | 485,3 | Rust; falla ≤300 ms |
+| Extremoduro — Prometeo | 463,9 | Rust; falla ≤300 ms |
+| Extremoduro — Sucede | 435,7 | Rust; falla ≤300 ms |
+| Extremoduro — So payaso | 462,4 | Rust; falla ≤300 ms |
+| Extremoduro — El día de la bestia | 663,2 | Rust; falla ≤300 ms |
+| Extremoduro — Tomás | 573,6 | Rust; falla ≤300 ms |
+| ROSALÍA — MALAMENTE Cap.1: Augurio | 473,4 | Rust; falla ≤300 ms |
+| ROSALÍA — QUE NO SALGA LA LUNA Cap.2: Boda | 544,6 | Rust; falla ≤300 ms |
+| ROSALÍA — PIENSO EN TU MIRÁ Cap.3: Celos | 472,1 | Rust; falla ≤300 ms |
+| ROSALÍA — DE AQUÍ NO SALES Cap.4: Disputa | 559,0 | Rust; falla ≤300 ms |
+| ROSALÍA — RENIEGO Cap.5: Lamento | 605,2 | Rust; falla ≤300 ms |
+| ROSALÍA — PRESO Cap.6: Clausura | 447,8 | Rust; falla ≤300 ms |
+| The Beatles — Come Together (Remastered 2009) | 456,1 | Rust; falla ≤300 ms |
+| The Beatles — Something (Remastered 2009) | 516,5 | Rust; falla ≤300 ms |
+| The Beatles — Maxwell's Silver Hammer (Remastered 2009) | 667,1 | Rust; falla ≤300 ms |
+| The Beatles — Oh! Darling (Remastered 2009) | 571,7 | Rust; falla ≤300 ms |
+| The Beatles — Octopus's Garden (Remastered 2009) | 615,6 | Rust; falla ≤300 ms |
+| The Beatles — I Want You (She's So Heavy) (Remastered 2009) | 581,8 | Rust; falla ≤300 ms |
+
+### Salto aún no capturado
+
+v25 `111503-760b5a46`: Preso inicia en 5559,4 ms; destino al 80 % adoptado
+correctamente en **2461,7 ms**, fuera de la meta de 1 s. El destino MSE contiene
+560,2 ms continuos por delante. Se comparan 28 unidades y 117/117 paquetes,
+cero discrepancias y captura/referencia anónimas: prefijos, sin EOF.
+El origen 0–0,521 s se agota antes de que llegue el destino: waiting a
+6060,5 ms y playing a 7976,6 ms, **1916,1 ms de corte real**. Se conserva también
+el waiting de seek de 0,4 ms. `gaps=[]` no acredita cero cortes en este ensayo.
+Falta conservar producción suficiente del origen mientras se prepara el salto.
+
+### Premium: referencia histórica separada
+
+No se accedió a la cuenta ni al perfil Premium en esta continuación. Las pocas
+medidas anteriores se conservan en el [informe inicial](informe-captura-youtube-2026-10-07.md)
+y no aprueban ninguna meta sin sesión ni describen v25.
+
+| Prueba Premium histórica | Primer sonido ms | Siguiente / salto ms | Anuncios vistos / saltados / entregados; espera | Alcance |
+|---|---:|---:|---|---|
+| Preso→Malamente | 5390,7 | 8,2 siguiente | 0 / 0 / 0; 0 ms | 2 completas, 2035+7502 paquetes, 0 discrepancias y cortes |
+| Seek no preparado | 3897,1 | 2106,3 salto | 0 / 0 / 0; 0 ms | Sólo 104 paquetes de prefijos; no EOF |
+
+### Comprobación, commits y pendientes
+
+374/374 pruebas JavaScript, 109 Rust aprobadas/13 ignoradas/0 fallos,
+Svelte/TypeScript con cero errores y avisos, build Windows correcto. Las pruebas
+ignoradas no cuentan como aprobadas. El test de reserva ahora espera la nueva
+lectura pendiente en lugar de resolver por error la anterior después de un
+sleep fijo; los criterios y las comprobaciones negativas no se relajaron.
+Build v25 de código limpio `a397744186324513d647181c65842598d6c5b1d4`, binario SHA256
+`597c5a9b9bfc73b5346b781672e1399701a49687fdd09b44ac6a1a079c0740ce`.
+El último control sólo tenía documentación modificada y usó ese mismo binario.
+
+| Informe local | SHA256 |
+|---|---|
+| v22 vuelta `100630-52c7c77d` | `283d61872b39407af1c56fa46c1ef0281111c1172f196909875df07b0c0b22e7` |
+| v23 vuelta `101900-4864e748` | `415752090c5f2d728bd827808a6dd32f04bc59d619fd815b2ca79f5d9e29d422` |
+| v24 vuelta `103439-3095cde1` | `093cd903d3e1276f7cbd4dfa1040a285046fb48b0380f74ca09a0a3ef7115c4b` |
+| v24 completas `104241-ffa95d55` | `d6c69540207de301333f38ef613834c99f346d38ab174823004bbe60e5cdbf41` |
+| v24 Propio `104744-6cde322c` | `7821db6d39727c8788f410ec78218682756b10d6768817ea968344e593ec39fd` |
+| v24 demora independiente | `b98f99e56062b80ab390953ac1302bb9e0d2f0dd8b92ec58d5aac8ae53212c8b` |
+| v25 arranque `111240-90adaff4` | `05439ad6198c3194bd53bce3d4203f1853b94a132d4a2ee83cb7548d4d789a45` |
+| v25 vuelta `111353-71a63979` | `86d3b13e40ebd9441b4bc03489ef86fdf1e749b9c70a28cdd5d237ae132a8c64` |
+| v25 salto `111503-760b5a46` | `aa145f1682603be03fbccd788964bbdba5a87f0db1cdd9e5b1735b94b26e6983` |
+| v25 Rust30 `111625-e0978fa6` | `68f711c47af40f99f55b9421f29c2571d95365a454b6bc628ee8969a05a13c56` |
+| v25 completas `112042-76cc0021` | `aa5ae2b11e37b03d81aedfc3fef540575f447c45f3f05a7db6864ecc40d4a338` |
+
+Commits locales de código y tests: `ffccb5e` (referencias y diagnóstico),
+`5a176a8` (auditoría de readiness), `c0642be` (intenciones y replanificación),
+`578936d` (banco de vuelta), `9fb6754` (continuación exacta), `9e11a4f`
+(cluster pendiente), `3b91a1b` (diagnóstico rápido), `cdc61a3` (visitante),
+`3b87cdb` (inventario WebM parcial) y `a397744` (test de reserva).
+El commit final de documentación se identifica al entregar el resultado.
+Captura subió a v25; API4, receta v1 y youtubei v1 se conservan. Se modificaron
+el lector y su supervisor internos para coordinar saltos; no db.rs, downloads.rs
+ni la interfaz visual. Raw, audio, logs y perfiles siguen en carpetas `.local`
+ignoradas. No hubo push, fusión ni publicación.
+
+Quedan el inicio frío Rust ≤300 ms/oficial ≤3 s, el salto no preparado ≤1 s sin
+agotar el origen, el cierre verificable de la vista parcial y la recuperación
+sin cortes. N=1,5 s impone más de 1 s para audio aún no presentado: reducirlo exige
+la cota independiente del marcador que todavía falta. También una nueva cohorte
+conjunta de 30 canciones completas y 50 transiciones reales con publicidad, sin
+discrepancias, cortes ni fallos de tiempo. Las campañas anteriores no sustituyen
+esa aprobación. yt-dlp continúa predeterminado; Propio conserva Rust→Legacy y
+la entrega progresiva nueva continúa siendo sólo el experimento del banco.
