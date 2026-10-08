@@ -374,10 +374,14 @@ test('seek exige la misma reserva en ledger y MSE; un hueco confirmado no se rel
   assert.equal(env.audio.currentTime, 4)
   const sb = env.instances[0].buffers[0]
   sb.ranges = [[0, 10], [79, 80.2], [80.21, 85]]
+  const firstDeliver = deliver
   deliver(packet({ from: 2, ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
   await settle(() => captureProgress(env.audio).ranges.length === 2)
-  await new Promise(resolve => setTimeout(resolve, 25))
+  // La respuesta vacía difiere la siguiente lectura; no resolver dos veces el mismo IPC.
+  await settle(() => deliver !== firstDeliver)
   assert.equal(settled, false, 'el ledger continuo tampoco sustituye la cobertura real MSE')
+  assert.equal(env.audio.currentTime, 4)
+  assert.deepEqual(sb.ranges, [[0, 10], [79, 80.2], [80.21, 85]])
   sb.ranges = [[0, 10], [79, 85]]
   deliver(packet({ from: 2, ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
   assert.equal(await pending, true)
