@@ -273,6 +273,29 @@ test('exact real packets with an unobserved first ready clock get diagnostics wi
   assert.equal(report.universalHoldbackBound, null)
 })
 
+test('a real ready unpaused zero followed by advance observes the first packet without weakening the independent full anchor', t => {
+  const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), external = realTone(join(w.directory, 'external.webm'), 1499)
+  writeFileSync(join(w.oracle, `${ID}-251.audio`), song)
+  const inventory = context.__musifyCaptureCore.inspectWebMPrefix(new Uint8Array(song), { final: true })
+  const b = builder(w.audit)
+  b.append(1, external); allPresented(b, 1, external, 0, 150)
+  b.append(2, song); b.mutation(2, 'endOfStream')
+  const ranges = [{ start: 0, end: inventory.codedEnd }]
+  b.clock(2, 0, 1000, 'content', { phase: 'loadedmetadata', readyState: 1, paused: true, audioRanges: ranges })
+  b.clock(2, 0, 1002, 'content', { phase: 'play-call', readyState: 4, audioRanges: ranges })
+  b.clock(2, 0.008538, 1015, 'content', { phase: 'playing', readyState: 4, audioRanges: ranges })
+  for (let ms = 50; ms < inventory.codedEnd * 1000; ms += 50) b.clock(2, ms / 1000, 1000 + ms, 'content', { audioRanges: ranges })
+  b.clock(2, inventory.codedEnd, 1000 + inventory.codedEnd * 1000, 'content', { ended: true, paused: true, sourceEnded: true, audioRanges: ranges })
+  b.finish()
+  const report = analyzeAudit({ auditDirectory: w.audit, oracleDirectory: w.oracle }), run = report.runs[1]
+  assert.equal(run.measured, true); assert.deepEqual(run.reasons, [])
+  assert.equal(run.presentedPackets, inventory.samples.length)
+  assert.equal(run.canonicalPackets, inventory.samples.length)
+  assert.equal(report.counts.measuredCandidateTransitions, 1)
+  assert.equal(report.candidates[0].semanticAdVerified, false)
+  assert.equal(report.universalHoldbackBound, null, 'a finite independent observation never authorizes a new safety margin by itself')
+})
+
 test('matching codec alone, a missing reference, a partial clock and a missing final marker remain unmeasured', t => {
   const w = workspace(t), song = realTone(join(w.directory, 'song.webm'), 997), different = realTone(join(w.directory, 'different.webm'), 1499)
   writeFileSync(join(w.oracle, `${ID}-251.audio`), song)

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import { readFileSync } from 'node:fs'
+import { presentationIntervals } from '../scripts/analyze-capture-audit.mjs'
 
 const auditCode = readFileSync(new URL('../src-tauri/src/capture-audit.js', import.meta.url), 'utf8')
 const coreCode = readFileSync(new URL('../src-tauri/src/capture-core.js', import.meta.url), 'utf8')
@@ -184,6 +185,37 @@ test('capture origin is scoped synchronously and external pause remains external
   assert.deepEqual(samples.map(s => [s.origin, s.reason]), [['capture', 'resume'], ['external', undefined], ['external', undefined]])
   assert.equal(samples[0].before.visibility, 'hidden'); assert.equal(samples[0].before.focused, false)
   assert.equal(samples[1].after.paused, true)
+})
+
+test('the real unpaused zero after play is observed before playing, without creating presentation credit by itself', () => {
+  const f = setup(); f.media.paused = true; f.media.readyState = 4; f.time(100)
+  const result = f.media.play()
+  assert.equal(result, f.media.playResult)
+  const first = f.messages.find(m => m.kind === 'clock' && m.phase === 'play-call')
+  assert.ok(first); assert.equal(first.position, 0); assert.equal(first.paused, false)
+  assert.equal(first.readyState, 4); assert.equal(first.browserNow, 100)
+  assert.ok(first.source > 0 && first.s > 0)
+  assert.deepEqual(presentationIntervals([first]), [], 'a play request is not proof of presentation')
+  f.time(125); f.media.currentTime = 0.02; f.event('playing')
+  const clocks = f.messages.filter(m => m.kind === 'clock')
+  assert.deepEqual(presentationIntervals(clocks), [{ start: 0, end: 0.02, wallStart: 100, wallEnd: 125 }])
+  assert.equal(f.tracker.sources.values().next().value.observations.length, 0, 'the private probe does not authorize the gate')
+})
+
+test('play clocks keep missing data, nonzero positions, rejection and later pause visible rather than inventing zero', () => {
+  const f = setup(); f.media.paused = true; f.media.readyState = 1; f.media.currentTime = 0.04; f.time(100)
+  f.media.play()
+  const first = f.messages.find(m => m.kind === 'clock' && m.phase === 'play-call')
+  assert.equal(first.position, 0.04); assert.equal(first.readyState, 1)
+  f.time(125); f.media.readyState = 4; f.media.currentTime = 0.06; f.event('play')
+  assert.deepEqual(presentationIntervals(f.messages.filter(m => m.kind === 'clock')), [])
+  f.media.pause(); f.time(130); f.event('pause'); f.time(150); f.media.currentTime = 0.08; f.event('playing')
+  const last = f.messages.filter(m => m.kind === 'clock').slice(-2)
+  assert.deepEqual(presentationIntervals(last), [], 'paused clocks cannot bridge a later advance')
+  const before = f.messages.filter(m => m.phase === 'play-call').length
+  f.media.playError = new Error('native refusal')
+  assert.throws(() => f.media.play(), error => error === f.media.playError)
+  assert.equal(f.messages.filter(m => m.phase === 'play-call').length, before)
 })
 
 test('property diagnostics do not coerce input twice and count redundant writes against each native getter', () => {

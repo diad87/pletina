@@ -121,7 +121,17 @@
           const budget = ['play', 'pause', 'muted'].includes(method) ? method : 'rate'
           if (sampleBudgets[budget] > 0) { sampleBudgets[budget]--; stack = safeStack() }
         } catch { /* Optional instrumentation must not swallow a native call. */ }
-        try { return original.apply(this, args) }
+        try {
+          const result = original.apply(this, args)
+          // A native play() clears paused synchronously, before queued `playing`
+          // can observe an already advancing clock. Keep that real snapshot when
+          // available; the offline analyzer still requires ready data, the same
+          // binding and a later continuous advance. This call is not coverage.
+          if (method === 'play' && before?.paused === true) {
+            try { clock(this, 'play-call') } catch { /* Never alter the native result. */ }
+          }
+          return result
+        }
         catch (error) { threw = true; throw error }
         finally {
           try { recordPlayback(this, method, args[0], previousValue, before, origin, reason, threw, stack) } catch { statistics.errors++ }
@@ -200,7 +210,7 @@
       if (frozen || capture) return
       capture = value
       installPlayback()
-      for (const type of ['timeupdate', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata']) {
+      for (const type of ['timeupdate', 'play', 'playing', 'ended', 'seeking', 'seeked', 'pause', 'loadedmetadata']) {
         const listener = event => { if (event.target instanceof scope.HTMLMediaElement) clock(event.target, type) }
         listeners.push([type, listener]); scope.addEventListener?.(type, listener, true)
       }

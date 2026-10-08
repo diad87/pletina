@@ -238,6 +238,118 @@ test('progressive units contain only complete samples inside confirmed presentat
   assert.equal(tracker.finish(source, { ...snapshot(0.06), sourceEnded: true }).complete, true)
 })
 
+test('sample projection is reused while clocks, observations and native availability remain live gates', () => {
+  const warm = progressiveSetup(), cold = progressiveSetup()
+  let projected = 0
+  const sampleRange = warm.tracker.sampleRange.bind(warm.tracker)
+  warm.tracker.sampleRange = (...args) => { projected++; return sampleRange(...args) }
+  const actual = [], expected = []
+  for (const position of [0, 0.0199, 0.02, 0.025, 0.04, 0.06]) {
+    warm.observe(position); cold.observe(position)
+    // Future clock alone, absent native data, readiness, or a different source
+    // never borrows the arithmetic cache as an eligibility decision.
+    if (position === 0.02) {
+      assert.equal(warm.tracker.pull(warm.source, { ...warm.snapshot(0.06), audioRanges: [] }).length, 0)
+      for (const change of [{ readyState: 1 }, { seeking: true }, { updating: true }, { playbackRate: 2 }, { source: {} }])
+        assert.equal(warm.tracker.pull(warm.source, { ...warm.snapshot(0.06), ...change }).length, 0)
+    }
+    actual.push(...warm.tracker.pull(warm.source, warm.snapshot(position)))
+    cold.buffer.sampleProjection = null
+    expected.push(...cold.tracker.pull(cold.source, cold.snapshot(position)))
+    assert.equal(warm.tracker.pull(warm.source, warm.snapshot(position)).length, 0, 'emitted samples are checked afresh')
+    if (position === 0.02) assert.equal(warm.tracker.pull(warm.source, warm.snapshot(0.06)).length, 0, 'a future snapshot does not extend observed coverage')
+  }
+  assert.equal(projected, 3, 'three arithmetic projections total, not three per pull')
+  assert.equal(actual.reduce((n, unit) => n + unit.frames, 0), 3)
+  assert.deepEqual(actual.map(unit => Buffer.from(unit.data)), expected.map(unit => Buffer.from(unit.data)))
+  assert.deepEqual(actual.map(({ data, ...unit }) => JSON.parse(JSON.stringify(unit))), expected.map(({ data, ...unit }) => JSON.parse(JSON.stringify(unit))))
+  assert.throws(() => warm.tracker.finish(warm.source, warm.snapshot(0.06)), codeIs('CAPTURE_PARTIAL_PRESENTATION'), 'cached arithmetic cannot certify EOF')
+})
+
+test('sample projection invalidates on append and preserves the exact new sample inventory', () => {
+  const { ProgressiveTracker, parseWebMOpus } = load(), tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 0 })
+  const source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  const firstBytes = fixture({ times: [0] }).bytes, tailBytes = fixture({ times: [20, 40] }).cluster
+  const snapshot = position => ({ source, position, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: 0.06 }] })
+  tracker.append(buffer, firstBytes)
+  for (const position of [0, 0.02]) tracker.observe(source, content, { position, now: position * 1000, duration: 0.06 })
+  const [first] = tracker.pull(source, snapshot(0.02)), cached = buffer.sampleProjection
+  tracker.append(buffer, tailBytes)
+  assert.equal(buffer.sampleProjection, null)
+  tracker.observe(source, content, { position: 0.06, now: 60, duration: 0.06 })
+  const [tail] = tracker.pull(source, snapshot(0.06))
+  assert.notEqual(buffer.sampleProjection, cached)
+  assert.equal(first.frames + tail.frames, 3); assert.equal(tail.firstFrame, 1); assert.equal(tail.endFrame, 3)
+  const replay = concat(first.data, tail.data.subarray(tail.initBytes))
+  assert.deepEqual(parseWebMOpus(replay).codedFrames, parseWebMOpus(concat(firstBytes, tailBytes)).codedFrames)
+})
+
+test('sample projection binds the current tuple, parser inventory, version, epoch and native objects', () => {
+  const { tracker, source, buffer } = progressiveSetup()
+  let inventory = tracker.inventory(source), settings = { ...buffer.timelineSettings }
+  let prior = tracker.projectSamples(source, inventory, settings)
+  assert.equal(tracker.projectSamples(source, inventory, settings), prior)
+  for (const mutation of ['tuple', 'inventory', 'version', 'epoch', 'native-buffer', 'native-source']) {
+    if (mutation === 'tuple') settings = { ...settings, appendWindowStart: 0.02 }
+    if (mutation === 'inventory') inventory = { ...inventory, samples: [...inventory.samples] }
+    if (mutation === 'version') buffer.version++
+    if (mutation === 'epoch') tracker.epoch++
+    if (mutation === 'native-buffer') buffer.native = {}
+    if (mutation === 'native-source') source.native = {}
+    const next = tracker.projectSamples(source, inventory, settings)
+    assert.notEqual(next, prior, mutation)
+    assert.equal(tracker.projectSamples(source, inventory, settings), next, mutation)
+    assert.equal(next.frameIndices[0], null, 'window arithmetic is recomputed, without minting coverage')
+    assert.equal(next.frameIndices[1], 0)
+    prior = next
+  }
+  assert.equal(tracker.coverage.length, 0); assert.equal(source.observations.length, 0)
+  assert.equal(source.completeCertificate, undefined); assert.equal(source.verifiedFinalEpoch, undefined)
+})
+
+test('a warm projection cannot revive samples after relabeling, native mutation, drop or seek reset', () => {
+  for (const operation of ['ad', 'unknown', 'drop', 'remove', 'abort', 'changeType', 'timeline', 'seek']) {
+    const scope = browserMocks(), { ProgressiveTracker, install } = load()
+    const tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 0 }), capture = install({ scope, tracker })
+    const media = new scope.HTMLMediaElement(), mse = new scope.MediaSource(), sb = mse.addSourceBuffer('audio/webm; codecs="opus"')
+    media.src = scope.URL.createObjectURL(mse)
+    sb.appendBuffer(fixture().bytes); sb.buffered = { length: 1, start: () => 0, end: () => 0.06 }
+    const source = capture.sourceOf(media), buffer = source.buffers[0]
+    for (const position of [0, 0.02]) tracker.observe(source, content, { position, now: position * 1000, duration: 0.06 })
+    media._currentTime = 0.02
+    assert.equal(tracker.pull(source, capture.snapshotOf(media)).length, 1)
+    assert.ok(buffer.sampleProjection)
+    const published = JSON.stringify(tracker.coverage)
+    if (operation === 'ad' || operation === 'unknown') tracker.observe(source, operation === 'ad' ? ad : { state: 'unknown' }, { position: 0.03, now: 30, duration: 0.06 })
+    if (operation === 'drop') tracker.drop(source)
+    if (operation === 'remove') sb.remove(0.02, 0.06)
+    if (operation === 'abort') sb.abort()
+    if (operation === 'changeType') sb.changeType('audio/mp4; codecs="mp4a.40.2"')
+    if (operation === 'timeline') { sb.timestampOffset = 1; sb.appendBuffer(fixture({ times: [60] }).cluster) }
+    if (operation === 'seek') {
+      tracker.beginEpoch(2, 0.04)
+      assert.equal(buffer.sampleProjection, null)
+      assert.equal(tracker.onTimeAssignment(source, media, 0.04), true)
+      sb.abort()
+      assert.equal(buffer.sampleProjection, null)
+      media._currentTime = 0.06
+      assert.equal(tracker.pull(source, capture.snapshotOf(media)).length, 0, 'old samples do not carry old observation coverage into a seek')
+      sb.appendBuffer(fixture({ times: [40] }).bytes)
+      for (const position of [0.04, 0.06]) tracker.observe(source, content, { position, now: 100 + position * 1000, duration: 0.06 })
+      const [tail] = tracker.pull(source, capture.snapshotOf(media))
+      assert.equal(tail.frames, 1); assert.equal(tail.rangeStart, 0.04)
+      assert.equal(tracker.coverage.length, 2, 'the missing middle packet stays missing')
+      continue
+    }
+    assert.equal(buffer.sampleProjection, null, operation)
+    media._currentTime = 0.06
+    if (operation === 'drop') assert.equal(tracker.pull(source, capture.snapshotOf(media)).length, 0)
+    else assert.throws(() => tracker.pull(source, capture.snapshotOf(media)), error => !!error.code, operation)
+    assert.equal(JSON.stringify(tracker.coverage), published, operation)
+    assert.equal(source.completeCertificate, undefined, operation)
+  }
+})
+
 test('seek epochs retain separate coverage islands and EOF never labels a hole complete', () => {
   const { tracker, source, snapshot, observe } = progressiveSetup()
   observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))

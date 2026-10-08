@@ -390,6 +390,7 @@
     }
     reject(source, code, reason) {
       delete source.startupGap
+      for (const buffer of source.buffers) buffer.sampleProjection = null
       super.reject(source, code, reason)
     }
     drop(source) {
@@ -398,7 +399,7 @@
       // No retained parser view may resurrect quarantined bytes after a conflicting
       // label. Already published experimental units cannot be recalled: a label
       // delayed longer than the holdback remains an explicit counterexample.
-      for (const buffer of source.buffers) { buffer.prefix = null; buffer.resetInit = null; buffer.version++ }
+      for (const buffer of source.buffers) { buffer.prefix = null; buffer.sampleProjection = null; buffer.resetInit = null; buffer.version++ }
       delete source.completeCertificate; delete source.nativeFinalClock
     }
     createBuffer(source, mime) {
@@ -417,7 +418,7 @@
         buffer.timelineSettings = null
         buffer.resetAfterSeek = false
       }
-      buffer.version++; buffer.prefix = null
+      buffer.version++; buffer.prefix = null; buffer.sampleProjection = null
       super.append(buffer, data, settings)
       if (buffer.awaitingStart && !buffer.source.error) {
         const input = join(buffer.chunks)
@@ -433,10 +434,12 @@
       this.epoch = epoch; this.seek = { at, assigned: false, active: true }
       for (const source of this.sources.values()) {
         source.observations = []; source.progress = { epoch, ranges: [], emitted: new Set() }
+        for (const buffer of source.buffers) buffer.sampleProjection = null
       }
     }
     restartBeginning(source) {
       if (source.error || source.observations.length || source.progress.emitted.size) fail('CAPTURE_PARTIAL_PRESENTATION', 'Cannot repair an already observed presentation by rewinding')
+      for (const buffer of source.buffers) buffer.sampleProjection = null
       this.seek = { at: 0, assigned: false, active: true, startup: true }
     }
     startupReplayUnpublished(source, snapshot) {
@@ -458,6 +461,7 @@
       // survive, and only a fresh presentation beginning at exactly zero can certify EOF.
       delete source.startupGap; source.error = null; source.state = 'content'
       source.observations = []; source.progress = { epoch: this.epoch, ranges: [], emitted: new Set() }
+      for (const buffer of source.buffers) buffer.sampleProjection = null
       delete source.completeCertificate; delete source.nativeFinalClock; delete source.verifiedFinalEpoch; delete source.lastPullAt
       this.seek = { at: 0, assigned: false, active: true, startup: true, replay: true, source }
       return detail
@@ -465,6 +469,7 @@
     onTimeAssignment(source, element, value) {
       if (!this.seek?.active || this.seek.assigned || source?.error || Math.abs(value - this.seek.at) > 0.000001) return false
       if (this.seek.replay && (source !== this.seek.source || element !== source.element || value !== 0)) return false
+      for (const buffer of source.buffers) buffer.sampleProjection = null
       if (!this.seek.startup) {
         try { this.inventory(source) } catch { return false }
         for (const buffer of source.buffers) {
@@ -482,6 +487,7 @@
       // previous complete inventory available for a buffered seek; rebuild from init if
       // the site subsequently appends a new range. No partial parser input is reused.
       try { this.inventory(buffer.source) } catch { return false }
+      buffer.sampleProjection = null
       if (operation === 'abort') buffer.resetAfterSeek = true
       return true
     }
@@ -587,6 +593,20 @@
       const end = Math.min(settings.appendWindowEnd ?? Infinity, sample.end + settings.timestampOffset)
       return { start, end }
     }
+    projectSamples(source, inventory, settings) {
+      const buffer = source.buffers[0], tuple = JSON.stringify(settings), cached = buffer.sampleProjection
+      if (cached && cached.inventory === inventory && cached.version === buffer.version && cached.tuple === tuple &&
+        cached.epoch === this.epoch && cached.source === source && cached.native === buffer.native && cached.nativeSource === source.native) return cached.value
+      // Only arithmetic derived from the immutable parser inventory is reused.
+      // Identity, observations, native ranges, clock, EOF and emission eligibility
+      // are deliberately rechecked by pull on every call.
+      const available = inventory.samples.map(sample => this.sampleRange(sample, settings))
+      let frameCount = 0
+      const frameIndices = available.map(range => range.end > range.start ? frameCount++ : null)
+      const value = { available, frameIndices }
+      buffer.sampleProjection = { inventory, version: buffer.version, tuple, epoch: this.epoch, source, native: buffer.native, nativeSource: source.native, value }
+      return value
+    }
     completeCertificate(source, buffer) {
       const certificate = source.completeCertificate
       if (!certificate || certificate.epoch !== this.epoch || source.progress.epoch !== this.epoch || certificate.buffer !== buffer || certificate.native !== buffer.native || certificate.nativeSource !== source.native || certificate.version !== buffer.version || certificate.settings !== JSON.stringify(buffer.timelineSettings ?? settingsOf()) || !source.sealed) fail('CAPTURE_PARTIAL_PRESENTATION', 'The complete-source certificate no longer identifies this immutable source and epoch')
@@ -614,9 +634,7 @@
       const certificate = this.experimental ? null : boundCertificate
       if (!this.experimental && !certificate) fail('CAPTURE_PARTIAL_PRESENTATION', 'Safe publication requires a complete-source certificate')
       if (boundCertificate && (!this.clockCovers(source, snapshot, boundCertificate.proof.timeline.end) || snapshot.audioRanges?.length !== 1 || Math.abs(snapshot.audioRanges[0].start - boundCertificate.proof.timeline.start) > codecEpsilon || Math.abs(snapshot.audioRanges[0].end - boundCertificate.proof.timeline.end) > codecEpsilon)) fail('CAPTURE_PARTIAL_PRESENTATION', 'The current native clock/range no longer covers the complete-source certificate')
-      const units = [], available = inventory.samples.map(s => this.sampleRange(s, settings))
-      let frameCount = 0
-      const frameIndices = available.map(r => r.end > r.start ? frameCount++ : null)
+      const units = [], { available, frameIndices } = this.projectSamples(source, inventory, settings)
       const normalEmitted = []
       for (let first = 0; first < available.length;) {
         const eligible = index => {
