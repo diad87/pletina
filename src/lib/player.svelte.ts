@@ -3,7 +3,7 @@ import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { setAudioSource, stopCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
-import { isPodcast } from './media'
+import { isPodcast, mediaUrl } from './media'
 import { toast } from './toast.svelte'
 import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
@@ -13,6 +13,23 @@ export { toQuery, type QueueItem, type Repeat }
 
 /** Tras tantos fallos seguidos se deja de saltar a la siguiente (p. ej. sin conexión). */
 const MAX_FAILURES = 3
+const RESOLVE_TIMEOUT = 120_000
+const AUDIO_TIMEOUT = 30_000
+
+/** También limita las promesas del navegador que no llegan a resolver ni rechazar. */
+function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  return Promise.race([
+    pending,
+    new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms) }),
+  ]).finally(() => clearTimeout(timer))
+}
+
+function audioError(audio: HTMLAudioElement): string {
+  return audio.error?.code === 3 || audio.error?.code === 4
+    ? 'El sistema no puede reproducir este formato de audio'
+    : audio.error?.message || 'El audio no se puede reproducir'
+}
 
 /** Lo que se pone en el `<audio>`: el archivo descargado (protocolo local) o la URL del stream. */
 const audioSrc = (p: Playable) => (p.local ? convertFileSrc(p.url) : p.url)
@@ -43,7 +60,7 @@ class Player implements PlayerApi {
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking = $state<QueueItem | null>(null)
 
-  #audio = new Audio()
+  #audio: HTMLAudioElement
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
@@ -55,31 +72,42 @@ class Player implements PlayerApi {
   #nextKey = 1
 
   constructor() {
-    const a = this.#audio
+    this.#audio = this.#createAudio()
+    this.#setupMediaSession()
+  }
+
+  /** Un elemento por carga: los eventos tardíos de una canción anterior se ignoran. */
+  #createAudio() {
+    const a = new Audio()
     a.preload = 'auto'
     a.volume = this.volume
+    a.muted = this.muted
     a.addEventListener('timeupdate', () => {
       // Mientras carga la siguiente, el audio aún tiene el tiempo de la anterior: se ignora.
-      if (this.status === 'loading') return
+      if (a !== this.#audio || this.status === 'loading') return
       this.time = a.currentTime
       this.#maybeRecord()
     })
     a.addEventListener('durationchange', () => {
+      if (a !== this.#audio) return
       if (Number.isFinite(a.duration)) this.duration = a.duration
       this.#syncPosition()
     })
     a.addEventListener('playing', () => {
+      if (a !== this.#audio || a.paused || a.error) return
       this.status = 'playing'
       this.#failures = 0
       this.#syncPosition()
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
+      this.#withMediaSession((ms) => { ms.playbackState = 'playing' })
     })
     a.addEventListener('pause', () => {
+      if (a !== this.#audio) return
       if (this.status === 'playing') this.status = 'paused'
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
+      this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
     })
-    a.addEventListener('seeked', () => this.#syncPosition())
+    a.addEventListener('seeked', () => { if (a === this.#audio) this.#syncPosition() })
     a.addEventListener('ended', () => {
+      if (a !== this.#audio || this.status === 'loading') return
       if (this.repeat === 'one') {
         this.#recorded = false
         a.currentTime = 0
@@ -88,8 +116,18 @@ class Player implements PlayerApi {
         this.next()
       }
     })
-    a.addEventListener('error', () => this.#onAudioError())
-    this.#setupMediaSession()
+    a.addEventListener('error', () => { if (a === this.#audio) this.#onAudioError() })
+    return a
+  }
+
+  #resetAudio() {
+    const previous = this.#audio
+    this.#audio = this.#createAudio()
+    stopCapture()
+    previous.pause()
+    previous.removeAttribute('src')
+    previous.load()
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
   }
 
   get current(): QueueItem | null {
@@ -204,6 +242,12 @@ class Player implements PlayerApi {
       this.#load(0)
     } else {
       // Fin de la cola: se queda parado al principio de la última canción.
+      if (this.status === 'loading') {
+        ++this.#token
+        this.#resetAudio()
+        this.status = 'idle'
+        return
+      }
       this.#audio.pause()
       this.#audio.currentTime = 0
       this.status = 'paused'
@@ -280,19 +324,22 @@ class Player implements PlayerApi {
 
     const token = ++this.#token
     this.status = 'loading'
-    this.#audio.pause()
     try {
-      const playable = await api.chooseSource(toQuery(item), videoId)
+      this.#resetAudio()
+      const playable = await withTimeout(api.chooseSource(toQuery(item), videoId), RESOLVE_TIMEOUT,
+        'No se pudo preparar el audio a tiempo. Vuelve a intentarlo')
       redownload()
       if (token !== this.#token) return true
       this.#retried = false
-      setAudioSource(this.#audio, audioSrc(playable))
-      await this.#audio.play()
+      await this.#playAudio(playable)
+      if (token !== this.#token) return true
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
     } catch (e) {
       if (token === this.#token) {
-        this.status = 'paused'
+        ++this.#token
+        this.#resetAudio()
+        this.status = 'idle'
         toast.show(`No se pudo usar ese vídeo: ${e}`)
       }
       return false
@@ -334,23 +381,44 @@ class Player implements PlayerApi {
     this.status = 'loading'
     this.time = startAt
     this.duration = item.track.duration
-    this.#audio.pause()
-    // Si sonaba una captura del motor propio, deja de leerse: así puede empezar la siguiente.
-    stopCapture()
-    this.#updateMediaSession(item)
-
     try {
+      this.#resetAudio()
+      this.#updateMediaSession(item)
+      this.#retried = refresh
       const playable = await this.#resolve(item, refresh)
       if (token !== this.#token) return
-      this.#retried = refresh
-      setAudioSource(this.#audio, audioSrc(playable))
-      if (startAt) this.#audio.currentTime = startAt
-      await this.#audio.play()
+      await this.#playAudio(playable, startAt)
+      if (token !== this.#token) return
       this.#prefetchNext()
     } catch (e) {
+      // Un AbortError de esta carga también es un fallo; solo se ignoran las cargas sustituidas.
       if (token !== this.#token) return
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      this.#fail(item, String(e))
+      if (!refresh && this.#audio.error?.code === 2) {
+        this.#start(item, true, startAt)
+        return
+      }
+      this.#fail(item, String(e), token)
+    }
+  }
+
+  async #playAudio(playable: Playable, startAt = 0) {
+    const a = this.#audio
+    let onError: () => void = () => {}
+    const started = new Promise<void>((resolve, reject) => {
+      onError = () => reject(new Error(audioError(a)))
+      a.addEventListener('error', onError)
+      try {
+        setAudioSource(a, audioSrc(playable))
+        if (startAt) a.currentTime = startAt
+        a.play().then(resolve, reject)
+      } catch (e) {
+        reject(e)
+      }
+    })
+    try {
+      await withTimeout(started, AUDIO_TIMEOUT, 'El reproductor no ha podido iniciar el audio (30 s). Vuelve a intentarlo')
+    } finally {
+      a.removeEventListener('error', onError)
     }
   }
 
@@ -365,7 +433,8 @@ class Player implements PlayerApi {
     const id = item.track.id
     let pending = this.#inFlight.get(id)
     if (!pending || refresh) {
-      pending = api.resolve(toQuery(item), refresh)
+      pending = withTimeout(api.resolve(toQuery(item), refresh), RESOLVE_TIMEOUT,
+        'No se pudo preparar el audio a tiempo. Vuelve a intentarlo')
       this.#inFlight.set(id, pending)
       pending.finally(() => this.#inFlight.get(id) === pending && this.#inFlight.delete(id)).catch(() => {})
     }
@@ -375,14 +444,19 @@ class Player implements PlayerApi {
   /** El audio falló a mitad (normalmente la URL caducó): se pide otra una vez y se sigue donde iba. */
   #onAudioError() {
     const item = this.current
-    if (!item || !this.#audio.src) return
+    // Al arrancar, #playAudio recoge tanto el evento error como el rechazo de play(): un solo fallo.
+    if (this.status === 'loading' || !item || !this.#audio.src) return
     const at = this.#audio.currentTime
-    if (this.#retried) this.#fail(item, 'el audio no se puede reproducir')
+    if (this.#retried || this.#audio.error?.code === 3 || this.#audio.error?.code === 4)
+      this.#fail(item, audioError(this.#audio), this.#token)
     else if (this.manual) this.#loadManual(this.manual, true, at)
     else this.#load(this.pos, true, at)
   }
 
-  #fail(item: QueueItem, reason: string) {
+  #fail(item: QueueItem, reason: string, token: number) {
+    if (token !== this.#token) return
+    ++this.#token
+    this.#resetAudio()
     this.#failures++
     toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)
     if (this.#failures < MAX_FAILURES && (this.userQueue.length > 0 || this.pos < this.order.length - 1)) {
@@ -394,22 +468,34 @@ class Player implements PlayerApi {
 
   // Teclas multimedia del teclado y panel multimedia de Windows.
   #setupMediaSession() {
-    if (!('mediaSession' in navigator)) return
-    const ms = navigator.mediaSession
-    ms.setActionHandler('play', () => this.toggle())
-    ms.setActionHandler('pause', () => this.toggle())
-    ms.setActionHandler('previoustrack', () => this.prev())
-    ms.setActionHandler('nexttrack', () => this.next())
-    ms.setActionHandler('seekto', (d) => d.seekTime != null && this.seek(d.seekTime))
+    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ['play', () => this.toggle()],
+      ['pause', () => this.toggle()],
+      ['previoustrack', () => this.prev()],
+      ['nexttrack', () => this.next()],
+      ['seekto', (d) => d.seekTime != null && this.seek(d.seekTime)],
+    ]
+    for (const [action, handler] of handlers) this.#withMediaSession((ms) => ms.setActionHandler(action, handler))
+  }
+
+  #withMediaSession(update: (session: MediaSession) => void) {
+    try {
+      if ('mediaSession' in navigator) update(navigator.mediaSession)
+    } catch {
+      // Integración opcional: un WebView sin esta función no debe impedir que suene el audio.
+    }
   }
 
   #updateMediaSession(item: QueueItem) {
-    if (!('mediaSession' in navigator)) return
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: item.track.title,
-      artist: item.track.artist.name,
-      album: item.albumTitle,
-      artwork: item.cover ? [{ src: item.cover, sizes: '500x500', type: 'image/jpeg' }] : [],
+    this.#withMediaSession((ms) => {
+      if (typeof MediaMetadata === 'undefined') return
+      const cover = mediaUrl(item.cover)
+      ms.metadata = new MediaMetadata({
+        title: item.track.title,
+        artist: item.track.artist.name,
+        album: item.albumTitle,
+        artwork: cover ? [{ src: cover, sizes: '500x500', type: 'image/jpeg' }] : [],
+      })
     })
   }
 

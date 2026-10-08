@@ -153,7 +153,10 @@ pub fn run() {
             #[cfg(target_os = "android")]
             android::attach(app.handle(), &db, &dir);
             app.manage(db);
-            app.manage(YtDlp::new(dir.join("bin")));
+            let ytdlp = YtDlp::new(dir.join("bin"));
+            #[cfg(target_os = "linux")]
+            let ytdlp = ytdlp.with_node_runtime(app.path().resource_dir()?.join("bin/node"));
+            app.manage(ytdlp);
             extractor::init(app.handle().clone());
             extractors::start(app.handle());
             app.manage(downloads::Downloads::start(app.handle()));

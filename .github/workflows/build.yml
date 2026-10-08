@@ -52,9 +52,17 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav \
+            gstreamer1.0-tools ffmpeg
 
       - run: npm ci
+
+      - name: Comprobar tipos de la interfaz
+        run: npm run check
+
+      - name: Comprobar el reproductor
+        run: node --test scripts/tests/player.test.mjs
 
       - name: Compilar y firmar
         run: npm run tauri build -- --bundles ${{ matrix.bundles }} ${{ matrix.args }}
@@ -62,6 +70,13 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: 1
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Comprobar el audio de la AppImage
+        if: runner.os == 'Linux'
+        run: bash scripts/test-linux-appimage.sh src-tauri/target/release/bundle/appimage/*.AppImage
+
+      - name: Comprobar el núcleo
+        run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml
 
       # Certificado de procedencia: GitHub firma que estos archivos salen de este código y de esta
       # ejecución. Cualquiera lo comprueba con `gh attestation verify <archivo> --repo diad87/pletina`.

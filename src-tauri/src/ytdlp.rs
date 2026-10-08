@@ -42,6 +42,8 @@ const DOWNLOAD_FORMAT: &str = "bestaudio[ext=webm]/bestaudio";
 #[cfg_attr(mobile, allow(dead_code))]
 const DOWNLOAD_FORMAT: &str = "bestaudio[ext=m4a]/bestaudio";
 const UPDATE_EVERY: u64 = 24 * 3600;
+const READY_TIMEOUT: Duration = Duration::from_secs(45);
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(35);
 
 /// Lo que se saca de un vídeo para reproducirlo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,12 +57,14 @@ pub struct VideoInfo {
 
 struct Ready {
     bin: PathBuf,
-    /// Motor de JavaScript que necesita yt-dlp para YouTube. `None` = el suyo por defecto (deno).
-    js_runtime: Option<&'static str>,
+    /// Runtime comprobado, con ruta explícita cuando viene con la aplicación.
+    /// Fuera de Linux se conserva el comportamiento por defecto de yt-dlp si no hay ninguno.
+    js_runtime: Option<String>,
 }
 
 pub struct YtDlp {
     dir: PathBuf,
+    node_runtime: Option<PathBuf>,
     ready: OnceCell<Ready>,
     /// video_id → (info, caducidad en segundos unix). Las URL de YouTube caducan a las ~6 h.
     videos: Mutex<HashMap<String, (VideoInfo, u64)>>,
@@ -68,7 +72,15 @@ pub struct YtDlp {
 
 impl YtDlp {
     pub fn new(dir: PathBuf) -> Self {
-        Self { dir, ready: OnceCell::new(), videos: Mutex::new(HashMap::new()) }
+        Self { dir, node_runtime: None, ready: OnceCell::new(), videos: Mutex::new(HashMap::new()) }
+    }
+
+    /// Linux incluye Node en sus recursos: funciona también al abrir la app desde el escritorio,
+    /// donde PATH puede no contener los programas instalados por el usuario.
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub fn with_node_runtime(mut self, path: PathBuf) -> Self {
+        self.node_runtime = Some(path);
+        self
     }
 
     /// Deja yt-dlp listo: lo descarga si falta y lo actualiza si hace más de un día.
@@ -77,8 +89,10 @@ impl YtDlp {
         if cfg!(mobile) {
             return Err("yt-dlp no existe en el móvil".into());
         }
-        self.ready
-            .get_or_try_init(|| async {
+        tokio::time::timeout(
+            READY_TIMEOUT,
+            self.ready.get_or_try_init(|| async {
+                let js_runtime = detect_js_runtime(self.node_runtime.as_deref()).await?;
                 std::fs::create_dir_all(&self.dir).map_err(|e| e.to_string())?;
                 let bin = self.dir.join(RELEASE_ASSET.1);
                 let stamp = self.dir.join("yt-dlp.updated");
@@ -87,13 +101,14 @@ impl YtDlp {
                     write_stamp(&stamp);
                 } else if now().saturating_sub(read_stamp(&stamp)) > UPDATE_EVERY {
                     // Si la actualización falla, se sigue con la versión que hay.
-                    let _ = run(&bin, &["-U"], 90).await;
+                    let _ = run(&bin, &["-U"], 10).await;
                     write_stamp(&stamp);
                 }
-                let js_runtime = detect_js_runtime().await;
                 Ok(Ready { bin, js_runtime })
-            })
-            .await
+            }),
+        )
+        .await
+        .map_err(|_| "La preparación del audio tardó demasiado. Comprueba la conexión y vuelve a intentarlo".to_string())?
     }
 
     /// Arranque en segundo plano para que la primera canción no espere a la descarga.
@@ -115,8 +130,8 @@ impl YtDlp {
         let ready = self.ready().await?;
         let watch = format!("https://music.youtube.com/watch?v={video_id}");
         let mut args = vec![];
-        if let Some(js) = ready.js_runtime {
-            args.extend(["--js-runtimes", js]);
+        if let Some(js) = ready.js_runtime.as_deref() {
+            args.extend(["--no-js-runtimes", "--js-runtimes", js]);
         }
         args.extend([
             "-f",
@@ -145,8 +160,8 @@ impl YtDlp {
         // En las plantillas de nombre de yt-dlp, '%' es especial.
         let template = format!("{}.%(ext)s", target.to_string_lossy().replace('%', "%%"));
         let mut cmd = Command::new(&ready.bin);
-        if let Some(js) = ready.js_runtime {
-            cmd.args(["--js-runtimes", js]);
+        if let Some(js) = ready.js_runtime.as_deref() {
+            cmd.args(["--no-js-runtimes", "--js-runtimes", js]);
         }
         cmd.args([
             "-f",
@@ -260,13 +275,7 @@ fn split_artist(title: &str, artist_norm: &str) -> (String, bool) {
 
 async fn download(bin: &Path) -> Result<(), String> {
     let url = format!("https://github.com/yt-dlp/yt-dlp/releases/latest/download/{}", RELEASE_ASSET.0);
-    let bytes = reqwest::get(&url)
-        .await
-        .and_then(|r| r.error_for_status())
-        .map_err(|e| format!("No se pudo descargar yt-dlp: {e}"))?
-        .bytes()
-        .await
-        .map_err(|e| format!("No se pudo descargar yt-dlp: {e}"))?;
+    let bytes = download_bytes(&url, DOWNLOAD_TIMEOUT).await?;
     let part = bin.with_extension("part");
     std::fs::write(&part, &bytes).map_err(|e| e.to_string())?;
     // En Mac y Linux hay que marcarlo como ejecutable.
@@ -278,19 +287,72 @@ async fn download(bin: &Path) -> Result<(), String> {
     std::fs::rename(&part, bin).map_err(|e| e.to_string())
 }
 
-async fn detect_js_runtime() -> Option<&'static str> {
-    let works = |program: &'static str| async move {
-        let mut cmd = Command::new(program);
-        cmd.arg("--version").stdout(Stdio::null()).stderr(Stdio::null()).kill_on_drop(true);
-        hide_window(&mut cmd);
-        matches!(tokio::time::timeout(Duration::from_secs(5), cmd.status()).await, Ok(Ok(s)) if s.success())
-    };
-    if works("deno").await {
-        None
-    } else if works("node").await {
-        Some("node")
+async fn download_bytes(url: &str, timeout: Duration) -> Result<Vec<u8>, String> {
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(timeout)
+        .build()
+        .map_err(|e| format!("No se pudo preparar la descarga de yt-dlp: {e}"))?;
+    let bytes = client.get(url).send().await
+        .and_then(|r| r.error_for_status())
+        .map_err(download_error)?
+        .bytes().await
+        .map_err(download_error)?;
+    Ok(bytes.to_vec())
+}
+
+fn download_error(error: reqwest::Error) -> String {
+    if error.is_timeout() {
+        "La descarga de yt-dlp tardó demasiado. Comprueba la conexión y vuelve a intentarlo".into()
     } else {
-        None
+        format!("No se pudo descargar yt-dlp: {error}")
+    }
+}
+
+async fn detect_js_runtime(bundled_node: Option<&Path>) -> Result<Option<String>, String> {
+    if let Some(path) = bundled_node {
+        if runtime_works("node", path).await {
+            return Ok(Some(format!("node:{}", path.to_string_lossy())));
+        }
+    }
+    for runtime in ["deno", "node"] {
+        if runtime_works(runtime, Path::new(runtime)).await {
+            return Ok(Some(runtime.to_string()));
+        }
+    }
+    if cfg!(target_os = "linux") {
+        Err("No se pudo iniciar el motor de YouTube incluido en Pletina. Reinstala la aplicación o instala Node.js 22 o superior o Deno 2.3 o superior y vuelve a abrirla".into())
+    } else {
+        Ok(None)
+    }
+}
+
+async fn runtime_works(runtime: &str, program: &Path) -> bool {
+    let mut cmd = Command::new(program);
+    cmd.arg("--version").stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).kill_on_drop(true);
+    hide_window(&mut cmd);
+    match tokio::time::timeout(Duration::from_secs(3), cmd.output()).await {
+        Ok(Ok(out)) if out.status.success() => supported_runtime(runtime, &String::from_utf8_lossy(&out.stdout)),
+        _ => false,
+    }
+}
+
+/// Mínimos de https://github.com/yt-dlp/yt-dlp/wiki/EJS. Que `--version` funcione no basta:
+/// varias distribuciones todavía instalan una versión de Node que yt-dlp ya no admite.
+fn supported_runtime(runtime: &str, output: &str) -> bool {
+    let Some(first) = output.lines().next() else { return false };
+    let version = match runtime {
+        "node" => first.trim().strip_prefix('v'),
+        "deno" => first.trim().strip_prefix("deno ").and_then(|s| s.split_whitespace().next()),
+        _ => None,
+    };
+    let Some(version) = version else { return false };
+    let Ok(parts) = version.split('.').map(str::parse::<u32>).collect::<Result<Vec<_>, _>>() else { return false };
+    if parts.len() != 3 { return false }
+    match runtime {
+        "node" => parts[0] >= 22,
+        "deno" => (parts[0], parts[1]) >= (2, 3),
+        _ => false,
     }
 }
 
@@ -345,12 +407,62 @@ fn write_stamp(path: &Path) {
 mod tests {
     use super::*;
 
+    #[test]
+    fn requires_a_supported_javascript_runtime() {
+        assert!(supported_runtime("node", "v22.0.0\n"));
+        assert!(supported_runtime("node", "v24.15.0\n"));
+        assert!(!supported_runtime("node", "v20.19.0\n"));
+        assert!(!supported_runtime("node", "v22.0.0-rc.1\n"));
+        assert!(!supported_runtime("node", "vbad.22.0.0\n"));
+        assert!(supported_runtime("deno", "deno 2.3.0 (stable, release, x86_64-unknown-linux-gnu)\nv8 13.5\n"));
+        assert!(!supported_runtime("deno", "deno 2.2.12\n"));
+        assert!(!supported_runtime("deno", ""));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn bundled_node_works_without_path_and_preserves_spaces() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("pletina node test {}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let node = dir.join("node");
+        std::fs::write(&node, "#!/bin/sh\nprintf 'v24.0.0\\n'\n").unwrap();
+        std::fs::set_permissions(&node, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let runtime = detect_js_runtime(Some(&node)).await.unwrap();
+        assert_eq!(runtime, Some(format!("node:{}", node.display())));
+        std::fs::remove_file(node).unwrap();
+        std::fs::remove_dir(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn bootstrap_download_times_out_when_the_server_stalls() {
+        use std::io::Write;
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/yt-dlp", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let server = std::thread::spawn(move || {
+            let until = std::time::Instant::now() + Duration::from_secs(2);
+            while std::time::Instant::now() < until {
+                if let Ok((mut stream, _)) = listener.accept() {
+                    // Cabecera recibida, cuerpo que no termina: el timeout también debe cubrirlo.
+                    let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 100\r\n\r\nx");
+                    std::thread::sleep(Duration::from_millis(250));
+                    return;
+                }
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        });
+        let error = download_bytes(&url, Duration::from_millis(100)).await.unwrap_err();
+        server.join().unwrap();
+        assert!(error.starts_with("La descarga de yt-dlp tardó demasiado."), "{error}");
+    }
+
     /// Descarga real a una carpeta temporal, con red:
     /// `cargo test real_download -- --ignored --nocapture`
     #[tokio::test]
     #[ignore]
     async fn real_download() {
-        let ytdlp = YtDlp::new(PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-download-{}", std::process::id())).join("bin"));
         let dir = std::env::temp_dir().join(format!("musify-dl-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut updates = Vec::new();

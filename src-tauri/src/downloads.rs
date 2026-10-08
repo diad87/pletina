@@ -386,7 +386,7 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let db = Db::open(&root.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-fetch-{}", std::process::id())).join("bin"));
         let track = LibTrack {
             id: 138539971,
             title: "Airbag".into(),
@@ -404,7 +404,8 @@ mod tests {
         fetch(&track, &dir, &db, &ytm, &ytdlp, |_| steps += 1).await.unwrap();
         let path = db.download_path(track.id).expect("apuntada en la base de datos");
         println!("{steps} avisos de progreso → {path}");
-        assert!(path.ends_with(r"Radiohead\OK Computer\Airbag.m4a") || path.ends_with("Radiohead/OK Computer/Airbag.m4a"));
+        let filename = if cfg!(target_os = "linux") { "Airbag.webm" } else { "Airbag.m4a" };
+        assert!(Path::new(&path).ends_with(Path::new("Radiohead").join("OK Computer").join(filename)));
 
         let q = TrackQuery { id: track.id, title: "Airbag".into(), artist: "Radiohead".into(), album: "OK Computer".into(), duration: 287 };
         let playable = player::resolve(&q, false, &db, &ytm, &ytdlp).await.unwrap();

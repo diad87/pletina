@@ -4,7 +4,8 @@
 //! - `youtubei`: la librería youtubei.js en la interfaz. Rust le hace las peticiones HTTP
 //!   (`http_fetch`) y le pide las URLs con un evento. Si falla, yt-dlp.
 //! - `propio`: primero el nivel rápido (`native.rs`, una petición desde Rust) y, si falla, el nivel
-//!   garantizado (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta).
+//!   garantizado (`capture.rs`, el reproductor oficial de YouTube Music en una ventana oculta;
+//!   en Linux se usa yt-dlp porque la captura de esa ventana solo está implementada en Windows).
 //!   `oficial` usa solo el nivel garantizado (para probarlo).
 
 use crate::youtube::BROWSER_UA;
@@ -89,6 +90,7 @@ async fn propio(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
 }
 
 /// Nivel garantizado: el `<audio>` pide `musify-capture:<id>` y la interfaz lo sirve con lo capturado.
+#[cfg(not(target_os = "linux"))]
 async fn official(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
     let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
     let meta = capture::stream(app, video_id, refresh).await?;
@@ -98,6 +100,15 @@ async fn official(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
         channel: meta.channel,
         duration: meta.duration,
     })
+}
+
+/// En Linux la ventana de captura no tiene canal nativo: el respaldo del motor propio usa
+/// yt-dlp, incluido su runtime, en vez de esperar audio de una ventana que permanece en blanco.
+#[cfg(target_os = "linux")]
+async fn official(video_id: &str, refresh: bool) -> Result<VideoInfo, String> {
+    use tauri::Manager;
+    let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
+    app.state::<YtDlp>().stream(video_id, refresh).await
 }
 
 /// Pide la URL a youtubei.js (en la interfaz) y la guarda mientras no caduque.

@@ -116,6 +116,9 @@ pub struct Meta {
 
 /// Pone la canción en el reproductor oficial y espera a que llegue su audio.
 pub async fn stream(app: &AppHandle, video_id: &str, refresh: bool) -> Result<Meta, String> {
+    if cfg!(target_os = "linux") {
+        return Err("La captura de YouTube no está disponible en Linux; usa el motor propio o yt-dlp".into());
+    }
     if !valid_id(video_id) {
         return Err("id de vídeo no válido".into());
     }

@@ -42,7 +42,7 @@
         <button class="link artist" onclick={() => nav.go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
           >{current.track.artist.name}</button
         >
-        {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Buscando en YouTube…'}</span>{/if}
+        {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Cargando audio…'}</span>{/if}
       </div>
       <button
         class="icon heart"

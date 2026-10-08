@@ -391,7 +391,7 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(std::path::PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-resolve-{}", std::process::id())).join("bin"));
         let q = TrackQuery {
             id: 138539971,
             title: "Airbag".into(),
@@ -423,7 +423,7 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(std::path::PathBuf::from(env!("LOCALAPPDATA")).join("dev.musify.desktop").join("bin"));
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-alternatives-{}", std::process::id())).join("bin"));
         let q = TrackQuery {
             id: 999_001,
             title: "Zuri".into(),

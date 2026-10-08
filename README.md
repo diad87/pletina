@@ -76,12 +76,14 @@ Descarga el archivo de tu sistema desde la [última versión](https://github.com
 |---|---|
 | Windows 10/11 | `Pletina_x.y.z_x64-setup.exe`: doble clic |
 | Mac (chip de Apple o Intel, macOS 11+) | `Pletina_x.y.z_universal.dmg`: arrastrar a Aplicaciones |
-| Linux (64 bits) | `Pletina_x.y.z_amd64.AppImage` (cualquier distribución) o `.deb` (Ubuntu/Debian) |
+| Linux (64 bits) | `Pletina_x.y.z_amd64.AppImage` (distribuciones recientes) o `.deb` (Ubuntu/Debian) |
 | Android 7 o superior (64 bits) | `Pletina_x.y.z_android.apk`, mejor con Obtainium (abajo) para que se actualice sola |
 
 Mientras el instalador de Windows no esté firmado (ver [Code signing policy](#code-signing-policy)), Windows avisa la primera vez: «Más información» → «Ejecutar de todas formas». El de Mac no está firmado por Apple: la primera vez, clic derecho en la app → Abrir. Las actualizaciones no avisan, porque las baja la propia app.
 
 Si tenías Musify, Pletina la sustituye al instalarse (o al actualizarse sola) y conserva tu biblioteca.
+
+En Linux, la AppImage incluye el soporte multimedia y el motor JavaScript necesario para YouTube. Dale permiso de ejecución antes de abrirla (`chmod +x Pletina_*.AppImage`). Para el `.deb`, usa `sudo apt install ./Pletina_*.deb` para instalar también sus dependencias de audio. La compilación de distribución usa Ubuntu 22.04 como base; las distribuciones más antiguas pueden necesitar una versión más nueva del sistema.
 
 ### Android, con Obtainium
 
@@ -142,7 +144,7 @@ El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); l
 
 ## Desarrollo
 
-Requisitos: Node 24, Rust (toolchain MSVC en Windows), Visual Studio Build Tools (C++) y WebView2.
+Requisitos: Node 24 y Rust. En Windows, toolchain MSVC, Visual Studio Build Tools (C++) y WebView2.
 
 ```bash
 npm install
@@ -152,6 +154,10 @@ npm run dev            # solo la interfaz en el navegador, con datos de ejemplo 
 npm run check          # tipos
 cd src-tauri && cargo test   # tests (con red: cargo test -- --ignored --nocapture)
 ```
+
+**Linux:** instala las dependencias de Tauri y audio: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`. Usa la distribución oficial de Node 24 conservando su archivo `LICENSE`: al compilar, `scripts/prepare-linux-runtime.mjs` incorpora ese ejecutable y su licencia en los paquetes. `npm run tauri build -- --config src-tauri/tauri.local.conf.json --bundles appimage,deb` genera los paquetes sin firmar. Antes de ejecutar `cargo test` directamente, prepara los recursos con `node scripts/prepare-linux-runtime.mjs`.
+
+La prueba `bash scripts/test-linux-appimage.sh ruta/al/paquete.AppImage` necesita `ffmpeg` y `gstreamer1.0-tools`. Comprueba el Node incluido y decodifica WAV, MP3, FLAC, Ogg, M4A y WebM con las bibliotecas y plugins del paquete, sin usar los plugins del sistema. GitHub Actions ejecuta esta prueba antes de publicar los instaladores de Linux.
 
 **Android:** además, el SDK de Android con el NDK 27.3.13750724, Java 21 y el objetivo de Rust `aarch64-linux-android` (y `x86_64-linux-android` para el emulador). `npm run tauri android build -- --apk --target aarch64` compila el APK; sale firmado si está la clave en `%USERPROFILE%\.musify\android.jks`. En Windows, Tauri no puede crear el enlace a la librería de Rust: se copia `src-tauri/target/<objetivo>/release/libmusify_lib.so` a `src-tauri/gen/android/app/src/main/jniLibs/<abi>/` y se termina con Gradle (`gradlew.bat assembleUniversalRelease -x rustBuildUniversalRelease`). Detalles y pruebas en [docs/plan-mobile.md](docs/plan-mobile.md).
 
