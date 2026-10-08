@@ -46,6 +46,9 @@ export interface CaptureProgress {
 }
 type Stop = (cancelBackend?: boolean) => void
 const readers = new WeakMap<HTMLAudioElement, { stop: Stop; seek: (at: number) => Promise<boolean>; ready: () => boolean; waitReady: () => Promise<void>; progress: () => CaptureProgress | null }>()
+// Native ordering survives replacement of one reader by another for the same ledger.
+let lastSeekRequestId = 0
+const nextSeekRequestId = () => (lastSeekRequestId = Math.max(lastSeekRequestId + 1, Date.now() * 1000))
 const cancelled = () => new DOMException('Captura cancelada', 'AbortError')
 const check = (signal: AbortSignal) => { if (signal.aborted) throw cancelled() }
 const integer = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) >= 0
@@ -170,6 +173,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   let progress: CaptureProgress | null = null, totalUnits = 0, firstAppendMs: number | null = null, readyMs: number | null = null
   let failure: unknown = null
   let requestId = 0, cursorVersion = 0, failed = false, stopped = false, notice = '', eof = false
+  let cachedIntent: { at: number; revision: number; generation: number; requestId: number; stale: boolean; retries: number } | null = null
   const metadata = new Map<string, string>(), contexts = new Map<string, TimelineSettings>()
   const frameEnds = new Map<string, number>()
   const initializations = new Map<string, Uint8Array>()
@@ -216,27 +220,63 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
     if (totalUnits) warning(error)
     else audio.dispatchEvent(new CustomEvent('captureerror', { detail: String(error) }))
   }
-  const requestSeek = async (at: number) => {
-    const current = ++requestId
+  const requestSeek = async (at: number, replayCached = true, onStale?: () => void) => {
+    if (replayCached) cachedIntent = null
+    const current = requestId = nextSeekRequestId()
     const reply = await abortable(invoke<{ requestId: number; generation: number; cached: boolean; stale?: boolean; from?: number }>('capture_seek', {
       videoId, at, generation, requestId: current,
-    }), signal)
-    check(signal)
-    if (current !== requestId) return false
-    if (!reply || reply.stale || reply.requestId !== current || !integer(reply.generation)) return false
+    }), signal).catch(error => {
+      if (signal.aborted || current !== requestId) return null
+      throw error
+    })
+    if (signal.aborted || current !== requestId) return false
+    if (!reply || reply.requestId !== current) return false
+    if (reply.stale) { onStale?.(); return false }
+    if (!integer(reply.generation)) return false
     // Un seek vigente puede reabrir una ventana cerrada conservando el mismo ledger.
     if (reply.generation !== generation) { generation = reply.generation; cursorVersion++ }
-    if (reply.cached) { from = reply.from ?? 0; cursorVersion++ }
+    if (reply.cached && replayCached) { from = reply.from ?? 0; cursorVersion++ }
     eof = false
     return true
   }
+  const retryCachedIntent = () => {
+    const intent = cachedIntent
+    if (!intent || !intent.stale || intent.requestId !== requestId || intent.revision !== revision ||
+        generation === intent.generation || progress?.generation !== generation || !seekReady(intent.at)) return
+    intent.retries++
+    notifyCachedIntent(intent)
+  }
+  const notifyCachedIntent = (intent: NonNullable<typeof cachedIntent>) => {
+    intent.generation = generation!; intent.stale = false
+    const pending = requestSeek(intent.at, false, () => {
+      if (cachedIntent !== intent || intent.requestId !== requestId) return
+      intent.stale = true
+      if (intent.retries >= 1) {
+        cachedIntent = null
+        warning('No se pudo reorientar el productor tras el salto; se conserva el audio verificado')
+      } else retryCachedIntent()
+    })
+    intent.requestId = requestId
+    void pending.then(accepted => {
+      if (accepted && cachedIntent === intent && intent.requestId === requestId) cachedIntent = null
+    }).catch(error => {
+      if (cachedIntent === intent && intent.requestId === requestId) { cachedIntent = null; warning(error) }
+    })
+  }
   const seek = async (at: number) => {
     if (!finite(at) || at < 0 || signal.aborted) return false
-    // Supersede only local adoption of an older reply; native work already sent may continue.
-    if (seekReady(at)) { requestId++; audio.currentTime = at; return true }
+    cachedIntent = null
+    if (seekReady(at) && progress) {
+      // Play accepted bytes immediately, but also fence/replan a producer sent to an
+      // older destination. No cursor replay is needed for this already buffered reserve.
+      cachedIntent = { at, revision: progress.revision, generation: generation!, requestId: 0, stale: false, retries: 0 }
+      notifyCachedIntent(cachedIntent)
+      audio.currentTime = at
+      return true
+    }
     try {
-      const pending = requestId + 1
-      if (!await requestSeek(at)) return false
+      const request = requestSeek(at), pending = requestId
+      if (!await request) return false
       const deadline = performance.now() + 10_000
       while (!signal.aborted && pending === requestId && performance.now() < deadline) {
         // Keep the old clock until the destination has a reserve. The old range can
@@ -268,6 +308,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
         if (f.error) throw new Error(f.error)
         if (revision !== f.revision) {
           revision = f.revision; from = f.from
+          cachedIntent = null
           if (installed) installed.context = ''
           metadata.clear(); contexts.clear(); initializations.clear(); frameEnds.clear()
         }
@@ -322,6 +363,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
           startupReserveSeconds: STARTUP_RESERVE_SECONDS, readyMs, reader: readerSnapshot() }
         if (ready()) { readyMs ??= performance.now() - started; progress.readyMs = readyMs }
         audio.dispatchEvent(new CustomEvent('captureprogress', { detail: progressSnapshot() }))
+        retryCachedIntent()
         if (f.softError) warning(f.softError)
         const verifiedDuration = f.audioDuration ?? f.duration
         const gap = verifiedDuration ? firstGap(f.ranges, verifiedDuration) : null
@@ -359,7 +401,7 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   }, { once: true })
   const stop: Stop = (cancelBackend = true) => {
     if (stopped) return
-    stopped = true; phase('stopped')
+    stopped = true; cachedIntent = null; phase('stopped')
     lifetime.abort(); audio.removeEventListener('seeking', onSeeking); URL.revokeObjectURL(url)
     if (readers.get(audio)?.stop === stop) readers.delete(audio)
     if (cancelBackend && generation !== undefined) void invoke('capture_cancel', { videoId, generation }).catch(() => {})

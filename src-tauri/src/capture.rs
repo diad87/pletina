@@ -608,6 +608,7 @@ struct Track {
     eof_end: Option<f64>,
     complete: bool,
     epoch_done: bool,
+    epoch_observed: bool,
     recovering: bool,
     last_read: Option<Instant>,
     last_msg: Instant,
@@ -615,6 +616,7 @@ struct Track {
     position: f64,
     resets: u8,
     seek_operation: u64,
+    last_seek_request: Option<u64>,
     target: f64,
     quarantined: u64,
     unknown: usize,
@@ -684,6 +686,7 @@ impl Track {
             eof_end: None,
             complete: false,
             epoch_done: false,
+            epoch_observed: false,
             recovering: false,
             last_read: None,
             last_msg: now,
@@ -691,6 +694,7 @@ impl Track {
             position: 0.0,
             resets: 0,
             seek_operation: 0,
+            last_seek_request: None,
             target: 0.0,
             quarantined: 0,
             unknown: 0,
@@ -711,6 +715,59 @@ impl Track {
     }
     fn ready(&self) -> bool {
         !self.chunks.is_empty()
+    }
+    fn seek_plan(&self, at: f64, producer_active: bool) -> SeekPlan {
+        let end = self.eof_end.map_or(at + 0.05, |end| end.min(at + 0.05));
+        let useful = self.ranges.iter().find(|range| {
+            range.start <= at + RANGE_EPSILON && range.end + RANGE_EPSILON >= at.max(end)
+        });
+        let cached = useful.is_some() || self.complete && self.eof_end.is_some_and(|end| at >= end);
+        if !cached {
+            return SeekPlan {
+                cached: false,
+                target: Some(at),
+            };
+        }
+        // A complete ledger or a suffix reaching proven EOF needs no new data
+        // for this playback intent. Any existing backfill may continue.
+        if self.complete
+            || useful.is_some_and(|range| {
+                self.eof_end
+                    .is_some_and(|end| range.end + RANGE_EPSILON >= end)
+            })
+        {
+            return SeekPlan {
+                cached: true,
+                target: None,
+            };
+        }
+        let useful = useful.unwrap();
+        let latest = self
+            .units
+            .iter()
+            .rev()
+            .find(|unit| unit.generation == self.generation && unit.epoch == self.epoch);
+        let extends_useful = producer_active
+            && self.epoch_observed
+            && !self.epoch_done
+            && self.phase != "interaction"
+            && latest.map_or_else(
+                || {
+                    self.target >= useful.start - RANGE_EPSILON
+                        && self.target <= useful.end + RANGE_EPSILON
+                },
+                |unit| {
+                    unit.range_start <= useful.end + RANGE_EPSILON
+                        && unit.range_end >= useful.start - RANGE_EPSILON
+                },
+            );
+        SeekPlan {
+            cached: true,
+            // Re-present only the edge, with the existing native preroll. Seeking
+            // to `at` would spend the already-buffered runway duplicating audio.
+            // This is scheduling only: no range or EOF evidence is added here.
+            target: (!extends_useful).then_some(useful.end),
+        }
     }
     fn begin_epoch(&mut self, generation: u64, epoch: u64, target: f64, recovering: bool) {
         if generation != self.generation {
@@ -737,6 +794,7 @@ impl Track {
         self.why = None;
         self.last_diagnostic = None;
         self.epoch_done = false;
+        self.epoch_observed = false;
         self.recovering = recovering;
         self.phase = "opening".into();
         self.session_started = Instant::now();
@@ -888,6 +946,18 @@ impl Track {
         }
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct SeekPlan {
+    cached: bool,
+    target: Option<f64>,
+}
+#[derive(Clone, Copy, Debug)]
+struct SeekIntent {
+    operation: u64,
+    revision: u64,
+    cancellation: u64,
+    ticket: Option<RequestTicket>,
+}
 #[derive(Clone, Debug)]
 struct Session {
     id: String,
@@ -907,6 +977,58 @@ struct Supervisor {
     foreground: Option<(String, Option<RequestTicket>)>,
 }
 impl Supervisor {
+    fn admit_seek(
+        &mut self,
+        id: &str,
+        generation: Option<u64>,
+        request_id: Option<u64>,
+        operation: u64,
+    ) -> Result<Option<SeekIntent>, String> {
+        let ticket = self
+            .foreground
+            .as_ref()
+            .filter(|(current, _)| current == id)
+            .ok_or("CAPTURE_CANCELLED: el lector ya no tiene la captura actual")?
+            .1;
+        if self
+            .sessions
+            .iter()
+            .any(|s| s.active && s.foreground && s.id != id)
+        {
+            return Err("CAPTURE_CANCELLED: otra cancion tiene prioridad".into());
+        }
+        let cancellation = self.cancellation(id);
+        let track = self
+            .tracks
+            .get_mut(id)
+            .ok_or("CAPTURE_CANCELLED: no hay captura")?;
+        if generation.is_some_and(|g| g != track.generation)
+            || request_id.is_some_and(|id| track.last_seek_request.is_some_and(|last| id <= last))
+        {
+            return Ok(None);
+        }
+        // The reader's global monotonic requestId also fences IPC that arrives
+        // out of order. Both fields survive a new window for this same ledger.
+        if let Some(request_id) = request_id {
+            track.last_seek_request = Some(request_id);
+        }
+        track.seek_operation = operation;
+        Ok(Some(SeekIntent {
+            operation,
+            revision: track.revision,
+            cancellation,
+            ticket,
+        }))
+    }
+    fn seek_current(&self, id: &str, intent: SeekIntent) -> bool {
+        self.foreground
+            .as_ref()
+            .is_some_and(|(current, ticket)| current == id && *ticket == intent.ticket)
+            && self.cancellation(id) == intent.cancellation
+            && self.tracks.get(id).is_some_and(|track| {
+                track.revision == intent.revision && track.seek_operation == intent.operation
+            })
+    }
     fn owns(&self, id: &str, generation: u64) -> bool {
         self.sessions
             .iter()
@@ -1908,6 +2030,9 @@ fn apply_message(
     );
     let total_bytes = state.total_bytes();
     let t = state.tracks.get_mut(id).unwrap();
+    // Planning an epoch is not proof that its seek reached the native actor.
+    // Only an accepted message with the new generation/epoch establishes that.
+    t.epoch_observed = true;
     t.sequence = m.sequence;
     t.last_msg = now;
     if t.epoch_done || t.phase == "interaction" {
@@ -2944,90 +3069,114 @@ pub async fn capture_seek(
     request_id: Option<u64>,
 ) -> Result<Value, String> {
     supported()?;
-    if !valid_id(&video_id) || !at.is_finite() || at < 0.0 {
+    if !valid_id(&video_id)
+        || !at.is_finite()
+        || at < 0.0
+        || request_id.is_some_and(|id| id > 9_007_199_254_740_991)
+    {
         return Err("salto no válido".into());
     }
     let operation = next_id();
-    {
+    let intent = {
         let mut state = STATE.lock().unwrap();
-        let t = state
-            .tracks
-            .get_mut(&video_id)
-            .ok_or("CAPTURE_CANCELLED: no hay captura")?;
-        if generation.is_some_and(|g| g != t.generation) {
+        let Some(intent) = state.admit_seek(&video_id, generation, request_id, operation)? else {
             return Ok(json!({"requestId":request_id,"stale":true}));
-        }
-        t.seek_operation = operation;
-    }
+        };
+        intent
+    };
     let _guard = TRANSITION.lock().await;
-    let (session, epoch, cached, reopen) = {
+    let (session, epoch, plan, reopen) = {
         let mut state = STATE.lock().unwrap();
-        if state
-            .foreground
-            .as_ref()
-            .is_none_or(|(id, _)| id != &video_id)
-        {
-            return Err("CAPTURE_CANCELLED: el lector ya no tiene la captura actual".into());
-        }
-        if state
-            .sessions
-            .iter()
-            .any(|s| s.active && s.foreground && s.id != video_id)
-        {
-            return Err("CAPTURE_CANCELLED: otra canción tiene prioridad".into());
+        if !state.seek_current(&video_id, intent) || request_current(intent.ticket).is_err() {
+            return Ok(json!({"requestId":request_id,"stale":true}));
         }
         let session = state.session(&video_id).cloned();
         let t = state
             .tracks
             .get_mut(&video_id)
             .ok_or("CAPTURE_CANCELLED: no hay captura")?;
-        if t.seek_operation != operation || generation.is_some_and(|g| g != t.generation) {
-            return Ok(json!({"requestId":request_id,"stale":true}));
-        }
-        let cached =
-            covers(&t.ranges, at, at + 0.05) || t.complete && t.eof_end.is_some_and(|d| at >= d);
-        if cached {
-            (session, t.epoch, true, false)
-        } else {
+        let plan = t.seek_plan(
+            at,
+            session
+                .as_ref()
+                .is_some_and(|s| s.generation == t.generation),
+        );
+        if let Some(target) = plan.target {
             t.require_recovery()?;
             let reopen = t.epoch_done || t.phase == "interaction";
             let epoch = next_id();
-            t.begin_epoch(t.generation, epoch, at, true);
-            (session, epoch, false, reopen)
+            t.begin_epoch(t.generation, epoch, target, true);
+            (session, epoch, plan, reopen)
+        } else {
+            (session, t.epoch, plan, false)
         }
     };
-    if !cached {
-        if let Some(session) = session {
-            if let Some(window) = app.get_webview_window(&session.label).filter(|_| !reopen) {
-                let request = json!({"at":at,"epoch":epoch,"requestId":request_id});
-                window
-                    .eval(format!("window.__musifySeek?.({request})"))
-                    .map_err(|e| format!("CAPTURE_SEEK: {e}"))?;
-            } else {
-                retire_locked(&app, &session).await?;
+    let result = async {
+        if let Some(target) = plan.target {
+            if let Some(session) = session {
+                if let Some(window) = app.get_webview_window(&session.label).filter(|_| !reopen) {
+                    // Admit newer intentions before this dispatch if they arrived
+                    // while the planner was outside STATE. Old epoch data remains fenced.
+                    if !STATE.lock().unwrap().seek_current(&video_id, intent)
+                        || request_current(intent.ticket).is_err()
+                    {
+                        return Ok(());
+                    }
+                    let request = json!({"at":target,"epoch":epoch,"requestId":request_id});
+                    window
+                        .eval(format!("window.__musifySeek?.({request})"))
+                        .map_err(|e| format!("CAPTURE_SEEK: {e}"))?;
+                } else {
+                    retire_locked(&app, &session).await?;
+                    if !STATE.lock().unwrap().seek_current(&video_id, intent)
+                        || request_current(intent.ticket).is_err()
+                    {
+                        return Ok(());
+                    }
+                    begin_locked(
+                        &app,
+                        &video_id,
+                        false,
+                        true,
+                        intent.ticket,
+                        None,
+                        Some(target),
+                        true,
+                    )
+                    .await?;
+                }
+            } else if STATE.lock().unwrap().seek_current(&video_id, intent)
+                && request_current(intent.ticket).is_ok()
+            {
                 begin_locked(
                     &app,
                     &video_id,
                     false,
                     true,
-                    session.ticket,
-                    session.next_slot,
-                    Some(at),
+                    intent.ticket,
+                    None,
+                    Some(target),
                     true,
                 )
                 .await?;
             }
-        } else {
-            begin_locked(&app, &video_id, false, true, None, None, Some(at), true).await?;
         }
+        Ok::<(), String>(())
     }
+    .await;
     let state = STATE.lock().unwrap();
+    // A newer intent can be admitted while begin_locked is awaiting a new
+    // WebView. Never let its predecessor return an adoptable generation/reply.
+    if !state.seek_current(&video_id, intent) || request_current(intent.ticket).is_err() {
+        return Ok(json!({"requestId":request_id,"stale":true}));
+    }
+    result?;
     let t = state
         .tracks
         .get(&video_id)
         .ok_or("CAPTURE_CANCELLED: no hay captura")?;
     Ok(
-        json!({"requestId":request_id,"generation":t.generation,"epoch":t.epoch,"revision":t.revision,"cached":cached,"from":0}),
+        json!({"requestId":request_id,"generation":t.generation,"epoch":t.epoch,"revision":t.revision,"cached":plan.cached,"from":0}),
     )
 }
 fn read_bounds(t: &Track, from: usize, revision: Option<u64>) -> (usize, usize, bool) {
@@ -3823,6 +3972,208 @@ mod tests {
             send(&mut s, segment(unit(1, 0.0, 1.0)));
             assert!(!s.tracks[ID].ready());
         }
+    }
+    #[test]
+    fn seek_cached_return_retargets_the_useful_edge_and_fences_old_epoch_audio() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 5.0);
+        let prefix = s.tracks[ID].chunks.clone();
+        s.tracks
+            .get_mut(ID)
+            .unwrap()
+            .begin_epoch(10, 21, 180.0, true);
+        deliver(&mut s, 1, 180.0, 182.0);
+        let stale = message(&s, segment(unit(2, 182.0, 183.0)));
+        let plan = s.tracks[ID].seek_plan(1.0, true);
+        assert_eq!(
+            plan,
+            SeekPlan {
+                cached: true,
+                target: Some(5.0)
+            }
+        );
+        s.tracks
+            .get_mut(ID)
+            .unwrap()
+            .begin_epoch(10, 22, plan.target.unwrap(), true);
+        let before = s.tracks[ID].last_msg;
+        assert!(!apply_message(&mut s, ID, 10, MUSIC, stale, Instant::now()));
+        assert_eq!(s.tracks[ID].last_msg, before);
+        assert!(!s.tracks[ID].epoch_observed);
+        deliver(&mut s, 1, 4.8, 5.5);
+        let t = &s.tracks[ID];
+        assert_eq!(&t.chunks[..1], prefix.as_slice());
+        assert_eq!(t.revision, 30);
+        assert_eq!(
+            t.ranges,
+            vec![
+                Range {
+                    start: 0.0,
+                    end: 5.5
+                },
+                Range {
+                    start: 180.0,
+                    end: 182.0
+                }
+            ]
+        );
+        assert!(!t.complete && !t.eof);
+        assert_eq!(read_bounds(t, 1, Some(30)), (1, 3, false));
+    }
+    #[test]
+    fn seek_cached_plan_uses_current_epoch_units_not_only_the_old_target() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 0.020);
+        deliver(&mut s, 2, 0.021, 5.0);
+        // The native producer is extending this island despite Opus quantization
+        // at zero. Scheduling must not restart it or close that unproven gap.
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, true),
+            SeekPlan {
+                cached: true,
+                target: None
+            }
+        );
+        assert_eq!(s.tracks[ID].ranges.len(), 2);
+        deliver(&mut s, 3, 180.0, 182.0);
+        assert_eq!(s.tracks[ID].target, 0.0);
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, true),
+            SeekPlan {
+                cached: true,
+                target: Some(5.0)
+            }
+        );
+        s.tracks.get_mut(ID).unwrap().begin_epoch(10, 21, 0.0, true);
+        deliver(&mut s, 1, 0.0, 1.0);
+        assert_eq!(
+            s.tracks[ID].seek_plan(180.5, true),
+            SeekPlan {
+                cached: true,
+                target: Some(182.0)
+            }
+        );
+    }
+    #[test]
+    fn seek_cached_plan_does_not_treat_an_undispatched_epoch_as_a_running_producer() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 5.0);
+        s.tracks.get_mut(ID).unwrap().begin_epoch(10, 21, 2.0, true);
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, true),
+            SeekPlan {
+                cached: true,
+                target: Some(5.0)
+            }
+        );
+        send(
+            &mut s,
+            json!({"kind":"event","type":"progress","state":"content","position":2.0}),
+        );
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, true),
+            SeekPlan {
+                cached: true,
+                target: None
+            }
+        );
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, false),
+            SeekPlan {
+                cached: true,
+                target: Some(5.0)
+            }
+        );
+    }
+    #[test]
+    fn seek_cached_complete_or_proven_eof_suffix_needs_no_retarget() {
+        let mut s = state();
+        deliver(&mut s, 1, 0.0, 5.0);
+        ended(&mut s, 5.0);
+        assert_eq!(
+            s.tracks[ID].seek_plan(1.0, false),
+            SeekPlan {
+                cached: true,
+                target: None
+            }
+        );
+        assert_eq!(
+            s.tracks[ID].seek_plan(4.99, false),
+            SeekPlan {
+                cached: true,
+                target: None
+            }
+        );
+        let mut partial = state();
+        deliver(&mut partial, 1, 180.0, 182.0);
+        ended(&mut partial, 182.0);
+        partial
+            .tracks
+            .get_mut(ID)
+            .unwrap()
+            .begin_epoch(10, 21, 0.0, true);
+        deliver(&mut partial, 1, 0.0, 1.0);
+        let t = &partial.tracks[ID];
+        assert!(!t.complete);
+        assert_eq!(
+            t.seek_plan(180.5, true),
+            SeekPlan {
+                cached: true,
+                target: None
+            }
+        );
+        assert_eq!(
+            t.seek_plan(90.0, true),
+            SeekPlan {
+                cached: false,
+                target: Some(90.0)
+            }
+        );
+        assert_eq!(t.ranges.len(), 2);
+    }
+    #[test]
+    fn seek_request_order_survives_reopen_without_accepting_stale_generation() {
+        let mut s = state();
+        s.promote(ID, None);
+        let old = s.admit_seek(ID, Some(10), Some(100), 50).unwrap().unwrap();
+        let latest = s.admit_seek(ID, Some(10), Some(102), 51).unwrap().unwrap();
+        // A newer native arrival does not make an older frontend intent current.
+        assert!(s.admit_seek(ID, Some(10), Some(101), 52).unwrap().is_none());
+        assert!(s.admit_seek(ID, Some(10), Some(102), 53).unwrap().is_none());
+        s.tracks
+            .get_mut(ID)
+            .unwrap()
+            .begin_epoch(11, 21, 180.0, true);
+        s.sessions[0].generation = 11;
+        // This intent was admitted before its predecessor's awaited reopen;
+        // same ledger/owner survives, but the predecessor's reply is obsolete.
+        assert!(!s.seek_current(ID, old));
+        assert!(s.seek_current(ID, latest));
+        assert_eq!(s.tracks[ID].last_seek_request, Some(102));
+        // Newly arriving commands still require the actual native generation.
+        assert!(s.admit_seek(ID, Some(10), Some(103), 54).unwrap().is_none());
+        assert!(s.seek_current(ID, latest));
+        let replay = s.admit_seek(ID, Some(11), Some(104), 55).unwrap().unwrap();
+        assert!(!s.seek_current(ID, latest));
+        assert!(s.seek_current(ID, replay));
+    }
+    #[test]
+    fn seek_intent_cannot_cross_cancellation_cache_replacement_or_foreground_owner() {
+        let mut s = state();
+        s.promote(ID, None);
+        let intent = s.admit_seek(ID, Some(10), Some(100), 50).unwrap().unwrap();
+        s.cancel_generation(ID, Some(10), true);
+        s.promote(ID, None);
+        assert!(!s.seek_current(ID, intent));
+        let intent = s.admit_seek(ID, Some(10), Some(101), 51).unwrap().unwrap();
+        s.tracks.insert(ID.into(), Track::new(11, 21, 31));
+        s.tracks.get_mut(ID).unwrap().seek_operation = intent.operation;
+        assert!(!s.seek_current(ID, intent));
+        let intent = s.admit_seek(ID, Some(11), Some(102), 52).unwrap().unwrap();
+        s.foreground = Some((NEXT.into(), None));
+        assert!(!s.seek_current(ID, intent));
+        assert!(s.admit_seek(ID, Some(11), Some(103), 53).is_err());
+        assert_eq!(s.tracks[ID].last_seek_request, Some(102));
     }
     #[test]
     fn eof_with_gap_preserves_audio_and_recovery_merges_without_revision_reset() {
