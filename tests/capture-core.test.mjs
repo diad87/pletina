@@ -965,9 +965,10 @@ test('a complete contiguous append during seek preserves packets for a buffered 
   assert.equal(source.verifiedFinalEpoch, undefined)
 })
 
-test('seek continuation rejects reinitialization, overlap, gaps, partial input, changed bindings and replaced payload', () => {
+test('non-experimental seek continuation rejects reinitialization, overlap, gaps, partial input, changed bindings and replaced payload', () => {
   for (const scenario of ['reinit', 'overlap', 'gap', 'partial-old', 'tuple', 'native-tuple', 'native-source', 'native-buffer', 'missing-native-source', 'missing-native-buffer', 'payload', 'limit']) {
     const { tracker, source, buffer, observe } = progressiveSetup()
+    tracker.experimental = false
     buffer.native = {}; source.native = {}
     observe(0)
     if (scenario === 'partial-old') tracker.append(buffer, fixture({ times: [60] }).cluster.subarray(0, 2))
@@ -990,6 +991,7 @@ test('seek continuation rejects reinitialization, overlap, gaps, partial input, 
     assert(buffer.chunks.reduce((sum, bytes) => sum + bytes.length, 0) < fixture().bytes.length + incoming.length, `${scenario}: no old prefix is silently retained`)
     assert(tracker.bytes <= tracker.maxBytes, scenario)
     assert.equal(source.completeCertificate, undefined, scenario)
+    assert.equal(source.derivedInventory, undefined, scenario)
   }
 })
 
@@ -1115,6 +1117,170 @@ test('split seek continuation confirms at its original cluster boundary and neve
   assert.equal(source.verifiedFinalEpoch, undefined)
   assert.equal(source.completeCertificate, undefined)
   assert.equal(source.successfulEndOfStream, false)
+})
+
+function derivedSeekSetup({ before = () => {}, tail = fixture({ times: [120, 140] }).cluster } = {}) {
+  const { tracker, source, buffer } = progressiveSetup()
+  let ranges = [{ start: 0, end: 0.06 }, { start: 0.12, end: 0.16 }]
+  source.native = { readyState: 'open' }
+  buffer.native = { buffered: { get length() { return ranges.length }, start: i => ranges[i].start, end: i => ranges[i].end } }
+  const snapshot = position => ({ source, position, duration: 0.16, seeking: false, paused: false, ended: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: ranges })
+  const observe = (position, now, identity = content) => tracker.observe(source, identity, { position, now, duration: 0.16 })
+  observe(0, 0)
+  tracker.beginEpoch(2, 0.12); assert.equal(tracker.onTimeAssignment(source, null, 0.12), true)
+  before({ tracker, source, buffer })
+  tracker.append(buffer, tail)
+  return { tracker, source, buffer, observe, snapshot, tail, setRanges: value => { ranges = value } }
+}
+
+test('experimental seek retains original raw gaps, accepts exact INIT/backfill/repetition and keeps published packet indices', () => {
+  const { tracker, source, buffer, observe, snapshot, tail, setRanges } = derivedSeekSetup()
+  assert.equal(source.error, null); assert.equal(source.derivedInventory, true)
+  assert.equal(tracker.inventory(source).samples.length, 5)
+  assert.deepEqual(concat(...buffer.chunks), concat(fixture().bytes, tail), 'the original gap remains in raw input; no intermediate remux is invented')
+  tracker.beginEpoch(3, 0.02); assert.equal(tracker.onTimeAssignment(source, null, 0.02), true)
+  observe(0.02, 200); observe(0.04, 220)
+  const [old] = tracker.pull(source, snapshot(0.04))
+  assert.equal(old.firstFrame, 1); assert.equal(old.endFrame, 2)
+  const backfill = fixture({ times: [60, 80, 100] })
+  tracker.append(buffer, backfill.init)
+  tracker.append(buffer, backfill.cluster.subarray(0, backfill.cluster.length - 4))
+  observe(0.06, 240)
+  assert.equal(tracker.pull(source, snapshot(0.06)).length, 0, 'pending raw input blocks even an old newly eligible packet')
+  tracker.append(buffer, backfill.cluster.subarray(backfill.cluster.length - 4))
+  assert.equal(source.error, null)
+  const beforeDuplicate = tracker.inventory(source), rawBefore = tracker.bytes
+  tracker.append(buffer, backfill.cluster)
+  const inventory = tracker.inventory(source)
+  assert.equal(inventory.samples.length, 8, 'the repeated three original blocks do not acquire new indices')
+  assert(tracker.bytes > rawBefore, 'retained duplicate raw bytes and their parser copy both count against the cap')
+  for (let i = 0; i < inventory.samples.length; i++) assert(tracker.samePacket(inventory.samples[i], beforeDuplicate.samples[i]))
+  setRanges([{ start: 0, end: 0.16 }]); observe(0.12, 300)
+  const units = tracker.pull(source, snapshot(0.12))
+  assert.equal(units[0].firstFrame, old.endFrame); assert.equal(units.at(-1).endFrame, 6)
+  const { inspectWebMPrefix } = load()
+  for (const unit of units) {
+    const actual = inspectWebMPrefix(unit.data, { allowGaps: true })
+    for (let i = 0; i < actual.samples.length; i++) assert(tracker.samePacket({ ...actual.samples[i], bytes: actual.bytes }, inventory.samples[unit.firstFrame + i]), 'remux uses the original whole Block bytes')
+  }
+  assert.equal(source.completeCertificate, undefined)
+})
+
+test('a derived seek inventory never credits missing packets, EOF, normal completion or the final holdback', () => {
+  const { tracker, source, buffer, observe, snapshot } = derivedSeekSetup(), { SessionTracker } = load()
+  tracker.beginEpoch(3, 0); assert.equal(tracker.onTimeAssignment(source, null, 0), true)
+  observe(0, 200); observe(0.16, 360)
+  tracker.holdbackSeconds = 0.02
+  tracker.pull(source, snapshot(0.16))
+  assert.equal(JSON.stringify(tracker.coverage), JSON.stringify([{ start: 0, end: 0.06 }, { start: 0.12, end: 0.12 + 0.02 }]))
+  const before = source.progress.emitted.size
+  const terminal = { ...snapshot(0.16), sourceEnded: true, ended: true, paused: true }
+  for (const experimental of [true, false]) {
+    tracker.experimental = experimental
+    assert.throws(() => tracker.finish(source, terminal), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+    assert.throws(() => SessionTracker.prototype.seal.call(tracker, source, terminal), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+    assert.equal(source.sealed, false); assert.equal(source.verifiedFinalEpoch, undefined); assert.equal(source.completeCertificate, undefined)
+    assert.equal(tracker.pull(source, terminal).length, 0)
+    assert.equal(source.progress.emitted.size, before)
+  }
+  assert(buffer.derived, 'EOF denial does not disguise the partial view as an original container')
+})
+
+test('derived backfill may reorder only the suffix after the entire published high-water prefix', () => {
+  const { tracker, source, buffer, observe, snapshot } = derivedSeekSetup()
+  observe(0.12, 200); observe(0.14, 220)
+  const [published] = tracker.pull(source, snapshot(0.14))
+  assert.equal(published.firstFrame, 3)
+  const coverage = JSON.stringify(tracker.coverage), nextUnit = tracker.nextUnit
+  tracker.append(buffer, fixture({ times: [60, 80, 100] }).bytes)
+  assert.match(source.error.message, /renumber/)
+  assert.equal(JSON.stringify(tracker.coverage), coverage); assert.equal(tracker.nextUnit, nextUnit)
+  assert.equal(source.progress.emitted.has(3), true)
+  assert.throws(() => tracker.pull(source, snapshot(0.16)), codeIs('CAPTURE_AMBIGUOUS_TIMELINE'))
+})
+
+test('new backfill cannot borrow earlier presentation while those packets were absent even inside the holdback', () => {
+  const { tracker, source, buffer, observe, snapshot, setRanges } = derivedSeekSetup()
+  tracker.beginEpoch(3, 0); assert.equal(tracker.onTimeAssignment(source, null, 0), true)
+  tracker.holdbackSeconds = 0.1
+  setRanges([{ start: 0, end: 0.16 }])
+  observe(0, 200); observe(0.16, 360)
+  tracker.pull(source, snapshot(0.16))
+  assert.equal(source.progress.emitted.size, 3, 'only the old prefix has passed holdback')
+  const coverage = JSON.stringify(tracker.coverage)
+  tracker.append(buffer, fixture({ times: [60, 80, 100] }).bytes)
+  assert.match(source.error.message, /before their original bytes arrived/)
+  assert.equal(JSON.stringify(tracker.coverage), coverage)
+  assert.equal(source.completeCertificate, undefined)
+})
+
+test('derived packets reject changed payload, block flags, padding, initialization and partial overlap', () => {
+  const group = padding => element(0x1f43b675, concat(element(0xe7, [0]), element(0xa0, concat(element(0xa1, [0x81, 0, 120, 0x80, 0x98, 1]), element(0x75a2, integer(padding))))))
+  for (const change of ['payload', 'flags', 'padding', 'init', 'overlap']) {
+    const { tracker, source, buffer, tail } = derivedSeekSetup(change === 'padding' ? { tail: group(0) } : {})
+    let incoming = tail.slice()
+    if (change === 'payload') incoming[incoming.length - 1] ^= 1
+    if (change === 'flags') incoming[incoming.length - 3] ^= 1
+    if (change === 'padding') incoming = group(1)
+    if (change === 'overlap') incoming = fixture({ times: [130] }).cluster
+    if (change === 'init') incoming = concat(element(0x1a45dfa3, element(0xec, [1])), fixture().init.subarray(5))
+    tracker.append(buffer, incoming)
+    assert(source.error, change); assert.equal(buffer.derived, null, change)
+    assert.equal(source.completeCertificate, undefined, change)
+  }
+})
+
+test('raw-run retention cannot repair modified old bytes, before derivation or with unpublished packets during it', () => {
+  const before = derivedSeekSetup({ before: ({ buffer }) => { buffer.chunks[0][buffer.chunks[0].length - 1] ^= 1 } })
+  assert.match(before.source.error.message, /prefix changed/)
+  assert.equal(before.source.progress.emitted.size, 0)
+  const during = derivedSeekSetup()
+  during.buffer.chunks[0][during.buffer.chunks[0].length - 1] ^= 1
+  during.tracker.append(during.buffer, fixture({ times: [160] }).cluster)
+  assert.match(during.source.error.message, /original seek run changed/)
+  assert.equal(during.source.progress.emitted.size, 0)
+  assert.equal(during.buffer.derived, null)
+})
+
+test('derived views are invalidated by rebinding, mutations, contradictions and drop without changing the published ledger', () => {
+  for (const change of ['tuple', 'native-tuple', 'native-source', 'native-buffer', 'version', 'abort', 'remove', 'ad', 'unknown', 'drop']) {
+    const { tracker, source, buffer, observe, snapshot } = derivedSeekSetup()
+    observe(0.12, 200); observe(0.14, 220); tracker.pull(source, snapshot(0.14))
+    const coverage = JSON.stringify(tracker.coverage), nextUnit = tracker.nextUnit
+    let settings
+    if (change === 'tuple') settings = { appendWindowEnd: 1 }
+    if (change === 'native-tuple') buffer.native.appendWindowEnd = 1
+    if (change === 'native-source') source.native = {}
+    if (change === 'native-buffer') buffer.native = {}
+    if (change === 'version') buffer.version++
+    if (change === 'abort' || change === 'remove') assert.equal(tracker.onSeekMutation(buffer, change), false)
+    if (change === 'ad' || change === 'unknown') observe(0.15, 230, change === 'ad' ? ad : { state: 'unknown', sourceBound: true })
+    if (change === 'drop') tracker.drop(source)
+    else tracker.append(buffer, fixture({ times: [160] }).cluster, settings)
+    assert.equal(buffer.derived, null, change)
+    assert.throws(() => tracker.pull(source, snapshot(0.16)), error => !!error.code, change)
+    assert.equal(JSON.stringify(tracker.coverage), coverage, change); assert.equal(tracker.nextUnit, nextUnit, change)
+    if (['ad', 'unknown', 'drop'].includes(change)) assert.equal(tracker.bytes, 0, change)
+  }
+})
+
+test('derived pending input cannot cross epochs or accept a replacement init and the encoded byte cap counts every retained run', () => {
+  for (const change of ['epoch', 'init', 'limit']) {
+    const { tracker, source, buffer, snapshot } = derivedSeekSetup()
+    const backfill = fixture({ times: [60, 80, 100] })
+    tracker.append(buffer, backfill.init)
+    tracker.append(buffer, backfill.cluster.subarray(0, backfill.cluster.length - 4))
+    assert.equal(tracker.inventory(source).pending, true)
+    if (change === 'epoch') tracker.beginEpoch(3, 0)
+    else if (change === 'init') tracker.append(buffer, backfill.init)
+    else { tracker.maxBytes = tracker.bytes + 3; tracker.append(buffer, backfill.cluster.subarray(backfill.cluster.length - 4)) }
+    assert(source.error, change); assert.equal(buffer.derived, null, change)
+    assert.throws(() => tracker.pull(source, snapshot(0.16)), error => !!error.code, change)
+    assert(tracker.bytes <= tracker.maxBytes, change)
+  }
+  const limited = derivedSeekSetup({ before: ({ tracker, buffer }) => { tracker.maxBytes = tracker.bytes + buffer.seekContinuation.inventory.bytes.length - 1 } })
+  assert.equal(limited.source.error.code, 'CAPTURE_QUARANTINE_LIMIT')
+  assert.equal(limited.buffer.derived, undefined)
 })
 
 test('real AAC/Opus remux retains the identical decoded PCM across many sample boundaries', t => {

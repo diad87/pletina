@@ -220,12 +220,12 @@
     let until = 0
     for (const frame of frames) {
       // WebM rounds timestamps to TimestampScale. Permit only that quantization error.
-      if (Math.abs(frame.start - until) > Math.max(scale / 1e9, 0.000001) + 1e-9 && !(options.allowGaps && frame.start > until)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded frames')
+      if (!options.collectPackets && Math.abs(frame.start - until) > Math.max(scale / 1e9, 0.000001) + 1e-9 && !(options.allowGaps && frame.start > until)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded frames')
       until = frame.end
     }
     let codedUntil = 0
     for (const frame of codedFrames) {
-      if (Math.abs(frame.start - codedUntil) > Math.max(scale / 1e9, 0.000001) + 1e-9 && !(options.allowGaps && frame.start > codedUntil)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded timestamps')
+      if (!options.collectPackets && Math.abs(frame.start - codedUntil) > Math.max(scale / 1e9, 0.000001) + 1e-9 && !(options.allowGaps && frame.start > codedUntil)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Gap, overlap or overwritten coded timestamps')
       codedUntil = frame.end
     }
     const result = { frames, start: frames[0]?.start ?? 0, end: until, codedFrames, codedStart: codedFrames[0]?.start ?? 0, codedEnd: codedUntil, lastBlock, codec: track.codec, quantum: scale / 1e9 }
@@ -254,9 +254,10 @@
     let clock = null, parts = []
     const flush = () => { if (parts.length) clusters.push(ebmlElement([0x1f, 0x43, 0xb6, 0x75], [ebmlElement([0xe7], [ebmlInteger(clock)]), ...parts])) }
     for (const sample of selected) {
-      if (sample.offset + sample.size > inventory.bytes.length) fail('CAPTURE_UNSUPPORTED_WEBM', 'Incomplete remux sample')
+      const bytes = sample.bytes ?? inventory.bytes
+      if (!bytes || sample.offset + sample.size > bytes.length) fail('CAPTURE_UNSUPPORTED_WEBM', 'Incomplete remux sample')
       if (clock !== sample.clock) { flush(); parts = []; clock = sample.clock }
-      parts.push(inventory.bytes.subarray(sample.offset, sample.offset + sample.size))
+      parts.push(bytes.subarray(sample.offset, sample.offset + sample.size))
     }
     flush()
     return { init: inventory.init, media: join(clusters), frames: count, start: selected[0].start, end: selected.at(-1).end }
@@ -340,6 +341,7 @@
       return result
     }
     seal(source, terminal = null) {
+      if (source?.derivedInventory) fail('CAPTURE_PARTIAL_PRESENTATION', 'A derived packet view cannot certify an original complete source')
       if (!source || source.sealed) fail('CAPTURE_AMBIGUOUS_SOURCE', 'Missing or already sealed source')
       source.sealed = true
       if (source.error) throw source.error
@@ -390,11 +392,12 @@
     }
     reject(source, code, reason) {
       delete source.startupGap
-      for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation; delete buffer.stagedContinuation }
+      for (const buffer of source.buffers) { this.discardDerived(buffer); buffer.sampleProjection = null; delete buffer.seekContinuation; delete buffer.stagedContinuation }
       super.reject(source, code, reason)
     }
     drop(source) {
       delete source.startupGap
+      for (const buffer of source.buffers) this.discardDerived(buffer)
       super.drop(source)
       // No retained parser view may resurrect quarantined bytes after a conflicting
       // label. Already published experimental units cannot be recalled: a label
@@ -411,12 +414,17 @@
     }
     append(buffer, data, settings) {
       delete buffer.source.verifiedFinalEpoch
+      if (buffer.derived) return this.appendDerived(buffer, data, settings)
       // A seek does not itself reset the native byte-stream parser. A complete,
       // append-only continuation may arrive while seeking to already buffered
       // audio; discarding its prefix would leave later buffered returns without
       // copied packets. This preserves bytes only, never presentation or EOF.
       const proof = buffer.stagedContinuation ?? (buffer.resetAfterSeek ? buffer.seekContinuation : null)
       const continuation = proof ? this.seekContinuationInventory(buffer, data, settings, proof) : null
+      if (!buffer.stagedContinuation && !continuation && this.canDerive(buffer, settings, proof)) {
+        if (!this.startDerived(buffer, proof)) return
+        return this.appendDerived(buffer, data, settings)
+      }
       if (buffer.stagedContinuation && !continuation) {
         const overBudget = this.bytes + copy(data).byteLength > this.maxBytes
         return this.reject(buffer.source, overBudget ? 'CAPTURE_QUARANTINE_LIMIT' : 'CAPTURE_AMBIGUOUS_TIMELINE', 'An incomplete seek continuation changed or could not be verified; its original prefix cannot be reset within this epoch')
@@ -447,6 +455,107 @@
           buffer.resetInit = null; buffer.awaitingStart = false
         }
       }
+    }
+    canDerive(buffer, settings, proof) {
+      const source = buffer.source
+      return this.experimental && this.seek && !this.seek.startup && !buffer.seekParserResetRequired && proof && buffer.webm &&
+        buffer.native && source.native && !source.error && !source.sealed && source.state === 'content' && source.seen.size === 1 && source.seen.has('content') &&
+        proof.epoch === this.epoch && proof.source === source && proof.nativeSource === source.native && proof.native === buffer.native && proof.version === buffer.version &&
+        proof.settings === JSON.stringify(buffer.timelineSettings) && proof.settings === JSON.stringify(settingsOf(settings)) && proof.settings === JSON.stringify(settingsOf(buffer.native)) &&
+        defaultSettings(buffer.timelineSettings) && !proof.inventory?.pending && proof.inventory?.init?.length && proof.inventory.samples?.length
+    }
+    // Experimental buffered-return support only. Keep raw runs and an exact packet
+    // view; never present that derived view as one original complete byte stream.
+    // The encoded budget includes duplicate raw appends and retained parser copies,
+    // not a measurement of the JavaScript heap or its transient parsing allocations.
+    discardDerived(buffer) {
+      if (!buffer.derived) return
+      this.bytes -= buffer.derived.cacheBytes
+      buffer.derived = null; buffer.prefix = null; buffer.sampleProjection = null
+    }
+    startDerived(buffer, proof) {
+      const parsed = proof.inventory, cacheBytes = parsed.bytes.length + parsed.init.length
+      let at = 0
+      for (const chunk of buffer.chunks) for (const byte of chunk) if (byte !== parsed.bytes[at++]) { this.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'The original raw seek prefix changed before retention'); return false }
+      if (at !== parsed.bytes.length) { this.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'The original raw seek prefix changed length before retention'); return false }
+      if (this.bytes + cacheBytes > this.maxBytes) { this.reject(buffer.source, 'CAPTURE_QUARANTINE_LIMIT', 'The retained raw seek inventory exceeds the memory budget'); return false }
+      this.bytes += cacheBytes
+      buffer.derived = { epoch: this.epoch, source: buffer.source, native: buffer.native, nativeSource: buffer.source.native, settings: proof.settings,
+        version: buffer.version, init: parsed.init, cacheBytes, runs: [{ chunks: buffer.chunks.slice(), parsed }], view: null }
+      buffer.source.derivedInventory = true
+      delete buffer.source.completeCertificate; delete buffer.source.nativeFinalClock; delete buffer.source.verifiedFinalEpoch
+      buffer.resetAfterSeek = false; delete buffer.seekContinuation
+      this.updateDerivedView(buffer)
+      return !buffer.source.error
+    }
+    derivedBound(buffer) {
+      const d = buffer.derived, source = buffer.source
+      return d && d.epoch === this.epoch && d.source === source && d.native === buffer.native && d.nativeSource === source.native &&
+        d.version === buffer.version && d.settings === JSON.stringify(buffer.timelineSettings) && d.settings === JSON.stringify(settingsOf(buffer.native))
+    }
+    samePacket(a, b) {
+      if (!a || !b || ['clock', 'start', 'end', 'audibleStart', 'audibleEnd', 'padding', 'size'].some(key => a[key] !== b[key])) return false
+      for (let i = 0; i < a.size; i++) if (a.bytes[a.offset + i] !== b.bytes[b.offset + i]) return false
+      return true
+    }
+    unchangedRun(previous, parsed) {
+      return parsed.bytes.length >= previous.bytes.length && previous.bytes.every((byte, i) => byte === parsed.bytes[i]) &&
+        parsed.samples.length >= previous.samples.length && previous.samples.every((sample, i) => sample.offset === parsed.samples[i].offset &&
+          this.samePacket({ ...sample, bytes: previous.bytes }, { ...parsed.samples[i], bytes: parsed.bytes }))
+    }
+    updateDerivedView(buffer) {
+      const d = buffer.derived, source = buffer.source, byTime = new Map()
+      try {
+        for (const run of d.runs) {
+          const p = run.parsed
+          if (!p?.init || p.init.length !== d.init.length || !p.init.every((byte, i) => byte === d.init[i])) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'A seek run changed its original WebM initialization')
+          for (const sample of p.samples) {
+            const packet = { ...sample, bytes: p.bytes }, key = `${sample.start}:${sample.end}`, previous = byTime.get(key)
+            if (previous && !this.samePacket(previous, packet)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Repeated seek packets differ in metadata or original payload')
+            if (!previous) byTime.set(key, packet)
+          }
+        }
+        const samples = [...byTime.values()].sort((a, b) => a.start - b.start)
+        if (samples.some((sample, i) => i && !timeAtOrAfter(sample.start, samples[i - 1].end))) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Partially overlapping seek packets cannot be merged')
+        const old = d.view?.samples ?? buffer.prefix?.value?.samples?.map(sample => ({ ...sample, bytes: buffer.prefix.value.bytes })) ?? []
+        const oldTimes = new Set(old.map(sample => `${sample.start}:${sample.end}`))
+        if (samples.some(sample => !oldTimes.has(`${sample.start}:${sample.end}`) && source.progress.ranges.some(range => !timeAtOrAfter(sample.start, range.end) && !timeAtOrAfter(range.start, sample.end)))) fail('CAPTURE_PARTIAL_PRESENTATION', 'New backfill packets cannot borrow presentation observed before their original bytes arrived')
+        let through = -1
+        for (const index of source.progress.emitted) through = Math.max(through, index)
+        for (let i = 0; i <= through; i++) if (!this.samePacket(old[i], samples[i])) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Seek backfill would renumber a published packet prefix')
+        d.init = d.runs[0].parsed.init
+        d.view = { init: d.init, samples, pending: d.runs.some(run => run.parsed.pending), quantum: d.runs[0].parsed.quantum,
+          codedStart: samples[0]?.start, codedEnd: samples.at(-1)?.end, seekPreRoll: d.runs[0].parsed.seekPreRoll }
+        buffer.sampleProjection = null
+      } catch (error) { this.reject(source, error.code || 'CAPTURE_AMBIGUOUS_TIMELINE', error.message) }
+    }
+    appendDerived(buffer, data, settings) {
+      const source = buffer.source, d = buffer.derived
+      if (!this.derivedBound(buffer) || d.settings !== JSON.stringify(settingsOf(settings)) || source.error) return this.reject(source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'Retained seek packets lost their native source, epoch or settings binding')
+      const incoming = copy(data), newInit = incoming.length >= 4 && incoming[0] === 0x1a && incoming[1] === 0x45 && incoming[2] === 0xdf && incoming[3] === 0xa3
+      let run = d.runs.at(-1)
+      if (newInit) {
+        if (run.parsed.pending) return this.reject(source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'Initialization interrupted incomplete raw seek input')
+        run = { chunks: [], parsed: null }
+      }
+      const oldCache = run.parsed ? run.parsed.bytes.length + run.parsed.init.length : 0
+      const rawSize = run.chunks.reduce((n, bytes) => n + bytes.length, 0) + incoming.length
+      if (this.bytes + incoming.length + rawSize + d.init.length - oldCache > this.maxBytes) return this.reject(source, 'CAPTURE_QUARANTINE_LIMIT', 'Raw seek runs and their retained parser views exceeded the memory budget')
+      super.append(buffer, incoming, settings)
+      if (source.error) return
+      run.chunks.push(buffer.chunks.at(-1))
+      try {
+        const parsed = parseWebMOpus(join(run.chunks), { prefix: true, inventory: true, collectPackets: true })
+        if (!parsed.init) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'A replacement WebM initialization is not complete')
+        // Every inventoried packet remains immutable, even before publication.
+        if (run.parsed && !this.unchangedRun(run.parsed, parsed)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'An original seek run changed before its appended continuation')
+        const cacheDelta = parsed.bytes.length + parsed.init.length - oldCache
+        this.bytes += cacheDelta; d.cacheBytes += cacheDelta
+        run.parsed = parsed
+        if (newInit) d.runs.push(run)
+        buffer.version++; d.version = buffer.version; buffer.prefix = null
+        this.updateDerivedView(buffer)
+      } catch (error) { this.reject(source, error.code || 'CAPTURE_AMBIGUOUS_TIMELINE', error.message) }
     }
     continuesAfterSeek(buffer, data, settings) {
       const result = this.seekContinuationInventory(buffer, data, settings, buffer.seekContinuation)
@@ -481,9 +590,9 @@
       if (!Number.isSafeInteger(epoch) || epoch <= this.epoch || !Number.isFinite(at) || at < 0) fail('CAPTURE_PROTOCOL_MISMATCH', 'Seek epoch must advance and have a finite target')
       this.epoch = epoch; this.seek = { at, assigned: false, active: true }
       for (const source of this.sources.values()) {
-        if (source.buffers.some(buffer => buffer.stagedContinuation)) this.reject(source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'A new epoch cannot replace incomplete seek parser input')
+        if (source.buffers.some(buffer => buffer.stagedContinuation || buffer.derived?.view?.pending)) this.reject(source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'A new epoch cannot replace incomplete seek parser input')
         source.observations = []; source.progress = { epoch, ranges: [], emitted: new Set() }
-        for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation }
+        for (const buffer of source.buffers) { if (buffer.derived) buffer.derived.epoch = epoch; buffer.sampleProjection = null; delete buffer.seekContinuation }
       }
     }
     restartBeginning(source) {
@@ -520,6 +629,10 @@
       if (!this.seek?.active || this.seek.assigned || source?.error || Math.abs(value - this.seek.at) > 0.000001) return false
       if (this.seek.replay && (source !== this.seek.source || element !== source.element || value !== 0)) return false
       for (const buffer of source.buffers) buffer.sampleProjection = null
+      if (source.derivedInventory) {
+        if (!source.buffers.every(buffer => this.derivedBound(buffer) && !buffer.derived.view.pending)) return false
+        this.seek.assigned = true; return true
+      }
       if (!this.seek.startup) {
         let inventory
         try { inventory = this.inventory(source) } catch { return false }
@@ -533,6 +646,7 @@
       return true
     }
     onSeekMutation(buffer, operation) {
+      if (buffer.source.derivedInventory) { this.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'Native mutation invalidated retained raw seek packets'); return false }
       if (buffer.stagedContinuation) { this.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'Native parser mutation interrupted an incomplete seek continuation'); return false }
       if (!this.seek?.active || !this.seek.assigned || buffer.source.error || !['abort', 'remove'].includes(operation)) return false
       if (this.seek.replay) return false // Replaying the already buffered prefix cannot borrow a reset parser inventory.
@@ -628,6 +742,11 @@
     }
     inventory(source, final = false) {
       const buffer = source.buffers[0]
+      if (source.derivedInventory) {
+        if (source.error) throw source.error
+        if (!this.derivedBound(buffer)) fail('CAPTURE_AMBIGUOUS_TIMELINE', 'Derived seek inventory is not bound to the current native source')
+        return buffer.derived.view
+      }
       if (source.buffers.length !== 1 || !buffer?.inspectPrefix || !buffer.remux) fail('CAPTURE_UNSUPPORTED_FORMAT', 'Progressive capture requires a verified sample parser and remuxer')
       if (buffer.awaitingStart) {
         if (final) fail('CAPTURE_PARTIAL_PRESENTATION', 'EOF before a seek initialization header became complete')
@@ -684,7 +803,7 @@
       if (source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false) return []
       if (!this.experimental && source.verifiedFinalEpoch !== this.epoch) return []
       const buffer = source.buffers[0], inventory = this.inventory(source)
-      if (buffer.stagedContinuation) return []
+      if (buffer.stagedContinuation || (buffer.derived && inventory.pending)) return []
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
       const boundCertificate = source.completeCertificate ? this.completeCertificate(source, buffer) : null
@@ -743,6 +862,7 @@
       return units
     }
     finish(source, snapshot) {
+      if (source?.derivedInventory) fail('CAPTURE_PARTIAL_PRESENTATION', 'Derived seek packets remain partial: original source EOF and the retained tail are not certified')
       if (source?.error) throw source.error
       if (source?.buffers.some(buffer => buffer.stagedContinuation)) fail('CAPTURE_PARTIAL_PRESENTATION', 'EOF cannot certify an incomplete seek continuation')
       if (source?.consentSuspension) fail('CAPTURE_PARTIAL_PRESENTATION', 'Visible consent interrupted this source; EOF cannot bridge the suspended interval')
