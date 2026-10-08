@@ -16,7 +16,11 @@ export async function apply() {
   if (view === 'album') nav.go({ name: 'album', id })
   else if (view === 'artist') nav.go({ name: 'artist', id: id || 399 })
   else if (view === 'search') nav.go({ name: 'search', query: p.get('q') ?? 'radiohead' })
+  else if (view === 'podcasts') nav.go({ name: 'podcasts', query: p.get('q') ?? '' })
+  else if (view === 'podcast') nav.go({ name: 'podcast', id: id || 500_000_000_000_001 })
   else if (view === 'playlist') nav.go({ name: 'playlist', id: id || 1 })
+  else if (view === 'import-playlist') nav.go({ name: 'import-playlist' })
+  else if (view === 'library') nav.go({ name: 'library' })
   else if (view === 'liked') nav.go({ name: 'liked' })
   else if (view === 'local') nav.go({ name: 'local' })
 

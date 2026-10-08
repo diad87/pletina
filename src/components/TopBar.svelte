@@ -13,14 +13,15 @@
   // Se va volviendo opaca al bajar; pasada la cabecera, aparecen el título y el botón de reproducir.
   const solid = $derived(Math.min(1, Math.max(0, (scrollY - 40) / 180)))
   const compact = $derived(scrollY > 300 && !!theme.title)
-  // Móvil: las tres secciones de la barra de abajo no llevan "atrás"; el buscador solo en Buscar.
-  const root = $derived(['home', 'search', 'library'].includes(nav.route.name))
-  const showSearch = $derived(!layout.mobile || nav.route.name === 'search')
+  // En Podcasts, el buscador consulta el catálogo de programas.
+  const podcasts = $derived(nav.route.name === 'podcasts' || nav.route.name === 'podcast')
+  const root = $derived(['home', 'search', 'podcasts', 'library'].includes(nav.route.name))
+  const showSearch = $derived(!layout.mobile || nav.route.name === 'search' || nav.route.name === 'podcasts')
 
   // Al volver atrás a una búsqueda, el cuadro muestra su texto; fuera de búsqueda, vacío.
   $effect(() => {
     const route = nav.route
-    value = route.name === 'search' ? route.query : ''
+    value = route.name === 'search' || route.name === 'podcasts' ? route.query : ''
   })
 
   nav.focusSearch = () => {
@@ -29,8 +30,8 @@
   }
 
   function onInput() {
-    const route = { name: 'search' as const, query: value }
-    if (nav.route.name === 'search') nav.replace(route)
+    const route = { name: podcasts ? 'podcasts' as const : 'search' as const, query: value }
+    if (nav.route.name === route.name) nav.replace(route)
     else nav.go(route)
   }
 
@@ -80,7 +81,8 @@
       bind:value
       oninput={onInput}
       onkeydown={onKeydown}
-      placeholder="¿Qué quieres escuchar?"
+      placeholder={podcasts ? 'Buscar podcasts' : '¿Qué quieres escuchar?'}
+      aria-label={podcasts ? 'Buscar podcasts' : 'Buscar música'}
       spellcheck="false"
       autocomplete="off"
     />

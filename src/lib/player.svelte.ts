@@ -3,6 +3,7 @@ import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { setAudioSource, stopCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
+import { isPodcast } from './media'
 import { toast } from './toast.svelte'
 import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
@@ -256,7 +257,7 @@ class Player implements PlayerApi {
    * si no, solo se guarda para la próxima vez.
    */
   async useSource(videoId: string, item: QueueItem | null = this.current): Promise<boolean> {
-    if (!item) return false
+    if (!item || isPodcast(item.track.id)) return false
     // Si estaba descargada, el archivo era del vídeo equivocado: el backend lo borra y se vuelve a bajar.
     const wasDownloaded = downloads.done.has(item.track.id)
     const redownload = () => {

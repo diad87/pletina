@@ -1,7 +1,7 @@
 <script lang="ts">
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
-  import { isLocal } from '../lib/media'
+  import { isLocal, isPodcast } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -11,6 +11,7 @@
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
+  const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
 
   // La barra se tiñe con el color de la carátula que suena.
@@ -35,13 +36,13 @@
         <span class="expand"><Icon name="chevronUp" size={22} /></span>
       </button>
       <div class="info">
-        <button class="link title" onclick={() => nav.go({ name: 'album', id: current.albumId })}
+        <button class="link title" onclick={() => nav.go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}
           >{current.track.title}</button
         >
-        <button class="link artist" onclick={() => nav.go({ name: 'artist', id: current.track.artist.id })}
+        <button class="link artist" onclick={() => nav.go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
           >{current.track.artist.name}</button
         >
-        {#if player.status === 'loading'}<span class="hint">Buscando en YouTube…</span>{/if}
+        {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Buscando en YouTube…'}</span>{/if}
       </div>
       <button
         class="icon heart"
@@ -57,14 +58,16 @@
   <div class="center"><Transport /></div>
 
   <div class="side">
-    <button
-      class="icon"
-      onclick={() => current && (player.picking = current)}
-      disabled={!current || isLocal(current.track.id)}
-      title="¿No es esta canción? Elegir otro vídeo"
-    >
-      <Icon name="swap" size={18} />
-    </button>
+    {#if !podcast}
+      <button
+        class="icon"
+        onclick={() => current && (player.picking = current)}
+        disabled={!current || isLocal(current.track.id)}
+        title="¿No es esta canción? Elegir otro vídeo"
+      >
+        <Icon name="swap" size={18} />
+      </button>
+    {/if}
     <button
       class="icon queue-btn"
       class:on={theme.queueOpen}

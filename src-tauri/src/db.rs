@@ -117,6 +117,25 @@ const MIGRATIONS: &[&str] = &[
     CREATE INDEX local_tracks_album ON local_tracks(album_id);
     CREATE INDEX local_tracks_artist ON local_tracks(artist_id);
     ",
+    // 5: podcasts RSS. Las URLs se conservan para reproducir favoritos e historial al reiniciar.
+    "
+    CREATE TABLE podcast_shows (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        feed_url TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        author TEXT NOT NULL,
+        description TEXT NOT NULL,
+        image TEXT,
+        language TEXT
+    );
+    CREATE TABLE podcast_episodes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        show_id INTEGER NOT NULL REFERENCES podcast_shows(id),
+        guid TEXT NOT NULL,
+        audio_url TEXT NOT NULL,
+        UNIQUE(show_id, guid)
+    );
+    ",
 ];
 
 pub struct Source {

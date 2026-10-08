@@ -11,10 +11,13 @@ mod downloads;
 mod extractor;
 mod extractors;
 mod library;
+mod playlist_import;
+mod spotify;
 mod local;
 mod native;
 mod native_player;
 mod player;
+mod podcasts;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
@@ -121,6 +124,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Deezer::new())
+        .manage(podcasts::Podcasts::new())
         .manage(updater::Pending::default())
         .manage(local::Scanner::default())
         .manage(YouTubeMusic::new())
@@ -166,6 +170,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            podcasts::podcast_search,
+            podcasts::podcast_detail,
+            podcasts::podcast_feed_url,
             artist,
             album,
             resolve,
@@ -176,6 +183,9 @@ pub fn run() {
             library::liked_tracks,
             library::set_album_saved,
             library::create_playlist,
+            playlist_import::read_spotify_playlist,
+            playlist_import::read_playlist_csv,
+            playlist_import::match_import_track,
             library::rename_playlist,
             library::delete_playlist,
             library::playlist,

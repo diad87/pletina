@@ -61,6 +61,9 @@
       <button class:active={route.name === 'search'} onclick={openSearch}>
         <Icon name="search" size={24} /> Buscar
       </button>
+      <button class:active={route.name === 'podcasts' || route.name === 'podcast'} onclick={() => nav.go({ name: 'podcasts', query: '' })}>
+        <Icon name="podcast" size={24} /> Podcasts
+      </button>
     </nav>
   </div>
 
@@ -70,6 +73,9 @@
       <button class="add" onclick={newPlaylist} title="Crear playlist"><Icon name="plus" size={20} /></button>
     </header>
 
+    <button class="import" class:active={route.name === 'import-playlist'} onclick={() => nav.go({ name: 'import-playlist' })}>
+      <Icon name="download" size={18} /> Importar de Spotify
+    </button>
     <LibraryList />
   </section>
 </aside>
@@ -183,5 +189,23 @@
   .add:hover {
     background: var(--elevated);
     color: var(--text);
+  }
+  .import {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: none;
+    margin: 0 4px 8px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+  }
+  .import:hover,
+  .import.active {
+    background: var(--hover);
+    color: var(--accent);
   }
 </style>

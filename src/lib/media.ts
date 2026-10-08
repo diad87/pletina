@@ -4,7 +4,11 @@ import { inTauri } from './api'
 /** Los ids de la música local empiezan aquí (ver LOCAL_BASE en src-tauri/src/local.rs). */
 export const LOCAL_BASE = 1_000_000_000_000_000
 
+/** Podcasts y episodios guardados desde RSS (ver src-tauri/src/podcasts.rs). */
+export const PODCAST_BASE = 500_000_000_000_000
+
 export const isLocal = (id: number) => id >= LOCAL_BASE
+export const isPodcast = (id: number) => id >= PODCAST_BASE && id < LOCAL_BASE
 
 /**
  * URL que puede mostrar la interfaz: las imágenes de internet tal cual, y los archivos del equipo

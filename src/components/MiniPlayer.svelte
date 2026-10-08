@@ -2,6 +2,7 @@
   // Móvil: lo que suena, encima de la barra de abajo. Tocarlo abre "Sonando ahora".
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
+  import { isPodcast } from '../lib/media'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
   import Cover from './Cover.svelte'
@@ -27,7 +28,7 @@
       <span class="thumb"><Cover src={current.cover} /></span>
       <span class="text">
         <span class="title">{current.track.title}</span>
-        <span class="artist">{player.status === 'loading' ? 'Buscando en YouTube…' : current.track.artist.name}</span>
+        <span class="artist">{player.status === 'loading' ? (isPodcast(current.track.id) ? 'Cargando episodio…' : 'Buscando en YouTube…') : current.track.artist.name}</span>
       </span>
     </button>
     <button class="icon" class:on={liked} onclick={() => library.toggleLike(current)} aria-label="Me gusta">

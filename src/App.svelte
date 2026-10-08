@@ -22,12 +22,15 @@
   import ArtistView from './views/ArtistView.svelte'
   import DownloadsView from './views/DownloadsView.svelte'
   import HistoryView from './views/HistoryView.svelte'
+  import ImportPlaylist from './views/ImportPlaylist.svelte'
   import LibraryView from './views/LibraryView.svelte'
   import Home from './views/Home.svelte'
   import LikedView from './views/LikedView.svelte'
   import LocalView from './views/LocalView.svelte'
   import PlaylistView from './views/PlaylistView.svelte'
   import Search from './views/Search.svelte'
+  import Podcasts from './views/Podcasts.svelte'
+  import PodcastView from './views/PodcastView.svelte'
 
   let scroller: HTMLElement | undefined = $state()
   let scrollY = $state(0)
@@ -62,7 +65,9 @@
   }
 
   const isTyping = (target: EventTarget | null) =>
-    target instanceof HTMLInputElement && target.type !== 'range'
+    (target instanceof HTMLInputElement && target.type !== 'range') ||
+    target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
 
   // Botón "atrás" de Android (MainActivity.kt): cierra lo que haya abierto o vuelve a la página
   // anterior. Si no queda nada, la app pasa a segundo plano.
@@ -92,6 +97,10 @@
         <Home />
       {:else if route.name === 'search'}
         <Search query={route.query} />
+      {:else if route.name === 'podcasts'}
+        <Podcasts query={route.query} />
+      {:else if route.name === 'podcast'}
+        <PodcastView id={route.id} feedUrl={route.feedUrl} />
       {:else if route.name === 'artist'}
         <ArtistView id={route.id} />
       {:else if route.name === 'album'}
@@ -100,6 +109,8 @@
         <LikedView />
       {:else if route.name === 'playlist'}
         <PlaylistView id={route.id} />
+      {:else if route.name === 'import-playlist'}
+        <ImportPlaylist />
       {:else if route.name === 'downloads'}
         <DownloadsView />
       {:else if route.name === 'local'}
@@ -114,7 +125,7 @@
 {/snippet}
 
 {#if layout.mobile}
-  <!-- Móvil: la página a pantalla completa y, abajo, lo que suena y las tres secciones. -->
+  <!-- Móvil: la página a pantalla completa y, abajo, lo que suena y las secciones. -->
   <div class="app mobile">
     <main class="main" style:--page-color={theme.color}>
       <TopBar {scrollY} />

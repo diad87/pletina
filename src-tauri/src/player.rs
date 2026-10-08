@@ -47,6 +47,16 @@ pub async fn resolve(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Playable, String> {
+    // Episodios: el audio publicado en el RSS, también desde el servicio nativo de Android.
+    if crate::podcasts::is_podcast(q.id) {
+        return Ok(Playable {
+            video_id: String::new(),
+            url: crate::podcasts::audio(db, q.id)?,
+            title: q.title.clone(),
+            channel: q.artist.clone(),
+            local: false,
+        });
+    }
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
         let path = crate::local::path(db, q.id).ok_or("Esta canción ya no está en tu música")?;
@@ -120,6 +130,9 @@ pub async fn alternatives(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Vec<Alternative>, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
     let current = db.source(q.id);
     let mut list: Vec<Alternative> = search(q, ytm, ytdlp, true)
         .await?
@@ -161,6 +174,9 @@ pub async fn alternatives(
 /// Solo el vídeo de una canción, sin pedir la URL del audio (para descargar):
 /// el guardado o la mejor coincidencia, que queda guardada.
 pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtDlp) -> Result<String, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("La descarga de episodios todavía no está disponible".into());
+    }
     if let Some(src) = db.source(q.id) {
         return Ok(src.video_id);
     }
@@ -184,6 +200,9 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
 pub async fn choose(q: &TrackQuery, video_id: &str, db: &Db, ytdlp: &YtDlp) -> Result<Playable, String> {
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
     let info = extractor::stream(ytdlp, video_id, false).await?;
     if let Some(path) = db.download_path(q.id) {
         let _ = std::fs::remove_file(path);
@@ -308,6 +327,51 @@ mod tests {
 #[cfg(test)]
 mod resolve_tests {
     use super::*;
+
+    /// El mismo resolvedor sirve al escritorio y a Android, sin buscar el episodio en YouTube.
+    #[tokio::test]
+    async fn podcast_uses_persisted_audio_and_rejects_music_sources() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.0.lock().unwrap().execute_batch(
+            "INSERT INTO podcast_shows (id, feed_url, title, author, description)
+             VALUES (1, 'https://example.org/feed.xml', 'Un podcast', 'Autora', '');
+             INSERT INTO podcast_episodes (id, show_id, guid, audio_url)
+             VALUES (1, 1, 'episodio-1', 'https://audio.example.org/episode.mp3');",
+        ).unwrap();
+        let q = TrackQuery {
+            id: 750_000_000_000_001,
+            title: "Un episodio".into(),
+            artist: "Autora".into(),
+            album: "Un podcast".into(),
+            duration: 3600,
+        };
+        let ytm = YouTubeMusic::new();
+        let ytdlp = YtDlp::new(std::path::PathBuf::new());
+        for refresh in [false, true] {
+            let playable = resolve(&q, refresh, &db, &ytm, &ytdlp).await.unwrap();
+            assert_eq!(playable.url, "https://audio.example.org/episode.mp3");
+            assert_eq!(playable.title, q.title);
+            assert_eq!(playable.channel, q.artist);
+            assert!(playable.video_id.is_empty());
+            assert!(!playable.local);
+        }
+        assert!(db.source(q.id).is_none());
+        assert_eq!(
+            alternatives(&q, &db, &ytm, &ytdlp).await.err().as_deref(),
+            Some("Los episodios usan el audio original del podcast"),
+        );
+        assert_eq!(
+            choose(&q, "video", &db, &ytdlp).await.err().as_deref(),
+            Some("Los episodios usan el audio original del podcast"),
+        );
+        assert_eq!(
+            find_video(&q, &db, &ytm, &ytdlp).await.err().as_deref(),
+            Some("La descarga de episodios todavía no está disponible"),
+        );
+        let missing = TrackQuery { id: q.id + 1, ..q };
+        assert!(resolve(&missing, false, &db, &ytm, &ytdlp).await.is_err());
+        assert!(db.source(missing.id).is_none());
+    }
 
     /// Resolución completa (búsqueda + yt-dlp + base de datos), con red:
     /// `cargo test real_resolve -- --ignored --nocapture`

@@ -2,14 +2,14 @@
   // Descargar un disco o una lista entera: descarga / progreso / descargado.
   import { downloads } from '../lib/downloads.svelte'
   import { layout } from '../lib/layout.svelte'
-  import { isLocal } from '../lib/media'
+  import { isLocal, isPodcast } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import type { QueueItem } from '../lib/player.svelte'
   import Icon from './Icon.svelte'
 
   let { items: all }: { items: QueueItem[] } = $props()
-  // La música local ya está en el equipo.
-  const items = $derived(all.filter((i) => !isLocal(i.track.id)))
+  // La música local ya está en el equipo; los episodios se escuchan en streaming.
+  const items = $derived(all.filter((i) => !isLocal(i.track.id) && !isPodcast(i.track.id)))
 
   const done = $derived(items.filter((i) => downloads.done.has(i.track.id)).length)
   const busy = $derived(items.some((i) => downloads.active.has(i.track.id)))

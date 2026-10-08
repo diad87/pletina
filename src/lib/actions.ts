@@ -6,7 +6,7 @@ import { toast } from './toast.svelte'
 import type { AlbumDetail } from './types'
 import { layout } from './layout.svelte'
 import { library } from './library.svelte'
-import { isLocal } from './media'
+import { isLocal, isPodcast } from './media'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
@@ -67,6 +67,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
     addToPlaylistMenu(() => [item]),
   ]
   const id = item.track.id
+  const podcast = isPodcast(id)
   if (isLocal(id)) {
     // Música local: ya está en el equipo y no viene de YouTube.
     items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealLocal(id).catch(() => {}) })
@@ -74,7 +75,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
     items.push({ label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) })
     // En el móvil las descargas están dentro de la app: no hay carpeta que enseñar.
     if (!layout.mobile) items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) })
-  } else if (!downloads.active.has(id) && layout.canDownload) {
+  } else if (!podcast && !downloads.active.has(id) && layout.canDownload) {
     items.push({ label: 'Descargar', icon: 'download', action: () => downloads.start([item]) })
   }
   if (playlist) {
@@ -84,16 +85,20 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       action: () => library.removeFromPlaylist(playlist.id, playlist.entryId),
     })
   }
-  items.push(
-    {
-      label: 'Ir al artista',
-      icon: 'user',
-      separated: true,
-      action: () => nav.go({ name: 'artist', id: item.track.artist.id }),
-    },
-    { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: item.albumId }) },
-  )
-  if (!isLocal(id)) {
+  if (podcast) {
+    items.push({ label: 'Ir al podcast', icon: 'disc', separated: true, action: () => nav.go({ name: 'podcast', id: item.albumId }) })
+  } else {
+    items.push(
+      {
+        label: 'Ir al artista',
+        icon: 'user',
+        separated: true,
+        action: () => nav.go({ name: 'artist', id: item.track.artist.id }),
+      },
+      { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: item.albumId }) },
+    )
+  }
+  if (!isLocal(id) && !podcast) {
     items.push({ label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) })
   }
   return items

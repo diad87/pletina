@@ -3,10 +3,13 @@ import { untrack } from 'svelte'
 export type Route =
   | { name: 'home' }
   | { name: 'search'; query: string }
+  | { name: 'podcasts'; query: string }
+  | { name: 'podcast'; id: number; feedUrl?: string }
   | { name: 'artist'; id: number }
   | { name: 'album'; id: number }
   | { name: 'liked' }
   | { name: 'playlist'; id: number }
+  | { name: 'import-playlist' }
   | { name: 'history' }
   | { name: 'downloads' }
   | { name: 'local' }

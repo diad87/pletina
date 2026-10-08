@@ -6,6 +6,7 @@
   import { layout } from '../lib/layout.svelte'
   import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
+  import { isPodcast } from '../lib/media'
   import { menu } from '../lib/menu.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
@@ -35,6 +36,7 @@
   const disc = (i: number) => items[i].track.diskNumber || 1
   const multiDisc = $derived(variant === 'album' && items.some((_, i) => disc(i) !== disc(0)))
   const reorderable = $derived(playlistId != null && entryIds != null)
+  const hasPodcasts = $derived(items.some((item) => isPodcast(item.track.id)))
 
   function play(i: number) {
     if (isCurrent(items[i])) player.toggle()
@@ -89,7 +91,7 @@
   <li class="row head">
     <span class="num">#</span>
     <span>Título</span>
-    {#if variant === 'list'}<span>Disco</span>{/if}
+    {#if variant === 'list'}<span>{hasPodcasts ? 'Disco / podcast' : 'Disco'}</span>{/if}
     {#if meta}<span>{metaLabel}</span>{/if}
     <span></span>
     <span class="dur"><Icon name="clock" size={16} /></span>
@@ -98,6 +100,7 @@
 
   {#each items as item, i (entryIds?.[i] ?? `${item.track.id}-${i}`)}
     {@const current = isCurrent(item)}
+    {@const podcast = isPodcast(item.track.id)}
     {@const liked = library.liked.has(item.track.id)}
     {@const downloaded = downloads.done.has(item.track.id)}
     {@const progress = downloads.active.get(item.track.id)}
@@ -152,7 +155,7 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
-                  <button class="link" onclick={(e) => go(e, { name: 'artist', id: item.track.artist.id })}
+                  <button class="link" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >
                 {/if}
@@ -163,7 +166,7 @@
 
         {#if variant === 'list'}
           <span class="album">
-            <button class="link" onclick={(e) => go(e, { name: 'album', id: item.albumId })}>{item.albumTitle}</button>
+            <button class="link" onclick={(e) => go(e, { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
           </span>
         {/if}
         {#if meta}<span class="meta">{meta(i)}</span>{/if}

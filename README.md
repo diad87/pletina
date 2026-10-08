@@ -4,6 +4,20 @@ Reproductor de música tipo Spotify para Windows, Mac, Linux y Android. Busca gr
 
 Software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
 
+### Importar playlists de Spotify
+
+En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.
+
+La vista pública de Spotify puede devolver solo parte de una lista (habitualmente hasta las primeras 100 canciones) y no permite consultar listas privadas. Para esas listas, importa un **CSV que ya hayas exportado**, de hasta 10 MB y 10.000 filas. Se admiten columnas `Track Name` y `Artist Name(s)` (o `Title` y `Artist`), y opcionalmente `Duration (ms)` e `ISRC`; los artistas múltiples se separan con punto y coma. Se leen archivos separados por comas, punto y coma o tabuladores. Los episodios, archivos locales y filas sin título o artista se omiten con aviso.
+
+No hace falta iniciar sesión en Spotify. La importación copia las canciones encontradas al catálogo local de Pletina; no sincroniza cambios posteriores. Las listas originales de Spotify no se modifican. La disponibilidad depende de la vista pública de Spotify y de las coincidencias del catálogo.
+
+### Podcasts
+
+La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
+
+Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. Por ahora necesitan conexión y no se descargan. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa.
+
 ![Inicio](docs/screenshots/inicio.png)
 
 | | |
@@ -74,6 +88,8 @@ En el PC, la app busca versiones nuevas al arrancar y cada pocas horas, las desc
 Pletina no tiene cuentas, ni analíticas, ni servidores propios. Tu biblioteca, tus playlists y tu historial se guardan solo en tu equipo. Se conecta a:
 
 - **Deezer**, para buscar artistas y discos y bajar las carátulas ([privacidad de Deezer](https://www.deezer.com/legal/personal-datas)).
+- **Spotify**, solo al importar una playlist mediante su enlace público, para leer los títulos y artistas. Al importar por enlace o CSV, se consultan esos títulos, artistas y, si existe, el ISRC en **Deezer** para encontrar las canciones equivalentes. No se envía el archivo CSV a Spotify ni se solicitan credenciales de su cuenta.
+- **Apple Podcasts**, para buscar podcasts, y **los servidores de sus autores y proveedores de alojamiento**, para consultar el idioma y los episodios del RSS, cargar las portadas y reproducir el audio. Estas conexiones se realizan al usar la sección de podcasts.
 - **YouTube y YouTube Music**, para encontrar cada canción y reproducir su audio ([privacidad de Google](https://policies.google.com/privacy)).
 - **GitHub**, para buscar y bajar actualizaciones de la app y de los extractores de audio, y yt-dlp en el PC ([privacidad de GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)).
 
@@ -88,7 +104,7 @@ La firma gratuita para proyectos de código abierto está solicitada a SignPath 
 - Committers and reviewers: [diad87](https://github.com/diad87)
 - Approvers: [diad87](https://github.com/diad87)
 
-Privacy: see [Privacidad](#privacidad). Pletina connects to Deezer, YouTube and GitHub as described there, sends no personal data and has no telemetry.
+Privacy: see [Privacidad](#privacidad). Pletina connects to Deezer, YouTube, GitHub, Spotify when importing public playlists, Apple Podcasts and podcast publishers as described there. It has no accounts or telemetry.
 
 ## Cómo funciona
 

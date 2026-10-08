@@ -254,6 +254,9 @@ fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
 
 #[tauri::command]
 pub fn download(tracks: Vec<LibTrack>, app: AppHandle, db: State<'_, Db>, downloads: State<'_, Downloads>) -> Res<()> {
+    if tracks.iter().any(|t| crate::podcasts::is_podcast(t.id)) {
+        return Err("La descarga de episodios todavía no está disponible".into());
+    }
     let generation = downloads.generation.load(Ordering::SeqCst);
     // La música local ya está en el equipo: no se descarga.
     for track in tracks.into_iter().filter(|t| !crate::local::is_local(t.id)) {

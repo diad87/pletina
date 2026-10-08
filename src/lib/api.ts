@@ -5,10 +5,14 @@ import type {
   ArtistPage,
   DownloadEntry,
   Entry,
+  ImportSource,
+  ImportTrack,
   LibraryData,
   LocalLibrary,
   LibTrack,
   Playable,
+  PodcastDetail,
+  PodcastSearchResults,
   PlaylistDetail,
   PlaylistSummary,
   SavedAlbum,
@@ -59,6 +63,12 @@ function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
 
 export const search = (query: string) => invoke<SearchResults>('search', { query })
 
+// Los episodios cambian con cada publicación: el backend limita la caché de las fuentes.
+export const podcastSearch = (query: string, language: string) =>
+  invoke<PodcastSearchResults>('podcast_search', { query, language })
+export const podcastDetail = (feedUrl: string) => invoke<PodcastDetail>('podcast_detail', { feedUrl })
+export const podcastFeedUrl = (id: number) => invoke<string>('podcast_feed_url', { id })
+
 // La música local cambia al reescanear: sin caché (además es instantánea).
 const LOCAL_BASE = 1_000_000_000_000_000
 
@@ -83,6 +93,9 @@ export const likedTracks = () => invoke<Entry[]>('liked_tracks')
 export const setAlbumSaved = (album: SavedAlbum, saved: boolean) => invoke<void>('set_album_saved', { album, saved })
 export const createPlaylist = (name: string, tracks: LibTrack[] = []) =>
   invoke<PlaylistSummary>('create_playlist', { name, tracks })
+export const readSpotifyPlaylist = (url: string) => invoke<ImportSource>('read_spotify_playlist', { url })
+export const readPlaylistCsv = (content: string, name: string) => invoke<ImportSource>('read_playlist_csv', { content, name })
+export const matchImportTrack = (track: ImportTrack) => invoke<LibTrack | null>('match_import_track', { track })
 export const renamePlaylist = (id: number, name: string) => invoke<void>('rename_playlist', { id, name })
 export const deletePlaylist = (id: number) => invoke<void>('delete_playlist', { id })
 export const playlist = (id: number) => invoke<PlaylistDetail>('playlist', { id })

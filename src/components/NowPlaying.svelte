@@ -2,7 +2,7 @@
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
   import { library } from '../lib/library.svelte'
-  import { isLocal, mediaUrl } from '../lib/media'
+  import { isLocal, isPodcast, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
@@ -11,11 +11,12 @@
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
+  const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
   const upcoming = $derived(player.upcoming.slice(0, 40))
   const queued = $derived(player.userQueue)
   // Carátula grande: la de 1000 px si es de Deezer.
-  const big = $derived(current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
+  const big = $derived(!podcast && current?.cover?.startsWith('http') ? current.cover.replace(/\/\d+x\d+-/, '/1000x1000-') : (current?.cover ?? null))
 
   /**
    * Deslizar hacia abajo para cerrar (con el dedo). No cuenta si empieza en un botón o en la barra
@@ -82,7 +83,7 @@
       </button>
       <div class="from">
         <span>Sonando desde</span>
-        <button class="link" onclick={() => go({ name: 'album', id: current.albumId })}>{current.albumTitle}</button>
+        <button class="link" onclick={() => go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
       </div>
       <span class="spacer"></span>
     </header>
@@ -95,7 +96,7 @@
         <div class="meta">
           <div class="text">
             <h1>{current.track.title}</h1>
-            <button class="link artist" onclick={() => go({ name: 'artist', id: current.track.artist.id })}
+            <button class="link artist" onclick={() => go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
               >{current.track.artist.name}</button
             >
           </div>
@@ -111,9 +112,11 @@
         <Transport big />
         <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
         <div class="extras">
-          <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
-            <Icon name="swap" size={20} /> ¿No es esta canción?
-          </button>
+          {#if !podcast}
+            <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
+              <Icon name="swap" size={20} /> ¿No es esta canción?
+            </button>
+          {/if}
           <button onclick={() => (theme.queueSheet = true)}>
             <Icon name="queue" size={20} /> Cola{#if queued.length}&nbsp;· {queued.length}{/if}
           </button>

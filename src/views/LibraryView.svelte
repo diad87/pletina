@@ -5,6 +5,7 @@
   import { newPlaylist } from '../lib/actions'
   import * as api from '../lib/api'
   import { isAndroid } from '../lib/player-android.svelte'
+  import { nav } from '../lib/nav.svelte'
   import { theme } from '../lib/theme.svelte'
   import { toast } from '../lib/toast.svelte'
   import { updates } from '../lib/updates.svelte'
@@ -18,6 +19,9 @@
     <h1 class="page-title">Tu biblioteca</h1>
     <button class="add" onclick={newPlaylist} title="Crear playlist"><Icon name="plus" size={26} /></button>
   </div>
+  <button class="import" onclick={() => nav.go({ name: 'import-playlist' })}>
+    <Icon name="download" size={20} /> Importar de Spotify
+  </button>
   <LibraryList />
 
   <!-- Lo que en el escritorio está en la barra lateral: versión y actualizaciones. -->
@@ -42,6 +46,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+  .import {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 8px 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--elevated);
+    color: var(--accent);
+    font-weight: 700;
   }
   .about {
     display: flex;

@@ -2,6 +2,7 @@ import { listen } from './events'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import { toLib } from './library.svelte'
+import { isLocal, isPodcast } from './media'
 import { isAndroid } from './player-android.svelte'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
@@ -27,7 +28,7 @@ class Downloads {
 
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */
   start(items: QueueItem[]) {
-    const todo = items.filter((i) => !this.done.has(i.track.id) && !this.active.has(i.track.id))
+    const todo = items.filter((i) => !isLocal(i.track.id) && !isPodcast(i.track.id) && !this.done.has(i.track.id) && !this.active.has(i.track.id))
     if (!todo.length) return
     for (const item of todo) {
       this.active.set(item.track.id, 0)

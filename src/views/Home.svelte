@@ -4,12 +4,13 @@
   import Cover from '../components/Cover.svelte'
   import Icon from '../components/Icon.svelte'
   import Shelf from '../components/Shelf.svelte'
-  import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { albumCardMenu, albumPlaying, playAlbum, trackMenu } from '../lib/actions'
   import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
   import { songs } from '../lib/format'
   import { fromLib, library } from '../lib/library.svelte'
   import { layout } from '../lib/layout.svelte'
+  import { isPodcast } from '../lib/media'
   import { nav, type Route } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -69,13 +70,19 @@
         key: `a${t.albumId}`,
         title: t.albumTitle,
         image: t.cover,
-        route: { name: 'album', id: t.albumId },
-        play: () => playAlbum(t.albumId),
+        route: { name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId },
+        play: () => playRecent(t),
         playing: albumPlaying(t.albumId),
       })
     }
     return list
   })
+
+  function playRecent(t: LibTrack) {
+    if (!isPodcast(t.id)) return playAlbum(t.albumId)
+    if (player.current?.albumId === t.albumId && player.status !== 'idle') return player.toggle()
+    player.playQueue([fromLib(t)], 0, t.albumTitle)
+  }
 
   async function playLiked() {
     const entries = await api.likedTracks()
@@ -134,9 +141,9 @@
           title={t.albumTitle}
           subtitle={t.artistName}
           playing={albumPlaying(t.albumId)}
-          onclick={() => nav.go({ name: 'album', id: t.albumId })}
-          onplay={() => playAlbum(t.albumId)}
-          oncontext={(e) => menu.show(e, albumCardMenu(t.albumId))}
+          onclick={() => nav.go({ name: isPodcast(t.id) ? 'podcast' : 'album', id: t.albumId })}
+          onplay={() => playRecent(t)}
+          oncontext={(e) => menu.show(e, isPodcast(t.id) ? trackMenu(fromLib(t)) : albumCardMenu(t.albumId))}
         />
       {/each}
     </Shelf>
