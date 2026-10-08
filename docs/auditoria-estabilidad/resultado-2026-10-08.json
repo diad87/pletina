@@ -60,7 +60,7 @@
     "radio de artista"
   ],
   "source": {
-    "workspace": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify",
+    "workspace": ".",
     "productModified": false,
     "changes": "Tests, harnesses and audit documentation only"
   },
@@ -164,29 +164,29 @@
       "affectedFlows": [
         {
           "flow": "Selector manual de fuente de canción, player::choose",
-          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:230",
+          "evidence": "src-tauri/src/player.rs:230",
           "impact": "Llama save_source y devuelvePlayable sin comprobar persistencia; elección puede funcionar temporalmente y desaparecer tras reinicio.",
           "validation": "Helper ejecutado; integración/UI inferida del flujo real, no pulsada bajo fallo."
         },
         {
           "flow": "Ajustes: elegir carpeta de descargas",
-          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:334",
+          "evidence": "src-tauri/src/downloads.rs:334",
           "impact": "choose_download_dir retorna Some(path) tras set_setting sin confirmación; UI puede mostrar carpeta que no quedóguardada.",
           "validation": "Helper ejecutado; diálogoUI no ejecutado."
         },
         {
           "flow": "Quitar descargas",
-          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:307",
+          "evidence": "src-tauri/src/downloads.rs:307",
           "impact": "forget_download puede no borrar referenciaSQLite mientras comando retornaOk; si fichero ya se eliminó, referencia queda obsoleta.",
           "validation": "DELETE fallido ejecutado en helper; secuencia completa remove_downloads no ejecutada."
         }
       ],
       "priorityReason": "P1 por falso éxito observable en decisiones persistentes y referencias de descargas; no P0 porque no se demostró corrupción ni pérdida de datos previamente confirmados.",
       "source": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:218",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:232",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:248",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:266"
+        "src-tauri/src/db.rs:218",
+        "src-tauri/src/db.rs:232",
+        "src-tauri/src/db.rs:248",
+        "src-tauri/src/db.rs:266"
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
@@ -217,8 +217,8 @@
       "observed": "Pide sólo16-63, conserva total64 yrenombra archivo64bytes como final aunque fuenteactual declare96.",
       "cause": "total=size(fresh.url) sólo se recalcula dentro de if fresh.itag != direct.itag.",
       "source": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:59",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:63"
+        "src-tauri/src/direct.rs:59",
+        "src-tauri/src/direct.rs:63"
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
@@ -249,8 +249,8 @@
       "observed": "Concatena48bytes deloffsetincorrecto; longitudfinal64 coincidecon total yretornaOk aunquecontenido esdistinto.",
       "cause": "Se comprueba status206, pero no se validaContent-Range antes deabrirarchivo enappend.",
       "source": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:83",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:90"
+        "src-tauri/src/direct.rs:83",
+        "src-tauri/src/direct.rs:90"
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
@@ -283,8 +283,8 @@
       "observed": "No retorna antes del timeout2500ms; fuente recorre metadata→remove_file ignorado→continue sin await. Resolvedor yarespondió y nunca alcanzaHTTP.",
       "cause": "La rama done>total ignora elerror deborrar ycontinúa sin límite sobreelmismoarchivo.",
       "source": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:37",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:39"
+        "src-tauri/src/direct.rs:37",
+        "src-tauri/src/direct.rs:39"
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
@@ -1344,8 +1344,8 @@
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:218",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:266"
+        "src-tauri/src/db.rs:218",
+        "src-tauri/src/db.rs:266"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Db real + SQLite real con fault injection",
@@ -1413,7 +1413,7 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs",
+        "scripts/tests/audit-frontend.test.mjs",
         "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
@@ -1441,7 +1441,7 @@
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/undeletable.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:37"
+        "src-tauri/src/direct.rs:37"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "direct.rs móvil real compilado en host Windows, filesystem real",
@@ -1469,8 +1469,8 @@
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:59",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:83"
+        "src-tauri/src/direct.rs:59",
+        "src-tauri/src/direct.rs:83"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "direct.rs y reqwest0.12 reales, HTTP loopback, resolvedor controlado",
@@ -1497,8 +1497,8 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:284"
+        "scripts/tests/audit-frontend.test.mjs",
+        "src-tauri/src/downloads.rs:284"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Store downloads real compilado Svelte; IPC/eventos controlados"
@@ -1521,7 +1521,7 @@
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
         "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+        "scripts/tests/audit-frontend.test.mjs"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Parser Rust real con fixtures + guardia frontend real"
@@ -1544,7 +1544,7 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+        "scripts/tests/audit-frontend.test.mjs"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Script original de ImportPlaylist compilado con runas Svelte; promesas/lifecycle controlados"
@@ -1567,7 +1567,7 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+        "scripts/tests/audit-frontend.test.mjs"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Script original ImportPlaylist compilado Svelte con IPC controlado"
@@ -1655,7 +1655,7 @@
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
         "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:230"
+        "src-tauri/src/player.rs:230"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Tests de identidad/resolvedor Rust + source helper Db bajo fallo",
@@ -1700,7 +1700,7 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/forum-playback.test.mjs:186"
+        "scripts/tests/forum-playback.test.mjs:186"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Player Svelte real con Audio/eventos/reloj simulado"
@@ -1722,7 +1722,7 @@
       ],
       "evidence": [
         "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/forum-playback.test.mjs:201"
+        "scripts/tests/forum-playback.test.mjs:201"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Player Svelte real con play() controlado"
@@ -1787,7 +1787,7 @@
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
         "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/README-audit.md"
+        "scripts/tests/README-audit.md"
       ],
       "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
       "layer": "Artefactos, manifests y logs de ejecución aislada"

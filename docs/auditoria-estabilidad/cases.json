@@ -28,8 +28,8 @@
       ],
       "evidence": [
         "artifact-metadata.json, apksigner.txt, aapt.txt, install-results.json, logcat por dispositivo.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/build.gradle.kts: minSdk24, targetSdk37.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/AndroidManifest.xml"
+        "src-tauri/gen/android/app/build.gradle.kts: minSdk24, targetSdk37.",
+        "src-tauri/gen/android/app/src/main/AndroidManifest.xml"
       ],
       "automation": "Preparar script PowerShell/adb de inventario e instalación; validación UI con UIAutomator; prueba del instalador del sistema en ARM64 físico.",
       "currentStatus": "APK publicado 0.10.0 instalado y abierto en emulador API 35 mediante traducción ARM, según prueba coordinada; el resto de la matriz y el teléfono ARM64 físico siguen pendientes. Esta preparación no instala ni ejecuta.",
@@ -62,8 +62,8 @@
       ],
       "evidence": [
         "before-after-library.json, db-integrity.txt, migration-backup-list.txt, APK certificates y resultados install-r.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:178,294,355",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:752"
+        "src-tauri/src/db.rs:178,294,355",
+        "src-tauri/src/podcasts.rs:752"
       ],
       "automation": "Instrumentación de fixtures SQLite en paquete aislado y harness de migración Rust; actualización real de APK firmado en perfil de prueba.",
       "currentStatus": "Planificado; existen tests Rust de migración 6→7, no equivalen a actualización completa Android.",
@@ -96,9 +96,9 @@
       ],
       "evidence": [
         "stream-matrix.json con network/source/videoId/latencias; logcat, musify.log, instantáneas MediaController.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:43",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/native.rs:114"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313",
+        "src-tauri/src/player.rs:43",
+        "src-tauri/src/native.rs:114"
       ],
       "automation": "Instrumentación MediaController+JNI y captura de estados; selección/controles UIAutomator. Usar fuentes autorizadas y fijadas en manifiesto.",
       "currentStatus": "Planificado; no extrapolar pruebas Linux/Windows a Android ni éxito de catálogo a enlace directo.",
@@ -131,8 +131,8 @@
       ],
       "evidence": [
         "rss-fixture-manifest.json, trace HTTP Range/status, reproducción position-samples.csv, musify.log.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:63",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:370,498"
+        "src-tauri/src/player.rs:63",
+        "src-tauri/src/podcasts.rs:370,498"
       ],
       "automation": "Servidor HTTPS de fixtures en entorno de pruebas y test instrumentado de MediaController; complementarlo con episodio público fijado.",
       "currentStatus": "Planificado; no inferir RSS por el nombre del programa.",
@@ -162,8 +162,8 @@
       ],
       "evidence": [
         "source-provenance.json, paired-runs.csv, logs por versión y fuente.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/youtube_podcasts.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:63"
+        "src-tauri/src/youtube_podcasts.rs",
+        "src-tauri/src/player.rs:63"
       ],
       "automation": "Parte automatizable con fixtures y MediaController; comparación de fuentes y versiones en el mismo dispositivo.",
       "currentStatus": "Planificado; comparativa controlada pendiente.",
@@ -196,8 +196,8 @@
       ],
       "evidence": [
         "lifecycle-timeline.json, logcat, dumpsys media_session/activity services, musify.log y vídeo UI.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:122,445",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player-android.svelte.ts:constructor,#sync"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:122,445",
+        "src/lib/player-android.svelte.ts:constructor,#sync"
       ],
       "automation": "adb input keyevent/home más UIAutomator e instrumentación de estados; confirmación física con pantalla apagada.",
       "currentStatus": "Planificado; no ejecutar soak largo durante preparación.",
@@ -230,7 +230,7 @@
       ],
       "evidence": [
         "power-before-after.txt, deviceidle-events.txt, posición/servicio cada30s, logs Android y app.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:103,116,514"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:103,116,514"
       ],
       "automation": "Script adb reversible para dispositivo dedicado; idle natural requiere ejecución real y observación.",
       "currentStatus": "Planificado; no forzar idle ni cambiar ajustes ahora.",
@@ -263,7 +263,7 @@
       ],
       "evidence": [
         "audio-focus-events.json, logcat AudioManager/Media3 y musify.log, capturas estado.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:97,349,363,400,423"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:97,349,363,400,423"
       ],
       "automation": "App de pruebas AudioFocusRequest + MediaController; llamadas/routing real en dispositivo para confirmar.",
       "currentStatus": "Planificado; carrera retry→play tras pausa demostrada previamente sólo en harness Kotlin.",
@@ -296,8 +296,8 @@
       ],
       "evidence": [
         "routing-avrcp-log.json, dumpsys audio/media_session, vídeo receptor/telefono, musify.log.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:102,349",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:181"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:102,349",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:181"
       ],
       "automation": "Parcial con instrumentación/eventos; validación A 2DP/AVRCP requiere hardware, no sólo inyección de broadcasts.",
       "currentStatus": "Planificado; no cubierto por pruebas de MediaBrowser.",
@@ -330,9 +330,9 @@
       ],
       "evidence": [
         "JUnit XML, DHU trace/screenshots, car-session-matrix.json, musify.log.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/docs/android-auto.md",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:144",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/androidTest/java/dev/musify/desktop/CarPlaybackTest.kt"
+        "docs/android-auto.md",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:144",
+        "src-tauri/gen/android/app/src/androidTest/java/dev/musify/desktop/CarPlaybackTest.kt"
       ],
       "automation": "Tests instrumentados existentes + guion DHU; verificación manual de hardware al final.",
       "currentStatus": "Base documental registra 4 pruebas instrumentadas API 35 previas; DHU/coche/ARM64 siguen por verificar para candidato.",
@@ -366,7 +366,7 @@
       "evidence": [
         "D:/tmp/pletina-forum-bugs-20261008/android/policy-repro.log (baseline demostrado).",
         "D:/tmp/pletina-forum-bugs-20261008/android/run-harness.ps1 (adaptar fuente al SHA candidato).",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:333,375,398",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:333,375,398",
         "fault-server-log.json y Media3 error/position timeline."
       ],
       "automation": "Harness Kotlin existente y futuro test instrumentado con inyección de fallos HTTP; confirmar física posterior.",
@@ -400,7 +400,7 @@
       ],
       "evidence": [
         "capabilities-timeline.json, ConnectivityManager/logcat, reproducción y cola antes/después.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:554,564",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:554,564",
         "https://developer.android.com/develop/connectivity/network-ops/reading-network-state"
       ],
       "automation": "Harness para clasificación y test instrumentado con red/proxy controlado; portal/celda en laboratorio.",
@@ -434,7 +434,7 @@
       ],
       "evidence": [
         "race-events.json con monotonic timestamps, assertions JUnit/harness, logcat.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:128,400,423,570",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:128,400,423,570",
         "D:/tmp/pletina-forum-bugs-20261008/android/policy-repro.log"
       ],
       "automation": "Reutilizar harness original para baseline y añadir test de servicio con controlador real; tiempo virtual para permutations.",
@@ -468,8 +468,8 @@
       ],
       "evidence": [
         "handoff-source-events.json, HTTP status/refresh counters, position-samples.csv.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313,380,564",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/native.rs:114"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313,380,564",
+        "src-tauri/src/native.rs:114"
       ],
       "automation": "Fixture con URLs expirable/renovable + prueba instrumentada; handoff físico con Wi-Fi y SIM.",
       "currentStatus": "Riesgo identificado estáticamente; renovación tras cambio de red no reproducida aún en dispositivo.",
@@ -502,8 +502,8 @@
       ],
       "evidence": [
         "offline-queue-matrix.json, downloaded-path checks, timeline e historial.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:383,408",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:91"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:383,408",
+        "src-tauri/src/player.rs:91"
       ],
       "automation": "Ampliar fixture CarPlaybackTest con descargas/colas y conectividad inyectada; confirmación modo avión en teléfono.",
       "currentStatus": "Salto A→C offline demostrado en harness como comportamiento deliberado; matriz integrada pendiente.",
@@ -536,8 +536,8 @@
       ],
       "evidence": [
         "queue-operation-seed.json, UI/native-snapshots.json, JUnit/UI vídeo.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player-android.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:109,121,158,300"
+        "src/lib/player-android.svelte.ts",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:109,121,158,300"
       ],
       "automation": "Prueba property/model para colas más secuencias UIAutomator contra servicio real; semilla reproducible.",
       "currentStatus": "Planificado; pruebas desktop de player no cubren AndroidPlayer/MediaController.",
@@ -570,8 +570,8 @@
       ],
       "evidence": [
         "process-lifecycle.json, cola snapshots, service PID/timeline, logcat crash/ANR.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:471,488,498",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:59"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:471,488,498",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:59"
       ],
       "automation": "Instrumentation helper de proceso y scripts adb en paquete aislado; no matar instalación personal.",
       "currentStatus": "Planificado; guardar/reabrir DB no sustituye prueba de muerte de proceso Android.",
@@ -604,9 +604,9 @@
       ],
       "evidence": [
         "download-events.json, DB/files inventory, logcat FGS, validación offline.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:34,51,92",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/downloads.svelte.ts:50",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:34,51,92",
+        "src/lib/downloads.svelte.ts:50",
+        "src-tauri/src/downloads.rs"
       ],
       "automation": "Instrumentación y fixture remota con tamaño controlado; UIAutomator permisos; comprobación audio real tras descarga.",
       "currentStatus": "Planificado; no asumir que descarga RSS está soportada por el mismo flujo que música/YouTube.",
@@ -639,8 +639,8 @@
       ],
       "evidence": [
         "fault-download-events.json, byte counts/partials, SQLITE integrity_check, HTTP transfer log.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:101"
+        "src-tauri/src/downloads.rs",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:101"
       ],
       "automation": "Filesystem/HTTP fixture fault injection e instrumentación; pruebas de espacio sólo volumen desechable.",
       "currentStatus": "Planificado; no alterar almacenamiento ni descargas personales.",
@@ -673,9 +673,9 @@
       ],
       "evidence": [
         "library-before-after.json, DB fixture checks, JUnit Rust e instrumentación Android.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:516,525,543",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/youtube_tracks.rs:295",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:445"
+        "src-tauri/src/podcasts.rs:516,525,543",
+        "src-tauri/src/youtube_tracks.rs:295",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:445"
       ],
       "automation": "Reutilizar tests Rust de persistencia más prueba UI/JNI de integración Android.",
       "currentStatus": "Tests Rust previos cubren invariantes importantes; recorrido Android candidato pendiente.",
@@ -708,9 +708,9 @@
       ],
       "evidence": [
         "diagnostic-coverage.json, exported-musify.log, logcat completo filtrado y sin filtrar, meminfo samples.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/MusifyLog.kt",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:274",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/views/LibraryView.svelte:37"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/MusifyLog.kt",
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:274",
+        "src/views/LibraryView.svelte:37"
       ],
       "automation": "Instrumentación de fallos y chooser capturado por app de test; contador de recursos y meminfo de laboratorio.",
       "currentStatus": "Planificado; existe exportación de registro, no se ha validado cobertura diagnóstica total.",
@@ -743,7 +743,7 @@
       ],
       "evidence": [
         "soak-manifest.json, samples-30s.csv, battery/thermal stats, full musify.log, timeline de transiciones.",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:514"
+        "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:514"
       ],
       "automation": "Scheduler de MediaController/adb + registro pasivo; hardware y redes reales obligatorios.",
       "currentStatus": "Planificado, no ejecutado.",
@@ -773,8 +773,8 @@
         "Datos y accesos directos pertenecen al usuario correcto."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "src-tauri/tauri.conf.json",
+        ".github/workflows/build.yml",
         "Por generar: versión WebView2, log NSIS y captura."
       ],
       "automation": "Semiautomática en VM limpia, con comprobación de audio real.",
@@ -805,9 +805,9 @@
         "Segundo usuario mantiene biblioteca independiente."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/ytdlp.rs",
+        "src-tauri/installer-hooks.nsh",
         "Por generar: inventario ACL/rutas y resultado audio."
       ],
       "automation": "Semiautomática PowerShell/UI en cuentas aisladas.",
@@ -838,9 +838,9 @@
         "Migración de nombre solo limpia rutas propias; ausencia de artefacto legado se marca SKIP."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "src-tauri/src/updater.rs",
+        "src-tauri/installer-hooks.nsh",
+        "scripts/release.mjs",
         "Por generar: SQLite antes/después, hashes y logs."
       ],
       "automation": "Semiautomática; requiere fixture firmado y endpoint aislado o release anterior controlada.",
@@ -873,10 +873,10 @@
         "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/extractor.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/extractor.rs",
+        "src-tauri/src/capture.rs",
+        "src-tauri/src/ytdlp.rs",
         "Por generar: matriz motor/codec y trazas de audio."
       ],
       "automation": "Tests JS existentes más E2E WebView2 real por preparar.",
@@ -907,9 +907,9 @@
         "Nueva apertura funciona; descarga parcial no se anuncia completa."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/capture.rs",
+        "src-tauri/src/downloads.rs",
         "Por generar: procesos/puertos antes y después."
       ],
       "automation": "Automatizable con supervisor de UI/procesos aislado.",
@@ -940,8 +940,8 @@
         "No bucle, doble salida ni procesos retenidos."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/ytdlp.rs",
         "Por generar: cronología energía/audio y estados."
       ],
       "automation": "Manual en hardware real; VM solo complementa.",
@@ -972,8 +972,8 @@
         "Si se conservan datos, reinstalación los reconoce; registrar contrato real del instalador."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "src-tauri/installer-hooks.nsh",
+        "src-tauri/tauri.conf.json",
         "Por generar: logs NSIS y diff de archivos/registro."
       ],
       "automation": "Semiautomática solo en perfil/VM desechable.",
@@ -1004,9 +1004,9 @@
         "Build universal CI es evidencia estructural, no ejecución física."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        ".github/workflows/build.yml",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/ytdlp.rs",
         "Por generar: lipo, arquitectura efectiva, logs y captura en dos Macs."
       ],
       "automation": "Estructura automatizable; arranque requiere dos tipos de Mac.",
@@ -1037,8 +1037,8 @@
         "No eliminar cuarentena ni modificar seguridad global para aparentar PASS."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/README.md",
+        "src-tauri/tauri.conf.json",
+        "README.md",
         "Por generar: codesign/spctl y capturas de avisos."
       ],
       "automation": "Semiautomática; interacción de SO en cuenta de prueba.",
@@ -1071,10 +1071,10 @@
         "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/extractor.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "src-tauri/src/ytdlp.rs",
+        "src-tauri/src/extractor.rs",
+        "src-tauri/src/capture.rs",
+        "src/lib/player.svelte.ts",
         "Por generar: matriz codec/motor y audio real."
       ],
       "automation": "Semiautomática WebKit real; tests JS no verifican codecs.",
@@ -1105,9 +1105,9 @@
         "Error de escritura no destruye instalación previa; minisign no equivale a notarización."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "src-tauri/src/updater.rs",
+        "scripts/release.mjs",
+        "src-tauri/tauri.conf.json",
         "Por generar: logs, hashes y SQLite antes/después."
       ],
       "automation": "Semiautomática con dos Macs y pares de paquetes firmados.",
@@ -1138,9 +1138,9 @@
         "Reapertura tiene una instancia y estado persistido correcto."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "src-tauri/src/lib.rs",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/capture.rs",
         "Por generar: timeline energía y procesos."
       ],
       "automation": "Manual en hardware; CI macos-latest no sustituye prueba.",
@@ -1171,8 +1171,8 @@
         "No ampliar permisos globales fuera de la prueba."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs",
+        "src-tauri/src/local.rs",
+        "src-tauri/src/player.rs",
         "Por generar: errores, resultados de escaneo y diff SQLite."
       ],
       "automation": "Semiautomática con Mac y volumen de prueba.",
@@ -1203,9 +1203,9 @@
         "WSL/extracción no valida FUSE ni integración de escritorio físico."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/README.md",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "src-tauri/tauri.linux.conf.json",
+        "README.md",
+        ".github/workflows/build.yml",
         "Por generar: ldd, versiones distro/runtime y logs."
       ],
       "automation": "Automatizable en VM; WSL disponible cubre solo extracción/virtual.",
@@ -1236,9 +1236,9 @@
         "No reemplaza DEB por AppImage silenciosamente; documentar conducta/error updater en DEB."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "src-tauri/tauri.linux.conf.json",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/updater.rs",
         "Por generar: dpkg-deb, logs apt/dpkg y E2E."
       ],
       "automation": "Automatizable solo en VM desechable, no instalar app en host compartido.",
@@ -1269,9 +1269,9 @@
         "Reproducción con gst del host no cuenta como prueba del paquete."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/test-linux-appimage.sh",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/prepare-linux-runtime.mjs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
+        "scripts/test-linux-appimage.sh",
+        "scripts/prepare-linux-runtime.mjs",
+        "src-tauri/tauri.linux.conf.json",
         "Antecedente: smoke Linux previo no acredita SHA candidato; regenerar logs."
       ],
       "automation": "Smoke ya existente y CI Ubuntu22; no ejecutado en esta preparación.",
@@ -1304,9 +1304,9 @@
         "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/linux-playback.py",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "scripts/tests/linux-playback.py",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/local_media.rs",
         "Antecedente: WSL24 y CI22 anteriores; repetir contra candidato antes de PASS."
       ],
       "automation": "E2E tauri-driver/WebKitWebDriver existente para smoke; ampliar harness externo para 30 muestras/celda y latencias. Audio virtual no demuestra sonido físico.",
@@ -1337,8 +1337,8 @@
         "Solo rutas autorizadas accesibles; errores no revelan rutas y listener se cierra."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs",
+        "src-tauri/src/local_media.rs",
+        "src-tauri/src/player.rs",
         "Por generar: cargo results, respuestas HTTP y E2E con rotación."
       ],
       "automation": "Tests Rust existentes más harness externo de integración; sin editar producto.",
@@ -1371,9 +1371,9 @@
         "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "src-tauri/src/ytdlp.rs",
+        "src-tauri/src/updater.rs",
+        "scripts/release.mjs",
         "Por generar: rutas efectivas runtime, hashes y logs."
       ],
       "automation": "Semiautomática con red y fixtures firmados; sin CI/publish.",
@@ -1404,9 +1404,9 @@
         "Registrar compositor/audio; WSL y Xvfb no son validación física."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "src-tauri/src/lib.rs",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/local_media.rs",
         "Por generar: journal, versiones y timeline físico."
       ],
       "automation": "Manual en escritorio físico pendiente.",
@@ -1438,9 +1438,9 @@
         "Treinta muestras por celda en red controlada: p95 inicio remoto <10 segundos y local <1 segundo."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "src/lib/player.svelte.ts",
+        "src-tauri/src/capture.rs",
+        "src-tauri/src/local_media.rs",
         "Por generar: CSV telemetría, timeline y crash reports por plataforma."
       ],
       "automation": "Supervisor automatizable más audio/revisión física; duración indicada por plataforma.",
@@ -1471,9 +1471,9 @@
         "Cola/posición actual no se persisten en escritorio: no inventar ese requisito ni confundirlo con pérdida de biblioteca."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "src-tauri/src/db.rs",
+        "src-tauri/src/lib.rs",
+        "src/lib/player.svelte.ts",
         "Por generar: integridad SQLite, preferencias y latencias de cien aperturas."
       ],
       "automation": "Automatizable con supervisor UI y perfiles aislados; duración por plataforma.",
@@ -1504,9 +1504,9 @@
         "DB inválida tiene diagnóstico visible; no borra datos ni afecta otro perfil."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "src-tauri/src/db.rs",
+        "src-tauri/src/downloads.rs",
+        "src-tauri/src/lib.rs",
         "Por generar: DB/WAL, integrity_check, errores y logs de reinicio."
       ],
       "automation": "Automatizable solo en VM/volumen aislado; duración por plataforma.",
@@ -1537,10 +1537,10 @@
         "Distinguir minisign, firma SO y attestation; ninguna sustituye prueba física."
       ],
       "evidence": [
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
-        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "src-tauri/src/updater.rs",
+        "src-tauri/tauri.conf.json",
+        "scripts/release.mjs",
+        ".github/workflows/build.yml",
         "Por generar: verificador, eventos updater y hash de instalación intacta."
       ],
       "automation": "Análisis automatizable; integración necesita fixture firmado, sin alterar endpoint público.",

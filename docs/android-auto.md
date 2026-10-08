@@ -25,7 +25,7 @@ La prueba de reproducción abre SQLite en WAL, igual que Rust, para que ambos mo
 Requisitos definidos por el proyecto: Java 21, NDK `27.3.13750724`, SDK compatible con `compileSdk = 37`, Node/npm y los targets Rust de Android. Gradle usa el wrapper del repositorio. Configurar las rutas para la sesión de PowerShell; este ejemplo coincide con el equipo de desarrollo revisado:
 
 ```powershell
-$env:ANDROID_HOME = 'C:\Users\iunan\Android\Sdk'
+$env:ANDROID_HOME = "$env:USERPROFILE\Android\Sdk"
 $env:NDK_HOME = Join-Path $env:ANDROID_HOME 'ndk\27.3.13750724'
 $env:JAVA_HOME = 'C:\Program Files\Microsoft\jdk-21.0.12.8-hotspot'
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
@@ -95,7 +95,7 @@ Validar en DHU y, después, en un coche detenido: descubrimiento de Pletina, nav
 
 | Elemento | Resultado de inspección |
 |---|---|
-| SDK | `C:\Users\iunan\Android\Sdk` |
+| SDK | `%USERPROFILE%\Android\Sdk` |
 | NDK | `27.3.13750724` |
 | SDK instalados | `android-36`, `android-37.0` |
 | Build Tools / ADB | `36.0.0` / `37.0.1` |
