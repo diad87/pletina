@@ -4,6 +4,7 @@ import * as api from './api'
 import { toLib } from './library.svelte'
 import { isLocal, isPodcast } from './media'
 import { isAndroid } from './player-android.svelte'
+import { youtubeEpisodes } from './podcasts'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
 import type { DownloadProgress } from './types'
@@ -28,7 +29,14 @@ class Downloads {
 
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */
   start(items: QueueItem[]) {
-    const todo = items.filter((i) => !isLocal(i.track.id) && !isPodcast(i.track.id) && !this.done.has(i.track.id) && !this.active.has(i.track.id))
+    // Los episodios, solo los de YouTube (son vídeos); la música local ya está en el equipo.
+    const todo = items.filter(
+      (i) =>
+        !isLocal(i.track.id) &&
+        (!isPodcast(i.track.id) || youtubeEpisodes.has(i.track.id)) &&
+        !this.done.has(i.track.id) &&
+        !this.active.has(i.track.id),
+    )
     if (!todo.length) return
     for (const item of todo) {
       this.active.set(item.track.id, 0)

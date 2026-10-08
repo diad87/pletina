@@ -21,6 +21,7 @@ mod podcasts;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
+mod youtube_podcasts;
 mod ytdlp;
 
 use db::Db;

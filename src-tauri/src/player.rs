@@ -49,13 +49,22 @@ pub async fn resolve(
 ) -> Result<Playable, String> {
     // Episodios: el audio publicado en el RSS, también desde el servicio nativo de Android.
     if crate::podcasts::is_podcast(q.id) {
-        return Ok(Playable {
-            video_id: String::new(),
-            url: crate::podcasts::audio(db, q.id)?,
-            title: q.title.clone(),
-            channel: q.artist.clone(),
-            local: false,
-        });
+        let audio = crate::podcasts::audio(db, q.id)?;
+        // Episodio de YouTube Music: es un vídeo, suena con el motor de siempre (o descargado).
+        if let Some(video_id) = audio.strip_prefix(crate::youtube_podcasts::PREFIX) {
+            if let Some(path) = db.download_path(q.id).filter(|p| std::path::Path::new(p).exists()) {
+                return Ok(Playable { video_id: video_id.to_string(), url: path, title: q.title.clone(), channel: q.artist.clone(), local: true });
+            }
+            let info = extractor::stream(ytdlp, video_id, refresh).await?;
+            return Ok(Playable {
+                video_id: video_id.to_string(),
+                url: info.url,
+                title: q.title.clone(),
+                channel: q.artist.clone(),
+                local: false,
+            });
+        }
+        return Ok(Playable { video_id: String::new(), url: audio, title: q.title.clone(), channel: q.artist.clone(), local: false });
     }
     // Música local: el propio archivo, sin YouTube.
     if crate::local::is_local(q.id) {
@@ -175,7 +184,7 @@ pub async fn alternatives(
 /// el guardado o la mejor coincidencia, que queda guardada.
 pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtDlp) -> Result<String, String> {
     if crate::podcasts::is_podcast(q.id) {
-        return Err("La descarga de episodios todavía no está disponible".into());
+        return crate::podcasts::youtube_video(db, q.id).ok_or_else(|| "La descarga de episodios todavía no está disponible".into());
     }
     if let Some(src) = db.source(q.id) {
         return Ok(src.video_id);

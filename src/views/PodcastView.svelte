@@ -1,5 +1,6 @@
 <script lang="ts">
   import Cover from '../components/Cover.svelte'
+  import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
@@ -9,7 +10,7 @@
   import { longDuration } from '../lib/format'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
-  import { episodeQueue, podcastLanguage } from '../lib/podcasts'
+  import { episodeQueue, noteYoutubeEpisodes, podcastLanguage } from '../lib/podcasts'
   import { theme } from '../lib/theme.svelte'
   import type { PodcastDetail } from '../lib/types'
 
@@ -35,6 +36,7 @@
         if (!alive) return
         const response = await api.podcastDetail(feed)
         if (!alive) return
+        noteYoutubeEpisodes(response)
         data = response
         theme.set(response.podcast.image, response.podcast.title)
         nav.ready()
@@ -85,7 +87,7 @@
       <h1>{data.podcast.title}</h1>
       <div class="meta">
         {#if data.podcast.author}<span class="strong">{data.podcast.author}</span>{/if}
-        <span class:dot={!!data.podcast.author}>{podcastLanguage(data.podcast.language)}</span>
+        <span class:dot={!!data.podcast.author}>{data.podcast.feedUrl.startsWith('youtube:') ? 'YouTube' : podcastLanguage(data.podcast.language)}</span>
         <span class="dot">{data.episodes.length} {data.episodes.length === 1 ? 'episodio' : 'episodios'}</span>
       </div>
     </div>
@@ -97,6 +99,8 @@
         <button class="big-play" onclick={playPodcast} title={playing ? 'Pausar pódcast' : 'Reproducir pódcast'} aria-label={playing ? 'Pausar pódcast' : 'Reproducir pódcast'}>
           <Icon name={playing ? 'pause' : 'play'} size={26} />
         </button>
+        <!-- Solo aparece en los de YouTube: los del RSS no se descargan. -->
+        <DownloadButton items={queue} />
         <span class="play-hint">{isThisPodcast ? 'Continúa escuchando' : 'Reproducir episodios'}</span>
       </div>
     {/if}

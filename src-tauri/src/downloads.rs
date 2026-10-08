@@ -254,8 +254,9 @@ fn download_dir(app: &AppHandle, db: &Db) -> PathBuf {
 
 #[tauri::command]
 pub fn download(tracks: Vec<LibTrack>, app: AppHandle, db: State<'_, Db>, downloads: State<'_, Downloads>) -> Res<()> {
-    if tracks.iter().any(|t| crate::podcasts::is_podcast(t.id)) {
-        return Err("La descarga de episodios todavía no está disponible".into());
+    // Los episodios de YouTube Music son vídeos y se descargan como las canciones; los del RSS, no.
+    if tracks.iter().any(|t| crate::podcasts::is_podcast(t.id) && crate::podcasts::youtube_video(&db, t.id).is_none()) {
+        return Err("Solo se pueden descargar los episodios de los pódcasts de YouTube".into());
     }
     let generation = downloads.generation.load(Ordering::SeqCst);
     // La música local ya está en el equipo: no se descarga.

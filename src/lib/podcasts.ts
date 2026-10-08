@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity'
 import type { QueueItem } from './queue'
 import type { PodcastDetail } from './types'
 
@@ -20,6 +21,16 @@ export function podcastLanguage(code: string | null): string {
   if (!code) return 'Idioma sin indicar'
   const primary = code.trim().toLowerCase().split(/[-_]/)[0]
   return PODCAST_LANGUAGES.find((language) => language.code === primary)?.label ?? code
+}
+
+/**
+ * Episodios de YouTube Music (son vídeos): se pueden descargar como las canciones. Se apuntan al
+ * abrir su programa (ver PodcastView); los del RSS no se descargan.
+ */
+export const youtubeEpisodes = new SvelteSet<number>()
+
+export function noteYoutubeEpisodes({ episodes }: PodcastDetail) {
+  for (const episode of episodes) if (episode.audioUrl.startsWith('youtube:')) youtubeEpisodes.add(episode.id)
 }
 
 /** Los episodios comparten cola, favoritos e historial con la música. */

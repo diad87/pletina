@@ -57,7 +57,7 @@
 
   const resultStatus = $derived(
     loading ? 'Buscando pódcasts…' : error ? error : results
-      ? `${results.podcasts.length} ${results.podcasts.length === 1 ? 'pódcast encontrado' : 'pódcasts encontrados'}`
+      ? `${results.podcasts.length + results.youtube.length} ${results.podcasts.length + results.youtube.length === 1 ? 'pódcast encontrado' : 'pódcasts encontrados'}`
       : '',
   )
 </script>
@@ -99,7 +99,22 @@
           />
         {/each}
       </div>
-    {:else}
+    {/if}
+    {#if results.youtube.length}
+      <!-- YouTube Music no dice el idioma: van aparte y sin filtrar. Cada temporada suele ser un programa. -->
+      <h2 class="section-title youtube">En YouTube</h2>
+      <div class="grid" aria-label="Pódcasts de YouTube">
+        {#each results.youtube as podcast (podcast.id)}
+          <Card
+            image={podcast.image}
+            title={podcast.title}
+            subtitle={podcast.author}
+            onclick={() => nav.go({ name: 'podcast', id: podcast.id, feedUrl: podcast.feedUrl })}
+          />
+        {/each}
+      </div>
+    {/if}
+    {#if !results.podcasts.length && !results.youtube.length}
       <div class="empty-state">
         <Icon name="search" size={40} />
         <strong>{query.trim() ? `No hay resultados para «${query.trim()}»` : 'No hay coincidencias en este idioma'}</strong>
@@ -169,5 +184,9 @@
   @media (max-width: 720px) {
     .heading { gap: 18px; }
     .hint, .language-filter, .result-status, .partial { margin-left: 4px; margin-right: 4px; }
+  }
+
+  .section-title.youtube {
+    margin-top: 32px;
   }
 </style>

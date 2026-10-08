@@ -102,6 +102,8 @@ export interface PodcastEpisode {
 
 export interface PodcastSearchResults {
   podcasts: Podcast[]
+  /** Los de YouTube Music: sin idioma declarado, se enseñan aparte (ver src-tauri/src/youtube_podcasts.rs). */
+  youtube: Podcast[]
   failedFeeds: number
 }
 

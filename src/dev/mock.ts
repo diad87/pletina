@@ -147,6 +147,7 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
           podcasts: podcastFixtures.filter((p) =>
             (!query || `${p.title} ${p.author}`.toLocaleLowerCase('es').includes(query)) &&
             (args.language === 'all' || p.language?.split(/[-_]/)[0] === args.language)),
+          youtube: [],
           failedFeeds: 0,
         }
       }

@@ -7,6 +7,7 @@ import type { AlbumDetail } from './types'
 import { layout } from './layout.svelte'
 import { library } from './library.svelte'
 import { isLocal, isPodcast } from './media'
+import { youtubeEpisodes } from './podcasts'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
@@ -75,7 +76,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
     items.push({ label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) })
     // En el móvil las descargas están dentro de la app: no hay carpeta que enseñar.
     if (!layout.mobile) items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) })
-  } else if (!podcast && !downloads.active.has(id) && layout.canDownload) {
+  } else if ((!podcast || youtubeEpisodes.has(id)) && !downloads.active.has(id) && layout.canDownload) {
     items.push({ label: 'Descargar', icon: 'download', action: () => downloads.start([item]) })
   }
   if (playlist) {

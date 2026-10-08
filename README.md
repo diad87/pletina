@@ -16,7 +16,9 @@ No hace falta iniciar sesión en Spotify. La importación copia las canciones en
 
 La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
 
-Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. Por ahora necesitan conexión y no se descargan. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa.
+Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
+
+Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
 
 ![Inicio](docs/screenshots/inicio.png)
 
@@ -100,7 +102,7 @@ Pletina no tiene cuentas, ni analíticas, ni servidores propios. Tu biblioteca, 
 - **Deezer**, para buscar artistas y discos y bajar las carátulas ([privacidad de Deezer](https://www.deezer.com/legal/personal-datas)).
 - **Spotify**, solo al importar una playlist mediante su enlace público, para leer los títulos y artistas. Al importar por enlace o CSV, se consultan esos títulos, artistas y, si existe, el ISRC en **Deezer** para encontrar las canciones equivalentes. No se envía el archivo CSV a Spotify ni se solicitan credenciales de su cuenta.
 - **Apple Podcasts**, para buscar podcasts, y **los servidores de sus autores y proveedores de alojamiento**, para consultar el idioma y los episodios del RSS, cargar las portadas y reproducir el audio. Estas conexiones se realizan al usar la sección de podcasts.
-- **YouTube y YouTube Music**, para encontrar cada canción y reproducir su audio ([privacidad de Google](https://policies.google.com/privacy)).
+- **YouTube y YouTube Music**, para encontrar cada canción, buscar sus podcasts y reproducir el audio ([privacidad de Google](https://policies.google.com/privacy)).
 - **GitHub**, para buscar y bajar actualizaciones de la app y de los extractores de audio, y yt-dlp en el PC ([privacidad de GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)).
 
 El registro de errores no sale del equipo salvo que tú lo compartas con «Enviar registro».

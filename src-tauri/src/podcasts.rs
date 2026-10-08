@@ -2,6 +2,8 @@
 //! El país del catálogo solo ayuda a ordenar: el idioma se comprueba en cada feed.
 
 use crate::db::Db;
+use crate::youtube::YouTubeMusic;
+use crate::youtube_podcasts;
 use encoding_rs::Encoding;
 use reqwest::{Client, Url};
 use roxmltree::{Document, Node};
@@ -64,6 +66,8 @@ pub struct PodcastDetail {
 #[serde(rename_all = "camelCase")]
 pub struct PodcastSearchResults {
     pub podcasts: Vec<Podcast>,
+    /// Los de YouTube Music (sin idioma declarado: se enseñan aparte, sin filtrar).
+    pub youtube: Vec<Podcast>,
     /// Feeds que no pudieron comprobarse. La interfaz puede avisar de resultados parciales.
     pub failed_feeds: usize,
 }
@@ -200,7 +204,19 @@ impl Podcasts {
             return Err(format!("Se encontró el catálogo, pero no se pudo leer ningún podcast. {last_error}"));
         }
         found.sort_by_key(|(index, _)| *index);
-        Ok(PodcastSearchResults { podcasts: found.into_iter().map(|(_, p)| p).collect(), failed_feeds })
+        Ok(PodcastSearchResults { podcasts: found.into_iter().map(|(_, p)| p).collect(), youtube: Vec::new(), failed_feeds })
+    }
+
+    /// Un programa de YouTube Music (`youtube:<id>`), con la misma caché que los RSS.
+    async fn youtube(&self, ytm: &YouTubeMusic, feed_url: &str) -> Result<PodcastDetail, String> {
+        if let Some(cached) = cached(&self.feeds, feed_url) {
+            return Ok(cached);
+        }
+        let browse_id = feed_url.strip_prefix(youtube_podcasts::PREFIX).ok_or("Este podcast no es de YouTube")?;
+        let page = youtube_podcasts::show(ytm, browse_id).await?;
+        let detail = from_youtube(page, feed_url);
+        put_cached(&self.feeds, feed_url.to_string(), detail.clone(), 32);
+        Ok(detail)
     }
 
     fn check_generation(&self, generation: u64) -> Result<(), String> {
@@ -400,6 +416,53 @@ fn parse_feed(xml: &str, feed_url: &str) -> Result<PodcastDetail, String> {
 
 pub fn is_podcast(id: u64) -> bool { (PODCAST_BASE..PODCAST_END).contains(&id) }
 
+/// Un programa de YouTube Music como cualquier podcast: dirección `youtube:<id>` y, en cada
+/// episodio, el audio `youtube:<vídeo>` (lo resuelve `player.rs` con el motor de siempre).
+fn from_youtube(page: youtube_podcasts::ShowPage, feed_url: &str) -> PodcastDetail {
+    let image = page.show.image.clone();
+    let episodes: Vec<PodcastEpisode> = page
+        .episodes
+        .into_iter()
+        .map(|e| PodcastEpisode {
+            id: 0,
+            title: e.title,
+            description: e.description,
+            published_at: e.published,
+            duration: e.duration,
+            audio_url: format!("{}{}", youtube_podcasts::PREFIX, e.video_id),
+            image: e.image.or_else(|| image.clone()),
+            explicit: false,
+            guid: e.video_id,
+        })
+        .collect();
+    PodcastDetail {
+        podcast: Podcast {
+            id: 0,
+            title: page.show.title,
+            author: page.show.author,
+            description: page.description,
+            image,
+            feed_url: feed_url.to_string(),
+            language: None,
+            episode_count: episodes.len(),
+        },
+        episodes,
+    }
+}
+
+fn youtube_show(show: youtube_podcasts::Show) -> Podcast {
+    Podcast {
+        id: 0,
+        title: show.title,
+        author: show.author,
+        description: String::new(),
+        image: show.image,
+        feed_url: format!("{}{}", youtube_podcasts::PREFIX, show.browse_id),
+        language: None,
+        episode_count: 0,
+    }
+}
+
 fn persist_show(conn: &rusqlite::Connection, podcast: &Podcast) -> Result<u64, String> {
     conn.execute("INSERT INTO podcast_shows (feed_url, title, author, description, image, language)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(feed_url) DO UPDATE SET
@@ -439,6 +502,11 @@ pub fn audio(db: &Db, id: u64) -> Result<String, String> {
         .ok_or_else(|| "Este episodio ya no está disponible. Vuelve a abrir su podcast".into())
 }
 
+/// El vídeo de un episodio de YouTube Music (los del RSS no tienen): se puede descargar.
+pub fn youtube_video(db: &Db, id: u64) -> Option<String> {
+    audio(db, id).ok()?.strip_prefix(youtube_podcasts::PREFIX).map(str::to_string)
+}
+
 pub fn feed_url(db: &Db, id: u64) -> Result<String, String> {
     if !(PODCAST_BASE..EPISODE_BASE).contains(&id) { return Err("El identificador no corresponde a un podcast".into()); }
     db.0.lock().unwrap().query_row("SELECT feed_url FROM podcast_shows WHERE id=?1", params![(id - PODCAST_BASE) as i64], |r| r.get(0))
@@ -446,13 +514,46 @@ pub fn feed_url(db: &Db, id: u64) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn podcast_search(query: String, language: String, podcasts: State<'_, Podcasts>, db: State<'_, Db>) -> Result<PodcastSearchResults, String> {
-    podcasts.search(&query, &language, &db).await
+pub async fn podcast_search(
+    query: String,
+    language: String,
+    podcasts: State<'_, Podcasts>,
+    ytm: State<'_, YouTubeMusic>,
+    db: State<'_, Db>,
+) -> Result<PodcastSearchResults, String> {
+    // A la vez: el catálogo de Apple (con sus RSS) y YouTube Music.
+    let (results, youtube) = tokio::join!(podcasts.search(&query, &language, &db), youtube_podcasts::search(&ytm, &query));
+    let youtube = youtube
+        .unwrap_or_default()
+        .into_iter()
+        .map(|show| {
+            let mut podcast = youtube_show(show);
+            save_show(&db, &mut podcast).map(|()| podcast)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    // Si falla una de las dos fuentes quedan los de la otra; solo es error si no hay nada.
+    match results {
+        Ok(mut results) => {
+            results.youtube = youtube;
+            Ok(results)
+        }
+        Err(_) if !youtube.is_empty() => Ok(PodcastSearchResults { podcasts: Vec::new(), youtube, failed_feeds: 0 }),
+        Err(e) => Err(e),
+    }
 }
 
 #[tauri::command]
-pub async fn podcast_detail(feed_url: String, podcasts: State<'_, Podcasts>, db: State<'_, Db>) -> Result<PodcastDetail, String> {
-    let mut detail = podcasts.feed(&feed_url).await?;
+pub async fn podcast_detail(
+    feed_url: String,
+    podcasts: State<'_, Podcasts>,
+    ytm: State<'_, YouTubeMusic>,
+    db: State<'_, Db>,
+) -> Result<PodcastDetail, String> {
+    let mut detail = if feed_url.starts_with(youtube_podcasts::PREFIX) {
+        podcasts.youtube(&ytm, &feed_url).await?
+    } else {
+        podcasts.feed(&feed_url).await?
+    };
     save_detail(&db, &mut detail)?;
     Ok(detail)
 }
