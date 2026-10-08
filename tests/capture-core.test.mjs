@@ -923,6 +923,112 @@ test('seek parser reset accepts either fresh split initialization or media with 
   }
 })
 
+test('a complete contiguous append during seek preserves packets for a buffered return with fresh observation and holdback', () => {
+  const { ProgressiveTracker, inspectWebMPrefix, remuxWebM } = load()
+  const tracker = new ProgressiveTracker({ epoch: 1, experimental: true, holdbackSeconds: 1.5 })
+  const source = tracker.createSource(), buffer = tracker.createBuffer(source, 'audio/webm; codecs="opus"')
+  const prefix = fixture({ times: Array.from({ length: 200 }, (_, i) => i * 20) }), tail = fixture({ times: [4000] })
+  buffer.native = { buffered: { length: 1, start: () => 0, end: () => 4.02 } }
+  source.native = { readyState: 'open' }
+  const snapshot = position => ({ source, position, duration: 4.02, seeking: false, playbackRate: 1, readyState: 4, updating: false, audioRanges: [{ start: 0, end: 4.02 }] })
+  const observe = (position, now) => tracker.observe(source, content, { position, now, duration: 4.02 })
+  tracker.append(buffer, prefix.bytes)
+  for (let i = 0; i <= 4; i++) observe(i * 0.5, i * 500)
+  tracker.pull(source, snapshot(2))
+  assert.equal(tracker.coverage.at(-1).end, 0.5)
+  tracker.beginEpoch(2, 3.2)
+  assert.equal(tracker.onTimeAssignment(source, null, 3.2), true)
+  tracker.append(buffer, tail.cluster)
+  assert.equal(tracker.bytes, prefix.bytes.length + tail.cluster.length, 'the retained prefix remains in the same bounded byte accounting')
+  const original = tracker.inventory(source, true)
+  assert.equal(original.samples.length, 201)
+  observe(3.2, 2500); observe(3.4, 2700)
+  assert.equal(tracker.pull(source, snapshot(3.4)).length, 0, 'the seek itself grants no presentation or holdback credit')
+  tracker.beginEpoch(3, 0.6)
+  assert.equal(tracker.onTimeAssignment(source, null, 0.6), true)
+  assert.equal(source.progress.ranges.length, 0)
+  observe(0.6, 3000)
+  assert.equal(tracker.pull(source, snapshot(2.6)).length, 0, 'even a later clock cannot substitute for fresh observations')
+  for (let i = 1; i <= 3; i++) observe(0.6 + i * 0.5, 3000 + i * 500)
+  assert.equal(tracker.pull(source, snapshot(2.1)).length, 0, 'the first complete packet still needs its entire1.5s holdback')
+  observe(2.6, 5000)
+  const returned = tracker.pull(source, snapshot(2.6))
+  assert(returned.length > 0)
+  assert.equal(returned[0].epoch, 3); assert.equal(returned[0].rangeStart, 0.6)
+  for (const unit of returned) {
+    const expected = remuxWebM(original, unit.firstFrame, unit.frames)
+    assert.deepEqual(unit.data, concat(expected.init, expected.media), 'returned packets retain their exact payload, flags and timestamps')
+    assert.equal(inspectWebMPrefix(unit.data, { allowGaps: true }).samples.length, unit.frames)
+  }
+  assert.equal(tracker.coverage.length, 2, 'the unobserved0.5..0.6 interval is never repaired')
+  assert.equal(source.completeCertificate, undefined)
+  assert.equal(source.verifiedFinalEpoch, undefined)
+})
+
+test('seek continuation rejects reinitialization, overlap, gaps, partial input, changed bindings and replaced payload', () => {
+  for (const scenario of ['reinit', 'overlap', 'gap', 'partial-old', 'partial-new', 'tuple', 'native-tuple', 'native-source', 'native-buffer', 'missing-native-source', 'missing-native-buffer', 'payload', 'limit']) {
+    const { tracker, source, buffer, observe } = progressiveSetup()
+    buffer.native = {}; source.native = {}
+    observe(0)
+    if (scenario === 'partial-old') tracker.append(buffer, fixture({ times: [60] }).cluster.subarray(0, 2))
+    tracker.beginEpoch(2, 0.04)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.04), true, scenario)
+    let incoming = fixture({ times: [60, 80] }).cluster, settings
+    if (scenario === 'reinit') incoming = fixture({ times: [60, 80] }).bytes
+    if (scenario === 'overlap') incoming = fixture({ times: [40, 60] }).cluster
+    if (scenario === 'gap') incoming = fixture({ times: [80, 100] }).cluster
+    if (scenario === 'partial-new') incoming = incoming.subarray(0, incoming.length - 1)
+    if (scenario === 'tuple') settings = { appendWindowEnd: 1 }
+    if (scenario === 'native-tuple') buffer.native.appendWindowEnd = 1
+    if (scenario === 'native-source') source.native = {}
+    if (scenario === 'native-buffer') buffer.native = {}
+    if (scenario === 'missing-native-source') delete source.native
+    if (scenario === 'missing-native-buffer') delete buffer.native
+    if (scenario === 'payload') buffer.chunks[0][buffer.chunks[0].length - 1] ^= 1
+    if (scenario === 'limit') tracker.maxBytes = tracker.bytes + incoming.length - 1
+    assert.equal(tracker.continuesAfterSeek(buffer, incoming, settings), false, scenario)
+    tracker.append(buffer, incoming, settings)
+    assert(buffer.chunks.reduce((sum, bytes) => sum + bytes.length, 0) < fixture().bytes.length + incoming.length, `${scenario}: no old prefix is silently retained`)
+    assert(tracker.bytes <= tracker.maxBytes, scenario)
+    assert.equal(source.completeCertificate, undefined, scenario)
+  }
+})
+
+test('native abort or remove stays invalidating across a second seek until parser input is rebuilt', () => {
+  for (const operation of ['abort', 'remove']) {
+    const { tracker, source, buffer, observe } = progressiveSetup()
+    observe(0)
+    tracker.beginEpoch(2, 0.04)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.04), true)
+    assert.equal(tracker.onSeekMutation(buffer, operation), true)
+    tracker.beginEpoch(3, 0.02)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.02), true)
+    const tail = fixture({ times: [60, 80] })
+    assert.equal(tracker.continuesAfterSeek(buffer, tail.cluster), false)
+    tracker.append(buffer, tail.cluster)
+    assert.equal(tracker.inventory(source, true).samples.length, 2)
+    assert.equal(tracker.inventory(source, true).codedStart, 0.06, 'native parser mutation never revives the old prefix')
+    assert.equal(buffer.seekParserResetRequired, false, 'only the actual reconstruction consumes the invalidation')
+  }
+})
+
+test('seek continuation cannot retain or revive bytes after an advertisement, unknown identity or explicit drop', () => {
+  for (const state of ['ad', 'unknown', 'drop']) {
+    const { tracker, source, buffer, observe, snapshot } = progressiveSetup()
+    observe(0)
+    tracker.beginEpoch(2, 0.04)
+    assert.equal(tracker.onTimeAssignment(source, null, 0.04), true)
+    if (state === 'drop') tracker.drop(source)
+    else tracker.observe(source, state === 'ad' ? ad : { state: 'unknown', sourceBound: true }, { position: 0.04, now: 40, duration: 0.1 })
+    assert.equal(buffer.seekContinuation, undefined)
+    assert.equal(tracker.bytes, 0)
+    tracker.append(buffer, fixture({ times: [60, 80] }).cluster)
+    if (state === 'drop') assert.throws(() => tracker.inventory(source, true), codeIs('CAPTURE_UNSUPPORTED_WEBM'))
+    else assert.throws(() => tracker.pull(source, snapshot(0.1)), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
+    assert.equal(tracker.coverage.length, 0)
+  }
+})
+
 test('real AAC/Opus remux retains the identical decoded PCM across many sample boundaries', t => {
   const available = spawnSync('ffmpeg', ['-version'], { windowsHide: true, encoding: 'utf8' })
   if (available.error?.code === 'ENOENT') return t.skip('FFmpeg is not installed; native MSE probes remain a separate required check')

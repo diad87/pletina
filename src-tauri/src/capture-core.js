@@ -390,7 +390,7 @@
     }
     reject(source, code, reason) {
       delete source.startupGap
-      for (const buffer of source.buffers) buffer.sampleProjection = null
+      for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation }
       super.reject(source, code, reason)
     }
     drop(source) {
@@ -399,7 +399,7 @@
       // No retained parser view may resurrect quarantined bytes after a conflicting
       // label. Already published experimental units cannot be recalled: a label
       // delayed longer than the holdback remains an explicit counterexample.
-      for (const buffer of source.buffers) { buffer.prefix = null; buffer.sampleProjection = null; buffer.resetInit = null; buffer.version++ }
+      for (const buffer of source.buffers) { buffer.prefix = null; buffer.sampleProjection = null; buffer.resetInit = null; delete buffer.seekContinuation; buffer.version++ }
       delete source.completeCertificate; delete source.nativeFinalClock
     }
     createBuffer(source, mime) {
@@ -411,12 +411,19 @@
     }
     append(buffer, data, settings) {
       delete buffer.source.verifiedFinalEpoch
+      // A seek does not itself reset the native byte-stream parser. A complete,
+      // append-only continuation may arrive while seeking to already buffered
+      // audio; discarding its prefix would leave later buffered returns without
+      // copied packets. This preserves bytes only, never presentation or EOF.
+      if (buffer.resetAfterSeek && this.continuesAfterSeek(buffer, data, settings)) buffer.resetAfterSeek = false
+      delete buffer.seekContinuation
       if (buffer.resetAfterSeek) {
         const init = buffer.prefix?.value?.init
         this.bytes -= buffer.chunks.reduce((n, c) => n + c.byteLength, 0)
         buffer.chunks = []; buffer.resetInit = init?.slice(); buffer.awaitingStart = true
         buffer.timelineSettings = null
         buffer.resetAfterSeek = false
+        buffer.seekParserResetRequired = false
       }
       buffer.version++; buffer.prefix = null; buffer.sampleProjection = null
       super.append(buffer, data, settings)
@@ -429,12 +436,35 @@
         }
       }
     }
+    continuesAfterSeek(buffer, data, settings) {
+      const proof = buffer.seekContinuation, source = buffer.source, previous = proof?.inventory
+      if (!proof || !buffer.native || !source.native || buffer.seekParserResetRequired || source.error || source.state !== 'content' || source.seen.size !== 1 || !source.seen.has('content') ||
+        proof.epoch !== this.epoch || proof.source !== source || proof.nativeSource !== source.native || proof.native !== buffer.native || proof.version !== buffer.version ||
+        proof.settings !== JSON.stringify(buffer.timelineSettings) || proof.settings !== JSON.stringify(settingsOf(settings)) ||
+        (buffer.native && proof.settings !== JSON.stringify(settingsOf(buffer.native))) || previous?.pending || !previous?.init?.length || !previous.samples?.length) return false
+      const incoming = copy(data)
+      if (this.bytes + incoming.byteLength > this.maxBytes) return false
+      let next
+      try { next = buffer.inspectPrefix(join([...buffer.chunks, incoming]), { allowGaps: true }) } catch { return false }
+      if (next.pending || !next.init || next.samples.length <= previous.samples.length || next.init.length !== previous.init.length ||
+        !next.init.every((byte, i) => byte === previous.init[i]) ||
+        previous.samples.some((sample, i) => JSON.stringify(sample) !== JSON.stringify(next.samples[i])) ||
+        !timeAtOrAfter(next.samples[previous.samples.length].start, previous.samples.at(-1).end) ||
+        !timeAtOrAfter(previous.samples.at(-1).end, next.samples[previous.samples.length].start) ||
+        next.samples.slice(previous.samples.length).some((sample, i) => !timeAtOrAfter(sample.start, next.samples[previous.samples.length + i - 1].end))) return false
+      // Compare the original payload too: TimeRanges and equal PTS alone cannot
+      // demonstrate that an already appended packet was not replaced.
+      return previous.samples.every(sample => {
+        for (let i = sample.offset; i < sample.offset + sample.size; i++) if (previous.bytes[i] !== next.bytes[i]) return false
+        return true
+      })
+    }
     beginEpoch(epoch, at) {
       if (!Number.isSafeInteger(epoch) || epoch <= this.epoch || !Number.isFinite(at) || at < 0) fail('CAPTURE_PROTOCOL_MISMATCH', 'Seek epoch must advance and have a finite target')
       this.epoch = epoch; this.seek = { at, assigned: false, active: true }
       for (const source of this.sources.values()) {
         source.observations = []; source.progress = { epoch, ranges: [], emitted: new Set() }
-        for (const buffer of source.buffers) buffer.sampleProjection = null
+        for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation }
       }
     }
     restartBeginning(source) {
@@ -471,9 +501,11 @@
       if (this.seek.replay && (source !== this.seek.source || element !== source.element || value !== 0)) return false
       for (const buffer of source.buffers) buffer.sampleProjection = null
       if (!this.seek.startup) {
-        try { this.inventory(source) } catch { return false }
+        let inventory
+        try { inventory = this.inventory(source) } catch { return false }
         for (const buffer of source.buffers) {
           buffer.preSeekRanges = { native: buffer.native, source, tuple: JSON.stringify(buffer.timelineSettings ?? settingsOf()), ranges: nativeRanges(buffer.native) }
+          buffer.seekContinuation = { epoch: this.epoch, source, nativeSource: source.native, native: buffer.native, version: buffer.version, settings: JSON.stringify(buffer.timelineSettings), inventory }
           buffer.resetAfterSeek = true
         }
       }
@@ -488,7 +520,10 @@
       // the site subsequently appends a new range. No partial parser input is reused.
       try { this.inventory(buffer.source) } catch { return false }
       buffer.sampleProjection = null
-      if (operation === 'abort') buffer.resetAfterSeek = true
+      // Sticky across another seek with no intervening append. A new assignment
+      // cannot erase an earlier native abort/remove of this parser input.
+      buffer.seekParserResetRequired = true; delete buffer.seekContinuation
+      buffer.resetAfterSeek = true
       return true
     }
     observeIdentity(source, evidence, element = null) {
