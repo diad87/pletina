@@ -54,7 +54,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav \
-            gstreamer1.0-tools ffmpeg
+            gstreamer1.0-tools ffmpeg xvfb webkit2gtk-driver pulseaudio
 
       - run: npm ci
 
@@ -74,6 +74,23 @@ jobs:
       - name: Comprobar el audio de la AppImage
         if: runner.os == 'Linux'
         run: bash scripts/test-linux-appimage.sh src-tauri/target/release/bundle/appimage/*.AppImage
+
+      - name: Preparar la prueba de reproducción en Linux
+        if: runner.os == 'Linux'
+        run: cargo install tauri-driver --version 2.1.0 --locked
+
+      - name: Reproducir archivos y descargas en la AppImage
+        if: runner.os == 'Linux'
+        timeout-minutes: 5
+        run: python3 scripts/tests/linux-playback.py src-tauri/target/release/bundle/appimage/*.AppImage --output-dir target/linux-playback-test
+
+      - name: Guardar el resultado de reproducción en Linux
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-playback-test
+          path: target/linux-playback-test/
+          if-no-files-found: ignore
 
       - name: Comprobar el núcleo
         run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml
