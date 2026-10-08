@@ -4,8 +4,9 @@
 mantiene 8 s de reproducción continua, con todas las unidades publicadas
 comparadas. El control completo Preso→De Aquí cerró 9263/9263 paquetes, cero
 discrepancias y cero cortes: siguiente en 4,6 ms, pero inicio frío en 6074 ms.
-Propio resolvió las 30 búsquedas frías por Rust, sin respaldo, con mediana
-548,9 ms; ninguna cumple 300 ms. El detalle de esta continuación está al final.
+Propio adaptativo resolvió las 30 búsquedas y arranques por Rust, sin respaldo,
+con mediana 653,4 ms; ninguna cumple 300 ms. El control anterior de captura v25
+tenía mediana 548,9 ms. La integración y adaptación posteriores están al final.
 Los controles anteriores conservan sus versiones, fallos y alcance originales.
 
 La captura API4/v20 cerró Airbag y PRESO completas, sin cortes y con16430/16430
@@ -676,3 +677,151 @@ dispositivo en este paso. Los tests ignorados no cuentan como éxitos.
 Logs, perfiles y medios permanecen fuera de Git.
 Se suben sólo las dos ramas de trabajo para revisión; no main, etiquetas,
 extractores ni versiones de la app.
+
+## Propio: descubrimiento y renovación de configuración
+
+El usuario aprobó reducir las reparaciones manuales del nivel rápido. El commit
+`c6d12380cf92b364a2ebc95b970b849edb87b901` añade configuración anónima descubierta
+para YouTube Music y WEB, cachés separadas de seis horas y renovación acotada.
+La búsqueda conserva una versión fija sólo si no puede descubrir ninguna.
+Un rechazo de autorización o estructura permite repetir una vez si cambió la
+petición; no se repiten peticiones idénticas ni se renueva por resultados vacíos
+legítimos. Las consultas `browse` de podcasts comparten ese contexto.
+
+El audio mantiene primero los clientes de la receta. Se deduplican rutas iguales
+y los rechazos estructurales del cliente abren un circuito de 30 segundos. Una
+respuesta de vídeo privado, un error de red o un fallo CDN no deshabilitan ese
+cliente para otras canciones. Después se prueba WEB descubierto, con un plazo
+total de seis segundos; exige el vídeo solicitado, audio compatible, dominio
+HTTPS GoogleVideo y una sonda no vacía. Los errores de todas estas rutas siguen
+permitiendo el respaldo Legacy en escritorio. No se cambian db.rs, downloads.rs,
+interfaz, recetas, scripts de extractor ni sus versiones/API.
+
+El bootstrap de producción procede de `sw.js_data` del dominio propio de cada
+cliente, sin sesión ni cookies de cuenta. La primera prueba con portadas falló
+por consentimiento en Music y formato en WEB; se cambió a la fuente pública del
+service worker y se corrigió el lector de configuración. No se ejecuta JavaScript
+remoto ni se almacenan perfiles, visitantes o tokens en Git.
+
+| Descubrimiento real sin sesión | Versión obtenida | Tiempo | Caché reutilizada |
+|---|---|---:|---|
+| Music / WEB_REMIX | `1.20261006.10.00` | 187,8 ms | Sí |
+| WEB | `2.20261007.01.00` | 108,6 ms | Sí |
+
+### Banco de 30 búsquedas y arranques, sin Premium
+
+Se ejecutó `native-search/propio/anonymous`, con `real_albums`, sin seek ni opt-in
+progresivo, el 8 de octubre a las 16:26 CEST. El binario se construyó desde el
+commit limpio anterior y se ejecutó en una app aislada con base de datos de banco.
+Cada canción perdió su asociación y URL antes de medir; el proceso, conexiones
+y configuración permanecieron calientes entre filas. Son 30 destinos fríos,
+no 30 arranques de proceso completamente fríos.
+
+Las 30 canciones llegaron a `playing` y avance del reloj con el vídeo esperado,
+todas por VISIONOS. No hubo error de resolución, respaldo Legacy ni intento WEB.
+El audio estaba silenciado por el banco: estos tiempos no son una medición
+acústica. La búsqueda incluida conserva sus alternativas habituales; que el
+audio sea nativo no acredita que cada consulta sólo usara Music.
+
+| Medida | Mínimo | Mediana | Máximo |
+|---|---:|---:|---:|
+| Búsqueda e inicio de reproducción | 456,5 ms | 653,4 ms | 1200,5 ms |
+| Búsqueda | 279,1 ms | 400,2 ms | 772,0 ms |
+| Extracción nativa y sonda | 92,5 ms | 174,7 ms | 468,1 ms |
+| Sonda CDN | 5,8 ms | 45,2 ms | 368,4 ms |
+
+**30/30 arranques; 0/30 cumplen 300 ms; 29/30 tardan menos de un segundo.**
+El banco termina con código de fallo porque las 30 filas superan la meta de
+300 ms. Es el único motivo de fallo por canción. La mediana es mayor que los
+548,9 ms del control anterior; una tanda por versión no permite atribuir esa
+diferencia al cambio. No se declara una mejora de latencia.
+
+| Canción | Arranque con búsqueda | Ruta |
+|---|---:|---|
+| Radiohead — Airbag | 1200,5 ms | VISIONOS |
+| Radiohead — Paranoid Android | 731,0 ms | VISIONOS |
+| Radiohead — Subterranean Homesick Alien | 926,7 ms | VISIONOS |
+| Radiohead — Exit Music (For A Film) | 728,4 ms | VISIONOS |
+| Radiohead — Let Down | 585,5 ms | VISIONOS |
+| Radiohead — Karma Police | 525,3 ms | VISIONOS |
+| Berri Txarrak — Dardararen Bat | 846,5 ms | VISIONOS |
+| Berri Txarrak — Zuri | 553,5 ms | VISIONOS |
+| Berri Txarrak — Infrasoinuak | 691,4 ms | VISIONOS |
+| Berri Txarrak — Spoiler! | 656,9 ms | VISIONOS |
+| Berri Txarrak — Zaldi Zauritua | 522,7 ms | VISIONOS |
+| Berri Txarrak — Beude | 614,9 ms | VISIONOS |
+| Extremoduro — Buscando una luna | 534,9 ms | VISIONOS |
+| Extremoduro — Prometeo | 495,1 ms | VISIONOS |
+| Extremoduro — Sucede | 506,7 ms | VISIONOS |
+| Extremoduro — So payaso | 936,7 ms | VISIONOS |
+| Extremoduro — El día de la bestia | 625,8 ms | VISIONOS |
+| Extremoduro — Tomás | 456,5 ms | VISIONOS |
+| ROSALÍA — MALAMENTE | 528,2 ms | VISIONOS |
+| ROSALÍA — QUE NO SALGA LA LUNA | 707,5 ms | VISIONOS |
+| ROSALÍA — PIENSO EN TU MIRÁ | 682,6 ms | VISIONOS |
+| ROSALÍA — DE AQUÍ NO SALES | 657,5 ms | VISIONOS |
+| ROSALÍA — RENIEGO | 723,8 ms | VISIONOS |
+| ROSALÍA — PRESO | 561,1 ms | VISIONOS |
+| The Beatles — Come Together | 544,5 ms | VISIONOS |
+| The Beatles — Something | 634,5 ms | VISIONOS |
+| The Beatles — Maxwell's Silver Hammer | 726,3 ms | VISIONOS |
+| The Beatles — Oh! Darling | 708,2 ms | VISIONOS |
+| The Beatles — Octopus's Garden | 941,5 ms | VISIONOS |
+| The Beatles — I Want You (She's So Heavy) | 649,9 ms | VISIONOS |
+
+Esta tanda no mide canciones hasta EOF, cobertura, saltos ni cambios naturales.
+No observa anuncios ni compara PCM; no corresponde atribuirle cero anuncios,
+cero discrepancias o cero cortes completos. No se accedió a Premium ni se
+repitió su referencia: las cifras históricas siguen en sus campañas originales.
+No aporta una nueva aprobación de la captura progresiva.
+
+### Alternativa WEB aislada y comprobaciones de código
+
+Como el banco anterior no alcanzó WEB, se añadió una medición de red ignorada
+por defecto que llama sólo a `auto_direct`, con su plazo de seis segundos y
+sin sustituir cachés, dominios, contexto ni perfil. Resultado: **0/3 URLs
+aceptadas**. El test termina correctamente porque registra todos los intentos;
+eso no significa que WEB haya funcionado.
+
+| Vídeo probado por WEB sin sesión | Tiempo | Resultado |
+|---|---:|---|
+| Airbag | 284,8 ms | `video-unavailable` |
+| Sucede | 95,3 ms | `video-unavailable` |
+| Come Together | 197,2 ms | `video-unavailable` |
+
+La categoría indica un rechazo de reproducción por ese cliente, no que el vídeo
+sea inaccesible en general: los tres funcionaron por VISIONOS en la app.
+No se obtuvo audio WEB para sondar. Este rechazo también permite pasar a Legacy;
+no se cambia a un cliente descubierto con identidad o datos de otra plataforma.
+
+La suite Rust del commit de código pasó **165 pruebas, 0 fallos y 20 ignoradas**.
+Después del ajuste final de diagnóstico pasaron de nuevo las 18 pruebas Native.
+Las pruebas HTTP locales comprueban recuperación tras versión rechazada,
+renovación efectiva, límite de reintentos, identidad errónea, sondas vacías/HTML/
+truncadas, rangos incoherentes, plazo propio de sonda y redirección a otro dominio.
+El descubrimiento anónimo real pasó por separado. El build Vite y de la app
+Windows son correctos. `cargo check --tests` Android x86_64 pasa offline con
+NDK 27.3, con los avisos de código sin uso existentes; no ejecuta pruebas en un
+dispositivo. La nueva medición WEB queda como otra prueba ignorada, sin modificar
+el comportamiento del binario medido. No se repitió la suite JavaScript porque
+no se cambió código JavaScript ni la interfaz.
+
+| Evidencia local ignorada | SHA256 |
+|---|---|
+| Informe `result-20261008-162505-b41958fd.json` | `965df188de6a82d850fb8aac3f3b6ccc092da7365f63b63f1c1a513fb0cc5f2e` |
+| Binario aislado de `c6d1238` | `108a09ed3aa7b5ab0c568f04535a16a38598badda4ac632adc4a5c645ea3796b` |
+
+Metadatos y logs están en `capture-bench.local/`, fuera de Git. El commit
+`c6d1238` contiene la implementación y sus pruebas; el cierre de documentación
+y la medición explícita de WEB se añaden en un commit posterior de esta rama.
+
+**Pendientes:** el cliente rápido VISIONOS aún depende de datos de receta y WEB
+no ha demostrado servir estas muestras reales. El descubrimiento automático
+reduce el mantenimiento de la búsqueda/contexto, pero no resuelve cualquier
+cambio de protocolo, firmas, SABR o requisitos de tokens. El protocolo `v1`
+es una base explícita cuando el bootstrap no declara otro, no un descubrimiento
+universal de API. La sonda confirma una muestra accesible, no EOF; una respuesta
+200 que ignore Range tampoco demuestra acceso al 80 %. Siguen pendientes la
+meta fría de 300 ms y los criterios completos de promoción de Oficial.
+La rama se sube para revisión, conservando yt-dlp predeterminado y la cuarentena
+completa del modo Oficial normal, sin publicar extractores ni etiquetar versiones.

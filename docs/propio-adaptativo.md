@@ -54,3 +54,33 @@ de versión, renovación efectiva, identidad incorrecta y sondas inválidas.
 La prueba real anónima del bootstrap y el banco de treinta canciones se registran
 por separado: una prueba de arranque no acredita escucha completa ni ausencia
 de cortes hasta EOF. Los resultados se incorporan al informe del 8 de octubre.
+
+## Resultados del 8 de octubre
+
+La app aislada, sobre el commit limpio `c6d1238`, resolvió e inició las 30 canciones
+de `real_albums` sin sesión, todas por VISIONOS y con el vídeo esperado. La mediana
+con búsqueda fue 653,4 ms (456,5–1200,5 ms); ninguna cumplió 300 ms y 29 tardaron
+menos de un segundo. La extracción nativa por separado tuvo mediana de 174,7 ms.
+Esta tanda conserva la funcionalidad del nivel rápido, pero no demuestra una
+mejora de latencia frente al control anterior ni ejercita la alternativa WEB.
+
+Una medición separada de WEB con Airbag, Sucede y Come Together produjo 0/3
+URLs aceptadas: el cliente respondió `video-unavailable` en 284,8, 95,3 y
+197,2 ms. Los vídeos sí funcionaron por VISIONOS. La alternativa queda acotada
+y verificada cuando obtiene audio, pero no demuestra reemplazar al cliente
+rápido actual ni eliminar su receta. Su rechazo permite continuar hacia Legacy.
+
+El bootstrap real obtuvo WEB_REMIX `1.20261006.10.00` y WEB `2.20261007.01.00`,
+con visitante y reutilización de caché, en 187,8 y 108,6 ms respectivamente.
+La fuente de producción es `sw.js_data` del dominio de cada cliente. La primera
+prueba con portadas falló por consentimiento/formato y motivó esa corrección.
+El valor `v1` es un protocolo base cuando la fuente no lo declara; descubrir
+una versión de cliente no acredita descubrir cualquier versión futura de API.
+
+Pasaron 165 pruebas Rust, con 20 pruebas ignoradas, en el commit de código.
+Tras ajustar la categoría final de error, pasaron otra vez las 18 pruebas de
+Native. El build de la app Windows y `cargo check --tests` para Android x86_64
+son correctos. No se ejecutaron pruebas instrumentadas en Android ni se accedió
+a Premium. El [informe](informe-captura-youtube-2026-10-08.md) conserva la tabla,
+procedencia y límites: arranque silenciado por eventos/reloj, sin campaña nueva
+de EOF, continuidad o comparación independiente de publicidad.

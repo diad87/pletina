@@ -17,7 +17,14 @@ La configuración web no se atribuye al cliente VISIONOS y los cambios de
 protocolo o descifrado todavía pueden requerir código. Esto no promueve la
 captura progresiva ni cambia sus criterios de aprobación.
 
-El camino recomendado es **Propio**: nivel rápido en Rust, sin sesión y sin anuncios,
+Esta adaptación está implementada: el descubrimiento anónimo real funciona y
+30/30 canciones arrancaron por VISIONOS en la app, sin respaldo, con mediana de
+653,4 ms incluyendo búsqueda. La meta de 300 ms sigue pendiente. Las pruebas
+HTTP locales ejercitan renovación de cliente e identidad/sondas inválidas;
+los límites y las mediciones se recogen en [Propio adaptativo](propio-adaptativo.md)
+y en el [informe del 8 de octubre](informe-captura-youtube-2026-10-08.md).
+
+El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
 

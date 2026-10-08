@@ -485,3 +485,48 @@ async fn http_reference_preferences_still_select_the_requested_audio_family_and_
     assert!(direct.mime.starts_with("audio/mp4"));
     assert_eq!(server.requests().len(), 1);
 }
+
+/// Medición de red explícita, sin recetas fijas ni fallback de captura. Un test
+/// finalizado acredita la medición y la sanidad de sus éxitos, no que WEB funcione.
+/// auto_direct conserva su bootstrap anónimo, renovación y sonda de producción;
+/// no se sustituyen ni reinician cachés, configuración, endpoints o perfiles.
+#[tokio::test]
+#[ignore]
+async fn real_anonymous_web_direct_three_videos() {
+    let videos = ["jNY_wLukVW0", "nV-F1WSpJIA", "oolpPmuK2I8"];
+    let mut successes = 0usize;
+    for video_id in videos {
+        let started = Instant::now();
+        let result = tokio::time::timeout(Duration::from_secs(6), auto_direct(video_id)).await;
+        let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+        let diagnostic = match result {
+            Ok(Ok(direct)) => {
+                // Assertions never interpolate Direct or its signed URL.
+                assert!(
+                    direct.client == "WEB",
+                    "unexpected client in WEB measurement"
+                );
+                assert!(direct_audio_url(&direct.url), "invalid direct audio origin");
+                assert!(
+                    direct.itag > 0 && direct.mime.starts_with("audio/"),
+                    "invalid audio metadata"
+                );
+                successes += 1;
+                json!({"videoId":video_id,"success":true,"elapsedMs":elapsed_ms,
+                    "client":direct.client,"itag":direct.itag})
+            }
+            Ok(Err(error)) => json!({"videoId":video_id,"success":false,"elapsedMs":elapsed_ms,
+                "code":reference_code("player", &error.to_string(), matches!(error, Error::Gone(_)))}),
+            Err(_) => json!({"videoId":video_id,"success":false,"elapsedMs":elapsed_ms,
+                "code":reference_code("player", "NATIVE_AUTO_TIMEOUT", false)}),
+        };
+        println!("adaptive-web-live {diagnostic}");
+    }
+    println!(
+        "adaptive-web-live summary {}",
+        json!({
+            "attempts":videos.len(),"successes":successes,"failures":videos.len()-successes,
+            "measurementCompleted":true
+        })
+    );
+}
