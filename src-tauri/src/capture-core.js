@@ -390,7 +390,7 @@
     }
     reject(source, code, reason) {
       delete source.startupGap
-      for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation }
+      for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation; delete buffer.stagedContinuation }
       super.reject(source, code, reason)
     }
     drop(source) {
@@ -399,7 +399,7 @@
       // No retained parser view may resurrect quarantined bytes after a conflicting
       // label. Already published experimental units cannot be recalled: a label
       // delayed longer than the holdback remains an explicit counterexample.
-      for (const buffer of source.buffers) { buffer.prefix = null; buffer.sampleProjection = null; buffer.resetInit = null; delete buffer.seekContinuation; buffer.version++ }
+      for (const buffer of source.buffers) { buffer.prefix = null; buffer.sampleProjection = null; buffer.resetInit = null; delete buffer.seekContinuation; delete buffer.stagedContinuation; buffer.version++ }
       delete source.completeCertificate; delete source.nativeFinalClock
     }
     createBuffer(source, mime) {
@@ -415,7 +415,13 @@
       // append-only continuation may arrive while seeking to already buffered
       // audio; discarding its prefix would leave later buffered returns without
       // copied packets. This preserves bytes only, never presentation or EOF.
-      if (buffer.resetAfterSeek && this.continuesAfterSeek(buffer, data, settings)) buffer.resetAfterSeek = false
+      const proof = buffer.stagedContinuation ?? (buffer.resetAfterSeek ? buffer.seekContinuation : null)
+      const continuation = proof ? this.seekContinuationInventory(buffer, data, settings, proof) : null
+      if (buffer.stagedContinuation && !continuation) {
+        const overBudget = this.bytes + copy(data).byteLength > this.maxBytes
+        return this.reject(buffer.source, overBudget ? 'CAPTURE_QUARANTINE_LIMIT' : 'CAPTURE_AMBIGUOUS_TIMELINE', 'An incomplete seek continuation changed or could not be verified; its original prefix cannot be reset within this epoch')
+      }
+      if (continuation) buffer.resetAfterSeek = false
       delete buffer.seekContinuation
       if (buffer.resetAfterSeek) {
         const init = buffer.prefix?.value?.init
@@ -427,6 +433,12 @@
       }
       buffer.version++; buffer.prefix = null; buffer.sampleProjection = null
       super.append(buffer, data, settings)
+      if (continuation && !buffer.source.error) {
+        // Keep the raw concatenation, not a reconstructed/merged byte stream.
+        // No packet is publishable while a seek continuation is incomplete.
+        buffer.stagedContinuation = continuation.pending ? { ...proof, version: buffer.version } : null
+        buffer.prefix = { version: buffer.version, final: false, value: continuation }
+      }
       if (buffer.awaitingStart && !buffer.source.error) {
         const input = join(buffer.chunks)
         if (input.length >= 8) {
@@ -437,7 +449,11 @@
       }
     }
     continuesAfterSeek(buffer, data, settings) {
-      const proof = buffer.seekContinuation, source = buffer.source, previous = proof?.inventory
+      const result = this.seekContinuationInventory(buffer, data, settings, buffer.seekContinuation)
+      return !!result && !result.pending
+    }
+    seekContinuationInventory(buffer, data, settings, proof) {
+      const source = buffer.source, previous = proof?.inventory
       if (!proof || !buffer.native || !source.native || buffer.seekParserResetRequired || source.error || source.state !== 'content' || source.seen.size !== 1 || !source.seen.has('content') ||
         proof.epoch !== this.epoch || proof.source !== source || proof.nativeSource !== source.native || proof.native !== buffer.native || proof.version !== buffer.version ||
         proof.settings !== JSON.stringify(buffer.timelineSettings) || proof.settings !== JSON.stringify(settingsOf(settings)) ||
@@ -446,23 +462,26 @@
       if (this.bytes + incoming.byteLength > this.maxBytes) return false
       let next
       try { next = buffer.inspectPrefix(join([...buffer.chunks, incoming]), { allowGaps: true }) } catch { return false }
-      if (next.pending || !next.init || next.samples.length <= previous.samples.length || next.init.length !== previous.init.length ||
+      if (!next.init || next.samples.length < previous.samples.length || (!next.pending && next.samples.length === previous.samples.length) || next.init.length !== previous.init.length ||
         !next.init.every((byte, i) => byte === previous.init[i]) ||
         previous.samples.some((sample, i) => JSON.stringify(sample) !== JSON.stringify(next.samples[i])) ||
-        !timeAtOrAfter(next.samples[previous.samples.length].start, previous.samples.at(-1).end) ||
-        !timeAtOrAfter(previous.samples.at(-1).end, next.samples[previous.samples.length].start) ||
-        next.samples.slice(previous.samples.length).some((sample, i) => !timeAtOrAfter(sample.start, next.samples[previous.samples.length + i - 1].end))) return false
+        (next.samples.length > previous.samples.length && (!timeAtOrAfter(next.samples[previous.samples.length].start, previous.samples.at(-1).end) ||
+          !timeAtOrAfter(previous.samples.at(-1).end, next.samples[previous.samples.length].start))) ||
+        next.samples.slice(previous.samples.length).some((sample, i) => !timeAtOrAfter(sample.start, next.samples[previous.samples.length + i - 1].end) ||
+          !timeAtOrAfter(next.samples[previous.samples.length + i - 1].end, sample.start))) return false
       // Compare the original payload too: TimeRanges and equal PTS alone cannot
       // demonstrate that an already appended packet was not replaced.
-      return previous.samples.every(sample => {
+      const unchanged = previous.samples.every(sample => {
         for (let i = sample.offset; i < sample.offset + sample.size; i++) if (previous.bytes[i] !== next.bytes[i]) return false
         return true
       })
+      return unchanged ? next : null
     }
     beginEpoch(epoch, at) {
       if (!Number.isSafeInteger(epoch) || epoch <= this.epoch || !Number.isFinite(at) || at < 0) fail('CAPTURE_PROTOCOL_MISMATCH', 'Seek epoch must advance and have a finite target')
       this.epoch = epoch; this.seek = { at, assigned: false, active: true }
       for (const source of this.sources.values()) {
+        if (source.buffers.some(buffer => buffer.stagedContinuation)) this.reject(source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'A new epoch cannot replace incomplete seek parser input')
         source.observations = []; source.progress = { epoch, ranges: [], emitted: new Set() }
         for (const buffer of source.buffers) { buffer.sampleProjection = null; delete buffer.seekContinuation }
       }
@@ -497,6 +516,7 @@
       return detail
     }
     onTimeAssignment(source, element, value) {
+      if (source?.buffers.some(buffer => buffer.stagedContinuation)) return false
       if (!this.seek?.active || this.seek.assigned || source?.error || Math.abs(value - this.seek.at) > 0.000001) return false
       if (this.seek.replay && (source !== this.seek.source || element !== source.element || value !== 0)) return false
       for (const buffer of source.buffers) buffer.sampleProjection = null
@@ -513,6 +533,7 @@
       return true
     }
     onSeekMutation(buffer, operation) {
+      if (buffer.stagedContinuation) { this.reject(buffer.source, 'CAPTURE_AMBIGUOUS_TIMELINE', 'Native parser mutation interrupted an incomplete seek continuation'); return false }
       if (!this.seek?.active || !this.seek.assigned || buffer.source.error || !['abort', 'remove'].includes(operation)) return false
       if (this.seek.replay) return false // Replaying the already buffered prefix cannot borrow a reset parser inventory.
       // A successful abort can discard the tail of the official parser input. Keep a
@@ -663,6 +684,7 @@
       if (source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.readyState < 2 || snapshot.updating !== false) return []
       if (!this.experimental && source.verifiedFinalEpoch !== this.epoch) return []
       const buffer = source.buffers[0], inventory = this.inventory(source)
+      if (buffer.stagedContinuation) return []
       if (!inventory.init || !inventory.samples.length) return []
       const settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon
       const boundCertificate = source.completeCertificate ? this.completeCertificate(source, buffer) : null
@@ -722,6 +744,7 @@
     }
     finish(source, snapshot) {
       if (source?.error) throw source.error
+      if (source?.buffers.some(buffer => buffer.stagedContinuation)) fail('CAPTURE_PARTIAL_PRESENTATION', 'EOF cannot certify an incomplete seek continuation')
       if (source?.consentSuspension) fail('CAPTURE_PARTIAL_PRESENTATION', 'Visible consent interrupted this source; EOF cannot bridge the suspended interval')
       if (!source || source.state !== 'content' || source.seen.size !== 1 || snapshot?.source !== source || snapshot.seeking !== false || snapshot.playbackRate !== 1 || snapshot.updating !== false || snapshot.readyState < 2) fail('CAPTURE_PARTIAL_PRESENTATION', 'Native final state does not identify the captured source')
       const buffer = source.buffers[0], inventory = this.inventory(source, true), settings = buffer.timelineSettings ?? settingsOf(), coverageEpsilon = 0.000001, codecEpsilon = inventory.quantum + coverageEpsilon

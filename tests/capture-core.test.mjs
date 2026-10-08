@@ -966,7 +966,7 @@ test('a complete contiguous append during seek preserves packets for a buffered 
 })
 
 test('seek continuation rejects reinitialization, overlap, gaps, partial input, changed bindings and replaced payload', () => {
-  for (const scenario of ['reinit', 'overlap', 'gap', 'partial-old', 'partial-new', 'tuple', 'native-tuple', 'native-source', 'native-buffer', 'missing-native-source', 'missing-native-buffer', 'payload', 'limit']) {
+  for (const scenario of ['reinit', 'overlap', 'gap', 'partial-old', 'tuple', 'native-tuple', 'native-source', 'native-buffer', 'missing-native-source', 'missing-native-buffer', 'payload', 'limit']) {
     const { tracker, source, buffer, observe } = progressiveSetup()
     buffer.native = {}; source.native = {}
     observe(0)
@@ -977,7 +977,6 @@ test('seek continuation rejects reinitialization, overlap, gaps, partial input, 
     if (scenario === 'reinit') incoming = fixture({ times: [60, 80] }).bytes
     if (scenario === 'overlap') incoming = fixture({ times: [40, 60] }).cluster
     if (scenario === 'gap') incoming = fixture({ times: [80, 100] }).cluster
-    if (scenario === 'partial-new') incoming = incoming.subarray(0, incoming.length - 1)
     if (scenario === 'tuple') settings = { appendWindowEnd: 1 }
     if (scenario === 'native-tuple') buffer.native.appendWindowEnd = 1
     if (scenario === 'native-source') source.native = {}
@@ -1027,6 +1026,95 @@ test('seek continuation cannot retain or revive bytes after an advertisement, un
     else assert.throws(() => tracker.pull(source, snapshot(0.1)), codeIs('CAPTURE_IDENTITY_UNCERTAIN'))
     assert.equal(tracker.coverage.length, 0)
   }
+})
+
+function stagedSeekSetup(times = [60, 80, 100]) {
+  const f = progressiveSetup(), { tracker, source, buffer, observe, snapshot } = f
+  source.native = { readyState: 'open' }
+  buffer.native = { buffered: { length: 1, start: () => 0, end: () => 0.14 } }
+  observe(0); observe(0.02); tracker.pull(source, snapshot(0.02))
+  tracker.beginEpoch(2, 0.04); assert.equal(tracker.onTimeAssignment(source, null, 0.04), true)
+  // The real second seek happened before the continuation arrived; its source
+  // still had the complete old prefix, so no parser input has to be reset.
+  tracker.beginEpoch(3, 0.02); assert.equal(tracker.onTimeAssignment(source, null, 0.02), true)
+  const tail = fixture({ times }).cluster, split = tail.length - 4
+  tracker.append(buffer, tail.subarray(0, split))
+  assert(buffer.stagedContinuation); assert.equal(source.error, null)
+  return { ...f, tail, split }
+}
+
+test('a streamed seek cluster keeps the exact original prefix and stable frame ordinals but publishes nothing until complete', () => {
+  const { tracker, source, buffer, observe, snapshot, tail, split } = stagedSeekSetup()
+  const originalBytes = concat(fixture().bytes, tail), { inspectWebMPrefix, remuxWebM } = load()
+  observe(0.02, 100); observe(0.06, 140); observe(0.1, 180)
+  assert.equal(tracker.pull(source, { ...snapshot(0.1), audioRanges: [{ start: 0, end: 0.12 }] }).length, 0)
+  assert.throws(() => tracker.finish(source, { ...snapshot(0.1), sourceEnded: true }), codeIs('CAPTURE_PARTIAL_PRESENTATION'))
+  assert.equal(source.progress.emitted.size, 0)
+  tracker.append(buffer, tail.subarray(split))
+  assert.equal(source.error, null); assert.equal(buffer.stagedContinuation, null)
+  assert.equal(tracker.bytes, originalBytes.length)
+  assert.deepEqual(concat(...buffer.chunks), originalBytes, 'no replacement, deduplication or artificial append is introduced')
+  const actual = tracker.inventory(source, true), expected = inspectWebMPrefix(originalBytes, { final: true })
+  assert.equal(JSON.stringify(actual.samples), JSON.stringify(expected.samples))
+  const units = tracker.pull(source, { ...snapshot(0.1), audioRanges: [{ start: 0, end: 0.12 }] })
+  assert.equal(units[0].firstFrame, 1, 'new epoch restarts observation, not the copied packet indices')
+  assert.equal(units.at(-1).endFrame, 5)
+  for (const unit of units) {
+    const exact = remuxWebM(expected, unit.firstFrame, unit.frames)
+    assert.deepEqual(unit.data, concat(exact.init, exact.media))
+  }
+  assert.equal(source.completeCertificate, undefined)
+})
+
+test('staged seek continuation rejects structural contradictions, rebinding and native mutations without resetting published ordinals', () => {
+  for (const scenario of ['reinit', 'overlap', 'gap', 'payload', 'tuple', 'native-tuple', 'native-buffer', 'native-source', 'epoch', 'abort', 'remove', 'ad', 'unknown', 'drop']) {
+    const { tracker, source, buffer, observe, snapshot, tail, split } = stagedSeekSetup(scenario === 'gap' ? [60, 80, 120] : undefined)
+    const coverage = JSON.stringify(tracker.coverage), nextUnit = tracker.nextUnit
+    let remainder = tail.subarray(split), settings
+    if (scenario === 'reinit') remainder = concat(remainder, fixture({ times: [120] }).bytes)
+    if (scenario === 'overlap') remainder = concat(remainder, fixture({ times: [80] }).cluster)
+    if (scenario === 'payload') buffer.chunks[0][buffer.chunks[0].length - 1] ^= 1
+    if (scenario === 'tuple') settings = { appendWindowEnd: 1 }
+    if (scenario === 'native-tuple') buffer.native.appendWindowEnd = 1
+    if (scenario === 'native-buffer') buffer.native = { ...buffer.native }
+    if (scenario === 'native-source') source.native = { ...source.native }
+    if (scenario === 'epoch') tracker.beginEpoch(4, 0)
+    if (scenario === 'abort' || scenario === 'remove') assert.equal(tracker.onSeekMutation(buffer, scenario), false)
+    if (scenario === 'ad' || scenario === 'unknown') observe(0.03, 130, scenario === 'ad' ? ad : { state: 'unknown', sourceBound: true })
+    if (scenario === 'drop') tracker.drop(source)
+    else tracker.append(buffer, remainder, settings)
+    if (scenario === 'drop') assert.equal(tracker.pull(source, snapshot(0.1)).length, 0)
+    else assert.throws(() => tracker.pull(source, snapshot(0.1)), error => !!error.code, scenario)
+    assert.equal(JSON.stringify(tracker.coverage), coverage, scenario)
+    assert.equal(tracker.nextUnit, nextUnit, scenario)
+    assert.equal(source.completeCertificate, undefined, scenario)
+  }
+})
+
+test('staged seek input shares the original memory budget and a later overflow cannot release its prefix', () => {
+  const { tracker, source, buffer, snapshot, tail, split } = stagedSeekSetup()
+  tracker.maxBytes = tracker.bytes + tail.length - split - 1
+  const bytes = tracker.bytes, coverage = JSON.stringify(tracker.coverage)
+  tracker.append(buffer, tail.subarray(split))
+  assert.equal(tracker.bytes, bytes)
+  assert(tracker.bytes <= tracker.maxBytes)
+  assert.throws(() => tracker.pull(source, snapshot(0.12)), codeIs('CAPTURE_QUARANTINE_LIMIT'))
+  assert.equal(JSON.stringify(tracker.coverage), coverage)
+})
+
+test('split seek continuation confirms at its original cluster boundary and never grants holdback or EOF credit', () => {
+  const { tracker, source, buffer, observe, snapshot, tail, split } = stagedSeekSetup()
+  tracker.holdbackSeconds = 1.5
+  observe(0.02, 100); observe(0.12, 200)
+  for (let i = split; i < tail.length; i++) {
+    tracker.append(buffer, tail.subarray(i, i + 1))
+    assert.equal(tracker.pull(source, { ...snapshot(0.12), audioRanges: [{ start: 0, end: 0.12 }] }).length, 0)
+    assert.equal(!!buffer.stagedContinuation, i !== tail.length - 1)
+  }
+  assert.equal(tracker.inventory(source, true).samples.length, 6)
+  assert.equal(source.verifiedFinalEpoch, undefined)
+  assert.equal(source.completeCertificate, undefined)
+  assert.equal(source.successfulEndOfStream, false)
 })
 
 test('real AAC/Opus remux retains the identical decoded PCM across many sample boundaries', t => {
