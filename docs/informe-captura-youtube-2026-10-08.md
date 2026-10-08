@@ -592,3 +592,39 @@ conjunta de 30 canciones completas y 50 transiciones reales con publicidad, sin
 discrepancias, cortes ni fallos de tiempo. Las campañas anteriores no sustituyen
 esa aprobación. yt-dlp continúa predeterminado; Propio conserva Rust→Legacy y
 la entrega progresiva nueva continúa siendo sólo el experimento del banco.
+
+## Preparación de publicación con los otros extractores
+
+Se puede publicar una versión de la app con Oficial experimental conservando
+los otros motores y seguir mejorándola. La promoción de la progresiva y la
+sustitución de Legacy tienen sus criterios propios; esta preparación no los cambia.
+Hoy youtubei tiene respaldo yt-dlp y Propio usa Rust→Legacy. Son modos elegibles,
+no una cadena automática de los tres. La progresiva nueva requiere banco y
+opt-in explícito: una publicación con la configuración actual mantiene la
+retención completa en el uso normal de Oficial.
+
+El empaquetado local mediante `--dry-run --to` comprobó captura v25/API4,
+receta v1/API1 y youtubei v1/API1. La captura empaquetada es idéntica al bundle
+incluido en la app; ambos scripts pasan `node --check`. El destino local era
+nuevo, por lo que este control no compara versiones con el índice remoto ni
+afirma que receta/youtubei necesiten publicarse. No hubo firmas ni uploads.
+
+| Paquete local | Bytes | SHA256 |
+|---|---:|---|
+| `capture-api4-v25.js` | 178253 | `c85f9a9f4206722b24f98640748d5f8b568757f33e8922a31996cc002c510590` |
+| `recipe-api1-v1.json` | 899 | `33900ac011fd0aa05c59738a4cf37a0ab197ddd5151c0ee573ed770719078c3f` |
+| `youtubei-api1-v1.js` | 661046 | `acedd5b74ef85f0bafc751393ff010a8db8675848d73b061dc0acd0ae604d632` |
+
+Los paquetes y su ficha están en `release-candidate.local/preflight-v25/`,
+ignorados por Git. Son paquetes de código sin firmas, no un instalador.
+El código revisado es `7433dba`; los tests y build Windows son los ya registrados.
+No se han repetido las pruebas de latencia ni preparado/verificado instalación,
+actualización o builds de otras plataformas en este paso.
+
+`main` local revisada en `4a69d84` ya contiene **Pletina 0.6.0** y captura API1.
+`p1-oficial` sigue en la base Musify 0.4.0 con captura API4. La app sólo acepta
+extractores de su API exacta: una publicación API4 no llega a una app API1 ni
+añade la coordinación Rust/lector. La entrega requiere una nueva app compatible,
+con el nombre, versión y canal actuales; la configuración antigua de esta rama
+todavía apunta al canal de Musify. Falta la integración y el instalador de esa
+versión; no se ha fusionado ni publicado durante esta revisión.

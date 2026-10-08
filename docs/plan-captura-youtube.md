@@ -185,6 +185,22 @@ periódicas se agrupan por vídeo; la final toma un snapshot nuevo y conserva lo
 
 ## Promoción y mantenimiento
 
+La app puede publicarse con los otros extractores y con Oficial experimental
+antes de alcanzar las metas de promoción. La configuración actual conserva
+yt-dlp predeterminado, youtubei→yt-dlp y Propio→Rust→Legacy; no encadena los tres
+motores automáticamente. La entrega progresiva nueva sigue restringida al banco
+con opt-in; el uso normal de Oficial retiene la fuente completa hasta validarla.
+Publicar esa versión no equivale a activar progresiva ni sustituir Legacy.
+
+**Empaquetado revisado el 8 de octubre:** el paquete local v25/API4 coincide
+con el bundle incluido y ambos scripts pasan comprobación de sintaxis. No está
+firmado ni publicado. `main` revisada en `4a69d84` ya es Pletina 0.6.0 y acepta
+captura API1: publicar el script API4 no actualiza esa app ni sus partes Rust/lector.
+La publicación requiere integrar los cambios en una nueva app compatible y
+conservar el nombre, versión y canal actuales. `p1-oficial` todavía contiene la
+configuración Musify 0.4.0. El [informe](informe-captura-youtube-2026-10-08.md)
+recoge los límites del candidato; no se ha fusionado, subido ni publicado.
+
 **Validación cerrada, no aprobada (7–8 de octubre).** Propio resolvió30 búsquedas
 frías por Rust, sin fallback, en445–1.649ms (mediana698): no cumple300ms.
 En la escucha completa de los cinco discos hubo29 resoluciones rápidas y un respaldo
