@@ -73,7 +73,7 @@ class Driver:
             "tauri:options": {"application": str(application)},
         }}})
         self.session = result["sessionId"]
-        self.request("POST", f"/session/{self.session}/timeouts", {"script": 110000})
+        self.request("POST", f"/session/{self.session}/timeouts", {"script": 410000})
         return result["capabilities"]
 
     def stop(self):
@@ -85,7 +85,7 @@ class Driver:
         kind = "async" if asynchronous else "sync"
         return self.request("POST", f"/session/{self.session}/execute/{kind}", {
             "script": script, "args": args or [],
-        })
+        }, timeout=420 if asynchronous else 120)
 
     def screenshot(self, destination):
         encoded = self.request("GET", f"/session/{self.session}/screenshot", timeout=10)
@@ -93,16 +93,19 @@ class Driver:
 
 
 PLAYBACK = r"""
+const injectStall=arguments[0]===true;
+const resumeCycles=arguments[1]||0;
 const done=arguments[arguments.length-1];
 (async()=>{
   const wait=ms=>new Promise(r=>setTimeout(r,ms));
-  const until=async predicate=>{
-    for(let i=0;i<100;i++){if(predicate())return;await wait(200);}
+  const until=async (predicate, seconds=20)=>{
+    for(let i=0;i<seconds*5;i++){if(predicate())return;await wait(200);}
     throw new Error('UI did not reach expected state');
   };
   const original=HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play=function(...args){
-    window.__linuxTestAudio=this;this.muted=true;return original.apply(this,args);
+    window.__linuxTestAudio=this;this.__linuxTestStartedAt=this.currentTime;
+    this.muted=true;return original.apply(this,args);
   };
   await until(()=>[...document.querySelectorAll('.sidebar button')].some(b=>b.innerText.includes('Tu música')));
   [...document.querySelectorAll('.sidebar button')].find(b=>b.innerText.includes('Tu música')).click();
@@ -110,14 +113,18 @@ const done=arguments[arguments.length-1];
   document.querySelector('.grid .card button.hit[title="Linux audio fixtures"]').click();
   await until(()=>document.querySelectorAll('.tracks .row[role="button"]').length===6);
 
-  async function check(title, seekTo){
+  let injected=false;
+  async function check(title, seekTo, reuse=false){
     const row=[...document.querySelectorAll('.tracks .row[role="button"]')].find(r=>r.querySelector('.name')?.textContent===title);
     if(!row)throw new Error('Missing track: '+title);
-    const previous=window.__linuxTestAudio;
-    row.click();
-    await until(()=>window.__linuxTestAudio&&window.__linuxTestAudio!==previous);
+    if(!reuse){
+      const previous=window.__linuxTestAudio;
+      row.click();
+      await until(()=>window.__linuxTestAudio&&window.__linuxTestAudio!==previous);
+    }
     await until(()=>window.__linuxTestAudio.error||(window.__linuxTestAudio.readyState>=3&&window.__linuxTestAudio.currentTime>.5&&!window.__linuxTestAudio.paused));
     const a=window.__linuxTestAudio;
+    const source=a.src;
     const result={title,currentTime:a?.currentTime,readyState:a?.readyState,error:a?.error?.message??null,
       sourceHost:a?.src?new URL(a.src).hostname:null,playingIndicator:!!document.querySelector('.tracks .current [aria-label="Sonando"]')};
     const seek=document.querySelector('input[aria-label="Posición"]');
@@ -125,30 +132,58 @@ const done=arguments[arguments.length-1];
     await until(()=>a.currentTime>seekTo+.3&&!a.seeking);result.seekTime=a?.currentTime;
     document.querySelector('.transport button.play').click();await until(()=>a.paused);result.pauseWorks=a?.paused===true;
     const pausedTime=a?.currentTime;await wait(300);result.pauseHolds=Math.abs((a?.currentTime??0)-pausedTime)<.1;
-    document.querySelector('.transport button.play').click();await until(()=>!a.paused&&a.currentTime>pausedTime+.3);result.resumeWorks=true;
+    const resumeStarted=performance.now();
+    document.querySelector('.transport button.play').click();
+    // Optional native clock stall: no error and no ended event, while paused remains false.
+    // The replacement decoder must start at the saved position with its normal rate.
+    const stalled=injectStall&&!injected&&title==='Fixture wav';
+    if(stalled){injected=true;a.playbackRate=0;}
+    // El watchdog puede reemplazar un decoder WebKit bloqueado. Comprobar el audio
+    // vigente y la posición, sin aprobar simplemente porque llegó otro `playing`.
+    await until(()=>{
+      const resumed=window.__linuxTestAudio;
+      return resumed&&!resumed.paused&&!resumed.error&&resumed.src===source&&resumed.currentTime>pausedTime+.3;
+    },75);
+    const resumed=window.__linuxTestAudio;
+    result.resumeWorks=true;result.resumeTime=resumed.currentTime;
+    result.resumeSeconds=(performance.now()-resumeStarted)/1000;
+    result.decoderRecreated=resumed!==a;
+    result.resumeStartedAt=resumed.__linuxTestStartedAt;
+    result.positionPreserved=Math.abs(result.resumeStartedAt-pausedTime)<.5;
+    result.injectedStall=stalled;
     result.pass=result.currentTime>.5&&result.readyState>=3&&!result.error&&result.playingIndicator&&result.sourceHost==='127.0.0.1'
-      &&result.seekTime>seekTo+.3&&result.pauseWorks&&result.pauseHolds&&result.resumeWorks;
+      &&result.seekTime>seekTo+.3&&result.pauseWorks&&result.pauseHolds&&result.resumeWorks&&result.positionPreserved
+      &&(!stalled||(result.decoderRecreated&&result.resumeSeconds>=29&&resumed.playbackRate===1));
     return result;
   }
   const local=[];
+  window.__linuxTestResults={local};
   for(const ext of ['wav','mp3','flac','ogg','m4a','opus'])local.push(await check('Fixture '+ext,6));
+  const repeated=[];
+  window.__linuxTestResults.repeated=repeated;
+  for(let i=0;i<resumeCycles;i++)repeated.push(await check('Fixture wav',6,i>0));
   [...document.querySelectorAll('.sidebar button')].find(b=>b.innerText.startsWith('Descargas')).click();
   await until(()=>[...document.querySelectorAll('.tracks .row .name')].some(n=>n.textContent==='Downloaded WebM fixture'));
   const download=await check('Downloaded WebM fixture',6);
   document.querySelector('.transport button.play').click();
-  done({local,download,pass:local.every(r=>r.pass)&&download.pass,body:document.body.innerText});
-})().catch(error=>done({pass:false,error:String(error),body:document.body.innerText}));
+  done({local,download,repeated,pass:local.every(r=>r.pass)&&download.pass&&repeated.every(r=>r.pass),body:document.body.innerText});
+})().catch(error=>{
+  const a=window.__linuxTestAudio;
+  done({...window.__linuxTestResults,pass:false,error:String(error),body:document.body.innerText,
+    failedAudio:a?{currentTime:a.currentTime,paused:a.paused,readyState:a.readyState,playbackRate:a.playbackRate,error:a.error?.message??null}:null});
+});
 """
 
 
-def run(image, output):
+def run(image, output, stall_after_resume=False, resume_cycles=0):
     binaries = {name: require(name) for name in (
         "ffmpeg", "Xvfb", "pulseaudio", "WebKitWebDriver", "tauri-driver",
     )}
     processes, logs = [], []
     driver = None
     report = {"appimage": str(image), "sha256": hashlib.sha256(image.read_bytes()).hexdigest(),
-              "systemSqlite": sqlite3.sqlite_version}
+              "systemSqlite": sqlite3.sqlite_version, "stallAfterResume": stall_after_resume,
+              "resumeCycles": resume_cycles}
     with tempfile.TemporaryDirectory(prefix="pletina-linux-playback-") as temporary:
         root = Path(temporary)
 
@@ -235,7 +270,7 @@ def run(image, output):
                 connection.execute("INSERT OR REPLACE INTO downloads(track_id,path,size,video_id,downloaded_at) VALUES (?,?,?,?,?)",
                                    (DOWNLOAD_ID, str(fixture / "tone.webm"), (fixture / "tone.webm").stat().st_size, "fixture", int(time.time())))
             driver.start(appdir / "AppRun")
-            report["playback"] = driver.execute(PLAYBACK, asynchronous=True)
+            report["playback"] = driver.execute(PLAYBACK, args=[stall_after_resume, resume_cycles], asynchronous=True)
             if not report["playback"]["pass"]:
                 raise AssertionError("Packaged WebKit playback regression failed")
             report["pass"] = True
@@ -283,7 +318,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("appimage", type=Path)
     parser.add_argument("--output-dir", type=Path, default=Path("target/linux-playback-test"))
+    parser.add_argument("--stall-after-resume", action="store_true",
+                        help="Freeze the WAV audio clock after resume and require watchdog decoder recovery")
+    parser.add_argument("--resume-cycles", type=int, default=0,
+                        help="Additional seek/pause/resume cycles on the same WAV track")
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    summary = run(args.appimage.resolve(), args.output_dir.resolve())
+    if not 0 <= args.resume_cycles <= 100:
+        parser.error("--resume-cycles must be between 0 and 100")
+    summary = run(args.appimage.resolve(), args.output_dir.resolve(), args.stall_after_resume, args.resume_cycles)
     print(f"Linux packaged playback PASS: 6 local formats + downloaded WebM, seek, pause and resume. Evidence: {args.output_dir}")

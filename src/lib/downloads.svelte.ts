@@ -21,6 +21,9 @@ class Downloads {
   version = $state(0)
 
   #finishedInBatch = 0
+  /** Ignora eventos tardíos de una transferencia que ya terminó. start abre un intento nuevo. */
+  #terminal = new Set<number>()
+  #attempts = new Map<number, number>()
 
   async init(downloadedIds: number[]) {
     for (const id of downloadedIds) this.done.add(id)
@@ -30,22 +33,31 @@ class Downloads {
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */
   start(items: QueueItem[]) {
     // Los episodios, solo los de YouTube (son vídeos); la música local ya está en el equipo.
-    const todo = items.filter(
-      (i) =>
-        !isLocal(i.track.id) &&
-        (!isPodcast(i.track.id) || youtubeEpisodes.has(i.track.id)) &&
-        !this.done.has(i.track.id) &&
-        !this.active.has(i.track.id),
-    )
+    const seen = new Set<number>()
+    const todo = items.filter((i) => {
+      const id = i.track.id
+      if (seen.has(id) || isLocal(id) || (isPodcast(id) && !youtubeEpisodes.has(id)) || this.done.has(id) || this.active.has(id)) return false
+      seen.add(id)
+      return true
+    })
     if (!todo.length) return
     for (const item of todo) {
+      this.#terminal.delete(item.track.id)
+      this.#attempts.set(item.track.id, (this.#attempts.get(item.track.id) ?? 0) + 1)
       this.active.set(item.track.id, 0)
       this.queued.set(item.track.id, item)
     }
+    const attempts = new Map(todo.map((item) => [item.track.id, this.#attempts.get(item.track.id)]))
     toast.show(todo.length === 1 ? `Descargando «${todo[0].track.title}»…` : `Descargando ${todo.length} canciones…`)
     api.download(todo.map(toLib)).catch((e) => {
-      for (const item of todo) this.#forget(item.track.id)
-      toast.show(`No se pudo empezar la descarga: ${e}`)
+      let current = false
+      for (const item of todo) {
+        const id = item.track.id
+        if (this.#attempts.get(id) !== attempts.get(id) || !this.active.has(id)) continue
+        this.#forget(id)
+        current = true
+      }
+      if (current) toast.show(`No se pudo empezar la descarga: ${e}`)
     })
     // En Android, sin esto la descarga se congela al salir de la app.
     if (isAndroid) api.androidDownloadsStarted().catch(() => {})
@@ -58,27 +70,48 @@ class Downloads {
   }
 
   async remove(ids: number[]) {
+    const attempts = new Map(ids.map((id) => [id, this.#attempts.get(id)]))
     try {
       await api.removeDownloads(ids)
-      for (const id of ids) this.done.delete(id)
+      for (const id of ids) {
+        if (this.#attempts.get(id) !== attempts.get(id)) continue
+        this.done.delete(id)
+        this.#terminal.add(id)
+      }
       this.version++
       toast.show(ids.length === 1 ? 'Descarga quitada' : `${ids.length} descargas quitadas`)
     } catch (e) {
       toast.show(`No se pudo quitar la descarga: ${e}`)
+      // Una tanda puede haber quitado las primeras canciones antes de fallar en otra.
+      // Solo reconciliar sus IDs; una respuesta vieja no debe deshacer un intento nuevo.
+      try {
+        const remaining = new Set((await api.downloadsList()).map((entry) => entry.track.id))
+        let changed = false
+        for (const id of ids) {
+          if (this.#attempts.get(id) !== attempts.get(id) || this.active.has(id) || remaining.has(id)) continue
+          changed = this.done.delete(id) || changed
+          this.#terminal.add(id)
+        }
+        if (changed) this.version++
+      } catch {
+        // Conserva el último estado conocido si tampoco se puede consultar la biblioteca.
+      }
     }
   }
 
   /** Descarta lo que aún no ha empezado; lo que se está descargando termina. */
   cancel() {
-    api.cancelDownloads().catch(() => {})
+    api.cancelDownloads().catch((e) => toast.show(`No se pudo cancelar la descarga: ${e}`))
   }
 
   #onProgress(p: DownloadProgress) {
     const id = p.trackId
+    if (this.#terminal.has(id) || this.done.has(id)) return
     if (p.state === 'queued' || p.state === 'downloading') {
       this.active.set(id, p.progress)
       return
     }
+    this.#terminal.add(id)
     const title = this.queued.get(id)?.track.title ?? 'la canción'
     this.#forget(id)
     if (p.state === 'done') {

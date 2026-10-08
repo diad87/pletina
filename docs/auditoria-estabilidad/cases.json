@@ -1,0 +1,2302 @@
+{
+  "schemaVersion": 1,
+  "preparedOn": "2026-10-08",
+  "baseline": "v0.10.0 / 2d679e477d906682974d2ee763d3cf09c5b4a7a2",
+  "status": "planned-not-completed",
+  "caseCount": 70,
+  "durationMeaning": "Estimación de un recorrido base por caso; no suma calendarizada ni incluye todas las combinaciones de dispositivos/versiones. Hay solapamientos de cobertura que pueden compartir evidencias.",
+  "acceptanceCriteria": "../auditoria-estabilidad.md",
+  "cases": [
+    {
+      "id": "AND-001",
+      "area": "Instalación y compatibilidad",
+      "priority": "P0",
+      "layer": "artefacto publicado + dispositivo/emulador",
+      "scenario": "Instalación limpia del APK firmado en la matriz Android declarada, separando incompatibilidad de ABI de un fallo de instalación.",
+      "steps": [
+        "Registrar SHA256 del APK, versionName/versionCode, certificado, minSdk, targetSdk y ABI con apksigner/aapt; conservar salida literal.",
+        "Registrar modelo, API, ABI admitidas, Android System WebView y espacio libre de cada destino.",
+        "En perfiles desechables, instalar con adb install y por instalador del sistema en al menos un ARM64 físico; cubrir API 24,28,33,35 y37 cuando haya imágenes/dispositivos disponibles.",
+        "Abrir, consultar catálogo y reproducir una fixture; repetir arranque sin red.",
+        "Probar un destino de ABI no incluida como control negativo y registrar INSTALL_FAILED_* sin atribuirlo al caso humano sin conocer su dispositivo."
+      ],
+      "expected": [
+        "APK válido y firmado; instalaciones en combinaciones declaradas compatibles terminan y abren sin crash/ANR.",
+        "El primer arranque no necesita permiso de notificaciones para mostrar biblioteca o reproducir.",
+        "Un error de ABI/API/firma/espacio queda identificado por código, sin sugerir borrar biblioteca como solución.",
+        "Cada celda no disponible queda bloqueada o no cubierta, nunca aprobada por otra arquitectura."
+      ],
+      "evidence": [
+        "artifact-metadata.json, apksigner.txt, aapt.txt, install-results.json, logcat por dispositivo.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/build.gradle.kts: minSdk24, targetSdk37.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/AndroidManifest.xml"
+      ],
+      "automation": "Preparar script PowerShell/adb de inventario e instalación; validación UI con UIAutomator; prueba del instalador del sistema en ARM64 físico.",
+      "currentStatus": "APK publicado 0.10.0 instalado y abierto en emulador API 35 mediante traducción ARM, según prueba coordinada; el resto de la matriz y el teléfono ARM64 físico siguen pendientes. Esta preparación no instala ni ejecuta.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "APK estable 0.10.0 y candidato con hash y procedencia; perfiles desechables.",
+        "Emuladores API seleccionadas y al menos teléfono ARM64; no sustituir ARM64 por sólo x86_64."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-002",
+      "area": "Actualización y migraciones",
+      "priority": "P0",
+      "layer": "dispositivo + SQLite/JNI",
+      "scenario": "Actualizar de 0.9.0 y 0.9.1 a 0.10.0/candidato y de 0.10.0 a un candidato futuro, sin perder biblioteca, descargas o identidad.",
+      "steps": [
+        "En perfiles aislados sembrar 0.9.0, 0.9.1 y 0.10.0 con playlists de duplicados, favoritos, historial, fuentes elegidas y dos descargas válidas; añadir favoritos de programa cuando la versión los admita.",
+        "Guardar inventario lógico de SQLite, conteos e IDs, hashes de descargas, cola y certificado del APK.",
+        "Ejecutar recorridos independientes 0.9.0→0.10.0, 0.9.1→0.10.0 y ambas anteriores→candidato; para un candidato futuro, añadir 0.10.0→candidato. Instalar con adb install -r sin desinstalar ni borrar datos; abrir, leer todos los elementos y reproducir una descarga sin red.",
+        "Reabrir dos veces, comprobar migración idempotente y backup previsto.",
+        "Ensayar firma distinta y downgrade como controles negativos exclusivamente en perfiles descartables; comprobar conservación de los datos."
+      ],
+      "expected": [
+        "Upgrade válido conserva IDs, contenidos, preferencias y ficheros; user_version llega a la migración esperada una sola vez.",
+        "Las fuentes elegidas y favoritos mantienen semántica tras actualizar; una descarga existente reproduce offline.",
+        "Rechazos del sistema por firma/downgrade no se confunden con corrupción de la aplicación.",
+        "No DB corrupta, tablas vaciadas ni aparición de duplicados por migración."
+      ],
+      "evidence": [
+        "before-after-library.json, db-integrity.txt, migration-backup-list.txt, APK certificates y resultados install-r.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:178,294,355",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:752"
+      ],
+      "automation": "Instrumentación de fixtures SQLite en paquete aislado y harness de migración Rust; actualización real de APK firmado en perfil de prueba.",
+      "currentStatus": "Planificado; existen tests Rust de migración 6→7, no equivalen a actualización completa Android.",
+      "durationMinutes": 60,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "APKs anteriores/candidato con la misma identidad de firma para el recorrido positivo.",
+        "Datos de prueba y copia consistente WAL; no abrir/escribir la DB de la instalación personal."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-003",
+      "area": "Streaming de música YouTube",
+      "priority": "P0",
+      "layer": "JNI + ExoPlayer + interfaz real",
+      "scenario": "Reproducir música del catálogo y canciones añadidas mediante enlace YouTube usando el motor móvil real.",
+      "steps": [
+        "Registrar tres pistas del catálogo y tres enlaces individuales con videoId, duración y fuente resuelta; incluir la canción denunciada en el foro cuando se disponga de URL exacta.",
+        "Vaciar sólo la caché del perfil de prueba y verificar ausencia de descargas.",
+        "Reproducir cada pista en Wi-Fi y datos móviles; medir pulsación→audio, estado ExoPlayer, avance de posición y transiciones. Para arranque en red controlada recoger al menos 30 muestras por combinación plataforma/origen auditada, con fuentes válidas y estados de caché identificados.",
+        "Pausar, reanudar y buscar a 20%,80% y cerca del final; alternar fuentes mediante la UI cuando sea aplicable.",
+        "Repetir una URL retirada/bloqueada como control negativo sin sustituir silenciosamente un enlace explícito por otra canción."
+      ],
+      "expected": [
+        "Cada fuente válida inicia audio y avanza al menos60 s; título/ID y duración corresponden al elemento seleccionado.",
+        "Criterio general de arranque en red controlada y fuente válida: p95 < 10 s con al menos 30 muestras. Una fuente inviable no debe iniciar en 10 s: debe alcanzar un fallo o estado de recuperación acotado y observable, sin espera indefinida.",
+        "Seek y pausa no cambian pista ni pierden la selección manual.",
+        "Un vídeo no disponible termina con error o política de cola registrada; no crea historial de audio no escuchado."
+      ],
+      "evidence": [
+        "stream-matrix.json con network/source/videoId/latencias; logcat, musify.log, instantáneas MediaController.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:43",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/native.rs:114"
+      ],
+      "automation": "Instrumentación MediaController+JNI y captura de estados; selección/controles UIAutomator. Usar fuentes autorizadas y fijadas en manifiesto.",
+      "currentStatus": "Planificado; no extrapolar pruebas Linux/Windows a Android ni éxito de catálogo a enlace directo.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Teléfono ARM64 con datos móviles y emulador para control; manifiesto de URLs reproducibles.",
+        "Descargas ausentes verificadas; cuenta/cookies sólo si forman parte explícita del producto."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-004",
+      "area": "Pódcasts RSS",
+      "priority": "P0",
+      "layer": "RSS + JNI + ExoPlayer",
+      "scenario": "Episodio RSS largo con seek, redirecciones y HTTP Range, identificado por enclosure real.",
+      "steps": [
+        "Elegir fixture HTTPS RSS conocida con episodio>60 min y otra fuente pública; guardar feed, GUID, enclosure, MIME y duración.",
+        "Confirmar en SQLite/resolvedor que el episodio usa enclosure RSS y no videoId YouTube.",
+        "Sin descarga, recoger 30 muestras de arranque de la fixture en red controlada y reproducir 5 min; buscar a 25 min, al 80% y atrás; pausar/reanudar y continuar con pantalla apagada.",
+        "Registrar rangos/respuestas de la fixture; repetir con redirectHTTPS y servidor que no admite Range.",
+        "Comprobar una respuesta404 y un timeout controlado; restaurar el servidor y reintentar."
+      ],
+      "expected": [
+        "Streaming y seek admitido conservan identidad y posición; la fuente es RSS demostrada por URL/metadatos.",
+        "En red controlada y fuente válida: arranque p95 < 10 s con al menos 30 muestras; posición tras seek ±2 s cuando formato/servidor lo soporten. Una fuente inviable debe terminar con fallo acotado, sin exigir inicio en 10 s.",
+        "Sin Range, la limitación se maneja sin crash ni salto a otro episodio; no se exige una capacidad que el servidor no ofrece.",
+        "Error de RSS/servidor se distingue de YouTube y no deja loading indefinido."
+      ],
+      "evidence": [
+        "rss-fixture-manifest.json, trace HTTP Range/status, reproducción position-samples.csv, musify.log.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:63",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:370,498"
+      ],
+      "automation": "Servidor HTTPS de fixtures en entorno de pruebas y test instrumentado de MediaController; complementarlo con episodio público fijado.",
+      "currentStatus": "Planificado; no inferir RSS por el nombre del programa.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Fixture RSS/audio propia o autorizada con duración y Range conocidos; certificado válido en dispositivo.",
+        "Perfil sin descargas del episodio."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-005",
+      "area": "Pódcasts RSS y YouTube",
+      "priority": "P1",
+      "layer": "aplicación real + dispositivo",
+      "scenario": "Comparación controlada de pódcasts RSS y YouTube entre versiones.",
+      "steps": [
+        "Identificar los episodios de prueba y registrar feed, GUID y enclosure o videoId de cada fuente.",
+        "Preparar un episodio YouTube y otro RSS del mismo programa sólo cuando ambas fuentes existan; verificar origen real en cada caso y ausencia de descarga.",
+        "Repetir en 0.9.0 y candidato con mismo teléfono/red/orden,10 min por fuente, y seek a una posición avanzada.",
+        "Comparar arranque, estabilidad, consumo y errores sin mezclar resultados de proveedores distintos."
+      ],
+      "expected": [
+        "Cada medición queda ligada a versión, episodio y origen demostrado.",
+        "En recorrido controlado no hay salto espontáneo, bloqueo o reinicio de posición; una diferencia reproducible entre versiones se investiga como regresión."
+      ],
+      "evidence": [
+        "source-provenance.json, paired-runs.csv, logs por versión y fuente.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/youtube_podcasts.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:63"
+      ],
+      "automation": "Parte automatizable con fixtures y MediaController; comparación de fuentes y versiones en el mismo dispositivo.",
+      "currentStatus": "Planificado; comparativa controlada pendiente.",
+      "durationMinutes": 50,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Dos perfiles/instalaciones de prueba de versiones fijadas; mismas condiciones medidas.",
+        "Episodios identificados; fuente no inferida por nombre del programa."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-006",
+      "area": "Segundo plano y pantalla apagada",
+      "priority": "P0",
+      "layer": "dispositivo ARM64 + servicio nativo",
+      "scenario": "Continuidad al cerrar Activity, bloquear pantalla y retirar la app de recientes.",
+      "steps": [
+        "Iniciar una cola streaming y otra descargada, fijar posición y evento actual; mantener ahorro de batería en configuración normal.",
+        "Mandar Activity a segundo plano, bloquear pantalla10 min y retirarla de recientes; distinguir esta acción de forzar detención.",
+        "Controlar pausa/reanudación/siguiente desde notificación y bloqueo.",
+        "Abrir de nuevo la UI y comparar timeline/índice/posición con MediaController antes de tocar nada.",
+        "Repetir mientras hay transición de pista."
+      ],
+      "expected": [
+        "Servicio mantiene reproducción/cola y controles con pantalla apagada; retirar recientes no equivale a perder sesión.",
+        "UI se resincroniza al volver sin doble reproducción, reinicio de pista ni salto.",
+        "Sólo se registra una escucha por reproducción conforme al umbral existente.",
+        "No crash/ANR ni pérdida de foreground media notification."
+      ],
+      "evidence": [
+        "lifecycle-timeline.json, logcat, dumpsys media_session/activity services, musify.log y vídeo UI.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:122,445",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player-android.svelte.ts:constructor,#sync"
+      ],
+      "automation": "adb input keyevent/home más UIAutomator e instrumentación de estados; confirmación física con pantalla apagada.",
+      "currentStatus": "Planificado; no ejecutar soak largo durante preparación.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Teléfono ARM64; batería/temperatura y política OEM anotadas.",
+        "Dos colas reproducibles streaming/offline."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-007",
+      "area": "Doze y restricciones de batería",
+      "priority": "P1",
+      "layer": "emulador controlado + teléfono físico",
+      "scenario": "Doze/standby y política OEM durante reproducción o pausa prolongada.",
+      "steps": [
+        "Registrar ajustes de optimización antes de probar; no exigir al usuario desactivar ahorro para aprobar el recorrido normal.",
+        "En dispositivo de pruebas, desenchufar simuladamente y forzar idle mediante adb shell dumpsys battery unplug y dumpsys deviceidle force-idle; guardar dumpsys deviceidle/power.",
+        "Reproducir fixture remota y offline durante 10 min; luego pausar, dejar idle y reanudar desde notificación.",
+        "Salir siempre del estado de prueba con dumpsys deviceidle unforce y dumpsys battery reset.",
+        "Repetir una sesión con idle natural en teléfono real y contrastar resultados."
+      ],
+      "expected": [
+        "Comportamiento sin suspensión inesperada mientras reproducción foreground está activa; pausa conserva cola/posición.",
+        "Al reanudar no quedan bloqueos ni audio duplicado.",
+        "Un fallo exclusivo del OEM se documenta con ajuste/modelo, sin aprobarlo usando sólo emulator force-idle.",
+        "Estados temporales de prueba se restauran."
+      ],
+      "evidence": [
+        "power-before-after.txt, deviceidle-events.txt, posición/servicio cada30s, logs Android y app.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:103,116,514"
+      ],
+      "automation": "Script adb reversible para dispositivo dedicado; idle natural requiere ejecución real y observación.",
+      "currentStatus": "Planificado; no forzar idle ni cambiar ajustes ahora.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Dispositivo de prueba con adb autorizado; no usar teléfono personal activo para alterar power state.",
+        "Instrumentación que no mantenga la pantalla encendida e invalide la prueba."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-008",
+      "area": "Foco de audio",
+      "priority": "P0",
+      "layer": "instrumentación Android + dispositivo",
+      "scenario": "Foco transitorio/permanente por navegación, llamada y otra app, sin reanudaciones que contradigan una pausa.",
+      "steps": [
+        "Reproducir streaming y provocar foco transitorio/duck con app de prueba; registrar reason y estado.",
+        "Simular llamada entrante/contestada o foco permanente con app de audio; terminar interrupción.",
+        "Pulsar pausa durante la interrupción y confirmar que al recuperar foco sigue pausado.",
+        "Repetir foco perdido mientras hay retry pendiente de red.",
+        "Comparar posición y estado entre notificación, UI y MediaController."
+      ],
+      "expected": [
+        "Duck/pausa respetan la política Android; no se mezclan dos audios por mala gestión de foco.",
+        "Tras pausa explícita, volver foco/red no fuerza play.",
+        "Recuperación no salta pista ni reinicia posición.",
+        "No se solicita configurar el coche para compensar un callback tardío de la app."
+      ],
+      "evidence": [
+        "audio-focus-events.json, logcat AudioManager/Media3 y musify.log, capturas estado.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:97,349,363,400,423"
+      ],
+      "automation": "App de pruebas AudioFocusRequest + MediaController; llamadas/routing real en dispositivo para confirmar.",
+      "currentStatus": "Planificado; carrera retry→play tras pausa demostrada previamente sólo en harness Kotlin.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "App de test que solicite/libere foco; dispositivo o emulador con audio funcional.",
+        "Fixtures de red controlada para combinar retry y foco."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-009",
+      "area": "Bluetooth y cambios de salida",
+      "priority": "P0",
+      "layer": "hardware físico",
+      "scenario": "Desconexión/reconexión Bluetooth A2DP y auriculares durante reproducción, pausa y retry.",
+      "steps": [
+        "Emparejar receptor Bluetooth de pruebas; registrar codec/ruta/versión Android.",
+        "Reproducir y desconectar receptor; repetir apagando el receptor y desde ajustes.",
+        "Repetir con auriculares cableados si el dispositivo los soporta.",
+        "Reconectar tras pausa explícita y durante espera de red; probar botones play/next/previous AVRCP.",
+        "Verificar metadatos, ruta y volumen tras cada cambio."
+      ],
+      "expected": [
+        "Evento becoming-noisy pausa sin enviar inesperadamente audio al altavoz.",
+        "Reconexión no ignora la pausa explícita ni crea dos reproductores.",
+        "Controles AVRCP actúan una vez sobre la canción correcta; metadatos coherentes.",
+        "No saltos espontáneos por confundir cambio de ruta con final de pista."
+      ],
+      "evidence": [
+        "routing-avrcp-log.json, dumpsys audio/media_session, vídeo receptor/telefono, musify.log.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:102,349",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:181"
+      ],
+      "automation": "Parcial con instrumentación/eventos; validación A 2DP/AVRCP requiere hardware, no sólo inyección de broadcasts.",
+      "currentStatus": "Planificado; no cubierto por pruebas de MediaBrowser.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Teléfono ARM64 y receptor Bluetooth real; cable si aplicable.",
+        "Dispositivo dedicado y volumen de prueba controlado."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-010",
+      "area": "Android Auto y coche",
+      "priority": "P1",
+      "layer": "instrumentación Media3 + DHU + coche real",
+      "scenario": "Descubrimiento, biblioteca, arranque sin Activity y controles de Android Auto.",
+      "steps": [
+        "Ejecutar CarLibraryServiceTest, CarLibraryTest y CarPlaybackTest en paquete.autotest; registrar JUnit sin asumir que constituyen prueba de coche.",
+        "Conectar DHU, comprobar descubrimiento, raíz, favoritos/playlists, selección por mediaId y actualización de biblioteca.",
+        "Iniciar desde Auto con Activity cerrada, reproducir streaming y offline y alternar controles teléfono/Auto.",
+        "Repetir next/previous/pause y selección de playlist con duplicados; probar voz sólo si está configurada.",
+        "Confirmar sesión en coche estacionado con USB y, si disponible, inalámbrico; registrar modelo/AndroidAuto."
+      ],
+      "expected": [
+        "Navegación y selección reales arrancan la canción correcta, conservando contexto y duplicados.",
+        "Una sola sesión y cola para teléfono/coche; ningún ANR al abrir biblioteca.",
+        "Metadatos/controles se actualizan y no requieren Activity visible.",
+        "Cada capa reporta resultado separado; DHU o MediaBrowser no aprueban coche real."
+      ],
+      "evidence": [
+        "JUnit XML, DHU trace/screenshots, car-session-matrix.json, musify.log.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/docs/android-auto.md",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:144",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/androidTest/java/dev/musify/desktop/CarPlaybackTest.kt"
+      ],
+      "automation": "Tests instrumentados existentes + guion DHU; verificación manual de hardware al final.",
+      "currentStatus": "Base documental registra 4 pruebas instrumentadas API 35 previas; DHU/coche/ARM64 siguen por verificar para candidato.",
+      "durationMinutes": 45,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Build de pruebas con sufijo.autotest y JNI de ABI correcta.",
+        "DHU y teléfono autorizado para Auto; coche estacionado disponible para última capa."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-011",
+      "area": "Red móvil y contador de reintentos",
+      "priority": "P0",
+      "layer": "Kotlin determinista + ExoPlayer con servidor controlado + móvil",
+      "scenario": "Cuatro cortes independientes durante una misma pista con recuperación estable entre ellos.",
+      "steps": [
+        "Reejecutar harness con bloques del SHA candidato y comparar con evidencia 0.10.0; no presentar dobles como radio real.",
+        "En servidor de fixture, hacer que cada corte agote la recuperación interna de ExoPlayer hasta onPlayerError.",
+        "Tras cada corte restaurar conexión y dejar 30 s de audio avanzando; repetir cuatro veces sin cambiar pista.",
+        "Registrar retries, errorCode, mediaId, posición, llamadas prepare/play y mensajes de salto.",
+        "Repetir una secuencia en datos móviles controlados cuando sea posible."
+      ],
+      "expected": [
+        "Una recuperación estable reinicia el presupuesto de fallos consecutivos; el cuarto corte independiente no salta automáticamente por errores históricos.",
+        "La pista y posición se conservan mientras exista intención de reproducir.",
+        "Cada nivel de retry y latencia queda medido; no afirmar que todo el corte dura sólo 1+2+3 s.",
+        "No se aprueba con buffer que oculta el corte: debe demostrarse onPlayerError."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-forum-bugs-20261008/android/policy-repro.log (baseline demostrado).",
+        "D:/tmp/pletina-forum-bugs-20261008/android/run-harness.ps1 (adaptar fuente al SHA candidato).",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:333,375,398",
+        "fault-server-log.json y Media3 error/position timeline."
+      ],
+      "automation": "Harness Kotlin existente y futuro test instrumentado con inyección de fallos HTTP; confirmar física posterior.",
+      "currentStatus": "Fallo de política reproducido en 0.10.0 con Kotlin original y dobles; candidato y red real pendientes.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Servidor HTTPS de fixtures capaz de bloquear/truncar lecturas; controles de buffer.",
+        "Registrar versión Media3 y no editar implementación para hacer pasar el test."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-012",
+      "area": "Conectividad validada",
+      "priority": "P0",
+      "layer": "Kotlin + Android ConnectivityManager + red controlada",
+      "scenario": "Transporte móvil/Wi-Fi presente sin acceso real a Internet y recuperación posterior.",
+      "steps": [
+        "Reproducir sin descargas y quitar acceso a Internet manteniendo transporte/activeNetwork; registrar NetworkCapabilities incluido VALIDATED.",
+        "Agotar buffer hasta error y observar si se consumen intentos y pistas.",
+        "Restaurar validación sin sustituir necesariamente el objeto Network; verificar callback onCapabilitiesChanged frente a sólo onAvailable.",
+        "Repetir DNS caído, portal cautivo y pérdida de cobertura corta como escenarios separados.",
+        "Finalizar con pausa explícita antes de restaurar Internet."
+      ],
+      "expected": [
+        "Ausencia de Internet no vacía la cola recorriendo canciones ni convierte cuatro fallos transitorios en fallo permanente de cada pista.",
+        "La app espera o informa de red y reanuda sólo la pista/posición/intención correctas cuando vuelve Internet.",
+        "Recupera también cambios de capacidades de la misma red.",
+        "Un transporte presente no se toma como prueba de conectividad útil."
+      ],
+      "evidence": [
+        "capabilities-timeline.json, ConnectivityManager/logcat, reproducción y cola antes/después.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:554,564",
+        "https://developer.android.com/develop/connectivity/network-ops/reading-network-state"
+      ],
+      "automation": "Harness para clasificación y test instrumentado con red/proxy controlado; portal/celda en laboratorio.",
+      "currentStatus": "Harness 0.10.0 demuestra que celular no validado se trata como datos y agota retries; integración pendiente.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Red de laboratorio y fixture remota sin descarga.",
+        "Observar capacidades desde la app/test sin depender de un ping aislado."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-013",
+      "area": "Carreras de retry y órdenes",
+      "priority": "P0",
+      "layer": "Kotlin determinista + sesión Media3",
+      "scenario": "Pausa, cambio de pista, limpieza de cola y destrucción durante callbacks de retry o vuelta de red.",
+      "steps": [
+        "Generar error con retry pendiente; pausar antes del vencimiento de 1/2/3 s y observar todos los callbacks.",
+        "Repetir A→B y pausa, cambio completo de cola y vaciado de cola antes del retry.",
+        "Con waitingForNetwork activo, pausar o cambiar pista y restaurar red antes/después del delay1500ms.",
+        "Ejecutar20 permutaciones de orden en harness y tres veces cada escenario en servicio real.",
+        "Destruir servicio de test mientras hay callback pendiente y confirmar cancelación."
+      ],
+      "expected": [
+        "Ningún callback viejo reanuda tras pausa ni prepara otra entrada de la cola.",
+        "Callbacks se vinculan a generación/identidad de la operación; no hay reintento0 actuando sobre B.",
+        "Vaciar/destruir no provoca índice inválido, crash o recreación involuntaria.",
+        "UI, MediaController e intención del usuario convergen tras cada secuencia."
+      ],
+      "evidence": [
+        "race-events.json con monotonic timestamps, assertions JUnit/harness, logcat.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:128,400,423,570",
+        "D:/tmp/pletina-forum-bugs-20261008/android/policy-repro.log"
+      ],
+      "automation": "Reutilizar harness original para baseline y añadir test de servicio con controlador real; tiempo virtual para permutations.",
+      "currentStatus": "Tres carreras de pausa/cambio de pista/red reproducidas en harness 0.10.0; integración real pendiente.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Paquete aislado con cola fixture y control de red/callbacks.",
+        "No ocultar fallos con esperas fijas sin validar que el callback ya ocurrió."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-014",
+      "area": "Cambio de red y URLs caducadas",
+      "priority": "P1",
+      "layer": "resolvedor JNI + HTTP + teléfono",
+      "scenario": "Wi-Fi→datos→Wi-Fi, URL caducada/403 y renovación sin perder posición.",
+      "steps": [
+        "Resolver una pista YouTube en Wi-Fi, registrar videoId y huella de URL sin publicar query firmado.",
+        "Cambiar a datos en mitad y al abrir la siguiente pista; repetir regreso a Wi-Fi.",
+        "En fixture de proveedor controlada, devolver403 para URL previa y200 para URL renovada; verificar refresh y segundo intento.",
+        "Probar episodio RSS con redirección y URL que sigue válida como control.",
+        "Pausar antes de cambio de red y confirmar que renovar no obliga a reproducir."
+      ],
+      "expected": [
+        "La recuperación solicita fuente nueva cuando sea necesario, conserva posición e identidad y evita loop de URL inválida.",
+        "Medir recuperación aparte del arranque. Para las 30 muestras de arranque con fuente válida/red controlada rige p95 < 10 s; una fuente inviable o red cortada debe terminar en estado/fallo acotado y observable, nunca esperar indefinidamente.",
+        "Una URL aún válida no causa cambio innecesario de pista.",
+        "Logs permiten distinguir red, caché, resolución y respuesta HTTP sin divulgar URLs firmadas completas."
+      ],
+      "evidence": [
+        "handoff-source-events.json, HTTP status/refresh counters, position-samples.csv.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:313,380,564",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/native.rs:114"
+      ],
+      "automation": "Fixture con URLs expirable/renovable + prueba instrumentada; handoff físico con Wi-Fi y SIM.",
+      "currentStatus": "Riesgo identificado estáticamente; renovación tras cambio de red no reproducida aún en dispositivo.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Teléfono con Wi-Fi y SIM; fixture HTTPS controlada o hooks sólo de pruebas.",
+        "Mantener constantes pista/videoId y registrar cambios de dirección/red."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-015",
+      "area": "Cola mixta offline",
+      "priority": "P1",
+      "layer": "JNI + ExoPlayer + SQLite",
+      "scenario": "Cola con streaming y descargas durante pérdida de red, repeat/shuffle y ausencia de siguiente descarga.",
+      "steps": [
+        "Sembrar cola A remota, B remota, C descargada, D descargada; verificar paths y hashes reales.",
+        "Perder red en A y registrar salto a la siguiente descargada conforme a la política actual.",
+        "Repetir sin ninguna descarga, con repeat-one, repeat-all y shuffle.",
+        "Eliminar únicamente el archivo de una descarga fixture conservando fila DB y repetir.",
+        "Restaurar red tras pausa y comprobar que no actúan callbacks de la pista abandonada."
+      ],
+      "expected": [
+        "Sólo se reproducen archivos existentes; ningún bucle infinito buscando siguiente descarga.",
+        "La política de omitir no descargadas es explícita y observable; no se registran como escuchadas las omitidas.",
+        "Sin alternativa offline conserva estado de espera/aviso, sin crash ni agotar infinitamente la cola.",
+        "Archivo desaparecido se refleja de forma coherente entre UI, DB y servicio."
+      ],
+      "evidence": [
+        "offline-queue-matrix.json, downloaded-path checks, timeline e historial.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:383,408",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:91"
+      ],
+      "automation": "Ampliar fixture CarPlaybackTest con descargas/colas y conectividad inyectada; confirmación modo avión en teléfono.",
+      "currentStatus": "Salto A→C offline demostrado en harness como comportamiento deliberado; matriz integrada pendiente.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Fixture aislada con audio propio y dos archivos válidos.",
+        "Fijar política de producto offline en el informe antes de clasificar como bug un salto deliberado."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-016",
+      "area": "Cola y sincronización de interfaz",
+      "priority": "P1",
+      "layer": "UI + puente Tauri + MediaController",
+      "scenario": "Órdenes rápidas, duplicados, cola manual, shuffle/repeat y retorno de UI congelada.",
+      "steps": [
+        "Crear playlist A,B,A,C y cola manual D,E; comprobar identidad por entrada, no sólo trackId.",
+        "Ejecutar next/prev/seek/play-pause rápidos y mover/quitar/insertar entradas actuales/próximas desde UI.",
+        "Alternar shuffle y repeat, reproducir cola manual y cambiar playlist preservando contrato DJ.",
+        "Enviar UI al fondo, editar con MediaController/Auto y regresar.",
+        "Muestrear timeline, índice y posición de servicio y UI después de cada lote."
+      ],
+      "expected": [
+        "Mismo elemento actual y orden en todos los controladores; duplicados mantienen identidad propia.",
+        "Ningún índice fuera de rango, pista invisible o doble consumo de cola manual.",
+        "Tras volver UI, convergencia≤2 s en red local/puente operativo; no arrancan órdenes antiguas sobre una cola nueva.",
+        "Skip/seek voluntario se distingue en logs de salto por error."
+      ],
+      "evidence": [
+        "queue-operation-seed.json, UI/native-snapshots.json, JUnit/UI vídeo.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player-android.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:109,121,158,300"
+      ],
+      "automation": "Prueba property/model para colas más secuencias UIAutomator contra servicio real; semilla reproducible.",
+      "currentStatus": "Planificado; pruebas desktop de player no cubren AndroidPlayer/MediaController.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Fixtures A–E con IDs y entradas duplicadas.",
+        "Disponibilidad de captura de estado nativo y UI sin modificar producto."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-017",
+      "area": "Muerte de proceso y recuperación",
+      "priority": "P0",
+      "layer": "Android lifecycle + persistencia",
+      "scenario": "Reapertura después de muerte de proceso, recreación de Activity y forzar detención como caso distinto.",
+      "steps": [
+        "Reproducir/pausar en posiciones conocidas; esperar al menos un checkpoint de 30 s del guardado periódico.",
+        "Recrear Activity y reconectar UI sin matar servicio; comprobar continuidad.",
+        "En paquete de prueba, matar proceso mediante harness instrumentado; relanzar desde icono y después desde controlador multimedia si Android lo permite.",
+        "Probar force-stop por separado, con expectativa de no autorreinicio hasta acción explícita.",
+        "Comparar cola.json, repeat, posición e historial antes/después y repetir con archivo cola.json fixture truncado."
+      ],
+      "expected": [
+        "Recrear Activity no cambia reproducción ni duplica servicio.",
+        "Tras reinicio, cola válida reaparece pausada según contrato; pérdida de posición no excede checkpoint de 30 s más margen de 2 s.",
+        "Force-stop no se interpreta como obligación de seguir sonando; no hay autorreanudación inesperada.",
+        "Cola inválida se maneja sin crash ni borrar biblioteca SQLite."
+      ],
+      "evidence": [
+        "process-lifecycle.json, cola snapshots, service PID/timeline, logcat crash/ANR.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:471,488,498",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:59"
+      ],
+      "automation": "Instrumentation helper de proceso y scripts adb en paquete aislado; no matar instalación personal.",
+      "currentStatus": "Planificado; guardar/reabrir DB no sustituye prueba de muerte de proceso Android.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Perfil aislado; archivos de cola sólo de fixtures.",
+        "Distinguir kill, swipe recientes y force-stop en cada registro."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-018",
+      "area": "Descargas en segundo plano",
+      "priority": "P0",
+      "layer": "servicio downloads + Rust + filesystem",
+      "scenario": "Descargar varias pistas mientras suena música, se apaga pantalla y se deniega permiso de notificaciones.",
+      "steps": [
+        "Encolar tres descargas de música/YouTube compatibles y reproducir otra pista simultáneamente.",
+        "Hacer variantes permiso POST_NOTIFICATIONS permitido/denegado donde aplique.",
+        "Mandar UI al fondo, bloquear pantalla y observar progreso y foreground service hasta finalizar.",
+        "Comprobar archivo final, tamaño/hash decodificable y fila downloads; reproducir offline con red deshabilitada.",
+        "Reabrir UI y comprobar que pending/progress no queda atascado."
+      ],
+      "expected": [
+        "Descarga no congela reproducción ni exige Activity visible.",
+        "Permiso denegado no causa crash ni bucle de solicitudes; comportamiento del sistema queda documentado.",
+        "Finalizar implica archivo reproducible y metadata consistente; nunca marca completo un parcial.",
+        "Servicio termina y libera recursos al agotarse pending."
+      ],
+      "evidence": [
+        "download-events.json, DB/files inventory, logcat FGS, validación offline.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:34,51,92",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/downloads.svelte.ts:50",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs"
+      ],
+      "automation": "Instrumentación y fixture remota con tamaño controlado; UIAutomator permisos; comprobación audio real tras descarga.",
+      "currentStatus": "Planificado; no asumir que descarga RSS está soportada por el mismo flujo que música/YouTube.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Fuentes descargables soportadas y suficientes datos/espacio del perfil.",
+        "Fixture con duración y bytes conocidos; API 33+ para permiso de notificación."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-019",
+      "area": "Descargas, cancelación y almacenamiento",
+      "priority": "P0",
+      "layer": "servicio + filesystem con fallos",
+      "scenario": "Cancelación, corte de red, cierre y disco lleno durante escritura de descarga.",
+      "steps": [
+        "Con fixture grande, cancelar a 10% y90%; verificar tarea/archivo/DB y volver a descargar.",
+        "Interrumpir red y proceso durante escritura; reabrir y solicitar de nuevo.",
+        "En emulador desechable con volumen acotado o inyección de escritura ENOSPC, agotar espacio sin llenar almacenamiento del host/usuario.",
+        "Probar error de permisos/ruta sólo en fixture; confirmar aviso y limpieza del estado pending.",
+        "Tras cada fallo reproducir otra pista y ejecutar comprobación integridad SQLite."
+      ],
+      "expected": [
+        "No hay archivo parcial marcado completo, corrupción DB ni spinner permanente.",
+        "Cancelación detiene transferencias del trabajo cancelado y no elimina descargas previas válidas.",
+        "Reintento explícito funciona; no se exige reanudación por bytes si el producto no la ofrece.",
+        "ENOSPC produce error útil y conserva biblioteca/descargas ya completas; app sigue utilizable."
+      ],
+      "evidence": [
+        "fault-download-events.json, byte counts/partials, SQLITE integrity_check, HTTP transfer log.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/DownloadService.kt:101"
+      ],
+      "automation": "Filesystem/HTTP fixture fault injection e instrumentación; pruebas de espacio sólo volumen desechable.",
+      "currentStatus": "Planificado; no alterar almacenamiento ni descargas personales.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Emulador/perfil descartable con cuota y snapshot.",
+        "No ejecutar llenado de disco en host o teléfono principal."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-020",
+      "area": "Persistencia de biblioteca",
+      "priority": "P1",
+      "layer": "UI + SQLite/JNI",
+      "scenario": "Favoritos RSS/YouTube, artistas, playlists e historial sobreviven a reinicio y eliminación selectiva.",
+      "steps": [
+        "Guardar programa RSS y YouTube, artista, canción del catálogo y enlace directo; crear playlist con duplicados.",
+        "Escuchar antes/después del umbral 30 s o media duración; guardar muestras de historial.",
+        "Quitar favorito del programa, quitar canción del listado YouTube y borrar una descarga, comprobando contrato independiente de playlist/historial.",
+        "Cerrar/reabrir y actualizar metadata de programa manteniendo mismo ID.",
+        "Comparar consultas nativas biblioteca/coche/UI."
+      ],
+      "expected": [
+        "Operaciones idempotentes, IDs estables y datos iguales tras reinicio.",
+        "Quitar favorito no borra episodios, historial ni playlists; quitar descarga no elimina canción guardada.",
+        "Metadata favorita procede del programa actualizado; no se crean favoritos desde IDs inválidos.",
+        "El historial no registra errores/saltos sin escucha ni duplica por reabrir UI."
+      ],
+      "evidence": [
+        "library-before-after.json, DB fixture checks, JUnit Rust e instrumentación Android.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/podcasts.rs:516,525,543",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/youtube_tracks.rs:295",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:445"
+      ],
+      "automation": "Reutilizar tests Rust de persistencia más prueba UI/JNI de integración Android.",
+      "currentStatus": "Tests Rust previos cubren invariantes importantes; recorrido Android candidato pendiente.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Programa RSS/YouTube reales o fixtures persistidas y perfil limpio.",
+        "Verificar esquema/versión APK antes de comparar."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-021",
+      "area": "Diagnóstico y aislamiento de fallos",
+      "priority": "P1",
+      "layer": "observabilidad + aplicación real",
+      "scenario": "Cada fallo de reproducción/servicio produce evidencia útil y el registro se puede compartir.",
+      "steps": [
+        "Provocar error de red,404/403, fuente no disponible, formato inválido y archivo desaparecido con fixtures.",
+        "Para cada fallo registrar ID/fuente/posición/errorCode/reintentos/estado final y comprobar aviso visible.",
+        "Usar Biblioteca→Enviar registro y comprobar contenido/URI FileProvider en destino de prueba, sin enviar a terceros.",
+        "Generar suficientes eventos de prueba para verificar rotación y ejecutar100 ciclos cortos crear/destruir/reconectar UI.",
+        "Revisar logcat por FATAL EXCEPTION, ANR, DeadObject, leaked receivers y tareas persistentes; capturar dumpsys meminfo antes/después."
+      ],
+      "expected": [
+        "Errores distinguibles por origen sin atribuir todos a YouTube; nunca éxito falso o silencio permanente.",
+        "Registro compartible y acotado, sin URLs firmadas completas ni datos ajenos necesarios para diagnosticar.",
+        "Ningún crash/ANR o fuga creciente de listeners/servicios durante ciclos.",
+        "El paquete y SHA que generaron cada log quedan identificados; ausencia de log no se interpreta como ausencia de fallo."
+      ],
+      "evidence": [
+        "diagnostic-coverage.json, exported-musify.log, logcat completo filtrado y sin filtrar, meminfo samples.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/MusifyLog.kt",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlayerPlugin.kt:274",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/views/LibraryView.svelte:37"
+      ],
+      "automation": "Instrumentación de fallos y chooser capturado por app de test; contador de recursos y meminfo de laboratorio.",
+      "currentStatus": "Planificado; existe exportación de registro, no se ha validado cobertura diagnóstica total.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "Destinatario de compartir controlado y sin envío externo.",
+        "Fixtures de error tipadas; política de redacción antes de adjuntar logs a incidencias públicas."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "AND-022",
+      "area": "Resistencia prolongada",
+      "priority": "P1",
+      "layer": "dispositivo ARM64 + red real",
+      "scenario": "Sesiones de resistencia de 8 h de música y 2 h de pódcasts en streaming con pantalla apagada, transiciones y cambios de red.",
+      "steps": [
+        "Planificar después de cerrar los P0 y P1 funcionales previos a la sesión prolongada; no ejecutar durante esta preparación. No se admite aprobación total con excepciones P0/P1.",
+        "Fijar manifiesto con pistas/episodios y origen demostrado; verificar ausencia de descargas. Preparar 8 h de música y 2 h de pódcasts, etiquetando RSS y YouTube por su fuente real.",
+        "Reproducir en teléfono físico con pantalla apagada: sesión de música de 8 h y sesión de pódcast de 2 h. Incluir al menos 20 transiciones musicales y dos cambios Wi-Fi/datos por sesión; registrar acciones y cortes planificados.",
+        "Muestrear posición, buffering, PSS, batería, temperatura y estado del servicio cada 30 s mediante recogida pasiva que no mantenga la Activity visible. Establecer baseline tras 15 min de calentamiento.",
+        "Comparar con control offline equivalente y, cuando proceda, 0.9.0 en las mismas condiciones; conservar resultados por proveedor separados y declarar cualquier origen desconocido."
+      ],
+      "expected": [
+        "Cero crash/ANR, saltos espontáneos, reproducción duplicada o reanudación tras pausa.",
+        "Tiempo sin audio y recuperación medidos; cualquier corte no planificado abre incidencia con mediaId, posición y red. Ninguna espera de recuperación o fallo es indefinida.",
+        "Tras 15 min de calentamiento, alerta de memoria sólo ante crecimiento sostenido superior al 20% Y superior a 100 MiB respecto al baseline estable, confirmado por la serie de muestras cada 30 s; nunca por un punto final aislado.",
+        "No afirmar autonomía/consumo aceptable sin baseline del mismo teléfono, brillo y red; resultados por fuente y versión."
+      ],
+      "evidence": [
+        "soak-manifest.json, samples-30s.csv, battery/thermal stats, full musify.log, timeline de transiciones.",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt:514"
+      ],
+      "automation": "Scheduler de MediaController/adb + registro pasivo; hardware y redes reales obligatorios.",
+      "currentStatus": "Planificado, no ejecutado.",
+      "durationMinutes": 630,
+      "prerequisites": [
+        "Fijar SHA candidato, APK SHA256, versión/API/ABI/WebView y evidencia en carpeta del caso; baseline actual de producto: 2d679e477d906682974d2ee763d3cf09c5b4a7a2.",
+        "P0 y P1 funcionales previos aprobados para optar a aprobación total; teléfono dedicado ARM64. Si algo está bloqueado/no cubierto, la auditoría queda parcial.",
+        "SIM/Wi-Fi disponibles y presupuesto de datos; fuentes identificadas."
+      ],
+      "platform": "Android"
+    },
+    {
+      "id": "DESK-WIN-001",
+      "area": "Instalación/WebView2",
+      "priority": "P0",
+      "platform": "Windows 10/11 x64",
+      "layer": "package/webview",
+      "scenario": "Primera instalación NSIS con y sin WebView2.",
+      "steps": [
+        "Crear snapshots con y sin Evergreen WebView2; no desinstalar el runtime del host.",
+        "Instalar como usuario estándar, abrir desde acceso directo y reproducir WAV.",
+        "Registrar error/aviso si falta runtime y contrastarlo con webviewInstallMode=skip."
+      ],
+      "expected": [
+        "Con runtime: UI y audio funcionan.",
+        "Sin runtime: obtener diagnóstico claro; si instalación aparenta éxito pero app no abre ni guía al usuario, registrar fallo.",
+        "Datos y accesos directos pertenecen al usuario correcto."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "Por generar: versión WebView2, log NSIS y captura."
+      ],
+      "automation": "Semiautomática en VM limpia, con comprobación de audio real.",
+      "currentStatus": "pending_clean_windows_environment",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-002",
+      "area": "Rutas/permisos",
+      "priority": "P1",
+      "platform": "Windows 10/11 x64",
+      "layer": "filesystem/package",
+      "scenario": "Instalación por usuario con espacios, tildes y caracteres no latinos.",
+      "steps": [
+        "Usar perfil y carpetas desechables Unicode.",
+        "Instalar en ubicación admitida, importar audio y descargar un tema.",
+        "Comparar HKCU/HKLM, app_local_data_dir y accesos desde segundo usuario."
+      ],
+      "expected": [
+        "App, auxiliares y música funcionan con las rutas probadas.",
+        "No hay escapes de argumentos ni escritura en perfil ajeno.",
+        "Segundo usuario mantiene biblioteca independiente."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
+        "Por generar: inventario ACL/rutas y resultado audio."
+      ],
+      "automation": "Semiautomática PowerShell/UI en cuentas aisladas.",
+      "currentStatus": "pending_clean_windows_environment",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-003",
+      "area": "Upgrade/migración",
+      "priority": "P0",
+      "platform": "Windows 10/11 x64",
+      "layer": "updater/database/package",
+      "scenario": "Actualización al salir y Reiniciar, incluida migración legado Musify cuando exista artefacto.",
+      "steps": [
+        "Instalar anterior y sembrar biblioteca/descargas verificables.",
+        "Probar al salir y Reiniciar con paquete firmado de prueba sin cambiar endpoint público.",
+        "Verificar datos/accesos/versión; repetir desde Musify antiguo si hay instalador."
+      ],
+      "expected": [
+        "Datos y ajustes persistidos sobreviven.",
+        "Una sola instalación, sin bucle ni instalador huérfano.",
+        "Migración de nombre solo limpia rutas propias; ausencia de artefacto legado se marca SKIP."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "Por generar: SQLite antes/después, hashes y logs."
+      ],
+      "automation": "Semiautomática; requiere fixture firmado y endpoint aislado o release anterior controlada.",
+      "currentStatus": "pending_signed_upgrade_fixture",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-004",
+      "area": "Audio/extractores",
+      "priority": "P0",
+      "platform": "Windows 10/11 x64",
+      "layer": "audio/e2e",
+      "scenario": "Audio local, YouTube, descarga offline y respaldo de extractores en paquete instalado.",
+      "steps": [
+        "Probar WAV/MP3/M4A/FLAC/Ogg/Opus con WebView2 real.",
+        "Probar yt-dlp, youtubei y propio; provocar fallo controlado del nivel rápido para probar captura oficial.",
+        "Hacer seek/pausa/siguiente, descargar y reproducir offline con Node/Python de desarrollo fuera de PATH.",
+        "Medir 30 muestras por celda plataforma/motor/formato, con red controlada y fixture fijo; guardar latencias individuales y p95."
+      ],
+      "expected": [
+        "Formato/motor admitido reproduce y avanza.",
+        "Formato no soportado o fallo de extractor termina con error acotado y permite seguir usando app.",
+        "No doble audio, ventana oculta visible ni spinner permanente.",
+        "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/extractor.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "Por generar: matriz motor/codec y trazas de audio."
+      ],
+      "automation": "Tests JS existentes más E2E WebView2 real por preparar.",
+      "currentStatus": "planned_not_run",
+      "durationMinutes": 40,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-005",
+      "area": "Instancia/cierre",
+      "priority": "P0",
+      "platform": "Windows 10/11 x64",
+      "layer": "lifecycle/process",
+      "scenario": "Segunda invocación, minimizar y cerrar con captura o descarga activa.",
+      "steps": [
+        "Abrir dos veces mientras reproduce y mientras resuelve.",
+        "Minimizar y abrir otra vez desde acceso directo.",
+        "Cerrar durante búsqueda/descarga/captura y observar árbol de procesos; reabrir."
+      ],
+      "expected": [
+        "Segunda invocación enfoca instancia existente sin audio duplicado.",
+        "Cierre termina app y auxiliares propios sin bloqueo de DB.",
+        "Nueva apertura funciona; descarga parcial no se anuncia completa."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
+        "Por generar: procesos/puertos antes y después."
+      ],
+      "automation": "Automatizable con supervisor de UI/procesos aislado.",
+      "currentStatus": "planned_not_run",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-006",
+      "area": "Reposo/salida audio",
+      "priority": "P1",
+      "platform": "Windows 10/11 x64 físico",
+      "layer": "power/audio",
+      "scenario": "Suspender, bloquear y cambiar salida durante audio local/remoto.",
+      "steps": [
+        "Probar reproduciendo y pausado antes de suspender cinco minutos.",
+        "Reanudar con y sin red; cambiar altavoz/cable/Bluetooth.",
+        "Repetir cuatro ciclos y URL caducada mediante fixture."
+      ],
+      "expected": [
+        "Pausa sigue siendo pausa.",
+        "Audio recupera o falla de forma visible y recuperable; local no depende de red.",
+        "No bucle, doble salida ni procesos retenidos."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "Por generar: cronología energía/audio y estados."
+      ],
+      "automation": "Manual en hardware real; VM solo complementa.",
+      "currentStatus": "pending_physical_device",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-WIN-007",
+      "area": "Reinstalación/desinstalación",
+      "priority": "P1",
+      "platform": "Windows 10/11 x64",
+      "layer": "installer/filesystem",
+      "scenario": "Reinstalar y desinstalar conservando datos cuando esa opción proceda.",
+      "steps": [
+        "En perfil desechable instalar versión candidata y sembrar datos.",
+        "Reinstalar encima y verificar única entrada en Aplicaciones/accesos.",
+        "Desinstalar usando opciones reales, registrar lo eliminado y reinstalar para verificar persistencia prevista."
+      ],
+      "expected": [
+        "No aparecen entradas/accesos duplicados.",
+        "No se borran carpetas ajenas ni datos sin una opción explícita que lo indique.",
+        "Si se conservan datos, reinstalación los reconoce; registrar contrato real del instalador."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/installer-hooks.nsh",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "Por generar: logs NSIS y diff de archivos/registro."
+      ],
+      "automation": "Semiautomática solo en perfil/VM desechable.",
+      "currentStatus": "pending_clean_windows_environment",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Windows build 26200 disponible; Windows 10/11 limpios en VM/cuenta de prueba pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-001",
+      "area": "DMG universal",
+      "priority": "P0",
+      "platform": "macOS 11+ Intel y Apple Silicon",
+      "layer": "package/native",
+      "scenario": "Instalación y ejecución nativa del DMG universal en ambas arquitecturas.",
+      "steps": [
+        "Verificar SHA, contenido y slices con lipo/file.",
+        "Instalar en Aplicaciones desde cuenta de prueba.",
+        "Arrancar nativamente y reproducir WAV sin toolchain externo."
+      ],
+      "expected": [
+        "Intel y ARM usan slice correcta, sin asumir Rosetta.",
+        "Recursos y auxiliares se localizan correctamente.",
+        "Build universal CI es evidencia estructural, no ejecución física."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "Por generar: lipo, arquitectura efectiva, logs y captura en dos Macs."
+      ],
+      "automation": "Estructura automatizable; arranque requiere dos tipos de Mac.",
+      "currentStatus": "pending_mac_hardware",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-002",
+      "area": "Firma/cuarentena",
+      "priority": "P0",
+      "platform": "macOS Intel y Apple Silicon",
+      "layer": "package/os-security",
+      "scenario": "Primera apertura con cuarentena y firma ad hoc.",
+      "steps": [
+        "Descargar con navegador conservando cuarentena.",
+        "Registrar codesign/spctl/xattr e intentar apertura normal y procedimiento permitido por SO.",
+        "Comparar avisos y pasos reales con README, sin desactivar Gatekeeper."
+      ],
+      "expected": [
+        "Se distingue signingIdentity '-' de DeveloperID/notarización.",
+        "Instrucción de apertura que no funciona se registra como fallo de distribución.",
+        "No eliminar cuarentena ni modificar seguridad global para aparentar PASS."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/README.md",
+        "Por generar: codesign/spctl y capturas de avisos."
+      ],
+      "automation": "Semiautomática; interacción de SO en cuenta de prueba.",
+      "currentStatus": "pending_mac_hardware",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-003",
+      "area": "WebKit/M4A/motores",
+      "priority": "P0",
+      "platform": "macOS Intel y Apple Silicon",
+      "layer": "audio/webkit/extractor",
+      "scenario": "Streaming M4A, audio offline y capacidades reales del respaldo en macOS.",
+      "steps": [
+        "En perfil nuevo sin Node/Python externos reproducir YouTube con yt-dlp y comprobar MIME/extensión.",
+        "Probar descarga M4A offline, M4A/MP3/WAV/FLAC locales y registrar capacidades Opus/WebM.",
+        "Probar youtubei/propio y forzar fallo del nivel rápido para validar captura en Mac.",
+        "Medir 30 muestras por celda plataforma/motor/formato, con red controlada y fixture fijo; guardar latencias individuales y p95."
+      ],
+      "expected": [
+        "M4A arranca, avanza, hace seek y pausa.",
+        "Cada motor entrega audio o error acotado, nunca espera infinita.",
+        "No trasladar a macOS evidencia de captura Windows; cualquier respaldo no operativo se registra.",
+        "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/extractor.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "Por generar: matriz codec/motor y audio real."
+      ],
+      "automation": "Semiautomática WebKit real; tests JS no verifican codecs.",
+      "currentStatus": "pending_mac_hardware",
+      "durationMinutes": 40,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-004",
+      "area": "Actualizador universal",
+      "priority": "P0",
+      "platform": "macOS Intel y Apple Silicon",
+      "layer": "updater/database",
+      "scenario": "Actualizar tar.gz firmado desde versión anterior.",
+      "steps": [
+        "Sembrar biblioteca y descargas en versión anterior.",
+        "Probar actualización al salir y Reiniciar con fixture firmado.",
+        "Verificar mappings darwin-aarch64/x86_64, hash nuevo, permisos y datos; probar destino no escribible."
+      ],
+      "expected": [
+        "Ambas arquitecturas reciben universal correcto y validan firma updater.",
+        "La app abre después y conserva datos.",
+        "Error de escritura no destruye instalación previa; minisign no equivale a notarización."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "Por generar: logs, hashes y SQLite antes/después."
+      ],
+      "automation": "Semiautomática con dos Macs y pares de paquetes firmados.",
+      "currentStatus": "pending_mac_hardware_and_signed_fixture",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-005",
+      "area": "Reposo/ventanas",
+      "priority": "P1",
+      "platform": "macOS Intel y Apple Silicon físico",
+      "layer": "power/lifecycle/audio",
+      "scenario": "Cerrar tapa, cambiar salida, Cmd-Q y cerrar ventana principal.",
+      "steps": [
+        "Suspender reproduciendo y pausado, incluyendo URL caducada al volver.",
+        "Cambiar salida interna/cable/Bluetooth.",
+        "Comparar cerrar ventana, Cmd-Q y segunda invocación; inspeccionar procesos ocultos."
+      ],
+      "expected": [
+        "Pausa no se convierte en reproducción.",
+        "Cerrar ventana principal sigue contrato actual de terminar app, sin audio/captura huérfanos.",
+        "Reapertura tiene una instancia y estado persistido correcto."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "Por generar: timeline energía y procesos."
+      ],
+      "automation": "Manual en hardware; CI macos-latest no sustituye prueba.",
+      "currentStatus": "pending_mac_hardware",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-MAC-006",
+      "area": "Carpetas/permisos",
+      "priority": "P1",
+      "platform": "macOS Intel y Apple Silicon",
+      "layer": "filesystem/local-library",
+      "scenario": "Unicode, permisos de carpeta y retirada de volumen externo.",
+      "steps": [
+        "Importar carpeta Unicode y audio de volumen externo desechable.",
+        "Denegar permiso cuando lo solicite el SO y retirar volumen durante escaneo/reproducción.",
+        "Reconectar, reabrir y reescanear; comparar IDs y conteos."
+      ],
+      "expected": [
+        "Denegación/ausencia produce error recuperable sin crash.",
+        "Reconexión no duplica pistas ni corrompe biblioteca.",
+        "No ampliar permisos globales fuera de la prueba."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs",
+        "Por generar: errores, resultados de escaneo y diff SQLite."
+      ],
+      "automation": "Semiautomática con Mac y volumen de prueba.",
+      "currentStatus": "pending_mac_hardware",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Mac Intel y Mac Apple Silicon físicos pendientes; ningún Mac confirmado disponible. Ejecutar separadamente en ambas arquitecturas.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-001",
+      "area": "AppImage/FUSE",
+      "priority": "P0",
+      "platform": "Linux x64 Ubuntu 22.04/24.04 y Debian",
+      "layer": "package/runtime",
+      "scenario": "Arranque por FUSE y extracción, desde entorno limpio.",
+      "steps": [
+        "Verificar SHA, permiso ejecutable y dependencias.",
+        "Probar FUSE en VM y extracción/APPIMAGE_EXTRACT_AND_RUN en otro entorno sin FUSE.",
+        "Abrir desde escritorio con PATH mínimo y XDG aislados; registrar glibc/WebKit."
+      ],
+      "expected": [
+        "Rutas admitidas arrancan con recursos correctos.",
+        "Ausencia FUSE tiene solución reproducible o queda como fallo.",
+        "WSL/extracción no valida FUSE ni integración de escritorio físico."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/README.md",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "Por generar: ldd, versiones distro/runtime y logs."
+      ],
+      "automation": "Automatizable en VM; WSL disponible cubre solo extracción/virtual.",
+      "currentStatus": "pending_clean_linux_matrix",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-002",
+      "area": "DEB/dependencias",
+      "priority": "P0",
+      "platform": "Ubuntu/Debian x64",
+      "layer": "package/dependencies",
+      "scenario": "Instalación y upgrade DEB mediante apt.",
+      "steps": [
+        "Inspeccionar control y dependencias; apt install en VM limpia.",
+        "Reproducir local/YouTube desde lanzador sin Node de desarrollo.",
+        "Actualizar desde DEB anterior y observar conducta del updater integrado."
+      ],
+      "expected": [
+        "APT resuelve WebKit/GStreamer, recursos y Node funcionan.",
+        "Upgrade conserva biblioteca.",
+        "No reemplaza DEB por AppImage silenciosamente; documentar conducta/error updater en DEB."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "Por generar: dpkg-deb, logs apt/dpkg y E2E."
+      ],
+      "automation": "Automatizable solo en VM desechable, no instalar app en host compartido.",
+      "currentStatus": "pending_clean_linux_matrix",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-003",
+      "area": "GStreamer/Node incluidos",
+      "priority": "P0",
+      "platform": "Linux AppImage x64",
+      "layer": "package/codec",
+      "scenario": "Siete codecs usando únicamente bibliotecas/plugins del paquete.",
+      "steps": [
+        "Ejecutar scripts/test-linux-appimage.sh sobre SHA candidato.",
+        "Excluir Node del PATH y comprobar bin/node, licencia, factories y ldd.",
+        "Decodificar WAV/MP3/FLAC/Ogg/M4A/Opus/WebM sin plugins host."
+      ],
+      "expected": [
+        "Siete fixtures decodifican desde AppImage.",
+        "Node incluido funciona con LD_LIBRARY_PATH del paquete.",
+        "Reproducción con gst del host no cuenta como prueba del paquete."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/test-linux-appimage.sh",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/prepare-linux-runtime.mjs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.linux.conf.json",
+        "Antecedente: smoke Linux previo no acredita SHA candidato; regenerar logs."
+      ],
+      "automation": "Smoke ya existente y CI Ubuntu22; no ejecutado en esta preparación.",
+      "currentStatus": "planned_existing_automation_not_run",
+      "durationMinutes": 8,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-004",
+      "area": "Audio real WebKitGTK",
+      "priority": "P0",
+      "platform": "Linux AppImage Ubuntu 22.04/24.04 x64",
+      "layer": "e2e/webkit/audio",
+      "scenario": "Seis formatos locales y descarga WebM con seek/pausa/reanudar.",
+      "steps": [
+        "Ejecutar linux-playback.py AppImage --output-dir carpeta-caso.",
+        "Usar XDG/Xvfb/Pulse privados sin Node en PATH.",
+        "Repetir sin privilegios y sandbox normal; validar cleanup aunque screenshot falle.",
+        "Medir 30 muestras por celda plataforma/motor/formato, con red controlada y fixture fijo; guardar latencias individuales y p95."
+      ],
+      "expected": [
+        "Audio llega a estado reproducible, avanza y respeta seek/pausa.",
+        "Local usa loopback, no asset://.",
+        "Screenshot opcional no invalida audio; ningún proceso huérfano ni falso fallo SQLite3.37.",
+        "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/linux-playback.py",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "Antecedente: WSL24 y CI22 anteriores; repetir contra candidato antes de PASS."
+      ],
+      "automation": "E2E tauri-driver/WebKitWebDriver existente para smoke; ampliar harness externo para 30 muestras/celda y latencias. Audio virtual no demuestra sonido físico.",
+      "currentStatus": "planned_existing_automation_not_run",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-005",
+      "area": "HTTP local/Range/registro",
+      "priority": "P0",
+      "platform": "Linux x64",
+      "layer": "backend/http/audio",
+      "scenario": "HEAD, Range y registro de más de512 archivos.",
+      "steps": [
+        "Ejecutar tests local_media y rangos válidos, inválidos y archivo vacío.",
+        "Registrar más de512 archivos conservando actual/precarga; resolver otra vez expulsado.",
+        "Borrar/sustituir archivo por enlace, probar host/token incorrectos y cerrar app."
+      ],
+      "expected": [
+        "HTTP200/206/416 y Content-Range correctos; HEAD sin cuerpo y seek funciona.",
+        "Registro acotado con cuatro recientes protegidos; no rompe pista actual/precarga.",
+        "Solo rutas autorizadas accesibles; errores no revelan rutas y listener se cierra."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs",
+        "Por generar: cargo results, respuestas HTTP y E2E con rotación."
+      ],
+      "automation": "Tests Rust existentes más harness externo de integración; sin editar producto.",
+      "currentStatus": "planned_partial_automation",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-006",
+      "area": "Streaming/upgrade AppImage",
+      "priority": "P0",
+      "platform": "Linux x64",
+      "layer": "extractor/updater",
+      "scenario": "YouTube con Node incluido, descarga offline y actualización.",
+      "steps": [
+        "Perfil limpio, abrir desde lanzador con PATH mínimo, preparar yt-dlp y reproducir YouTube.",
+        "Descargar WebM y reproducir sin red.",
+        "Actualizar AppImage anterior al salir/Reiniciar con paquete firmado; probar destino no escribible.",
+        "Medir 30 muestras por celda plataforma/motor/formato, con red controlada y fixture fijo; guardar latencias individuales y p95."
+      ],
+      "expected": [
+        "Primera extracción produce audio o error acotado reintentable.",
+        "Offline funciona y persiste tras upgrade.",
+        "Actualización válida reemplaza paquete; fallo de permisos conserva instalación/datos.",
+        "Con red controlada, p95 de inicio remoto <10 segundos y local <1 segundo; tiempo de instalación inicial de extractor se mide aparte."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/ytdlp.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "Por generar: rutas efectivas runtime, hashes y logs."
+      ],
+      "automation": "Semiautomática con red y fixtures firmados; sin CI/publish.",
+      "currentStatus": "pending_signed_upgrade_fixture",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-LIN-007",
+      "area": "Reposo/escritorio/audio físico",
+      "priority": "P1",
+      "platform": "Linux x64 físico X11/Wayland",
+      "layer": "power/audio/os-integration",
+      "scenario": "Suspender, cambiar salida y cerrar en PulseAudio/PipeWire.",
+      "steps": [
+        "Abrir AppImage/DEB desde lanzador en X11 y Wayland disponibles.",
+        "Suspender cinco minutos reproduciendo/pausado, cambiar cable/Bluetooth y recuperar red.",
+        "Cerrar/reabrir e inspeccionar WebKit, listener y procesos."
+      ],
+      "expected": [
+        "Pausa preservada; audio recupera o falla de forma visible.",
+        "Una instancia y una salida audible, sin bloqueo de UI.",
+        "Registrar compositor/audio; WSL y Xvfb no son validación física."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "Por generar: journal, versiones y timeline físico."
+      ],
+      "automation": "Manual en escritorio físico pendiente.",
+      "currentStatus": "pending_physical_linux_desktop",
+      "durationMinutes": 40,
+      "prerequisites": [
+        "WSL2 Ubuntu 24.04.4 disponible; Ubuntu 22.04/24.04 y Debian limpios y Linux físico pendientes.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-ALL-001",
+      "area": "Soak CPU/memoria",
+      "priority": "P1",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "layer": "soak/performance",
+      "scenario": "Soak por plataforma: ocho horas de música y dos horas de pódcast.",
+      "steps": [
+        "Establecer baseline del árbol app+WebView+extractores tras 15 minutos de calentamiento.",
+        "Ejecutar ocho horas de música y dos de pódcast alternando cola, seek, pausa y siguiente; Linux rota más de 512 locales.",
+        "Muestrear cada 30 segundos RSS/CPU/handles-FDs/procesos, estado audio y latencias; comparar versión anterior en el mismo hardware."
+      ],
+      "expected": [
+        "No crashes, audio duplicado, UI bloqueada ni crecimiento sin límite.",
+        "Alarma de memoria si, tras los 15 minutos de calentamiento, el crecimiento sostenido supera a la vez 20% y 100 MiB; un pico puntual no activa por sí solo esa alarma.",
+        "Alarma de CPU idle sostenida >5% de un núcleo para investigar; registrar p50/p95 de inicio y huecos, separando servicio externo de fallo propio.",
+        "Treinta muestras por celda en red controlada: p95 inicio remoto <10 segundos y local <1 segundo."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/capture.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/local_media.rs",
+        "Por generar: CSV telemetría, timeline y crash reports por plataforma."
+      ],
+      "automation": "Supervisor automatizable más audio/revisión física; duración indicada por plataforma.",
+      "currentStatus": "planned_long_run_not_started",
+      "durationMinutes": 620,
+      "prerequisites": [
+        "Ejecutar por separado Windows x64, Mac Intel, Mac Apple Silicon y Linux x64. Requiere fixtures y telemetría aislados.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-ALL-002",
+      "area": "Reapertura/persistencia",
+      "priority": "P0",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "layer": "database/lifecycle/e2e",
+      "scenario": "Cien cierres/aperturas con biblioteca y ajustes.",
+      "steps": [
+        "Sembrar favoritos canciones/artistas/podcasts, playlists con duplicados, historial, fuentes y descarga completa.",
+        "Variar volumen no-cero/shuffle/repeat; repetir cien aperturas y comparar UI/SQLite.",
+        "Comprobar cierre durante escaneo, instancia única y estado persistido real."
+      ],
+      "expected": [
+        "Datos y ajustes persistidos sobreviven sin duplicados/corrupción.",
+        "No reaparece audio sin orden ni procesos antiguos.",
+        "Cola/posición actual no se persisten en escritorio: no inventar ese requisito ni confundirlo con pérdida de biblioteca."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src/lib/player.svelte.ts",
+        "Por generar: integridad SQLite, preferencias y latencias de cien aperturas."
+      ],
+      "automation": "Automatizable con supervisor UI y perfiles aislados; duración por plataforma.",
+      "currentStatus": "planned_not_run",
+      "durationMinutes": 60,
+      "prerequisites": [
+        "Ejecutar por separado Windows x64, Mac Intel, Mac Apple Silicon y Linux x64. Requiere fixtures y telemetría aislados.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-ALL-003",
+      "area": "Crash/disco/migraciones",
+      "priority": "P0",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "layer": "database/fault-injection",
+      "scenario": "Terminación forzada, disco lleno y DB inválida en fixtures desechables.",
+      "steps": [
+        "Matar únicamente árbol propio durante descarga y escritura de biblioteca.",
+        "Usar volumen virtual limitado para ENOSPC/permisos denegados; liberar espacio y reabrir.",
+        "Probar DB anterior/corrupta/futura conservando copias; ejecutar integrity_check."
+      ],
+      "expected": [
+        "Transacciones incompletas no dejan medias filas; confirmadas persisten.",
+        "Descargas parciales no aparecen completas y migración conserva backup.",
+        "DB inválida tiene diagnóstico visible; no borra datos ni afecta otro perfil."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/lib.rs",
+        "Por generar: DB/WAL, integrity_check, errores y logs de reinicio."
+      ],
+      "automation": "Automatizable solo en VM/volumen aislado; duración por plataforma.",
+      "currentStatus": "pending_fault_injection_environment",
+      "durationMinutes": 40,
+      "prerequisites": [
+        "Ejecutar por separado Windows x64, Mac Intel, Mac Apple Silicon y Linux x64. Requiere fixtures y telemetría aislados.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "DESK-ALL-004",
+      "area": "Integridad/errores updater",
+      "priority": "P0",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "layer": "release-integrity/updater",
+      "scenario": "Arquitectura, firmas incorrectas, descarga truncada y cortes.",
+      "steps": [
+        "Validar SHA256SUMS y cuatro mappings desktop contra artefactos exactos.",
+        "Servir fixture válido/truncado/firma errónea desde endpoint aislado; simular corte/TLS/404.",
+        "Comprobar consulta10s, ciclo6h y cierre durante descarga mediante harness/reloj cuando sea posible."
+      ],
+      "expected": [
+        "Solo paquete completo con firma esperada se instala.",
+        "Fallos dejan instalación y datos utilizables; nunca instala otra plataforma.",
+        "Distinguir minisign, firma SO y attestation; ninguna sustituye prueba física."
+      ],
+      "evidence": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/updater.rs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/tauri.conf.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/release.mjs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/.github/workflows/build.yml",
+        "Por generar: verificador, eventos updater y hash de instalación intacta."
+      ],
+      "automation": "Análisis automatizable; integración necesita fixture firmado, sin alterar endpoint público.",
+      "currentStatus": "pending_signed_upgrade_fixture",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Ejecutar por separado Windows x64, Mac Intel, Mac Apple Silicon y Linux x64. Requiere fixtures y telemetría aislados.",
+        "Artefacto candidato fijado por versión, commit y SHA256; CI verde no equivale a prueba física.",
+        "Cuenta/VM y datos desechables: no modificar instalación, datos ni seguridad del host del usuario.",
+        "Aprobación por plataforma: cero P0/P1 abiertos o bloqueados; una plataforma pendiente de hardware no se aprueba por CI verde."
+      ]
+    },
+    {
+      "id": "CORE-DB-001",
+      "area": "Migración SQLite",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Actualizar perfiles creados por v0.9.0 y v0.9.1 (esquema 5) a la versión auditada sin perder datos.",
+      "steps": [
+        "Crear un perfil sintético independiente con cada versión antigua: favoritos de canciones, discos guardados, playlists con duplicados/orden, historial, una descarga real, música local, episodios RSS y YouTube, fuentes elegidas y ajustes.",
+        "Cerrar, obtener copia SQLite consistente y exportar filas ordenadas, user_version y hashes de archivos; abrir una copia con la versión actual.",
+        "Comprobar datos, abrir listas, reproducir la descarga sin red, reiniciar y repetir comparación."
+      ],
+      "expected": [
+        "Todas las tablas y relaciones que existían en el origen conservan filas, IDs, orden, timestamps, rutas y contenido de archivos.",
+        "saved_artists, youtube_tracks y saved_podcasts se crean vacías si no existían; no inventar favoritos.",
+        "PRAGMA integrity_check devuelve ok; foreign_key_check no devuelve filas; backup previo legible conserva esquema 5."
+      ],
+      "evidence": [
+        "git show v0.9.0:src-tauri/src/db.rs y v0.9.1:src-tauri/src/db.rs terminan en migración 5.",
+        "src-tauri/src/db.rs:9 MIGRATIONS; :178 Db::open; :294 backup_before_migrating; :319 migrate.",
+        "El test migration_seven_preserves_version_six_library_and_podcast_data solo cubre 6→7, no estos dos orígenes de versión."
+      ],
+      "automation": "Nueva integración de perfiles reales/fixtures versionados; complementar cargo test --manifest-path src-tauri/Cargo.toml migrations_keep_existing_sources -- --nocapture. No basta el recuento de filas de open_real_db.",
+      "durationMinutes": 45,
+      "prerequisites": [
+        "Binarios o fuentes exactas v0.9.0 y v0.9.1 y versión candidata con SHA.",
+        "Usuario/perfil de sistema desechable; en Linux XDG_DATA_HOME aislado. Nunca abrir ni degradar la DB habitual.",
+        "Descarga y archivo de prueba sintéticos; herramienta SQLite."
+      ]
+    },
+    {
+      "id": "CORE-DB-002",
+      "area": "Migración SQLite",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Migrar esquema 6 a 7 y reabrir repetidamente, conservando artistas, enlaces YouTube y datos de episodios.",
+      "steps": [
+        "Ejecutar el test existente de migración 6→7.",
+        "Añadir dos programas favoritos después de migrar, cerrar/reabrir dos veces y comparar exportación.",
+        "Verificar separación entre favorito de programa y favorito de episodio."
+      ],
+      "expected": [
+        "No se duplican filas ni migraciones; esquema 7 estable tras reinicios.",
+        "Los datos previos y backup v6 sobreviven; FK rechaza programa inexistente.",
+        "Guardar/quitar programa no elimina liked_tracks, playlists, historial ni descargas de episodios."
+      ],
+      "evidence": [
+        "src-tauri/src/db.rs:355 migration_seven_preserves_version_six_library_and_podcast_data.",
+        "src-tauri/src/podcasts.rs:752 saved_programs_survive_restart_and_removal_preserves_episode_library.",
+        "src-tauri/src/podcasts.rs:826 saved_programs_read_updated_metadata_and_known_episode_counts."
+      ],
+      "automation": "Existente parcial: cargo test --manifest-path src-tauri/Cargo.toml migration_seven_preserves_version_six_library_and_podcast_data -- --nocapture; cargo test --manifest-path src-tauri/Cargo.toml saved_programs -- --nocapture. Ampliación para múltiples reaperturas.",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "Toolchain Rust y dependencias Tauri de la plataforma.",
+        "Solo archivos temporales creados por los tests; conservar log y SHA."
+      ]
+    },
+    {
+      "id": "CORE-DB-003",
+      "area": "SQLite WAL y recuperación",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Recuperar datos confirmados en WAL y proteger backup/migraciones frente a cierre forzado o falta de espacio.",
+      "steps": [
+        "Crear DB sintética con escrituras confirmadas todavía en WAL; terminar únicamente el proceso de prueba sin cierre limpio.",
+        "Copiar consistentemente el conjunto DB/WAL o usar backup SQLite, abrir con la candidata y comparar.",
+        "En un volumen desechable, fallar VACUUM INTO por espacio/permisos y cortar en puntos de migración; volver a abrir al restaurar recursos."
+      ],
+      "expected": [
+        "Toda escritura confirmada sobrevive; ninguna tabla queda parcialmente migrada.",
+        "Si falla backup o migración, se informa del fallo y no se sustituye la biblioteca por una vacía.",
+        "La última copia íntegra continúa utilizable; el nuevo arranque puede completar migración tras corregir el problema."
+      ],
+      "evidence": [
+        "src-tauri/src/db.rs:182 activa journal_mode=WAL y foreign_keys.",
+        "src-tauri/src/db.rs:294 VACUUM INTO antes de migrar y limpieza de backups.",
+        "src-tauri/src/db.rs:322 cada migración y user_version comparten transacción.",
+        "src-tauri/src/db.rs:334 prueba de cabecera WAL vacía, cobertura más estrecha que recuperación con datos."
+      ],
+      "automation": "Nueva prueba de procesos/SQLite y fallo de volumen aislado; no incluida actualmente. Capturar PRAGMA, exports y hashes antes/después.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Volumen/perfil temporal con cuota o permisos controlables, sin alterar discos de usuario.",
+        "Proceso de prueba identificable por PID y barreras de sincronización.",
+        "Copias consistentes; no copiar solo musify.db mientras tiene WAL activo."
+      ]
+    },
+    {
+      "id": "CORE-DB-004",
+      "area": "Errores de escritura SQLite",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "DB de solo lectura, llena, bloqueada o corrupta durante favoritos, ajustes, historial y selección de vídeo.",
+      "steps": [
+        "Sobre copia sintética, inyectar de forma separada SQLITE_READONLY, SQLITE_FULL y contención de un segundo escritor.",
+        "Intentar guardar/quitar favoritos, crear playlist, cambiar fuente de canción y actualizar ajustes; observar respuesta y recargar.",
+        "Abrir una copia truncada/corrupta y comprobar conservación del archivo y diagnóstico."
+      ],
+      "expected": [
+        "No se muestra éxito si el dato no quedó persistido; no aparecen favoritos o fuente elegida que desaparezcan al reiniciar.",
+        "La biblioteca previa permanece íntegra y las operaciones parciales se revierten.",
+        "El inicio fallido no crea una DB nueva sobre una que contenía datos; no hay bloqueo indefinido ni pánico."
+      ],
+      "evidence": [
+        "src-tauri/src/library.rs:197 with_tx propaga errores.",
+        "src-tauri/src/db.rs:218 save_source, :247 forget_download y :265 set_setting descartan el resultado de execute; riesgo concreto pendiente de inyección.",
+        "src-tauri/src/db.rs:178 comprobación de contenido al abrir.",
+        "src/lib/library.svelte.ts toggleArtist/togglePodcast solo mutan tras IPC exitoso, pero dependen de que el backend comunique el fallo."
+      ],
+      "automation": "Nueva inyección SQLite aislada + integración frontend/backend. Revisión estática identifica riesgo; no se marca fallo reproducido.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "DB desechable y mecanismo controlado de error, sin llenar el disco principal.",
+        "Captura de IPC, avisos y estado SQL después de cada operación.",
+        "Guardar original de la copia corrupta para comparar hashes."
+      ]
+    },
+    {
+      "id": "CORE-DB-005",
+      "area": "Concurrencia y cierre",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Escrituras concurrentes de biblioteca, historial, descargas e importación al cerrar y reabrir.",
+      "steps": [
+        "Lanzar en barreras conocidas guardar favorito, record_play, creación de playlist con 100 entradas y finalización de descarga.",
+        "Cerrar normalmente y, en ejecución separada, terminar solo el proceso de prueba en distintas fases.",
+        "Reabrir y validar integridad, orden, duplicados permitidos y correspondencia entre archivos y filas."
+      ],
+      "expected": [
+        "Cada operación confirmada aparece completa una sola vez; una transacción no confirmada no deja mitad de playlist.",
+        "No hay deadlock de Mutex ni proceso colgado.",
+        "Los archivos descargados y metadatos quedan en un estado recuperable y sin referencias rotas silenciosas."
+      ],
+      "evidence": [
+        "src-tauri/src/db.rs:174 Arc<Mutex<Connection>> compartida.",
+        "src-tauri/src/library.rs:179 append y :197 with_tx.",
+        "src-tauri/src/downloads.rs:183 upsert_track e INSERT downloads no usan una transacción conjunta explícita.",
+        "src-tauri/src/library.rs:419 record."
+      ],
+      "automation": "Nueva integración multiproceso/fault injection; complementar cargo test --manifest-path src-tauri/Cargo.toml playlist_add_move_remove -- --nocapture.",
+      "durationMinutes": 40,
+      "prerequisites": [
+        "Perfil sintético exclusivo, PIDs de prueba y barreras reproducibles.",
+        "Ficheros de prueba con hashes conocidos.",
+        "Tiempo máximo por operación y captura de hilos al superar el límite."
+      ]
+    },
+    {
+      "id": "CORE-LIB-006",
+      "area": "Identidad y biblioteca",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Persistencia y eliminación independiente de favoritos, playlists, artistas, programas y enlaces YouTube.",
+      "steps": [
+        "Guardar un artista, un programa RSS, uno YouTube y un episodio; añadir una canción YouTube dos veces y editar sus metadatos.",
+        "Añadir la misma canción dos veces a una playlist, reordenar y quitar solo una aparición.",
+        "Quitar el programa o la canción de su sección, reiniciar sin red y revisar favoritos, historial, playlists y descargas."
+      ],
+      "expected": [
+        "IDs estables, duplicados de playlist conservados como apariciones distintas y metadatos editados no sobrescritos por una cola antigua.",
+        "Quitar de una sección no elimina las apariciones o descargas conservadas por diseño.",
+        "Favoritos guardados visibles sin consulta remota; doble clic y respuesta antigua de library.load no deshacen el estado."
+      ],
+      "evidence": [
+        "src-tauri/src/library.rs:474 playlist_add_move_remove; :509 saved_artists_survive_restart_and_repeated_save_remove.",
+        "src-tauri/src/youtube_tracks.rs:296 duplicates_and_removal_preserve_playlists_favorites_history_and_identity; :331 old_queue_and_library_copies_do_not_undo_edited_youtube_metadata.",
+        "scripts/tests/podcast-favorites.test.mjs:51-141 contiene 8 casos de store; aquí las referencias son ubicaciones de cobertura, no resultado de esta auditoría."
+      ],
+      "automation": "Existente parcial: node --test scripts/tests/podcast-favorites.test.mjs; cargo test --manifest-path src-tauri/Cargo.toml library::tests; cargo test --manifest-path src-tauri/Cargo.toml youtube_tracks::tests; completar UI real offline.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "DB y biblioteca sintéticas; red desactivable solo para la app/prueba.",
+        "IPC real para la pasada de persistencia; no usar el mock de desarrollo como prueba de SQLite."
+      ]
+    },
+    {
+      "id": "CORE-DL-007",
+      "area": "Cola de descargas",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Duplicados, colisiones de nombre y cancelación de una tanda con dos descargas concurrentes.",
+      "steps": [
+        "Encolar seis pistas, incluyendo ID repetido y dos vídeos YouTube distintos con mismo artista/álbum/título.",
+        "Con dos descargas activas, cancelar la cola y esperar sus eventos terminales.",
+        "Encolar nueva tanda después de cancelar y repetir clic en Descargar durante una descarga activa."
+      ],
+      "expected": [
+        "Máximo dos tareas activas, una tarea por ID y archivos diferentes para vídeos distintos.",
+        "Cancelar descarta pendientes; las ya empezadas pueden terminar según el contrato actual.",
+        "No quedan IDs activos/queued fantasma; la generación cancelada no elimina trabajos nuevos ni se marca como completada."
+      ],
+      "evidence": [
+        "src-tauri/src/downloads.rs:30 PARALLEL=2; :100 run comprueba generation; :261 download deduplica pending.",
+        "src-tauri/src/downloads.rs:284 cancel_downloads incrementa generación.",
+        "src-tauri/src/downloads.rs:448 separate_youtube_links_never_share_a_download_path.",
+        "src/lib/downloads.svelte.ts:32 start; :79 cancel; :83 onProgress."
+      ],
+      "automation": "Test existente de rutas + nueva integración de cola/eventos con descargas lentas controladas. No confundir cancelación de pendientes con abortar una transferencia activa.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Directorio temporal y servidor fixture o extractor de prueba controlable.",
+        "Registrar cada evento download con trackId, state, progress y momento.",
+        "No cancelar tandas reales del usuario."
+      ]
+    },
+    {
+      "id": "CORE-DL-008",
+      "area": "Errores de disco en descargas",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Directorio no escribible, disco lleno, fallo de renombrado y eliminación denegada.",
+      "steps": [
+        "Provocar por separado errores al crear .part, escribir, renombrar archivo terminado e insertar fila downloads.",
+        "Intentar quitar una descarga cuyo archivo está bloqueado o no permite borrado.",
+        "Restaurar permisos/espacio y reintentar; comparar listado, done, archivos y hashes."
+      ],
+      "expected": [
+        "Nunca marcar done ni emitir éxito antes de archivo completo y persistencia correcta.",
+        "No se pierde una descarga válida existente; fallos de borrar no se anuncian como eliminación completa.",
+        "No hay loop infinito, progreso superior a 100% ni restos tratados como audio completo; reintento recuperable."
+      ],
+      "evidence": [
+        "src-tauri/src/direct.rs:71 rename y :90 escritura append.",
+        "src-tauri/src/downloads.rs:183-192 persistencia al terminar.",
+        "src-tauri/src/downloads.rs:307 remove_downloads ignora remove_file y luego olvida DB: riesgo pendiente de reproducción.",
+        "src/lib/downloads.svelte.ts:65 remove actualiza done cuando IPC responde éxito."
+      ],
+      "automation": "Nueva integración con volumen/permisos desechables y validación SQL/archivo; no cubierta por safe_names/real_fetch.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Disco virtual o carpeta desechable con límites controlables; nunca agotar almacenamiento del usuario.",
+        "Lock de archivo reproducible en Windows o permisos equivalentes en Linux/macOS.",
+        "Hashes de audio y snapshot SQL previos."
+      ]
+    },
+    {
+      "id": "CORE-DL-009",
+      "area": "Reanudación de descargas",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Corte de conexión o cierre durante descarga parcial, renovación 403 y cambio de formato.",
+      "steps": [
+        "Descargar un archivo fixture de más de 20 MB y cortar después del primer bloque; conservar .part y reiniciar.",
+        "Reanudar con URL renovada del mismo itag, luego repetir con itag distinto y tamaño cambiado.",
+        "Probar 206 truncado, 200 que ignora Range al reanudar, 416 y conexión que deja de enviar bytes."
+      ],
+      "expected": [
+        "Mismo formato continúa en el byte correcto sin duplicar; cambio de formato descarta parcial incompatible.",
+        "Archivo final idéntico al original y completamente decodificable; no mezclar versiones ni aceptar un EOF prematuro como éxito.",
+        "Errores sin progreso terminan de forma acotada y los parciales permiten reintento explícito."
+      ],
+      "evidence": [
+        "src-tauri/src/direct.rs:15 CHUNK; :17 RETRIES; :30 download; :76 fetch; :115 part_path por itag.",
+        "src-tauri/src/direct.rs:58 actualiza total al cambiar itag; caso mismo itag/tamaño diferente necesita validación.",
+        "src-tauri/src/ytdlp.rs:157 descarga de escritorio y timeout de 15 minutos; probar ruta nativa Android y yt-dlp de escritorio por separado."
+      ],
+      "automation": "Nueva integración de transporte con fixture HTTP y fallos deterministas; complementar cargo test --manifest-path src-tauri/Cargo.toml downloads_a_song -- --ignored --nocapture solo en perfil live autorizado.",
+      "durationMinutes": 45,
+      "prerequisites": [
+        "Fixture HTTP local con Range configurable y archivos de hash conocido.",
+        "Proceso de prueba con carpeta temporal; para Android, dispositivo/entorno aislado coordinado con su bloque nativo.",
+        "Separar resultados de transporte simulado y descarga externa real."
+      ]
+    },
+    {
+      "id": "CORE-DL-010",
+      "area": "Estado frontend de descargas",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Inicialización, reinicio y eventos terminales durante cambios de vista o errores IPC.",
+      "steps": [
+        "Cargar downloadedIds y emitir queued/downloading/done/error/cancelled en órdenes válidos, con eventos terminales repetidos y confirmación IPC tardía.",
+        "Cambiar de vista, recargar y volver a abrir durante una tanda; inyectar rechazo de download y cancelDownloads.",
+        "Comprobar badges, listado, progreso, active, queued, done y mensaje final."
+      ],
+      "expected": [
+        "Una tarea terminal desaparece de active/queued y solo done se añade a completadas.",
+        "Estado frontend coincide con backend tras reabrir; no quedan descargas fantasma ni notificaciones duplicadas engañosas.",
+        "Errores de empezar/cancelar quedan observables y no deshacen otra descarga ya confirmada."
+      ],
+      "evidence": [
+        "src/lib/downloads.svelte.ts:26 init conecta listener después de poblar done.",
+        "src/lib/downloads.svelte.ts:32 start preactualiza active/queued y revierte al rechazar IPC.",
+        "src/lib/downloads.svelte.ts:79 cancel descarta rechazo; :83 onProgress controla #finishedInBatch.",
+        "No hay suite específica de este store entre scripts/tests/*.mjs revisados."
+      ],
+      "automation": "Nuevo harness Svelte del store downloads con eventos/IPC controlados, seguido de arranque real con downloads_list. No modificar producto para esta preparación.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Dependencias npm y stub EventTarget/IPC; fixture de eventos con identidad de tanda.",
+        "App nativa y perfil descartable para comprobar arranque fuera del mock."
+      ]
+    },
+    {
+      "id": "CORE-IMP-011",
+      "area": "Importación: entradas y límites",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "CSV de distintas variantes y playlist pública Spotify truncada, privada o con HTML cambiado.",
+      "steps": [
+        "Probar CSV UTF-8/BOM, comas/punto y coma/tabuladores, títulos multilínea, comillas y duplicados; incluir filas inválidas/locales/episodios.",
+        "Probar límites 10 MB y 10.000 filas, duración inválida, cabecera inexistente y contenido malformado.",
+        "Usar fixtures Spotify de orden/duplicados, disponibilidad y lista truncada; una prueba externa aparte contra playlist pública conocida."
+      ],
+      "expected": [
+        "Orden y duplicados preservados; ninguna omisión silenciosa ni coincidencias inventadas.",
+        "Límites y entradas inválidas dan mensajes explícitos; las advertencias de truncación/skipped coinciden con lo procesado.",
+        "No se crea playlist hasta revisar y guardar; fallos del servicio externo se distinguen de cero coincidencias."
+      ],
+      "evidence": [
+        "src-tauri/src/playlist_import.rs:128-160 tests de formatos, omisiones y límites.",
+        "src-tauri/src/spotify.rs:245 preserves_order_duplicates_and_artist_names; :260 reports_invalid_entries_and_possible_truncation; :272 fails_closed_on_unavailable_changed_or_wrong_playlist.",
+        "src/views/ImportPlaylist.svelte:63 límite frontend de 10 MB."
+      ],
+      "automation": "Existente: cargo test --manifest-path src-tauri/Cargo.toml playlist_import::tests; cargo test --manifest-path src-tauri/Cargo.toml spotify::tests. Test public_playlist_smoke_test solo perfil live, separado.",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "Fixtures versionados; CSV límite sintético sin datos personales.",
+        "Red únicamente para el subcaso live; registrar URL pública/fecha y evitar listas privadas."
+      ]
+    },
+    {
+      "id": "CORE-IMP-012",
+      "area": "Cancelación de importación",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Cancelar o salir mientras se lee/busca una playlist y recibir después respuestas antiguas.",
+      "steps": [
+        "Retener lectura Spotify/CSV o matchImportTrack, cancelar y comenzar una importación diferente.",
+        "Liberar éxito y rechazo tardíos de la primera importación en órdenes distintos.",
+        "Repetir navegando fuera de la vista durante lectura y matching."
+      ],
+      "expected": [
+        "Respuestas obsoletas no cambian fase, nombre, resultados ni navegación de la importación nueva.",
+        "Cancelar durante lectura/matching no persiste playlist parcial ni mantiene solicitudes nuevas innecesarias.",
+        "La vista vuelve a un estado usable y un error antiguo no aparece sobre un trabajo nuevo."
+      ],
+      "evidence": [
+        "src/views/ImportPlaylist.svelte:30 isCurrent; :36 onDestroy; :42 cancel incrementan invalidación.",
+        "src/views/ImportPlaylist.svelte:69-107 verifica generación después de cada await.",
+        "No se ha ejecutado una prueba UI/harness de importación durante esta preparación."
+      ],
+      "automation": "Nueva prueba de componente Svelte o UI instrumentada con promesas diferidas; no basta prueba CSV backend.",
+      "durationMinutes": 20,
+      "prerequisites": [
+        "Harness/preview con respuestas controlables y ruteo real; biblioteca temporal.",
+        "Registrar generation/phase externamente en test, sin añadir instrumentación permanente al producto."
+      ]
+    },
+    {
+      "id": "CORE-IMP-013",
+      "area": "Importación: recuperación y guardado",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Interrumpir matching por red, reanudar desde el primer pendiente y cerrar durante guardado.",
+      "steps": [
+        "Hacer que matchImportTrack falle en la fila N; reintentar tras recuperar red y comparar lista completa con orden/duplicados originales.",
+        "Pulsar Guardar repetidamente y navegar fuera durante createPlaylist; retener su respuesta y confirmar después.",
+        "En otra pasada, hacer fallar la transacción de creación y reintentar desde revisión."
+      ],
+      "expected": [
+        "Un fallo de red conserva la fila como pendiente, no como no encontrada; reanudar no repite ni omite apariciones.",
+        "Una sola playlist por guardado; la confirmación se refleja en biblioteca aunque se haya salido, sin navegación tardía que saque al usuario de su vista.",
+        "Fallo de DB deja revisión recuperable y no crea playlist parcial."
+      ],
+      "evidence": [
+        "src/views/ImportPlaylist.svelte:86 match conserva results y :108 pone phase=paused; :117 retry.",
+        "src/views/ImportPlaylist.svelte:122 save exige phase=review y actualiza library tras crear; :42 cancel no cancela guardado confirmado.",
+        "src-tauri/src/library.rs:337 create_playlist usa with_tx."
+      ],
+      "automation": "Nueva prueba de componente con IPC diferido y prueba de integración SQL; parser/backend existentes no cubren lifecycle de vista.",
+      "durationMinutes": 25,
+      "prerequisites": [
+        "Lista sintética de 20 filas con duplicados y resultados nulos conocidos.",
+        "Inyección determinista de red/SQL y perfil aislado."
+      ]
+    },
+    {
+      "id": "CORE-EXT-014",
+      "area": "Arranque de extractores",
+      "priority": "P1",
+      "platform": "Windows, macOS y Linux; Android solo motor propio",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Arranque frío y caliente del motor, falta de runtime y servidor de descarga de extractor lento o caído.",
+      "steps": [
+        "Abrir perfil nuevo y resolver canción con cada motor soportado, registrando versiones reales; repetir con caché.",
+        "En escritorio probar PATH sin Node y uso de runtime incluido donde corresponda; ejecutar fixtures de bootstrap atascado.",
+        "Repetir sin red con extractores ya guardados y con canal de actualización inaccesible, sin borrar biblioteca.",
+        "Medir 30 arranques por ruta de streaming con red controlada, separando frío/caliente y registrando bootstrap aparte."
+      ],
+      "expected": [
+        "Arranque y errores acotados, sin carga eterna; mensaje permite distinguir runtime inexistente, descarga fallida y canción no disponible.",
+        "No se descarga ni utiliza un motor que la plataforma no soporta; Linux incluido funciona sin depender accidentalmente del Node del sistema.",
+        "Un fallo de actualización no invalida extractor útil previo ni datos locales.",
+        "p95 del inicio remoto inferior a 10 s en la ruta medida; ninguna espera indefinida."
+      ],
+      "evidence": [
+        "src-tauri/src/ytdlp.rs:88 ready; :290 download_bytes; :312 detect_js_runtime; :438 bootstrap_download_times_out_when_the_server_stalls.",
+        "src-tauri/src/extractor.rs:171 stream_engines limita móviles a propio.",
+        "src-tauri/src/extractors.rs:166 load_saved conserva incluidos cuando no carga versión guardada."
+      ],
+      "automation": "Existente parcial: cargo test --manifest-path src-tauri/Cargo.toml requires_a_supported_javascript_runtime; cargo test --manifest-path src-tauri/Cargo.toml bootstrap_download_times_out_when_the_server_stalls. Linux: bundled_node_works_without_path_and_preserves_spaces. Pasada nativa real por motor aún necesaria.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Instaladores candidatos y perfiles nuevos independientes; dependencias del empaquetado ya verificadas por su bloque.",
+        "Modificación de PATH solo del proceso de prueba; no desinstalar runtimes del usuario.",
+        "Fixtures de bootstrap local y presupuesto de tiempo por motor."
+      ]
+    },
+    {
+      "id": "CORE-EXT-015",
+      "area": "Actualización de extractores",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Canal firmado, archivo corrupto, API incompatible y cierre entre guardar código y metadatos.",
+      "steps": [
+        "Ejecutar tests de nombres/API/verificación y cargar canal fixture con hash o firma incorrectos, versión vieja, API distinta y archivo truncado.",
+        "Con una versión firmada válida de prueba, cortar el proceso después de escribir temporal, renombrar código y antes/después de metadata.",
+        "Reabrir offline y consultar engine_stats/estado efectivo; repetir con carpeta de extractor no escribible."
+      ],
+      "expected": [
+        "Ningún archivo sin verificación íntegra se ejecuta; solo versiones/API compatibles se activan.",
+        "Tras corte se usa versión válida guardada o incluida, sin impedir reproducción ni dejar metadata que afirme otra versión.",
+        "Un fallo de persistencia queda observable; bibliotecas y archivos de música no se alteran."
+      ],
+      "evidence": [
+        "src-tauri/src/extractors.rs:178 load; :202 check filtra API/versión; :227 install verifica, activa y escribe código/metadata.",
+        "src-tauri/src/extractors.rs:267 verify comprueba hash/firma y nombre.",
+        "src-tauri/src/extractors.rs:306 api_matches_extractors_json; :321 rejects_bad_files."
+      ],
+      "automation": "Existente parcial: cargo test --manifest-path src-tauri/Cargo.toml extractors::tests. Nueva integración de corte/escritura; usar MUSIFY_EXTRACTORS_URL apuntando a fixture local del proceso, nunca modificar canal publicado.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Canal fixture local y, para caso válido, artefacto ya firmado autorizado o claves exclusivas de entorno de test sin tocar claves de distribución.",
+        "Directorio temporal de extractores; captura de estado efectivo antes/después."
+      ]
+    },
+    {
+      "id": "CORE-EXT-016",
+      "area": "Caché y renovación de streaming",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "control de refresh/posición/colas aprobado previamente en harness; caché y rangos reales pendientes de la auditoría",
+      "scenario": "Caché válida/caducada, HTTP403 inicial o a mitad y validación del tramo final de URL.",
+      "steps": [
+        "Resolver mismo videoId en frío/caliente y alrededor del margen de expiración; forzar refresh y comparar solicitud/fuente.",
+        "Servir URL fixture que responde al inicio pero403 al80%; verificar sustitución o error antes de reproducir.",
+        "En app, inyectar code2/code4 inicial y durante reproducción; registrar URL anonimizada, videoId, posición, reintentos y cola."
+      ],
+      "expected": [
+        "Caché expirada o refresh explícito no reutiliza una URL obsoleta; caché vigente evita extracción innecesaria.",
+        "Validación final distingue 200/206 de403 y no afirma que una muestra de1KB demuestra reproducción completa.",
+        "Una renovación por fallo recuperable mantiene pista/posición; segundo fallo termina o avanza una vez, sin doble aviso ni salto."
+      ],
+      "evidence": [
+        "src-tauri/src/native.rs:114 cache exige expires>now+600; :263 validate pide1KB al80% si conoce clen.",
+        "src-tauri/src/ytdlp.rs:120 caché y refresh; src/lib/player.svelte.ts:461 resolve y :469 canRefreshSource.",
+        "scripts/tests/player.test.mjs:167 y :189; scripts/tests/forum-playback.test.mjs:125 y :147.",
+        "D:/tmp/pletina-forum-bugs-20261008/desktop/baseline-after.log y forum-playback.log: estas ramas de control pasaron con adaptadores simulados."
+      ],
+      "automation": "Ya disponible para control: node --test scripts/tests/player.test.mjs scripts/tests/forum-playback.test.mjs (suite conjunta conserva 3 fallos conocidos ajenos a estos positivos). Live: harness scripts/tests/forum-native/Cargo.toml sondea rangos, no reproduce ni demuestra duración completa; nueva caché/fault fixture pendiente.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Fixture de URL caducada y rangos; selección de motor documentada.",
+        "Para live, IDs de contenidos públicos fijados y red disponible; ocultar firma/cookies de URLs en logs."
+      ]
+    },
+    {
+      "id": "CORE-EXT-017",
+      "area": "Fuente elegida y descarga",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Elegir vídeo alternativo con reproducción/descarga activa y conservar enlaces YouTube explícitos.",
+      "steps": [
+        "Sobre canción de catálogo descargada, elegir vídeo alternativo y dejarlo resolver mientras se cambia de canción; volver y reiniciar.",
+        "Intercalar descarga de la fuente antigua, elección nueva y renovación403; comprobar sources.verified, downloads.video_id y archivo reproducido.",
+        "Para canción añadida por enlace YouTube, simular vídeo no disponible y verificar que nunca se sustituye buscando otra canción."
+      ],
+      "expected": [
+        "La elección confirmada persiste y el audio/descarga posterior corresponden al vídeo correcto; una respuesta tardía no cambia la canción actual.",
+        "Un fallo de borrar archivo o guardar fuente no produce falso éxito ni pierde una descarga utilizable sin diagnóstico.",
+        "El enlace YouTube explícito mantiene identidad aunque falle; un403 transitorio no se trata como permiso para cambiar su vídeo."
+      ],
+      "evidence": [
+        "src-tauri/src/player.rs:228 choose elimina descarga antigua y save_source(verified=true); varios errores de persistencia/borrado se descartan y requieren inyección.",
+        "src-tauri/src/player.rs:48 rama is_youtube usa mapeo específico; :201 find_video.",
+        "src/lib/player.svelte.ts:320 useSource y redownload; scripts/tests/player.test.mjs:253 y :272 prueban timeout/403 de alternativa.",
+        "src-tauri/src/youtube_tracks.rs:296 y :331 prueban identidad y metadatos."
+      ],
+      "automation": "Existente parcial: tests player/youtube_tracks + nueva integración con barreras de download/choose y errores de disco. No publicar ni cambiar fuentes de biblioteca del usuario.",
+      "durationMinutes": 35,
+      "prerequisites": [
+        "Canción de catálogo y dos vídeos públicos identificados; enlaces explícitos separados.",
+        "DB/descargas desechables, hashes de archivos y trazas de videoId por solicitud."
+      ]
+    },
+    {
+      "id": "CORE-PLY-018",
+      "area": "Regresión de control de reproducción",
+      "priority": "P0",
+      "platform": "Windows, macOS y Linux",
+      "layer": "unitaria del reproductor real compilado, dependencias simuladas",
+      "currentStatus": "aprobado previamente:23 baseline y8 positivos adicionales; repetir sobre candidato de auditoría",
+      "scenario": "Mantener la cobertura conocida de carga, MediaSession, fallos, reproducción local y carreras de cola.",
+      "steps": [
+        "Ejecutar suite player.test.mjs sobre el SHA candidato y guardar salida completa.",
+        "Ejecutar los positivos de forum-playback.test.mjs y contrastar resultados individuales, conservando a la vista los fallos conocidos.",
+        "Verificar que se compila src/lib/player.svelte.ts real y que el harness no sustituye la lógica de control."
+      ],
+      "expected": [
+        "Los23 casos baseline siguen pasando: timeouts de resolución/audio, AbortError vigente,403, un único avance, eventos viejos, loopback local y MediaSession opcional.",
+        "Los8 positivos adicionales mantienen recuperación offline, latencia en límites y orden DJ/álbum.",
+        "Resultado distingue mock de IPC/Audio/reloj de reproducción/códecs/red reales."
+      ],
+      "evidence": [
+        "scripts/tests/player.test.mjs; scripts/tests/helpers/player-harness.mjs importa fuente real y compileModule.",
+        "scripts/tests/forum-playback.test.mjs:19-168 contiene8 positivos.",
+        "D:/tmp/pletina-forum-bugs-20261008/desktop/results.json:23 baseline +8 adicionales aprobados sobre v0.10.0/2d679e4."
+      ],
+      "automation": "Existente: node --test scripts/tests/player.test.mjs; node --test scripts/tests/forum-playback.test.mjs. La segunda suite devuelve exit1 por3 casos diagnósticos conocidos; no suprimirlos ni convertir el exit1 en éxito global.",
+      "durationMinutes": 5,
+      "prerequisites": [
+        "npm ci completo; Node24; SHA y diff capturados.",
+        "Sin navegador ni red necesarios; logs originales preservados."
+      ]
+    },
+    {
+      "id": "CORE-PLY-019",
+      "area": "Bloqueo de búfer permanente",
+      "priority": "P0",
+      "platform": "Windows, macOS y Linux",
+      "layer": "harness y reproducción real con red controlada",
+      "currentStatus": "fallo confirmado en harness v0.10.0; reproducción con transporte/códec real pendiente",
+      "scenario": "Audio que deja de avanzar tras waiting/stalled sin emitir error terminal.",
+      "steps": [
+        "Ejecutar caso de forum-playback que arranca, avanza a60s, emite waiting/stalled y deja180s sin progreso/error.",
+        "Reproducir la misma secuencia con servidor fixture que mantiene socket abierto pero deja de enviar, sobre WebView real.",
+        "Recuperar red y probar intervención manual; guardar estado, tiempo, eventos y acciones, evitando atribuir resultado mock al incidente original."
+      ],
+      "expected": [
+        "A los 30 s de stall sin avance debe existir un estado correcto y recuperación acotada; nunca permanecer indefinidamente mostrado como sonando.",
+        "La política de recuperación es acotada: estado visible de espera y recuperación/reintento/fallo definidos; no saltos repetidos ni pérdida de cola.",
+        "Si vuelve flujo dentro del umbral, continúa sin reiniciar innecesariamente."
+      ],
+      "evidence": [
+        "src/lib/player.svelte.ts:93 createAudio no escucha waiting/stalled y solo limita arranque en :444.",
+        "scripts/tests/forum-playback.test.mjs:186 falla: status=playing,time=60,renewals=0,messages=[],timers=0 tras180s.",
+        "D:/tmp/pletina-forum-bugs-20261008/desktop/forum-playback.log."
+      ],
+      "automation": "Existente y rojo: node --test --test-name-pattern=\"REGRESSION: a permanent buffering stall\" scripts/tests/forum-playback.test.mjs. Nueva pasada WebView+HTTP fixture pendiente.",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "No modificar producto durante diagnóstico; registrar política esperada antes de aceptar un fix.",
+        "Servidor local de prueba con audio suficientemente largo y bloqueo controlado; perfil/WebView aislado."
+      ]
+    },
+    {
+      "id": "CORE-PLY-020",
+      "area": "Reanudar reproducción",
+      "priority": "P1",
+      "platform": "Windows, macOS y Linux",
+      "layer": "harness y WebView real",
+      "currentStatus": "dos fallos confirmados en harness v0.10.0; condición equivalente del navegador real aún no reproducida",
+      "scenario": "play() al reanudar devuelve rechazo o queda pendiente, frente al arranque inicial protegido por timeout.",
+      "steps": [
+        "Pausar una pista ya arrancada y rechazar siguiente play() con AbortError; ejecutar test existente.",
+        "Repetir dejando play() pendiente180s; comprobar avisos, estado y capacidad de cambiar de pista.",
+        "Probar en app real con fuente caducada/desconexión y reanudar; distinguir play() rechazado sin error de Audio de error media que sí activa recuperación."
+      ],
+      "expected": [
+        "El rechazo no se descarta silenciosamente; estado y aviso explican el fallo y permiten reintentar.",
+        "La promesa pendiente tiene espera acotada y no deja el botón aparentemente inoperante.",
+        "Reintentos no crean múltiples reproducciones ni afectan audio de la pista elegida después."
+      ],
+      "evidence": [
+        "src/lib/player.svelte.ts:238 toggle usa play().catch(() => {}) en paused.",
+        "scripts/tests/forum-playback.test.mjs:201 y :216 fallan; ambos quedan paused sin mensaje ni timer.",
+        "src/lib/player.svelte.ts:428 playAudio sí protege el arranque inicial."
+      ],
+      "automation": "Existente y rojo: node --test --test-name-pattern=\"REGRESSION: a (rejected|pending) resume\" scripts/tests/forum-playback.test.mjs. Integración WebView pendiente.",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "npm deps y perfil de app descartable.",
+        "Logs de rechazo play() y eventos media; no confundir error inyectado conHTTP403 observado."
+      ]
+    },
+    {
+      "id": "CORE-POD-021",
+      "area": "Streaming prolongado de pódcasts",
+      "priority": "P0",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "Planificado; ensayo prolongado y comparación entre versiones pendientes.",
+      "scenario": "Ensayo prolongado de pódcasts en streaming y comparación controlada entre versiones.",
+      "steps": [
+        "Fijar programa, episodio, duración, procedencia RSS/YouTube, feedUrl/videoId, motor y ausencia de descarga.",
+        "En perfiles separados, reproducir un pódcast de al menos 2 h con v0.9.0 y candidata, con fuente y condiciones iguales. El perfil general de soak de música dura 8 h y se coordina con el runner; no cuenta como ejecutado por este caso.",
+        "Muestrear cada 30 s wall-clock/currentTime, pausas reales, red, fuente, motor y memoria; repetir cambio Wi-Fi/datos y recuperación únicamente en fase separada. La caducidad de URL se fuerza en fixture separado si no ocurre durante las 2 h."
+      ],
+      "expected": [
+        "No cortes ni EOF anticipado; currentTime y audio audible avanzan durante la sesión y no se confunde archivo local con streaming.",
+        "Una comparación válida usa misma fuente, episodio, dispositivo/red y condiciones.",
+        "Si URL caduca se recupera desde posición apropiada o se informa; tras 15 min de calentamiento, crecimiento sostenido de memoria mayor del 20% y de 100 MiB dispara alerta e investigación."
+      ],
+      "evidence": [
+        "src-tauri/src/player.rs:64 distingue RSS directo de episodio YouTube extraído.",
+        "src-tauri/src/native.rs:114 expiración de URL y :263 sondeo parcial; un sondeo no prueba horas de reproducción.",
+        "src/lib/player.svelte.ts:476 recuperación de error durante reproducción."
+      ],
+      "automation": "Soak de app real supervisado/semi-automático, con adquisición de audio/telemetría externa de prueba. Harness/range probes no son equivalentes. Coordinación con bloque Android para pantalla apagada/coche.",
+      "durationMinutes": 240,
+      "prerequisites": [
+        "Referencia reproducible del episodio y ambos binarios exactos; no mezclar perfiles DB de versiones.",
+        "Dispositivo y salida de audio reales; registro de energía/red; contenido público disponible.",
+        "Ejecución larga explícita del perfil soak; no se ejecuta durante esta preparación."
+      ]
+    },
+    {
+      "id": "CORE-POD-022",
+      "area": "Seek, pausa y EOF de episodios largos",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Buscar a posiciones lejanas, pausar/reanudar y llegar al final en RSS y YouTube de larga duración.",
+      "steps": [
+        "Con episodios RSS y YouTube equivalentes, hacer seek a50%,95%,volver a10s y alternar pausas; incluir formatosM4A/WebM/MP3 soportados.",
+        "Pausar durante tiempo suficiente para caducar URL de fixture; reanudar y validar posición.",
+        "Llegar aEOF y encadenar episodio/canción siguiente, incluyendo repeat one/all y cambio de duración/URL del feed al recargar."
+      ],
+      "expected": [
+        "Seek no cambia episodio ni vuelve a0 sin explicación; audio y progreso convergen con tolerancia documentada.",
+        "Un único ended por final válido produce una sola transición; duración/EOF parciales no cortan una grabación larga.",
+        "IDs de episodios se mantienen cuando cambia audio_url con mismo GUID; favoritos e historial siguen resolviendo."
+      ],
+      "evidence": [
+        "src/lib/player.svelte.ts:122 ended; :273 seek; :476 onAudioError conserva currentTime.",
+        "src-tauri/src/podcasts.rs:728 episode_identity_and_audio_survive_restart_and_url_changes.",
+        "src-tauri/src/local_media.rs soporte HEAD/Range para archivosLinux y scripts/tests/linux-playback.py prueba formatos locales, no soak remoto."
+      ],
+      "automation": "Existente parcial: cargo test --manifest-path src-tauri/Cargo.toml episode_identity_and_audio_survive_restart_and_url_changes. Nueva UI+HTTP fixture para seek/EOF, luego muestra live por procedencia.",
+      "durationMinutes": 90,
+      "prerequisites": [
+        "Episodios públicos con procedencia confirmada y fixtures largos de hashes/duración conocidos.",
+        "Registrar Range/respuesta, seeked/currentTime/ended y fuente; comparar con reproductor de referencia."
+      ]
+    },
+    {
+      "id": "CORE-OBS-023",
+      "area": "Evidencia y reproducción de fallos",
+      "priority": "P1",
+      "platform": "Todas las plataformas auditadas",
+      "layer": "runner y artefactos de diagnóstico",
+      "currentStatus": "planificado; no ejecutado en esta preparación",
+      "scenario": "Cada fallo se puede repetir y separar entre UI, extractor, transporte, códec y persistencia.",
+      "steps": [
+        "Para cada ejecución guardar versión/SHA/diff, SO/WebView/runtime, motor/versión, tipo de fuente, ID estable y estado de caché/descarga.",
+        "Guardar comando, tiempos, secuencia de eventos, errores, resultados por caso y hashes de artefactos; reproducir un fallo con los mismos inputs.",
+        "Revisar logs exportables para eliminar tokens, cookies, firmas de URL, rutas/personales no necesarias y contenido de DB de usuario."
+      ],
+      "expected": [
+        "Informe distingue passed,failed,blocked,not_run y capa realmente probada; no declara estable toda la app por tests mock verdes.",
+        "Fallo tiene paso mínimo y evidencia preservada; resultados históricos no se atribuyen al candidato sin SHA.",
+        "Artefactos viven bajo D:/tmp/pletina-stability-audit-20261008 y no se publican ni envían automáticamente.",
+        "No aprobar una plataforma con ningún P0/P1 abierto o bloqueado; registrar explícitamente automatizaciones pendientes y su responsable."
+      ],
+      "evidence": [
+        "src-tauri/src/extractor.rs:193 engine_stats; :273 bench_plan; :279 bench_report; :323 bench_probe.",
+        "src/lib/extractor/bench.ts mediciones de motores y src-tauri/src/extractors.rs:106 status.",
+        "D:/tmp/pletina-forum-bugs-20261008/desktop/results.json ya distingue mock/redreal y registra hallazgos previos.",
+        "scripts/tests/forum-native/src/main.rs usa fuentesRust reales para resolver/sondear, sinUI ni reproducción audible."
+      ],
+      "automation": "Runner preparado por root: inventario de entorno, captura de stdout/stderr/JSON y manifiesto por caso. Aplicar redacción antes de cualquier exportación compartida.",
+      "durationMinutes": 15,
+      "prerequisites": [
+        "Directorio de artefactos y reloj monotónico disponible.",
+        "No escribir ni leer datos personales de biblioteca para fixtures; usar perfiles sintéticos.",
+        "Estado de código registrado antes de correr y comandos exactos reproducibles."
+      ]
+    },
+    {
+      "id": "CORE-DL-024",
+      "area": "Offline y archivos desaparecidos",
+      "priority": "P1",
+      "platform": "Windows, macOS, Linux y Android",
+      "layer": "integración del núcleo",
+      "currentStatus": "ramas de control local aprobadas previamente en harness; integridad/metadata offline en app real planificadas",
+      "scenario": "Descargas completas offline, archivo movido/borrado y retorno controlado al streaming.",
+      "steps": [
+        "Descargar pista y episodio YouTube, cerrar, desconectar red, reabrir y reproducir desde favoritos/playlist/descargas.",
+        "En copia de prueba mover o borrar uno de los archivos externos, intentar reproducir offline y luego online.",
+        "Recargar biblioteca/listado y verificar caché de portadas, fuentes y badges; repetir con rutaUnicode/espacios.",
+        "Medir 30 inicios locales de archivos completos sobre cada plataforma y registrar distribución de latencia."
+      ],
+      "expected": [
+        "Archivo existente reproduce sin extraer de YouTube; metadata/cola visibles offline.",
+        "Archivo inexistente produce error claro offline y puede resolverse remoto online; DB y badges se reconcilian sin afirmar una descarga inexistente.",
+        "No se borra otro archivo ni se cambia identidad al recuperarse; protocoloLinux loopback conserva local=true y no reextrae ante error de códec.",
+        "p95 de inicio local inferior a 1 s; las medidas de reloj simulado no cuentan para este criterio."
+      ],
+      "evidence": [
+        "src-tauri/src/player.rs:45-109 prioriza download_path/local, comprueba existencia y olvida referencia perdida.",
+        "src/lib/player.svelte.ts:35 audioSrc acepta loopbackLinuxlocal; scripts/tests/player.test.mjs:24 prueba transporte/local sin refresh.",
+        "src/lib/downloads.svelte.ts:26 init y :65 remove; src-tauri/src/downloads.rs:289 downloads_list.",
+        "scripts/tests/forum-playback.test.mjs:81 prueba fallback a descarga en harness, sin validar archivo real."
+      ],
+      "automation": "Existente parcial: player.test.mjs + scripts/tests/linux-playback.py para audio local/descarga fixture. Nueva integración offline/reinicio y archivo desaparecido con IPC/SQLite reales.",
+      "durationMinutes": 30,
+      "prerequisites": [
+        "Carpeta de descargas sintética y perfil separado; no mover/borrar música del usuario.",
+        "Red controlada por proceso/dispositivo de prueba; audio conocido y hash previo."
+      ]
+    }
+  ]
+}

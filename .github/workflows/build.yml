@@ -61,11 +61,8 @@ jobs:
       - name: Comprobar tipos de la interfaz
         run: npm run check
 
-      - name: Comprobar el reproductor
-        run: node --test scripts/tests/player.test.mjs
-
-      - name: Comprobar favoritos de pódcasts
-        run: node --test scripts/tests/podcast-favorites.test.mjs
+      - name: Comprobar reproducción, favoritos e importación y descargas
+        run: npm test
 
       - name: Compilar y firmar
         run: npm run tauri build -- --bundles ${{ matrix.bundles }} ${{ matrix.args }}
@@ -84,7 +81,7 @@ jobs:
 
       - name: Reproducir archivos y descargas en la AppImage
         if: runner.os == 'Linux'
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: python3 scripts/tests/linux-playback.py src-tauri/target/release/bundle/appimage/*.AppImage --output-dir target/linux-playback-test
 
       - name: Guardar el resultado de reproducción en Linux

@@ -1,0 +1,1818 @@
+{
+  "schemaVersion": 1,
+  "product": "Pletina",
+  "version": "0.10.0",
+  "commit": "2d679e477d906682974d2ee763d3cf09c5b4a7a2",
+  "executedOn": "2026-10-08",
+  "consolidatedAt": "2026-10-08T18:20:40.834Z",
+  "status": "not-approved",
+  "platformsApproved": [],
+  "caseCount": 70,
+  "caseCounts": {
+    "pass": 6,
+    "fail": 9,
+    "partial": 38,
+    "blocked": 17
+  },
+  "countsByGroup": {
+    "android": {
+      "pass": 0,
+      "fail": 3,
+      "partial": 11,
+      "blocked": 8
+    },
+    "windows": {
+      "pass": 0,
+      "fail": 0,
+      "partial": 7,
+      "blocked": 4
+    },
+    "linux": {
+      "pass": 2,
+      "fail": 1,
+      "partial": 3,
+      "blocked": 1
+    },
+    "macos": {
+      "pass": 0,
+      "fail": 0,
+      "partial": 3,
+      "blocked": 3
+    },
+    "core": {
+      "pass": 4,
+      "fail": 5,
+      "partial": 14,
+      "blocked": 1
+    }
+  },
+  "statusMeaning": {
+    "pass": "Recorrido del caso aprobado en la capa descrita; no acredita otras plataformas o pruebas.",
+    "fail": "Al menos una expectativa incumplida; incluye condiciones inyectadas claramente identificadas.",
+    "partial": "Hay evidencia útil pero faltan condiciones exigidas por el caso.",
+    "blocked": "No hay cobertura suficiente por hardware, entorno o prerrequisito funcional ausente."
+  },
+  "excluded": [
+    "iOS",
+    "web",
+    "Play Store",
+    "radio de canción",
+    "radio de artista"
+  ],
+  "source": {
+    "workspace": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify",
+    "productModified": false,
+    "changes": "Tests, harnesses and audit documentation only"
+  },
+  "evidenceRoot": "D:/tmp/pletina-stability-execution-20261008",
+  "evidenceReports": [
+    {
+      "path": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json",
+      "sha256": "5d798494306f467fb7f8a36c9ae65f637c52c7f86c46285bebf542c6fdb7687e"
+    },
+    {
+      "path": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json",
+      "sha256": "c7941263a0e33d7a9f7f56183eb2c5ab09a531053708124860f0c04517cd693f"
+    },
+    {
+      "path": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json",
+      "sha256": "4fc2b84698cb35760a59e3f5d7976aabae15832502111f1680bdd273d6bdf52e"
+    },
+    {
+      "path": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json",
+      "sha256": "c9239c304c5f35e6ab5aeba77738cc967ae39178c989ab52fe8432cb4409fb75"
+    },
+    {
+      "path": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "sha256": "03a4efdc959de6ec6d9870e894bbf20fa4866555f1d9dc4f0b67e6c134874130"
+    }
+  ],
+  "primaryDefects": [
+    {
+      "id": "STAB-001",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Reintentos se acumulan pese a recuperaciones y el cuarto corte salta la pista",
+      "evidenceKind": "original-kotlin-published-jni-real-exoplayer-controlled-http-plus-policy-harness"
+    },
+    {
+      "id": "STAB-002",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Reintento pendiente deshace pausa o actúa sobre una pista posterior",
+      "evidenceKind": "original-kotlin-published-jni-real-exoplayer-controlled-http-plus-policy-harness"
+    },
+    {
+      "id": "STAB-003",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Retorno de red reanuda pese a pausa durante la espera",
+      "evidenceKind": "original-kotlin-with-doubles"
+    },
+    {
+      "id": "STAB-004",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Búfer detenido sin progreso ni error queda mostrando reproducción indefinidamente",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    },
+    {
+      "id": "STAB-005",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Rechazo de play al reanudar se silencia",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    },
+    {
+      "id": "STAB-006",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Reanudación pendiente sin timeout",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    },
+    {
+      "id": "STAB-007",
+      "title": "Errores de escritura SQLite silenciados por helpers Db",
+      "priority": "P1",
+      "category": "confirmed-core-write-error",
+      "cases": [
+        "CORE-DB-004",
+        "CORE-EXT-017"
+      ],
+      "preconditions": [
+        "Una escritura de ajuste/fuente/borrado se rechaza porSQLite. Fixture1 query_only=ON produceSQLITE_READONLY; fixture2 max_page_count=current_page_count yvalor1MiB produceSQLITE_FULL; fixture3 otra conexión BEGIN IMMEDIATE produceSQLITE_BUSY."
+      ],
+      "steps": [
+        "Crear perfil sintético esquema5, migrar medianteDb::open real.",
+        "Provocar error SQLite y comprobarlo con execute de control.",
+        "Invocar set_setting/save_source/forget_download/delete_source reales.",
+        "Comparar valor retornado, filas actuales y datos tras la operación."
+      ],
+      "expected": "Operación rechazada llega como error al llamante; no confirmar guardado o eliminación inexistente.",
+      "observed": [
+        "Los4 helpers retornan() enSQLITE_READONLY mientras las filas permanecen.",
+        "set_setting retorna() enSQLITE_FULL sin guardar; save_source retorna() enSQLITE_BUSY sin cambiar vídeo.",
+        "SQLiteprevio ybackup no se corrompen; errornuevo no significa pérdida de toda la biblioteca."
+      ],
+      "cause": "let _ = conn.execute(...) descarta rusqlite::Result. Los3 tests negativos son modos de fallo de la misma causa.",
+      "affectedFlows": [
+        {
+          "flow": "Selector manual de fuente de canción, player::choose",
+          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:230",
+          "impact": "Llama save_source y devuelvePlayable sin comprobar persistencia; elección puede funcionar temporalmente y desaparecer tras reinicio.",
+          "validation": "Helper ejecutado; integración/UI inferida del flujo real, no pulsada bajo fallo."
+        },
+        {
+          "flow": "Ajustes: elegir carpeta de descargas",
+          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:334",
+          "impact": "choose_download_dir retorna Some(path) tras set_setting sin confirmación; UI puede mostrar carpeta que no quedóguardada.",
+          "validation": "Helper ejecutado; diálogoUI no ejecutado."
+        },
+        {
+          "flow": "Quitar descargas",
+          "evidence": "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:307",
+          "impact": "forget_download puede no borrar referenciaSQLite mientras comando retornaOk; si fichero ya se eliminó, referencia queda obsoleta.",
+          "validation": "DELETE fallido ejecutado en helper; secuencia completa remove_downloads no ejecutada."
+        }
+      ],
+      "priorityReason": "P1 por falso éxito observable en decisiones persistentes y referencias de descargas; no P0 porque no se demostró corrupción ni pérdida de datos previamente confirmados.",
+      "source": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:218",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:232",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:248",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:266"
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json"
+      ],
+      "limitation": "ErroresSQLite reales sobre fixtures hostWindows; no volumen físico lleno ni integraciónUI completa."
+    }
+  ],
+  "conditionalDefenses": [
+    {
+      "id": "STAB-008",
+      "title": "URL renovada con mismo itag y otro clen puede declararse completa usando tamaño anterior",
+      "priority": "P2",
+      "category": "conditional-transport-defense",
+      "cases": [
+        "CORE-DL-009"
+      ],
+      "preconditions": [
+        "Resolvedor inicial: itag251/clen64, parcial16bytes; HTTP403.",
+        "Al refrescar, mismoitag251 pero URLdeclara clen96; HTTPresponde correctamente206 yContent-Range16-63/96."
+      ],
+      "steps": [
+        "Ejecutar actual direct::download con servidor local yresolvedor fixture descrito.",
+        "Registrar rangos yarchivo devuelto."
+      ],
+      "expected": "Actualizar tamaño objetivo o rechazar explícitamente cambioincompatible; no afirmar éxito con contenido incompleto.",
+      "observed": "Pide sólo16-63, conserva total64 yrenombra archivo64bytes como final aunque fuenteactual declare96.",
+      "cause": "total=size(fresh.url) sólo se recalcula dentro de if fresh.itag != direct.itag.",
+      "source": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:59",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:63"
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/changed-size/audio.webm"
+      ],
+      "priorityReason": "P2 de defensa: pérdida de integridad bajo cambio de representación controlado; no se observó ese cambio enYouTube real.",
+      "platformRelevance": "direct.rs es transporte de descargas móvil. Ejecutado enhostWindows conreqwestreal, no dispositivoAndroid ni rutaWindowsdesktop.",
+      "productionReachability": "Pendiente: demostrar mismo vídeo/itag cuyo clen cambia entre URLs reales."
+    },
+    {
+      "id": "STAB-009",
+      "title": "HTTP206 con Content-Range incorrecto se acepta y concatena bytes erróneos",
+      "priority": "P2",
+      "category": "conditional-transport-defense",
+      "cases": [
+        "CORE-DL-009"
+      ],
+      "preconditions": [
+        "Parcialcorrecto16bytes ytotal64.",
+        "Cliente solicita Range16-63; servidor fixture incumple petición yresponde206 Content-Range0-47/64 con48bytes."
+      ],
+      "steps": [
+        "Ejecutar direct::download real ante esa respuesta.",
+        "Comparar hash/contenido final confixtureoriginal."
+      ],
+      "expected": "Rechazar rango incongruente o reiniciar de forma segura; no declararcompleto archivo conbytesrepetidos.",
+      "observed": "Concatena48bytes deloffsetincorrecto; longitudfinal64 coincidecon total yretornaOk aunquecontenido esdistinto.",
+      "cause": "Se comprueba status206, pero no se validaContent-Range antes deabrirarchivo enappend.",
+      "source": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:83",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:90"
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/wrong-range/audio.webm"
+      ],
+      "priorityReason": "P2 de defensa ante servidor no conforme; no respuestaobservada deYouTube.",
+      "platformRelevance": "Transporte móvil compilado enhostWindows, HTTP/archivosreales. AndroidE2Ependiente.",
+      "productionReachability": "Pendiente: no se vioContent-Range incorrecto en los28 rangos live de root."
+    },
+    {
+      "id": "STAB-010",
+      "title": "Parcial mayor que tamaño esperado y no borrable deja un bucle sin salida",
+      "priority": "P1",
+      "priorityStatus": "propuesta condicionada a relevancia dispositivo; fuera del recuento provisional de averías reales de root",
+      "category": "conditional-filesystem-defense",
+      "cases": [
+        "CORE-DL-008"
+      ],
+      "preconditions": [
+        "Archivo .251.part de80bytes; resolvedor válido declara clen64.",
+        "remove_file denegado realmente: handleWindows abierto conFILE_SHARE_READ|WRITE, sinFILE_SHARE_DELETE. Error32 comprobado antes dellamarproducto."
+      ],
+      "steps": [
+        "Crear fixture yhandle enproceso hijo propio.",
+        "Invocar direct::download real.",
+        "Runnerespera2500ms yterminaúnicamenteelhijo cuando no devuelve."
+      ],
+      "expected": "Intento de limpieza fallido se devuelve como error recuperable; no bloqueartrabajadorasíncrono.",
+      "observed": "No retorna antes del timeout2500ms; fuente recorre metadata→remove_file ignorado→continue sin await. Resolvedor yarespondió y nunca alcanzaHTTP.",
+      "cause": "La rama done>total ignora elerror deborrar ycontinúa sin límite sobreelmismoarchivo.",
+      "source": [
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:37",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:39"
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/undeletable.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json"
+      ],
+      "priorityReason": "P1 propuesto si se alcanza unfallo equivalente enalmacenamientoAndroid: descarga yworker puedenquedar bloqueados indefinidamente. Eltimeout eslímitedeprueba, no tiempo de usuario ni medicióndeCPU.",
+      "platformRelevance": "Código móvil real ejecutado enhostWindows; Windowsdesktopproductivo usa yt-dlp yno esta rama. Faltareproducir permiso/volumen equivalenteAndroid.",
+      "productionReachability": "Pendiente enAndroid; elfallodearchivo yloop host estánconfirmados."
+    }
+  ],
+  "additionalObservation": {
+    "id": "OBS-LIN-001",
+    "case": "DESK-LIN-004",
+    "status": "reproduced-in-virtual-environment-cause-unresolved",
+    "summary": "AppImage intermitentemente no avanza al reanudar en Ubuntu24 WSL; hubo controles AppImage correctos, DEB correcto y CI22 correcto. No extrapolar a todo Linux.",
+    "evidenceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+  },
+  "frontendRobustness": [
+    {
+      "case": "CORE-DL-010",
+      "condition": "cancelDownloads IPC rejeсta",
+      "observed": "Rechazo silenciado.",
+      "classification": "Sólo robustez del puente; comando backend retorna() sinerror denegocio. No aumentarbugsconfirmados."
+    },
+    {
+      "case": "CORE-DL-010",
+      "condition": "done duplicado inyectado",
+      "observed": "Duplica version ytoast.",
+      "classification": "Sin evidencia de quebackendemita la secuencia."
+    },
+    {
+      "case": "CORE-DL-010",
+      "condition": "downloading después de done inyectado",
+      "observed": "ID simultáneamente done yactive.",
+      "classification": "Sin evidencia de quebackendemita la secuencia."
+    }
+  ],
+  "results": [
+    {
+      "id": "AND-001",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Instalación y compatibilidad",
+      "scenario": "Instalación limpia del APK firmado en la matriz Android declarada, separando incompatibilidad de ABI de un fallo de instalación.",
+      "status": "partial",
+      "covered": [
+        "Reutilizada verificación real del APK publicado 0.10.0: SHA256, certificado v2, zipalign16KiB, instalación limpia y arranque API35 x86_64 con traducción ARM64.",
+        "Emulador aislado5580 arrancado y .autotest ARM64 instalado para esta ejecución; ninguna operación sobre5554."
+      ],
+      "notCovered": [
+        "Teléfono ARM64 físico; API24/28/33/37; instalador del sistema y permisos/UI completos. Los ejecutables .autotest no son el APK de distribución."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-forum-bugs-20261008/apk/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/install-harness.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/test-package.txt"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-002",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Actualización y migraciones",
+      "scenario": "Actualizar de 0.9.0 y 0.9.1 a 0.10.0/candidato y de 0.10.0 a un candidato futuro, sin perder biblioteca, descargas o identidad.",
+      "status": "partial",
+      "covered": [
+        "Reutilizada actualización firmada 0.9.1→0.10.0 que conserva firstInstallTime y vuelve a abrir.",
+        "En esta ejecución SQLite/descargas/favoritos y cola sobreviven a otro proceso Android; no equivale a upgrade de datos entre versiones."
+      ],
+      "notCovered": [
+        "0.9.0→0.10.0; upgrade con biblioteca sembrada; todos los recorridos candidato; rechazo firma/downgrade y matriz de dispositivos."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-forum-bugs-20261008/apk/upgrade-v0.9.1-to-v0.10.0.txt",
+        "D:/tmp/pletina-forum-bugs-20261008/apk/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase2.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-003",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Streaming de música YouTube",
+      "scenario": "Reproducir música del catálogo y canciones añadidas mediante enlace YouTube usando el motor móvil real.",
+      "status": "partial",
+      "covered": [
+        "JNI exacto del APK publicado resuelve vídeo público jNQXAC9IVRw en740ms sin descarga.",
+        "ExoPlayer real llegó playing, avanzó más de1.5s durante2.5s y test nativeYouTubePublicStreamResolvesAndPlays pasó."
+      ],
+      "notCovered": [
+        "30 muestras YouTube, música de catálogo, fuentes manuales/retiradas y fallo concreto del foro; SIM/radio real; controles/UI Tauri completos."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-real.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/native-youtube-live.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/product-source-manifest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-004",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Pódcasts RSS",
+      "scenario": "Episodio RSS largo con seek, redirecciones y HTTP Range, identificado por enclosure real.",
+      "status": "partial",
+      "covered": [
+        "Episodio RSS fixture persistido, resuelto por Rust hacia HTTP loopback y reproducido por ExoPlayer real.",
+        "30 aperturas reiniciando MediaItems: p95=920ms hasta playing y posición>500ms; seek120s, pausa/reanuda y Range206 correctos.",
+        "Reconexión de MediaController tras mandar Activity de pruebas al fondo conservó reproducción en120922ms."
+      ],
+      "notCovered": [
+        "RSS remoto público, parser de feed, HTTPS/TLS, episodio>60min, redirects, servidor sin Range y teléfono físico. Fixture WAV180s sembrada directamente en SQLite; no validar toda fuente RSS por esta prueba."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-rss-final.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/rss-30-starts-seek-reconnect.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumented/app/src/androidTest/java/dev/musify/desktop/StabilityPlaybackTest.kt"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-005",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Pódcasts RSS y YouTube",
+      "scenario": "Comparación controlada de pódcasts RSS y YouTube entre versiones.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "Comparativa histórica por episodio/fuente/dispositivo no identificados; no se infiere origen RSS/YouTube de un programa. No se ejecutó equivalencia0.9.0/candidato."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-006",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Segundo plano y pantalla apagada",
+      "scenario": "Continuidad al cerrar Activity, bloquear pantalla y retirar la app de recientes.",
+      "status": "partial",
+      "covered": [
+        "Audio continuó al pasar Activity de pruebas al fondo; controlador liberado y reconectado al servicio original sin parar audio."
+      ],
+      "notCovered": [
+        "Diez minutos de pantalla apagada, retirada de recientes, notificación/bloqueo, transición de pista y Activity/WebView reales en teléfono."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-rss-final.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/rss-30-starts-seek-reconnect.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-007",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Doze y restricciones de batería",
+      "scenario": "Doze/standby y política OEM durante reproducción o pausa prolongada.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "No se ejecutó Doze natural/forzado ni variaciones OEM; P0 fallidos y sin teléfono físico. No se sustituyó esta cobertura por una lectura de código."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-008",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Foco de audio",
+      "scenario": "Foco transitorio/permanente por navegación, llamada y otra app, sin reanudaciones que contradigan una pausa.",
+      "status": "blocked",
+      "covered": [
+        "Se identificó y corrigió una precondición del arnés: API35 deniega foco al test sin Activity top/FGS; la repetición usa Activity de pruebas sin alterar producto."
+      ],
+      "notCovered": [
+        "No probado foco transitorio/permanente, llamadas, navegación o recuperación combinada. El primer bloqueo de foco no se contabiliza como defecto de producto."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/logcat-first-focus-precondition.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-009",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Bluetooth y cambios de salida",
+      "scenario": "Desconexión/reconexión Bluetooth A2DP y auriculares durante reproducción, pausa y retry.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "Sin receptor Bluetooth/cable/teléfono físico; no se inyectaron broadcasts como sustituto de A2DP/AVRCP real."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-010",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Android Auto y coche",
+      "scenario": "Descubrimiento, biblioteca, arranque sin Activity y controles de Android Auto.",
+      "status": "partial",
+      "covered": [
+        "Cuatro pruebas instrumentadas originales pasaron: biblioteca Media3 sin Activity, browser legacy, identidad/contexto de duplicados y mediaId→SQLite/JNI→ExoPlayer con descarga."
+      ],
+      "notCovered": [
+        "DHU, vehículo, controles volante, voz, Android Auto real, ARM64 físico y USB/inalámbrico. MediaBrowser no equivale a Auto."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-first.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/product-source-manifest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-011",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Red móvil y contador de reintentos",
+      "scenario": "Cuatro cortes independientes durante una misma pista con recuperación estable entre ellos.",
+      "status": "fail",
+      "covered": [
+        "Reproducción real de A, corte HTTP hasta error2004, recuperación con avance3s, repetida3 veces; el cuarto corte salta a B.",
+        "Prueba final falla expected index0 but was1; HTTP trace contiene200/206 y16 respuestas503. Demuestra acumulación de fallos tras recuperaciones exitosas.",
+        "Harness Kotlin original adicional confirma mismo defecto con30s simulados entre recuperaciones."
+      ],
+      "notCovered": [
+        "Radio móvil real, treinta segundos reales entre recuperaciones y atribución al teléfono del foro. Inyección de HTTP503 en loopback, no pérdida de transporte."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-fourSeparatedHttpFailuresMustNotSkipRecoveredTrack.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/four-cuts-real-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/logcat-fourSeparatedHttpFailuresMustNotSkipRecoveredTrack.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/policy-repro.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-012",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Conectividad validada",
+      "scenario": "Transporte móvil/Wi-Fi presente sin acceso real a Internet y recuperación posterior.",
+      "status": "fail",
+      "covered": [
+        "Harness Kotlin extraído del SHA auditado confirma que transporte celular sin VALIDATED se clasifica datos, consume3 reintentos y salta en vez de esperar."
+      ],
+      "notCovered": [
+        "No se reprodujo validación ConnectivityManager perdida/restaurada en Android real ni portal/DNS/cobertura. Este fallo tiene evidencia de política con dobles, no de radio."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/policy-repro.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/source-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/ActualPlaybackPolicy.kt"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-013",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Carreras de retry y órdenes",
+      "scenario": "Pausa, cambio de pista, limpieza de cola y destrucción durante callbacks de retry o vuelta de red.",
+      "status": "fail",
+      "covered": [
+        "Error HTTP2004 real en A, pausa explícita y servidor restaurado: después del retry playWhenReady=true; JUnit falla con mensaje de pausa sobrescrita.",
+        "Error HTTP2004 real en A a856471ms; cambio a B y pausa a856487ms; a859002ms B tiene playWhenReady=true. JUnit falla BUG: A retry resumed B after explicit pause.",
+        "Harness Kotlin añade variante vuelta de red que ignora pausa."
+      ],
+      "notCovered": [
+        "Vaciado completo de cola, destrucción durante callbacks,20 permutaciones y red móvil física. Dos reproducciones reales ya incumplen criterio P0."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-pendingHttpRetryMustRespectPause.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-retryFromPreviousTrackMustNotResumeNewPausedTrack.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/retry-pause-real-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/retry-changed-track-real-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/policy-repro.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-014",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Cambio de red y URLs caducadas",
+      "scenario": "Wi-Fi→datos→Wi-Fi, URL caducada/403 y renovación sin perder posición.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "No ejecutados Wi-Fi→SIM, URL YouTube caducada/403 y renovación de URL expirada. Reintentar una fixture RSS503 no sustituye este escenario."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-015",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Cola mixta offline",
+      "scenario": "Cola con streaming y descargas durante pérdida de red, repeat/shuffle y ausencia de siguiente descarga.",
+      "status": "partial",
+      "covered": [
+        "CarPlaybackTest original prepara dos descargas y cambia mediaId conservando playlist duplicada con JNI/ExoPlayer.",
+        "Archivo fixture offline persistido se resuelve local=true y reproduce después de reiniciar proceso.",
+        "Harness Kotlin confirma salto deliberado a siguiente descarga ante sin red."
+      ],
+      "notCovered": [
+        "Cola mixta remota/offline y desaparición de archivo en Android real; repeat/shuffle completos; transición real a modo avión."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-first.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase2.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/policy-repro.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-016",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Cola y sincronización de interfaz",
+      "scenario": "Órdenes rápidas, duplicados, cola manual, shuffle/repeat y retorno de UI congelada.",
+      "status": "partial",
+      "covered": [
+        "Pruebas instrumentadas originales confirman identidad de duplicados y contexto de selección; cola persistida mantiene dos apariciones distintas.",
+        "Cambio de pista durante retry demuestra una carrera real y se registra como fallo AND-013."
+      ],
+      "notCovered": [
+        "UI AndroidPlayer/Tauri, edición rápida DJ, shuffle, combinaciones repeat/seek y sincronización tras WebView congelada."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-first.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase1.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/retry-changed-track-real-http.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-017",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Muerte de proceso y recuperación",
+      "scenario": "Reapertura después de muerte de proceso, recreación de Activity y forzar detención como caso distinto.",
+      "status": "partial",
+      "covered": [
+        "Fase1 guarda cola duplicada pausada a15000ms y repeat-all. Fuerza detención del paquete aislado entre procesos.",
+        "Fase2 en nuevo proceso restaura pausado exactamente15000ms, repeat-all, dos entradas y reproduce descarga hasta16058ms.",
+        "SQLite integrity_check=ok."
+      ],
+      "notCovered": [
+        "Muerte no ordenada durante escritura, checkpoint activo30s, cola.json truncado, UI real y reproducción reanudada desde auriculares. Force-stop y posterior relanzamiento explícito no equivalen a continuidad sin proceso."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-persistencePhase1SeedAndSavePausedQueue.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-persistencePhase2RestoreAfterProcessDeath.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase1.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase2.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/run-methods.ps1"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-018",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Descargas en segundo plano",
+      "scenario": "Descargar varias pistas mientras suena música, se apaga pantalla y se deniega permiso de notificaciones.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "No se inició transferencia de Downloads: depende del AppHandle/estado Tauri ausente en arnés nativo. Requiere APK completo instrumentable/puente de pruebas de descarga.",
+        "No cubiertos permisos de notificaciones, foreground transfer, concurrencia streaming ni pantalla apagada durante descarga. Reproducir fixture sembrada en downloads no prueba descargar."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-019",
+      "platform": "Android",
+      "priority": "P0",
+      "area": "Descargas, cancelación y almacenamiento",
+      "scenario": "Cancelación, corte de red, cierre y disco lleno durante escritura de descarga.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "No ejecutados cancelación/ENOSPC/corte durante transferencia ni corrupción parcial. El arnés carece del flujo Tauri de enqueue Downloads; no se llenó disco del host ni dispositivo de usuario."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-020",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Persistencia de biblioteca",
+      "scenario": "Favoritos RSS/YouTube, artistas, playlists e historial sobreviven a reinicio y eliminación selectiva.",
+      "status": "partial",
+      "covered": [
+        "Descarga, canción favorita, artista favorito y programa favorito sembrados persisten tras detener y relanzar proceso; verificados conteos e integrity_check.",
+        "Archivo guardado sigue resuelto por JNI y reproducible; cola conserva duplicados."
+      ],
+      "notCovered": [
+        "Acciones CRUD reales desde UI/comandos, eliminación selectiva, programa RSS/YouTube doble, actualización de metadatos e historial por umbral. Fixtures se sembraron por SQLite de pruebas."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase1.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/persistence-phase2.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/instrumentation-persistencePhase2RestoreAfterProcessDeath.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-021",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Diagnóstico y aislamiento de fallos",
+      "scenario": "Cada fallo de reproducción/servicio produce evidencia útil y el registro se puede compartir.",
+      "status": "partial",
+      "covered": [
+        "Capturados logs reales de error2004, retries, pausas y cambio de pista, con timestamps correlacionables; reportes incluyen solicitudes HTTP y estados MediaController.",
+        "Artefactos identificados por hash y se conservaron errores de precondición del arnés separados de fallos de producto."
+      ],
+      "notCovered": [
+        "UI Enviar registro/FileProvider, rotación,100 ciclos, variedad completa de errores y series de memoria. Meminfo final aislado no se usa como diagnóstico de fuga."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/retry-changed-track-real-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/reports/four-cuts-real-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/musify-final.log",
+        "D:/tmp/pletina-stability-execution-20261008/android/product-source-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/meminfo-final.txt"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "AND-022",
+      "platform": "Android",
+      "priority": "P1",
+      "area": "Resistencia prolongada",
+      "scenario": "Sesiones de resistencia de 8 h de música y 2 h de pódcasts en streaming con pantalla apagada, transiciones y cambios de red.",
+      "status": "blocked",
+      "covered": [],
+      "notCovered": [
+        "Sesiones8h música+2h pódcast no iniciadas: los P0 AND-011/012/013 fallan y no hay dispositivo ARM64 físico. No hay aprobación total ni excepciones."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/android/case-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/android/execution-metadata.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/android/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-001",
+      "platform": "Windows 10/11 x64",
+      "priority": "P0",
+      "area": "Instalación/WebView2",
+      "scenario": "Primera instalación NSIS con y sin WebView2.",
+      "status": "partial",
+      "covered": [
+        "NSIS publicado: SHA256 y firma updater válidos. QA del mismo código arranca con WebView2 154 en Windows 11."
+      ],
+      "notCovered": [
+        "Instalación NSIS y diagnóstico sin WebView2 en VM limpia; el runtime del host no se ha retirado."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/download-hashes.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/runtime-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/native.result.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-002",
+      "platform": "Windows 10/11 x64",
+      "priority": "P1",
+      "area": "Rutas/permisos",
+      "scenario": "Instalación por usuario con espacios, tildes y caracteres no latinos.",
+      "status": "blocked",
+      "covered": [
+        "Ninguna instalación en perfil Unicode."
+      ],
+      "notCovered": [
+        "VM/segundo usuario y rutas Unicode del sistema; los textos Unicode de la fixture SQLite no validan este caso."
+      ],
+      "evidence": [],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-003",
+      "platform": "Windows 10/11 x64",
+      "priority": "P0",
+      "area": "Upgrade/migración",
+      "scenario": "Actualización al salir y Reiniciar, incluida migración legado Musify cuando exista artefacto.",
+      "status": "partial",
+      "covered": [
+        "Migraciones del Db real en fixtures v0.9.0/v0.9.1 pasan; identidad de firma updater del NSIS verificada."
+      ],
+      "notCovered": [
+        "Instalación y actualización automática de extremo a extremo; no se modificó la instalación personal."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-1/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-004",
+      "platform": "Windows 10/11 x64",
+      "priority": "P0",
+      "area": "Audio/extractores",
+      "scenario": "Audio local, YouTube, descarga offline y respaldo de extractores en paquete instalado.",
+      "status": "partial",
+      "covered": [
+        "WebView2 real: 8 comprobaciones de audio/seek por motor (3 nativo, 2 youtubei, 2 yt-dlp, 1 captura oficial), WebM/Opus y M4A/AAC. Reproductor real: 7 inicios en cola (3/2/2). youtubei sirve sus 2 pistas sin fallback. Todos pasan."
+      ],
+      "notCovered": [
+        "QA debug con identidad aislada, no NSIS instalado. Audio silenciado: acredita decodificación y avance, no salida audible. Faltan locales, descarga offline, 30 muestras por celda, falta de runtime y fallo del nivel rápido inducido; captura se invocó directamente."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/windows/runtime-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/native.result.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/youtubei.result.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/ytdlp.result.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/capture.result.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-005",
+      "platform": "Windows 10/11 x64",
+      "priority": "P0",
+      "area": "Instancia/cierre",
+      "scenario": "Segunda invocación, minimizar y cerrar con captura o descarga activa.",
+      "status": "partial",
+      "covered": [
+        "100 inicios y cierres normales de QA sin bloqueo ni procesos propios supervivientes."
+      ],
+      "notCovered": [
+        "Segunda instancia, minimizar y cierre durante búsqueda/descarga/captura activa."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/windows/reopen-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/processes-after.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-006",
+      "platform": "Windows 10/11 x64 físico",
+      "priority": "P1",
+      "area": "Reposo/salida audio",
+      "scenario": "Suspender, bloquear y cambiar salida durante audio local/remoto.",
+      "status": "blocked",
+      "covered": [
+        "Ninguna suspensión ni cambio de salida física."
+      ],
+      "notCovered": [
+        "Equipo de pruebas con salida física; no se suspendió el equipo del usuario durante su uso."
+      ],
+      "evidence": [],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-WIN-007",
+      "platform": "Windows 10/11 x64",
+      "priority": "P1",
+      "area": "Reinstalación/desinstalación",
+      "scenario": "Reinstalar y desinstalar conservando datos cuando esa opción proceda.",
+      "status": "blocked",
+      "covered": [
+        "NSIS conservado para ensayo futuro."
+      ],
+      "notCovered": [
+        "VM/perfil de instalación desechable, reinstalación y desinstalación."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/windows/Pletina_0.10.0_x64-setup.exe"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-001",
+      "platform": "macOS 11+ Intel y Apple Silicon",
+      "priority": "P0",
+      "area": "DMG universal",
+      "scenario": "Instalación y ejecución nativa del DMG universal en ambas arquitecturas.",
+      "status": "partial",
+      "covered": [
+        "SHA de tar/DMG correcto. Mach-O universal contiene x86_64 y arm64; ambos minOS11.0 coinciden con Info.plist, versión0.10.0 e identificador dev.musify.desktop. Dependencias son frameworks/dylibs del sistema."
+      ],
+      "notCovered": [
+        "No Mac disponible: instalación DMG, ejecución nativa de cada slice y audio no ejecutados.",
+        "DMG validado como UDIF con trailer/plist; no se montó su sistema de archivos en macOS.",
+        "CI construyó universal y pasó tests núcleo; no incluyó prueba GUI/audio macOS."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/download-hashes.json",
+        "D:/tmp/pletina-stability-execution-20261008/macos/structure.json",
+        "D:/tmp/pletina-stability-execution-20261008/ci-release-run.json",
+        "D:/tmp/pletina-stability-execution-20261008/ci-release-jobs.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-002",
+      "platform": "macOS Intel y Apple Silicon",
+      "priority": "P0",
+      "area": "Firma/cuarentena",
+      "scenario": "Primera apertura con cuarentena y firma ad hoc.",
+      "status": "partial",
+      "covered": [
+        "CodeDirectory de ambas slices declara firma ad hoc (flags0x10002); no equivale a Developer ID/notarización. Firma updater criptográfica válida."
+      ],
+      "notCovered": [
+        "Sin macOS no se ejecutaron codesign/spctl, cuarentena de descarga ni recorrido de primera apertura documentado."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/macos/structure.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-003",
+      "platform": "macOS Intel y Apple Silicon",
+      "priority": "P0",
+      "area": "WebKit/M4A/motores",
+      "scenario": "Streaming M4A, audio offline y capacidades reales del respaldo en macOS.",
+      "status": "blocked",
+      "covered": [
+        "Reproducción WebKit/M4A y motores no ejecutada: falta Mac Intel y Apple Silicon."
+      ],
+      "notCovered": [
+        "Build universal y tests unitarios no validan codecs, extracción ni captura macOS."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/macos/structure.json",
+        "D:/tmp/pletina-stability-execution-20261008/ci-release-jobs.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-004",
+      "platform": "macOS Intel y Apple Silicon",
+      "priority": "P0",
+      "area": "Actualizador universal",
+      "scenario": "Actualizar tar.gz firmado desde versión anterior.",
+      "status": "partial",
+      "covered": [
+        "latest.json apunta ambas arquitecturas al mismo tar universal. Firma updater, trusted comment y control negativo de alteración pasan con la clave del producto."
+      ],
+      "notCovered": [
+        "Sin hardware macOS no se ejecutó sustitución de instalación, relanzamiento, permisos ni preservación de biblioteca."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/latest.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json",
+        "D:/tmp/pletina-stability-execution-20261008/macos/structure.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-005",
+      "platform": "macOS Intel y Apple Silicon físico",
+      "priority": "P1",
+      "area": "Reposo/ventanas",
+      "scenario": "Cerrar tapa, cambiar salida, Cmd-Q y cerrar ventana principal.",
+      "status": "blocked",
+      "covered": [
+        "Reposo/tapa, salida Bluetooth/cable, Cmd-Q y ciclo de ventanas pendientes por falta de hardware."
+      ],
+      "notCovered": [
+        "CI macOS no sustituye este recorrido físico."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/ci-release-jobs.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-MAC-006",
+      "platform": "macOS Intel y Apple Silicon",
+      "priority": "P1",
+      "area": "Carpetas/permisos",
+      "scenario": "Unicode, permisos de carpeta y retirada de volumen externo.",
+      "status": "blocked",
+      "covered": [
+        "Permisos de carpeta, Unicode y retirada/reconexión de volumen externo pendientes por falta de macOS."
+      ],
+      "notCovered": [
+        "No se simularon permisos macOS desde otro sistema."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/macos/structure.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/macos/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-001",
+      "platform": "Linux x64 Ubuntu 22.04/24.04 y Debian",
+      "priority": "P0",
+      "area": "AppImage/FUSE",
+      "scenario": "Arranque por FUSE y extracción, desde entorno limpio.",
+      "status": "partial",
+      "covered": [
+        "SHA correcto; AppImage extraída y montada por FUSE arranca como nobody con XDG privado y PATH sin Node. FUSE necesita fusermount en el PATH del harness."
+      ],
+      "notCovered": [
+        "Ubuntu24 WSL2, Xvfb/Pulse virtual; no escritorio físico ni Debian limpio.",
+        "Ubuntu22 procede del CI existente del mismo SHA de artefacto, no una VM nueva local.",
+        "Fallo de resume en FUSE queda en DESK-LIN-004; no se aprueba audio global."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/download-hashes.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/environment.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-fuse-corrected/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-unmuted/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/bundled-runtime-versions.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/ci-ubuntu22/result.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-002",
+      "platform": "Ubuntu/Debian x64",
+      "priority": "P0",
+      "area": "DEB/dependencias",
+      "scenario": "Instalación y upgrade DEB mediante apt.",
+      "status": "partial",
+      "covered": [
+        "Metadatos DEB amd64/0.10.0 y dependencias correctas; apt -s resolvería instalación en host actual. Binario extraído del DEB reproduce 7 formatos, YouTube y WebM descargado usando Node incluido."
+      ],
+      "notCovered": [
+        "No se instaló paquete en host compartido: apt real en VM limpia, upgrade y comportamiento del updater en instalación DEB pendientes.",
+        "Dependencias de audio del DEB proceden del host Ubuntu24 (WebKit2.52.6/GStreamer1.24.2), tal como declara el paquete.",
+        "Reproducción del descargado fue local por loopback; no se bloqueó toda la red ni se ensayó reinicio offline."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/deb-control.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/deb-contents.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/deb-ldd.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/deb-apt-simulation.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/deb-node.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-deb/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-deb/youtube-package.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-003",
+      "platform": "Linux AppImage x64",
+      "priority": "P0",
+      "area": "GStreamer/Node incluidos",
+      "scenario": "Siete codecs usando únicamente bibliotecas/plugins del paquete.",
+      "status": "pass",
+      "covered": [
+        "Los 7 formatos WAV/MP3/FLAC/Ogg/M4A/Opus/WebM decodifican con plugins, scanner y bibliotecas GStreamer del paquete; Node incluido v24.21.0 funciona."
+      ],
+      "notCovered": [
+        "CLI diagnóstico Ubuntu24 no es ABI compatible con GStreamer1.20 incluido (gst_plugin_get_status_infos); se repitió con CLI Ubuntu22 compatible, manteniendo plugins host excluidos.",
+        "Este caso acredita decodificación del paquete, no sonido físico ni estabilidad de pausa/resume."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/package-smoke-compatible-tools.log",
+        "D:/tmp/pletina-stability-execution-20261008/linux/diagnostic-gst-tools-metadata.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/bundled-gstreamer-hook.sh",
+        "D:/tmp/pletina-stability-execution-20261008/linux/bundled-runtime-versions.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/package-smoke.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-004",
+      "platform": "Linux AppImage Ubuntu 22.04/24.04 x64",
+      "priority": "P0",
+      "area": "Audio real WebKitGTK",
+      "scenario": "Seis formatos locales y descarga WebM con seek/pausa/reanudar.",
+      "status": "fail",
+      "covered": [
+        "Stall intermitente real al reanudar tras seek y pausa en AppImage sobre WSL Ubuntu24: readyState4, paused=false, eventos playing, pero currentTime vuelve a6 y no avanza. También hay una pasada completa 7/7 y 210 inicios locales correctos."
+      ],
+      "notCovered": [
+        "Causa no atribuida definitivamente a aplicación, bundle, WebKit o audio virtual. Se reproduce muted y unmuted, extracción y FUSE; una pasada DEB completa pasó.",
+        "No reproducción en altavoces/dispositivo físico; no supone fallo de todas las instalaciones Linux.",
+        "30 muestras por formato son inicios cálidos en una sesión; no 30 arranques fríos ni 30 muestras Ubuntu22.",
+        "AppImage lleva WebKit2.50.4 y GStreamer1.20.3; DEB usa WebKit2.52.6 y GStreamer1.24.2 del host."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-clean-bus/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-original-unmuted/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-fuse-corrected/controls-progress.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-package-extra/controls-progress.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-unmuted/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-unmuted/latency-summary.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-unmuted/latency-samples.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-deb/result.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/ci-ubuntu22/result.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-005",
+      "platform": "Linux x64",
+      "priority": "P0",
+      "area": "HTTP local/Range/registro",
+      "scenario": "HEAD, Range y registro de más de512 archivos.",
+      "status": "pass",
+      "covered": [
+        "4 tests Rust del módulo Linux exacto pasan. En AppImage y DEB publicados, HTTP real pasa GET/HEAD/Range206/416, host/token/método; 524 archivos, 512 activos de520, 8 expulsados, actual/precarga registrados de nuevo protegidos, vacío416 y sustitución por symlink/borrado404; listener cierra."
+      ],
+      "notCovered": [
+        "Se prueba transporte/registro del paquete en entorno aislado; audio continuo de horas con rotación de512 pistas no ensayado."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/local-media-source-hashes.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/local-media-rust.log",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-package-extra/http-range.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-package-extra/registry-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-package-extra/listener-cleanup.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-deb/registry-http.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/cleanup.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-006",
+      "platform": "Linux x64",
+      "priority": "P0",
+      "area": "Streaming/upgrade AppImage",
+      "scenario": "YouTube con Node incluido, descarga offline y actualización.",
+      "status": "partial",
+      "covered": [
+        "AppImage y DEB resuelven y reproducen YouTube real jNQXAC9IVRw; descargan WebM252182bytes y lo reproducen por loopback con local=true, Node ajeno ausente del PATH. Firma updater válida con control de tamper."
+      ],
+      "notCovered": [
+        "Una fuente real por paquete, no 30 muestras ni red controlada: p95 remoto pendiente.",
+        "La descarga local se reproduce, pero no se ensayó upgrade, reinicio offline, pérdida de permisos ni desconexión total de red.",
+        "No se ejecutó updater sobre instalación compartida ni se alteró endpoint público."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-package-extra/youtube-package.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/e2e-deb/youtube-package.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/latest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-LIN-007",
+      "platform": "Linux x64 físico X11/Wayland",
+      "priority": "P1",
+      "area": "Reposo/escritorio/audio físico",
+      "scenario": "Suspender, cambiar salida y cerrar en PulseAudio/PipeWire.",
+      "status": "blocked",
+      "covered": [
+        "No hay escritorio Linux físico disponible para suspend, Bluetooth/cable, X11/Wayland y PipeWire/Pulse con audio audible."
+      ],
+      "notCovered": [
+        "WSL/Xvfb/sink virtual no sustituye hardware."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/linux/environment.txt",
+        "D:/tmp/pletina-stability-execution-20261008/linux/cleanup.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/linux/case-results.json"
+    },
+    {
+      "id": "DESK-ALL-001",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "priority": "P1",
+      "area": "Soak CPU/memoria",
+      "scenario": "Soak por plataforma: ocho horas de música y dos horas de pódcast.",
+      "status": "blocked",
+      "covered": [
+        "No se ejecutó la sesión de 8 h/2 h."
+      ],
+      "notCovered": [
+        "Prerrequisito funcional incumplido: STAB-004/005/006 abiertos; falta además hardware macOS y salidas físicas. Los ensayos cortos no sustituyen soak ni demuestran ausencia de fugas."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-ALL-002",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "priority": "P0",
+      "area": "Reapertura/persistencia",
+      "scenario": "Cien cierres/aperturas con biblioteca y ajustes.",
+      "status": "partial",
+      "covered": [
+        "100 reaperturas reales de Windows QA; comparación exacta antes/después de 12 tablas con favoritos, programas/episodios, artistas, lista duplicada, fuentes, historial y ajustes. integrity_check=ok, sin violaciones FK, sin procesos supervivientes."
+      ],
+      "notCovered": [
+        "No se sembró descarga completa ni se variaron volumen/shuffle/repeat de localStorage. Faltan comprobación visual, cierres durante escaneo y 100 ciclos de Linux/macOS."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/windows/persistence.mjs",
+        "D:/tmp/pletina-stability-execution-20261008/windows/reopen.ps1",
+        "D:/tmp/pletina-stability-execution-20261008/windows/reopen-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/persistence-before.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/persistence-after.json",
+        "D:/tmp/pletina-stability-execution-20261008/windows/processes-after.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-ALL-003",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "priority": "P0",
+      "area": "Crash/disco/migraciones",
+      "scenario": "Terminación forzada, disco lleno y DB inválida en fixtures desechables.",
+      "status": "partial",
+      "covered": [
+        "Db real: WAL tras terminación abrupta, backup fallido, rollback y corrupción se prueban con fixtures. Helpers que silencian fallos de escritura registrados en CORE-DB-004/STAB-007."
+      ],
+      "notCovered": [
+        "Terminación de aplicación durante descargas y biblioteca, volumen virtual lleno y diálogos nativos por SO."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-1/db-results.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "DESK-ALL-004",
+      "platform": "Windows x64 / macOS Intel / macOS Apple Silicon / Linux x64",
+      "priority": "P0",
+      "area": "Integridad/errores updater",
+      "scenario": "Arquitectura, firmas incorrectas, descarga truncada y cortes.",
+      "status": "partial",
+      "covered": [
+        "SHA256 de los artefactos publicados; firma Ed25519/prehash y trusted comment de NSIS, AppImage y tar universal; contenido alterado rechazado. Cuatro mappings de latest.json corresponden a los artefactos."
+      ],
+      "notCovered": [
+        "No se ha ejecutado el instalador updater real con truncado/404/TLS, cierre a mitad ni reloj 6 h. La firma updater no equivale a firma del sistema o aprobación de Gatekeeper."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/download-hashes.json",
+        "D:/tmp/pletina-stability-execution-20261008/signature-verification.json",
+        "D:/tmp/pletina-stability-execution-20261008/linux/latest.json",
+        "D:/tmp/pletina-stability-execution-20261008/macos/inspect-artifacts.py"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/windows/case-results.json"
+    },
+    {
+      "id": "CORE-DB-001",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Migración SQLite",
+      "scenario": "Actualizar perfiles creados por v0.9.0 y v0.9.1 (esquema 5) a la versión auditada sin perder datos.",
+      "status": "pass",
+      "covered": [
+        "SQL exacto de tags v0.9.0 y v0.9.1 (esquema5) extraído con git show y SHA256 registrado.",
+        "Cada ruta conserva todos los valores de15 tablas, incluyendo IDs, timestamps, playlist con duplicados, fuentes, rutas e historial;45 comparaciones por ruta en3 reaperturas.",
+        "Nuevas tablas vacías, integrity_check=ok, foreign_key_check sin filas; backup v5 idéntico al snapshot anterior.",
+        "Archivo de descarga sintético conserva SHA256 antes/después."
+      ],
+      "notCovered": [
+        "No actualización de instalador ni perfil real del usuario; fixture de descarga contiene bytes sintéticos, no valida decodificación."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Db::open Rust real + SQLite nativo, fixtures históricos sintéticos"
+    },
+    {
+      "id": "CORE-DB-002",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Migración SQLite",
+      "scenario": "Migrar esquema 6 a 7 y reabrir repetidamente, conservando artistas, enlaces YouTube y datos de episodios.",
+      "status": "partial",
+      "covered": [
+        "migration_seven_preserves_version_six_library_and_podcast_data y saved_programs_* pasan; datos v6, backup y FK validados.",
+        "63 tests Rust pasan y19 están ignored en el conjunto ejecutado por root."
+      ],
+      "notCovered": [
+        "No se amplió a3 reaperturas específicas del perfil v6 ni se ejecutó su UI offline."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Tests Rust del producto (runner root)"
+    },
+    {
+      "id": "CORE-DB-003",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "SQLite WAL y recuperación",
+      "scenario": "Recuperar datos confirmados en WAL y proteger backup/migraciones frente a cierre forzado o falta de espacio.",
+      "status": "pass",
+      "covered": [
+        "Hijo termina mediante process::exit con WAL abierto: escritura confirmada sobrevive; escritura en transacción sin confirmar desaparece.",
+        "Backup previo incluye datos confirmados del WAL y conserva esquema5.",
+        "Destino de backup no escribible como archivo (colisión con directorio) provoca error sin migrar ni cambiar filas.",
+        "Colisión en una tabla nueva revierte la migración6; eliminar sólo la colisión en fixture permite reabrir en esquema7."
+      ],
+      "notCovered": [
+        "Fallo de backup por colisión de destino controlada; no disco físico lleno ni corte eléctrico real."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "SQLite real + proceso hijo con salida abrupta + Db::open real"
+    },
+    {
+      "id": "CORE-DB-004",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Errores de escritura SQLite",
+      "scenario": "DB de solo lectura, llena, bloqueada o corrupta durante favoritos, ajustes, historial y selección de vídeo.",
+      "status": "fail",
+      "covered": [
+        "Una causa común STAB-007: helpers ignoran los Result de execute y retornan() aunque no persistan.",
+        "Con SQLITE_READONLY real se silencian set_setting, save_source, forget_download y delete_source.",
+        "SQLITE_FULL real mediante max_page_count impide guardar ajuste; retorna() sin diagnóstico. SQLITE_BUSY real desde segunda conexión impide cambiar fuente; retorna() sin diagnóstico.",
+        "Base corrupta rechazada sin cambiar bytes existentes. No se ha probado pérdida de biblioteca previamente guardada."
+      ],
+      "notCovered": [
+        "Query_only y max_page_count reproducen errores SQLite; no simulan fallos físicos de disco.",
+        "Rutas UI afectadas identificadas por llamadas en código, sin pulsarlas bajo estos fallos en app real."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:218",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/db.rs:266"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Db real + SQLite real con fault injection",
+      "findingIds": [
+        "STAB-007"
+      ]
+    },
+    {
+      "id": "CORE-DB-005",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Concurrencia y cierre",
+      "scenario": "Escrituras concurrentes de biblioteca, historial, descargas e importación al cerrar y reabrir.",
+      "status": "partial",
+      "covered": [
+        "400 escrituras de ajustes/fuentes, valores completos comprobados al reabrir, integrity_check=ok; sin deadlock.",
+        "La recuperación de transacción sin confirmar se probó aparte en CORE-DB-003."
+      ],
+      "notCovered": [
+        "No se ejecutaron simultáneamente comandos Tauri de importación/history/download ni se forzó cierre mientras esos4 threads escribían."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Db real compartido entre4 threads"
+    },
+    {
+      "id": "CORE-LIB-006",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Identidad y biblioteca",
+      "scenario": "Persistencia y eliminación independiente de favoritos, playlists, artistas, programas y enlaces YouTube.",
+      "status": "partial",
+      "covered": [
+        "library::tests, youtube_tracks::tests, podcasts::tests y media_library::tests relevantes pasan.",
+        "Suite podcast-favorites pasa, incluyendo doble clic y cargas de biblioteca tardías."
+      ],
+      "notCovered": [
+        "Falta recorrido UI offline completo de todas las secciones y plataformas."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/podcast-favorites.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Rust real y stores Svelte con IPC simulado, runner root"
+    },
+    {
+      "id": "CORE-DL-007",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Cola de descargas",
+      "scenario": "Duplicados, colisiones de nombre y cancelación de una tanda con dos descargas concurrentes.",
+      "status": "partial",
+      "covered": [
+        "Se omiten IDs completados/activos, archivos locales y RSS; episodio YouTube elegible.",
+        "Cancelar pendientes y completar tarea activa deja active/queued vacíos y una sola descarga completada.",
+        "separate_youtube_links_never_share_a_download_path pasa en Rust."
+      ],
+      "notCovered": [
+        "No se ejecutó la cola real Tauri/semaphore con2 descargas concurrentes ni carrera de generaciones del backend."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Store Svelte real con eventos controlados; test Rust de nombres"
+    },
+    {
+      "id": "CORE-DL-008",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Errores de disco en descargas",
+      "scenario": "Directorio no escribible, disco lleno, fallo de renombrado y eliminación denegada.",
+      "status": "fail",
+      "covered": [
+        "Rename hacia directorio ocupado retorna error y conserva el parcial completo.",
+        "STAB-010: parcial80bytes, URLclen64 y borrado realmente denegado por handle Windows sin FILE_SHARE_DELETE: direct::download no retorna y el hijo propio alcanza timeout2500ms.",
+        "Fuente muestra loop síncrono que ignora remove_file fallido y vuelve a comprobar la misma longitud."
+      ],
+      "notCovered": [
+        "Ruta direct.rs utilizada por móvil; Windows desktop productivo usa yt-dlp.",
+        "Fallo de filesystem Windows inyectado para probar la rama portable; precondición equivalente en dispositivo Android pendiente.",
+        "No se ensayó volumen lleno ni remove_downloads de Tauri."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/undeletable.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:37"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "direct.rs móvil real compilado en host Windows, filesystem real",
+      "findingIds": [
+        "STAB-010"
+      ]
+    },
+    {
+      "id": "CORE-DL-009",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Reanudación de descargas",
+      "scenario": "Corte de conexión o cierre durante descarga parcial, renovación 403 y cambio de formato.",
+      "status": "fail",
+      "covered": [
+        "Pasan206 inicial, reanudación desdebyte16, renovación403, conexión cortada tras16bytes y cambioitag251→140 con descarte del parcial.",
+        "STAB-008: URL renovada declara96bytes conservandoitag251; total permanece64 y devuelve éxito con archivo truncado de64bytes.",
+        "STAB-009: pidebytes16-63 pero el servidor responde206 Content-Range0-47/64; concatena48bytes equivocados y declara éxito de64bytes."
+      ],
+      "notCovered": [
+        "Las dos precondiciones problemáticas se inyectaron; no se observaron en YouTube real.",
+        "Bytes sintéticos para verificar igualdad; no codecs, móvil real ni audio reproducible."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:59",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/direct.rs:83"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "direct.rs y reqwest0.12 reales, HTTP loopback, resolvedor controlado",
+      "findingIds": [
+        "STAB-008",
+        "STAB-009"
+      ]
+    },
+    {
+      "id": "CORE-DL-010",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Estado frontend de descargas",
+      "scenario": "Inicialización, reinicio y eventos terminales durante cambios de vista o errores IPC.",
+      "status": "partial",
+      "covered": [
+        "Pasan carga deIDs offline, falloIPC de inicio y reintento, fallo de borrado con badges conservados y reintento, mezcla done/error.",
+        "Tres aserciones diagnósticas fallan: rechazo cancel IPC silenciado, done duplicado duplica aviso/version, progreso después de done vuelve a active.",
+        "cancel_downloads backend retorna() y no genera error de negocio. No se ha demostrado que el backend emita eventos duplicados/fuera de orden."
+      ],
+      "notCovered": [
+        "Los3 diagnósticos se clasifican como robustez/hipótesis, no tres defectos backend ni tres fallos confirmados de producción.",
+        "No arranque real con downloads_list ni listenerIPC real."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/downloads.rs:284"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Store downloads real compilado Svelte; IPC/eventos controlados"
+    },
+    {
+      "id": "CORE-IMP-011",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Importación: entradas y límites",
+      "scenario": "CSV de distintas variantes y playlist pública Spotify truncada, privada o con HTML cambiado.",
+      "status": "partial",
+      "covered": [
+        "Tests playlist_import::tests y spotify::tests no ignorados pasan en runner root.",
+        "GuardiaCSV>10MiB rechaza antes de leer contenido ni invocar parser.",
+        "Orden/duplicados, delimitadores, comillas, skipped y truncación se cubren con fixtures del producto."
+      ],
+      "notCovered": [
+        "Consulta real Spotify pública está ignored; no probaron formatos externos nuevos ni HTML live."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Parser Rust real con fixtures + guardia frontend real"
+    },
+    {
+      "id": "CORE-IMP-012",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Cancelación de importación",
+      "scenario": "Cancelar o salir mientras se lee/busca una playlist y recibir después respuestas antiguas.",
+      "status": "pass",
+      "covered": [
+        "Cancelar lectura CSV pendiente impide invocar parser cuando llega texto tardío.",
+        "Importación antigua no sobrescribe nombre/resultados de una importación posterior.",
+        "Destroy durante matching descarta respuesta y evita navegación/guardado.",
+        "Cancelar durante throttle150ms impide nueva búsqueda y vuelve a fase input."
+      ],
+      "notCovered": [
+        "Cubre lógica de vista; sin render DOM ni WebView."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Script original de ImportPlaylist compilado con runas Svelte; promesas/lifecycle controlados"
+    },
+    {
+      "id": "CORE-IMP-013",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Importación: recuperación y guardado",
+      "scenario": "Interrumpir matching por red, reanudar desde el primer pendiente y cerrar durante guardado.",
+      "status": "partial",
+      "covered": [
+        "Error de matching mantiene fila pendiente y resultados previos; retry conserva duplicados sin repetir consulta ya cacheada.",
+        "Doble guardar crea una sola playlist; cancelar durante saving no revierte la confirmación.",
+        "Salir durante guardado actualiza biblioteca y toast sin navegación tardía.",
+        "SQLITE_FULL rechazado por IPC deja revisión intacta y retry guarda los mismos tracks."
+      ],
+      "notCovered": [
+        "SQLITE_FULL aquí es rechazoIPC simulado; no se invocó create_playlist Rust real bajo fallo para comprobar atomicidad de esa transacción."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/frontend.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/audit-frontend.test.mjs"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Script original ImportPlaylist compilado Svelte con IPC controlado"
+    },
+    {
+      "id": "CORE-EXT-014",
+      "platform": "Windows, macOS y Linux; Android solo motor propio",
+      "priority": "P1",
+      "area": "Arranque de extractores",
+      "scenario": "Arranque frío y caliente del motor, falta de runtime y servidor de descarga de extractor lento o caído.",
+      "status": "partial",
+      "covered": [
+        "requires_a_supported_javascript_runtime y bootstrap_download_times_out_when_the_server_stalls pasan.",
+        "Sondeos live:4 búsquedas,7 fuentes y28 rangos pasan en runner network."
+      ],
+      "notCovered": [
+        "No30 muestras por ruta ni p95 de inicio de audio; extracción/búsqueda no equivale a playback.",
+        "Linux/runtime incluido y motores Windows se coordinan con agentes de plataforma."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T18-03-49.421Z-win32-526f06ba/network-probe.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Tests Rust runner root; sondeos live de motor nativo"
+    },
+    {
+      "id": "CORE-EXT-015",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Actualización de extractores",
+      "scenario": "Canal firmado, archivo corrupto, API incompatible y cierre entre guardar código y metadatos.",
+      "status": "partial",
+      "covered": [
+        "api_matches_extractors_json, file_names y rejects_bad_files pasan.",
+        "real_signature y real_channel permanecen ignored."
+      ],
+      "notCovered": [
+        "Sin corte durante guardado código/metadata ni ejercicio live del canal firmado; no aprobar resiliencia completa de actualización."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Tests extractors Rust runner root"
+    },
+    {
+      "id": "CORE-EXT-016",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Caché y renovación de streaming",
+      "scenario": "Caché válida/caducada, HTTP403 inicial o a mitad y validación del tramo final de URL.",
+      "status": "partial",
+      "covered": [
+        "Baseline y positivos de playback cubren refresh403 inicial/a mitad, timeout y carrera al cambiar canción.",
+        "Pruebas network actuales resuelven7 fuentes, incluyendo caché, y sondean28 rangos HTTP reales."
+      ],
+      "notCovered": [
+        "No control de expiración real deURL ni corte de audio WebView; sondeo4KB no demuestra reproducción completa."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-baseline.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T18-03-49.421Z-win32-526f06ba/network-probe.json"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Player Svelte con Audio/IPC simulado + extracción HTTP live de root"
+    },
+    {
+      "id": "CORE-EXT-017",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Fuente elegida y descarga",
+      "scenario": "Elegir vídeo alternativo con reproducción/descarga activa y conservar enlaces YouTube explícitos.",
+      "status": "partial",
+      "covered": [
+        "youtube_link_keeps_its_video_and_offline_audio_after_reopening y pruebas deidentidad YouTube pasan.",
+        "STAB-007 demuestra que save_source silencia rechazo deSQLite; player::choose llama al mismo helper sin comprobar confirmación."
+      ],
+      "notCovered": [
+        "No carrera real download/choose ni UI de selección manual bajo disco bloqueado; afectación dechoose inferida directamente de su flujo de código."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/src-tauri/src/player.rs:230"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Tests de identidad/resolvedor Rust + source helper Db bajo fallo",
+      "findingIds": [
+        "STAB-007"
+      ]
+    },
+    {
+      "id": "CORE-PLY-018",
+      "platform": "Windows, macOS y Linux",
+      "priority": "P0",
+      "area": "Regresión de control de reproducción",
+      "scenario": "Mantener la cobertura conocida de carga, MediaSession, fallos, reproducción local y carreras de cola.",
+      "status": "pass",
+      "covered": [
+        "23/23 baseline pasan.",
+        "8 positivos adicionales pasan;3 tests negativos se contabilizan por separado en CORE-PLY-019/020."
+      ],
+      "notCovered": [
+        "No prueba de decoder/red/hardware."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-baseline.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Player real compilado Svelte; Audio/IPC/reloj simulado, ejecutado por root"
+    },
+    {
+      "id": "CORE-PLY-019",
+      "platform": "Windows, macOS y Linux",
+      "priority": "P0",
+      "area": "Bloqueo de búfer permanente",
+      "scenario": "Audio que deja de avanzar tras waiting/stalled sin emitir error terminal.",
+      "status": "fail",
+      "covered": [
+        "waiting/stalled permanente y180s simulados siguen mostrados como playing sin avance, retry ni temporizador.",
+        "Reejecutado en quick actual, no sólo resultado histórico."
+      ],
+      "notCovered": [
+        "Reloj/eventos simulados; agente de plataforma debe añadir reproducción real del mismo estado."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/forum-playback.test.mjs:186"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Player Svelte real con Audio/eventos/reloj simulado"
+    },
+    {
+      "id": "CORE-PLY-020",
+      "platform": "Windows, macOS y Linux",
+      "priority": "P1",
+      "area": "Reanudar reproducción",
+      "scenario": "play() al reanudar devuelve rechazo o queda pendiente, frente al arranque inicial protegido por timeout.",
+      "status": "fail",
+      "covered": [
+        "Rechazo al reanudar se silencia.",
+        "Promesa de reanudación pendiente180s simulados no alcanza timeout ni recuperación.",
+        "Reejecutados en quick actual."
+      ],
+      "notCovered": [
+        "No garantía de que un motor real deje play() pendiente; prueba de política frontend con entrada controlada."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-forum-regressions.log",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/forum-playback.test.mjs:201"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Player Svelte real con play() controlado"
+    },
+    {
+      "id": "CORE-POD-021",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P0",
+      "area": "Streaming prolongado de pódcasts",
+      "scenario": "Ensayo prolongado de pódcasts en streaming y comparación controlada entre versiones.",
+      "status": "blocked",
+      "covered": [
+        "Este bloque no ejecutó8h de música ni2h de pódcast ni comparación controlada de versión anterior."
+      ],
+      "notCovered": [
+        "Faltan fuente exacta y condiciones reproducibles de referencia, ejecución prolongada y telemetría de memoria/audio.",
+        "Ningún sondeo de rango o test rápido sustituye el soak."
+      ],
+      "evidence": [],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Soak y comparación de app real pendientes"
+    },
+    {
+      "id": "CORE-POD-022",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Seek, pausa y EOF de episodios largos",
+      "scenario": "Buscar a posiciones lejanas, pausar/reanudar y llegar al final en RSS y YouTube de larga duración.",
+      "status": "partial",
+      "covered": [
+        "episode_identity_and_audio_survive_restart_and_url_changes y podcast_uses_persisted_audio_and_rejects_music_sources pasan."
+      ],
+      "notCovered": [
+        "Seek/pause/EOF real en episodio largo RSS/YouTube y tolerancia temporal no ejecutados por este bloque."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Persistencia deepisodios Rust, runner root"
+    },
+    {
+      "id": "CORE-OBS-023",
+      "platform": "Todas las plataformas auditadas",
+      "priority": "P1",
+      "area": "Evidencia y reproducción de fallos",
+      "scenario": "Cada fallo se puede repetir y separar entre UI, extractor, transporte, códec y persistencia.",
+      "status": "partial",
+      "covered": [
+        "Fuentes yfixtures conSHA256 en manifest DB; comando rustc y salida exactos registrados; tests guardan expected/observed ycasoID.",
+        "Primera corrida direct-run-1 inválida por dependencia reqwest del updater queda excluida; direct-run-2 tenía socket fixture no bloqueante; se usa exclusivamente direct-run-3 final.",
+        "No producto editado, datos personales consultados ni artefactos publicados; procesos hijos terminados."
+      ],
+      "notCovered": [
+        "Root fusiona plataforma/motor y aplica criterio de aprobación global; este reporte no aprueba ninguna plataforma."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/db-run-2/db-manifest.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-results.json",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct.log",
+        "D:/tmp/pletina-stability-execution-20261008/core/direct-run-3/direct-manifest.json",
+        "C:/Users/iunan/.codex/worktrees/forum-bug-tests/musify/scripts/tests/README-audit.md"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Artefactos, manifests y logs de ejecución aislada"
+    },
+    {
+      "id": "CORE-DL-024",
+      "platform": "Windows, macOS, Linux y Android",
+      "priority": "P1",
+      "area": "Offline y archivos desaparecidos",
+      "scenario": "Descargas completas offline, archivo movido/borrado y retorno controlado al streaming.",
+      "status": "partial",
+      "covered": [
+        "downloads_require_files_and_invalid_sources_do_not_become_playable y youtube_link_keeps_its_video_and_offline_audio_after_reopening pasan.",
+        "Baselineplayer incluye loopback local sin refresh."
+      ],
+      "notCovered": [
+        "No30 muestras audio local p95<1s ni reinicio real offline en este bloque.",
+        "ROOT/platform agents añaden sus pruebas nativas; no extrapolar estas a hardware."
+      ],
+      "evidence": [
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-46.301Z-win32-e9cdd257/rust-unit.log",
+        "D:/tmp/pletina-stability-execution-20261008/runs/2026-10-08T17-57-27.863Z-win32-ffca9687/player-baseline.log"
+      ],
+      "sourceReport": "D:/tmp/pletina-stability-execution-20261008/core/case-results.json",
+      "layer": "Tests Rust de catálogo/resolvedor + player Svelte mock, root"
+    }
+  ]
+}

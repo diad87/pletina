@@ -13,7 +13,7 @@ use crate::library::{LibTrack, upsert_track};
 use crate::player;
 use crate::youtube::{TrackQuery, YouTubeMusic};
 use crate::ytdlp::YtDlp;
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -169,7 +169,7 @@ async fn fetch(
         Ok(file) => file,
         // El vídeo guardado ya no existe: se busca otro una vez.
         Err(e) if player::is_gone(&e) && !crate::youtube_tracks::is_youtube(t.id) => {
-            db.delete_source(t.id);
+            db.delete_source(t.id).map_err(|e| format!("No se pudo quitar la fuente anterior: {e}"))?;
             video_id = player::resolve(&q, false, db, ytm, ytdlp).await?.video_id;
             get(&video_id, &target, ytdlp, &mut report).await?
         }
@@ -181,14 +181,16 @@ async fn fetch(
         crate::direct::save_cover(url, &cover_path(dir, t.album_id)).await;
     }
 
-    let size = std::fs::metadata(&file).map(|m| m.len()).unwrap_or(0);
-    let conn = db.0.lock().unwrap();
-    upsert_track(&conn, t).map_err(|e| e.to_string())?;
-    conn.execute(
+    let size = std::fs::metadata(&file).map_err(|e| format!("No se pudo comprobar la descarga: {e}"))?.len();
+    let mut conn = db.0.lock().unwrap();
+    let tx = conn.transaction().map_err(|e| format!("No se pudo guardar la descarga: {e}"))?;
+    upsert_track(&tx, t).map_err(|e| format!("No se pudo guardar la descarga: {e}"))?;
+    tx.execute(
         "INSERT OR REPLACE INTO downloads (track_id, path, size, video_id) VALUES (?1, ?2, ?3, ?4)",
         params![t.id as i64, file.to_string_lossy(), size as i64, video_id],
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("No se pudo guardar la descarga: {e}"))?;
+    tx.commit().map_err(|e| format!("No se pudo guardar la descarga: {e}"))?;
     Ok(())
 }
 
@@ -306,21 +308,43 @@ pub fn downloads_list(db: State<'_, Db>) -> Res<Vec<DownloadEntry>> {
 #[tauri::command]
 pub fn remove_downloads(track_ids: Vec<u64>, db: State<'_, Db>) -> Res<()> {
     for id in track_ids {
-        if let Some(path) = db.download_path(id) {
-            let path = PathBuf::from(path);
-            let _ = std::fs::remove_file(&path);
-            // remove_dir solo borra carpetas vacías: si hay algo más, se queda.
-            if let Some(album) = path.parent() {
-                if std::fs::remove_dir(album).is_ok() {
-                    if let Some(artist) = album.parent() {
-                        let _ = std::fs::remove_dir(artist);
-                    }
+        remove_download(&db, id)?;
+    }
+    Ok(())
+}
+
+fn remove_download(db: &Db, id: u64) -> Res<()> {
+    let db_error = |e| format!("No se pudo quitar la descarga de la biblioteca: {e}");
+    let mut conn = db.0.lock().unwrap();
+    let tx = conn.transaction().map_err(db_error)?;
+    let path: Option<String> = tx.query_row("SELECT path FROM downloads WHERE track_id = ?1", params![id as i64], |r| r.get(0))
+        .optional().map_err(db_error)?;
+    // Un rechazo SQLite no debe borrar antes el audio que todavía figura en la biblioteca.
+    tx.execute("DELETE FROM downloads WHERE track_id = ?1", params![id as i64]).map_err(db_error)?;
+    if let Some(path) = &path {
+        remove_file_if_present(Path::new(path))?;
+    }
+    tx.commit().map_err(db_error)?;
+    if let Some(path) = path {
+        // Limpieza opcional: solo carpetas vacías, sin afectar al resultado del borrado confirmado.
+        if let Some(album) = Path::new(&path).parent() {
+            if std::fs::remove_dir(album).is_ok() {
+                if let Some(artist) = album.parent() {
+                    let _ = std::fs::remove_dir(artist);
                 }
             }
         }
-        db.forget_download(id);
     }
     Ok(())
+}
+
+/// Un archivo ya borrado no impide limpiar su referencia; los demás errores sí se informan.
+pub(crate) fn remove_file_if_present(path: &Path) -> Res<()> {
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(format!("No se pudo borrar {}: {e}", path.display())),
+    }
 }
 
 #[tauri::command]
@@ -336,7 +360,7 @@ pub async fn choose_download_dir(app: AppHandle, db: State<'_, Db>) -> Res<Optio
         return Ok(None);
     };
     let path = path.to_string_lossy().into_owned();
-    db.set_setting(DIR_KEY, &path);
+    db.set_setting(DIR_KEY, &path).map_err(|e| format!("No se pudo guardar la carpeta de descargas: {e}"))?;
     Ok(Some(path))
 }
 
@@ -380,6 +404,39 @@ pub fn reveal_download(track_id: u64, app: AppHandle, db: State<'_, Db>) -> Res<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn removal_preserves_audio_on_db_error_and_metadata_on_file_error() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let dir = std::env::temp_dir().join(format!("pletina-remove-{}-{nonce}", std::process::id()));
+        std::fs::create_dir(&dir).unwrap();
+        // La limpieza de carpetas no debe afectar a la carpeta temporal general durante el test.
+        std::fs::write(dir.join("keep"), b"fixture").unwrap();
+        let path = dir.join("audio.webm");
+        std::fs::write(&path, b"old audio").unwrap();
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        {
+            let conn = db.0.lock().unwrap();
+            conn.execute_batch("INSERT INTO tracks (id,title,duration,artist_id,artist_name,album_id,album_title,album_artist_id) VALUES (7,'Fixture',1,1,'Fixture',1,'Fixture',1);").unwrap();
+            conn.execute("INSERT INTO downloads (track_id,path,size,video_id) VALUES (7,?1,9,'old')", params![path.to_string_lossy()]).unwrap();
+            conn.execute_batch("PRAGMA query_only=ON;").unwrap();
+        }
+        assert!(remove_download(&db, 7).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"old audio");
+        assert!(db.download_path(7).is_some());
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        assert!(remove_download(&db, 7).is_err());
+        assert!(db.download_path(7).is_some());
+        std::fs::remove_dir(&path).unwrap();
+        std::fs::write(&path, b"old audio").unwrap();
+        remove_download(&db, 7).unwrap();
+        assert!(db.download_path(7).is_none());
+        assert!(!path.exists());
+        std::fs::remove_file(dir.join("keep")).unwrap();
+        std::fs::remove_dir(dir).unwrap();
+    }
 
     /// Descarga completa (búsqueda + yt-dlp + base de datos) y que después suene el archivo, con red:
     /// `cargo test real_fetch -- --ignored --nocapture`

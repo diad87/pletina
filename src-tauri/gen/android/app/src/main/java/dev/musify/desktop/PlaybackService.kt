@@ -15,6 +15,7 @@ import android.os.PowerManager
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
@@ -67,10 +68,20 @@ class PlaybackService : MediaLibraryService() {
 
   /** Canción (id de Deezer) → consulta para el núcleo (TrackQuery en JSON). */
   private val queries = ConcurrentHashMap<String, String>()
-  /** Reintentos seguidos de la canción actual. */
-  private var retries = 0
-  /** Se cortó por falta de red: en cuanto vuelva, se sigue en el mismo punto. */
-  private var waitingForNetwork = false
+  private val recovery = PlaybackRecovery(
+    snapshot = {
+      PlaybackRecovery.Snapshot(player.currentMediaItem?.mediaId, player.playWhenReady, player.isPlaying, player.currentPosition)
+    },
+    hasInternet = { internetValidated },
+    schedule = { delay, action ->
+      val task = Runnable { action() }
+      main.postDelayed(task, delay)
+      val cancel: () -> Unit = { main.removeCallbacks(task) }
+      cancel
+    },
+    resume = { resume(it) },
+  )
+  @Volatile private var internetValidated = false
   /** La canción actual ya se apuntó en el historial. */
   private var recorded = false
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -103,7 +114,27 @@ class PlaybackService : MediaLibraryService() {
       .setWakeMode(C.WAKE_MODE_NETWORK)
       .build()
     player.addListener(listener)
-    session = MediaLibrarySession.Builder(this, player, callback).build()
+    // stop() can leave playWhenReady=true, and a redundant pause emits no listener event.
+    // Capture the command itself, including commands from notifications and external clients.
+    val sessionPlayer = object : ForwardingPlayer(player) {
+      override fun play() {
+        recovery.onPlayIntent(true)
+        super.play()
+      }
+      override fun pause() {
+        recovery.onPlayIntent(false)
+        super.pause()
+      }
+      override fun setPlayWhenReady(playWhenReady: Boolean) {
+        recovery.onPlayIntent(playWhenReady)
+        super.setPlayWhenReady(playWhenReady)
+      }
+      override fun stop() {
+        recovery.onPlayIntent(false)
+        super.stop()
+      }
+    }
+    session = MediaLibrarySession.Builder(this, sessionPlayer, callback).build()
     restore()
     watchNetwork()
     tick()
@@ -127,6 +158,7 @@ class PlaybackService : MediaLibraryService() {
 
   override fun onDestroy() {
     MusifyLog.log("servicio: destruido")
+    recovery.onPlayIntent(false)
     save()
     main.removeCallbacksAndMessages(null)
     runCatching { unregisterReceiver(screen) }
@@ -234,19 +266,23 @@ class PlaybackService : MediaLibraryService() {
       mediaItems: MutableList<MediaItem>,
       startIndex: Int,
       startPositionMs: Long,
-    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = background {
-      val fromApp = controller.packageName == packageName && mediaItems.all {
-        entryOf(it) != null || it.requestMetadata.extras?.getString(EXTRA_QUERY) != null
-      }
-      if (!fromApp && mediaItems.size == 1) {
-        val selected = carLibrary.selection(mediaItems[0])
-        selected.items.forEach { entryOf(it)?.let(::remember) }
-        MediaSession.MediaItemsWithStartPosition(selected.items, selected.index, startPositionMs.takeIf { it >= 0 } ?: 0)
-      } else {
-        val items = mediaItems.mapIndexed { index, item ->
-          if (fromApp) nativeItem(item, controller) else carQueueItem(item, index, null)
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+      // Invalidate immediately; resolving an external queue happens asynchronously.
+      recovery.onEntryChanged()
+      return background {
+        val fromApp = controller.packageName == packageName && mediaItems.all {
+          entryOf(it) != null || it.requestMetadata.extras?.getString(EXTRA_QUERY) != null
         }
-        MediaSession.MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+        if (!fromApp && mediaItems.size == 1) {
+          val selected = carLibrary.selection(mediaItems[0])
+          selected.items.forEach { entryOf(it)?.let(::remember) }
+          MediaSession.MediaItemsWithStartPosition(selected.items, selected.index, startPositionMs.takeIf { it >= 0 } ?: 0)
+        } else {
+          val items = mediaItems.mapIndexed { index, item ->
+            if (fromApp) nativeItem(item, controller) else carQueueItem(item, index, null)
+          }
+          MediaSession.MediaItemsWithStartPosition(items, startIndex, startPositionMs)
+        }
       }
     }
 
@@ -330,7 +366,7 @@ class PlaybackService : MediaLibraryService() {
 
   private val listener = object : Player.Listener {
     override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-      retries = 0
+      recovery.onEntryChanged()
       recorded = false
       val why = when (reason) {
         Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "sola"
@@ -357,6 +393,7 @@ class PlaybackService : MediaLibraryService() {
         else -> "otro motivo ($reason)"
       }
       MusifyLog.log("${if (playWhenReady) "reanudar" else "pausa"}: $why")
+      recovery.onPlayIntent(playWhenReady)
       if (!playWhenReady) save()
     }
 
@@ -370,6 +407,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       MusifyLog.log(if (isPlaying) "sonando" else "parado (${state()})")
+      recovery.onPlayingChanged()
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -378,28 +416,26 @@ class PlaybackService : MediaLibraryService() {
       val id = trackId(item) ?: return
       // Siempre con URL nueva: la anterior puede haber caducado o ser de otra red.
       refresh.add(id)
+      // A stopped/paused player must not advance the queue or start a delayed recovery.
+      if (!recovery.wantsPlayback()) return
       when {
         error.errorCode !in 2000..2999 -> skip("no se puede reproducir")
-        network() == "sin red" -> {
+        !internetValidated -> {
           val next = nextOffline()
           if (next != null) {
             // Sin conexión solo suenan las descargadas: a la siguiente que lo esté.
             MusifyLog.log("sin red y «${item.mediaMetadata.title}» no está descargada: a la siguiente descargada (${next + 1})")
             MusifyCore.emit("player-error", JSONObject().put("message", "Sin conexión: suenan solo las canciones descargadas").toString())
-            retries = 0
+            recovery.onEntryChanged()
             player.seekTo(next, 0)
             player.prepare()
             player.play()
           } else {
-            waitingForNetwork = true
+            recovery.onFailure()
             MusifyLog.log("esperando a que vuelva la red")
           }
         }
-        retries < 3 -> {
-          retries++
-          main.postDelayed({ resume("reintento $retries") }, 1000L * retries)
-        }
-        else -> skip("no sale después de 3 intentos")
+        recovery.onFailure() == PlaybackRecovery.Failure.EXHAUSTED -> skip("no sale después de 3 intentos")
       }
     }
   }
@@ -433,7 +469,7 @@ class PlaybackService : MediaLibraryService() {
     val title = player.currentMediaItem?.mediaMetadata?.title
     MusifyLog.log("se salta ($why)")
     MusifyCore.emit("player-error", JSONObject().put("message", "No se pudo reproducir «$title»: $why").toString())
-    retries = 0
+    recovery.onEntryChanged()
     if (player.hasNextMediaItem()) {
       player.seekToNextMediaItem()
       player.prepare()
@@ -554,29 +590,45 @@ class PlaybackService : MediaLibraryService() {
   private fun network(): String {
     val cm = getSystemService(ConnectivityManager::class.java) ?: return "?"
     val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return "sin red"
-    return when {
+    val transport = when {
       caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
       caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "datos"
       else -> "otra red"
     }
+    return if (validated(caps)) transport else "$transport sin Internet validado"
   }
 
   private fun watchNetwork() {
     val cm = getSystemService(ConnectivityManager::class.java) ?: return
+    var current = cm.activeNetwork
+    internetValidated = validated(current?.let { cm.getNetworkCapabilities(it) })
     val callback = object : ConnectivityManager.NetworkCallback() {
       override fun onAvailable(network: Network) {
-        main.postDelayed({
-          MusifyLog.log("red: ${network()}")
-          if (waitingForNetwork) {
-            waitingForNetwork = false
-            retries = 0
-            resume("vuelve la red")
+        main.post {
+          current = network
+          internetValidated = false
+        }
+      }
+
+      override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+        // Use callback data, not a synchronous query which can describe a different network.
+        val ready = validated(capabilities)
+        main.post {
+          if (current == network) {
+            internetValidated = ready
+            recovery.onNetworkChanged()
           }
-        }, 1500)
+        }
       }
 
       override fun onLost(network: Network) {
-        MusifyLog.log("red: perdida")
+        main.post {
+          if (current == network) {
+            current = null
+            internetValidated = false
+            MusifyLog.log("red: perdida")
+          }
+        }
       }
     }
     cm.registerDefaultNetworkCallback(callback)
@@ -584,6 +636,10 @@ class PlaybackService : MediaLibraryService() {
   }
 
   companion object {
+    internal fun validated(capabilities: NetworkCapabilities?): Boolean =
+      capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+
     /** La entrada de la interfaz (JSON), en `mediaMetadata.extras`. */
     const val EXTRA_ENTRY = "entry"
     /** Prueba de la fase 0: solo la consulta, en `requestMetadata.extras`. */

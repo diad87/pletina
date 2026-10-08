@@ -215,21 +215,24 @@ impl Db {
             .flatten()
     }
 
-    pub fn save_source(&self, track_id: u64, s: &Source) {
-        let _ = self.0.lock().unwrap().execute(
+    pub fn save_source(&self, track_id: u64, s: &Source) -> rusqlite::Result<()> {
+        write_source(&self.0.lock().unwrap(), track_id, s)
+    }
+
+    pub fn delete_source(&self, track_id: u64) -> rusqlite::Result<()> {
+        self.0.lock().unwrap().execute("DELETE FROM sources WHERE track_id = ?1", params![track_id as i64])?;
+        Ok(())
+    }
+}
+
+/// También permite guardar una elección junto a la invalidación de su descarga en una transacción.
+pub(crate) fn write_source(conn: &Connection, track_id: u64, s: &Source) -> rusqlite::Result<()> {
+    conn.execute(
             "INSERT OR REPLACE INTO sources (track_id, video_id, title, channel, duration, score, verified, updated_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())",
             params![track_id as i64, s.video_id, s.title, s.channel, s.duration, s.score, s.verified],
-        );
-    }
-
-    pub fn delete_source(&self, track_id: u64) {
-        let _ = self
-            .0
-            .lock()
-            .unwrap()
-            .execute("DELETE FROM sources WHERE track_id = ?1", params![track_id as i64]);
-    }
+    )?;
+    Ok(())
 }
 
 impl Db {
@@ -245,12 +248,13 @@ impl Db {
     }
 
     /// Quita la descarga de la base de datos (no borra el archivo).
-    pub fn forget_download(&self, track_id: u64) {
-        let _ = self
+    pub fn forget_download(&self, track_id: u64) -> rusqlite::Result<()> {
+        self
             .0
             .lock()
             .unwrap()
-            .execute("DELETE FROM downloads WHERE track_id = ?1", params![track_id as i64]);
+            .execute("DELETE FROM downloads WHERE track_id = ?1", params![track_id as i64])?;
+        Ok(())
     }
 
     pub fn setting(&self, key: &str) -> Option<String> {
@@ -263,11 +267,12 @@ impl Db {
             .flatten()
     }
 
-    pub fn set_setting(&self, key: &str, value: &str) {
-        let _ = self.0.lock().unwrap().execute(
+    pub fn set_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
+        self.0.lock().unwrap().execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![key, value],
-        );
+        )?;
+        Ok(())
     }
 }
 
@@ -332,6 +337,70 @@ mod tests {
     use super::*;
 
     #[test]
+    fn write_helpers_propagate_readonly_errors_and_allow_retry() {
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        let source = Source { video_id: "old".into(), title: "Fixture".into(), channel: "Fixture".into(), duration: None, score: 90, verified: true };
+        db.save_source(7, &source).unwrap();
+        db.set_setting("key", "old").unwrap();
+        db.0.lock().unwrap().execute_batch(
+            "INSERT INTO tracks (id,title,duration,artist_id,artist_name,album_id,album_title,album_artist_id)
+             VALUES (7,'Fixture',1,1,'Fixture',1,'Fixture',1);
+             INSERT INTO downloads (track_id,path,size,video_id) VALUES (7,'fixture.webm',1,'old');
+             PRAGMA query_only=ON;"
+        ).unwrap();
+        let new_source = Source { video_id: "new".into(), ..source };
+        for result in [db.set_setting("key", "new"), db.save_source(7, &new_source), db.delete_source(7), db.forget_download(7)] {
+            assert_eq!(result.unwrap_err().sqlite_error_code(), Some(rusqlite::ErrorCode::ReadOnly));
+        }
+        assert_eq!(db.setting("key").as_deref(), Some("old"));
+        assert_eq!(db.source(7).unwrap().video_id, "old");
+        assert_eq!(db.download_path(7).as_deref(), Some("fixture.webm"));
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        db.set_setting("key", "new").unwrap();
+        db.save_source(7, &new_source).unwrap();
+        db.forget_download(7).unwrap();
+        assert_eq!(db.setting("key").as_deref(), Some("new"));
+        assert_eq!(db.source(7).unwrap().video_id, "new");
+        assert!(db.download_path(7).is_none());
+        db.delete_source(7).unwrap();
+        assert!(db.source(7).is_none());
+    }
+
+    #[test]
+    fn settings_report_sqlite_full_without_losing_existing_data() {
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        db.set_setting("keep", "old").unwrap();
+        {
+            let conn = db.0.lock().unwrap();
+            let pages: i64 = conn.query_row("PRAGMA page_count", [], |r| r.get(0)).unwrap();
+            conn.execute_batch(&format!("PRAGMA max_page_count={pages};")).unwrap();
+        }
+        let error = db.set_setting("too-large", &"x".repeat(1024 * 1024)).unwrap_err();
+        assert_eq!(error.sqlite_error_code(), Some(rusqlite::ErrorCode::DiskFull));
+        assert_eq!(db.setting("keep").as_deref(), Some("old"));
+        assert_eq!(db.setting("too-large"), None);
+    }
+
+    #[test]
+    fn source_writer_reports_busy_and_can_retry_after_lock_release() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-db-busy-{}-{nonce}.db", std::process::id()));
+        let db = Db::open(&path).unwrap();
+        let source = Source { video_id: "new".into(), title: "Fixture".into(), channel: "Fixture".into(), duration: None, score: 90, verified: true };
+        db.0.lock().unwrap().busy_timeout(std::time::Duration::from_millis(1)).unwrap();
+        let other = Connection::open(&path).unwrap();
+        other.execute_batch("BEGIN IMMEDIATE;").unwrap();
+        assert_eq!(db.save_source(7, &source).unwrap_err().sqlite_error_code(), Some(rusqlite::ErrorCode::DatabaseBusy));
+        assert!(db.source(7).is_none());
+        other.execute_batch("ROLLBACK;").unwrap();
+        db.save_source(7, &source).unwrap();
+        assert_eq!(db.source(7).unwrap().video_id, "new");
+        drop(other);
+        drop(db);
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
     fn opens_header_only_file() {
         let dir = std::env::temp_dir().join(format!("musify-db-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -344,7 +413,7 @@ mod tests {
         assert!(!has_content(&path));
 
         let db = Db::open(&path).unwrap();
-        db.set_setting("k", "v");
+        db.set_setting("k", "v").unwrap();
         drop(db);
         assert!(has_content(&path));
         assert_eq!(Db::open(&path).unwrap().setting("k").as_deref(), Some("v"));
