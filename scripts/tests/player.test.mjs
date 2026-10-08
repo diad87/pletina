@@ -47,8 +47,8 @@ function harness({ resolve = async (track) => playable(track.id), play, mediaSes
     pause() { this.paused = true; this.dispatchEvent(new Event('pause')) }
     removeAttribute(name) { if (name === 'src') this.src = '' }
     load() { this.loads++ }
-    fail(code = 4) {
-      this.error = { code, message: 'Simulated media error' }
+    fail(code = 4, message = 'Simulated media error') {
+      this.error = { code, message }
       this.dispatchEvent(new Event('error'))
     }
   }
@@ -167,11 +167,13 @@ test('a current AbortError leaves loading and reports one failure', async () => 
   assert.equal(h.audios.at(-2).src, '')
 })
 
-test('media error plus rejected play skips only one song and ignores old events', async () => {
+test('duplicate errors after one remote refresh skip only one song and ignore old events', async () => {
   const first = deferred()
+  const refreshed = deferred()
   let attempts = 0
   const h = harness({ play: (audio) => {
     if (++attempts === 1) return first.promise
+    if (attempts === 2) return refreshed.promise
     audio.paused = false
     audio.dispatchEvent(new Event('playing'))
     return Promise.resolve()
@@ -182,14 +184,20 @@ test('media error plus rejected play skips only one song and ignores old events'
   old.fail(4)
   first.reject(new DOMException('Unsupported source', 'NotSupportedError'))
   await flush()
+  const retry = h.audios.at(-1)
+  retry.fail(4)
+  refreshed.reject(new DOMException('Unsupported source', 'NotSupportedError'))
+  await flush()
   old.fail(4)
+  retry.fail(4)
   old.dispatchEvent(new Event('ended'))
   await flush()
   assert.equal(h.player.current.track.id, 2)
   assert.equal(h.player.status, 'playing')
   assert.equal(h.messages.length, 1)
-  assert.match(h.messages[0], /formato de audio/)
-  assert.deepEqual(h.sources, ['https://audio.test/1', 'https://audio.test/2'])
+  assert.match(h.messages[0], /fuente de audio/)
+  assert.deepEqual(h.sources, ['https://audio.test/1', 'https://audio.test/1', 'https://audio.test/2'])
+  assert.deepEqual(h.resolutions.filter(([id]) => id === 1), [[1, false], [1, true]])
 })
 
 test('selecting a new song while resolving prevents an old result from replacing it', async () => {
@@ -225,6 +233,75 @@ test('network failure during startup refreshes once without a duplicate queue ad
   assert.equal(h.messages.length, 0)
 })
 
+test('an expired remote URL reported as code 4 refreshes and recovers during startup', async () => {
+  const pending = deferred()
+  const h = harness({
+    resolve: async (_track, refresh) => playable(refresh ? 99 : 1),
+    play: (audio) => {
+      if (audio.src === 'https://audio.test/1') return pending.promise
+      audio.paused = false
+      audio.dispatchEvent(new Event('playing'))
+      return Promise.resolve()
+    },
+  })
+  h.player.playQueue([item()], 0)
+  await flush()
+  h.audios.at(-1).fail(4, 'HTTP response 403')
+  pending.reject(new DOMException('Unsupported source', 'NotSupportedError'))
+  await flush()
+  assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+  assert.deepEqual(h.sources, ['https://audio.test/1', 'https://audio.test/99'])
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.messages.length, 0)
+})
+
+test('code 4 during remote playback refreshes once and preserves the position', async () => {
+  const h = harness({ resolve: async (_track, refresh) => playable(refresh ? 99 : 1) })
+  h.player.playQueue([item()], 0)
+  await flush()
+  h.audios.at(-1).currentTime = 42
+  h.audios.at(-1).fail(4, 'HTTP response 403')
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audios.at(-1).currentTime, 42)
+  assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+  h.audios.at(-1).fail(4, 'HTTP response 403')
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.equal(h.messages.length, 1)
+  assert.equal(h.resolutions.length, 2)
+})
+
+test('unsupported local audio fails without re-extracting or diagnosing the format as certain', async () => {
+  const h = harness({
+    resolve: async () => playable(1, true),
+    play: (audio) => {
+      audio.fail(4)
+      return Promise.reject(new DOMException('Unsupported source', 'NotSupportedError'))
+    },
+  })
+  h.player.playQueue([item()], 0)
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.deepEqual(h.resolutions, [[1, false]])
+  assert.equal(h.messages.length, 1)
+  assert.match(h.messages[0], /fuente de audio/)
+  assert.doesNotMatch(h.messages[0], /formato/)
+})
+
+for (const code of [2, 4]) {
+  test(`local playback error ${code} does not refresh a file source`, async () => {
+    const h = harness({ resolve: async () => playable(1, true) })
+    h.player.playQueue([item()], 0)
+    await flush()
+    h.audios.at(-1).fail(code)
+    await flush()
+    assert.equal(h.player.status, 'idle')
+    assert.deepEqual(h.resolutions, [[1, false]])
+    assert.equal(h.messages.length, 1)
+  })
+}
+
 test('repeated unsupported audio stops after three failures and releases every source', async () => {
   const h = harness({ play: (audio) => {
     audio.fail(4)
@@ -233,9 +310,11 @@ test('repeated unsupported audio stops after three failures and releases every s
   h.player.playQueue([item(1), item(2), item(3), item(4)], 0)
   await flush()
   await flush()
+  await flush()
   assert.equal(h.player.current.track.id, 3)
   assert.equal(h.player.status, 'idle')
   assert.equal(h.messages.length, 3)
+  assert.deepEqual(h.resolutions, [[1, false], [1, true], [2, false], [2, true], [3, false], [3, true]])
   assert.ok(h.audios.every((audio) => !audio.src))
   assert.equal(h.timers.size, 0)
 })
@@ -257,6 +336,31 @@ test('choosing an alternative source also times out and returns to a retryable s
   pending.resolve(playable(99))
   await flush()
   assert.ok(!h.sources.includes('https://audio.test/99'))
+})
+
+test('a chosen remote source reported as code 4 refreshes before reporting success', async () => {
+  let resolutions = 0
+  const h = harness({
+    resolve: async () => playable([1, 2, 99][resolutions++]),
+    play: (audio) => {
+      if (audio.src === 'https://audio.test/2') {
+        audio.fail(4, 'HTTP response 403')
+        return Promise.reject(new DOMException('Unsupported source', 'NotSupportedError'))
+      }
+      audio.paused = false
+      audio.dispatchEvent(new Event('playing'))
+      return Promise.resolve()
+    },
+  })
+  h.player.playQueue([item()], 0)
+  await flush()
+  assert.equal(await h.player.useSource('video'), true)
+  assert.equal(h.player.status, 'playing')
+  assert.equal(resolutions, 3)
+  assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+  assert.deepEqual(h.sources, ['https://audio.test/1', 'https://audio.test/2', 'https://audio.test/99'])
+  assert.equal(h.messages.length, 1)
+  assert.match(h.messages[0], /^Hecho:/)
 })
 
 test('cancelling the final song during resolution does not restart it later', async () => {

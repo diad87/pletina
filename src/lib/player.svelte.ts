@@ -26,9 +26,10 @@ function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promi
 }
 
 function audioError(audio: HTMLAudioElement): string {
-  return audio.error?.code === 3 || audio.error?.code === 4
-    ? 'El sistema no puede reproducir este formato de audio'
-    : audio.error?.message || 'El audio no se puede reproducir'
+  if (audio.error?.code === 3) return 'No se pudo decodificar el audio'
+  // SRC_NOT_SUPPORTED también puede ser un HTTP 403 de una URL caducada.
+  if (audio.error?.code === 4) return 'No se pudo cargar la fuente de audio'
+  return audio.error?.message || 'El audio no se puede reproducir'
 }
 
 /** Lo que se pone en el `<audio>`: el archivo descargado (protocolo local) o la URL del stream. */
@@ -66,6 +67,7 @@ class Player implements PlayerApi {
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
   #inFlight = new Map<number, Promise<Playable>>()
   #retried = false
+  #sourceLocal = true
   #failures = 0
   /** Si la canción actual ya se apuntó en el historial. */
   #recorded = false
@@ -123,6 +125,7 @@ class Player implements PlayerApi {
   #resetAudio() {
     const previous = this.#audio
     this.#audio = this.#createAudio()
+    this.#sourceLocal = true
     stopCapture()
     previous.pause()
     previous.removeAttribute('src')
@@ -331,7 +334,17 @@ class Player implements PlayerApi {
       redownload()
       if (token !== this.#token) return true
       this.#retried = false
-      await this.#playAudio(playable)
+      try {
+        await this.#playAudio(playable)
+      } catch (e) {
+        if (token !== this.#token) return true
+        if (!this.#canRefreshSource()) throw e
+        this.#resetAudio()
+        this.#retried = true
+        const refreshed = await this.#resolve(item, true)
+        if (token !== this.#token) return true
+        await this.#playAudio(refreshed)
+      }
       if (token !== this.#token) return true
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
@@ -393,7 +406,7 @@ class Player implements PlayerApi {
     } catch (e) {
       // Un AbortError de esta carga también es un fallo; solo se ignoran las cargas sustituidas.
       if (token !== this.#token) return
-      if (!refresh && this.#audio.error?.code === 2) {
+      if (this.#canRefreshSource()) {
         this.#start(item, true, startAt)
         return
       }
@@ -403,6 +416,7 @@ class Player implements PlayerApi {
 
   async #playAudio(playable: Playable, startAt = 0) {
     const a = this.#audio
+    this.#sourceLocal = playable.local
     let onError: () => void = () => {}
     const started = new Promise<void>((resolve, reject) => {
       onError = () => reject(new Error(audioError(a)))
@@ -441,13 +455,19 @@ class Player implements PlayerApi {
     return pending
   }
 
-  /** El audio falló a mitad (normalmente la URL caducó): se pide otra una vez y se sigue donde iba. */
+  /** Una URL remota caducada puede aparecer como error de red o de fuente no compatible. */
+  #canRefreshSource() {
+    const code = this.#audio.error?.code
+    return !this.#retried && !this.#sourceLocal && (code === 2 || code === 4)
+  }
+
+  /** El audio falló a mitad: si la URL pudo caducar, se pide otra una vez y se sigue donde iba. */
   #onAudioError() {
     const item = this.current
     // Al arrancar, #playAudio recoge tanto el evento error como el rechazo de play(): un solo fallo.
     if (this.status === 'loading' || !item || !this.#audio.src) return
     const at = this.#audio.currentTime
-    if (this.#retried || this.#audio.error?.code === 3 || this.#audio.error?.code === 4)
+    if (!this.#canRefreshSource())
       this.#fail(item, audioError(this.#audio), this.#token)
     else if (this.manual) this.#loadManual(this.manual, true, at)
     else this.#load(this.pos, true, at)

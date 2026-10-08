@@ -20,7 +20,7 @@ node=$(find "$appdir/usr" -type f -path '*/bin/node' -print -quit)
   exit 1
 }
 # Use FFmpeg only to create fixtures; playback below uses the bundled GStreamer.
-for ext in wav mp3 flac ogg m4a webm; do
+for ext in wav mp3 flac ogg m4a opus webm; do
   ffmpeg -hide_banner -loglevel error -f lavfi -i 'sine=frequency=440:duration=1' "$scratch/tone.$ext"
 done
 export LD_LIBRARY_PATH="$appdir/usr/lib:$appdir/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
@@ -40,7 +40,7 @@ done
 for element in playbin decodebin uridecodebin filesrc typefind audioconvert audioresample autoaudiosink souphttpsrc; do
   gst-inspect-1.0 "$element" >/dev/null
 done
-for ext in wav mp3 flac ogg m4a webm; do
+for ext in wav mp3 flac ogg m4a opus webm; do
   timeout 30s gst-launch-1.0 -q uridecodebin "uri=file://$scratch/tone.$ext" ! audioconvert ! audioresample ! fakesink
   echo "AppImage decode OK: $ext"
 done
