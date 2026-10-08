@@ -294,8 +294,9 @@ test('seek a 80% conserva buffer y reloj actuales hasta que el destino se puede 
     if (command === 'capture_seek') { sought = true; return Promise.resolve({ requestId: args.requestId, generation: 3, epoch: 2, cached: false }) }
     if (command !== 'capture_read') return Promise.resolve()
     if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 10]], ranges: [{ start: 0, end: 10 }] }))
-    if (sought && args.from === 1) return Promise.resolve(packet({ from: 1, chunks: [[255, 79, 85]], units: [unit(79, 85, { epoch: 2 })] }))
-    return Promise.resolve(packet({ from: args.from }))
+    if (sought && args.from === 1) return Promise.resolve(packet({ from: 1, chunks: [[255, 79, 85]], units: [unit(79, 85, { epoch: 2 })],
+      ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+    return Promise.resolve(packet({ from: args.from, ranges: [{ start: 0, end: 10 }, ...(args.from > 1 ? [{ start: 79, end: 85 }] : [])] }))
   })
   const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
   await settle(() => captureProgress(env.audio)?.units === 1)
@@ -308,6 +309,140 @@ test('seek a 80% conserva buffer y reloj actuales hasta que el destino se puede 
   assert.deepEqual(env.instances[0].buffers[0].ranges, [[0, 10], [79, 85]])
   assert.equal(env.instances[0].buffers[0].aborts, 1)
   assert.deepEqual(calls.find(([c]) => c === 'capture_seek')[1], { videoId: 'aaaaaaaaaaa', at: 80, generation: 3, requestId: 1 })
+})
+
+test('seek no adopta el borde con 0,2 ms; espera medio segundo continuo y updateend', async t => {
+  let deliver, seeks = 0
+  const env = environment(t, (command, args) => {
+    if (command === 'capture_seek') { seeks++; return Promise.resolve({ requestId: args.requestId, generation: 3, cached: false }) }
+    if (command !== 'capture_read') return Promise.resolve()
+    if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 10]], ranges: [{ start: 0, end: 10 }] }))
+    return new Promise(resolve => { deliver = resolve })
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => !!deliver)
+  const sb = env.instances[0].buffers[0], append = sb.appendBuffer
+  let decodedEnd = 80.0002
+  t.mock.method(sb, 'appendBuffer', function (chunk) { append.call(this, chunk); this.ranges = [[0, 10], [79, decodedEnd]] })
+  env.audio.currentTime = 4
+  let settled = false
+  const pending = seekCapture(env.audio, 80).then(result => { settled = true; return result })
+  const publish = async (from, start, end) => {
+    await settle(() => !!deliver)
+    const reply = deliver; deliver = null; decodedEnd = end
+    reply(packet({ from, chunks: [[255, 200, from]],
+      units: [unit(start, end, { epoch: 2, unit: from, firstFrame: from - 1, endFrame: from })],
+      ranges: [{ start: 0, end: 10 }, { start: 79, end }] }))
+  }
+  await publish(1, 79, 80.0002)
+  await settle(() => captureProgress(env.audio).units === 2)
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false); assert.equal(env.audio.currentTime, 4); assert.equal(env.audio.paused, false)
+  await publish(2, 80.0002, 80.3)
+  await settle(() => captureProgress(env.audio).units === 3)
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false); assert.equal(env.audio.currentTime, 4)
+  sb.hold = true
+  await publish(3, 80.3, 80.5)
+  await settle(() => sb.chunks.length === 4)
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false, 'appendBuffer aún pendiente no acredita la reserva')
+  sb.complete()
+  assert.equal(await pending, true); assert.equal(env.audio.currentTime, 80)
+  assert.equal(seeks, 1); assert.equal(env.instances.length, 1)
+  assert.deepEqual(sb.ranges, [[0, 10], [79, 80.5]])
+})
+
+test('seek exige la misma reserva en ledger y MSE; un hueco confirmado no se rellena', async t => {
+  let deliver
+  const env = environment(t, (command, args) => {
+    if (command === 'capture_seek') return Promise.resolve({ requestId: args.requestId, generation: 3, cached: false })
+    if (command !== 'capture_read') return Promise.resolve()
+    if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 10], [255, 79, 85]],
+      ranges: [{ start: 0, end: 10 }, { start: 79, end: 80.2 }, { start: 80.21, end: 85 }] }))
+    return new Promise(resolve => { deliver = resolve })
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => !!deliver)
+  env.audio.currentTime = 4
+  let settled = false
+  const pending = seekCapture(env.audio, 80).then(result => { settled = true; return result })
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false, 'un MSE continuo no sustituye la evidencia de captura')
+  assert.equal(env.audio.currentTime, 4)
+  const sb = env.instances[0].buffers[0]
+  sb.ranges = [[0, 10], [79, 80.2], [80.21, 85]]
+  deliver(packet({ from: 2, ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+  await settle(() => captureProgress(env.audio).ranges.length === 2)
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false, 'el ledger continuo tampoco sustituye la cobertura real MSE')
+  sb.ranges = [[0, 10], [79, 85]]
+  deliver(packet({ from: 2, ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+  assert.equal(await pending, true)
+})
+
+test('la duración nominal no acorta la reserva de seek; sólo un EOF validado admite una cola corta', async t => {
+  let deliver, seeks = 0
+  const env = environment(t, (command, args) => {
+    if (command === 'capture_seek') { seeks++; return Promise.resolve({ requestId: args.requestId, generation: 3, cached: false }) }
+    if (command !== 'capture_read') return Promise.resolve()
+    if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 100]], ranges: [{ start: 0, end: 100 }] }))
+    return new Promise(resolve => { deliver = resolve })
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => !!deliver)
+  env.audio.currentTime = 4
+  let settled = false
+  const pending = seekCapture(env.audio, 99.8).then(result => { settled = true; return result })
+  await new Promise(resolve => setTimeout(resolve, 25))
+  assert.equal(settled, false); assert.equal(env.audio.currentTime, 4)
+  assert.equal(captureProgress(env.audio).duration, 100)
+  deliver(packet({ from: 1, ranges: [{ start: 0, end: 100 }], audioDuration: 100 }))
+  assert.equal(await pending, true); assert.equal(env.audio.currentTime, 99.8)
+  env.audio.currentTime = 4
+  assert.equal(await seekCapture(env.audio, 99.9), true)
+  assert.equal(env.audio.currentTime, 99.9)
+  assert.equal(seeks, 1, 'la cola ya preparada con EOF no necesita otro comando')
+})
+
+test('un seek ya preparado invalida el reply tardío de un destino anterior', async t => {
+  let reply, request, deliver
+  const env = environment(t, (command, args) => {
+    if (command === 'capture_seek') { request = args; return new Promise(resolve => { reply = resolve }) }
+    if (command !== 'capture_read') return Promise.resolve()
+    if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 10]], ranges: [{ start: 0, end: 10 }] }))
+    return new Promise(resolve => { deliver = resolve })
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
+  await settle(() => captureProgress(env.audio)?.units === 1)
+  const first = seekCapture(env.audio, 80)
+  await settle(() => !!reply)
+  assert.equal(await seekCapture(env.audio, 5), true)
+  deliver(packet({ from: 1, chunks: [[255, 79, 85]], ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+  await settle(() => captureProgress(env.audio).units === 2)
+  reply({ requestId: request.requestId, generation: 3, cached: false })
+  assert.equal(await first, false); assert.equal(env.audio.currentTime, 5)
+})
+
+test('cancelar durante la reserva del seek descarta bytes tardíos y conserva la nueva fuente', async t => {
+  let deliver
+  const env = environment(t, (command, args) => {
+    if (command === 'capture_seek') return Promise.resolve({ requestId: args.requestId, generation: 3, cached: false })
+    if (command !== 'capture_read') return Promise.resolve()
+    if (!args.from) return Promise.resolve(packet({ chunks: [[255, 0, 10]], ranges: [{ start: 0, end: 10 }] }))
+    return new Promise(resolve => { deliver = resolve })
+  })
+  const stop = playCapture(env.audio, 'aaaaaaaaaaa')
+  await settle(() => !!deliver)
+  const pending = seekCapture(env.audio, 80)
+  await tick()
+  stop(); env.audio.src = 'https://example.test/otra'; env.audio.currentTime = 12
+  deliver(packet({ from: 1, chunks: [[255, 79, 85]], ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+  assert.equal(await pending, false)
+  await tick()
+  assert.equal(env.audio.currentTime, 12); assert.equal(env.audio.src, 'https://example.test/otra')
+  assert.equal(env.instances[0].buffers[0].chunks.length, 1)
+  assert.deepEqual(env.audio.warnings, [])
 })
 
 test('un reply antiguo de seek no pisa el destino más reciente', async t => {
@@ -490,9 +625,10 @@ test('un seek vigente puede reabrir otra generación y conserva el ledger', asyn
   const env = environment(t, (command, args) => {
     if (command === 'capture_seek') { generation = 4; sought = true; return Promise.resolve({ requestId: args.requestId, generation, cached: false }) }
     if (command !== 'capture_read') return Promise.resolve()
-    if (!args.from) return Promise.resolve(packet({ generation, chunks: [[255, 0, 10]] }))
-    if (sought && args.from === 1) return Promise.resolve(packet({ generation, from: 1, chunks: [[254, 79, 85]] }))
-    return Promise.resolve(packet({ generation, from: args.from }))
+    if (!args.from) return Promise.resolve(packet({ generation, chunks: [[255, 0, 10]], ranges: [{ start: 0, end: 10 }] }))
+    if (sought && args.from === 1) return Promise.resolve(packet({ generation, from: 1, chunks: [[254, 79, 85]],
+      ranges: [{ start: 0, end: 10 }, { start: 79, end: 85 }] }))
+    return Promise.resolve(packet({ generation, from: args.from, ranges: [{ start: 0, end: 10 }, ...(args.from > 1 ? [{ start: 79, end: 85 }] : [])] }))
   })
   const stop = playCapture(env.audio, 'aaaaaaaaaaa'); t.after(stop)
   await settle(() => captureProgress(env.audio)?.units === 1)

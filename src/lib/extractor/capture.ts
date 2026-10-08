@@ -189,6 +189,13 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
     // progress is published only after the entire read batch reaches updateend.
     return end > at && covers(progress.buffered, at, end) && covers(buffered(), at, end)
   }
+  const seekReady = (at: number) => {
+    if (signal.aborted || !progress) return false
+    // Only a validated audio EOF can shorten the reserve; nominal duration cannot.
+    const end = Math.min(at + STARTUP_RESERVE_SECONDS, progress.audioDuration ?? Infinity)
+    return end > at && covers(progress.ranges, at, end) &&
+      covers(progress.buffered, at, end) && covers(buffered(), at, end)
+  }
   const waitReady = async () => {
     while (!ready()) {
       check(signal)
@@ -225,13 +232,16 @@ export function playCapture(audio: HTMLAudioElement, videoId: string): Stop {
   }
   const seek = async (at: number) => {
     if (!finite(at) || at < 0 || signal.aborted) return false
-    if (covers(buffered(), at)) { audio.currentTime = at; return true }
+    // Supersede only local adoption of an older reply; native work already sent may continue.
+    if (seekReady(at)) { requestId++; audio.currentTime = at; return true }
     try {
       const pending = requestId + 1
       if (!await requestSeek(at)) return false
       const deadline = performance.now() + 10_000
       while (!signal.aborted && pending === requestId && performance.now() < deadline) {
-        if (covers(buffered(), at)) { audio.currentTime = at; return true }
+        // Keep the old clock until the destination has a reserve. The old range can
+        // still run out while its native producer seeks; that waiting remains observable.
+        if (seekReady(at)) { audio.currentTime = at; return true }
         await delay(20, signal)
       }
       if (pending === requestId) warning(`No se pudo preparar el salto a ${at.toFixed(1)} s; se conserva el audio actual`)
