@@ -139,18 +139,35 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
         .chain([BUNDLED.clone()])
         .collect();
     let mut last = Error::Failed("La receta no tiene clientes".into());
-    let clients: Vec<(&Recipe, &Client)> = recipes
+    let mut attempts = Vec::new();
+    let clients: Vec<(usize, usize, &Recipe, &Client)> = recipes
         .iter()
-        .flat_map(|r| r.clients.iter().map(move |c| (r, c)))
+        .enumerate()
+        .flat_map(|(ri, r)| {
+            r.clients
+                .iter()
+                .enumerate()
+                .map(move |(ci, c)| (ri, ci, r, c))
+        })
         .collect();
-    for (recipe, client) in clients {
+    for (recipe_index, client_index, recipe, client) in clients {
         // Segundo intento con sesión de visitante nueva y otra URL.
         for attempt in 0..2 {
+            let mut record = |stage, error: &str, gone| {
+                attempts.push(ReferenceAttempt {
+                    recipe: recipe_index,
+                    client: client_index,
+                    attempt,
+                    stage,
+                    code: reference_code(stage, error, gone),
+                })
+            };
             let stage = Instant::now();
             let visitor = match visitor(recipe, attempt > 0).await {
                 Ok(v) => v,
                 Err(e) => {
                     visitor_ms += stage.elapsed().as_secs_f64() * 1000.0;
+                    record("visitor", &e, false);
                     last = Error::Failed(e);
                     continue;
                 }
@@ -168,6 +185,10 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
                         Ok(()) => {
                             if std::env::var_os("MUSIFY_BENCH").is_some() {
                                 eprintln!(
+                                    "[native-resolution] {}",
+                                    json!({ "success": true, "failures": resolution_failures(&attempts) })
+                                );
+                                eprintln!(
                                     "[native-timing] {video_id} totalMs={:.3} visitorMs={visitor_ms:.3} playerMs={player_ms:.3} validationMs={validation_ms:.3}",
                                     started.elapsed().as_secs_f64() * 1000.0
                                 );
@@ -180,6 +201,7 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
                             return Ok(d);
                         }
                         Err(e) => {
+                            record("validation", &e, false);
                             STATS.replaced.fetch_add(1, Ordering::Relaxed);
                             last = Error::Failed(e);
                         }
@@ -187,14 +209,24 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
                 }
                 // Otro cliente podría reproducirlo; si ninguno puede, se devuelve esto.
                 Err(Error::Gone(e)) => {
+                    record("player", &e, true);
                     last = Error::Gone(e);
                     break;
                 }
-                Err(e) => last = e,
+                Err(e) => {
+                    record("player", &e.to_string(), false);
+                    last = e;
+                }
             }
         }
     }
     STATS.failed.fetch_add(1, Ordering::Relaxed);
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!(
+            "[native-resolution] {}",
+            json!({ "success": false, "failures": resolution_failures(&attempts) })
+        );
+    }
     Err(last)
 }
 
@@ -252,12 +284,16 @@ fn reference_code(stage: &str, error: &str, gone: bool) -> String {
     .into()
 }
 
-fn reference_failure(attempts: &[ReferenceAttempt]) -> String {
+fn resolution_failures(attempts: &[ReferenceAttempt]) -> Value {
     // Report bounded, safe metadata, never visitor data, recipe names or raw errors.
     let last = &attempts[attempts.len().saturating_sub(8)..];
+    json!({ "totalAttempts": attempts.len(), "truncated": attempts.len() > 8, "attempts": last })
+}
+
+fn reference_failure(attempts: &[ReferenceAttempt]) -> String {
     format!(
         "REFERENCE_RESOLUTION_FAILED {}",
-        json!({ "totalAttempts": attempts.len(), "truncated": attempts.len() > 8, "attempts": last })
+        resolution_failures(attempts)
     )
 }
 
