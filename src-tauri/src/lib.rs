@@ -14,6 +14,8 @@ mod library;
 mod playlist_import;
 mod spotify;
 mod local;
+#[cfg(target_os = "linux")]
+mod local_media;
 mod native;
 mod native_player;
 mod player;
@@ -70,9 +72,15 @@ async fn resolve(
     ytdlp: State<'_, YtDlp>,
     app: tauri::AppHandle,
 ) -> Result<Playable, String> {
-    let playable = player::resolve(&track, refresh, &db, &ytm, &ytdlp).await?;
-    // El archivo descargado se sirve por el protocolo de archivos locales: hay que permitirlo.
+    #[allow(unused_mut)]
+    let mut playable = player::resolve(&track, refresh, &db, &ytm, &ytdlp).await?;
+    // WebKitGTK necesita HTTP para audio local; el resto usa el protocolo asset de Tauri.
     if playable.local {
+        #[cfg(target_os = "linux")]
+        {
+            playable.url = app.state::<local_media::LocalMedia>().register(std::path::Path::new(&playable.url))?;
+        }
+        #[cfg(not(target_os = "linux"))]
         app.asset_protocol_scope().allow_file(&playable.url).map_err(|e| e.to_string())?;
     }
     Ok(playable)
@@ -157,6 +165,8 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             let ytdlp = ytdlp.with_node_runtime(app.path().resource_dir()?.join("bin/node"));
             app.manage(ytdlp);
+            #[cfg(target_os = "linux")]
+            app.manage(tauri::async_runtime::block_on(local_media::LocalMedia::start())?);
             extractor::init(app.handle().clone());
             extractors::start(app.handle());
             app.manage(downloads::Downloads::start(app.handle()));

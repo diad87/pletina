@@ -11,7 +11,7 @@ use serde::Serialize;
 #[serde(rename_all = "camelCase")]
 pub struct Playable {
     pub video_id: String,
-    /// URL del stream, o ruta del archivo si `local`.
+    /// URL del stream, o ruta del archivo si `local` (HTTP loopback en Linux).
     pub url: String,
     pub title: String,
     pub channel: String,

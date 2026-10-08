@@ -46,6 +46,13 @@ jni = "0.21"
 webview2-com = "0.39"
 windows-core = "0.62"
 
+# WebKitGTK no reproduce audio del protocolo asset://: transporte HTTP local y acotado.
+[target.'cfg(target_os = "linux")'.dependencies]
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tower-http = { version = "0.6", features = ["fs"] }
+uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["net", "fs", "rt"] }
+
 # Binario pequeño: la ligereza es prioridad.
 [profile.release]
 codegen-units = 1

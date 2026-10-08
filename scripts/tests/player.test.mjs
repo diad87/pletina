@@ -119,6 +119,35 @@ test('local audio plays even when optional MediaSession APIs throw', async () =>
   assert.equal(h.timers.size, 0)
 })
 
+test('local loopback transport uses its URL unchanged and never refreshes it as a remote source', async () => {
+  const url = 'http://127.0.0.1:32123/random-token/opaque-file-id'
+  const h = harness({ resolve: async () => ({ url, local: true }) })
+  h.player.playQueue([item()], 0)
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.deepEqual(h.sources, [url])
+  h.audios.at(-1).fail(4)
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.deepEqual(h.resolutions, [[1, false]])
+  assert.equal(h.messages.length, 1)
+})
+
+for (const url of [
+  String.raw`C:\Music\song.mp3`,
+  String.raw`\\server\Music\song.mp3`,
+  'http://127.0.0.1:32123@remote.test/song.mp3',
+  'http://127.0.0.1:99999/song.mp3',
+  'https://127.0.0.1:32123/song.mp3',
+]) {
+  test(`local path or unsupported transport still passes through convertFileSrc: ${url}`, async () => {
+    const h = harness({ resolve: async () => ({ url, local: true }) })
+    h.player.playQueue([item()], 0)
+    await flush()
+    assert.deepEqual(h.sources, [`asset://${url}`])
+  })
+}
+
 test('unresolved backend request times out, can be retried, and cannot start late audio', async () => {
   const pending = deferred()
   let attempt = 0

@@ -32,8 +32,19 @@ function audioError(audio: HTMLAudioElement): string {
   return audio.error?.message || 'El audio no se puede reproducir'
 }
 
-/** Lo que se pone en el `<audio>`: el archivo descargado (protocolo local) o la URL del stream. */
-const audioSrc = (p: Playable) => (p.local ? convertFileSrc(p.url) : p.url)
+/** Linux sirve los archivos por HTTP local porque WebKitGTK no reproduce audio desde asset://. */
+function audioSrc(p: Playable): string {
+  if (!p.local) return p.url
+  if (p.url.startsWith('http://127.0.0.1:')) {
+    try {
+      const url = new URL(p.url)
+      if (url.hostname === '127.0.0.1' && !url.username && !url.password) return p.url
+    } catch {
+      // Una ruta local o una URL inválida sigue usando el protocolo de archivos de Tauri.
+    }
+  }
+  return convertFileSrc(p.url)
+}
 
 /** El reproductor de escritorio: un `<audio>` en la interfaz. */
 class Player implements PlayerApi {
