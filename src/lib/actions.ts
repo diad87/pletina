@@ -11,6 +11,7 @@ import { youtubeEpisodes } from './podcasts'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
+import { pins } from './pins.svelte'
 import { justCreated } from '../views/PlaylistView.svelte'
 
 /** "Añadir a playlist ▸": nueva playlist + las que ya hay. */
@@ -51,6 +52,25 @@ export function albumCardMenu(albumId: number): MenuItem[] {
     { label: 'Reproducir', icon: 'play', action: () => playAlbum(albumId) },
     ...queueMenu(tracks),
     { ...addToPlaylistMenu(tracks), separated: true },
+    {
+      label: pins.has('album', albumId) ? 'Desfijar de Inicio' : 'Fijar en Inicio',
+      icon: 'pin',
+      action: async () => {
+        const pinned = pins.items.find((pin) => pin.kind === 'album' && pin.id === albumId)
+        if (pinned) {
+          pins.toggle(pinned)
+          return
+        }
+        try {
+          const album = await api.album(albumId)
+          if (!pins.has('album', albumId)) {
+            pins.toggle({ kind: 'album', id: album.id, title: album.title, image: album.coverBig })
+          }
+        } catch (e) {
+          toast.show(`No se pudo fijar el disco: ${e}`)
+        }
+      },
+    },
     { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: albumId }) },
   ]
 }

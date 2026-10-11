@@ -4,6 +4,18 @@ Reproductor de música tipo Spotify para Windows, Mac, Linux y Android. Busca gr
 
 Software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
 
+### Tu música, a mano
+
+En las playlists y en **Canciones que te gustan**, busca por título o artista sin preocuparte por las tildes o las mayúsculas. Los resultados conservan su posición en la lista: al reproducir uno, la cola continúa desde esa canción. Para cambiar el orden arrastrando, borra primero la búsqueda.
+
+El botón de la chincheta en un disco o una playlist permite **Fijar en Inicio**. Los fijados aparecen primero, se conservan al cerrar la app y se pueden quitar desde la misma chincheta. En Inicio, **Ponme un disco** elige al azar uno de tus álbumes guardados y lo reproduce desde la primera canción, en orden; si tienes varios, evita elegir el que ya está puesto.
+
+### Sugeridos en Inicio
+
+**Sugeridos para ti** mezcla discos de los artistas que escuchas y guardas con discos de artistas similares. **Artistas que te pueden gustar** permite descubrir otros grupos, indicando con qué artista están relacionados. La selección usa tus últimas 300 escuchas, canciones favoritas y discos guardados; omite los discos que ya aparecen en esos datos y no usa podcasts, archivos locales ni canciones independientes de YouTube como semillas.
+
+Si aún no tienes gustos guardados, muestra discos y artistas populares de Deezer. La selección se calcula en tu equipo, sin cuenta de Spotify; al catálogo se le piden listas populares, discos y artistas relacionados. Puedes abrir y reproducir los discos desde sus tarjetas. Si falla la conexión, Inicio conserva tus accesos habituales y permite reintentar los sugeridos.
+
 ![Inicio](docs/screenshots/inicio.png)
 
 | | |
@@ -87,6 +99,8 @@ En la ficha de cada programa puedes **añadirlo a favoritos**, tanto si procede 
 Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
 
 Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
+
+Cada episodio recuerda su punto de escucha en este dispositivo. Al volver a reproducirlo, continúa donde lo dejaste, también después de cerrar la app. La lista muestra **Continuar desde…**, una barra de progreso y **Escuchado** al terminar; los episodios completados vuelven a empezar desde el principio. En Android, el servicio de audio guarda el progreso incluso con la pantalla apagada.
 
 ## Instalar
 

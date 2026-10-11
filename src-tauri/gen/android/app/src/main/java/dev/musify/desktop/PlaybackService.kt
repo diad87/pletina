@@ -85,6 +85,12 @@ class PlaybackService : MediaLibraryService() {
   /** La canción actual ya se apuntó en el historial. */
   private var recorded = false
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
+  private var episodeGeneration = 0
+  private val pendingEpisodeResume = mutableMapOf<String, Int>()
+  private val episodeDurations = mutableMapOf<String, Long>()
+  private val completedItems = mutableSetOf<String>()
+  private var applyingEpisodeResume = false
+  private var destroyed = false
 
   /** Pantalla encendida / apagada, para el registro. */
   private val screen = object : BroadcastReceiver() {
@@ -153,6 +159,7 @@ class PlaybackService : MediaLibraryService() {
   override fun onTaskRemoved(rootIntent: Intent?) {
     MusifyLog.log("app quitada de recientes; sonando=${player.isPlaying}")
     save()
+    saveEpisodeProgress()
     super.onTaskRemoved(rootIntent)
   }
 
@@ -160,6 +167,9 @@ class PlaybackService : MediaLibraryService() {
     MusifyLog.log("servicio: destruido")
     recovery.onPlayIntent(false)
     save()
+    saveEpisodeProgress()
+    destroyed = true
+    episodeGeneration++
     main.removeCallbacksAndMessages(null)
     runCatching { unregisterReceiver(screen) }
     networkCallback?.let { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(it) }
@@ -246,6 +256,7 @@ class PlaybackService : MediaLibraryService() {
       controller: MediaSession.ControllerInfo,
       mediaItems: MutableList<MediaItem>,
     ): ListenableFuture<MutableList<MediaItem>> {
+      saveEpisodeProgress()
       // ctx identifica una aparición en la cola de fondo de la app. Las adiciones externas
       // necesitan posiciones nuevas incluso si añaden dos veces la misma canción.
       val entries = (0 until player.mediaItemCount).mapNotNull { entryOf(player.getMediaItemAt(it)) }
@@ -267,6 +278,7 @@ class PlaybackService : MediaLibraryService() {
       startIndex: Int,
       startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+      saveEpisodeProgress()
       // Invalidate immediately; resolving an external queue happens asynchronously.
       recovery.onEntryChanged()
       return background {
@@ -345,6 +357,10 @@ class PlaybackService : MediaLibraryService() {
     queries[query.getLong("id").toString()] = query.toString()
   }
 
+  /** El mismo espacio de ids que podcasts.rs; no incluye la música local. */
+  private fun isPodcast(id: String?): Boolean =
+    id?.toLongOrNull()?.let { it >= 500_000_000_000_000L && it < 1_000_000_000_000_000L } == true
+
   /** Lo llama ExoPlayer (en un hilo suyo) al abrir cada canción: le da la URL de YouTube o el archivo. */
   private fun resolve(spec: DataSpec): DataSpec {
     if (spec.uri.scheme != "musify") return spec
@@ -368,6 +384,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
       recovery.onEntryChanged()
       recorded = false
+      resumeEpisode(item, reason)
       val why = when (reason) {
         Player.MEDIA_ITEM_TRANSITION_REASON_AUTO -> "sola"
         Player.MEDIA_ITEM_TRANSITION_REASON_SEEK -> "salto"
@@ -394,7 +411,43 @@ class PlaybackService : MediaLibraryService() {
       }
       MusifyLog.log("${if (playWhenReady) "reanudar" else "pausa"}: $why")
       recovery.onPlayIntent(playWhenReady)
-      if (!playWhenReady) save()
+      if (!playWhenReady) {
+        save()
+        saveEpisodeProgress()
+      }
+    }
+
+    override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+      val old = oldPosition.mediaItem
+      if (old != null && old.mediaId !in pendingEpisodeResume && !applyingEpisodeResume) {
+        val ended = reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION || old.mediaId in completedItems
+        writeEpisodeProgress(old, oldPosition.positionMs, episodeDurations[old.mediaId] ?: 0, ended)
+      }
+      // Un salto dentro del mismo episodio es una decisión del usuario, incluido volver a cero.
+      if (old?.mediaId == newPosition.mediaItem?.mediaId && reason == Player.DISCONTINUITY_REASON_SEEK) {
+        if (!applyingEpisodeResume && old != null && old.mediaId in pendingEpisodeResume) {
+          // Un seek del usuario durante la lectura gana a la reanudación pendiente.
+          episodeGeneration++
+          pendingEpisodeResume.remove(old.mediaId)
+        }
+        newPosition.mediaItem?.let { completedItems.remove(it.mediaId) }
+        saveEpisodeProgress()
+      }
+    }
+
+    override fun onPlaybackStateChanged(playbackState: Int) {
+      val item = player.currentMediaItem ?: return
+      if (playbackState == Player.STATE_READY && player.duration > 0) {
+        episodeDurations[item.mediaId] = player.duration
+        if (isPodcast(trackId(item)) && player.currentPosition >= player.duration) {
+          // Una fuente distinta (RSS/YouTube) puede ser más corta que la escucha anterior.
+          player.seekTo((player.duration - 1000).coerceAtLeast(0))
+        }
+      }
+      if (playbackState == Player.STATE_ENDED) {
+        completedItems.add(item.mediaId)
+        saveEpisodeProgress()
+      }
     }
 
     override fun onPlaybackSuppressionReasonChanged(reason: Int) {
@@ -408,6 +461,7 @@ class PlaybackService : MediaLibraryService() {
     override fun onIsPlayingChanged(isPlaying: Boolean) {
       MusifyLog.log(if (isPlaying) "sonando" else "parado (${state()})")
       recovery.onPlayingChanged()
+      if (!isPlaying) saveEpisodeProgress()
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -493,9 +547,75 @@ class PlaybackService : MediaLibraryService() {
           }
         }
       }
-      if (player.isPlaying) save(quiet = true)
+      if (player.isPlaying) {
+        save(quiet = true)
+        saveEpisodeProgress()
+      }
       tick()
     }, 5_000)
+  }
+
+  // --- Progreso de podcasts ------------------------------------------------------------------
+
+  /** La cola puede cambiar o la WebView puede cerrarse; cada episodio conserva su propio punto. */
+  private fun writeEpisodeProgress(item: MediaItem, position: Long, duration: Long, completed: Boolean) {
+    val id = trackId(item)?.toLongOrNull() ?: return
+    if (!isPodcast(id.toString())) return
+    val data = JSONObject().put("id", id)
+      .put("position", position.coerceAtLeast(0) / 1000.0)
+      .put("duration", duration.coerceAtLeast(0) / 1000.0)
+      .put("completed", completed).toString()
+    worker.execute {
+      val error = MusifyCore.savePodcastProgress(data)
+      if (error.isNotEmpty()) MusifyLog.log("progreso del podcast: ERROR $error")
+    }
+  }
+
+  private fun saveEpisodeProgress() {
+    val item = player.currentMediaItem ?: return
+    // Preparar un audio emite eventos en posición cero antes de recuperar lo guardado.
+    if (item.mediaId in pendingEpisodeResume) return
+    val duration = player.duration.takeIf { it > 0 } ?: episodeDurations[item.mediaId] ?: 0
+    if (duration > 0) episodeDurations[item.mediaId] = duration
+    writeEpisodeProgress(item, player.currentPosition, duration, item.mediaId in completedItems)
+  }
+
+  private fun resumeEpisode(item: MediaItem?, reason: Int) {
+    val generation = ++episodeGeneration
+    val id = item?.let { trackId(it) }?.toLongOrNull() ?: return
+    if (!isPodcast(id.toString())) return
+    completedItems.remove(item.mediaId)
+    // Repetir un episodio terminado empieza desde el principio, sin releer la posición anterior.
+    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) return
+    pendingEpisodeResume[item.mediaId] = generation
+    // El mismo worker ordena primero el guardado del episodio anterior y luego esta lectura.
+    // Dejar acabar los callbacks del salto antes de leer (guardan la posición anterior).
+    main.post read@ {
+      if (destroyed) return@read
+      worker.execute {
+        val raw = MusifyCore.podcastProgress(id)
+        val saved = runCatching { JSONObject(raw) }.getOrNull()
+        val position = if (saved?.optBoolean("completed") == false) {
+          (saved.optDouble("position", 0.0) * 1000).toLong().coerceAtLeast(0)
+        } else 0L
+        main.post apply@ {
+          if (pendingEpisodeResume[item.mediaId] == generation) pendingEpisodeResume.remove(item.mediaId)
+          if (destroyed || generation != episodeGeneration || player.currentMediaItem?.mediaId != item.mediaId) return@apply
+          if (saved?.has("error") == true) {
+            MusifyLog.log("recuperar podcast: ${saved.optString("error")}")
+            return@apply
+          }
+          val duration = player.duration.takeIf { it > 0 }
+          val at = if (duration != null) position.coerceAtMost((duration - 1000).coerceAtLeast(0)) else position
+          if (at > 0 || saved?.optBoolean("completed") == true) {
+            applyingEpisodeResume = true
+            player.seekTo(at)
+            applyingEpisodeResume = false
+          }
+          save()
+        }
+      }
+    }
   }
 
   // --- Cola guardada ------------------------------------------------------------------------

@@ -2,6 +2,7 @@
   import Cover from '../components/Cover.svelte'
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
+  import PinButton from '../components/PinButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -114,6 +115,7 @@
         <Icon name={saved ? 'heartFilled' : 'heart'} size={32} />
       </button>
       <DownloadButton items={queue} />
+      <PinButton item={{ kind: 'album', id: data.id, title: data.title, image: data.coverBig }} />
       <button class="action" onclick={albumMenu} title="Más opciones"><Icon name="more" size={32} /></button>
     </div>
 

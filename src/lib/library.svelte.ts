@@ -2,6 +2,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
+import { pins } from './pins.svelte'
 import type { AlbumDetail, LibraryData, LibTrack, PlaylistSummary, Podcast, SavedAlbum, SavedArtist } from './types'
 
 /** De canción en la cola a canción de biblioteca. */
@@ -87,6 +88,7 @@ class Library {
         ...data.podcasts.filter((podcast) => !protectedPodcasts.has(podcast.id)),
       ]
       this.playlists = data.playlists
+      pins.prunePlaylists(data.playlists.map((playlist) => playlist.id))
       return data
     } catch (e) {
       toast.show(`No se pudo cargar la biblioteca: ${e}`)

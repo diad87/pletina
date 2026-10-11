@@ -158,6 +158,16 @@ const MIGRATIONS: &[&str] = &[
         added_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
     ",
+    // 8: progreso por episodio; independiente de la cola y de la URL del audio.
+    "
+    CREATE TABLE podcast_progress (
+        episode_id INTEGER PRIMARY KEY REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+        position REAL NOT NULL CHECK(position >= 0),
+        duration REAL NOT NULL CHECK(duration >= 0),
+        completed INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    ",
 ];
 
 pub struct Source {
@@ -421,7 +431,7 @@ mod tests {
     }
 
     #[test]
-    fn migration_seven_preserves_version_six_library_and_podcast_data() {
+    fn migrations_preserve_version_six_library_and_podcast_data() {
         let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let path = std::env::temp_dir().join(format!("pletina-migration-seven-{}-{nonce}.db", std::process::id()));
         {
@@ -461,7 +471,7 @@ mod tests {
             assert_eq!(db.setting("keep").as_deref(), Some("value"));
             assert_eq!(db.download_path(7).as_deref(), Some("audio.webm"));
             let conn = db.0.lock().unwrap();
-            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), 7);
+            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), MIGRATIONS.len() as i64);
             for table in ["sources", "tracks", "liked_tracks", "saved_albums", "saved_artists", "playlists",
                 "playlist_tracks", "history", "downloads", "settings", "youtube_tracks", "local_artists", "local_albums", "local_tracks"]
             {
@@ -471,6 +481,7 @@ mod tests {
             let audio: String = conn.query_row("SELECT audio_url FROM podcast_episodes WHERE guid = 'rss-episode'", [], |r| r.get(0)).unwrap();
             assert_eq!(audio, "https://audio.example/episode.mp3");
             assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_episodes", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_progress", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
             assert!(crate::podcasts::saved_shows(&conn).unwrap().is_empty());
             assert!(conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (999)", []).is_err());
             conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (1), (2)", []).unwrap();
@@ -480,7 +491,7 @@ mod tests {
             assert_eq!(saved[1].title, "Programa RSS");
         }
         // La copia previa sigue siendo v6 y conserva los datos originales.
-        let backup = path.with_extension("db.antes-de-v7");
+        let backup = path.with_extension(format!("db.antes-de-v{}", MIGRATIONS.len()));
         {
             let conn = Connection::open(&backup).unwrap();
             assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), 6);

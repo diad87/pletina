@@ -179,6 +179,7 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
 
   @Command
   fun play(invoke: Invoke) = run(invoke) { c ->
+    if (c.playbackState == Player.STATE_ENDED) c.seekTo(0)
     if (c.playbackState == Player.STATE_IDLE || c.playbackState == Player.STATE_ENDED) c.prepare()
     c.play()
     null

@@ -19,6 +19,10 @@ object MusifyCore {
   /** Apunta una escucha en el historial (LibTrack en JSON). Devuelve el error, o "" si fue bien. */
   external fun recordPlay(track: String): String
 
+  /** Progreso por episodio; JSON o null. Llamar desde el worker, como recordPlay. */
+  external fun podcastProgress(episodeId: Long): String
+  external fun savePodcastProgress(progress: String): String
+
   /** Aviso a la interfaz, si la app está abierta (evento de Tauri con datos en JSON). */
   external fun emit(event: String, payload: String)
 

@@ -28,7 +28,7 @@ const deferred = () => {
 }
 
 function harness(overrides = {}) {
-  const messages = [], calls = []
+  const messages = [], calls = [], prunedPlaylistIds = []
   const api = {
     library: async () => data(),
     setPodcastSaved: async (id, saved) => { calls.push([id, saved]) },
@@ -39,13 +39,14 @@ function harness(overrides = {}) {
     'svelte/reactivity': { SvelteSet },
     './api': api,
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
+    './pins.svelte': { pins: { prunePlaylists: (ids) => prunedPlaylistIds.push([...ids]) } },
   }
   const exports = {}
   new Function('require', 'exports', compiled)((name) => {
     assert.ok(name in modules, `Unmocked dependency: ${name}`)
     return modules[name]
   }, exports)
-  return { library: exports.library, messages, calls, api }
+  return { library: exports.library, messages, calls, api, prunedPlaylistIds }
 }
 
 test('loads saved RSS and YouTube programs independently of liked episodes', async () => {
@@ -114,6 +115,13 @@ test('failed library reload keeps the last available favorites', async () => {
   h.api.library = async () => { throw new Error('No se puede leer la biblioteca') }
   assert.equal(await h.library.load(), null)
   assert.deepEqual(h.library.podcasts.map((p) => p.id), [rss.id, youtube.id])
+  assert.deepEqual(h.prunedPlaylistIds, [[]], 'failed reads must not prune pinned playlists')
+})
+
+test('successful library reads prune playlist pins using the returned playlist IDs', async () => {
+  const h = harness({ library: async () => ({ ...data(), playlists: [{ id: 7 }, { id: 9 }] }) })
+  await h.library.load()
+  assert.deepEqual(h.prunedPlaylistIds, [[7, 9]])
 })
 
 test('a library response started before a successful save cannot erase it', async () => {

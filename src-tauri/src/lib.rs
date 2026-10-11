@@ -22,6 +22,7 @@ mod native;
 mod native_player;
 mod player;
 mod podcasts;
+mod podcast_progress;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
@@ -30,7 +31,7 @@ mod youtube_tracks;
 mod ytdlp;
 
 use db::Db;
-use deezer::{AlbumDetail, ArtistPage, Deezer, SearchResults};
+use deezer::{Album, AlbumDetail, Artist, ArtistPage, Deezer, Discovery, SearchResults};
 use player::{Alternative, Playable};
 use tauri::{Manager, State};
 use youtube::{TrackQuery, YouTubeMusic};
@@ -52,6 +53,21 @@ async fn search(query: String, deezer: State<'_, Deezer>, db: State<'_, Db>) -> 
         }
         Err(e) => Err(e),
     }
+}
+
+#[tauri::command]
+async fn discovery(deezer: State<'_, Deezer>) -> Result<Discovery, String> {
+    deezer.discovery().await
+}
+
+#[tauri::command]
+async fn related_artists(id: u64, deezer: State<'_, Deezer>) -> Result<Vec<Artist>, String> {
+    deezer.related_artists(id).await
+}
+
+#[tauri::command]
+async fn artist_albums(id: u64, deezer: State<'_, Deezer>) -> Result<Vec<Album>, String> {
+    deezer.artist_albums(id).await
 }
 
 #[tauri::command]
@@ -187,9 +203,14 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            discovery,
+            related_artists,
+            artist_albums,
             podcasts::podcast_search,
             podcasts::podcast_detail,
             podcasts::podcast_feed_url,
+            podcast_progress::podcast_progress,
+            podcast_progress::save_podcast_progress,
             podcasts::set_podcast_saved,
             artist,
             album,

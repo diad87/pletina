@@ -7,6 +7,7 @@
   import { library } from '../lib/library.svelte'
   import { local } from '../lib/local.svelte'
   import { nav } from '../lib/nav.svelte'
+  import { pins } from '../lib/pins.svelte'
   import Collage from './Collage.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
@@ -72,7 +73,7 @@
       <span class="art"><Collage covers={p.covers} /></span>
       <span class="text">
         <span class="title">{p.name}</span>
-        <span class="sub">Playlist · {songs(p.count)}</span>
+        <span class="sub">{#if pins.has('playlist', p.id)}<span class="pinned" title="Fijada en Inicio" aria-label="Fijada en Inicio"><Icon name="pin" size={13} /></span>{/if}Playlist · {songs(p.count)}</span>
       </span>
     </button>
   {/each}
@@ -86,7 +87,7 @@
       <span class="art"><Cover src={a.cover} /></span>
       <span class="text">
         <span class="title">{a.title}</span>
-        <span class="sub">Disco · {a.artistName}</span>
+        <span class="sub">{#if pins.has('album', a.id)}<span class="pinned" title="Fijado en Inicio" aria-label="Fijado en Inicio"><Icon name="pin" size={13} /></span>{/if}Disco · {a.artistName}</span>
       </span>
     </button>
   {/each}
@@ -218,5 +219,11 @@
   .sub {
     font-size: 13px;
     color: var(--muted);
+  }
+  .pinned {
+    display: inline-flex;
+    margin-right: 4px;
+    vertical-align: -2px;
+    color: var(--accent);
   }
 </style>

@@ -2,7 +2,7 @@
 // Solo se carga en desarrollo y fuera de la app; usa respuestas reales guardadas en ./fixtures
 // (se regeneran con `cargo test write_fixtures -- --ignored` en src-tauri).
 
-import type { Album, AlbumDetail, ArtistPage, Entry, LibTrack, PlaylistSummary, SavedAlbum, SavedArtist, SearchResults } from '../lib/types'
+import type { Album, AlbumDetail, Artist, ArtistPage, Discovery, Entry, LibTrack, PlaylistSummary, SavedAlbum, SavedArtist, SearchResults, PodcastProgress } from '../lib/types'
 import { YOUTUBE_BASE } from '../lib/media'
 import album1 from './fixtures/album-1.json'
 import album2 from './fixtures/album-2.json'
@@ -10,9 +10,42 @@ import album3 from './fixtures/album-3.json'
 import album4 from './fixtures/album-4.json'
 import artistPage from './fixtures/artist.json'
 import searchResults from './fixtures/search.json'
+import recommendations from './fixtures/recommendations.json'
 import { podcastFixture, podcastFixtures } from './podcasts'
 
 const albums = [album1, album2, album3, album4] as unknown as AlbumDetail[]
+
+interface SuggestionFixture {
+  discovery: { albums: number[]; artists: number[] }
+  related: Record<number, number[]>
+  artists: Record<number, Artist>
+  artistAlbums: Record<number, number[]>
+  albums: Record<number, AlbumDetail & { fans: number }>
+}
+
+const suggestions = recommendations as unknown as SuggestionFixture
+const suggestionScenario = new URLSearchParams(location.search).get('suggestions')
+
+function suggestedAlbum(id: number): Album {
+  const album = suggestions.albums[id]
+  if (!album) throw new Error('No se encuentra este disco de ejemplo')
+  return {
+    id: album.id, title: album.title, coverMedium: album.coverBig, coverXl: album.coverXl,
+    releaseDate: album.releaseDate, recordType: album.recordType, nbTracks: album.tracks.length,
+    explicitLyrics: album.explicitLyrics, fans: album.fans, artist: album.artist,
+  }
+}
+
+function suggestedArtistPage(id: number): ArtistPage {
+  const artist = suggestions.artists[id]
+  if (!artist) throw new Error('No se encuentra este artista de ejemplo')
+  return { artist, albums: (suggestions.artistAlbums[id] ?? []).map(suggestedAlbum), top: [] }
+}
+
+function savedPodcastProgress(): Record<number, PodcastProgress> {
+  try { return JSON.parse(localStorage.getItem('pletina:dev:podcast-progress') ?? '{}') }
+  catch { return {} }
+}
 
 /** Música local de ejemplo: los mismos discos, con ids locales. */
 const LOCAL_BASE = 1_000_000_000_000_000
@@ -94,6 +127,13 @@ const playlists = new Map<number, { name: string; tracks: LibTrack[] }>([
 ])
 const history = entries([...[0, 1, 2].map((i) => lib(albums[2], i)), ...[3, 4].map((i) => lib(albums[3], i)), lib(albums[1], 0)], 1500)
 
+if (suggestionScenario === 'empty') {
+  liked.clear()
+  saved.splice(0)
+  playlists.clear()
+  history.splice(0)
+}
+
 function summary(id: number): PlaylistSummary {
   const p = playlists.get(id)!
   return {
@@ -151,6 +191,9 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
   // Tauri cruza una frontera JSON. Evita guardar proxies de $state en el backend de prueba.
   args = JSON.parse(JSON.stringify(args))
   await wait(cmd === 'resolve' ? 600 : 120)
+  if (suggestionScenario === 'error' && ['discovery', 'artist_albums', 'related_artists'].includes(cmd)) {
+    throw new Error('Sin conexión al catálogo de sugerencias (vista previa).')
+  }
   const out = ((): unknown => {
     switch (cmd) {
       case 'preview_youtube_track': {
@@ -205,6 +248,16 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
       case 'podcast_detail':
         if (podcastPreviewError('podcastDetailError')) throw new Error('No se pudo conectar con este pódcast (vista previa).')
         return podcastFixture(args.feedUrl)
+      case 'podcast_progress': {
+        const progress = savedPodcastProgress()
+        return args.ids.map((id: number) => progress[id]).filter(Boolean)
+      }
+      case 'save_podcast_progress': {
+        const progress = savedPodcastProgress()
+        progress[args.progress.id] = args.progress
+        localStorage.setItem('pletina:dev:podcast-progress', JSON.stringify(progress))
+        return
+      }
       case 'podcast_feed_url': {
         const podcast = podcastFixtures.find((p) => p.id === args.id)
         if (!podcast) throw new Error('No se encuentra este podcast de ejemplo')
@@ -228,9 +281,19 @@ export async function mockInvoke<T>(cmd: string, args: any = {}): Promise<T> {
           scanning: false,
         }
       case 'artist':
-        return artistPage as unknown as ArtistPage
+        return args.id === artistPage.artist.id || !suggestions.artists[args.id]
+          ? artistPage as unknown as ArtistPage : suggestedArtistPage(args.id)
       case 'album':
-        return albums.find((a) => a.id === args.id) ?? albums[0]
+        return albums.find((a) => a.id === args.id) ?? suggestions.albums[args.id] ?? albums[0]
+      case 'discovery':
+        return {
+          albums: suggestions.discovery.albums.map(suggestedAlbum),
+          artists: suggestions.discovery.artists.map((id) => suggestions.artists[id]),
+        } satisfies Discovery
+      case 'artist_albums':
+        return (suggestions.artistAlbums[args.id] ?? []).map(suggestedAlbum)
+      case 'related_artists':
+        return (suggestions.related[args.id] ?? []).map((id) => suggestions.artists[id])
       case 'resolve':
       case 'choose_source':
         return { videoId: 'preview', url: silentAudio(), title: '', channel: '', local: false }

@@ -24,8 +24,11 @@ export const item = (id = 1) => ({
 })
 export const playable = (id = 1, local = false) => ({ url: local ? `/music/${id}.mp3` : `https://audio.test/${id}`, local })
 
-export function harness({ resolve = async (track) => playable(track.id), play, mediaSession, metadata } = {}) {
+export function harness({ resolve = async (track) => playable(track.id), play, mediaSession, metadata,
+  progress = new Map(), duration = () => 180, inTauri = false, flushProgress = async () => {} } = {}) {
   const audios = [], messages = [], resolutions = [], sources = [], records = []
+  const events = new EventTarget()
+  let closeHandler, destroyed = false
   const timers = new Map()
   let now = 0, timerId = 0, stopped = 0
   class Audio extends EventTarget {
@@ -38,6 +41,11 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     loads = 0
     constructor() { super(); audios.push(this) }
     play() {
+      if (!Number.isFinite(this.duration)) {
+        this.duration = duration(this)
+        this.dispatchEvent(new Event('loadedmetadata'))
+        this.dispatchEvent(new Event('durationchange'))
+      }
       if (play) return play(this)
       this.paused = false
       this.dispatchEvent(new Event('playing'))
@@ -54,7 +62,11 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
   const modules = {
     'svelte/internal/client': svelte,
     '@tauri-apps/api/core': { convertFileSrc: (path) => `asset://${path}` },
+    '@tauri-apps/api/window': { getCurrentWindow: () => ({
+      onCloseRequested: async (fn) => { closeHandler = fn }, destroy: async () => { destroyed = true },
+    }) },
     './api': {
+      inTauri,
       resolve: (track, refresh) => { resolutions.push([track.id, refresh]); return resolve(track, refresh) },
       chooseSource: (track) => resolve(track, true),
       recordPlay: async (item) => { records.push(item.track.id) },
@@ -65,7 +77,12 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
       setAudioSource: (audio, src) => { audio.src = src; sources.push(src) },
     },
     './library.svelte': { library: { historyVersion: 0 }, toLib: (value) => value },
-    './media': { isPodcast: () => false, isYouTubeTrack: () => false, mediaUrl: (value) => value },
+    './media': { isPodcast: (id) => id >= 500_000_000_000_000 && id < 1_000_000_000_000_000,
+      isYouTubeTrack: () => false, mediaUrl: (value) => value },
+    './podcast-progress.svelte': { episodeProgress: {
+      position: async (id) => progress.get(id)?.completed ? 0 : progress.get(id)?.position ?? 0,
+      save: async (value) => { progress.set(value.id, { ...value }) }, flush: flushProgress,
+    } },
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
     './player-android.svelte': { isAndroid: false },
     './queue': {
@@ -75,14 +92,17 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     },
   }
   const exports = {}
-  new Function('require', 'exports', 'Audio', 'navigator', 'MediaMetadata', 'setTimeout', 'clearTimeout', compiled)(
+  new Function('require', 'exports', 'Audio', 'navigator', 'MediaMetadata', 'setTimeout', 'clearTimeout', 'window', 'document', compiled)(
     (name) => { assert.ok(name in modules, `Unmocked dependency: ${name}`); return modules[name] },
     exports, Audio, mediaSession ? { mediaSession } : {}, metadata,
     (fn, delay) => { const id = ++timerId; timers.set(id, { at: now + delay, fn }); return id },
     (id) => timers.delete(id),
+    events, events,
   )
   return {
     player: exports.player, audios, messages, resolutions, sources, records, timers,
+    progress, events, get audio() { return audios.at(-1) },
+    get destroyed() { return destroyed }, close: (event) => closeHandler(event),
     get stopped() { return stopped },
     async advance(ms) {
       await flush()

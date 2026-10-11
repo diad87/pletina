@@ -73,7 +73,15 @@
         </button>
         <DownloadButton {items} />
       </div>
-      <TrackList {items} variant="list" context="Canciones que te gustan" metaLabel="Añadida" meta={(i) => shortDate(entries![i].at)} />
+      <TrackList
+        {items}
+        variant="list"
+        context="Canciones que te gustan"
+        searchable
+        searchLabel="Buscar en Canciones que te gustan"
+        metaLabel="Añadida"
+        meta={(i) => shortDate(entries![i].at)}
+      />
     {:else}
       <div class="empty-state">
         <Icon name="heart" size={48} />

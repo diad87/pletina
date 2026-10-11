@@ -199,6 +199,17 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
   - buscar dice «Sin conexión».
 - **Falta:** la música guardada en el teléfono (`MediaStore`) y, quizá, descargar solo con wifi.
 
+## Reanudar podcasts: comprobación del servicio Android
+
+**Prueba inicial del 10 de octubre de 2026 en el emulador Android 15 (API 35, x86_64):** 11 casos correctos con el servicio `PlaybackService`, JNI y SQLite reales, antes de integrar los cambios sobre la 0.10.1. La app de prueba usa el identificador independiente `dev.musify.desktop.resumeqa` y dos episodios con audio WAV servido dentro del emulador.
+
+- Cada episodio conserva su posición al pausar, buscar y cambiar de episodio. Tras 48 saltos rápidos entre dos episodios se mantienen sus puntos separados, de 23 y 45 segundos.
+- Buscar a cero sustituye el punto anterior. Llegar al final marca el episodio como escuchado; seleccionarlo de nuevo empieza desde cero.
+- Con la Activity detenida y la pantalla apagada (`Wakefulness=Asleep`, `mScreenState=OFF` antes y después), el audio avanza de 51,353 a 63,333 segundos durante 12 segundos. El servicio sigue guardando en SQLite cada 5 segundos.
+- Tras forzar el cierre y abrir un proceso nuevo, recupera la cola en pausa exactamente en 63,307 segundos. Al reproducir, el audio continúa desde ese punto.
+
+Esta prueba cubre la reproducción nativa y la persistencia con audio RSS controlado. Quedan fuera el teléfono físico, las restricciones de batería de cada fabricante, la selección de audio en YouTube y el botón de la interfaz que repite un episodio acabado. El estrés de cambios rápidos comprueba que los puntos se conservan, pero no fuerza un orden concreto de las lecturas pendientes.
+
 ## Pruebas antes de darla por buena
 
 | Prueba | Tiene que pasar |

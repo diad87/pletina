@@ -77,6 +77,11 @@ export interface SearchResults {
   localAlbums: Album[]
 }
 
+export interface Discovery {
+  albums: Album[]
+  artists: Artist[]
+}
+
 /** Catálogo de podcasts y episodios publicados en sus fuentes RSS. */
 export interface Podcast {
   id: number
@@ -110,6 +115,13 @@ export interface PodcastSearchResults {
 export interface PodcastDetail {
   podcast: Podcast
   episodes: PodcastEpisode[]
+}
+
+export interface PodcastProgress {
+  id: number
+  position: number
+  duration: number
+  completed: boolean
 }
 
 /** Tu música local (carpetas importadas). */

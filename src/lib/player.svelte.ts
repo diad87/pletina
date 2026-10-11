@@ -1,10 +1,12 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { setAudioSource, stopCapture } from './extractor/capture'
 import { library, toLib } from './library.svelte'
 import { isPodcast, isYouTubeTrack, mediaUrl } from './media'
 import { toast } from './toast.svelte'
+import { episodeProgress } from './podcast-progress.svelte'
 import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import type { Playable } from './types'
@@ -90,10 +92,32 @@ class Player implements PlayerApi {
   /** Si la canción actual ya se apuntó en el historial. */
   #recorded = false
   #nextKey = 1
+  // La cola visible puede cambiar antes de sustituir el audio que todavía suena.
+  #activeItem: QueueItem | null = null
+  #progressSavedAt = 0
+  #completed = false
+  #resumeAt = 0
+  #requestedSeek: number | null = null
+  #metadataReady = false
+  #positionKnown = false
 
   constructor() {
     this.#audio = this.#createAudio()
     this.#setupMediaSession()
+    window.addEventListener('pagehide', () => this.#saveProgress(true))
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.#saveProgress(true)
+    })
+    if (api.inTauri) {
+      const win = getCurrentWindow()
+      void win.onCloseRequested(async (event) => {
+        event.preventDefault()
+        this.#pause()
+        this.#saveProgress(true)
+        await episodeProgress.flush()
+        await win.destroy()
+      }).catch(() => {})
+    }
   }
 
   /** Un elemento por carga: los eventos tardíos de una canción anterior se ignoran. */
@@ -108,6 +132,17 @@ class Player implements PlayerApi {
       this.time = a.currentTime
       this.#watchProgress()
       this.#maybeRecord()
+      this.#saveProgress()
+    })
+    a.addEventListener('loadedmetadata', () => {
+      if (a !== this.#audio) return
+      this.#metadataReady = true
+      if (!this.#resumeAt) return
+      // YouTube y RSS pueden tener duraciones distintas; conservar los segundos sin salir del audio.
+      a.currentTime = Number.isFinite(a.duration) && a.duration > 0
+        ? Math.min(this.#resumeAt, Math.max(0, a.duration - 1)) : this.#resumeAt
+      this.time = a.currentTime
+      this.#resumeAt = 0
     })
     a.addEventListener('durationchange', () => {
       if (a !== this.#audio) return
@@ -121,6 +156,7 @@ class Player implements PlayerApi {
       }
       if (a.paused || a.error) return
       this.status = 'playing'
+      this.#requestedSeek = null
       this.#failures = 0
       this.#watchProgress()
       this.#syncPosition()
@@ -130,18 +166,23 @@ class Player implements PlayerApi {
       if (a !== this.#audio || !a.paused) return
       this.#clearProgressTimer()
       if (this.status === 'playing') this.status = 'paused'
+      this.#saveProgress(true)
       this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
     })
     a.addEventListener('seeked', () => {
       if (a !== this.#audio) return
       this.#syncPosition()
       this.#watchProgress()
+      this.#saveProgress(true)
     })
     a.addEventListener('ended', () => {
       if (a !== this.#audio || !this.#wantsPlay || this.status === 'loading') return
       this.#clearProgressTimer()
+      this.#completed = true
+      this.#saveProgress(true)
       if (this.repeat === 'one') {
         this.#recorded = false
+        this.#completed = false
         a.currentTime = 0
         this.time = 0
         this.#resume()
@@ -159,6 +200,8 @@ class Player implements PlayerApi {
     this.#audio = this.#createAudio()
     this.#sourceLocal = true
     this.#playable = null
+    this.#metadataReady = false
+    this.#resumeAt = 0
     stopCapture()
     previous.pause()
     previous.removeAttribute('src')
@@ -271,6 +314,7 @@ class Player implements PlayerApi {
     if (this.#audio.src) this.time = Math.max(this.time, this.#audio.currentTime)
     this.#audio.pause()
     this.status = 'paused'
+    this.#saveProgress(true)
   }
 
   async #resume() {
@@ -278,7 +322,7 @@ class Player implements PlayerApi {
     if (!item || this.#wantsPlay && this.status === 'loading') return
     this.#wantsPlay = true
     this.#repaired = false
-    if (!this.#audio.src || this.status === 'idle') {
+    if (!this.#audio.src || this.status === 'idle' || !this.#activeItem) {
       this.#start(item, false, this.time, true)
       return
     }
@@ -308,6 +352,9 @@ class Player implements PlayerApi {
       this.#load(0)
     } else {
       // Fin de la cola: se queda parado al principio de la última canción.
+      this.#saveProgress(true)
+      this.#activeItem = null
+      this.#positionKnown = false
       if (this.status === 'loading') {
         this.#wantsPlay = false
         ++this.#token
@@ -331,10 +378,23 @@ class Player implements PlayerApi {
   }
 
   seek(seconds: number) {
+    this.#completed = false
+    this.#positionKnown = true
+    if (this.status === 'loading') {
+      this.#requestedSeek = seconds
+      this.time = seconds
+      if (this.#activeItem && this.#metadataReady) {
+        this.#resumeAt = 0
+        this.#audio.currentTime = seconds
+      } else this.#resumeAt = seconds
+      return
+    }
+    this.#resumeAt = 0
     this.#audio.currentTime = seconds
     this.time = seconds
     this.#clearProgressTimer()
     this.#watchProgress()
+    this.#saveProgress(true)
   }
 
   setVolume(v: number) {
@@ -458,6 +518,13 @@ class Player implements PlayerApi {
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
+    this.#saveProgress(true)
+    this.#activeItem = null
+    const restore = !refresh && (!preserveHistory || !this.#positionKnown)
+    if (!preserveHistory && !refresh) {
+      this.#requestedSeek = null
+      this.#positionKnown = false
+    }
     const token = ++this.#token
     this.#wantsPlay = true
     if (!refresh) this.#repaired = false
@@ -470,16 +537,23 @@ class Player implements PlayerApi {
       this.#resetAudio()
       this.#updateMediaSession(item)
       this.#retried = refresh
-      const playable = await this.#resolve(item, refresh)
+      const [playable, savedAt] = await Promise.all([
+        this.#resolve(item, refresh),
+        restore && isPodcast(item.track.id)
+          ? episodeProgress.position(item.track.id).catch(() => {
+              toast.show('No se pudo recuperar el punto de escucha del pódcast')
+              return 0
+            }) : Promise.resolve(startAt),
+      ])
       if (token !== this.#token) return
-      await this.#playAudio(playable, startAt)
+      await this.#playAudio(playable, savedAt)
       if (token !== this.#token) return
       this.#prefetchNext()
     } catch (e) {
       // Un AbortError de esta carga también es un fallo; solo se ignoran las cargas sustituidas.
       if (token !== this.#token) return
       if (this.#canRefreshSource()) {
-        this.#start(item, true, startAt)
+        this.#start(item, true, this.#requestedSeek ?? this.time)
         return
       }
       this.#fail(item, String(e), token)
@@ -488,11 +562,31 @@ class Player implements PlayerApi {
 
   async #playAudio(playable: Playable, startAt = 0) {
     const a = this.#audio
+    this.#activeItem = this.current
+    this.#completed = false
+    this.#progressSavedAt = Date.now()
+    this.#positionKnown = true
+    this.#metadataReady = false
+    this.#resumeAt = this.#requestedSeek ?? startAt
+    this.time = this.#resumeAt
     this.#sourceLocal = playable.local
     this.#playable = playable
     setAudioSource(a, audioSrc(playable))
-    if (startAt) a.currentTime = startAt
     await this.#playElement(a)
+  }
+
+  #saveProgress(force = false) {
+    const item = this.#activeItem
+    const audio = this.#audio
+    if (!item || !isPodcast(item.track.id) || !this.#metadataReady || this.status === 'loading' || this.#resumeAt) return
+    if (!Number.isFinite(audio.currentTime) || (!force && Date.now() - this.#progressSavedAt < 5000)) return
+    this.#progressSavedAt = Date.now()
+    void episodeProgress.save({
+      id: item.track.id,
+      position: audio.currentTime,
+      duration: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0,
+      completed: this.#completed,
+    })
   }
 
   async #playElement(a: HTMLAudioElement) {
@@ -546,6 +640,7 @@ class Player implements PlayerApi {
       return
     }
     this.#repaired = true
+    this.#saveProgress(true)
     const token = ++this.#token
     this.time = at
     this.status = 'loading'
@@ -600,6 +695,7 @@ class Player implements PlayerApi {
 
   #fail(item: QueueItem, reason: string, token: number, advance = true) {
     if (token !== this.#token) return
+    this.#saveProgress(true)
     ++this.#token
     this.#wantsPlay = false
     this.#resetAudio()

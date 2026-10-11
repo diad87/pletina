@@ -140,6 +140,33 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_recordPlay<'l>(
     to_java(&mut env, out.err().unwrap_or_default())
 }
 
+/// Posición por episodio; estas dos llamadas también funcionan con la interfaz suspendida.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_podcastProgress<'l>(
+    mut env: JNIEnv<'l>, _class: JClass<'l>, id: jlong,
+) -> jstring {
+    let out = core().and_then(|core| crate::podcast_progress::read(&core.db, id as u64));
+    let out = match out {
+        Ok(progress) => serde_json::to_value(progress).unwrap_or(Value::Null),
+        Err(error) => json!({ "error": error }),
+    };
+    to_java(&mut env, out.to_string())
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_musify_desktop_MusifyCore_savePodcastProgress<'l>(
+    mut env: JNIEnv<'l>, _class: JClass<'l>, progress: JString<'l>,
+) -> jstring {
+    let progress = from_java(&mut env, &progress);
+    let out = (|| {
+        let progress = serde_json::from_str(&progress).map_err(|e| format!("progreso no válido: {e}"))?;
+        let saved = crate::podcast_progress::save(&core()?.db, progress)?;
+        if let Some(app) = APP.get() { let _ = app.emit("podcast-progress", saved); }
+        Ok::<_, String>(())
+    })();
+    to_java(&mut env, out.err().unwrap_or_default())
+}
+
 /// `MusifyCore.emit(event, json)`: un aviso del servicio a la interfaz (si la app está abierta).
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_dev_musify_desktop_MusifyCore_emit<'l>(

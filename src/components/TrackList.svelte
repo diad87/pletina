@@ -2,7 +2,7 @@
   // Lista de canciones: la de un disco, favoritas, una playlist o el historial.
   import { trackMenu } from '../lib/actions'
   import { downloads } from '../lib/downloads.svelte'
-  import { duration } from '../lib/format'
+  import { duration, songs } from '../lib/format'
   import { layout } from '../lib/layout.svelte'
   import { reorder } from '../lib/reorder'
   import { library } from '../lib/library.svelte'
@@ -27,20 +27,46 @@
     meta?: (index: number) => string
     /** De dónde vienen (nombre del disco, de la playlist…), para la cola. */
     context?: string
+    /** Busca dentro de esta lista sin cambiar la cola ni los índices de sus entradas. */
+    searchable?: boolean
+    searchLabel?: string
+    query?: string
   }
 
-  let { items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta, context = '' }: Props =
-    $props()
+  let {
+    items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta, context = '',
+    searchable = false, searchLabel = 'Buscar en esta lista', query = $bindable(''),
+  }: Props = $props()
 
-  const isCurrent = (item: QueueItem) => player.current?.track.id === item.track.id
+  let searchInput: HTMLInputElement | undefined = $state()
+  const searchId = $props.id()
+  const normalize = (value: string) => value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('es')
+  const words = $derived(searchable ? normalize(query).trim().split(/\s+/).filter(Boolean) : [])
+  const filtering = $derived(searchable && query.trim().length > 0)
+  const rows = $derived(items.map((item, index) => ({
+    item,
+    index,
+    text: searchable ? normalize(`${item.track.title} ${item.track.artist.name}`) : '',
+  })))
+  const visibleRows = $derived(words.length ? rows.filter((row) => words.every((word) => row.text.includes(word))) : rows)
+  const sameQueue = $derived(searchable && player.context === context && player.queue.length === items.length &&
+    player.queue.every((item, i) => item.track.id === items[i].track.id))
+  // Comparamos entradas de la propia cola: dos apariciones de una canción siguen siendo distintas.
+  const isCurrent = (item: QueueItem, index: number) => player.current?.track.id === item.track.id &&
+    (!searchable || (sameQueue && player.current === player.queue[index]))
   const disc = (i: number) => items[i].track.diskNumber || 1
   const multiDisc = $derived(variant === 'album' && items.some((_, i) => disc(i) !== disc(0)))
-  const reorderable = $derived(playlistId != null && entryIds != null)
+  const reorderable = $derived(playlistId != null && entryIds != null && !filtering)
   const hasPodcasts = $derived(items.some((item) => isPodcast(item.track.id)))
 
   function play(i: number) {
-    if (isCurrent(items[i])) player.toggle()
+    if (isCurrent(items[i], i)) player.toggle()
     else player.playQueue(items, i, context)
+  }
+
+  function clearSearch() {
+    query = ''
+    searchInput?.focus()
   }
 
   function openMenu(e: MouseEvent, i: number) {
@@ -63,7 +89,7 @@
   let dropAt = $state<number | null>(null)
 
   function onDragOver(e: DragEvent, i: number) {
-    if (dragFrom === null) return
+    if (!reorderable || dragFrom === null) return
     e.preventDefault()
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
     dropAt = e.clientY < r.top + r.height / 2 ? i : i + 1
@@ -71,7 +97,7 @@
 
   function onDrop(e: DragEvent) {
     e.preventDefault()
-    if (dragFrom !== null && dropAt !== null && playlistId != null && entryIds) {
+    if (reorderable && dragFrom !== null && dropAt !== null && playlistId != null && entryIds) {
       const to = dropAt > dragFrom ? dropAt - 1 : dropAt
       if (to !== dragFrom) library.moveInPlaylist(playlistId, entryIds[dragFrom], to)
     }
@@ -79,13 +105,48 @@
   }
 </script>
 
+{#if searchable}
+  <div class="list-search">
+    <div class="search-field">
+      <Icon name="search" size={19} />
+      <input
+        bind:this={searchInput}
+        bind:value={query}
+        type="search"
+        placeholder="Buscar canción o artista"
+        aria-label={searchLabel}
+        aria-controls={`${searchId}-tracks`}
+        aria-describedby={`${searchId}-count`}
+        autocomplete="off"
+        spellcheck="false"
+        onkeydown={(e) => {
+          if (e.key === 'Escape' && query) {
+            e.preventDefault()
+            e.stopPropagation()
+            clearSearch()
+          }
+        }}
+      />
+      {#if query}
+        <button class="clear-search" aria-label="Limpiar búsqueda" title="Limpiar búsqueda" onclick={clearSearch}>
+          <Icon name="close" size={18} />
+        </button>
+      {/if}
+    </div>
+    <p id={`${searchId}-count`} class="search-count" role="status" aria-atomic="true">
+      {filtering ? `${visibleRows.length} de ${songs(items.length)}` : songs(items.length)}
+    </p>
+  </div>
+{/if}
+
 <ol
+  id={`${searchId}-tracks`}
   class="tracks {variant}"
   class:with-meta={!!meta}
   class:grips={reorderable && layout.mobile}
   use:reorder={{
     enabled: reorderable && layout.mobile,
-    onMove: (from, to) => playlistId != null && entryIds && library.moveInPlaylist(playlistId, entryIds[from], to),
+    onMove: (from, to) => reorderable && playlistId != null && entryIds && library.moveInPlaylist(playlistId, entryIds[from], to),
   }}
 >
   <li class="row head">
@@ -98,15 +159,15 @@
     <span></span>
   </li>
 
-  {#each items as item, i (entryIds?.[i] ?? `${item.track.id}-${i}`)}
-    {@const current = isCurrent(item)}
+  {#each visibleRows as { item, index: i }, visibleIndex (entryIds?.[i] ?? `${item.track.id}-${i}`)}
+    {@const current = isCurrent(item, i)}
     {@const podcast = isPodcast(item.track.id)}
     {@const youtube = isYouTubeTrack(item.track.id)}
     {@const liked = library.liked.has(item.track.id)}
     {@const downloaded = downloads.done.has(item.track.id)}
     {@const progress = downloads.active.get(item.track.id)}
     {@const showArtist = variant === 'list' || item.track.artist.id !== albumArtistId}
-    {#if multiDisc && (i === 0 || disc(i) !== disc(i - 1))}
+    {#if multiDisc && (visibleIndex === 0 || disc(i) !== disc(visibleRows[visibleIndex - 1].index))}
       <li class="disc">Disco {disc(i)}</li>
     {/if}
     <li data-reorder-index={i}>
@@ -196,7 +257,82 @@
   {/each}
 </ol>
 
+{#if filtering && !visibleRows.length}
+  <div class="search-empty">
+    <Icon name="search" size={32} />
+    <strong>No hay coincidencias para «{query.trim()}»</strong>
+    <p>Prueba con otra canción o artista.</p>
+    <button class="pill" onclick={clearSearch}>Ver todas las canciones</button>
+  </div>
+{/if}
+
 <style>
+  .list-search {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin: 0 16px 16px;
+  }
+  .search-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: min(100%, 360px);
+    min-height: 44px;
+    padding-left: 13px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-2);
+    color: var(--muted);
+  }
+  .search-field:focus-within {
+    border-color: var(--accent);
+    outline: 1px solid var(--accent);
+  }
+  .search-field input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+  }
+  .search-field input::placeholder { color: var(--muted); }
+  .search-field input::-webkit-search-cancel-button { display: none; }
+  .clear-search {
+    display: grid;
+    place-items: center;
+    align-self: stretch;
+    flex: none;
+    width: 44px;
+    border-radius: 6px;
+    color: var(--muted);
+  }
+  .clear-search:hover { color: var(--text); }
+  .search-count {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 36px 16px;
+    color: var(--muted);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .search-empty strong { color: var(--text); }
+  .search-empty p { margin: 0 0 8px; }
   .tracks {
     list-style: none;
     margin: 8px 0 0;
@@ -401,6 +537,9 @@
 
   /* Móvil: título y artista, y el botón "⋯" siempre visible. */
   @media (max-width: 720px) {
+    .list-search { margin: 0 4px 12px; gap: 8px; }
+    .search-field { width: 100%; }
+    .search-field input { font-size: 16px; }
     .head,
     .row > .num,
     .row > .album,
