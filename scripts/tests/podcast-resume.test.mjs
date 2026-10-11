@@ -155,6 +155,20 @@ test('window close waits for the final checkpoint before destroying the window',
   assert.equal(h.destroyed, true)
 })
 
+test('window close does not hang when the final checkpoint never finishes', async () => {
+  const a = episode(1)
+  const h = setup({ inTauri: true, flushProgress: () => new Promise(() => {}) })
+  h.player.playQueue([a], 0)
+  await flush()
+  progress(h.audio, 74)
+  const close = h.close({ preventDefault() {} })
+  await h.advance(1_000)
+  assert.equal(h.destroyed, false)
+  await h.advance(600)
+  await close
+  assert.equal(h.destroyed, true)
+})
+
 test('startup URL renewal retains the restored podcast position', async () => {
   const pending = deferred(), a = episode(1)
   let attempts = 0

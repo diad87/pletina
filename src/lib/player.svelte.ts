@@ -17,6 +17,8 @@ export { toQuery, type QueueItem, type Repeat }
 const MAX_FAILURES = 3
 const RESOLVE_TIMEOUT = 120_000
 const AUDIO_TIMEOUT = 30_000
+/** Lo que espera el cierre de la ventana a que se guarde el punto del pódcast. */
+const CLOSE_TIMEOUT = 1_500
 
 /** También limita las promesas del navegador que no llegan a resolver ni rechazar. */
 function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promise<T> {
@@ -112,10 +114,14 @@ class Player implements PlayerApi {
       const win = getCurrentWindow()
       void win.onCloseRequested(async (event) => {
         event.preventDefault()
-        this.#pause()
-        this.#saveProgress(true)
-        await episodeProgress.flush()
-        await win.destroy()
+        try {
+          this.#pause()
+          this.#saveProgress(true)
+          // Si la base de datos no responde, se cierra igual: como mucho se pierde el último punto.
+          await withTimeout(episodeProgress.flush(), CLOSE_TIMEOUT, 'cierre').catch(() => {})
+        } finally {
+          await win.destroy()
+        }
       }).catch(() => {})
     }
   }

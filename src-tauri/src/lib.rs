@@ -275,8 +275,19 @@ pub fn run() {
         // Al cerrar la ventana principal se cierra la app, aunque el motor propio tenga abierta su
         // ventana oculta con YouTube Music.
         .on_window_event(|window, event| {
-            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
-                window.app_handle().exit(0);
+            if window.label() != "main" { return; }
+            match event {
+                // La interfaz guarda el punto del pódcast y cierra ella misma; si está colgada y no
+                // contesta, la ventana se cierra igual.
+                tauri::WindowEvent::CloseRequested { .. } => {
+                    let window = window.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        let _ = window.destroy();
+                    });
+                }
+                tauri::WindowEvent::Destroyed => window.app_handle().exit(0),
+                _ => {}
             }
         })
         .build(tauri::generate_context!())

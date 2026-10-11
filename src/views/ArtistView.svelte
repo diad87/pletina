@@ -212,9 +212,9 @@
     </div>
 
     {#if isRadioArtist(data.artist.id)}
-      <p id="artist-radio-status" class="radio-status" class:error={radioError} role="status" aria-atomic="true">
-        {radioMessage || 'Una mezcla de hasta 45 canciones de este artista y otros similares.'}
-      </p>
+      <!-- Vacío hasta pulsar la radio (el botón ya lo explica al pasar el ratón); sigue en la
+           página para que el lector de pantalla anuncie el resultado. -->
+      <p id="artist-radio-status" class="radio-status" class:error={radioError} role="status" aria-atomic="true">{radioMessage}</p>
     {/if}
 
     {#if top.length}
@@ -277,6 +277,7 @@
   .radio :global(svg) { flex: none; }
   .radio-status { margin: -8px 16px 24px; color: var(--muted); font-size: 13px; }
   .radio-status.error { color: #ffb4a8; }
+  .radio-status:empty { margin: 0; }
 
   /* Cabecera con la foto del artista a todo lo ancho, fundida con el color de la página. */
   .banner {
