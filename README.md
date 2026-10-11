@@ -16,6 +16,10 @@ El botón de la chincheta en un disco o una playlist permite **Fijar en Inicio**
 
 Si aún no tienes gustos guardados, muestra discos y artistas populares de Deezer. La selección se calcula en tu equipo, sin cuenta de Spotify; al catálogo se le piden listas populares, discos y artistas relacionados. Puedes abrir y reproducir los discos desde sus tarjetas. Si falla la conexión, Inicio conserva tus accesos habituales y permite reintentar los sugeridos.
 
+### Radio de artista
+
+En la ficha de un artista del catálogo, **Radio de…** prepara una mezcla de hasta 45 canciones suyas y de artistas similares. Alterna artistas y evita repetir una canción o una grabación con el mismo ISRC. La selección entra en la cola habitual, conservando las canciones que habías añadido manualmente; puedes preparar otra mezcla cuando quieras. Necesita conexión para consultar el catálogo y avisa si alguna fuente falla. Es una selección finita, no una emisión continua.
+
 ![Inicio](docs/screenshots/inicio.png)
 
 | | |

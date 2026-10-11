@@ -39,7 +39,20 @@ function suggestedAlbum(id: number): Album {
 function suggestedArtistPage(id: number): ArtistPage {
   const artist = suggestions.artists[id]
   if (!artist) throw new Error('No se encuentra este artista de ejemplo')
-  return { artist, albums: (suggestions.artistAlbums[id] ?? []).map(suggestedAlbum), top: [] }
+  const albumIds = suggestions.artistAlbums[id] ?? []
+  const seen = new Set<number>()
+  const top = albumIds.flatMap((albumId) => {
+    const album = suggestions.albums[albumId]
+    return (album?.tracks ?? []).filter((track) => {
+      if (track.artist.id !== id || seen.has(track.id)) return false
+      seen.add(track.id)
+      return true
+    }).map((track) => ({
+      ...track,
+      album: { id: album.id, title: album.title, coverMedium: album.coverBig, coverBig: album.coverBig },
+    }))
+  }).slice(0, 10)
+  return { artist, albums: albumIds.map(suggestedAlbum), top }
 }
 
 function savedPodcastProgress(): Record<number, PodcastProgress> {
