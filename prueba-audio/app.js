@@ -22,7 +22,7 @@
     return {
       schema: 'pletina-screen-off-1', createdAt: Date.now(),
       environment: {
-        build: '8db30f4c37cea83c',
+        build: 'd4f9611d0b371a3e',
         userAgent: navigator.userAgent, platform: navigator.platform,
         origin: location.origin, path: location.pathname, standalone: isStandalone(),
         secureContext: window.isSecureContext, mediaSession: 'mediaSession' in navigator,
@@ -42,6 +42,7 @@
     return {
       slot, phase, hidden: document.hidden, time: finite(audio.currentTime),
       duration: finite(audio.duration), paused: audio.paused, ended: audio.ended,
+      muted: audio.muted, volume: finite(audio.volume),
       readyState: audio.readyState, networkState: audio.networkState,
       mediaError: audio.error?.code || null,
       audioSessionType: navigator.audioSession?.type || null,
