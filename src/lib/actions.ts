@@ -157,7 +157,7 @@ export async function playAlbum(albumId: number) {
   if (player.current?.albumId === albumId && player.status !== 'idle') return player.toggle()
   try {
     const album = await api.album(albumId)
-    player.playQueue(albumQueue(album), 0, album.title)
+    player.playQueue(albumQueue(album), null, album.title)
   } catch (e) {
     toast.show(`No se pudo abrir el disco: ${e}`)
   }

@@ -139,7 +139,7 @@
     <Status />
   {:else if items.length}
     <div class="actions">
-      <button class="big-play" title="Reproducir canciones de YouTube" onclick={() => player.playQueue(items, 0, 'Canciones de YouTube')}>
+      <button class="big-play" title="Reproducir canciones de YouTube" onclick={() => player.playQueue(items, null, 'Canciones de YouTube')}>
         <Icon name="play" size={26} />
       </button>
       <DownloadButton {items} />

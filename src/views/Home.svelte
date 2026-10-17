@@ -116,12 +116,12 @@
 
   async function playLiked() {
     const entries = await api.likedTracks()
-    if (entries.length) player.playQueue(entries.map((e) => fromLib(e.track)), 0, 'Canciones que te gustan')
+    if (entries.length) player.playQueue(entries.map((e) => fromLib(e.track)), null, 'Canciones que te gustan')
   }
 
   async function playPlaylist(id: number) {
     const p = await api.playlist(id)
-    if (p.entries.length) player.playQueue(p.entries.map((e) => fromLib(e.track)), 0, p.name)
+    if (p.entries.length) player.playQueue(p.entries.map((e) => fromLib(e.track)), null, p.name)
   }
 
   let choosingAlbum = $state(false)

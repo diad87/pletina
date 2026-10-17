@@ -235,12 +235,13 @@ class Player implements PlayerApi {
     this.#load(pos)
   }
 
-  /** Reproduce una lista (p. ej. un disco) empezando por la canción `start`. Tu cola se conserva. */
-  playQueue(items: QueueItem[], start: number, context = '') {
+  /** Reproduce una colección (`start = null`) o una canción concreta. Tu cola se conserva. */
+  playQueue(items: QueueItem[], start: number | null, context = '') {
+    if (!items.length) return
     this.queue = items
     this.context = context || (items.every((i) => i.albumId === items[0]?.albumId) ? (items[0]?.albumTitle ?? '') : '')
     this.order = playOrder(items.length, start, this.shuffle)
-    this.#load(this.shuffle ? 0 : start)
+    this.#load(this.shuffle ? 0 : (start ?? 0))
   }
 
   // ----- Tu cola (DJ) -----

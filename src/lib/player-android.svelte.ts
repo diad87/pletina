@@ -128,7 +128,7 @@ export class AndroidPlayer implements PlayerApi {
     }
   }
 
-  playQueue(items: QueueItem[], start: number, context = '') {
+  playQueue(items: QueueItem[], start: number | null, context = '') {
     if (!items.length) return
     const label = context || (items.every((i) => i.albumId === items[0].albumId) ? items[0].albumTitle : '')
     const entries = items.map((item, i) => this.#entry(item, false, i, label))
@@ -141,8 +141,8 @@ export class AndroidPlayer implements PlayerApi {
       list = [entries[order[0]], ...mine, ...order.slice(1).map((i) => entries[i])]
       index = 0
     } else {
-      list = [...entries.slice(0, start + 1), ...mine, ...entries.slice(start + 1)]
-      index = start
+      index = start ?? 0
+      list = [...entries.slice(0, index + 1), ...mine, ...entries.slice(index + 1)]
     }
     this.#setQueue(list, index, true)
   }

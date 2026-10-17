@@ -24,12 +24,13 @@ export function toQuery(item: QueueItem): TrackQuery {
   }
 }
 
-/** Orden de reproducción: en aleatorio, `first` primero y el resto barajado. */
-export function playOrder(length: number, first: number, shuffle: boolean): number[] {
+/** `first = null`: empieza al azar en aleatorio; un índice explícito siempre va primero. */
+export function playOrder(length: number, first: number | null, shuffle: boolean): number[] {
   const order = Array.from({ length }, (_, i) => i)
-  if (!shuffle) return order
-  const rest = order.filter((i) => i !== first)
-  return [first, ...shuffled(rest)]
+  if (!shuffle || !length) return order
+  const start = first ?? Math.floor(Math.random() * length)
+  const rest = order.filter((i) => i !== start)
+  return [start, ...shuffled(rest)]
 }
 
 export function shuffled<T>(list: T[]): T[] {
@@ -80,7 +81,8 @@ export interface PlayerApi {
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking: QueueItem | null
   playAt(pos: number): void
-  playQueue(items: QueueItem[], start: number, context?: string): void
+  /** `start = null` reproduce la colección según el modo; un índice elige esa canción. */
+  playQueue(items: QueueItem[], start: number | null, context?: string): void
   addToQueue(items: QueueItem[]): void
   playNext(items: QueueItem[]): void
   insertInQueue(items: QueueItem[], at: number): void

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Card from '../components/Card.svelte'
   import Icon from '../components/Icon.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -135,7 +136,7 @@
 
   function playTop() {
     if (isThis) player.toggle()
-    else if (top.length) player.playQueue(top, 0, data?.artist.name)
+    else if (top.length) player.playQueue(top, null, data?.artist.name)
   }
 
   $effect(() => {
@@ -184,6 +185,7 @@
       <button class="big-play" onclick={playTop} disabled={!top.length} title={playing ? 'Pausa' : 'Reproducir lo más escuchado'}>
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <ShuffleButton />
       <button
         class="favorite"
         class:on={saved}

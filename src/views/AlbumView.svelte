@@ -3,6 +3,7 @@
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
   import PinButton from '../components/PinButton.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -61,7 +62,7 @@
 
   function playAlbum() {
     if (isThisAlbum) player.toggle()
-    else player.playQueue(queue, 0, data?.title)
+    else player.playQueue(queue, null, data?.title)
   }
 
   // Botón de reproducir en la barra superior al hacer scroll.
@@ -106,6 +107,7 @@
       <button class="big-play" onclick={playAlbum} title={playing ? 'Pausa' : 'Reproducir'}>
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <ShuffleButton />
       <button
         class="action"
         class:on={saved}
@@ -132,6 +134,9 @@
 {/if}
 
 <style>
+  .actions {
+    flex-wrap: wrap;
+  }
   .credits {
     margin-top: 36px;
     padding: 0 16px;

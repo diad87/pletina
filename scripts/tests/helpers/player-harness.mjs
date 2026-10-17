@@ -11,6 +11,11 @@ const javascript = ts.transpileModule(source, { compilerOptions: { target: ts.Sc
 const compiled = ts.transpileModule(compileModule(javascript, { filename: 'player.svelte.js' }).js.code, {
   compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
 }).outputText
+const queueSource = await readFile(new URL('../../../src/lib/queue.ts', import.meta.url), 'utf8')
+const queue = {}
+new Function('exports', ts.transpileModule(queueSource, {
+  compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
+}).outputText)(queue)
 
 export const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve() }
 export const deferred = () => {
@@ -87,7 +92,7 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     './player-android.svelte': { isAndroid: false },
     './queue': {
       load: (_key, fallback) => fallback,
-      playOrder: (length) => Array.from({ length }, (_, index) => index),
+      playOrder: queue.playOrder,
       save: () => {}, toQuery: (value) => value.track,
     },
   }

@@ -3,6 +3,7 @@
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
   import PinButton from '../components/PinButton.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -71,7 +72,7 @@
   const playing = $derived(isThis && player.status === 'playing')
 
   $effect(() => {
-    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name)) } : null
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, null, data?.name)) } : null
   })
 
   function startRename() {
@@ -145,11 +146,12 @@
       <button
         class="big-play"
         disabled={!items.length}
-        onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name))}
+        onclick={() => (isThis ? player.toggle() : player.playQueue(items, null, data?.name))}
         title={playing ? 'Pausa' : 'Reproducir'}
       >
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <ShuffleButton />
       <DownloadButton {items} />
       <PinButton item={{ kind: 'playlist', id: data.id, title: data.name, covers: data.covers }} />
       <button class="action" onclick={playlistMenu} title="Más opciones"><Icon name="more" size={32} /></button>
@@ -190,6 +192,9 @@
 {/if}
 
 <style>
+  .actions {
+    flex-wrap: wrap;
+  }
   .info {
     min-width: 0;
     flex: 1;

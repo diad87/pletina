@@ -6,6 +6,8 @@ Software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
 
 ### Tu música, a mano
 
+El botón **Aleatorio**, junto a Play en playlists, artistas, discos y **Canciones que te gustan**, activa o desactiva la mezcla. Al iniciar una colección con ese modo activo, también la primera canción se elige al azar; el resto suena sin repetir entradas hasta terminar la lista. Si eliges una canción concreta, empieza por ella. Cambiar el modo durante la escucha conserva la canción y la posición actuales. La elección se recuerda al cerrar la app, tanto en el PC como en Android.
+
 En las playlists y en **Canciones que te gustan**, busca por título o artista sin preocuparte por las tildes o las mayúsculas. Los resultados conservan su posición en la lista: al reproducir uno, la cola continúa desde esa canción. Para cambiar el orden arrastrando, borra primero la búsqueda.
 
 El botón de la chincheta en un disco o una playlist permite **Fijar en Inicio**. Los fijados aparecen primero, se conservan al cerrar la app y se pueden quitar desde la misma chincheta. En Inicio, **Ponme un disco** elige al azar uno de tus álbumes guardados y lo reproduce desde la primera canción, en orden; si tienes varios, evita elegir el que ya está puesto.
