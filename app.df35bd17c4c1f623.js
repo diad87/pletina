@@ -1,4 +1,4 @@
-// Solo la instalación y las actualizaciones. No carga la aplicación nativa ni música.
+// Instalación mínima. El reproductor se importa solo cuando se solicita.
 const status = document.querySelector('#status')
 const installButton = document.querySelector('#install')
 const checkButton = document.querySelector('#check-update')
@@ -8,6 +8,10 @@ const intro = document.querySelector('#intro')
 const installGuide = document.querySelector('#install-guide')
 const guideTitle = document.querySelector('#guide-title')
 const guideSteps = document.querySelector('#guide-steps')
+const playerButton = document.querySelector('#open-player')
+const homeScreen = document.querySelector('#home-screen')
+const playerScreen = document.querySelector('#player-screen')
+const playerURL = new URL('./player/entry.c9dae38823c2f999.js', location.href)
 const portable = location.protocol === 'file:' || document.documentElement.hasAttribute('data-portable')
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 const say = (message) => { status.textContent = message }
@@ -21,13 +25,55 @@ let registration
 let checking = false
 let reloading = false
 let controlled = !portable && Boolean(navigator.serviceWorker?.controller)
+let player
+let playerLoadFailed = false
 
 if (portable) {
+  playerButton.hidden = true
   document.querySelector('link[rel="manifest"]')?.remove()
   document.querySelector('#updates').hidden = true
   const version = document.querySelector('#version')
   if (version.textContent.includes('__BUILD_VERSION__')) version.textContent = 'local'
 }
+
+playerButton.addEventListener('click', async () => {
+  if (playerLoadFailed) { location.reload(); return }
+  playerButton.disabled = true
+  try {
+    if (!player) {
+      say('Descargando el reproductor…')
+      await waitForController()
+      const { mountPlayer } = await import(playerURL.href)
+      player = await mountPlayer(document.querySelector('#player-host'))
+    }
+    homeScreen.hidden = true
+    playerScreen.hidden = false
+    playerButton.textContent = 'Volver al reproductor'
+    document.querySelector('#back-home').focus()
+  } catch {
+    playerLoadFailed = true
+    playerButton.textContent = 'Recargar para reintentar'
+    say('No se pudo abrir el reproductor. Comprueba la conexión y recarga para reintentar.')
+  } finally { playerButton.disabled = false }
+})
+
+function waitForController() {
+  if (navigator.serviceWorker?.controller) return Promise.resolve()
+  if (!('serviceWorker' in navigator) || !window.isSecureContext) return Promise.reject(new Error('Navegador sin acceso seguro.'))
+  return new Promise((resolve, reject) => {
+    const cleanup = () => { clearTimeout(timer); navigator.serviceWorker.removeEventListener('controllerchange', check) }
+    const check = () => { if (navigator.serviceWorker.controller) { cleanup(); resolve() } }
+    const timer = setTimeout(() => { cleanup(); reject(new Error('No se pudo preparar la aplicación.')) }, 30000)
+    navigator.serviceWorker.addEventListener('controllerchange', check)
+    check()
+  })
+}
+document.querySelector('#back-home').addEventListener('click', () => {
+  playerScreen.hidden = true
+  homeScreen.hidden = false
+  playerButton.focus()
+  showState()
+})
 
 function showInstallState() {
   installed ||= standalone()

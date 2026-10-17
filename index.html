@@ -26,6 +26,9 @@
       button:disabled { opacity: .5; cursor: wait; }
       #install, #apply-update { background: #bba6fa; color: #15121c; border-color: transparent; font-weight: 600; }
       #install { width: 100%; }
+      #open-player { margin-top: 12px; width: 100%; }
+      #player-screen { width: min(100%, 640px); }
+      #back-home { margin-bottom: 24px; }
       .actions { display: flex; flex-wrap: wrap; gap: 10px; }
       #status { margin: 24px 0 0; font-size: .875rem; min-height: 2.6em; }
       details { margin-top: 16px; font-size: .875rem; color: #ada5ba; }
@@ -42,10 +45,10 @@
       footer { margin-top: 48px; font-size: .75rem; color: #81788f; }
       [hidden] { display: none !important; }
     </style>
-    <script src="./app.3075cf387b079074.js" defer></script>
+    <script src="./app.df35bd17c4c1f623.js" defer></script>
   </head>
   <body>
-    <main>
+    <main id="home-screen">
       <img src="./icons/icon-192.png" width="56" height="56" alt="" />
       <p class="name">Pletina</p>
       <h1 id="headline" data-installed-title="Hola mundo.">Instalar Pletina</h1>
@@ -54,14 +57,19 @@
         <button id="install" type="button">Instalar</button>
         <button id="apply-update" type="button" hidden>Actualizar y abrir</button>
       </div>
+      <button id="open-player" type="button">Abrir reproductor</button>
       <p id="status" role="status" aria-live="polite">Preparando el acceso sin conexión…</p>
       <details id="updates">
         <summary>Actualizaciones</summary>
         <button id="check-update" type="button" hidden>Buscar actualizaciones</button>
       </details>
       <noscript><p>Activa JavaScript para guardar la app y recibir actualizaciones.</p></noscript>
-      <footer>Versión <span id="version">e3c7411a520acf71</span></footer>
+      <footer>Versión <span id="version">85d3cde632c1480f</span></footer>
     </main>
+    <section id="player-screen" aria-label="Reproductor" hidden>
+      <button id="back-home" type="button">Volver al inicio</button>
+      <div id="player-host"></div>
+    </section>
     <dialog id="install-guide" aria-labelledby="guide-title">
       <h2 id="guide-title">Instalar Pletina</h2>
       <ol id="guide-steps"></ol>
