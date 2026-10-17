@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#25183d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pletina · bloqueo">
+  <title>Pletina · prueba de pantalla apagada</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <script src="./resolver.js" defer></script>
+  <script src="./app.js" defer></script>
+  <style>
+    :root { font: 16px/1.5 system-ui, sans-serif; color: #24212b; background: #f4f1f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: max(20px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom)); }
+    main { max-width: 660px; margin: auto; }
+    h1 { font-size: 1.8rem; line-height: 1.2; margin-bottom: 12px; }
+    h2 { font-size: 1.15rem; margin-top: 0; }
+    p { color: #625b6d; }
+    section { margin-top: 20px; padding: 20px; background: white; border: 1px solid #ded5e9; border-radius: 16px; }
+    label { display: block; margin: 14px 0 6px; font-weight: 600; }
+    input:not([type=checkbox]), select { width: 100%; font: inherit; padding: 10px; border: 1px solid #bcb0ca; border-radius: 8px; }
+    button { min-height: 46px; font: inherit; font-weight: 600; padding: 10px 16px; border: 1px solid #ad9bbe; border-radius: 9px; background: white; color: #372448; cursor: pointer; }
+    button.primary { background: #5c3699; color: white; border-color: #5c3699; }
+    button:disabled { opacity: .5; cursor: default; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #b999e8; outline-offset: 3px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    audio { display: block; width: 100%; margin: 18px 0; }
+    .small { font-size: .875rem; }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+    .check input { margin-top: 6px; }
+    #status { min-height: 3em; font-weight: 600; color: #372448; }
+    #summary, pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; }
+    pre { max-height: 300px; overflow: auto; background: #f4f1f8; padding: 12px; border-radius: 8px; }
+    details p { margin-bottom: 0; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Prueba de pantalla apagada</h1>
+  <p>Audio directo, sin servidor intermediario. Esta prueba registra lo que ocurre; no certifica que la pantalla esté apagada.</p>
+  <section>
+    <h2>1. Preparar con la pantalla encendida</h2>
+    <label for="first-video">Primer vídeo: enlace o ID</label>
+    <input id="first-video" value="aqz-KE-bpKQ" autocomplete="off" spellcheck="false">
+    <label for="next-video">Siguiente vídeo: enlace o ID</label>
+    <input id="next-video" value="aqz-KE-bpKQ" autocomplete="off" spellcheck="false">
+    <label for="mode">Cuándo obtener la siguiente URL</label>
+    <select id="mode">
+      <option value="prepared">Preparada antes de bloquear</option>
+      <option value="on-ended">Resolver solo cuando termine la primera</option>
+    </select>
+    <p class="small">Preparar obtiene la primera fuente y la sitúa a 30 segundos del final. En el segundo modo, la siguiente fuente se solicita después de terminar la primera.</p>
+    <div class="actions"><button id="prepare" type="button" class="primary">Preparar</button></div>
+  </section>
+  <section>
+    <h2>2. Empezar y bloquear</h2>
+    <p>Pulsa Empezar y apaga físicamente la pantalla con el botón del móvil. Déjala así al menos 2 minutos; puedes repetir durante 10 minutos. Comprueba si el audio continúa y cambia de fuente.</p>
+    <div class="actions">
+      <button id="start" type="button" class="primary" disabled>Empezar y bloquear</button>
+      <button id="stop" type="button" disabled>Parar</button>
+      <button id="resume" type="button" hidden>Reanudar con un toque</button>
+    </div>
+    <audio id="audio" controls preload="metadata"></audio>
+    <p id="status" role="status" aria-live="polite">Pulsa Preparar para empezar una prueba nueva.</p>
+    <p id="summary" aria-live="polite"></p>
+    <label class="check"><input id="physical-off" type="checkbox"><span>Confirmo que mantuve la pantalla físicamente apagada durante la prueba. Es una declaración manual, no una medición del navegador.</span></label>
+    <div class="actions"><button id="export" type="button">Exportar registro JSON</button></div>
+  </section>
+  <section>
+    <h2>Instalación y contexto</h2>
+    <p id="context" class="small"></p>
+    <p id="offline" class="small">Comprobando el acceso a los archivos de la prueba…</p>
+    <details>
+      <summary>Instalar y comparar las dos formas de abrir</summary>
+      <p class="small">iPhone/iPad: abre la dirección HTTPS en Safari, Compartir → Añadir a pantalla de inicio, con Abrir como app web activado si aparece. Android: menú del navegador → Instalar aplicación / Añadir a pantalla de inicio.</p>
+      <p class="small">Haz una prueba en la pestaña y otra desde el icono instalado. Abre primero el icono con conexión. El modo offline guarda esta herramienta; obtener audio de YouTube sigue necesitando red. La apertura de un archivo HTML local en iPhone no sustituye estas pruebas.</p>
+    </details>
+    <p class="small">Pendiente de verificar en iPhone real. El estado «hidden» también aparece al cambiar de pestaña y no demuestra apagado de pantalla. No se guardan URLs de audio, tokens, cookies ni peticiones completas.</p>
+  </section>
+  <section><h2>Últimos eventos</h2><pre id="log"></pre></section>
+</main>
+</body>
+</html>
