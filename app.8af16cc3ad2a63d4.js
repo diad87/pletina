@@ -11,7 +11,7 @@ const guideSteps = document.querySelector('#guide-steps')
 const playerButton = document.querySelector('#open-player')
 const homeScreen = document.querySelector('#home-screen')
 const playerScreen = document.querySelector('#player-screen')
-const playerURL = new URL('./player/entry.c9dae38823c2f999.js', location.href)
+const playerURL = new URL('./application/launcher.68c5278d45906e5c.js', location.href)
 const portable = location.protocol === 'file:' || document.documentElement.hasAttribute('data-portable')
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 const say = (message) => { status.textContent = message }
@@ -41,19 +41,19 @@ playerButton.addEventListener('click', async () => {
   playerButton.disabled = true
   try {
     if (!player) {
-      say('Descargando el reproductor…')
+      say('Preparando Pletina…')
       await waitForController()
       const { mountPlayer } = await import(playerURL.href)
       player = await mountPlayer(document.querySelector('#player-host'))
     }
     homeScreen.hidden = true
     playerScreen.hidden = false
-    playerButton.textContent = 'Volver al reproductor'
+    playerButton.textContent = 'Abrir Pletina'
     document.querySelector('#back-home').focus()
   } catch {
     playerLoadFailed = true
     playerButton.textContent = 'Recargar para reintentar'
-    say('No se pudo abrir el reproductor. Comprueba la conexión y recarga para reintentar.')
+    say('No se pudo abrir Pletina. Comprueba la conexión y recarga para reintentar.')
   } finally { playerButton.disabled = false }
 })
 
@@ -226,4 +226,10 @@ if (!portable && 'serviceWorker' in navigator && window.isSecureContext) {
   say(portable
     ? 'Archivo local. Listo para usar sin servidor. Esta copia se actualiza sustituyendo el archivo.'
     : 'Para instalar y guardar esta app, ábrela en un navegador compatible desde su dirección HTTPS.')
+}
+
+if (!portable) {
+  let reopen = new URL(location.href).searchParams.get('open') === 'app'
+  try { reopen ||= standalone() && localStorage.getItem('pletina:web:opened') === '1' } catch { /* Sin persistencia. */ }
+  if (reopen) playerButton.click()
 }
