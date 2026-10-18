@@ -1,0 +1,210 @@
+{
+  "testedAt": "2026-10-18T11:51:22.984Z",
+  "browser": "153.0.8010.52",
+  "checks": [
+    {
+      "name": "full A installs without application downloads; app opens on demand",
+      "pass": true,
+      "applicationPath": "/pletina/application/index.cdda57645876dd87.html",
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": null,
+        "cacheInfo": [
+          {
+            "version": "0eb01d09eb9e158f",
+            "paths": [
+              "/pletina/app.29b71ac88b237c3b.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-BSCGGeHI.js",
+              "/pletina/application/assets/index-C3UQ1I-9.css",
+              "/pletina/application/index.cdda57645876dd87.html",
+              "/pletina/application/launcher.4655cee02dc1c392.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "UI-created playlist and duplicate entries persist in real IndexedDB before update",
+      "pass": true,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "duplicateTrackId": 101
+    },
+    {
+      "name": "B waits behind the real update banner without replacing A or eagerly caching its app",
+      "pass": true,
+      "waitingVersion": "2185c66b2486a4d5",
+      "currentApplication": "A",
+      "initialOptionalDownloads": 0
+    },
+    {
+      "name": "a failed application preparation keeps A active and the playlist intact",
+      "pass": true,
+      "oldApplicationRemainedActive": true,
+      "activationMessages": 0,
+      "retryEnabled": true
+    },
+    {
+      "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+      "pass": true,
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "newApplicationPath": "/pletina/application/index.c2aab4f9ad97ca8c.html",
+      "cachedOptionalFiles": 6,
+      "preservedDatabase": true
+    },
+    {
+      "name": "updated B reopens offline with the same playlist ID, entry IDs and duplicate metadata",
+      "pass": true,
+      "online": false,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "musicOfflineClaimed": false
+    },
+    {
+      "name": "existing prototype migrates to full app through the same scope and manifest identity",
+      "pass": true,
+      "prototypeVersion": "85d3cde632c1480f",
+      "newVersion": "0eb01d09eb9e158f",
+      "scope": "/pletina/",
+      "registrationCount": 1,
+      "manifestIdentityUnchanged": true,
+      "legacyPlayerCacheRemoved": true,
+      "localStoragePreserved": true,
+      "unrelatedCachePreserved": true,
+      "osShortcutMigrationVerified": false
+    }
+  ],
+  "errors": [],
+  "messages": [
+    {
+      "phase": "full-A",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "failed-preparation",
+      "path": "/pletina/application/index.cdda57645876dd87.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.cdda57645876dd87.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.cdda57645876dd87.html",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.cdda57645876dd87.html",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    }
+  ],
+  "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+  "osShortcutInstallationVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "externalMusicNetworkUsed": false,
+  "productionDirectoriesMutated": false,
+  "updateTrigger": "registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.",
+  "playlistFixture": "Created and renamed through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No audio files or signed URLs.",
+  "baseDistributionVersion": "1785b6edf53a230b",
+  "sourceCompiledHtmlSha256": "25394c4f48704476118d36a6f535bec73cf729546c8728f41d1b2c5643f1afcc",
+  "builds": {
+    "A": {
+      "version": "0eb01d09eb9e158f",
+      "applicationPage": "application/index.cdda57645876dd87.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-BSCGGeHI.js",
+        "application/assets/index-C3UQ1I-9.css",
+        "application/index.cdda57645876dd87.html",
+        "application/launcher.4655cee02dc1c392.js"
+      ]
+    },
+    "B": {
+      "version": "2185c66b2486a4d5",
+      "applicationPage": "application/index.c2aab4f9ad97ca8c.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-BSCGGeHI.js",
+        "application/assets/index-C3UQ1I-9.css",
+        "application/index.c2aab4f9ad97ca8c.html",
+        "application/launcher.9829fd299b071518.js"
+      ]
+    }
+  },
+  "sourceApplicationAssets": [
+    {
+      "url": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+    },
+    {
+      "url": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+    },
+    {
+      "url": "application/assets/index-BSCGGeHI.js",
+      "sha256": "5584ed3337884073f3669c187990455c963128a98eeb4777d166375885204a25"
+    },
+    {
+      "url": "application/assets/index-C3UQ1I-9.css",
+      "sha256": "90d78faada3bdc75578bf6e9a3e3d0b667307a8fc7abfef1e633e9c44b670113"
+    }
+  ],
+  "manifestIdentity": {
+    "id": "./",
+    "scope": "./",
+    "start_url": "./"
+  },
+  "prototypeVersion": "85d3cde632c1480f",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "blockedExternalHosts": [
+    "cdn-images.dzcdn.net"
+  ],
+  "finishedAt": "2026-10-18T11:51:30.441Z",
+  "passed": true
+}

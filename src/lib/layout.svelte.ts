@@ -11,11 +11,11 @@ class Layout {
   keyboard = $state(false)
   /** Importar carpetas de música: en el móvil todavía no (llega con la fase 4). */
   get canImportLocal() {
-    return !this.mobile
+    return import.meta.env.MODE !== 'pwa' && !this.mobile
   }
   /** Descargas para escuchar sin conexión: en el escritorio (yt-dlp) y en Android (motor propio). */
   get canDownload() {
-    return !this.mobile || android
+    return import.meta.env.MODE !== 'pwa' && (!this.mobile || android)
   }
 
   constructor() {

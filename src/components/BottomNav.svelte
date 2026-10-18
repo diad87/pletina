@@ -5,12 +5,13 @@
   import Icon, { type IconName } from './Icon.svelte'
 
   type Tab = 'home' | 'search' | 'podcasts' | 'library'
-  const TABS: { tab: Tab; label: string; icon: IconName; route: Route }[] = [
+  const ALL_TABS: { tab: Tab; label: string; icon: IconName; route: Route }[] = [
     { tab: 'home', label: 'Inicio', icon: 'home', route: { name: 'home' } },
     { tab: 'search', label: 'Buscar', icon: 'search', route: { name: 'search', query: '' } },
     { tab: 'podcasts', label: 'Podcasts', icon: 'podcast', route: { name: 'podcasts', query: '' } },
     { tab: 'library', label: 'Tu biblioteca', icon: 'library', route: { name: 'library' } },
   ]
+  const TABS = ALL_TABS.filter((item) => import.meta.env.MODE !== 'pwa' || item.tab !== 'podcasts')
   const LIBRARY = ['library', 'liked', 'history', 'local', 'downloads', 'playlist', 'import-playlist', 'youtube-tracks']
 
   let active = $state<Tab>('home')
@@ -29,7 +30,7 @@
   }
 </script>
 
-<nav class="bottom-nav">
+<nav class="bottom-nav" style:--tabs={TABS.length}>
   {#each TABS as t (t.tab)}
     <button class:active={active === t.tab} onclick={() => open(t)}>
       <Icon name={t.icon} size={24} />
@@ -41,7 +42,7 @@
 <style>
   .bottom-nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(var(--tabs, 4), 1fr);
     padding: 6px 8px calc(6px + var(--safe-bottom));
   }
   button {

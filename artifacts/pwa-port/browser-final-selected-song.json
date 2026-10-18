@@ -1,0 +1,455 @@
+{
+  "testedAt": "2026-10-18T11:50:55.369Z",
+  "build": "1785b6edf53a230b",
+  "query": "Radiohead Creep",
+  "runKind": "Selected song diagnostic",
+  "checks": [
+    {
+      "name": "initial install stays small; opening downloads the full app on demand",
+      "pass": true,
+      "initialApplicationRequests": 0,
+      "downloadedPaths": [
+        "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "/pletina/application/assets/index-BSCGGeHI.js",
+        "/pletina/application/assets/index-C3UQ1I-9.css",
+        "/pletina/application/index.25394c4f48704476.html",
+        "/pletina/application/launcher.68c5278d45906e5c.js"
+      ],
+      "cachedPaths": [
+        "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "/pletina/application/assets/index-BSCGGeHI.js",
+        "/pletina/application/assets/index-C3UQ1I-9.css",
+        "/pletina/application/index.25394c4f48704476.html",
+        "/pletina/application/launcher.68c5278d45906e5c.js"
+      ]
+    },
+    {
+      "name": "name and artist search renders real internal song results",
+      "pass": true,
+      "results": [
+        {
+          "title": "Creep",
+          "artist": "E Radiohead"
+        },
+        {
+          "title": "Creep (Acoustic)",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Million Dollar Question",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Inside My Head",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Blow Out (Remix)",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Yes I Am",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Creep (Cover of Radiohead)",
+          "artist": "Glee Cast"
+        },
+        {
+          "title": "2 + 2 = 5 (Live)",
+          "artist": "Radiohead"
+        }
+      ],
+      "screenshot": "desktop-search.png"
+    },
+    {
+      "name": "the selected first song itself reaches audible playback",
+      "pass": true,
+      "expectedTitle": "Creep",
+      "observedTitle": "Creep",
+      "sourceChoices": [
+        {
+          "trackId": 138547415,
+          "videoId": "9RfVp-GhKfs",
+          "title": "Creep",
+          "channel": "Radiohead"
+        }
+      ],
+      "audio": {
+        "instances": [
+          {
+            "index": 0,
+            "srcPresent": true,
+            "sourceRevision": 1,
+            "currentTime": 2.13,
+            "duration": 238.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 4,
+            "networkState": 1,
+            "errorCode": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2643,
+            "hidden": false,
+            "title": "Creep",
+            "index": 0,
+            "srcPresent": true,
+            "sourceRevision": 1,
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 0,
+            "networkState": 2,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2747,
+            "hidden": false,
+            "title": "Creep",
+            "index": 0,
+            "srcPresent": true,
+            "sourceRevision": 1,
+            "currentTime": 0,
+            "duration": 238.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 1,
+            "networkState": 2,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 2825,
+            "hidden": false,
+            "title": "Creep",
+            "index": 0,
+            "srcPresent": true,
+            "sourceRevision": 1,
+            "currentTime": 0,
+            "duration": 238.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 4,
+            "networkState": 1,
+            "errorCode": null
+          }
+        ],
+        "hidden": false,
+        "online": true,
+        "iframeCount": 0,
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "mediaSession": {
+          "playbackState": "playing",
+          "title": "Creep",
+          "artist": "Radiohead"
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "network": [
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "music.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "www.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "www.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "rr2---sn-uxax4vopj5xn-cpvl.googlevideo.com",
+      "status": 206,
+      "resourceType": "media",
+      "contentType": "audio/mp4",
+      "contentLength": "3864998"
+    },
+    {
+      "host": "music.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "www.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    }
+  ],
+  "scope": "Real Chrome desktop network/audio. Mobile layouts use desktop Chrome emulation only.",
+  "physicalScreenOffVerified": false,
+  "iOSPlaybackVerified": false,
+  "outputSilencedByChromeLaunchArgument": true,
+  "mediaElementMuted": false,
+  "backgroundTransitionAcceleratedBySeek": true,
+  "offlineMusicClaimed": false,
+  "originKind": "ephemeral localhost static QA server",
+  "browser": "Chrome/148.0.7778.97",
+  "selectedSong": {
+    "expectedTitle": "Creep",
+    "observedTitle": "Creep",
+    "sourceChoices": [
+      {
+        "trackId": 138547415,
+        "videoId": "9RfVp-GhKfs",
+        "title": "Creep",
+        "channel": "Radiohead"
+      }
+    ],
+    "audio": {
+      "instances": [
+        {
+          "index": 0,
+          "srcPresent": true,
+          "sourceRevision": 1,
+          "currentTime": 2.13,
+          "duration": 238.64,
+          "paused": false,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 4,
+          "networkState": 1,
+          "errorCode": null
+        }
+      ],
+      "events": [
+        {
+          "type": "loadstart",
+          "at": 2643,
+          "hidden": false,
+          "title": "Creep",
+          "index": 0,
+          "srcPresent": true,
+          "sourceRevision": 1,
+          "currentTime": 0,
+          "duration": null,
+          "paused": false,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 0,
+          "networkState": 2,
+          "errorCode": null
+        },
+        {
+          "type": "loadedmetadata",
+          "at": 2747,
+          "hidden": false,
+          "title": "Creep",
+          "index": 0,
+          "srcPresent": true,
+          "sourceRevision": 1,
+          "currentTime": 0,
+          "duration": 238.64,
+          "paused": false,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 1,
+          "networkState": 2,
+          "errorCode": null
+        },
+        {
+          "type": "playing",
+          "at": 2825,
+          "hidden": false,
+          "title": "Creep",
+          "index": 0,
+          "srcPresent": true,
+          "sourceRevision": 1,
+          "currentTime": 0,
+          "duration": 238.64,
+          "paused": false,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 4,
+          "networkState": 1,
+          "errorCode": null
+        }
+      ],
+      "hidden": false,
+      "online": true,
+      "iframeCount": 0,
+      "handlers": [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto"
+      ],
+      "mediaSession": {
+        "playbackState": "playing",
+        "title": "Creep",
+        "artist": "Radiohead"
+      }
+    }
+  },
+  "finalAudio": {
+    "instances": [
+      {
+        "index": 0,
+        "srcPresent": true,
+        "sourceRevision": 1,
+        "currentTime": 2.132,
+        "duration": 238.64,
+        "paused": true,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 4,
+        "networkState": 1,
+        "errorCode": null
+      }
+    ],
+    "events": [
+      {
+        "type": "loadstart",
+        "at": 2643,
+        "hidden": false,
+        "title": "Creep",
+        "index": 0,
+        "srcPresent": true,
+        "sourceRevision": 1,
+        "currentTime": 0,
+        "duration": null,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 0,
+        "networkState": 2,
+        "errorCode": null
+      },
+      {
+        "type": "loadedmetadata",
+        "at": 2747,
+        "hidden": false,
+        "title": "Creep",
+        "index": 0,
+        "srcPresent": true,
+        "sourceRevision": 1,
+        "currentTime": 0,
+        "duration": 238.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 1,
+        "networkState": 2,
+        "errorCode": null
+      },
+      {
+        "type": "playing",
+        "at": 2825,
+        "hidden": false,
+        "title": "Creep",
+        "index": 0,
+        "srcPresent": true,
+        "sourceRevision": 1,
+        "currentTime": 0,
+        "duration": 238.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 4,
+        "networkState": 1,
+        "errorCode": null
+      },
+      {
+        "type": "pause",
+        "at": 5033,
+        "hidden": false,
+        "title": "Creep",
+        "index": 0,
+        "srcPresent": true,
+        "sourceRevision": 1,
+        "currentTime": 2.132,
+        "duration": 238.64,
+        "paused": true,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 4,
+        "networkState": 1,
+        "errorCode": null
+      }
+    ],
+    "hidden": false,
+    "online": true,
+    "iframeCount": 0,
+    "handlers": [
+      "play",
+      "pause",
+      "previoustrack",
+      "nexttrack",
+      "seekto"
+    ],
+    "mediaSession": {
+      "playbackState": "paused",
+      "title": "Creep",
+      "artist": "Radiohead"
+    }
+  },
+  "finalUI": {
+    "title": "Pletina",
+    "online": true,
+    "notices": []
+  },
+  "finishedAt": "2026-10-18T11:51:01.485Z",
+  "passed": true
+}

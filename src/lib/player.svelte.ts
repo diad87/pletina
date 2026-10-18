@@ -108,6 +108,12 @@ class Player implements PlayerApi {
   #sleepDeadline = 0
 
   constructor() {
+    if (api.inPwa) {
+      try {
+        const audioNavigator = navigator as Navigator & { audioSession?: { type: string } }
+        if (audioNavigator.audioSession) audioNavigator.audioSession.type = 'playback'
+      } catch { /* Integración opcional. */ }
+    }
     this.#audio = this.#createAudio()
     this.#setupMediaSession()
     window.addEventListener('pagehide', () => this.#saveProgress(true))
@@ -132,7 +138,7 @@ class Player implements PlayerApi {
     }
   }
 
-  /** Un elemento por carga: los eventos tardíos de una canción anterior se ignoran. */
+  /** El escritorio renueva el elemento por carga; la PWA conserva el activado por el usuario. */
   #createAudio() {
     const a = new Audio()
     a.preload = 'auto'
@@ -212,10 +218,12 @@ class Player implements PlayerApi {
     return a
   }
 
-  #resetAudio() {
+  #resetAudio(recreate = false) {
     this.#clearProgressTimer()
     const previous = this.#audio
-    this.#audio = this.#createAudio()
+    // En web se conserva el elemento activado por el usuario entre canciones.
+    // La reparación de un decoder bloqueado sí puede reconstruirlo.
+    if (!api.inPwa || recreate) this.#audio = this.#createAudio()
     this.#sourceLocal = true
     this.#playable = null
     this.#metadataReady = false
@@ -654,6 +662,7 @@ class Player implements PlayerApi {
   }
 
   async #playElement(a: HTMLAudioElement) {
+    const token = this.#token
     let onError: () => void = () => {}
     const started = new Promise<void>((resolve, reject) => {
       onError = () => reject(new Error(audioError(a)))
@@ -667,6 +676,16 @@ class Player implements PlayerApi {
     })
     try {
       await withTimeout(started, AUDIO_TIMEOUT, 'El reproductor no ha podido iniciar el audio (30 s). Vuelve a intentarlo')
+    } catch (error) {
+      if (api.inPwa && error instanceof DOMException && error.name === 'NotAllowedError') {
+        if (a !== this.#audio || token !== this.#token) return
+        // Conserva la fuente preparada: el siguiente toque puede iniciar el audio.
+        this.#wantsPlay = false
+        this.status = 'paused'
+        toast.show('Audio preparado. Pulsa Reproducir para escucharlo.')
+        return
+      }
+      throw error
     } finally {
       a.removeEventListener('error', onError)
     }
@@ -709,7 +728,7 @@ class Player implements PlayerApi {
     const token = ++this.#token
     this.time = at
     this.status = 'loading'
-    this.#resetAudio()
+    this.#resetAudio(true)
     try {
       // Una ruta local sigue siendo local; nunca se busca en YouTube para reparar su decoder.
       const source = playable.local ? playable : await this.#resolve(item, true)

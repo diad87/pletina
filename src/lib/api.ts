@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
+import { webInvoke } from '../../web-port/invoke'
 import type {
   AlbumDetail,
   Album,
@@ -27,7 +28,8 @@ import type {
 } from './types'
 
 /** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
-export const inTauri = '__TAURI_INTERNALS__' in window
+export const inPwa = import.meta.env.MODE === 'pwa'
+export const inTauri = !inPwa && '__TAURI_INTERNALS__' in window
 
 /**
  * La comunicación con Rust, lista. En Android, lo que se pide en los primeros instantes de arrancar
@@ -49,7 +51,7 @@ export const ipcReady: Promise<void> = inTauri
 // En un navegador normal (solo desarrollo) se usa un backend falso con datos guardados,
 // para poder ver y ajustar la interfaz. En la app compilada siempre es Tauri.
 const invoke: typeof tauriInvoke =
-  inTauri || !import.meta.env.DEV
+  inPwa ? webInvoke : inTauri || !import.meta.env.DEV
     ? tauriInvoke
     : async (cmd, args) => (await import('../dev/mock')).mockInvoke(cmd, args)
 

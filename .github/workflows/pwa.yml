@@ -1,0 +1,57 @@
+name: Publicar PWA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'pwa/**'
+      - 'web-port/**'
+      - 'src/**'
+      - 'experiments/screen-off/**'
+      - 'scripts/build*pwa.mjs'
+      - 'scripts/build-pwa-screen-off.mjs'
+      - 'scripts/preview-pwa.mjs'
+      - 'scripts/tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.pwa.config.ts'
+      - '.github/workflows/pwa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pletina-pwa-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build:pwa
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pwa
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment

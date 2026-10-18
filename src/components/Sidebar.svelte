@@ -46,12 +46,16 @@
     <div class="brand">
       <span class="logo"><Icon name="note" size={18} /></span> Pletina
       {#if updates.current}
+        {#if import.meta.env.MODE === 'pwa'}
+          <span class="version">{updates.current}</span>
+        {:else}
         <button
           class="version"
           title="Versión instalada · de dónde sale el audio"
           onpointerenter={() => extractor.stats().then((s) => (stats = s)).catch(() => {})}
           onclick={engineMenu}>{updates.current}</button
         >
+        {/if}
       {/if}
     </div>
     <nav>
@@ -61,9 +65,11 @@
       <button class:active={route.name === 'search'} onclick={openSearch}>
         <Icon name="search" size={24} /> Buscar
       </button>
+      {#if import.meta.env.MODE !== 'pwa'}
       <button class:active={route.name === 'podcasts' || route.name === 'podcast'} onclick={() => nav.go({ name: 'podcasts', query: '' })}>
         <Icon name="podcast" size={24} /> Podcasts
       </button>
+      {/if}
     </nav>
   </div>
 
@@ -73,9 +79,11 @@
       <button class="add" onclick={newPlaylist} title="Crear playlist"><Icon name="plus" size={20} /></button>
     </header>
 
+    {#if import.meta.env.MODE !== 'pwa'}
     <button class="import" class:active={route.name === 'import-playlist'} onclick={() => nav.go({ name: 'import-playlist' })}>
       <Icon name="download" size={18} /> Importar de Spotify
     </button>
+    {/if}
     <LibraryList />
   </section>
 </aside>

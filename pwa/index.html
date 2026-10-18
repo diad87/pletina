@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#15121c" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Pletina" />
+    <meta name="description" content="La pequeña puerta de entrada a Pletina." />
+    <title>Pletina</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png" />
+    <style>
+      :root { color-scheme: dark; font: 16px/1.5 system-ui, sans-serif; background: #15121c; color: #f4efff; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+      main { width: min(100%, 360px); }
+      img { width: 56px; height: 56px; border-radius: 14px; }
+      .name { margin: 20px 0 8px; color: #bba6fa; font-weight: 600; }
+      h1 { margin: 0 0 12px; font-size: clamp(2.5rem, 10vw, 3.5rem); line-height: 1.1; letter-spacing: -.05em; }
+      p { margin: 0 0 24px; color: #ada5ba; }
+      button { min-height: 46px; padding: 10px 16px; border: 1px solid #504262; border-radius: 12px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+      button:focus-visible, summary:focus-visible { outline: 2px solid #bba6fa; outline-offset: 4px; }
+      button:disabled { opacity: .5; cursor: wait; }
+      #install, #apply-update { background: #bba6fa; color: #15121c; border-color: transparent; font-weight: 600; }
+      #install { width: 100%; }
+      #open-player { margin-top: 12px; width: 100%; }
+      #player-screen { width: min(100%, 640px); }
+      #back-home { margin-bottom: 24px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+      #status { margin: 24px 0 0; font-size: .875rem; min-height: 2.6em; }
+      details { margin-top: 16px; font-size: .875rem; color: #ada5ba; }
+      summary { cursor: pointer; }
+      details p { margin: 10px 0 0; }
+      details button { margin-top: 12px; }
+      dialog { width: min(360px, calc(100% - 32px)); padding: 24px; border: 1px solid #504262; border-radius: 20px; background: #211a2c; color: inherit; }
+      dialog::backdrop { background: #000a; }
+      dialog h2 { margin: 0 0 16px; font-size: 1.4rem; }
+      dialog ol { padding-left: 24px; margin: 0 0 20px; }
+      dialog li { margin-bottom: 12px; }
+      dialog p { font-size: .875rem; }
+      dialog button { width: 100%; }
+      footer { margin-top: 48px; font-size: .75rem; color: #81788f; }
+      [hidden] { display: none !important; }
+    </style>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main id="home-screen">
+      <img src="./icons/icon-192.png" width="56" height="56" alt="" />
+      <p class="name">Pletina</p>
+      <h1 id="headline" data-installed-title="Hola mundo.">Instalar Pletina</h1>
+      <p id="intro">Llévala a tu pantalla de inicio.</p>
+      <div class="actions">
+        <button id="install" type="button">Instalar</button>
+        <button id="apply-update" type="button" hidden>Actualizar y abrir</button>
+      </div>
+      <button id="open-player" type="button">Abrir Pletina</button>
+      <p id="status" role="status" aria-live="polite">Preparando el acceso sin conexión…</p>
+      <details id="updates">
+        <summary>Actualizaciones</summary>
+        <button id="check-update" type="button" hidden>Buscar actualizaciones</button>
+      </details>
+      <noscript><p>Activa JavaScript para guardar la app y recibir actualizaciones.</p></noscript>
+      <footer>Versión <span id="version">__BUILD_VERSION__</span></footer>
+    </main>
+    <section id="player-screen" aria-label="Reproductor" hidden>
+      <button id="back-home" type="button">Volver al inicio</button>
+      <div id="player-host"></div>
+    </section>
+    <dialog id="install-guide" aria-labelledby="guide-title">
+      <h2 id="guide-title">Instalar Pletina</h2>
+      <ol id="guide-steps"></ol>
+      <p>Después, abre Pletina desde el nuevo icono.</p>
+      <button id="close-guide" type="button" autofocus>Entendido</button>
+    </dialog>
+  </body>
+</html>

@@ -5,6 +5,7 @@
   import Shelf from '../components/Shelf.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
+  import TrackList from '../components/TrackList.svelte'
   import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
   import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
@@ -12,11 +13,15 @@
   import { nav } from '../lib/nav.svelte'
   import { recents } from '../lib/recents.svelte'
   import { theme } from '../lib/theme.svelte'
-  import type { SearchResults } from '../lib/types'
+  import type { SearchResults, TopTrack } from '../lib/types'
+  import type { QueueItem } from '../lib/queue'
+  type SongResults = SearchResults & { tracks?: TopTrack[]; failedSections?: string[] }
 
   let { query }: { query: string } = $props()
 
-  let results = $state<SearchResults | null>(null)
+  let results = $state<SongResults | null>(null)
+  let resultQuery = $state('')
+  let expanded = $state(false)
   let error = $state<string | null>(null)
   let loading = $state(false)
   let attempt = $state(0)
@@ -43,6 +48,8 @@
         .then((r) => {
           if (!alive) return
           results = r
+          resultQuery = q
+          expanded = false
           loading = false
           // La página toma el color del resultado principal.
           theme.set(r.artists[0]?.pictureMedium ?? r.albums[0]?.coverMedium)
@@ -62,13 +69,17 @@
 
   const topArtist = $derived(results?.artists[0])
   const hasLocal = $derived(!!results && (results.localArtists.length > 0 || results.localAlbums.length > 0))
+  const queue = $derived<QueueItem[]>((results?.tracks ?? []).map(({ album, ...track }) => ({
+    track: { ...track, title: track.titleVersion && !track.title.toLowerCase().includes(track.titleVersion.toLowerCase()) ? `${track.title} (${track.titleVersion})` : track.title }, albumId: album.id,
+    albumTitle: album.title, artistId: track.artist.id, cover: album.coverMedium ?? album.coverBig,
+  })))
 </script>
 
 <section class="page top">
   {#if !query.trim()}
     <div class="intro">
       <h1 class="page-title">Buscar</h1>
-      <p class="hint">Escribe el nombre de un grupo, artista o disco.</p>
+      <p class="hint">{import.meta.env.MODE === 'pwa' ? 'Busca canciones, artistas o discos.' : 'Escribe el nombre de un grupo, artista o disco.'}</p>
     </div>
     {#if recents.items.length}
       <Shelf title="Visto recientemente">
@@ -87,7 +98,7 @@
     <Status {error} retry={() => attempt++} />
   {:else if !results}
     <Skeleton kind="grid" />
-  {:else if !results.artists.length && !results.albums.length && !hasLocal}
+  {:else if !results.artists.length && !results.albums.length && !hasLocal && !queue.length && !results.failedSections?.length}
     {#if !loading}
       <div class="empty-state">
         <Icon name="search" size={40} />
@@ -97,6 +108,19 @@
     {/if}
   {:else}
     <div class:stale={loading}>
+      {#if results.failedSections?.length && !loading}
+        <div class="partial-error" role="status">
+          <p>No se pudo completar toda la búsqueda. Puedes usar los resultados disponibles.</p>
+          <button class="pill" onclick={() => attempt++}>Reintentar</button>
+        </div>
+      {/if}
+      {#if queue.length}
+        <h2 class="section-title">Canciones</h2>
+        <TrackList items={expanded ? queue : queue.slice(0, 8)} variant="list" context={`Búsqueda: ${resultQuery}`} />
+        {#if queue.length > 8}
+          <button class="more" onclick={() => expanded = !expanded}>{expanded ? 'Ver menos' : `Ver más (${queue.length})`}</button>
+        {/if}
+      {/if}
       {#if hasLocal}
         <Shelf title="En tu música">
           {#each results.localArtists as artist (artist.id)}
@@ -172,6 +196,9 @@
 </section>
 
 <style>
+  .more { margin: 12px 16px; color: var(--muted); font-weight: 700; }
+  .partial-error { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-l); }
+  .partial-error p { flex: 1 1 200px; margin: 0; color: var(--muted); }
   .intro .page-title {
     margin-bottom: 4px;
   }

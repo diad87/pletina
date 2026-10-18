@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pwa": "node scripts/build-web-pwa.mjs",
+    "build:pwa:screen-off": "node scripts/build-pwa-screen-off.mjs",
+    "preview:pwa": "node scripts/preview-pwa.mjs",
+    "test:pwa": "node --test scripts/tests/pwa*.test.mjs scripts/tests/web-*.test.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
     "test": "node --test scripts/tests/*.test.mjs",
     "tauri": "tauri",
@@ -16,6 +20,7 @@
     "@tauri-apps/cli": "^2.12.1",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^26.6.4",
+    "fake-indexeddb": "^6.2.6",
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
     "typescript": "~6.0.2",
