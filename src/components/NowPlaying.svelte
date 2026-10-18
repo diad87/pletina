@@ -8,6 +8,7 @@
   import { theme } from '../lib/theme.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import SleepTimer from './SleepTimer.svelte'
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
@@ -86,7 +87,7 @@
         <span>Sonando desde</span>
         <button class="link" onclick={() => go(youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
       </div>
-      <span class="spacer"></span>
+      <SleepTimer variant="header" />
     </header>
 
     <div class="body">
@@ -211,9 +212,9 @@
     gap: 16px;
     padding: 18px 28px;
   }
-  .close,
-  .spacer {
+  .close {
     width: 40px;
+    flex: none;
   }
   .close {
     display: grid;
@@ -229,6 +230,7 @@
   }
   .from {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -238,6 +240,10 @@
     letter-spacing: 0.1em;
   }
   .from .link {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-size: 14px;
     font-weight: 700;
     color: var(--text);

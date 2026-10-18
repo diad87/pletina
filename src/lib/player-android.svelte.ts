@@ -14,6 +14,7 @@ import { isPodcast, isYouTubeTrack } from './media'
 import { load, playOrder, save, shuffled, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import { toast } from './toast.svelte'
 import type { LibTrack, TrackQuery } from './types'
+import { isSleepMinutes, type SleepTimerState } from './sleep-timer'
 
 export const isAndroid = api.inTauri && /Android/i.test(navigator.userAgent)
 
@@ -40,6 +41,7 @@ interface NativeStatus {
   playWhenReady: boolean
   state: 'idle' | 'buffering' | 'ready' | 'ended'
   repeat: Repeat
+  sleepTimer: SleepTimerState
   at: number
 }
 
@@ -55,6 +57,7 @@ export class AndroidPlayer implements PlayerApi {
   muted = $state(false)
   shuffle = $state(load('musify:shuffle', false, (v) => typeof v === 'boolean'))
   repeat = $state<Repeat>('off')
+  sleepTimer = $state<SleepTimerState>({ mode: 'off', endsAt: 0 })
   picking = $state<QueueItem | null>(null)
 
   /** Última posición que dio el servicio; entre avisos, la hora se calcula aquí. */
@@ -64,6 +67,7 @@ export class AndroidPlayer implements PlayerApi {
   constructor() {
     listen<{ entries: (Entry | null)[] }>('player-timeline', (e) => this.#applyTimeline(e.payload.entries))
     listen<NativeStatus>('player-status', (e) => this.#applyStatus(e.payload))
+    listen<SleepTimerState>('sleep-timer', (e) => { this.sleepTimer = e.payload })
     listen<{ message: string }>('player-error', (e) => toast.show(e.payload.message))
     listen('history-changed', () => library.historyVersion++)
     this.#sync()
@@ -280,6 +284,13 @@ export class AndroidPlayer implements PlayerApi {
     this.#call('setRepeat', { mode: this.repeat })
   }
 
+  async setSleepTimer(minutes: number): Promise<boolean> {
+    if (minutes !== 0 && minutes !== -1 && !isSleepMinutes(minutes)) return false
+    if (minutes !== 0 && !this.current) return false
+    // El servicio confirma el estado por evento y en la instantánea.
+    return this.#call('setSleepTimer', { minutes })
+  }
+
   async useSource(videoId: string, item: QueueItem | null = this.current): Promise<boolean> {
     if (!item || isPodcast(item.track.id) || isYouTubeTrack(item.track.id)) return false
     try {
@@ -334,6 +345,7 @@ export class AndroidPlayer implements PlayerApi {
   #applyStatus(s: NativeStatus) {
     this.index = s.index
     this.repeat = s.repeat
+    this.sleepTimer = s.sleepTimer ?? { mode: 'off', endsAt: 0 }
     const current = this.current
     this.duration = s.durationMs > 0 ? s.durationMs / 1000 : (current?.track.duration ?? 0)
     // La foto es de hace un instante (s.at): se descuenta lo que tardó en llegar.

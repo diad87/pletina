@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -34,6 +35,8 @@ import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -91,6 +94,9 @@ class PlaybackService : MediaLibraryService() {
   private val completedItems = mutableSetOf<String>()
   private var applyingEpisodeResume = false
   private var destroyed = false
+  private val sleepTimer = SleepTimer()
+  private var sleepItemId: String? = null
+  private val sleepDeadline = Runnable { checkSleepDeadline() }
 
   /** Pantalla encendida / apagada, para el registro. */
   private val screen = object : BroadcastReceiver() {
@@ -140,7 +146,8 @@ class PlaybackService : MediaLibraryService() {
         super.stop()
       }
     }
-    session = MediaLibrarySession.Builder(this, sessionPlayer, callback).build()
+    session = MediaLibrarySession.Builder(this, sessionPlayer, callback)
+      .setSessionExtras(Bundle().apply { putBundle(SLEEP_TIMER_EXTRA, sleepExtras()) }).build()
     restore()
     watchNetwork()
     tick()
@@ -183,6 +190,42 @@ class PlaybackService : MediaLibraryService() {
   }
 
   private val callback = object : MediaLibrarySession.Callback {
+    override fun onConnectAsync(mediaSession: MediaSession, controller: MediaSession.ControllerInfo): ListenableFuture<MediaSession.ConnectionResult> {
+      checkSleepDeadline()
+      // Conservar las órdenes de biblioteca para Android Auto y los navegadores multimedia.
+      val commands = if (controller.isTrusted) MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
+        else MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_SESSION_AND_LIBRARY_COMMANDS
+      val result = MediaSession.ConnectionResult.AcceptedResultBuilder(mediaSession, controller)
+        .setAvailableSessionCommands(commands.buildUpon()
+          .add(SessionCommand(SLEEP_TIMER_COMMAND, Bundle.EMPTY))
+          .add(SessionCommand(CANCEL_END_SLEEP_TIMER_COMMAND, Bundle.EMPTY)).build())
+        .build()
+      return Futures.immediateFuture(result)
+    }
+
+    override fun onCustomCommand(
+      mediaSession: MediaSession,
+      controller: MediaSession.ControllerInfo,
+      customCommand: SessionCommand,
+      args: Bundle,
+    ): ListenableFuture<SessionResult> {
+      if (customCommand.customAction == CANCEL_END_SLEEP_TIMER_COMMAND) {
+        if (sleepTimer.mode == "end") clearSleepTimer()
+        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+      }
+      if (customCommand.customAction != SLEEP_TIMER_COMMAND) return super.onCustomCommand(mediaSession, controller, customCommand, args)
+      val minutes = args.getInt("minutes", Int.MIN_VALUE)
+      val result = when {
+        minutes != -1 && minutes !in 0..1440 -> SessionResult.RESULT_ERROR_BAD_VALUE
+        minutes == -1 && player.currentMediaItem == null -> SessionResult.RESULT_ERROR_INVALID_STATE
+        else -> {
+          setSleepTimer(minutes)
+          SessionResult.RESULT_SUCCESS
+        }
+      }
+      return Futures.immediateFuture(SessionResult(result))
+    }
+
     override fun onGetLibraryRoot(
       session: MediaLibrarySession,
       browser: MediaSession.ControllerInfo,
@@ -278,6 +321,7 @@ class PlaybackService : MediaLibraryService() {
       startIndex: Int,
       startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+      if (sleepTimer.mode == "end") clearSleepTimer()
       saveEpisodeProgress()
       // Invalidate immediately; resolving an external queue happens asynchronously.
       recovery.onEntryChanged()
@@ -382,6 +426,11 @@ class PlaybackService : MediaLibraryService() {
 
   private val listener = object : Player.Listener {
     override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+      if (sleepTimer.mode == "end") {
+        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+          finishSleepTimer()
+        } else if (item?.mediaId != sleepItemId) clearSleepTimer()
+      }
       recovery.onEntryChanged()
       recorded = false
       resumeEpisode(item, reason)
@@ -400,6 +449,13 @@ class PlaybackService : MediaLibraryService() {
     }
 
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+      if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && sleepTimer.mode == "end") {
+        player.currentMediaItem?.let { completedItems.add(it.mediaId) }
+        finishSleepTimer()
+      } else if (playWhenReady && checkSleepDeadline()) {
+        // La pausa ya ha notificado el nuevo estado: no restablecer la intención anterior.
+        return
+      }
       val why = when (reason) {
         Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST -> "pedido (botón, notificación, bloqueo o auriculares)"
         Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS -> "otra app o una llamada se ha quedado el sonido"
@@ -447,6 +503,7 @@ class PlaybackService : MediaLibraryService() {
       if (playbackState == Player.STATE_ENDED) {
         completedItems.add(item.mediaId)
         saveEpisodeProgress()
+        if (sleepTimer.mode == "end") finishSleepTimer()
       }
     }
 
@@ -466,6 +523,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onPlayerError(error: PlaybackException) {
       MusifyLog.log("error: ${error.errorCodeName} ${error.message} (${network()})")
+      if (checkSleepDeadline()) return
       val item = player.currentMediaItem ?: return
       val id = trackId(item) ?: return
       // Siempre con URL nueva: la anterior puede haber caducado o ser de otra red.
@@ -477,6 +535,10 @@ class PlaybackService : MediaLibraryService() {
         !internetValidated -> {
           val next = nextOffline()
           if (next != null) {
+            if (sleepTimer.mode == "end") {
+              finishSleepTimer()
+              return
+            }
             // Sin conexión solo suenan las descargadas: a la siguiente que lo esté.
             MusifyLog.log("sin red y «${item.mediaMetadata.title}» no está descargada: a la siguiente descargada (${next + 1})")
             MusifyCore.emit("player-error", JSONObject().put("message", "Sin conexión: suenan solo las canciones descargadas").toString())
@@ -511,6 +573,7 @@ class PlaybackService : MediaLibraryService() {
 
   /** Sigue en la misma canción y el mismo segundo. */
   private fun resume(why: String) {
+    if (destroyed || checkSleepDeadline() || !recovery.wantsPlayback()) return
     val at = player.currentPosition
     MusifyLog.log("$why desde ${at / 1000} s")
     player.seekTo(player.currentMediaItemIndex, at)
@@ -523,6 +586,11 @@ class PlaybackService : MediaLibraryService() {
     val title = player.currentMediaItem?.mediaMetadata?.title
     MusifyLog.log("se salta ($why)")
     MusifyCore.emit("player-error", JSONObject().put("message", "No se pudo reproducir «$title»: $why").toString())
+    if (sleepTimer.mode == "end") {
+      finishSleepTimer()
+      return
+    }
+    if (checkSleepDeadline() || !recovery.wantsPlayback()) return
     recovery.onEntryChanged()
     if (player.hasNextMediaItem()) {
       player.seekToNextMediaItem()
@@ -534,6 +602,7 @@ class PlaybackService : MediaLibraryService() {
   /** Cada 5 s mientras suena: apunta la canción en el historial a los 30 s (o la mitad si es corta). */
   private fun tick() {
     main.postDelayed({
+      checkSleepDeadline()
       if (player.isPlaying && !recorded) {
         val duration = player.duration.takeIf { it > 0 } ?: 60_000
         if (player.currentPosition >= minOf(30_000, duration / 2)) {
@@ -553,6 +622,62 @@ class PlaybackService : MediaLibraryService() {
       }
       tick()
     }, 5_000)
+  }
+
+  // --- Temporizador de apagado --------------------------------------------------------------
+
+  private fun sleepExtras() = Bundle().apply {
+    putString("mode", sleepTimer.mode)
+    putLong("endsAt", sleepTimer.endsAt)
+  }
+
+  private fun publishSleepTimer() {
+    session?.let { current ->
+      current.setSessionExtras(Bundle(current.sessionExtras).apply { putBundle(SLEEP_TIMER_EXTRA, sleepExtras()) })
+    }
+    MusifyCore.emit("sleep-timer", JSONObject().put("mode", sleepTimer.mode).put("endsAt", sleepTimer.endsAt).toString())
+  }
+
+  private fun setSleepTimer(minutes: Int) {
+    main.removeCallbacks(sleepDeadline)
+    sleepTimer.set(minutes, SystemClock.elapsedRealtime(), System.currentTimeMillis())
+    sleepItemId = if (minutes == -1) player.currentMediaItem?.mediaId else null
+    player.setPauseAtEndOfMediaItems(minutes == -1)
+    sleepTimer.remaining(SystemClock.elapsedRealtime())?.let { main.postDelayed(sleepDeadline, it) }
+    publishSleepTimer()
+    MusifyLog.log("temporizador: ${sleepTimer.mode}${if (minutes > 0) ", $minutes min" else ""}")
+    if (minutes == -1 && player.playbackState == Player.STATE_ENDED) finishSleepTimer()
+  }
+
+  private fun clearSleepTimer() {
+    main.removeCallbacks(sleepDeadline)
+    sleepTimer.clear()
+    sleepItemId = null
+    player.setPauseAtEndOfMediaItems(false)
+    publishSleepTimer()
+  }
+
+  private fun finishSleepTimer() {
+    // Invalida también los reintentos ya desencolados y la espera de una red validada.
+    recovery.onPlayIntent(false)
+    // Pausar antes de quitar el freno al final del elemento impide que arranque el siguiente.
+    player.pause()
+    clearSleepTimer()
+    save()
+    saveEpisodeProgress()
+    MusifyLog.log("temporizador: pausa")
+  }
+
+  /** Devuelve true si acaba de vencer; los reintentos no pueden deshacer esta pausa. */
+  private fun checkSleepDeadline(): Boolean {
+    val remaining = sleepTimer.remaining(SystemClock.elapsedRealtime()) ?: return false
+    if (remaining == 0L) {
+      finishSleepTimer()
+      return true
+    }
+    main.removeCallbacks(sleepDeadline)
+    main.postDelayed(sleepDeadline, remaining)
+    return false
   }
 
   // --- Progreso de podcasts ------------------------------------------------------------------
@@ -756,6 +881,9 @@ class PlaybackService : MediaLibraryService() {
   }
 
   companion object {
+    const val SLEEP_TIMER_COMMAND = "dev.musify.desktop.SET_SLEEP_TIMER"
+    const val CANCEL_END_SLEEP_TIMER_COMMAND = "dev.musify.desktop.CANCEL_END_SLEEP_TIMER"
+    const val SLEEP_TIMER_EXTRA = "sleepTimer"
     internal fun validated(capabilities: NetworkCapabilities?): Boolean =
       capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)

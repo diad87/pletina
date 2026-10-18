@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -19,6 +20,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import app.tauri.annotation.Command
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
@@ -59,7 +62,11 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
   private fun connect() {
     if (future != null) return
     val token = SessionToken(activity, ComponentName(activity, PlaybackService::class.java))
-    val f = MediaController.Builder(activity, token).buildAsync()
+    val f = MediaController.Builder(activity, token).setListener(object : MediaController.Listener {
+      override fun onExtrasChanged(controller: MediaController, extras: Bundle) {
+        emitStatus(controller)
+      }
+    }).buildAsync()
     future = f
     f.addListener({
       val c = runCatching { f.get() }.getOrNull()
@@ -170,6 +177,8 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
   fun skipTo(invoke: Invoke) {
     val args = invoke.getArgs()
     run(invoke) { c ->
+      // También elegir de nuevo la misma canción cancela «al terminar esta canción».
+      c.sendCustomCommand(SessionCommand(PlaybackService.CANCEL_END_SLEEP_TIMER_COMMAND, Bundle.EMPTY), Bundle.EMPTY)
       c.seekToDefaultPosition(args.getInt("index"))
       if (c.playbackState == Player.STATE_IDLE) c.prepare()
       c.play()
@@ -232,6 +241,41 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     run(invoke) { c ->
       c.volume = args.getDouble("volume").toFloat().coerceIn(0f, 1f)
       null
+    }
+  }
+
+  /** El servicio posee el plazo, incluso con la interfaz suspendida o cerrada. */
+  @Command
+  fun setSleepTimer(invoke: Invoke) {
+    val value = invoke.getArgs().opt("minutes")
+    val minutes = (value as? Number)?.toDouble()
+    if (minutes == null || !minutes.isFinite() || minutes != minutes.toInt().toDouble() || (minutes != -1.0 && minutes !in 0.0..1440.0)) {
+      invoke.reject("Elige entre 1 y 1440 minutos")
+      return
+    }
+    main.post {
+      val task: (MediaController) -> Unit = { c ->
+        try {
+          val result = c.sendCustomCommand(SessionCommand(PlaybackService.SLEEP_TIMER_COMMAND, Bundle.EMPTY), Bundle().apply {
+            putInt("minutes", minutes.toInt())
+          })
+          result.addListener({
+            try {
+              if (result.get().resultCode == SessionResult.RESULT_SUCCESS) invoke.resolve()
+              else invoke.reject("No se pudo activar el temporizador")
+            } catch (e: Exception) {
+              invoke.reject(e.message ?: e.toString())
+            }
+          }, ContextCompat.getMainExecutor(activity))
+        } catch (e: Exception) {
+          invoke.reject(e.message ?: e.toString())
+        }
+      }
+      val c = controller
+      if (c != null) task(c) else {
+        waiting.add(task)
+        connect()
+      }
     }
   }
 
@@ -328,6 +372,8 @@ class PlayerPlugin(private val activity: Activity) : Plugin(activity) {
     state.put("durationMs", if (c.duration == C.TIME_UNSET) -1 else c.duration)
     state.put("playing", c.isPlaying)
     state.put("playWhenReady", c.playWhenReady)
+    val timer = c.sessionExtras.getBundle(PlaybackService.SLEEP_TIMER_EXTRA)
+    state.put("sleepTimer", JSONObject().put("mode", timer?.getString("mode") ?: "off").put("endsAt", timer?.getLong("endsAt") ?: 0L))
     state.put(
       "state",
       when (c.playbackState) {

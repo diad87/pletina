@@ -1,6 +1,7 @@
 // Lo común a los dos reproductores: el de la interfaz (escritorio, player.svelte.ts) y el nativo
 // de Android (player-android.svelte.ts).
 import type { Track, TrackQuery } from './types'
+import type { SleepTimerState } from './sleep-timer'
 
 /** Una canción en la cola, con lo necesario para mostrarla y buscarla. */
 export interface QueueItem {
@@ -78,6 +79,9 @@ export interface PlayerApi {
   muted: boolean
   shuffle: boolean
   repeat: Repeat
+  readonly sleepTimer: SleepTimerState
+  /** 0: cancelar; -1: al terminar; 1–1440: minutos desde ahora, también durante las pausas. */
+  setSleepTimer(minutes: number): Promise<boolean>
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking: QueueItem | null
   playAt(pos: number): void

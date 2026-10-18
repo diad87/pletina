@@ -210,6 +210,16 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 
 Esta prueba cubre la reproducción nativa y la persistencia con audio RSS controlado. Quedan fuera el teléfono físico, las restricciones de batería de cada fabricante, la selección de audio en YouTube y el botón de la interfaz que repite un episodio acabado. El estrés de cambios rápidos comprueba que los puntos se conservan, pero no fuerza un orden concreto de las lecturas pendientes.
 
+## Temporizador de apagado (0.11.2)
+
+El botón de luna de «Sonando ahora» permite pausar dentro de 15, 30 o 60 minutos, elegir un tiempo personalizado de 1 a 1.440 minutos o parar al terminar el episodio o la canción. La interfaz muestra la cuenta atrás y permite cambiarla o desactivarla. La cuenta sigue durante las pausas; el temporizador no se guarda al destruir el servicio.
+
+`PlaybackService` conserva el plazo con `SystemClock.elapsedRealtime()` y publica el estado mediante los extras de `MediaLibrarySession`. La WebView solo manda la orden y recupera ese estado al volver del segundo plano. La parada al terminar usa `setPauseAtEndOfMediaItems`, conserva el modo de repetición e invalida la recuperación automática mediante `PlaybackRecovery`. El servicio mantiene sus funciones de exploración y búsqueda para Android Auto.
+
+Validación: pruebas del reproductor compilado con Svelte y del puente Android, además de cinco pruebas Kotlin de plazos y las once existentes de recuperación. La interfaz se ha revisado en escritorio y a 320 y 390 píxeles, incluida la edición con poca altura disponible.
+
+El emulador comprueba el servicio de esta versión, junto a `CarLibrary` y `PlaybackRecovery`, con una fuente WAV local y el puente JNI de prueba. Pasan la exploración con `MediaBrowser`, la parada al final y reanudación con los tres modos de repetición, la última pista, la cancelación al cambiar de pista, el progreso completado del pódcast y un temporizador real de un minuto con la pantalla apagada. Esta comprobación aísla el servicio; no sustituye las pruebas en teléfonos físicos ni en el coche.
+
 ## Pruebas antes de darla por buena
 
 | Prueba | Tiene que pasar |

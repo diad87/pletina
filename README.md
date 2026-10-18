@@ -108,6 +108,12 @@ Debajo salen también los programas de **YouTube Music**, en su propia sección 
 
 Cada episodio recuerda su punto de escucha en este dispositivo. Al volver a reproducirlo, continúa donde lo dejaste, también después de cerrar la app. La lista muestra **Continuar desde…**, una barra de progreso y **Escuchado** al terminar; los episodios completados vuelven a empezar desde el principio. En Android, el servicio de audio guarda el progreso incluso con la pantalla apagada.
 
+### Temporizador de apagado
+
+Pulsa la luna de **Sonando ahora** o de la barra de reproducción del PC para pausar la música o el pódcast dentro de **15, 30 o 60 minutos**, elegir un tiempo **Personalizado** (de 1 minuto a 24 horas) o detenerte **al terminar el episodio o la canción**. La cuenta atrás muestra cuánto queda y la hora de pausa. Puedes cambiar o desactivar el temporizador desde el mismo botón; en móvil se abre como un panel inferior.
+
+La cuenta sigue corriendo durante las pausas. Al agotarse, conserva el punto de escucha. «Al terminar» detiene la cola aunque tengas la repetición activada y marca el episodio como escuchado; si cambias de canción o episodio antes del final, se cancela esa opción. En Android funciona en el servicio de audio, también con la pantalla apagada. El temporizador es para la sesión actual: no se recupera al volver a arrancar la app o su servicio.
+
 ## Instalar
 
 Descarga el archivo de tu sistema desde la [última versión](https://github.com/diad87/pletina-releases/releases/latest):

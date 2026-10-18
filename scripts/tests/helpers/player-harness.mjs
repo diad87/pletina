@@ -17,6 +17,11 @@ new Function('exports', ts.transpileModule(queueSource, {
   compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
 }).outputText)(queue)
 
+export const sleepTimer = {}
+new Function('exports', ts.transpileModule(await readFile(new URL('../../../src/lib/sleep-timer.ts', import.meta.url), 'utf8'), {
+  compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
+}).outputText)(sleepTimer)
+
 export const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve() }
 export const deferred = () => {
   let resolve, reject
@@ -36,6 +41,11 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
   let closeHandler, destroyed = false
   const timers = new Map()
   let now = 0, timerId = 0, stopped = 0
+  let wall = 1_700_000_000_000
+  class FakeDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [wall])) }
+    static now() { return wall }
+  }
   class Audio extends EventTarget {
     src = ''
     currentTime = 0
@@ -44,8 +54,10 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     error = null
     playbackRate = 1
     loads = 0
+    plays = 0
     constructor() { super(); audios.push(this) }
     play() {
+      this.plays++
       if (!Number.isFinite(this.duration)) {
         this.duration = duration(this)
         this.dispatchEvent(new Event('loadedmetadata'))
@@ -90,6 +102,7 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     } },
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
     './player-android.svelte': { isAndroid: false },
+    './sleep-timer': sleepTimer,
     './queue': {
       load: (_key, fallback) => fallback,
       playOrder: queue.playOrder,
@@ -97,29 +110,35 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     },
   }
   const exports = {}
-  new Function('require', 'exports', 'Audio', 'navigator', 'MediaMetadata', 'setTimeout', 'clearTimeout', 'window', 'document', compiled)(
+  new Function('require', 'exports', 'Audio', 'navigator', 'MediaMetadata', 'setTimeout', 'clearTimeout', 'window', 'document', 'Date', 'performance', compiled)(
     (name) => { assert.ok(name in modules, `Unmocked dependency: ${name}`); return modules[name] },
     exports, Audio, mediaSession ? { mediaSession } : {}, metadata,
     (fn, delay) => { const id = ++timerId; timers.set(id, { at: now + delay, fn }); return id },
     (id) => timers.delete(id),
-    events, events,
+    events, events, FakeDate, { now: () => now },
   )
   return {
     player: exports.player, audios, messages, resolutions, sources, records, timers,
     progress, events, get audio() { return audios.at(-1) },
     get destroyed() { return destroyed }, close: (event) => closeHandler(event),
     get stopped() { return stopped },
+    get now() { return wall },
+    shiftWall(ms) { wall += ms },
+    elapse(ms) { now += ms; wall += ms },
     async advance(ms) {
       await flush()
       const until = now + ms
       for (;;) {
         const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0]
         if (!next || next[1].at > until) break
-        now = next[1].at
+        const at = Math.max(now, next[1].at)
+        wall += at - now
+        now = at
         timers.delete(next[0])
         next[1].fn()
         await flush()
       }
+      wall += until - now
       now = until
       await flush()
     },

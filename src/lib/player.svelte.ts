@@ -10,6 +10,7 @@ import { episodeProgress } from './podcast-progress.svelte'
 import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import type { Playable } from './types'
+import { isSleepMinutes, type SleepTimerState } from './sleep-timer'
 
 export { toQuery, type QueueItem, type Repeat }
 
@@ -73,6 +74,7 @@ class Player implements PlayerApi {
   muted = $state(false)
   shuffle = $state(load('musify:shuffle', false, (v) => typeof v === 'boolean'))
   repeat = $state<Repeat>(load('musify:repeat', 'off', (v) => v === 'off' || v === 'all' || v === 'one'))
+  sleepTimer = $state<SleepTimerState>({ mode: 'off', endsAt: 0 })
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking = $state<QueueItem | null>(null)
 
@@ -102,6 +104,8 @@ class Player implements PlayerApi {
   #requestedSeek: number | null = null
   #metadataReady = false
   #positionKnown = false
+  #sleepTimeout: ReturnType<typeof setTimeout> | undefined
+  #sleepDeadline = 0
 
   constructor() {
     this.#audio = this.#createAudio()
@@ -109,7 +113,9 @@ class Player implements PlayerApi {
     window.addEventListener('pagehide', () => this.#saveProgress(true))
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) this.#saveProgress(true)
+      else this.#checkSleepTimer()
     })
+    window.addEventListener('focus', () => this.#checkSleepTimer())
     if (api.inTauri) {
       const win = getCurrentWindow()
       void win.onCloseRequested(async (event) => {
@@ -133,6 +139,7 @@ class Player implements PlayerApi {
     a.volume = this.volume
     a.muted = this.muted
     a.addEventListener('timeupdate', () => {
+      if (a === this.#audio && this.#checkSleepTimer()) return
       // Mientras carga la siguiente, el audio aún tiene el tiempo de la anterior: se ignora.
       if (a !== this.#audio || this.status === 'loading') return
       this.time = a.currentTime
@@ -156,7 +163,7 @@ class Player implements PlayerApi {
       this.#syncPosition()
     })
     a.addEventListener('playing', () => {
-      if (a !== this.#audio || !this.#wantsPlay) {
+      if (a !== this.#audio || this.#checkSleepTimer() || !this.#wantsPlay) {
         a.pause()
         return
       }
@@ -186,6 +193,11 @@ class Player implements PlayerApi {
       this.#clearProgressTimer()
       this.#completed = true
       this.#saveProgress(true)
+      if (this.sleepTimer.mode === 'end') {
+        this.#finishSleep(true)
+        return
+      }
+      if (this.#checkSleepTimer()) return
       if (this.repeat === 'one') {
         this.#recorded = false
         this.#completed = false
@@ -327,6 +339,7 @@ class Player implements PlayerApi {
   async #resume() {
     const item = this.current
     if (!item || this.#wantsPlay && this.status === 'loading') return
+    if (this.#checkSleepTimer()) return
     this.#wantsPlay = true
     this.#repaired = false
     if (!this.#audio.src || this.status === 'idle' || !this.#activeItem) {
@@ -433,6 +446,48 @@ class Player implements PlayerApi {
     save('musify:repeat', this.repeat)
   }
 
+  async setSleepTimer(minutes: number): Promise<boolean> {
+    if (minutes !== 0 && minutes !== -1 && !isSleepMinutes(minutes)) return false
+    if (minutes !== 0 && !this.current) return false
+    clearTimeout(this.#sleepTimeout)
+    this.#sleepTimeout = undefined
+    this.#sleepDeadline = 0
+    if (minutes === 0) this.sleepTimer = { mode: 'off', endsAt: 0 }
+    else if (minutes === -1) this.sleepTimer = { mode: 'end', endsAt: 0 }
+    else {
+      const delay = minutes * 60_000
+      this.sleepTimer = { mode: 'time', endsAt: Date.now() + delay }
+      this.#sleepDeadline = performance.now() + delay
+      this.#scheduleSleepCheck()
+    }
+    return true
+  }
+
+  #checkSleepTimer(): boolean {
+    if (this.sleepTimer.mode !== 'time' || performance.now() < this.#sleepDeadline) return false
+    this.#finishSleep()
+    return true
+  }
+
+  #scheduleSleepCheck() {
+    this.#sleepTimeout = setTimeout(() => {
+      if (!this.#checkSleepTimer() && this.sleepTimer.mode === 'time') this.#scheduleSleepCheck()
+    }, Math.max(1, this.#sleepDeadline - performance.now()))
+  }
+
+  #finishSleep(atEnd = false) {
+    void this.setSleepTimer(0)
+    // La pausa invalida cargas pendientes y detiene el detector de bloqueos y la recuperación.
+    this.#pause()
+    if (atEnd || this.#completed) {
+      this.#activeItem = null
+      this.#positionKnown = false
+      this.#resetAudio()
+      this.time = 0
+    }
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+  }
+
   /**
    * Fija a mano el vídeo de una canción y lo recuerda. Si es la que suena, se cambia al momento;
    * si no, solo se guarda para la próxima vez.
@@ -513,6 +568,7 @@ class Player implements PlayerApi {
   #load(pos: number, refresh = false, startAt = 0) {
     const item = this.queue[this.order[pos]]
     if (!item) return
+    if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = null
     this.pos = pos
     this.#start(item, refresh, startAt)
@@ -520,6 +576,7 @@ class Player implements PlayerApi {
 
   /** Pone una canción de tu cola (sin mover la posición en el disco o playlist de fondo). */
   #loadManual(item: QueueItem, refresh = false, startAt = 0) {
+    if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = item
     this.#start(item, refresh, startAt)
   }
@@ -639,6 +696,7 @@ class Player implements PlayerApi {
 
   /** Reconstruye el decoder una vez, sin cambiar de canción ni reextraer los archivos locales. */
   async #repair(at: number) {
+    if (this.#checkSleepTimer()) return
     const item = this.current
     const playable = this.#playable
     if (!item || !playable || !this.#wantsPlay) return
@@ -690,6 +748,7 @@ class Player implements PlayerApi {
 
   /** El audio falló a mitad: si la URL pudo caducar, se pide otra una vez y se sigue donde iba. */
   #onAudioError() {
+    if (this.#checkSleepTimer()) return
     const item = this.current
     // Al arrancar, #playAudio recoge tanto el evento error como el rechazo de play(): un solo fallo.
     if (this.status === 'loading' || !item || !this.#audio.src || !this.#wantsPlay) return
@@ -702,6 +761,14 @@ class Player implements PlayerApi {
 
   #fail(item: QueueItem, reason: string, token: number, advance = true) {
     if (token !== this.#token) return
+    if (this.#checkSleepTimer()) return
+    if (this.sleepTimer.mode === 'end') {
+      toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)
+      this.#finishSleep()
+      this.#activeItem = null
+      this.#resetAudio()
+      return
+    }
     this.#saveProgress(true)
     ++this.#token
     this.#wantsPlay = false

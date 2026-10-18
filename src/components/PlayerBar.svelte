@@ -8,6 +8,7 @@
   import { toast } from '../lib/toast.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import SleepTimer from './SleepTimer.svelte'
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
@@ -61,6 +62,7 @@
   <div class="center"><Transport /></div>
 
   <div class="side">
+    <SleepTimer />
     {#if !podcast && !youtube}
       <button
         class="icon"
@@ -111,7 +113,7 @@
     position: relative;
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) minmax(340px, 2fr) minmax(200px, 1fr);
+    grid-template-columns: minmax(160px, 1fr) minmax(300px, 2fr) minmax(270px, 1fr);
     align-items: center;
     gap: 16px;
     height: 80px;
@@ -229,10 +231,10 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 14px;
+    gap: 12px;
   }
   .volume {
-    width: 110px;
+    width: 90px;
     height: 14px;
     margin: 0;
     appearance: none;
@@ -279,6 +281,18 @@
     from {
       opacity: 0;
       transform: translate(-50%, 8px) scale(0.97);
+    }
+  }
+  @media (max-width: 1000px) {
+    .player {
+      grid-template-columns: minmax(120px, 1fr) minmax(260px, 1.5fr) auto;
+      gap: 10px;
+    }
+    .side {
+      gap: 10px;
+    }
+    .volume {
+      display: none;
     }
   }
 </style>

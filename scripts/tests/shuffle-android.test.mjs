@@ -4,7 +4,7 @@ import test from 'node:test'
 import { compileModule } from 'svelte/compiler'
 import * as svelte from 'svelte/internal/client'
 import ts from 'typescript'
-import { flush, item } from './helpers/player-harness.mjs'
+import { flush, item, sleepTimer } from './helpers/player-harness.mjs'
 
 // Android recibe una cola ya ordenada; compilamos el mando real y simulamos solo su IPC.
 const source = await readFile(new URL('../../src/lib/player-android.svelte.ts', import.meta.url), 'utf8')
@@ -35,6 +35,7 @@ function harness({ storage = new Map() } = {}) {
     './media': { isPodcast: () => false },
     './queue': queue,
     './toast.svelte': { toast: { show: () => {} } },
+    './sleep-timer': sleepTimer,
   }
   const exports = {}, events = new EventTarget()
   new Function('require', 'exports', 'navigator', 'document', 'setInterval', compiled)(
