@@ -1,6 +1,6 @@
 # Audio con pantalla apagada: estado de la comprobación
 
-> Registro histórico de la herramienta diagnóstica y el reproductor básico anteriores. El estado actual del port 0.11.2 está en [su informe](pwa-port-0.11.2.md); ese port aún no tiene prueba física de pantalla apagada. Las tablas siguientes mantienen la evidencia original. Algunos artefactos citados pertenecen al entorno anterior y no están copiados a este worktree.
+> Registro histórico de la herramienta diagnóstica y el reproductor básico anteriores. El estado actual del port 0.11.2 está en [su informe](pwa-port-0.11.2.md); las confirmaciones físicas de este texto no se aplican automáticamente a ese port. Las tablas siguientes mantienen la evidencia original. Algunos artefactos citados pertenecen al entorno anterior y no están copiados a este worktree.
 
 Actualizado el 18 de octubre de 2026. Prueba pública:
 <https://diad87.github.io/pletina/prueba-audio/>.

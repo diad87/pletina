@@ -36,10 +36,13 @@ await Promise.all(Array.from({ length: 4 }, async () => {
   }
 }))
 files.sort((a, b) => a.path.localeCompare(b.path))
-const report = { testedAt: new Date().toISOString(), url: base.href, passed: files.every((file) => file.pass), files }
+const build = (await readFile(join(distribution, 'sw.js'), 'utf8')).match(/const VERSION = "([a-f0-9]{16})"/)?.[1]
+if (!build) throw new Error('Falta la versión compilada del worker.')
+const report = { testedAt: new Date().toISOString(), build, url: base.href, passed: files.every((file) => file.pass), files }
 const output = join(workspace, 'artifacts', 'pwa-deploy', 'public-files.json')
 await mkdir(dirname(output), { recursive: true })
 await writeFile(output, JSON.stringify(report, null, 2) + '\n')
+await writeFile(join(dirname(output), `public-files-${build}.json`), JSON.stringify(report, null, 2) + '\n')
 console.log(JSON.stringify({ url: report.url, passed: report.passed, checked: files.length,
   failures: files.filter((file) => !file.pass), report: relative(workspace, output) }, null, 2))
 if (!report.passed) process.exitCode = 1

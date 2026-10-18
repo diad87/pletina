@@ -2,7 +2,9 @@
 
 El port web reutiliza la interfaz Svelte de Pletina **0.11.2**, con búsqueda por nombre o artista y reproducción de canciones sin pegar enlaces. La entrada de instalación sigue siendo pequeña: muestra **Instalar** y carga la aplicación completa solo al pulsar **Abrir Pletina**. GitHub Pages sirve archivos estáticos; el catálogo y el audio se consultan directamente desde el navegador, sin backend, proxy ni microservidor en el móvil.
 
-**Estado de publicación: publicado y verificado por HTTPS.** El build final `1785b6edf53a230b` está en <https://diad87.github.io/pletina/>. Sus **22/22 archivos** respondieron HTTP 200 y coincidieron con los SHA-256 locales; la prueba pública de instalación mínima, búsqueda y reproducción de la canción seleccionada pasó **3/3 comprobaciones** en Chrome de escritorio. El [informe del port 0.11.2](pwa-port-0.11.2.md) enlaza los resultados y delimita la validación móvil pendiente.
+**Estado de publicación: corrección `74d9ad3aebca421b` publicada y verificada.** Está en <https://diad87.github.io/pletina/>. Sus **22/22 archivos** respondieron HTTP 200 con SHA-256 coincidentes y la transición pública Creep → Million Dollar Question pasó en Chrome de escritorio con la pestaña oculta. El [informe del port 0.11.2](pwa-port-0.11.2.md) enlaza la evidencia y distingue la repetición física pendiente.
+
+**Incidencia física:** durante la prueba solicitada del build anterior, el usuario informó en Xiaomi 15T Pro instalado que el audio continúa con pantalla apagada, pero no empieza la siguiente canción. La causa y el comportamiento al desbloquear no están confirmados. La corrección publicada pasa **226/226 pruebas**, tipos sin errores ni avisos y transiciones reales de escritorio, locales y públicas, con pestaña oculta. **Falta repetir la prueba física; todavía no se declara resuelta la incidencia móvil.**
 
 ## Compilar y comprobar
 
@@ -44,7 +46,7 @@ Para instalar o abrir el port publicado:
 
 El botón está disponible aunque el navegador no permita invocar el aviso de instalación programáticamente. En iOS la web muestra instrucciones; la confirmación de añadirla corresponde al usuario. Los nombres de las opciones pueden variar: [ayuda de Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=es) y [guía de Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios).
 
-El build final preparado `1785b6edf53a230b` contiene **35.884 bytes iniciales** y **410.560 bytes de aplicación bajo demanda**, sin comprimir. La instalación inicial no solicita los archivos de `application/`. La primera apertura verifica y guarda ese conjunto antes de entrar en la app. Después de abrirla una vez, el icono instalado puede volver directamente a Pletina mientras se conserve el indicador local. Los tamaños y el hash cambian al recompilar una modificación.
+El build actual `74d9ad3aebca421b` contiene **35.884 bytes iniciales** y **411.523 bytes de aplicación bajo demanda**, sin comprimir. La instalación inicial no solicita los archivos de `application/`. La primera apertura verifica y guarda ese conjunto antes de entrar en la app. Después de abrirla una vez, el icono instalado puede volver directamente a Pletina mientras se conserve el indicador local. Los tamaños y el hash cambian al recompilar una modificación. El build anterior `1785b6edf53a230b` tenía 410.560 bytes bajo demanda.
 
 ## Música y biblioteca
 
@@ -70,11 +72,13 @@ Tras una primera apertura completa con red, la interfaz guardada y los metadatos
 
 El usuario confirmó continuidad y siguiente pista con pantalla físicamente apagada en **Xiaomi 15T Pro**, primero con la herramienta diagnóstica y después con el reproductor básico instalado anterior. Esa evidencia está en [el registro histórico de pantalla apagada](pwa-screen-off-results.md) y [el informe histórico de la primera integración](pwa-player-results.md).
 
-**El nuevo port 0.11.2 todavía no tiene una prueba física de pantalla apagada.** Sus pruebas de escritorio verifican audio real y siguiente pista con la pestaña oculta; las vistas móviles son emulación de diseño en Chrome. iPhone/iPad, Safari y la PWA instalada en iOS siguen pendientes de prueba real. Los informes anteriores no acreditan automáticamente esos entornos ni este nuevo build.
+En la prueba física posterior del port, el usuario indicó **«reproduce bien con la pantalla apagada, pero no pasa a la siguiente cancion»** en el contexto solicitado de PWA instalada en Xiaomi 15T Pro. Se registra [esa observación](../artifacts/pwa-port/android-installed-user-report-1785b6edf53a230b.json): continuidad sí, siguiente no; no se ha confirmado el hash abierto, que quedaran más canciones en la cola ni qué ocurre al desbloquear. Por tanto, la continuación de la cola con el teléfono bloqueado **no está validada**.
+
+La corrección publicada prepara una única fuente siguiente en RAM y, si sigue vigente, cambia `src` y llama a `play()` dentro del mismo evento de fin, sin esperar a IndexedDB ni vaciar el audio. Actualiza esa reserva al ocultarse mientras se quiere reproducir y al reanudar. Se comprobaron sus transiciones e invalidaciones con **17/17 pruebas de reproductor**, incluida una regresión que fallaba antes. También pasó la [transición pública](../artifacts/pwa-port/transition-public-74d9ad3aebca421b.json) con las dos canciones indicadas. Eso todavía no demuestra que resuelva la incidencia física. Las vistas móviles siguen siendo emulación de Chrome y iPhone/iPad, Safari y la PWA instalada de iOS continúan sin prueba real.
 
 ## Publicación
 
-El sitio utiliza GitHub Pages desde la rama **`gh-pages`** en modo de publicación por rama. El commit de distribución `cd4c6b68d5fe729a69f326952d65018d3149e4e7` está publicado y sus archivos HTTPS se comprobaron con `scripts/verify-pwa-deploy.mjs`: [22/22 correctos](../artifacts/pwa-deploy/public-files.json). Es un commit de archivos estáticos, distinto de la base nativa 0.11.2. La dirección raíz y <https://diad87.github.io/pletina/prueba-audio/> mantienen su ubicación.
+El sitio utiliza GitHub Pages desde la rama **`gh-pages`** en modo de publicación por rama. La corrección está publicada en el commit de distribución `d004cea9ebdde641b75a51ec6b1ad8eaf947c1c0`; su comparación HTTPS pasó [22/22 archivos](../artifacts/pwa-deploy/public-files-74d9ad3aebca421b.json). La verificación anterior de `1785b6edf53a230b`, commit `cd4c6b68d5fe729a69f326952d65018d3149e4e7`, queda [archivada por separado](../artifacts/pwa-deploy/public-files-1785b6edf53a230b.json). Son commits de archivos estáticos, distintos de la base nativa 0.11.2. La dirección raíz y <https://diad87.github.io/pletina/prueba-audio/> mantienen su ubicación.
 
 El workflow `.github/workflows/pwa.yml` está preparado para compilar, comprobar y desplegar `dist-pwa/` mediante GitHub Actions. **Todavía no es el mecanismo activo de publicación.** Para usarlo habría que incorporar esos cambios a la rama configurada y cambiar **Settings → Pages → Build and deployment → Source → GitHub Actions**. Su presencia en el repositorio no acredita un despliegue.
 

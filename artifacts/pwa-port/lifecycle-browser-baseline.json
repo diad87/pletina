@@ -1,0 +1,1074 @@
+{
+  "testedAt": "2026-10-18T12:12:12.051Z",
+  "sourcePlayerSha256": "a917d9fcc6d68874cb26fb9fbc6945ff813901072f83af06c16f20dddf0f3b87",
+  "scope": "Real compiled Player with controlled API adapter and real Chrome Audio decoding local WAV. Explicit renderer freezing/throttling only; no physical screen-off equivalence.",
+  "physicalScreenOffVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "fullApplicationTest": false,
+  "realYouTubeResolverTested": false,
+  "externalNetworkUsed": false,
+  "audioOutputSilencedByChromeArgument": true,
+  "mediaElementMuted": false,
+  "expectPrepared": false,
+  "cases": [
+    {
+      "name": "single-track queue exhaustion control",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 1,
+        "status": "paused",
+        "pos": 0,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 4,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/1.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325532748,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325532748,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325532748,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325532749,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325532749,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325532803,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325532803,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325532835,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325532908,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "pause",
+            "at": 1792325536995,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325536995,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "hidden page natural ended transition",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 2,
+        "status": "paused",
+        "pos": 1,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/2.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325565312,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325565313,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325565313,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325565314,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325565314,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325565318,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325565318,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325565348,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325565365,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325565365,
+            "hidden": false,
+            "id": 2,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325565365,
+            "hidden": false,
+            "id": 2,
+            "late": false
+          },
+          {
+            "type": "pause",
+            "at": 1792325569444,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325569444,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325569444,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325569445,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325569445,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325569445,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325569452,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325569459,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "pause",
+            "at": 1792325581504,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325581504,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "hidden CPU-throttled renderer transition",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 2,
+        "status": "paused",
+        "pos": 1,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/2.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325595917,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325595917,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325595917,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325595918,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325595918,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325595933,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325595933,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325595939,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325595949,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325595950,
+            "hidden": false,
+            "id": 2,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325595950,
+            "hidden": false,
+            "id": 2,
+            "late": false
+          },
+          {
+            "type": "pause",
+            "at": 1792325600003,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325600003,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325600003,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325600004,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325600004,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325600004,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325600012,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325600019,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "pause",
+            "at": 1792325612073,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325612073,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "explicit frozen renderer limitation",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 2,
+        "status": "paused",
+        "pos": 1,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/2.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325626426,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325626426,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325626427,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325626427,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325626427,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325626439,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325626439,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325626445,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325626451,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325626451,
+            "hidden": false,
+            "id": 2,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325626451,
+            "hidden": false,
+            "id": 2,
+            "late": false
+          },
+          {
+            "type": "pause",
+            "at": 1792325630502,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325630503,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325630503,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325630503,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325630504,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325630504,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325630533,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325630539,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "waiting",
+            "at": 1792325643148,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325643215,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "pause",
+            "at": 1792325643215,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325643216,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "late resolver barrier versus prepared source",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 2,
+        "status": "paused",
+        "pos": 1,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/2.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325656952,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325656953,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325656953,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325656953,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325656953,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325656966,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325656966,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325656971,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325656979,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325656979,
+            "hidden": false,
+            "id": 2,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325656979,
+            "hidden": false,
+            "id": 2,
+            "late": false
+          },
+          {
+            "type": "pause",
+            "at": 1792325661032,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325661032,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325661032,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325661033,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325661033,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325661033,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325661041,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325661048,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "pause",
+            "at": 1792325673101,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325673101,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 12,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "simulated autoplay rejection signature and manual retry",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "final": {
+        "current": 2,
+        "status": "paused",
+        "pos": 1,
+        "hasNext": false,
+        "upcoming": [],
+        "audioCount": 1,
+        "audio": {
+          "time": 0,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "errorCode": null,
+          "source": "/audio/2.wav"
+        },
+        "events": [
+          {
+            "type": "source-cleared",
+            "at": 1792325687515,
+            "hidden": false
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325687515,
+            "hidden": false,
+            "id": 1,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325687515,
+            "hidden": false,
+            "id": 1,
+            "late": false
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325687516,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325687516,
+            "hidden": false,
+            "source": "/audio/1.wav"
+          },
+          {
+            "type": "waiting",
+            "at": 1792325687532,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325687532,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325687541,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "playing",
+            "at": 1792325687553,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 0,
+            "paused": false,
+            "errorCode": null
+          },
+          {
+            "type": "resolve-start",
+            "at": 1792325687554,
+            "hidden": false,
+            "id": 2,
+            "refresh": false,
+            "late": false
+          },
+          {
+            "type": "resolve-complete",
+            "at": 1792325687554,
+            "hidden": false,
+            "id": 2,
+            "late": false
+          },
+          {
+            "type": "pause",
+            "at": 1792325691611,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "ended",
+            "at": 1792325691611,
+            "hidden": false,
+            "source": "/audio/1.wav",
+            "time": 4,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "source-assigned",
+            "at": 1792325691611,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "play-called",
+            "at": 1792325691612,
+            "hidden": false,
+            "source": "/audio/2.wav"
+          },
+          {
+            "type": "autoplay-rejected",
+            "at": 1792325691612,
+            "hidden": false
+          },
+          {
+            "type": "toast",
+            "at": 1792325691613,
+            "hidden": false,
+            "message": "Audio preparado. Pulsa Reproducir para escucharlo."
+          },
+          {
+            "type": "loadstart",
+            "at": 1792325691613,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": true,
+            "errorCode": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 1792325691620,
+            "hidden": false,
+            "source": "/audio/2.wav",
+            "time": 0,
+            "paused": true,
+            "errorCode": null
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [],
+  "browser": "153.0.8010.52",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "finishedAt": "2026-10-18T12:15:17.957Z",
+  "passed": false
+}

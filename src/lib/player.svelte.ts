@@ -83,6 +83,9 @@ class Player implements PlayerApi {
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
   #inFlight = new Map<number, Promise<Playable>>()
+  /** Una sola fuente siguiente, solo en RAM: ended no tiene que volver a abrir IndexedDB. */
+  #preparedNext: { id: number; playable: Playable; expiresAt: number } | null = null
+  #preparation = 0
   #retried = false
   #sourceLocal = true
   #playable: Playable | null = null
@@ -118,7 +121,10 @@ class Player implements PlayerApi {
     this.#setupMediaSession()
     window.addEventListener('pagehide', () => this.#saveProgress(true))
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.#saveProgress(true)
+      if (document.hidden) {
+        this.#saveProgress(true)
+        if (api.inPwa && this.#wantsPlay) this.#prefetchNext()
+      }
       else this.#checkSleepTimer()
     })
     window.addEventListener('focus', () => this.#checkSleepTimer())
@@ -276,6 +282,7 @@ class Player implements PlayerApi {
     this.userQueue = [...this.userQueue, ...this.#wrap(items)]
     toast.show(items.length === 1 ? `«${items[0].track.title}» añadida a la cola` : `${items.length} canciones añadidas a la cola`)
     this.#startIfIdle()
+    if (api.inPwa) this.#prefetchNext()
   }
 
   /** Al principio de tu cola: suenan justo después de la actual. */
@@ -284,6 +291,7 @@ class Player implements PlayerApi {
     this.userQueue = [...this.#wrap(items), ...this.userQueue]
     toast.show(items.length === 1 ? `«${items[0].track.title}» sonará a continuación` : `${items.length} canciones sonarán a continuación`)
     this.#startIfIdle()
+    if (api.inPwa) this.#prefetchNext()
   }
 
   /** Inserta en tu cola en una posición concreta (al arrastrar al panel de la cola). */
@@ -292,10 +300,12 @@ class Player implements PlayerApi {
     list.splice(Math.max(0, Math.min(at, list.length)), 0, ...this.#wrap(items))
     this.userQueue = list
     this.#startIfIdle()
+    if (api.inPwa) this.#prefetchNext()
   }
 
   removeFromQueue(key: number) {
     this.userQueue = this.userQueue.filter((e) => e.key !== key)
+    if (api.inPwa) this.#prefetchNext()
   }
 
   moveInQueue(key: number, to: number) {
@@ -305,10 +315,12 @@ class Player implements PlayerApi {
     const [moved] = list.splice(from, 1)
     list.splice(Math.max(0, Math.min(to, list.length)), 0, moved)
     this.userQueue = list
+    if (api.inPwa) this.#prefetchNext()
   }
 
   clearQueue() {
     this.userQueue = []
+    if (api.inPwa) this.#prefetchNext()
   }
 
   /** Reproduce ya una canción de tu cola; las que iban delante se quitan (como en Spotify). */
@@ -359,6 +371,7 @@ class Player implements PlayerApi {
     this.status = 'loading'
     try {
       await this.#playElement(this.#audio)
+      if (api.inPwa && token === this.#token) this.#prefetchNext()
     } catch (e) {
       if (token !== this.#token) return
       if (this.#canRefreshSource()) this.#repair(at)
@@ -452,6 +465,7 @@ class Player implements PlayerApi {
   cycleRepeat() {
     this.repeat = this.repeat === 'off' ? 'all' : this.repeat === 'all' ? 'one' : 'off'
     save('musify:repeat', this.repeat)
+    if (api.inPwa) this.#prefetchNext()
   }
 
   async setSleepTimer(minutes: number): Promise<boolean> {
@@ -502,6 +516,10 @@ class Player implements PlayerApi {
    */
   async useSource(videoId: string, item: QueueItem | null = this.current): Promise<boolean> {
     if (!item || isPodcast(item.track.id) || isYouTubeTrack(item.track.id)) return false
+    if (api.inPwa) {
+      this.#clearPrepared()
+      this.#inFlight.delete(item.track.id)
+    }
     // Si estaba descargada, el archivo era del vídeo equivocado: el backend lo borra y se vuelve a bajar.
     const wasDownloaded = downloads.done.has(item.track.id)
     const redownload = () => {
@@ -513,10 +531,12 @@ class Player implements PlayerApi {
     if (item.track.id !== this.current?.track.id) {
       try {
         await api.chooseSource(toQuery(item), videoId)
+        if (api.inPwa) this.#prefetchNext()
         redownload()
         toast.show(`Hecho: «${item.track.title}» sonará con ese vídeo`)
         return true
       } catch (e) {
+        if (api.inPwa) this.#prefetchNext()
         toast.show(`No se pudo usar ese vídeo: ${e}`)
         return false
       }
@@ -545,6 +565,7 @@ class Player implements PlayerApi {
         await this.#playAudio(refreshed)
       }
       if (token !== this.#token) return true
+      if (api.inPwa) this.#prefetchNext()
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
     } catch (e) {
@@ -590,6 +611,9 @@ class Player implements PlayerApi {
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
+    const prepared = api.inPwa && !refresh && startAt === 0 && this.#preparedNext?.id === item.track.id &&
+      this.#preparedNext.expiresAt > Date.now() ? this.#preparedNext.playable : null
+    if (api.inPwa) this.#clearPrepared()
     this.#saveProgress(true)
     this.#activeItem = null
     const restore = !refresh && (!preserveHistory || !this.#positionKnown)
@@ -606,6 +630,17 @@ class Player implements PlayerApi {
     this.time = startAt
     this.duration = item.track.duration
     try {
+      if (prepared) {
+        // Cambiar src y llamar a play en la misma tarea que ended, sin descargar el elemento
+        // ni esperar a IndexedDB/red cuando el teléfono deja de tener audio activo.
+        this.#clearProgressTimer()
+        this.#updateMediaSession(item)
+        this.#retried = false
+        await this.#playAudio(prepared)
+        if (token !== this.#token) return
+        this.#prefetchNext()
+        return
+      }
       this.#resetAudio()
       this.#updateMediaSession(item)
       this.#retried = refresh
@@ -728,6 +763,7 @@ class Player implements PlayerApi {
     const token = ++this.#token
     this.time = at
     this.status = 'loading'
+    if (api.inPwa) this.#clearPrepared()
     this.#resetAudio(true)
     try {
       // Una ruta local sigue siendo local; nunca se busca en YouTube para reparar su decoder.
@@ -735,16 +771,51 @@ class Player implements PlayerApi {
       if (token !== this.#token) return
       this.#retried = !source.local
       await this.#playAudio(source, at)
+      if (api.inPwa && token === this.#token) this.#prefetchNext()
     } catch (e) {
       if (token === this.#token) this.#fail(item, String(e), token, false)
     }
   }
 
+  #following(): QueueItem | undefined {
+    const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
+    return this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
+  }
+
+  #clearPrepared() {
+    ++this.#preparation
+    this.#preparedNext = null
+  }
+
+  #preparedExpiry(source: Playable): number {
+    const now = Date.now()
+    try {
+      const expiration = Number(new URL(source.url).searchParams.get('expire')) * 1000
+      if (Number.isFinite(expiration) && expiration > 0) return Math.min(now + 20 * 60_000, expiration - 60_000)
+    } catch { /* Un origen sin caducidad explícita tiene una reserva corta. */ }
+    return now + 5 * 60_000
+  }
+
   /** Mientras suena una canción, se prepara la siguiente para que no haya espera. */
   #prefetchNext() {
-    const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
-    const following = this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
-    if (following && following !== this.current) this.#resolve(following, false).catch(() => {})
+    const following = this.#following()
+    if (!api.inPwa) {
+      if (following && following !== this.current) this.#resolve(following, false).catch(() => {})
+      return
+    }
+    if (following && this.#preparedNext?.id === following.track.id && this.#preparedNext.expiresAt > Date.now()) return
+    this.#clearPrepared()
+    if (!following) return
+    const id = following.track.id
+    const preparation = this.#preparation
+    // Una aparición duplicada de la canción actual puede reutilizar su fuente vigente.
+    const pending = id === this.current?.track.id && this.#playable
+      ? Promise.resolve(this.#playable) : this.#resolve(following, false)
+    pending.then((playable) => {
+      if (preparation !== this.#preparation || this.#following()?.track.id !== id) return
+      const expiresAt = this.#preparedExpiry(playable)
+      if (expiresAt > Date.now()) this.#preparedNext = { id, playable, expiresAt }
+    }).catch(() => {})
   }
 
   #resolve(item: QueueItem, refresh: boolean): Promise<Playable> {

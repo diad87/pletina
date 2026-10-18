@@ -78,7 +78,7 @@ async function cacheApplicationPaths() {
 async function selectedSongCheck() {
   const expectedTitle = await page.$eval('.tracks li[data-reorder-index="0"] .name', (element) => element.textContent.trim())
   // One deliberate start. No queue mutation or second click until real progress.
-  await page.click('.tracks li[data-reorder-index="0"] .row[role="button"]')
+  await page.click('.tracks li[data-reorder-index="0"] .row[role="button"] .num')
   await waitAudio(() => window.__qaAudio.instances.some((audio) => !audio.paused && audio.currentTime > 2))
   const snapshot = await media()
   const sourceChoices = await page.evaluate(() => new Promise((resolve, reject) => {
@@ -241,7 +241,7 @@ try {
     await page.waitForSelector('.tracks li[data-reorder-index="0"] button.heart.on')
     // Full QA has already verified one clean start; do not click it again.
     // UI-only follow-up starts the main list before adding a manual queue entry.
-    if (uiOnly) await page.click('.tracks li[data-reorder-index="0"] .row[role="button"]')
+    if (uiOnly) await page.click('.tracks li[data-reorder-index="0"] .row[role="button"] .num')
     await page.click('.tracks li[data-reorder-index="1"] button.more')
     await clickText('[role="menuitem"]', 'Añadir a la cola')
     await page.click('.player button[title="Cola de reproducción"]')
