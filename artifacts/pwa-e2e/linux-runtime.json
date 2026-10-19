@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "host": "Ubuntu 24.04.4 LTS x64 under WSL2 on Windows",
+  "kernel": "6.6.87.2-microsoft-standard-WSL2",
+  "runtimeDirectory": "D:/tmp/pletina-e2e-linux",
+  "node": {
+    "version": "24.22.0",
+    "file": "node-v24.22.0-linux-x64.tar.xz",
+    "sha256": "cc2f601cee82d9a5a233302fe307abc600727035fd7d2c3a3571755989e95008",
+    "source": "https://nodejs.org/dist/latest-v24.x/SHASUMS256.txt"
+  },
+  "playwright": "1.62.1, reused repository JavaScript package",
+  "webkit": "26.5, official Ubuntu 24.04 browser build 2336, headless WPE",
+  "dependencies": [
+    {
+      "package": "libevent-2.1-7t64",
+      "version": "2.1.12-stable-9ubuntu2.2",
+      "sha256": "083ced6efb23476cb4de4e441b741af02db5653e67fa7fcd6cf7e5f7b78f6101"
+    },
+    {
+      "package": "libavif16",
+      "version": "1.0.4-1ubuntu3",
+      "sha256": "b295a9954a4b756af05ff381d9808f3c0c582a111b7e4c7678cfe13de9ae8818"
+    },
+    {
+      "package": "libgav1-1",
+      "version": "0.18.0-1build3",
+      "sha256": "428f353f449e6b15cdcf5823215416e36adcfba75fe9f0fedc1cd132d68e6b3f"
+    },
+    {
+      "package": "libyuv0",
+      "version": "0.0~git202401110.af6ac82-1",
+      "sha256": "88bd472e50a7e45469e31f8e0ba232b4d8ed30322f5badb285c58cc1ba0d2176"
+    },
+    {
+      "package": "libabsl20220623t64",
+      "version": "20220623.1-3.1ubuntu3.2",
+      "sha256": "dec97687bc3bc4edbd1c26bc9182f7584e3ff1c36a9bb7ce80211951e5a5893d"
+    }
+  ],
+  "dependencySource": "Official archive.ubuntu.com Ubuntu package pool; SHA256 checked against apt-cache metadata",
+  "systemPackagesInstalled": false,
+  "configuration": [
+    "Dependencies extracted to runtimeDirectory/sysroot using dpkg-deb -x, without sudo or apt install",
+    "Downloaded WPE MiniBrowser launcher appends inherited LD_LIBRARY_PATH to its bundled library paths",
+    "Only the QA process receives PLAYWRIGHT_BROWSERS_PATH, LD_LIBRARY_PATH and PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1",
+    "GTK visible-browser libraries were not installed; the executable tested is headless WPE",
+    "Ephemeral loopback TLS proxy allows only five fixture hosts (two AAC, RSS and two cover-image hosts); no external upstream",
+    "Self-signed certificate accepted only by disposable QA BrowserContext; no product or system trust changes"
+  ],
+  "physicalIPhoneClaimed": false,
+  "fixtureHosts": [
+    "fixture.googlevideo.com",
+    "media.pletina.test",
+    "feeds.pletina.test",
+    "images.pletina.test",
+    "i.ytimg.com"
+  ]
+}

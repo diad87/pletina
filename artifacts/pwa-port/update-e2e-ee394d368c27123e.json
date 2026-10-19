@@ -1,0 +1,225 @@
+{
+  "testedAt": "2026-10-19T06:46:10.300Z",
+  "browser": "153.0.8010.52",
+  "checks": [
+    {
+      "name": "full A installs without application downloads; app opens on demand",
+      "pass": true,
+      "applicationPath": "/pletina/application/index.99f864a2df362b23.html",
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": null,
+        "cacheInfo": [
+          {
+            "version": "9c9c36375170495b",
+            "paths": [
+              "/pletina/app.91db061803fd9aa8.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-B8eT0LIO.js",
+              "/pletina/application/assets/index-Dhe7ruI3.css",
+              "/pletina/application/index.99f864a2df362b23.html",
+              "/pletina/application/launcher.88021092126246e3.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "UI-created playlist and duplicate entries persist in real IndexedDB before update",
+      "pass": true,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "duplicateTrackId": 101
+    },
+    {
+      "name": "v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update",
+      "pass": true,
+      "librarySchemaFrom": 1,
+      "librarySchemaTo": 2,
+      "podcastId": 500000000000101,
+      "episodeId": 750000000000101,
+      "progress": {
+        "id": 750000000000101,
+        "position": 57,
+        "duration": 600,
+        "completed": false
+      },
+      "download": {
+        "trackId": 101,
+        "bytes": 1644,
+        "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+        "stablePath": "/pletina/__audio__/101",
+        "playbackTested": false,
+        "providerDownloaded": false
+      }
+    },
+    {
+      "name": "B waits behind the real update banner without replacing A or eagerly caching its app",
+      "pass": true,
+      "waitingVersion": "7d62d07f19616697",
+      "currentApplication": "A",
+      "initialOptionalDownloads": 0
+    },
+    {
+      "name": "a failed application preparation keeps A active and the playlist intact",
+      "pass": true,
+      "oldApplicationRemainedActive": true,
+      "activationMessages": 0,
+      "retryEnabled": true
+    },
+    {
+      "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+      "pass": true,
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "newApplicationPath": "/pletina/application/index.127d1ca0b2207547.html",
+      "cachedOptionalFiles": 6,
+      "preservedDatabase": true
+    },
+    {
+      "name": "updated B reopens offline with playlist, podcast progress and identical downloaded/cache-route bytes",
+      "pass": true,
+      "online": false,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "podcastId": 500000000000101,
+      "episodeId": 750000000000101,
+      "podcastPosition": 57,
+      "downloadedTrackId": 101,
+      "cachedSha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "swRouteSha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "swRouteStatus": 200,
+      "downloadedBytes": 1644,
+      "fixturePlaybackClaimed": false,
+      "providerDownloadClaimed": false
+    }
+  ],
+  "errors": [],
+  "messages": [
+    {
+      "phase": "full-A",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "failed-preparation",
+      "path": "/pletina/application/index.99f864a2df362b23.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.99f864a2df362b23.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.99f864a2df362b23.html",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.99f864a2df362b23.html",
+      "type": "controllerchange"
+    }
+  ],
+  "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+  "osShortcutInstallationVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "externalMusicNetworkUsed": false,
+  "productionDirectoriesMutated": false,
+  "updateTrigger": "registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.",
+  "playlistFixture": "Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.",
+  "audioFixture": "Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.",
+  "baseDistributionVersion": "ee394d368c27123e",
+  "sourceCompiledHtmlSha256": "f574f746af5205fd65bbd0e8507c6feca341ddaae447d2cab6d1ed3fcf9cd013",
+  "builds": {
+    "A": {
+      "version": "9c9c36375170495b",
+      "applicationPage": "application/index.99f864a2df362b23.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-B8eT0LIO.js",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/index.99f864a2df362b23.html",
+        "application/launcher.88021092126246e3.js"
+      ]
+    },
+    "B": {
+      "version": "7d62d07f19616697",
+      "applicationPage": "application/index.127d1ca0b2207547.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-B8eT0LIO.js",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/index.127d1ca0b2207547.html",
+        "application/launcher.10c353edf1accc07.js"
+      ]
+    }
+  },
+  "sourceApplicationAssets": [
+    {
+      "url": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+    },
+    {
+      "url": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+    },
+    {
+      "url": "application/assets/index-B8eT0LIO.js",
+      "sha256": "d1d63afddc9f0da034467af7fe320c9e1190a81562111b67a5f018bdb35596bb"
+    },
+    {
+      "url": "application/assets/index-Dhe7ruI3.css",
+      "sha256": "8aa749e9eff0f9bdd3db461c93e9dc98872bafee37a8e6bf1f415ba812d1e298"
+    }
+  ],
+  "manifestIdentity": {
+    "id": "./",
+    "scope": "./",
+    "start_url": "./"
+  },
+  "downloadFixture": {
+    "trackId": 101,
+    "bytes": 1644,
+    "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+    "stablePath": "/pletina/__audio__/101",
+    "playbackTested": false,
+    "providerDownloaded": false
+  },
+  "pending": [
+    "Prototype migration requires --prototype pointing to an existing compiled prototype."
+  ],
+  "browserClosed": true,
+  "browserProfile": "Disposable Playwright launch profile; browser.close releases it.",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "blockedExternalHosts": [
+    "cdn-images.dzcdn.net"
+  ],
+  "finishedAt": "2026-10-19T06:46:15.946Z",
+  "passed": true
+}

@@ -1,0 +1,581 @@
+// UI scenarios against the compiled application. Provider fixtures enter through HTTP
+// responses; these tests never replace application modules or expose product globals.
+import assert from 'node:assert/strict'
+
+export const libraryScenarioInventory = [
+  { id: 'library.navigation', actions: ['four mobile tabs', 'browser Back/Forward', 'query replacement', 'reload', 'viewport bounds'] },
+  { id: 'library.discovery', actions: ['discovery cards', 'artist detail', 'album detail', 'recently viewed navigation', 'pinned tile navigation', 'unpin on Home'] },
+  { id: 'library.search', actions: ['songs/artists/albums', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
+  { id: 'library.favorites', actions: ['save/remove artist', 'save/remove album', 'like/filter/unlike song'] },
+  { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
+  { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'all omitted', 'empty name', 'review matches/omissions', 'save duplicate entries', 'reload'] },
+  { id: 'library.spotify', actions: ['unsupported public URL has a visible explanation'] },
+  { id: 'library.youtube', actions: ['reject invalid link', 'preview/change link', 'edit/validate metadata', 'save/update without duplicate', 'remove saved link'] },
+  { id: 'library.source-picker', actions: ['choose listed candidate', 'invalid link', 'manual choice', 'remember choice', 'native dialog close'] },
+  { id: 'library.podcasts', actions: ['RSS and YouTube search', 'language filters', 'episode detail', 'save/remove show', 'reload persistence'] },
+  { id: 'library.history', actions: ['empty history', 'recorded history after media scenarios', 'cancel clear', 'clear and reload'] },
+]
+
+function ui(ctx) {
+  const { page } = ctx
+  const settle = () => page.evaluate(async () => {
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await Promise.all((document.querySelector('.view')?.getAnimations() ?? []).map(a => a.finished.catch(() => {})))
+  })
+  const tap = async (selector) => { await settle(); await ctx.tap(selector) }
+  const text = async (selector, label, exact = true) => { await settle(); await ctx.clickText(selector, label, exact) }
+  const wait = (fn, value, timeout = 15000) => page.waitForFunction(fn, value, { timeout })
+  const mobile = async () => await page.locator('.bottom-nav').count() > 0
+  const tab = async (label) => {
+    if (await mobile()) await text('.bottom-nav button', label)
+    else if (label !== 'Tu biblioteca') await text('.sidebar nav button', label)
+    await settle()
+  }
+  const library = async (label) => {
+    await tab('Tu biblioteca')
+    await text('.items .item', label, false)
+    await settle()
+  }
+  const fill = async (selector, value) => { await settle(); await page.locator(selector).fill(value); await settle() }
+  const search = async (query) => {
+    await tab('Buscar'); await fill('input[aria-label="Buscar música"]', query)
+    if (query) await page.locator('ol.tracks > li[data-reorder-index]').first().waitFor()
+    await settle()
+  }
+  const rows = () => page.locator('ol.tracks > li[data-reorder-index]')
+  const titles = () => rows().locator('.name').allTextContents()
+  const rowMenu = async (index = 0) => {
+    const row = rows().nth(index)
+    if (!await mobile()) await row.hover()
+    await tap(`ol.tracks > li[data-reorder-index="${await row.getAttribute('data-reorder-index')}"] button.more`)
+    await page.locator('[role="menu"]').first().waitFor()
+  }
+  const menu = (label) => text('[role="menuitem"]', label)
+  const addToPlaylist = async (name) => {
+    if (await mobile()) await menu('Añadir a playlist')
+    else await page.getByRole('menuitem', { name: 'Añadir a playlist', exact: true }).hover()
+    await menu(name)
+  }
+  const rename = async (name) => {
+    await page.locator('input[aria-label="Nombre de la playlist"]').waitFor()
+    await fill('input[aria-label="Nombre de la playlist"]', name)
+    await page.locator('input[aria-label="Nombre de la playlist"]').press('Enter')
+    await wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
+  }
+  return { settle, tap, text, wait, mobile, tab, library, fill, search, rows, titles, rowMenu, menu, addToPlaylist, rename }
+}
+
+export async function runLibraryScenarios(ctx) {
+  const { page, fixture, check } = ctx
+  const u = ui(ctx)
+  const tracks = fixture.data?.tracks ?? fixture.tracks
+  const artists = fixture.data?.artists ?? fixture.artists
+  const albums = fixture.data?.albums ?? fixture.albums
+  assert.ok(tracks?.length >= 9 && albums?.length >= 3 && artists?.length >= 2, 'Library scenarios require the agreed provider fixtures')
+  const first = tracks[0], second = tracks[1], third = tracks[2]
+  const artistName = artists[0].name
+  const albumTitle = albums[0].title
+  const query = fixture.media.query
+  const playlistName = 'E2E Biblioteca'
+  const renamedPlaylist = 'E2E Biblioteca Renombrada'
+  const importedName = 'E2E CSV Duplicados'
+  const trackArtist = first.artist?.name ?? first.artistName ?? artistName
+  const currentRoute = () => page.evaluate(() => history.state?.snapshot?.stack[history.state.index]?.name)
+
+  await check('library.navigation: four tabs, browser history, reload and viewport', async () => {
+    if (!await page.locator('.app').count()) {
+      if (!await page.locator('#open-player').count()) await page.goto(ctx.baseURL, { waitUntil: 'load' })
+      await Promise.all([page.waitForURL(url => url.pathname.includes('/application/')), u.tap('#open-player')])
+    }
+    await page.locator('.app').waitFor()
+    if (await u.mobile()) {
+      assert.deepEqual(await page.locator('.bottom-nav button').allTextContents().then(xs => xs.map(x => x.trim())), ['Inicio', 'Buscar', 'Podcasts', 'Tu biblioteca'])
+    } else {
+      assert.deepEqual(await page.locator('.sidebar nav button').allTextContents().then(xs => xs.map(x => x.trim())), ['Inicio', 'Buscar', 'Podcasts'])
+    }
+    await u.tab('Inicio')
+    const url = page.url()
+    await u.search(query)
+    await page.evaluate(() => history.back())
+    await page.locator('.greeting').waitFor()
+    assert.equal(page.url(), url)
+    await page.evaluate(() => history.forward())
+    await u.wait(q => document.querySelector('input[aria-label="Buscar música"]')?.value === q, query)
+    await page.reload({ waitUntil: 'load' })
+    await u.wait(q => document.querySelector('input[aria-label="Buscar música"]')?.value === q, query)
+    await page.evaluate(() => history.back())
+    await page.locator('.greeting').waitFor()
+    const size = await page.evaluate(() => {
+      const rect = document.querySelector('.bottom-nav')?.getBoundingClientRect()
+      return { width: innerWidth, document: document.documentElement.scrollWidth, height: innerHeight,
+        bottom: rect?.bottom ?? null, navHeight: rect?.height ?? null }
+    })
+    assert.ok(size.document <= size.width + 1)
+    if (size.bottom !== null) assert.ok(size.navHeight > 0 && size.bottom <= size.height + 1)
+    return { sameURL: true, restoredQuery: true, viewport: size }
+  })
+
+  await check('library.discovery: home cards and empty history', async () => {
+    await u.tab('Inicio')
+    assert.equal(await page.locator('button.surprise').isDisabled(), true)
+    await page.locator('.recommendations[aria-busy="false"] .card .hit').first().waitFor()
+    assert.ok(await page.locator('.recommendations .card .hit').count() >= 2)
+    await u.library('Historial')
+    assert.match(await page.locator('.empty-state').textContent(), /Aún no has escuchado nada/)
+    return { discoveryCards: true, initiallyEmptyHistory: true }
+  })
+
+  await check('library.search: tracks, artists, albums and expanded results', async () => {
+    await u.search(query)
+    assert.equal(await u.rows().count(), 8)
+    assert.equal((await u.titles())[0].trim(), first.title)
+    await u.text('button.more', 'Ver más', false)
+    assert.equal(await u.rows().count(), tracks.length)
+    await u.text('button.more', 'Ver menos')
+    assert.equal(await u.rows().count(), 8)
+    assert.equal(await page.locator('.top-result .top-name').textContent(), artistName)
+    assert.ok(await page.locator('.grid .card .hit').count() >= albums.length)
+    return { tracks: tracks.length, artists: artists.length, albums: albums.length }
+  })
+
+  await check('library.search: natural song de artist retries the empty literal query', async () => {
+    const requests = () => fixture.requests.filter(request => request.host === 'api.deezer.com' && request.path === '/search/track').length
+    const before = requests()
+    const natural = `${first.title} de ${trackArtist}`
+    await u.tab('Buscar'); await u.fill('input[aria-label="Buscar música"]', natural)
+    await u.wait(title => {
+      const rows = document.querySelectorAll('ol.tracks > li[data-reorder-index]')
+      return rows.length === 1 && rows[0].querySelector('.name')?.textContent.trim() === title && !document.querySelector('.stale')
+    }, first.title)
+    const delta = requests() - before
+    assert.ok(delta >= 2, 'The empty literal query and normalized retry must both pass through provider HTTP fixtures')
+    assert.equal((await u.titles())[0].trim(), first.title)
+    await u.tap('.top-result')
+    await u.wait(name => document.querySelector('.banner h1')?.textContent === name, artistName)
+    await u.search(query)
+    return { naturalQuery: natural, selectedTrackId: first.id, title: first.title, interceptedTrackRequests: delta, artistOpenedWithoutPlayback: true }
+  })
+
+  await check('library.search: empty results and partial-provider retry remain explicit', async () => {
+    await u.tab('Buscar'); await u.fill('input[aria-label="Buscar música"]', 'zzzz inexistente')
+    await u.wait(() => document.querySelector('.empty-state strong')?.textContent.includes('No hay resultados'))
+    fixture.failNext('/search/artist')
+    await u.fill('input[aria-label="Buscar música"]', query)
+    await page.locator('.partial-error').waitFor()
+    assert.ok(await u.rows().count() > 0, 'A failed artist section must not hide available songs')
+    await u.text('.partial-error button', 'Reintentar')
+    await page.locator('.partial-error').waitFor({ state: 'detached' })
+    await page.locator('.top-result').waitFor()
+    return { emptyState: true, partialResultsUsable: true, retriedFailedSection: true }
+  })
+
+  await check('library.artist: detail, favorites and discography filters', async () => {
+    await u.search(query); await u.tap('.top-result')
+    await u.wait(name => document.querySelector('.banner h1')?.textContent === name, artistName)
+    await u.tap('button.favorite[title="Añadir a artistas favoritos"]')
+    await page.locator('button.favorite[aria-pressed="true"]:not(:disabled)').waitFor()
+    const chips = await page.locator('.chips button').allTextContents()
+    assert.equal(await u.rows().count(), 5)
+    await u.text('button.more', 'Mostrar más')
+    assert.equal(await u.rows().count(), 8)
+    await u.text('button.more', 'Mostrar menos')
+    assert.equal(await u.rows().count(), 5)
+    assert.ok(chips.some(label => label.includes('Álbumes')))
+    assert.ok(chips.some(label => label.includes('Sencillos y EP')))
+    await u.text('.chips button', 'Sencillos y EP', false)
+    assert.equal(await page.locator('.grid .hit').count(), 1)
+    await u.text('.chips button', 'Todo')
+    assert.equal(await page.locator('.grid .hit').count(), 2)
+    return { artist: artistName, favorite: true, filters: chips.map(x => x.trim()) }
+  })
+
+  const albumReady = await check('library.album: detail, save, pin and library persistence', async () => {
+    await u.search(query); await u.tap(`.grid .hit[aria-label=${JSON.stringify(albumTitle)}]`)
+    await u.wait(title => document.querySelector('.hero h1')?.textContent === title, albumTitle)
+    assert.equal(await u.rows().count(), 4)
+    await u.tap('button[title="Guardar en tu biblioteca"]')
+    await page.locator('button[title="Quitar de tu biblioteca"]').waitFor()
+    await u.tap('button[aria-label="Fijar en Inicio"]')
+    await page.locator('button[aria-label="Desfijar de Inicio"][aria-pressed="true"]').waitFor()
+    await u.tab('Inicio')
+    await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + albumTitle)}]`).waitFor()
+    await page.reload({ waitUntil: 'load' })
+    await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + albumTitle)}]`).waitFor()
+    await u.library(albumTitle)
+    await page.locator('button[title="Quitar de tu biblioteca"]').waitFor()
+    return { album: albumTitle, tracks: 4, savedAndPinnedAcrossReload: true }
+  })
+
+  await check('library.home-and-menus: song destinations, recent cards and direct unpin', async () => {
+    if (!albumReady) return { status: 'blocked', reason: 'The preceding saved album/pin prerequisite failed.' }
+    await u.search(query); await u.rowMenu(0); await u.menu('Ir al artista')
+    await u.wait(name => document.querySelector('.banner h1')?.textContent === name, artistName)
+    await page.evaluate(() => history.back())
+    await u.wait(() => history.state?.snapshot?.stack[history.state.index]?.name === 'search')
+    await u.rows().first().waitFor()
+    await u.rowMenu(0); await u.menu('Ir al disco')
+    await u.wait(title => document.querySelector('.hero h1')?.textContent === title, albumTitle)
+    await page.evaluate(() => history.back())
+    await u.wait(() => history.state?.snapshot?.stack[history.state.index]?.name === 'search')
+    await u.rows().first().waitFor()
+    await u.rowMenu(0); await page.evaluate(() => history.back())
+    await page.locator('[role="menu"]').waitFor({ state: 'detached' })
+    assert.equal(await currentRoute(), 'search')
+    await u.tab('Inicio')
+    assert.equal(await page.locator('button.surprise').isDisabled(), false)
+    await u.tap(`.tile-hit[title=${JSON.stringify(albumTitle)}]`)
+    await u.wait(title => document.querySelector('.hero h1')?.textContent === title, albumTitle)
+    await u.tab('Inicio')
+    const recents = page.locator('.shelf').filter({ has: page.getByRole('heading', { name: 'Visto recientemente', exact: true }) })
+    const recentArtist = recents.locator(`.hit[aria-label=${JSON.stringify(artistName)}]`)
+    await recentArtist.waitFor(); await ctx.tap(recentArtist)
+    await u.wait(name => document.querySelector('.banner h1')?.textContent === name, artistName)
+    await u.tab('Inicio')
+    await u.tap(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + albumTitle)}]`)
+    assert.equal(await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + albumTitle)}]`).count(), 0)
+    // Restore the original saved/pinned prerequisite for the later removal scenario.
+    await u.library(albumTitle); await u.tap('button[aria-label="Fijar en Inicio"]')
+    await page.locator('button[aria-label="Desfijar de Inicio"][aria-pressed="true"]').waitFor()
+    return { menuBackClosedOnlyOverlay: true, songArtistAndAlbumNavigation: true, pinnedTileAndRecentArtistOpened: true,
+      directHomeUnpin: true, surpriseEnabledOnlyWithSavedAlbum: true }
+  })
+
+  await check('library.favorites: like, search, clear and remove one song', async () => {
+    await u.search(query)
+    for (const index of [0, 1]) { await u.rowMenu(index); await u.menu('Añadir a Canciones que te gustan') }
+    await u.library('Canciones que te gustan')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 2)
+    await u.fill('input[aria-label="Buscar en Canciones que te gustan"]', 'cancion dos')
+    assert.equal(await u.rows().count(), 1)
+    assert.equal((await u.titles())[0].trim(), second.title)
+    await u.tap('button[aria-label="Limpiar búsqueda"]')
+    assert.equal(await u.rows().count(), 2)
+    const before = await u.titles()
+    await u.rowMenu(0); await u.menu('Quitar de Canciones que te gustan')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 1)
+    const remaining = (await u.titles())[0].trim()
+    assert.notEqual(remaining, before[0].trim())
+    return { accentInsensitiveSearch: true, removedOnlyOne: true, remaining }
+  })
+
+  const playlistCreated = await check('library.playlists: create, rename/cancel and pin', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('[title="Crear playlist"]')
+    await u.rename(playlistName)
+    await u.tap('.hero button[title="Cambiar nombre"]')
+    await u.fill('input[aria-label="Nombre de la playlist"]', 'No guardar este nombre')
+    await page.locator('input[aria-label="Nombre de la playlist"]').press('Escape')
+    assert.equal(await page.locator('.hero h1').textContent(), playlistName)
+    await u.tap('.hero button[title="Cambiar nombre"]'); await u.rename(renamedPlaylist)
+    await u.tap('button[aria-label="Fijar en Inicio"]')
+    await u.tab('Inicio')
+    await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + renamedPlaylist)}]`).waitFor()
+    return { playlistName: renamedPlaylist, renameCancel: true, pinned: true }
+  })
+
+  await check('library.playlists: append album, duplicate entries, filter and reorder', async () => {
+    if (!playlistCreated) return { status: 'blocked', reason: 'Playlist creation failed in the preceding UI scenario.' }
+    await u.search(query); await u.tap(`.grid .hit[aria-label=${JSON.stringify(albumTitle)}]`)
+    await u.rows().first().waitFor()
+    await u.tap('.actions button[title="Más opciones"]'); await u.addToPlaylist(renamedPlaylist)
+    for (let i = 0; i < 2; i++) { await u.rowMenu(0); await u.addToPlaylist(renamedPlaylist) }
+    await u.library(renamedPlaylist)
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 6)
+    assert.equal((await u.titles()).filter(title => title.trim() === first.title).length, 3)
+    await u.fill('input[aria-label="Buscar en esta playlist"]', 'cancion dos')
+    assert.equal(await u.rows().count(), 1)
+    assert.equal(await page.locator('[data-reorder-handle]').count(), 0)
+    if (!await u.mobile()) {
+      await u.fill('input[aria-label="Buscar en esta playlist"]', 'cancion qa')
+      const filteredOrder = await u.titles()
+      const target = await u.rows().nth(1).locator('.row').boundingBox()
+      assert.ok(target)
+      await u.rows().first().locator('.row').dragTo(u.rows().nth(1).locator('.row'), { targetPosition: { x: 30, y: target.height - 4 } })
+      await u.settle()
+      assert.deepEqual(await u.titles(), filteredOrder, 'Filtering disables desktop drag reorder as well as mobile handles')
+    }
+    await page.locator('input[aria-label="Buscar en esta playlist"]').press('Escape')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 6)
+    const before = (await u.titles()).map(x => x.trim())
+    if (await u.mobile()) {
+      await page.locator('[data-reorder-handle]').first().scrollIntoViewIfNeeded()
+      await page.evaluate(() => {
+        const row = document.querySelector('ol.tracks > li[data-reorder-index]'), content = document.querySelector('.content')
+        content.scrollTop += row.getBoundingClientRect().top - content.getBoundingClientRect().top - 90
+      })
+      await u.settle()
+      const from = await page.locator('[data-reorder-handle]').first().boundingBox()
+      const to = await u.rows().nth(1).boundingBox()
+      assert.ok(from && to)
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+      await page.mouse.down(); await page.mouse.move(from.x + from.width / 2, to.y + to.height * 0.8, { steps: 12 }); await page.mouse.up()
+    } else {
+      const target = await u.rows().nth(1).locator('.row').boundingBox()
+      assert.ok(target)
+      await u.rows().first().locator('.row').dragTo(u.rows().nth(1).locator('.row'), { targetPosition: { x: 30, y: target.height - 4 } })
+    }
+    await u.wait(title => document.querySelector('ol.tracks > li[data-reorder-index] .name')?.textContent.trim() === title, before[1])
+    await u.rowMenu(4); await u.menu('Quitar de esta playlist')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 5)
+    assert.equal((await u.titles()).filter(title => title.trim() === first.title).length, 2)
+    await page.reload({ waitUntil: 'load' })
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 5)
+    assert.equal((await u.titles())[0].trim(), before[1])
+    return { duplicateEntriesIndependent: true, filteredReorderDisabled: true, reorderedAndPersisted: true, remaining: 5 }
+  })
+
+  const csvCreated = await check('library.csv: visible Spotify limit, invalid CSV, retry, review and save', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    const errors = ctx.report.errors ??= []
+    const spotifyErrorStart = errors.length
+    await u.fill('#spotify-url', 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M')
+    await u.text('form button', 'Buscar canciones')
+    await page.locator('[role="alert"]').waitFor()
+    assert.match(await page.locator('[role="alert"]').textContent(), /Spotify/)
+    assert.match(await page.locator('details.csv').textContent(), /CSV/)
+    await u.settle()
+    // Windows WebKit also emits this handled fetch rejection as a pageerror.
+    // Keep the original diagnostic and annotate only the exact negative case,
+    // after verifying that the application explained the failure to the user.
+    const expectedSpotifyErrors = errors.slice(spotifyErrorStart).filter(error =>
+      error.name === 'Fetch API cannot load https' &&
+      /^\/{1,2}open\.spotify\.com\/embed\/playlist\/37i9dQZF1DXcBWIGoYBM5M due to access control checks\.$/.test(error.message))
+    for (const error of expectedSpotifyErrors) {
+      error.handledExpected = true
+      error.scope = 'library.csv.spotify-unsupported'
+      ;(ctx.report.expectedHandledNetworkErrors ??= []).push({ ...error,
+        reason: 'The deliberate direct Spotify import rejection is displayed in the UI; other page errors remain failures.' })
+    }
+    await page.locator('#playlist-csv').setInputFiles({ name: 'invalid.csv', mimeType: 'text/csv', buffer: Buffer.from('Wrong,Headers\na,b\n') })
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.locator('[role="alert"]').waitFor()
+    assert.match(await page.locator('[role="alert"]').textContent(), /CSV|columna|título|artista/i)
+    const quote = value => '"' + String(value).replaceAll('"', '""') + '"'
+    const csv = ['Track Name,Artist Name(s),Duration (ms)', ...[first, first, second].map(track =>
+      `${quote(track.title)},${quote(track.artist?.name ?? track.artistName ?? trackArtist)},${track.duration * 1000}`), 'Canción inexistente,Artista inexistente,12000'].join('\n')
+    await page.locator('#playlist-csv').setInputFiles({ name: 'duplicate-entries.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+    fixture.failNext('/search/track')
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.getByRole('button', { name: 'Reintentar búsqueda', exact: true }).waitFor()
+    assert.match(await page.locator('[role="alert"]').textContent(), /detenido|conexión|catálogo/i)
+    await u.text('.actions button', 'Reintentar búsqueda')
+    await page.locator('#playlist-name').waitFor()
+    assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['3', '1'])
+    await u.text('summary', 'Canciones que se guardarán (3)')
+    assert.equal(await page.locator('.track-details ol li').count(), 3)
+    await u.fill('#playlist-name', importedName)
+    await u.text('.actions button', 'Guardar playlist')
+    await u.wait(name => document.querySelector('.hero h1')?.textContent === name, importedName)
+    assert.deepEqual((await u.titles()).map(x => x.trim()), [first.title, first.title, second.title])
+    await page.reload({ waitUntil: 'load' })
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 3)
+    assert.deepEqual((await u.titles()).map(x => x.trim()), [first.title, first.title, second.title])
+    return { found: 3, omitted: 1, retriedProviderFailure: true, repeatedEntriesPreserved: true,
+      spotifyUnsupportedVisible: true, expectedHandledNetworkErrors: expectedSpotifyErrors.length }
+  })
+
+  await check('library.csv-validation: size limit, all omitted, empty name and cancel', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    const input = page.locator('#playlist-csv')
+    const upload = (name, content) => input.setInputFiles({ name, mimeType: 'text/csv', buffer: Buffer.isBuffer(content) ? content : Buffer.from(content) })
+    await upload('too-large.csv', Buffer.alloc(10 * 1024 * 1024 + 1, 32))
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.locator('[role="alert"]').waitFor()
+    assert.match(await page.locator('[role="alert"]').textContent(), /10 MB/)
+    await upload('missing.csv', 'Track Name,Artist Name(s)\nCanción inexistente,Artista inexistente\n')
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.locator('#playlist-name').waitFor()
+    assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['0', '1'])
+    assert.equal(await page.getByRole('button', { name: 'Guardar playlist', exact: true }).isDisabled(), true)
+    await u.text('.actions button', 'Importar otra lista')
+    const quote = value => '"' + String(value).replaceAll('"', '""') + '"'
+    const known = `Track Name,Artist Name(s)\n${quote(first.title)},${quote(trackArtist)}\n`
+    await upload('known.csv', known); await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.locator('#playlist-name').waitFor()
+    await u.fill('#playlist-name', '')
+    assert.equal(await page.getByRole('button', { name: 'Guardar playlist', exact: true }).isDisabled(), true)
+    await u.text('.actions button', 'Importar otra lista')
+    await upload('cancel.csv', known); fixture.failNext('/search/track')
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.getByRole('button', { name: 'Reintentar búsqueda', exact: true }).waitFor()
+    await u.text('.actions button', 'Cancelar')
+    await input.waitFor()
+    assert.equal(await input.evaluate(element => element.files.length), 0)
+    assert.equal(await page.locator('#playlist-name').count(), 0)
+    assert.equal(await page.locator('[role="alert"]').count(), 0)
+    return { oversizedFileRejected: true, allOmittedCannotSave: true, blankNameCannotSave: true,
+      importAnotherReset: true, cancelledPausedImport: true, createdPlaylist: false }
+  })
+
+  await check('library.source-picker: candidates, invalid link, manual choice and remembered source', async () => {
+    await u.search(query); await u.rowMenu(7); await u.menu('¿No es esta canción?')
+    const dialog = page.locator('dialog[aria-label="Elegir otro vídeo"]')
+    await dialog.locator('button.alt').first().waitFor()
+    assert.ok(await dialog.locator('button.alt').count() >= 1)
+    await ctx.tap(dialog.locator('button.alt').first())
+    await dialog.waitFor({ state: 'hidden' })
+    await u.rowMenu(7); await u.menu('¿No es esta canción?')
+    await dialog.locator('button.alt.current').waitFor()
+    await u.fill('dialog[aria-label="Elegir otro vídeo"] form input', 'esto no es un enlace')
+    await u.text('dialog[aria-label="Elegir otro vídeo"] form button', 'Usar')
+    assert.match(await dialog.locator('.link-error').textContent(), /no parece/)
+    await u.fill('dialog[aria-label="Elegir otro vídeo"] form input', `https://youtu.be/${third.videoId}`)
+    await u.text('dialog[aria-label="Elegir otro vídeo"] form button', 'Usar')
+    await dialog.waitFor({ state: 'hidden' })
+    await u.rowMenu(7); await u.menu('¿No es esta canción?')
+    await dialog.locator('button.alt.current').waitFor()
+    assert.ok(await dialog.locator('button.alt').count() >= 2)
+    const selected = await dialog.locator('button.alt.current .title').textContent()
+    await u.tap('dialog[aria-label="Elegir otro vídeo"] button[title="Cerrar (Esc)"]')
+    await dialog.waitFor({ state: 'hidden' })
+    await page.reload({ waitUntil: 'load' })
+    await u.rows().first().waitFor()
+    await u.rowMenu(7); await u.menu('¿No es esta canción?')
+    await dialog.locator('button.alt.current').waitFor()
+    assert.equal(await dialog.locator('button.alt.current .title').textContent(), selected)
+    await u.tap('dialog[aria-label="Elegir otro vídeo"] button[title="Cerrar (Esc)"]')
+    return { listedCandidateChosen: true, invalidInputRejected: true, manualChoiceRemembered: true, selected }
+  })
+
+  await check('library.youtube: preview, edit, save/update and remove personal link', async () => {
+    await u.library('Canciones de YouTube')
+    await u.fill('#youtube-url', 'not-a-youtube-link')
+    await u.text('.url-form button', 'Continuar')
+    await page.locator('[role="alert"]').waitFor()
+    assert.match(await page.locator('[role="alert"]').textContent(), /YouTube|vídeo|enlace/i)
+    await u.fill('#youtube-url', `https://youtu.be/${third.videoId}`)
+    await u.text('.url-form button', 'Continuar')
+    await page.locator('#youtube-title').waitFor()
+    await u.text('.review button', 'Cambiar enlace')
+    assert.equal(await page.locator('#youtube-title').count(), 0)
+    assert.equal(await page.locator('#youtube-url').isEnabled(), true)
+    await u.text('.url-form button', 'Continuar'); await page.locator('#youtube-title').waitFor()
+    await u.fill('#youtube-title', '')
+    assert.equal(await page.locator('.review button[type="submit"]').isDisabled(), true)
+    await u.fill('#youtube-title', 'E2E Enlace YouTube')
+    await u.fill('#youtube-artist', 'Canal E2E')
+    await u.text('.review button', 'Guardar canción')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 1)
+    assert.equal((await u.titles())[0].trim(), 'E2E Enlace YouTube')
+    await u.fill('#youtube-url', `https://youtu.be/${third.videoId}`)
+    await u.text('.url-form button', 'Continuar')
+    await page.locator('#youtube-title').waitFor()
+    await u.fill('#youtube-title', 'E2E Enlace Actualizado')
+    await u.text('.review button', 'Guardar canción')
+    await u.wait(() => document.querySelector('ol.tracks .name')?.textContent.trim() === 'E2E Enlace Actualizado')
+    assert.equal(await u.rows().count(), 1)
+    await u.rowMenu(0); await u.menu('Quitar de Canciones de YouTube')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 0)
+    return { invalidLinkRejected: true, changeLinkResetReview: true, blankTitleCannotSave: true,
+      editedMetadata: true, sameVideoUpdatedWithoutDuplicate: true, removed: true }
+  })
+
+  await check('library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload', async () => {
+    const podcast = fixture.media.rss, youtube = fixture.media.youtubePodcast
+    await u.tab('Podcasts'); await u.fill('input[aria-label="Buscar podcasts"]', podcast.query)
+    await page.locator('[aria-label="Resultados de pódcasts"] .hit').first().waitFor()
+    await page.locator('[aria-label="Pódcasts de YouTube"] .hit').first().waitFor()
+    assert.equal(await page.locator('[aria-label="Resultados de pódcasts"] .hit').count(), 1)
+    await page.locator('select[aria-label="Idioma de los pódcasts"]').selectOption('all')
+    await u.wait(() => document.querySelectorAll('[aria-label="Resultados de pódcasts"] .hit').length === 2)
+    await page.locator('select[aria-label="Idioma de los pódcasts"]').selectOption('en')
+    await u.wait(() => document.querySelectorAll('[aria-label="Resultados de pódcasts"] .hit').length === 1)
+    assert.equal(await page.locator('[aria-label="Pódcasts de YouTube"] .hit').count(), 1, 'Unknown YouTube language remains visible')
+    await page.locator('select[aria-label="Idioma de los pódcasts"]').selectOption('es')
+    await page.locator(`[aria-label="Resultados de pódcasts"] .hit[aria-label=${JSON.stringify(podcast.showTitle)}]`).waitFor()
+    await u.tap(`[aria-label="Resultados de pódcasts"] .hit[aria-label=${JSON.stringify(podcast.showTitle)}]`)
+    await page.locator('.episodes .episode').first().waitFor()
+    assert.deepEqual(await page.locator('.episodes .episode h3').allTextContents(), podcast.episodes.map(e => e.title))
+    await u.tap('button.favorite[title="Guardar programa en Tus pódcasts"]')
+    await page.locator('button.favorite[aria-pressed="true"]:not(:disabled)').waitFor()
+    await u.tab('Podcasts'); await u.fill('input[aria-label="Buscar podcasts"]', youtube.query)
+    await page.locator(`[aria-label="Pódcasts de YouTube"] .hit[aria-label=${JSON.stringify(youtube.showTitle)}]`).waitFor()
+    await u.tap(`[aria-label="Pódcasts de YouTube"] .hit[aria-label=${JSON.stringify(youtube.showTitle)}]`)
+    await page.locator('.episodes .episode').first().waitFor()
+    assert.equal(await page.locator('.episodes .episode h3').first().textContent(), youtube.episodeTitle)
+    await u.tap('button.favorite[title="Guardar programa en Tus pódcasts"]')
+    await page.locator('button.favorite[aria-pressed="true"]:not(:disabled)').waitFor()
+    await page.reload({ waitUntil: 'load' })
+    await page.locator('button.favorite[aria-pressed="true"]').waitFor()
+    await u.tab('Podcasts')
+    await page.locator('[aria-label="Tus pódcasts"] .hit').first().waitFor()
+    assert.equal(await page.locator('[aria-label="Tus pódcasts"] .hit').count(), 2)
+    await u.tap(`[aria-label=${JSON.stringify('Quitar ' + youtube.showTitle + ' de Tus pódcasts')}]`)
+    await u.wait(() => document.querySelectorAll('[aria-label="Tus pódcasts"] .hit').length === 1)
+    return { languageFilters: ['es', 'all', 'en'], rssEpisodes: podcast.episodes.length, savedAcrossReload: true, rssLeftSavedForMediaScenarios: true }
+  })
+
+  await check('library.persistence: saved artist/album and pin removal survive reload', async () => {
+    await u.tab('Tu biblioteca')
+    await page.locator(`[aria-label=${JSON.stringify('Quitar a ' + artistName + ' de artistas favoritos')}]`).waitFor()
+    await u.library(albumTitle)
+    await u.tap('button[title="Quitar de tu biblioteca"]')
+    await page.locator('button[title="Guardar en tu biblioteca"]').waitFor()
+    await u.tap('button[aria-label="Desfijar de Inicio"]')
+    await u.tab('Tu biblioteca')
+    await u.tap(`[aria-label=${JSON.stringify('Quitar a ' + artistName + ' de artistas favoritos')}]`)
+    await page.locator(`[aria-label=${JSON.stringify('Quitar a ' + artistName + ' de artistas favoritos')}]`).waitFor({ state: 'detached' })
+    await page.reload({ waitUntil: 'load' })
+    await page.locator('.items').waitFor()
+    assert.equal(await page.locator(`[aria-label=${JSON.stringify('Quitar a ' + artistName + ' de artistas favoritos')}]`).count(), 0)
+    await u.tab('Inicio')
+    assert.equal(await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + albumTitle)}]`).count(), 0)
+    return { artistRemoved: true, albumRemoved: true, albumUnpinned: true }
+  })
+
+  await check('library.playlists: cancellation and permanent deletion remove the pinned list', async () => {
+    if (!playlistCreated) return { status: 'blocked', reason: 'Playlist creation failed in the preceding UI scenario.' }
+    await u.library(renamedPlaylist)
+    await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+    await u.text('.confirm button', 'Cancelar')
+    assert.equal(await page.locator('.hero h1').textContent(), renamedPlaylist)
+    await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+    await u.text('.confirm button', 'Eliminar')
+    await page.locator('.greeting').waitFor()
+    await u.tab('Tu biblioteca')
+    assert.ok(!(await page.locator('.items .title').allTextContents()).includes(renamedPlaylist))
+    await u.tab('Inicio')
+    assert.equal(await page.locator(`.tile-pin[aria-label=${JSON.stringify('Desfijar de Inicio: ' + renamedPlaylist)}]`).count(), 0)
+    assert.equal(await currentRoute(), 'home')
+    return { cancelKeptList: true, deletedPlaylistAndPin: true, importedPlaylistKeptForMediaScenarios: csvCreated ? importedName : null }
+  })
+
+  await check('library.contextual-playlist: create from a song and delete the temporary list', async () => {
+    await u.search(query); await u.rowMenu(0); await u.addToPlaylist('Nueva playlist')
+    await page.locator('.hero button[title="Cambiar nombre"]').waitFor()
+    assert.equal(await u.rows().count(), 1)
+    assert.equal((await u.titles())[0].trim(), first.title)
+    await u.tap('.hero button[title="Cambiar nombre"]'); await u.rename('E2E Playlist Contextual Temporal')
+    await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+    await u.text('.confirm button', 'Eliminar'); await page.locator('.greeting').waitFor()
+    return { createdFromTrackMenu: true, firstTrackPreserved: true, temporaryListDeleted: true }
+  })
+}
+
+/** Run after media scenarios have genuinely played a fixture long enough to record it. */
+export async function runLibraryHistoryScenario(ctx) {
+  const { page, check } = ctx
+  const u = ui(ctx)
+  await check('library.history: recorded plays, cancel clear, clear and reload', async () => {
+    const playback = ctx.report.checks.find(entry => entry.name === 'media.selection-html-audio')
+    if (!playback || playback.status !== 'pass') return {
+      status: 'blocked', reason: 'Recording history requires the preceding real-playback scenario to pass.',
+      prerequisite: playback?.name ?? 'media.selection-html-audio', prerequisiteStatus: playback?.status ?? 'not-run',
+      ...(playback?.evidence ? { evidence: playback.evidence } : {}),
+    }
+    await u.library('Historial')
+    await u.rows().first().waitFor()
+    const count = await u.rows().count()
+    assert.ok(count > 0, 'Media scenarios must create history through playback, not direct database writes')
+    await u.text('button.ghost', 'Borrar historial')
+    await u.text('.confirm button', 'Cancelar')
+    assert.equal(await u.rows().count(), count)
+    await u.text('button.ghost', 'Borrar historial')
+    await u.text('.confirm button', 'Borrar')
+    await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 0)
+    assert.match(await page.locator('.empty-state').textContent(), /Aún no has escuchado nada/)
+    await page.reload({ waitUntil: 'load' })
+    await page.locator('.empty-state').waitFor()
+    assert.match(await page.locator('.empty-state').textContent(), /Aún no has escuchado nada/)
+    return { recordedEntries: count, cancelKeptHistory: true, clearedAcrossReload: true }
+  })
+}
