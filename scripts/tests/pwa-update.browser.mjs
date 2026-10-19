@@ -26,7 +26,8 @@ const report = {
   osShortcutInstallationVerified: false, androidVerified: false, iOSVerified: false,
   externalMusicNetworkUsed: false, productionDirectoriesMutated: false,
   updateTrigger: 'registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.',
-  playlistFixture: 'Created and renamed through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No audio files or signed URLs.',
+  playlistFixture: 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
+  audioFixture: 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
 }
 const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '[URL]')
   .replace(/[A-Z]:[\\/][^\s\n"']+/gi, '[path]').replace(/\u001b\[[0-9;]*m/g, '').slice(0, 700)
@@ -50,6 +51,16 @@ const defer = () => {
   const promise = new Promise((yes) => { resolve = yes })
   return { promise, resolve }
 }
+function waveFixture() {
+  const result = Buffer.alloc(44 + 1600)
+  result.write('RIFF', 0); result.writeUInt32LE(result.length - 8, 4); result.write('WAVEfmt ', 8)
+  result.writeUInt32LE(16, 16); result.writeUInt16LE(1, 20); result.writeUInt16LE(1, 22)
+  result.writeUInt32LE(8000, 24); result.writeUInt32LE(16000, 28); result.writeUInt16LE(2, 32)
+  result.writeUInt16LE(16, 34); result.write('data', 36); result.writeUInt32LE(1600, 40)
+  return result
+}
+const fixtureBytes = waveFixture(), fixtureHash = digest(fixtureBytes)
+const podcastId = 500000000000101, episodeId = 750000000000101
 async function context() {
   const result = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'allow' })
   await result.route('**/*', (route) => {
@@ -109,9 +120,9 @@ async function database() {
     operation.onerror = () => reject(new Error('Could not open test library'))
     operation.onsuccess = () => {
       const db = operation.result
-      const names = ['playlists', 'entries', 'tracks']
+      const names = ['playlists', 'entries', 'tracks', 'podcasts', 'progress', 'episodes', 'sources', 'meta']
       const transaction = db.transaction(names)
-      const result = {}
+      const result = { version: db.version, episodeIdentityUnique: transaction.objectStore('episodes').index('identity').unique }
       for (const name of names) {
         const request = transaction.objectStore(name).getAll()
         request.onsuccess = () => { result[name] = request.result }
@@ -120,6 +131,91 @@ async function database() {
       transaction.onabort = () => { db.close(); reject(new Error('Could not read test library')) }
     }
   }))
+}
+async function seedLegacyLibrary() {
+  await page.evaluate(({ podcastId, episodeId }) => new Promise((resolve, reject) => {
+    const operation = indexedDB.open('pletina-web-library', 1)
+    operation.onupgradeneeded = () => {
+      const db = operation.result
+      const stores = ['tracks', 'likes', 'albums', 'artists', 'podcasts', 'playlists', 'entries', 'history', 'progress', 'youtube', 'sources', 'meta']
+      for (const name of stores) db.createObjectStore(name, {
+        keyPath: name === 'likes' ? 'trackId' : ['entries', 'history'].includes(name) ? 'entryId'
+          : ['youtube', 'sources'].includes(name) ? 'trackId' : name === 'meta' ? 'key' : 'id',
+        autoIncrement: ['playlists', 'entries', 'history'].includes(name),
+      })
+      operation.transaction.objectStore('entries').createIndex('playlistId', 'playlistId')
+      operation.transaction.objectStore('youtube').createIndex('videoId', 'videoId', { unique: true })
+    }
+    operation.onerror = () => reject(new Error('Could not seed v1 library'))
+    operation.onsuccess = () => {
+      const db = operation.result, tx = db.transaction(['podcasts', 'progress', 'meta'], 'readwrite')
+      tx.objectStore('podcasts').put({ id: podcastId, at: 1700000000, order: 1, saved: true, value: {
+        id: podcastId, title: 'Podcast de QA', author: 'Autor de QA', description: 'Metadatos locales de prueba',
+        image: null, feedUrl: 'https://podcast.example/qa.xml', language: 'es', episodeCount: 1,
+      } })
+      tx.objectStore('progress').put({ id: episodeId, position: 57, duration: 600, completed: false })
+      tx.objectStore('meta').put({ key: 'order', value: 1 })
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onabort = () => { db.close(); reject(new Error('Could not commit v1 fixtures')) }
+    }
+  }), { podcastId, episodeId })
+}
+async function seedDownloadAndEpisode() {
+  await page.evaluate(async ({ bytes, episodeId, podcastId }) => {
+    const track = { id: 101, title: 'Canción de QA', duration: 180, explicit: false,
+      artistId: 1, artistName: 'Artista de QA', albumId: 1, albumTitle: 'Álbum de QA', albumArtistId: 1, cover: null }
+    const root = new URL('../', location.href)
+    const key = new URL(`__audio__/101?stage=${Date.now()}-${crypto.randomUUID()}`, root).href
+    await (await caches.open('pletina-audio-downloads:v1')).put(key, new Response(new Uint8Array(bytes), { headers: { 'Content-Type': 'audio/wav' } }))
+    await new Promise((resolve, reject) => {
+      const opening = indexedDB.open('pletina-web-downloads', 1)
+      opening.onupgradeneeded = () => opening.result.createObjectStore('files', { keyPath: 'id' })
+      opening.onerror = () => reject(new Error('Could not open download fixture database'))
+      opening.onsuccess = () => {
+        const db = opening.result, tx = db.transaction('files', 'readwrite')
+        tx.objectStore('files').put({ id: 101, track, size: bytes.length, at: 1700000000, cacheKey: key })
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onabort = () => { db.close(); reject(new Error('Could not commit download fixture')) }
+      }
+    })
+    await new Promise((resolve, reject) => {
+      const opening = indexedDB.open('pletina-web-library')
+      opening.onerror = () => reject(new Error('Could not open episode fixture database'))
+      opening.onsuccess = () => {
+        const db = opening.result, tx = db.transaction(['podcasts', 'episodes'], 'readwrite')
+        const request = tx.objectStore('podcasts').get(podcastId)
+        request.onsuccess = () => tx.objectStore('podcasts').put({ ...request.result, episodeIds: [episodeId] })
+        tx.objectStore('episodes').put({ id: episodeId, podcastId, guid: 'qa-stable-episode', value: {
+          id: episodeId, title: 'Episodio de QA', description: 'Metadatos persistidos', publishedAt: null,
+          duration: 600, audioUrl: 'https://podcast.example/qa-episode.mp3', image: null, explicit: false,
+        } })
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onabort = () => { db.close(); reject(new Error('Could not commit episode fixture')) }
+      }
+    })
+  }, { bytes: [...fixtureBytes], episodeId, podcastId })
+}
+async function downloadSnapshot() {
+  return page.evaluate(async () => {
+    const rows = await new Promise((resolve, reject) => {
+      const opening = indexedDB.open('pletina-web-downloads')
+      opening.onerror = () => reject(new Error('Could not read download fixture'))
+      opening.onsuccess = () => {
+        const db = opening.result, tx = db.transaction('files'), request = tx.objectStore('files').getAll()
+        request.onsuccess = () => { const rows = request.result; tx.oncomplete = () => { db.close(); resolve(rows) } }
+        tx.onabort = () => { db.close(); reject(new Error('Could not read download fixture')) }
+      }
+    })
+    const saved = rows.find(row => row.id === 101)
+    if (!saved) throw new Error('Download metadata vanished')
+    const cache = await caches.open('pletina-audio-downloads:v1'), cached = await cache.match(saved.cacheKey)
+    if (!cached) throw new Error('Cached download bytes vanished')
+    const hash = async response => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await response.arrayBuffer()))].map(byte => byte.toString(16).padStart(2, '0')).join('')
+    const cachedSha256 = await hash(cached)
+    const stable = new URL('../__audio__/101', location.href), response = await fetch(stable)
+    return { rows, stablePath: stable.pathname, status: response.status, cachedSha256, servedSha256: await hash(response),
+      online: navigator.onLine, controlled: Boolean(navigator.serviceWorker.controller), cacheName: 'pletina-audio-downloads:v1' }
+  })
 }
 async function openApplication() {
   await page.locator('#open-player').click()
@@ -186,17 +282,23 @@ try {
   const fullContext = await context()
   page = await newPage(fullContext)
   const playlistName = 'QA actualización persistente'
-  let expectedDatabase
+  let expectedDatabase, expectedDownload
   phase = 'full-A'
   await check('full A installs without application downloads; app opens on demand', async () => {
     await page.goto(url, { waitUntil: 'load' })
     await installed()
     assert.equal(requests.filter((request) => request.path.includes('/application/')).length, 0)
+    await seedLegacyLibrary()
     await openApplication()
     assert.equal(await page.title(), 'Pletina QA A')
     const state = await snapshot()
     assert.equal(state.scope, '/pletina/')
     assert.equal(state.registrations, 1)
+    const library = await database()
+    assert.equal(library.version, 2)
+    assert.equal(library.episodeIdentityUnique, true)
+    assert.equal(library.podcasts[0].id, podcastId)
+    assert.deepEqual(library.progress, [{ id: episodeId, position: 57, duration: 600, completed: false }])
     return { applicationPath: new URL(page.url()).pathname, serviceWorker: state }
   })
   await check('UI-created playlist and duplicate entries persist in real IndexedDB before update', async () => {
@@ -227,6 +329,21 @@ try {
     await openPlaylist(playlistName)
     return { playlistId, entryIds: expectedDatabase.entries.map((row) => row.entryId), duplicateTrackId: 101 }
   })
+  await check('v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update', async () => {
+    await seedDownloadAndEpisode()
+    expectedDatabase = await database()
+    expectedDownload = await downloadSnapshot()
+    assert.equal(expectedDatabase.version, 2)
+    assert.equal(expectedDatabase.episodes[0].guid, 'qa-stable-episode')
+    assert.equal(expectedDatabase.progress[0].position, 57)
+    assert.equal(expectedDownload.cachedSha256, fixtureHash)
+    assert.equal(expectedDownload.servedSha256, fixtureHash)
+    assert.equal(expectedDownload.status, 200)
+    report.downloadFixture = { trackId: 101, bytes: fixtureBytes.length, sha256: fixtureHash, stablePath: expectedDownload.stablePath,
+      playbackTested: false, providerDownloaded: false }
+    return { librarySchemaFrom: 1, librarySchemaTo: expectedDatabase.version, podcastId, episodeId,
+      progress: expectedDatabase.progress[0], download: report.downloadFixture }
+  })
   phase = 'waiting-B'
   live = 'B'
   await check('B waits behind the real update banner without replacing A or eagerly caching its app', async () => {
@@ -239,6 +356,7 @@ try {
     assert.ok(waiting)
     assert.equal(waiting.paths.filter((path) => path.includes('/application/')).length, 0)
     assert.deepEqual(await database(), expectedDatabase)
+    assert.deepEqual(await downloadSnapshot(), expectedDownload)
     return { waitingVersion: builds.B.version, currentApplication: 'A', initialOptionalDownloads: 0 }
   })
   phase = 'failed-preparation'
@@ -249,6 +367,7 @@ try {
     assert.equal(await page.title(), 'Pletina QA A')
     assert.equal((await snapshot()).waiting, 'installed')
     assert.deepEqual(await database(), expectedDatabase)
+    assert.deepEqual(await downloadSnapshot(), expectedDownload)
     assert.equal(report.messages.filter((message) => message.phase === phase && message.type === 'ACTIVATE_UPDATE').length, 0)
     assert.equal(await page.locator('.web-update button').isEnabled(), true)
     return { oldApplicationRemainedActive: true, activationMessages: 0, retryEnabled: true }
@@ -269,6 +388,7 @@ try {
     assert.equal((await snapshot()).waiting, 'installed')
     assert.equal(report.messages.filter((message) => message.phase === phase && message.type === 'ACTIVATE_UPDATE').length, 0)
     assert.deepEqual(await database(), expectedDatabase)
+    assert.deepEqual(await downloadSnapshot(), expectedDownload)
     gate.release.resolve()
     gate = null
     await page.waitForURL(`${origin}/pletina/${builds.B.applicationPage}`, { waitUntil: 'load', timeout: 30000 })
@@ -278,6 +398,7 @@ try {
     assert.ok(messages.indexOf('PREPARE_APPLICATION') >= 0)
     assert.ok(messages.indexOf('ACTIVATE_UPDATE') > messages.indexOf('PREPARE_APPLICATION'))
     assert.deepEqual(await database(), expectedDatabase)
+    assert.deepEqual(await downloadSnapshot(), expectedDownload)
     const state = await snapshot()
     assert.equal(state.waiting, null)
     assert.deepEqual(state.cacheInfo.map((cache) => cache.version), [builds.B.version])
@@ -286,14 +407,22 @@ try {
       cachedOptionalFiles: builds.B.optionalFiles.length, preservedDatabase: true }
   })
   phase = 'offline-B'
-  await check('updated B reopens offline with the same playlist ID, entry IDs and duplicate metadata', async () => {
+  await check('updated B reopens offline with playlist, podcast progress and identical downloaded/cache-route bytes', async () => {
     await fullContext.setOffline(true)
     await page.reload({ waitUntil: 'load', timeout: 20000 })
     await openPlaylist(playlistName)
     assert.equal(await page.title(), 'Pletina QA B')
     assert.deepEqual(await database(), expectedDatabase)
+    const downloaded = await downloadSnapshot()
+    assert.deepEqual({ ...downloaded, online: true }, expectedDownload)
+    assert.equal(downloaded.online, false)
+    assert.equal(downloaded.cachedSha256, fixtureHash)
+    assert.equal(downloaded.servedSha256, fixtureHash)
     return { online: await page.evaluate(() => navigator.onLine), playlistId: expectedDatabase.playlists[0].id,
-      entryIds: expectedDatabase.entries.map((row) => row.entryId), musicOfflineClaimed: false }
+      entryIds: expectedDatabase.entries.map((row) => row.entryId), podcastId, episodeId,
+      podcastPosition: expectedDatabase.progress[0].position, downloadedTrackId: 101,
+      cachedSha256: downloaded.cachedSha256, swRouteSha256: downloaded.servedSha256, swRouteStatus: downloaded.status,
+      downloadedBytes: fixtureBytes.length, fixturePlaybackClaimed: false, providerDownloadClaimed: false }
   })
   await fullContext.close()
   page = null
@@ -351,6 +480,8 @@ try {
 } finally {
   gate?.release.resolve()
   await browser?.close().catch(() => {})
+  report.browserClosed = !browser || !browser.isConnected()
+  report.browserProfile = 'Disposable Playwright launch profile; browser.close releases it.'
   if (server) {
     await new Promise((resolve) => { server.close(resolve); server.closeAllConnections() })
     report.localServerClosed = !server.listening
@@ -363,7 +494,7 @@ try {
   }
   report.blockedExternalHosts = [...blockedHosts].sort()
   report.finishedAt = new Date().toISOString()
-  report.passed = !report.fatal && report.checks.length >= (option('--prototype', null) ? 7 : 6)
+  report.passed = !report.fatal && report.checks.length >= (option('--prototype', null) ? 8 : 7)
     && report.checks.every((check) => check.pass) && report.errors.length === 0
   await mkdir(artifactDirectory, { recursive: true })
   await writeFile(join(artifactDirectory, reportName), `${JSON.stringify(report, null, 2)}\n`)

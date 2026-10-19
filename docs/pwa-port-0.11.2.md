@@ -1,5 +1,7 @@
 # Port web de Pletina 0.11.2
 
+> Informe histórico de la primera fase y de su corrección de audio. El estado actual y la ampliación a la APK completa están en [pwa.md](pwa.md) y en la [matriz de paridad](pwa-parity-0.11.2.md).
+
 Actualizado el **18 de octubre de 2026**. Base nativa exacta: commit `4b5691ff50d659fbd048f5a9cff1ddfa91c22a79`, versión **0.11.2**. Build publicado actual: **`74d9ad3aebca421b`**, con corrección de la transición a siguiente pista. El primer build publicado fue `1785b6edf53a230b` y el informe amplio anterior corresponde a `3622b8aa49a2ee7f`; cada ejecución se identifica a continuación.
 
 **Estado de publicación: `74d9ad3aebca421b` publicado y verificado por HTTPS.** Está en <https://diad87.github.io/pletina/>. La comparación pública pasó **22/22 archivos**, con HTTP 200 y SHA-256 coincidentes; las pruebas local y pública de Creep → Million Dollar Question pasaron **2/2 comprobaciones cada una** en Chrome de escritorio con pestaña oculta. Commit de distribución `gh-pages`: `d004cea9ebdde641b75a51ec6b1ad8eaf947c1c0`, distinto de la base nativa 0.11.2.

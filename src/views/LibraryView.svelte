@@ -19,11 +19,9 @@
     <h1 class="page-title">Tu biblioteca</h1>
     <button class="add" onclick={newPlaylist} title="Crear playlist"><Icon name="plus" size={26} /></button>
   </div>
-  {#if import.meta.env.MODE !== 'pwa'}
   <button class="import" onclick={() => nav.go({ name: 'import-playlist' })}>
     <Icon name="download" size={20} /> Importar de Spotify
   </button>
-  {/if}
   <LibraryList />
 
   <!-- Lo que en el escritorio está en la barra lateral: versión y actualizaciones. -->
@@ -36,7 +34,7 @@
     {/if}
     <div class="row">
       {#if updates.current}<span>Pletina {updates.current}</span>{/if}
-      {#if isAndroid}
+      {#if isAndroid || api.inPwa}
         <button class="link" onclick={() => api.shareLog().catch((e) => toast.show(String(e)))}>Enviar registro</button>
       {/if}
     </div>

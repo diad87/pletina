@@ -1,0 +1,83 @@
+{
+  "completedAt": "2026-10-19T06:16:33.683Z",
+  "apkReference": {
+    "version": "0.11.2",
+    "commit": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79"
+  },
+  "build": "ee394d368c27123e",
+  "deployment": {
+    "url": "https://diad87.github.io/pletina/",
+    "branch": "gh-pages",
+    "commit": "a0da490f0c6776451c8b355bf7541843d58fcd45",
+    "tree": "860416299c31aa92410218f364c4764ecfbb1c2d",
+    "distributionSHA256": "f8db1a2a1aaa91971fed52881c1c30d6d5bab0d208ddfdae7f4af4e1c1b6a2c8",
+    "pagesStatus": "built",
+    "publicFilesPassed": 22,
+    "publicFilesChecked": 22,
+    "publicReport": "../pwa-deploy/public-files-ee394d368c27123e.json"
+  },
+  "bytes": {
+    "initial": 38720,
+    "optionalApplication": 466208
+  },
+  "validation": {
+    "unitTests": {
+      "passed": 326,
+      "failed": 0,
+      "log": "tests-final.txt"
+    },
+    "typecheck": {
+      "errors": 0,
+      "warnings": 0,
+      "log": "check-final.txt"
+    },
+    "nativeFrontendBuild": "passed",
+    "pwaBuild": "passed",
+    "mobileUI": {
+      "passed": 9,
+      "report": "consolidated-ee394d368c27123e.json",
+      "kind": "Consolidated successful feature checks with the individual source reports and earlier runner failures retained; not one single full successful rerun."
+    },
+    "downloadAndUserSong": {
+      "passed": 7,
+      "report": "downloads-browser-final-ee394d368c27123e.json",
+      "query": "A solas con un ritmo lirico de violadores del verso",
+      "catalogId": 3240252511,
+      "downloadBytes": 1903359
+    },
+    "publicUserSong": {
+      "passed": 3,
+      "report": "../pwa-port/browser-public-user-song-confirmed-ee394d368c27123e.json",
+      "earlierHarnessFailure": "../pwa-port/browser-public-user-song-ee394d368c27123e.json",
+      "earlierFailureCause": "Generic multi-song runner required at least two search results; an exact song query correctly returned one. Selected-song runner now accepts one; product unchanged."
+    },
+    "hiddenTransition": {
+      "passed": 2,
+      "report": "../pwa-port/transition-parity-local-ee394d368c27123e.json",
+      "physicalScreenOffVerified": false
+    },
+    "update": {
+      "passed": 7,
+      "report": "../pwa-port/update-browser-final-ee394d368c27123e.json",
+      "downloadFixtureScope": "Verifies stored metadata and known WAV bytes preserved across A to B; actual YouTube download/playback separately verified in the download report."
+    }
+  },
+  "runtime": {
+    "ownBackend": false,
+    "proxy": false,
+    "phoneMicroserver": false,
+    "staticHTTPSHosting": "GitHub Pages"
+  },
+  "remainingDifferences": [
+    "Spotify playlist URL import remains unavailable in the tested browser routes; real CSV import works.",
+    "Physical Android Back/reopen/song-selection fixes await user confirmation on the Xiaomi 15T Pro.",
+    "Physical Android screen-off transition for this port is not verified by the desktop hidden-tab tests.",
+    "iPhone/iPad and Safari installed PWA have no physical playback or download validation.",
+    "Browser background downloads are not an Android native foreground download service; closed-app completion is not claimed."
+  ],
+  "deferredByUser": [
+    "Android Auto",
+    "Apple CarPlay"
+  ],
+  "completeOneToOneParityClaimed": false
+}

@@ -1,7 +1,11 @@
 import type { InvokeArgs } from '@tauri-apps/api/core'
-import type { ImportTrack, TrackQuery } from '../src/lib/types'
+import type { ImportTrack, LibraryData, LibTrack, TrackQuery } from '../src/lib/types'
 import * as catalog from './catalog'
 import * as audio from './audio'
+import * as podcasts from './podcasts'
+import { readPlaylistCsv, readSpotifyPlaylist } from './imports'
+import { shareWebLog } from './diagnostics'
+import { listDownloads, enqueueDownloads, cancelDownloads, removeDownloads } from './downloads'
 import { handlesStorage, storageInvoke } from './storage'
 
 const unavailable = (feature: string): never => { throw new Error(`${feature} todavía no está disponible en la versión web.`) }
@@ -10,6 +14,10 @@ let searchController: AbortController | undefined
 export async function webInvoke<T = unknown>(command: string, args?: InvokeArgs): Promise<T> {
   if (args && (Array.isArray(args) || ArrayBuffer.isView(args) || args instanceof ArrayBuffer)) throw new Error('Petición web no válida.')
   const values = (args ?? {}) as Record<string, unknown>
+  if (command === 'library') {
+    const [library, entries] = await Promise.all([storageInvoke(command, values) as Promise<LibraryData>, listDownloads()])
+    return { ...library, downloadedIds: entries.map((entry) => entry.track.id) } as T
+  }
   if (handlesStorage(command)) return await storageInvoke(command, values) as T
   let result: unknown
   switch (command) {
@@ -32,15 +40,24 @@ export async function webInvoke<T = unknown>(command: string, args?: InvokeArgs)
     case 'preview_youtube_track': result = await audio.previewYouTube(String(values.url ?? '')); break
     case 'match_import_track': result = await catalog.matchImportTrack(values.track as ImportTrack); break
     case 'local_library': result = { folders: [], albums: [], artists: [], tracks: 0, scanning: false }; break
-    case 'downloads_list': result = []; break
+    case 'downloads_list': result = await listDownloads(); break
+    case 'download': result = await enqueueDownloads(values.tracks as LibTrack[]); break
+    case 'cancel_downloads': result = await cancelDownloads(); break
+    case 'remove_downloads': result = await removeDownloads(values.trackIds as number[]); break
     case 'newer_version': result = null; break
     case 'install_update': {
       const { applyWebUpdate } = await import('./updates.svelte')
       result = await applyWebUpdate(); break
     }
-    case 'read_spotify_playlist': unavailable('La importación por dirección de Spotify'); break
-    case 'podcast_search': case 'podcast_detail': case 'podcast_feed_url': unavailable('El catálogo de podcasts'); break
-    case 'download': case 'cancel_downloads': case 'remove_downloads': unavailable('La descarga de canciones'); break
+    case 'read_spotify_playlist': result = await readSpotifyPlaylist(String(values.url ?? '')); break
+    case 'read_playlist_csv': result = readPlaylistCsv(String(values.content ?? ''), String(values.name ?? '')); break
+    case 'podcast_search': result = await podcasts.search(String(values.query ?? ''), String(values.language ?? 'all')); break
+    case 'podcast_detail': result = await podcasts.detail(String(values.feedUrl ?? '')); break
+    case 'podcast_feed_url': result = await podcasts.feedUrl(Number(values.id)); break
+    case 'player_native': {
+      if (values.cmd !== 'shareLog') throw new Error('Esta acción del sistema no está disponible en el navegador.')
+      result = await shareWebLog(); break
+    }
     case 'add_local_folder': case 'scan_local': case 'remove_local_folder': unavailable('La importación de carpetas'); break
     default: throw new Error('Esta acción necesita una adaptación para la versión web.')
   }

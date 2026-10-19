@@ -1,85 +1,71 @@
-# Pletina PWA: instalación mínima y app 0.11.2
+# Pletina PWA: port de la APK 0.11.2
 
-El port web reutiliza la interfaz Svelte de Pletina **0.11.2**, con búsqueda por nombre o artista y reproducción de canciones sin pegar enlaces. La entrada de instalación sigue siendo pequeña: muestra **Instalar** y carga la aplicación completa solo al pulsar **Abrir Pletina**. GitHub Pages sirve archivos estáticos; el catálogo y el audio se consultan directamente desde el navegador, sin backend, proxy ni microservidor en el móvil.
+La referencia es la APK **0.11.2**, commit nativo `4b5691ff50d659fbd048f5a9cff1ddfa91c22a79`. Se reutilizan sus componentes Svelte y pantallas, sustituyendo los comandos de Rust y Android por adaptadores web. La [matriz de paridad](pwa-parity-0.11.2.md) distingue lo comprobado y las diferencias pendientes. El [informe del primer port](pwa-port-0.11.2.md) es histórico y describe una fase anterior.
 
-**Estado de publicación: corrección `74d9ad3aebca421b` publicada y verificada.** Está en <https://diad87.github.io/pletina/>. Sus **22/22 archivos** respondieron HTTP 200 con SHA-256 coincidentes y la transición pública Creep → Million Dollar Question pasó en Chrome de escritorio con la pestaña oculta. El [informe del port 0.11.2](pwa-port-0.11.2.md) enlaza la evidencia y distingue la repetición física pendiente.
+Dirección: **https://diad87.github.io/pletina/**. GitHub Pages distribuye archivos estáticos. El catálogo y el audio se consultan directamente desde el navegador, sin backend propio, proxy ni microservidor en el móvil. La entrada pequeña muestra **Instalar** y prepara la aplicación completa al pulsar **Abrir Pletina**.
 
-**Incidencia física:** durante la prueba solicitada del build anterior, el usuario informó en Xiaomi 15T Pro instalado que el audio continúa con pantalla apagada, pero no empieza la siguiente canción. La causa y el comportamiento al desbloquear no están confirmados. La corrección publicada pasa **226/226 pruebas**, tipos sin errores ni avisos y transiciones reales de escritorio, locales y públicas, con pestaña oculta. **Falta repetir la prueba física; todavía no se declara resuelta la incidencia móvil.**
+**Publicado y verificado: `ee394d368c27123e`.** Pasan 326/326 pruebas, tipos sin errores ni avisos, compilación web/nativa y [22/22 archivos públicos con SHA-256 coincidente](../artifacts/pwa-deploy/public-files-ee394d368c27123e.json). La [canción solicitada reproduce desde Pages](../artifacts/pwa-port/browser-public-user-song-confirmed-ee394d368c27123e.json); el [resumen de entrega](../artifacts/pwa-parity/release-ee394d368c27123e.json) recoge los recorridos, su alcance y las comprobaciones físicas pendientes. La entrada tiene 38.720 bytes y la aplicación bajo demanda 466.208, sin comprimir.
 
-## Compilar y comprobar
+El cambio actual recupera las cuatro pestañas **Inicio, Buscar, Podcasts y Tu biblioteca**, la importación CSV, los podcasts RSS y YouTube, las descargas y el registro de audio compartible. También se adaptan la restauración de cola, el botón Atrás y el tamaño del viewport al reabrir. **No se declara paridad total:** la importación Spotify por URL sigue bloqueada y falta probar físicamente iPhone.
 
-Desde la raíz de este port, la orden de compilación completa es:
+## Compilar
+
+Trabajar en el checkout del port, no en un checkout antiguo de la app nativa:
 
 ```sh
+npm run check
+npm test
 npm run build:pwa
 ```
 
-Este wrapper compila `web-port/` en modo `pwa`, incorpora la aplicación a `dist-pwa/application/`, genera la entrada instalable y su service worker y añade la herramienta diagnóstica independiente de pantalla apagada. También crea `dist-pwa-portable/Pletina.html`.
+`build:pwa` compila `web-port/`, incorpora la aplicación a `dist-pwa/application/` y genera la entrada, el worker y la prueba de audio independiente. La compilación nativa sigue con `npm run build`. No publicar ejecutando `scripts/build-pwa.mjs` directamente: es el constructor interno de la entrada mínima y no incorpora el port sin recibir la aplicación.
 
-**No ejecutes `scripts/build-pwa.mjs` directamente para publicar el port.** Es el constructor de la entrada mínima y sus pruebas; sin el parámetro de aplicación no incorpora la app Svelte. Tampoco hace falta encadenar otra compilación de la prueba de audio: `npm run build:pwa` ya la incluye.
+`npm run preview:pwa` sirve una previsualización estática en el ordenador; no forma parte de la app instalada. Abrir con `file://` no permite instalar ni actualizar una PWA. `dist-pwa-portable/Pletina.html` sigue siendo el antiguo Hola mundo autónomo, sin la aplicación musical.
 
-Para ejecutar las pruebas de la PWA y sus adaptadores:
+## Instalar y actualizar
 
-```sh
-npm run test:pwa
-```
+1. Abrir la dirección publicada con Chrome en Android o Safari en iPhone/iPad.
+2. Pulsar **Instalar**. Android presenta el aviso nativo cuando está disponible y, en caso contrario, los pasos del menú.
+3. En iOS, seguir **Compartir → Añadir a pantalla de inicio** y confirmar.
+4. Abrir el icono con conexión y pulsar **Abrir Pletina**.
+5. Para actualizar una instalación anterior, usar **Actualizar y abrir** en la entrada o **Actualizar** en el aviso de la aplicación.
 
-La previsualización opcional en el ordenador compila el mismo port y sirve los archivos estáticos en `http://localhost:4174/pletina/`:
+Se mantienen dirección, identidad y scope. Antes de activar una actualización, el worker prepara y verifica los SHA-256 de toda la aplicación. Si falla, conserva la versión anterior. Actualizar recarga e interrumpe el audio actual; conserva biblioteca y descargas. Comprueba versiones al abrir, recuperar conexión o volver a la app, sin ejecutarse mientras está cerrada. Los nombres de las opciones de instalación dependen del navegador: [Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=es), [Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios).
 
-```sh
-npm run preview:pwa
-```
+## Catálogo, biblioteca y podcasts
 
-Admite `npm run preview:pwa -- --port 4175`. Es una herramienta de desarrollo local; la aplicación publicada no la utiliza. En un móvil, `localhost` señala al propio móvil: para instalar, abre la dirección HTTPS publicada.
+Deezer proporciona canciones, discos, artistas, duración y carátulas mediante JSONP aislado. YouTube aporta audio MP4 seleccionado por comparación de metadatos, con selección manual alternativa. No se usa un proxy ni se ejecuta JavaScript remoto para descifrar fuentes.
 
-`dist-pwa-portable/Pletina.html` sigue siendo una copia autónoma de **Hola mundo** para abrir con doble clic. No contiene la app musical, no se instala como PWA y se actualiza sustituyendo el archivo. La instalación y las actualizaciones del port necesitan una dirección HTTPS estable, como GitHub Pages.
+Favoritos, discos, artistas, playlists, historial, canciones de YouTube, fuentes elegidas, programas y progreso de episodios se guardan en IndexedDB. La versión 2 migra los datos anteriores. Los IDs de programa y episodio permanecen estables para el mismo feed y GUID. La biblioteca web es independiente de la APK y de otros dispositivos.
 
-## Instalar en Android o iPhone
+Podcasts conserva búsqueda y filtros. Los programas RSS se descubren en Apple y se leen directamente desde el feed. Si el proveedor bloquea esa lectura se intenta la lista pública de episodios de Apple; algunos proveedores seguirán sin permitir acceso. El idioma procede del RSS, sin inferirlo del país. YouTube conserva búsqueda y páginas de episodios con continuaciones.
 
-Para instalar o abrir el port publicado:
+El reproductor mantiene cola y cola DJ, anterior/siguiente, avance, aleatorio, repetición, temporizador y Media Session. Conserva la cola y su posición sin guardar fuentes temporales de audio; al reabrir restaura pausado y obtiene una fuente al pulsar reproducir. **Enviar registro** comparte o descarga un JSON local acotado de estados, sin títulos ni URLs.
 
-1. Abre <https://diad87.github.io/pletina/> con conexión: Chrome en Android o Safari en iPhone/iPad.
-2. Pulsa **Instalar**. En Android abre el aviso nativo cuando está disponible; en caso contrario muestra los pasos del menú del navegador.
-3. En iPhone/iPad la guía indica **Compartir → Añadir a pantalla de inicio**. Mantén **Abrir como app web** si aparece y confirma **Añadir**.
-4. Abre el icono con conexión. Pulsa **Abrir Pletina** para obtener la aplicación completa.
-5. En **Buscar**, escribe una canción o artista y pulsa una canción de los resultados. Si el navegador pide otro gesto para empezar el audio, pulsa **Reproducir**.
+## Importación
 
-El botón está disponible aunque el navegador no permita invocar el aviso de instalación programáticamente. En iOS la web muestra instrucciones; la confirmación de añadirla corresponde al usuario. Los nombres de las opciones pueden variar: [ayuda de Chrome](https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=es) y [guía de Apple](https://support.apple.com/guide/iphone/iphea86e5236/ios).
+CSV conserva lectura, matching real, pausa/reintento, revisión y guardado, con duplicados y orden. Aplica las reglas nativas de delimitadores, comillas, 10 MB y 10.000 filas.
 
-El build actual `74d9ad3aebca421b` contiene **35.884 bytes iniciales** y **411.523 bytes de aplicación bajo demanda**, sin comprimir. La instalación inicial no solicita los archivos de `application/`. La primera apertura verifica y guarda ese conjunto antes de entrar en la app. Después de abrirla una vez, el icono instalado puede volver directamente a Pletina mientras se conserve el indicador local. Los tamaños y el hash cambian al recompilar una modificación. El build anterior `1785b6edf53a230b` tenía 410.560 bytes bajo demanda.
+**Spotify por URL: diferencia pendiente.** Chrome rechaza la lectura del embed por CORS. oEmbed proporciona título e iframe, sin canciones; la API sin token responde 401 y la API del iframe no ofrece la lista de pistas. La interfaz informa y permite CSV. No se inventan datos ni se incorpora un intermediario. [Evidencia del navegador](../artifacts/pwa-port/imports-browser.json).
 
-## Música y biblioteca
+La importación de carpetas es de escritorio y tampoco está disponible en la interfaz móvil de la APK.
 
-Se conservan las pantallas de Inicio, Buscar, artistas, discos, biblioteca y reproducción de la app nativa. El catálogo de Deezer aporta nombres, artistas, discos, duración y carátulas. El adaptador usa JSONP aislado para acceder al catálogo; selecciona el vídeo correspondiente mediante búsqueda y comparación de metadatos y obtiene audio MP4 directamente de YouTube.
+## Descargas y funcionamiento sin conexión
 
-La interfaz no requiere enlaces para buscar o escuchar canciones. Se conserva también la posibilidad de añadir un vídeo de YouTube y el selector **¿No es esta canción?** para recordar una fuente elegida manualmente.
+CacheStorage guarda el audio completo, separado de la caché versionada de la aplicación. IndexedDB `pletina-web-downloads` conserva sus metadatos. El worker sirve rutas locales `__audio__/<id>`. Antes de confirmar una descarga se valida que el audio guardado puede decodificarse. Si falla red, cuota, validación o escritura, no se marca como terminada. La cola es serial; cancelar elimina las pendientes y permite acabar la actual.
 
-Favoritos, discos y artistas guardados, playlists, historial y elecciones de vídeo se almacenan en **IndexedDB del navegador**. Las preferencias siguen en almacenamiento local. El reproductor mantiene cola normal y DJ, anterior/siguiente, posición, aleatorio, repetición y temporizador. No hay sincronización entre dispositivos ni conexión con la base de datos de la instalación nativa.
+Las URLs temporales de YouTube no se guardan como campos de IndexedDB ni del snapshot de cola. La respuesta opaca del navegador puede retener internamente su URL de origen. La reproducción descargada usa una ruta local estable sin renovar fuentes remotas.
 
-Esta fase no porta el catálogo de podcasts, la importación de carpetas, las descargas de música ni la importación de Spotify por URL o CSV. El flujo de importación está oculto en la PWA; que exista matching interno no lo convierte en una función disponible. Las demás acciones nativas sin adaptar se ocultan o devuelven un mensaje de indisponibilidad. Android Auto y CarPlay siguen fuera de esta fase.
+Tras la primera apertura completa, interfaz y datos locales pueden abrirse sin red. Buscar contenido nuevo o escuchar audio no descargado necesita conexión. Borrar los datos del sitio elimina biblioteca y audio. El servicio nativo Android de descargas no existe en una web; no se ha comprobado que las descargas en curso terminen con la PWA cerrada.
 
-## Actualizar sin reinstalar
+## Pantalla apagada y plataformas
 
-Para distribuir cambios, ejecuta `npm run build:pwa` y publica el contenido de `dist-pwa/`, conservando la dirección, el `id` y el `scope` del manifiesto. La PWA comprueba actualizaciones al abrirse, al volver a estar visible y al recuperar conexión; no descarga versiones mientras está cerrada.
+El usuario confirmó en Xiaomi 15T Pro continuidad y cambio de canción con pantalla apagada en la prueba y el reproductor básico anteriores. En el primer port completo informó continuidad sin siguiente canción. La corrección posterior prepara la siguiente fuente en RAM y cambia el audio dentro del evento de fin, sin esperar a IndexedDB ni vaciarlo. Pasó en escritorio con pestaña oculta; el usuario indicó después que pasó a la siguiente, sin precisar bloqueo o build.
 
-La aplicación completa muestra un aviso **Hay una nueva versión de Pletina** con **Actualizar**. Al pulsarlo, el worker pendiente prepara los archivos de la app nueva en su caché separada y verifica sus SHA-256 antes de activarse. Si esa preparación falla, informa del fallo y conserva activa la versión anterior. Después de activar, vuelve a la entrada estable y abre la app nueva. La biblioteca local se conserva; no hace falta reinstalar el icono. Aplicar la actualización recarga la aplicación e interrumpe la reproducción actual.
-
-La entrada mínima también permite **Buscar actualizaciones** y **Actualizar y abrir**. Los archivos llevan nombres derivados del contenido y cada versión utiliza una caché propia. El navegador puede activar una versión pendiente al cerrar todas las ventanas de la PWA. El nombre y el icono que muestra el sistema pueden actualizarse más tarde que el contenido.
-
-## Sin conexión y pantalla apagada
-
-Tras una primera apertura completa con red, la interfaz guardada y los metadatos locales pueden abrirse sin conexión. Eso se comprobó en Chrome de escritorio. **La música no está descargada:** buscar canciones nuevas y reproducir audio de YouTube requieren conexión. Los datos dependen de que el navegador conserve su caché e IndexedDB; borrar los datos del sitio o liberar ese almacenamiento elimina esa disponibilidad.
-
-El usuario confirmó continuidad y siguiente pista con pantalla físicamente apagada en **Xiaomi 15T Pro**, primero con la herramienta diagnóstica y después con el reproductor básico instalado anterior. Esa evidencia está en [el registro histórico de pantalla apagada](pwa-screen-off-results.md) y [el informe histórico de la primera integración](pwa-player-results.md).
-
-En la prueba física posterior del port, el usuario indicó **«reproduce bien con la pantalla apagada, pero no pasa a la siguiente cancion»** en el contexto solicitado de PWA instalada en Xiaomi 15T Pro. Se registra [esa observación](../artifacts/pwa-port/android-installed-user-report-1785b6edf53a230b.json): continuidad sí, siguiente no; no se ha confirmado el hash abierto, que quedaran más canciones en la cola ni qué ocurre al desbloquear. Por tanto, la continuación de la cola con el teléfono bloqueado **no está validada**.
-
-La corrección publicada prepara una única fuente siguiente en RAM y, si sigue vigente, cambia `src` y llama a `play()` dentro del mismo evento de fin, sin esperar a IndexedDB ni vaciar el audio. Actualiza esa reserva al ocultarse mientras se quiere reproducir y al reanudar. Se comprobaron sus transiciones e invalidaciones con **17/17 pruebas de reproductor**, incluida una regresión que fallaba antes. También pasó la [transición pública](../artifacts/pwa-port/transition-public-74d9ad3aebca421b.json) con las dos canciones indicadas. Eso todavía no demuestra que resuelva la incidencia física. Las vistas móviles siguen siendo emulación de Chrome y iPhone/iPad, Safari y la PWA instalada de iOS continúan sin prueba real.
+No se da por cerrada la incidencia física. El nuevo cambio conserva esa preparación y añade posiciones de episodios y fuentes locales descargadas. Historial: [pantalla apagada](pwa-screen-off-results.md), [reproductor inicial](pwa-player-results.md), [primer port](pwa-port-0.11.2.md). La emulación móvil en Chrome no acredita Android o Safari. **iPhone/iPad y pantalla apagada en iOS siguen sin validación física.** Android Auto y CarPlay permanecen aplazados.
 
 ## Publicación
 
-El sitio utiliza GitHub Pages desde la rama **`gh-pages`** en modo de publicación por rama. La corrección está publicada en el commit de distribución `d004cea9ebdde641b75a51ec6b1ad8eaf947c1c0`; su comparación HTTPS pasó [22/22 archivos](../artifacts/pwa-deploy/public-files-74d9ad3aebca421b.json). La verificación anterior de `1785b6edf53a230b`, commit `cd4c6b68d5fe729a69f326952d65018d3149e4e7`, queda [archivada por separado](../artifacts/pwa-deploy/public-files-1785b6edf53a230b.json). Son commits de archivos estáticos, distintos de la base nativa 0.11.2. La dirección raíz y <https://diad87.github.io/pletina/prueba-audio/> mantienen su ubicación.
+El mecanismo activo es Pages desde **`gh-pages`**, ruta `/`. `scripts/publish-pwa.mjs` publica solo `dist-pwa/`, comprueba el estado remoto conocido y actualiza sin forzar la rama; admite `--dry-run`. `scripts/verify-pwa-deploy.mjs` compara HTTP y SHA-256 de todos los archivos y conserva informes por hash en `artifacts/pwa-deploy/`.
 
-El workflow `.github/workflows/pwa.yml` está preparado para compilar, comprobar y desplegar `dist-pwa/` mediante GitHub Actions. **Todavía no es el mecanismo activo de publicación.** Para usarlo habría que incorporar esos cambios a la rama configurada y cambiar **Settings → Pages → Build and deployment → Source → GitHub Actions**. Su presencia en el repositorio no acredita un despliegue.
-
-El alojamiento estático distribuye el código de Pletina. No procesa las búsquedas ni retransmite canciones. Los endpoints internos de YouTube pueden cambiar y requieren nuevas comprobaciones cuando se modifique el motor.
+El workflow `.github/workflows/pwa.yml` está preparado pero no activo. No se han cambiado los ajustes de Pages. Los commits de distribución son distintos de la base nativa y de los commits del código del port.

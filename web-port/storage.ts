@@ -1,9 +1,9 @@
 import type {
   Entry, LibTrack, LibraryData, PlaylistDetail, PlaylistSummary, Podcast,
-  PodcastProgress, SavedAlbum, SavedArtist,
+  PodcastDetail, PodcastEpisode, PodcastProgress, SavedAlbum, SavedArtist,
 } from '../src/lib/types'
 
-const DATABASE_VERSION = 1
+const DATABASE_VERSION = 2
 const DEFAULT_DATABASE = 'pletina-web-library'
 const YOUTUBE_BASE = 250_000_000_000_000
 const PODCAST_BASE = 500_000_000_000_000
@@ -11,7 +11,7 @@ const EPISODE_BASE = 750_000_000_000_000
 const LOCAL_BASE = 1_000_000_000_000_000
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
 const STORES = ['tracks', 'likes', 'albums', 'artists', 'podcasts', 'playlists',
-  'entries', 'history', 'progress', 'youtube', 'sources', 'meta'] as const
+  'entries', 'history', 'progress', 'youtube', 'sources', 'meta', 'episodes'] as const
 type Store = typeof STORES[number]
 
 const COMMANDS = new Set([
@@ -20,6 +20,7 @@ const COMMANDS = new Set([
   'playlist', 'add_to_playlist', 'remove_from_playlist', 'move_in_playlist',
   'record_play', 'history', 'clear_history', 'podcast_progress',
   'save_podcast_progress', 'save_youtube_track', 'youtube_tracks', 'remove_youtube_track',
+  'podcast_feed_url',
 ])
 
 export interface SourceChoice {
@@ -36,7 +37,8 @@ interface LikeRow { trackId: number; at: number; order: number }
 interface PlaylistRow { id: number; name: string; order: number }
 interface EntryRow { entryId: number; playlistId: number; trackId: number; position: number; at: number }
 interface HistoryRow { entryId: number; trackId: number; at: number }
-interface PodcastRow extends Timed<Podcast> { saved: boolean }
+interface PodcastRow extends Timed<Podcast> { saved: boolean; episodeIds?: number[] }
+interface EpisodeRow { id: number; podcastId: number; guid: string; value: PodcastEpisode }
 interface YouTubeRow { trackId: number; videoId: string; saved: boolean; at: number; order: number }
 interface SourceRow { trackId: number; choice: SourceChoice }
 interface MetaRow { key: string; value: number }
@@ -46,6 +48,11 @@ export interface WebStorageOptions {
   indexedDB?: IDBFactory
   name?: string
 }
+
+export type PodcastShowInput = Omit<Podcast, 'id'> & { id?: number }
+export type PodcastEpisodeInput = Omit<PodcastEpisode, 'id'> & { id?: number; guid: string }
+export interface PodcastDetailInput { podcast: PodcastShowInput; episodes: PodcastEpisodeInput[] }
+export interface StoredPodcastEpisode extends PodcastEpisode { podcastId: number; feedUrl: string; guid: string }
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} no es válido.`)
@@ -114,14 +121,40 @@ function artist(value: unknown): SavedArtist {
 }
 function podcast(value: unknown): Podcast {
   const row = object(value, 'El pódcast')
-  const feedUrl = text(row.feedUrl, 'La fuente del pódcast', false, 8192)
-  if (!/^youtube:[A-Za-z0-9_-]+$/.test(feedUrl)) {
-    metadataURL(feedUrl, 'La fuente del pódcast')
-  }
-  return { id: integer(row.id, 'El identificador del pódcast', PODCAST_BASE, EPISODE_BASE - 1),
+  const feedUrl = podcastFeed(row.feedUrl)
+  return { id: integer(row.id, 'El identificador del pódcast', PODCAST_BASE + 1, EPISODE_BASE - 1),
     title: text(row.title, 'El título'), author: text(row.author, 'El autor', true),
     description: text(row.description, 'La descripción', true, 200_000), image: image(row.image), feedUrl,
     language: nullableText(row.language, 'El idioma'), episodeCount: integer(row.episodeCount, 'El número de episodios') }
+}
+function podcastFeed(value: unknown): string {
+  const raw = text(value, 'La fuente del pódcast', false, 8192)
+  if (/^youtube:[A-Za-z0-9_-]+$/.test(raw)) return raw
+  const url = new URL(metadataURL(raw, 'La fuente del pódcast'))
+  url.hash = ''
+  return url.href
+}
+function podcastAudio(value: unknown): string {
+  const raw = text(value, 'El audio del episodio', false, 16384)
+  if (raw.startsWith('youtube:')) return 'youtube:' + videoId(raw.slice('youtube:'.length))
+  let url: URL
+  try { url = new URL(raw) } catch { throw new Error('El audio del episodio no es una dirección HTTP válida.') }
+  // RSS enclosures are published source metadata (including provider query parameters).
+  // Resolved YouTube stream addresses must remain in RAM; only youtube:<videoId> persists.
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password
+    || url.hostname === 'googlevideo.com' || url.hostname.endsWith('.googlevideo.com')) {
+    throw new Error('El audio del episodio no es una fuente RSS o un identificador de YouTube válido.')
+  }
+  url.hash = ''
+  return url.href
+}
+function podcastEpisode(value: unknown): { guid: string; value: PodcastEpisode } {
+  const row = object(value, 'El episodio')
+  return { guid: text(row.guid, 'La identidad del episodio', false, 16384), value: {
+    id: 0, title: text(row.title, 'El título'), description: text(row.description, 'La descripción', true, 200_000),
+    publishedAt: nullableText(row.publishedAt, 'La fecha'), duration: number(row.duration, 'La duración'),
+    audioUrl: podcastAudio(row.audioUrl), image: image(row.image), explicit: boolean(row.explicit, 'El indicador de contenido explícito'),
+  } }
 }
 function progress(value: unknown): PodcastProgress {
   const row = object(value, 'La posición del episodio')
@@ -180,6 +213,13 @@ export function createWebStorage(options: WebStorageOptions = {}) {
         if (!entries.indexNames.contains('playlistId')) entries.createIndex('playlistId', 'playlistId')
         const youtube = operation.transaction!.objectStore('youtube')
         if (!youtube.indexNames.contains('videoId')) youtube.createIndex('videoId', 'videoId', { unique: true })
+        const podcasts = operation.transaction!.objectStore('podcasts')
+        // Non-unique permits opening v1 databases that already contain duplicate feed metadata.
+        // New writes are serialized and always reuse the first existing feed identity.
+        if (!podcasts.indexNames.contains('feedUrl')) podcasts.createIndex('feedUrl', 'value.feedUrl')
+        const episodes = operation.transaction!.objectStore('episodes')
+        if (!episodes.indexNames.contains('identity')) episodes.createIndex('identity', ['podcastId', 'guid'], { unique: true })
+        if (!episodes.indexNames.contains('podcastId')) episodes.createIndex('podcastId', 'podcastId')
       }
       operation.onerror = () => { settled = true; reject(operation.error || new Error('No se pudo abrir la biblioteca web.')) }
       operation.onblocked = () => { settled = true; reject(new Error('Otra pestaña bloquea la actualización de la biblioteca. Ciérrala y vuelve a intentarlo.')) }
@@ -223,6 +263,35 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     await put(tx, 'meta', { key, value: next })
     return next
   }
+  async function podcastId(tx: IDBTransaction, episode: boolean): Promise<number> {
+    const base = episode ? EPISODE_BASE : PODCAST_BASE
+    const end = episode ? LOCAL_BASE : EPISODE_BASE
+    const counter = episode ? 'podcastEpisodeId' : 'podcastShowId'
+    const previous = await get<MetaRow>(tx, 'meta', counter)
+    const last = await request(tx.objectStore(episode ? 'episodes' : 'podcasts').openKeyCursor(undefined, 'prev'))
+    let next = Math.max(base, previous?.value ?? base, typeof last?.key === 'number' ? last.key : base)
+    for (;;) {
+      ++next
+      if (next >= end) throw new Error('No se pueden guardar más pódcasts o episodios.')
+      // Old v1 progress/library rows have no episode identity table. Never assign one
+      // of those occupied IDs to an unrelated new episode during the upgrade.
+      if (episode && (await get(tx, 'progress', next) || await get(tx, 'tracks', next))) continue
+      await put(tx, 'meta', { key: counter, value: next })
+      return next
+    }
+  }
+  async function showByFeed(tx: IDBTransaction, feedUrl: string): Promise<PodcastRow | undefined> {
+    return request(tx.objectStore('podcasts').index('feedUrl').get(feedUrl)) as Promise<PodcastRow | undefined>
+  }
+  async function saveShow(tx: IDBTransaction, value: Podcast): Promise<PodcastRow> {
+    const old = await showByFeed(tx, value.feedUrl)
+    const row: PodcastRow = { ...old, id: old?.id ?? await podcastId(tx, false),
+      value: { ...value, id: old?.id ?? 0, episodeCount: Math.max(value.episodeCount, old?.value.episodeCount ?? 0) },
+      saved: old?.saved ?? false, at: old?.at ?? timestamp(), order: old?.order ?? await sequence(tx) }
+    row.value.id = row.id
+    await put(tx, 'podcasts', row)
+    return row
+  }
   async function entries(tx: IDBTransaction, playlistId: number): Promise<Entry[]> {
     const rows = await request(tx.objectStore('entries').index('playlistId').getAll(playlistId)) as EntryRow[]
     rows.sort((a, b) => a.position - b.position || a.entryId - b.entryId)
@@ -260,7 +329,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
   async function storageInvoke(command: string, args: Record<string, unknown> = {}): Promise<unknown> {
     if (!handlesStorage(command)) throw new Error(`El comando «${command}» no está disponible en el almacenamiento web.`)
     object(args, 'Los argumentos')
-    const readonly = ['library', 'liked_tracks', 'playlist', 'history', 'podcast_progress', 'youtube_tracks'].includes(command)
+    const readonly = ['library', 'liked_tracks', 'playlist', 'history', 'podcast_progress', 'podcast_feed_url', 'youtube_tracks'].includes(command)
     return transaction(readonly ? 'readonly' : 'readwrite', async (tx) => {
       switch (command) {
         case 'library': {
@@ -270,7 +339,10 @@ export function createWebStorage(options: WebStorageOptions = {}) {
           ])
           const data: LibraryData = { likedIds: newest(liked).map((row) => row.trackId), downloadedIds: [],
             albums: newest(albums).map((row) => row.value), artists: newest(artists).map((row) => row.value),
-            podcasts: newest(podcasts.filter((row) => row.saved)).map((row) => row.value),
+            podcasts: await Promise.all(newest(podcasts.filter((row) => row.saved)).map(async (row) => {
+              const known = await request(tx.objectStore('episodes').index('podcastId').count(row.id))
+              return { ...row.value, episodeCount: known || row.value.episodeCount }
+            })),
             playlists: await Promise.all(newest(lists).map(async (row) => summary(row, await entries(tx, row.id)))) }
           return data
         }
@@ -302,12 +374,17 @@ export function createWebStorage(options: WebStorageOptions = {}) {
           return
         }
         case 'set_podcast_saved': {
-          const podcastId = integer(args.id, 'El pódcast', PODCAST_BASE, EPISODE_BASE - 1)
+          const podcastId = integer(args.id, 'El pódcast', PODCAST_BASE + 1, EPISODE_BASE - 1)
           const saved = boolean(args.saved, 'El estado de guardado')
           const row = await get<PodcastRow>(tx, 'podcasts', podcastId)
           if (!row) throw new Error('No se han cargado los metadatos de este pódcast. Ábrelo y vuelve a intentarlo.')
           await put(tx, 'podcasts', { ...row, saved, order: saved && !row.saved ? await sequence(tx) : row.order })
           return
+        }
+        case 'podcast_feed_url': {
+          const row = await get<PodcastRow>(tx, 'podcasts', integer(args.id, 'El pódcast', PODCAST_BASE + 1, EPISODE_BASE - 1))
+          if (!row) throw new Error('No se encuentra este pódcast en la biblioteca.')
+          return row.value.feedUrl
         }
         case 'create_playlist': {
           const values = tracks(args.tracks ?? [])
@@ -412,9 +489,70 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     await transaction('readwrite', async (tx) => {
       for (const value of normalized) {
         const old = await get<PodcastRow>(tx, 'podcasts', value.id)
-        await put(tx, 'podcasts', { id: value.id, value, saved: old?.saved ?? false,
+        await put(tx, 'podcasts', { ...old, id: value.id, value, saved: old?.saved ?? false,
           at: old?.at ?? timestamp(), order: old?.order ?? await sequence(tx) })
       }
+    })
+  }
+  async function savePodcastShows(values: PodcastShowInput[]): Promise<Podcast[]> {
+    if (!Array.isArray(values)) throw new Error('La lista de pódcasts no es válida.')
+    const normalized = values.map((value) => podcast({ ...object(value, 'El pódcast'), id: PODCAST_BASE + 1 }))
+    return transaction('readwrite', async (tx) => {
+      const result: Podcast[] = []
+      for (const value of normalized) result.push((await saveShow(tx, value)).value)
+      return result
+    })
+  }
+  async function savePodcastDetail(detail: PodcastDetailInput): Promise<PodcastDetail> {
+    const input = object(detail, 'La ficha del pódcast')
+    const normalized = podcast({ ...object(input.podcast, 'El pódcast'), id: PODCAST_BASE + 1 })
+    if (!Array.isArray(input.episodes)) throw new Error('La lista de episodios no es válida.')
+    const candidates = input.episodes.map(podcastEpisode)
+    return transaction('readwrite', async (tx) => {
+      const row = await saveShow(tx, normalized)
+      const episodes: PodcastEpisode[] = [], seen = new Set<string>()
+      for (const candidate of candidates) {
+        if (seen.has(candidate.guid)) continue
+        seen.add(candidate.guid)
+        const previous = await request(tx.objectStore('episodes').index('identity').get([row.id, candidate.guid])) as EpisodeRow | undefined
+        const value = { ...candidate.value, id: previous?.id ?? await podcastId(tx, true) }
+        await put(tx, 'episodes', { id: value.id, podcastId: row.id, guid: candidate.guid, value } satisfies EpisodeRow)
+        await put(tx, 'tracks', { id: value.id, title: value.title, duration: value.duration, explicit: value.explicit,
+          artistId: row.id, artistName: row.value.author || row.value.title, albumId: row.id,
+          albumTitle: row.value.title, albumArtistId: row.id, cover: value.image ?? row.value.image } satisfies LibTrack)
+        episodes.push(value)
+      }
+      row.episodeIds = episodes.map((value) => value.id)
+      row.value.episodeCount = episodes.length
+      await put(tx, 'podcasts', row)
+      return { podcast: row.value, episodes }
+    })
+  }
+  async function readPodcastFeedUrl(showId: number): Promise<string | null> {
+    const key = integer(showId, 'El pódcast', PODCAST_BASE + 1, EPISODE_BASE - 1)
+    return transaction('readonly', async (tx) => (await get<PodcastRow>(tx, 'podcasts', key))?.value.feedUrl ?? null)
+  }
+  async function readPodcastEpisode(episodeId: number): Promise<StoredPodcastEpisode | null> {
+    const key = integer(episodeId, 'El episodio', EPISODE_BASE + 1, LOCAL_BASE - 1)
+    return transaction('readonly', async (tx) => {
+      const row = await get<EpisodeRow>(tx, 'episodes', key)
+      if (!row) return null
+      const show = await get<PodcastRow>(tx, 'podcasts', row.podcastId)
+      if (!show) throw new Error('No se encuentran los metadatos del programa de este episodio.')
+      return { ...row.value, podcastId: row.podcastId, feedUrl: show.value.feedUrl, guid: row.guid }
+    })
+  }
+  async function readPodcastDetail(feedUrl: string): Promise<PodcastDetail | null> {
+    const feed = podcastFeed(feedUrl)
+    return transaction('readonly', async (tx) => {
+      const row = await showByFeed(tx, feed)
+      if (!row) return null
+      const episodes = await Promise.all((row.episodeIds ?? []).map(async (key) => {
+        const episode = await get<EpisodeRow>(tx, 'episodes', key)
+        if (!episode) throw new Error('Faltan los metadatos de un episodio del programa.')
+        return episode.value
+      }))
+      return { podcast: row.value, episodes }
     })
   }
   async function readSourceChoice(trackId: number): Promise<SourceChoice | null> {
@@ -440,7 +578,8 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     connection?.close()
     connection = undefined
   }
-  return { storageInvoke, handlesStorage, rememberPodcasts, readSourceChoice, saveSourceChoice, readYouTubeVideo, close }
+  return { storageInvoke, handlesStorage, rememberPodcasts, savePodcastShows, savePodcastDetail,
+    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readSourceChoice, saveSourceChoice, readYouTubeVideo, close }
 }
 
 export const handlesStorage = (command: string): boolean => COMMANDS.has(command)
@@ -450,6 +589,11 @@ export async function storageInvoke(command: string, args: Record<string, unknow
   return storage().storageInvoke(command, args)
 }
 export const rememberPodcasts = (values: Podcast[]): Promise<void> => storage().rememberPodcasts(values)
+export const savePodcastShows = (values: PodcastShowInput[]): Promise<Podcast[]> => storage().savePodcastShows(values)
+export const savePodcastDetail = (detail: PodcastDetailInput): Promise<PodcastDetail> => storage().savePodcastDetail(detail)
+export const readPodcastFeedUrl = (showId: number): Promise<string | null> => storage().readPodcastFeedUrl(showId)
+export const readPodcastEpisode = (episodeId: number): Promise<StoredPodcastEpisode | null> => storage().readPodcastEpisode(episodeId)
+export const readPodcastDetail = (feedUrl: string): Promise<PodcastDetail | null> => storage().readPodcastDetail(feedUrl)
 export const readSourceChoice = (trackId: number): Promise<SourceChoice | null> => storage().readSourceChoice(trackId)
 export const saveSourceChoice = (trackId: number, choice: SourceChoice): Promise<void> => storage().saveSourceChoice(trackId, choice)
 export const readYouTubeVideo = (trackId: number): Promise<string | null> => storage().readYouTubeVideo(trackId)

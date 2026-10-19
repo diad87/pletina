@@ -19,6 +19,14 @@ export type Route =
 
 const sameRoute = (a: Route, b: Route) => JSON.stringify(a) === JSON.stringify(b)
 
+export interface NavigationDriver {
+  push(stack: Route[], index: number): void
+  replace(stack: Route[], index: number): void
+  back(): void
+  forward(): void
+  overlay(open: boolean, close: () => boolean): void
+}
+
 /** Historial propio (atrás / adelante) sin router: una pila de rutas y un índice. */
 class Nav {
   stack = $state<Route[]>([{ name: 'home' }])
@@ -30,6 +38,18 @@ class Nav {
   focusSearch: () => void = () => {}
 
   #scrollTops: number[] = []
+  #driver: NavigationDriver | null = null
+
+  /** Solo la entrada web instala un historial de navegador; Tauri conserva su pila. */
+  installDriver(driver: NavigationDriver) { this.#driver = driver }
+
+  restore(stack: Route[], index: number) {
+    this.#saveScroll()
+    this.stack = stack
+    this.index = index
+  }
+
+  overlay(open: boolean, close: () => boolean) { this.#driver?.overlay(open, close) }
 
   get route(): Route {
     return this.stack[this.index]
@@ -50,21 +70,25 @@ class Nav {
     this.index = this.stack.length - 1
     this.#scrollTops[this.index] = 0
     this.scroller?.scrollTo(0, 0)
+    this.#driver?.push(this.stack, this.index)
   }
 
   /** Cambia la ruta actual sin crear entrada en el historial (p. ej. al escribir en el buscador). */
   replace(route: Route) {
     this.stack[this.index] = route
+    this.#driver?.replace(this.stack, this.index)
   }
 
   back() {
     if (!this.canBack) return
+    if (this.#driver) { this.#driver.back(); return }
     this.#saveScroll()
     this.index--
   }
 
   forward() {
     if (!this.canForward) return
+    if (this.#driver) { this.#driver.forward(); return }
     this.#saveScroll()
     this.index++
   }

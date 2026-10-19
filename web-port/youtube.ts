@@ -14,6 +14,8 @@ export interface StreamInfo {
   channel: string
   duration: number | null
   expiresAt: number
+  /** Tamaño declarado del mismo formato MP4 seleccionado; no se guardan sus URLs. */
+  contentLength?: number
 }
 
 type ErrorCode = 'network' | 'timeout' | 'response' | 'unavailable' | 'restricted' | 'format'
@@ -96,9 +98,9 @@ async function jsonBridge(config: { requestId: number; url: string; body: unknow
 }
 
 /** Únicamente estos endpoints, enviados por código de la aplicación. */
-export async function requestJson(provider: 'music' | 'youtube', endpoint: 'search' | 'player', body: unknown, signal?: AbortSignal): Promise<unknown> {
+export async function requestJson(provider: 'music' | 'youtube', endpoint: 'search' | 'player' | 'browse', body: unknown, signal?: AbortSignal): Promise<unknown> {
   checkAbort(signal)
-  if (!['music', 'youtube'].includes(provider) || !['search', 'player'].includes(endpoint)) throw new Error('Petición de audio no válida.')
+  if (!['music', 'youtube'].includes(provider) || !['search', 'player', 'browse'].includes(endpoint)) throw new Error('Petición de audio no válida.')
   const url = `https://${provider === 'music' ? 'music' : 'www'}.youtube.com/youtubei/v1/${endpoint}?prettyPrint=false`
   return new Promise((resolve, reject) => {
     const frame = document.createElement('iframe')
@@ -206,10 +208,14 @@ function rememberVisitor(response: unknown): void {
   if (value) visitor = { value, expiresAt: Date.now() + 15 * 60_000 }
 }
 
+export function musicContext() {
+  return { client: { clientName: 'WEB_REMIX', clientVersion: MUSIC_VERSION, hl: 'es', gl: 'ES' } }
+}
+
 export async function searchMusic(query: string, signal?: AbortSignal): Promise<Candidate[]> {
   checkAbort(signal)
   const response = await requestJson('music', 'search', {
-    context: { client: { clientName: 'WEB_REMIX', clientVersion: MUSIC_VERSION, hl: 'es', gl: 'ES' } },
+    context: musicContext(),
     query: query.trim().slice(0, 500), params: 'EgWKAQIIAWoKEAkQBRAKEAMQBA==',
   }, signal)
   return parseMusicResults(response)
@@ -249,16 +255,25 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
       at(format, 'audioTrack', 'audioIsDefault') !== false)
     .sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0))
   let url: string | undefined
+  let selected: Row | undefined
   for (const format of formats) {
-    try { url = audioUrl(format.url); break } catch { /* No aceptar otro origen como alternativa. */ }
+    try { url = audioUrl(format.url); selected = format; break } catch { /* No aceptar otro origen como alternativa. */ }
   }
   if (!url) throw new YouTubeError('Este vídeo no ofrece audio MP4 compatible.', 'format')
   const expiration = Number(new URL(url).searchParams.get('expire')) * 1000
   if (expiration > 0 && expiration <= now + 60_000) throw new YouTubeError('La dirección de audio ha caducado. Vuelve a intentarlo.', 'response')
   const expiresAt = Math.min(now + 20 * 60_000, Number.isFinite(expiration) && expiration > 0 ? expiration - 60_000 : now + 5 * 60_000)
   const seconds = Number(details.lengthSeconds)
+  const size = (value: unknown): number | undefined => {
+    if (typeof value !== 'number' && (typeof value !== 'string' || !/^\d{1,10}$/.test(value))) return
+    const number = Number(value)
+    return Number.isSafeInteger(number) && number > 0 && number <= 2 * 1024 ** 3 ? number : undefined
+  }
+  const declared = size(selected?.contentLength), query = size(new URL(url).searchParams.get('clen'))
+  const contentLength = declared && query && declared !== query ? undefined : declared ?? query
   return { videoId, url, title: string(details.title, 300) || videoId,
-    channel: string(details.author, 200) || 'YouTube', duration: Number.isFinite(seconds) && seconds > 0 && seconds <= 604800 ? Math.round(seconds) : null, expiresAt }
+    channel: string(details.author, 200) || 'YouTube', duration: Number.isFinite(seconds) && seconds > 0 && seconds <= 604800 ? Math.round(seconds) : null, expiresAt,
+    ...(contentLength ? { contentLength } : {}) }
 }
 
 export async function stream(videoId: string, refresh = false, signal?: AbortSignal): Promise<StreamInfo> {

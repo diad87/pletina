@@ -1,0 +1,319 @@
+{
+  "testedAt": "2026-10-19T06:02:06.904Z",
+  "query": "A solas con un ritmo lirico de violadores del verso",
+  "checks": [
+    {
+      "name": "minimal install opens compiled mobile UI with all four tabs",
+      "passed": true,
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ]
+    },
+    {
+      "name": "the requested song can be found by title and artist",
+      "passed": true,
+      "usedQuery": "Violadores del Verso A solas",
+      "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+      "artist": "Violadores del Verso"
+    },
+    {
+      "name": "tapping the searched artist text plays that song and keeps the song list visible",
+      "passed": true,
+      "selectedTitle": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+      "tag": "SPAN",
+      "audio": {
+        "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+        "online": true,
+        "events": [
+          {
+            "type": "loadedmetadata",
+            "index": 0,
+            "at": 3446,
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "index": 0,
+            "at": 3504,
+            "time": 0,
+            "error": null
+          }
+        ],
+        "instances": [
+          {
+            "index": 0,
+            "sourcePresent": true,
+            "localCache": false,
+            "time": 1.01167,
+            "duration": 264.586667,
+            "paused": false,
+            "readyState": 4,
+            "error": null,
+            "muted": false,
+            "volume": 0.8
+          }
+        ]
+      }
+    },
+    {
+      "name": "real download validates bytes through production SW before completing",
+      "passed": false,
+      "error": "No element found for selector: .mini button[aria-label=\"Pausa\"]"
+    }
+  ],
+  "searchAttempts": [
+    {
+      "query": "A solas con un ritmo lirico de violadores del verso",
+      "passed": false,
+      "error": "No song results for this search"
+    },
+    {
+      "query": "A solas con un ritmo",
+      "passed": false,
+      "error": "The input did not match the regular expression /violadores/i. Input:\n\n'Kase.O'\n"
+    },
+    {
+      "query": "Violadores del Verso A solas",
+      "passed": true,
+      "result": {
+        "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+        "artist": "Violadores del Verso"
+      }
+    }
+  ],
+  "downloadAttempts": [
+    {
+      "query": "Violadores del Verso A solas",
+      "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+      "events": [
+        {
+          "trackId": 3219517311,
+          "state": "queued",
+          "progress": 0,
+          "error": null
+        },
+        {
+          "trackId": 3219517311,
+          "state": "downloading",
+          "progress": 0,
+          "error": null
+        },
+        {
+          "trackId": 3219517311,
+          "state": "done",
+          "progress": 1,
+          "error": null
+        }
+      ],
+      "database": {
+        "cacheEntries": 1,
+        "rows": [
+          {
+            "id": 3219517311,
+            "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+            "size": 4285313,
+            "stageKeyValid": true,
+            "cachePresent": true,
+            "cacheType": "opaque"
+          }
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "network": [
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "music.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "rr1---sn-uxax4vopj5xn-cpve.googlevideo.com",
+      "type": "media",
+      "status": 206
+    },
+    {
+      "host": "music.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "rr1---sn-uxax4vopj5xn-cpve.googlevideo.com",
+      "type": "fetch",
+      "status": 200
+    }
+  ],
+  "scope": "Desktop Chrome emulates Android layout/taps; actual public music, compiled PWA and production SW. No physical phone, iOS, screen-off or cars claim.",
+  "browser": "Chrome/148.0.7778.97",
+  "build": "065c52bfb2862900",
+  "fatal": "The expression evaluated to a falsy value:\n\n  assert.ok(await check('real download validates bytes through production SW before completing', async () => {\n",
+  "finishedAt": "2026-10-19T06:02:12.507Z",
+  "finalAudio": {
+    "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+    "online": true,
+    "events": [
+      {
+        "type": "loadedmetadata",
+        "index": 0,
+        "at": 3446,
+        "time": 0,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "index": 0,
+        "at": 3504,
+        "time": 0,
+        "error": null
+      },
+      {
+        "type": "pause",
+        "index": 0,
+        "at": 4607,
+        "time": 1.032773,
+        "error": null
+      },
+      {
+        "type": "loadedmetadata",
+        "index": 1,
+        "at": 4681,
+        "time": 0,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "index": 0,
+        "at": 4844,
+        "time": 1.100403,
+        "error": null
+      }
+    ],
+    "instances": [
+      {
+        "index": 0,
+        "sourcePresent": true,
+        "localCache": false,
+        "time": 1.101178,
+        "duration": 264.586667,
+        "paused": false,
+        "readyState": 4,
+        "error": null,
+        "muted": false,
+        "volume": 0.8
+      },
+      {
+        "index": 1,
+        "sourcePresent": false,
+        "localCache": false,
+        "time": 0,
+        "duration": null,
+        "paused": true,
+        "readyState": 0,
+        "error": null,
+        "muted": false,
+        "volume": 1
+      }
+    ]
+  },
+  "finalDatabase": {
+    "cacheEntries": 1,
+    "rows": [
+      {
+        "id": 3219517311,
+        "title": "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+        "size": 4285313,
+        "stageKeyValid": true,
+        "cachePresent": true,
+        "cacheType": "opaque"
+      }
+    ]
+  },
+  "finalUI": {
+    "headings": [
+      "Descargas",
+      "En este navegador · 1 canción · 4 MB"
+    ],
+    "notices": [
+      "Descarga terminada"
+    ],
+    "rows": [
+      "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)"
+    ]
+  },
+  "passed": false
+}

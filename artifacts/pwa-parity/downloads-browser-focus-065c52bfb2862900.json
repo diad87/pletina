@@ -1,0 +1,170 @@
+{
+  "testedAt": "2026-10-19T06:03:52.464Z",
+  "query": "A solas con un ritmo lirico de violadores del verso",
+  "checks": [
+    {
+      "name": "minimal install opens compiled mobile UI with all four tabs",
+      "passed": true,
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ]
+    },
+    {
+      "name": "the requested song can be found by title and artist",
+      "passed": false,
+      "error": "The requested title was not returned by any of the three catalog searches"
+    }
+  ],
+  "searchAttempts": [
+    {
+      "query": "A solas con un ritmo lirico de violadores del verso",
+      "passed": false,
+      "error": "No song results for this search",
+      "ui": {
+        "input": "A solas con un ritmo lirico de violadores del verso",
+        "notices": [
+          "No hay resultados para «A solas con un ritmo lirico de violadores del verso» Revisa cómo está escrito o prueba con menos palabras."
+        ],
+        "titles": []
+      }
+    },
+    {
+      "query": "A solas con un ritmo",
+      "passed": false,
+      "error": "The input did not match the regular expression /solas.*ritmo.*l[ií]rico/i. Input:\n\n'A Solas Con un Ritmo 2011'\n",
+      "ui": {
+        "input": "A solas con un ritmo",
+        "notices": [],
+        "titles": [
+          "A Solas Con un Ritmo 2011",
+          "A Solas Con un Ritmo Kase.O",
+          "A Solas Con un RItmo Lírico",
+          "A Solas Con un Ritmo Sho-Hai",
+          "A Solas Con un Ritmo",
+          "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+          "Color Ladrillo",
+          "Mirador y Pola"
+        ]
+      }
+    },
+    {
+      "query": "Violadores del Verso A solas",
+      "passed": false,
+      "error": "The input did not match the regular expression /solas.*ritmo.*l[ií]rico/i. Input:\n\n'Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)'\n",
+      "ui": {
+        "input": "Violadores del Verso A solas",
+        "notices": [],
+        "titles": [
+          "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+          "A Solas Con un Ritmo Kase.O",
+          "A Solas Con un RItmo Lírico",
+          "A Solas Con un Ritmo Sho-Hai"
+        ]
+      }
+    }
+  ],
+  "downloadAttempts": [],
+  "pageErrors": [],
+  "network": [
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    }
+  ],
+  "scope": "Desktop Chrome emulates Android layout/taps; actual public music, compiled PWA and production SW. No physical phone, iOS, screen-off or cars claim.",
+  "browser": "Chrome/148.0.7778.97",
+  "build": "065c52bfb2862900",
+  "fatal": "The expression evaluated to a falsy value:\n\n  assert.ok(searched)\n",
+  "finishedAt": "2026-10-19T06:03:55.814Z",
+  "finalAudio": {
+    "title": null,
+    "online": true,
+    "events": [],
+    "instances": [
+      {
+        "index": 0,
+        "sourcePresent": false,
+        "localCache": false,
+        "time": 0,
+        "duration": null,
+        "paused": true,
+        "readyState": 0,
+        "error": null,
+        "muted": false,
+        "volume": 0.8
+      }
+    ]
+  },
+  "finalDatabase": {
+    "cacheEntries": 0,
+    "rows": []
+  },
+  "finalUI": {
+    "input": "Violadores del Verso A solas",
+    "headings": [
+      "Canciones"
+    ],
+    "notices": [],
+    "rows": [
+      "Medley: Virtuosos/A Solas Con un Ritmo Kase.O/Atras (Live)",
+      "A Solas Con un Ritmo Kase.O",
+      "A Solas Con un RItmo Lírico",
+      "A Solas Con un Ritmo Sho-Hai"
+    ]
+  },
+  "passed": false
+}

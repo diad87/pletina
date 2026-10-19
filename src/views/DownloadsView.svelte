@@ -40,7 +40,7 @@
     }
   })
 
-  if (!layout.mobile) api.downloadDirPath().then((dir) => (folder = dir))
+  if (!layout.mobile && !api.inPwa) api.downloadDirPath().then((dir) => (folder = dir))
 
   const items = $derived((entries ?? []).map((e) => fromLib(e.track)))
   const totalSize = $derived((entries ?? []).reduce((sum, e) => sum + e.size, 0))
@@ -68,8 +68,10 @@
 <section class="page top">
   <h1 class="page-title">Descargas</h1>
 
-  <!-- En el móvil se guardan dentro de la app: no hay carpeta que elegir ni abrir. -->
-  {#if !layout.mobile}
+  <!-- En móvil y web se guardan dentro de la app, sin una carpeta nativa que abrir. -->
+  {#if api.inPwa}
+    <p class="storage-note">Las descargas se guardan en este navegador para escucharlas sin conexión.</p>
+  {:else if !layout.mobile}
     <div class="folder">
       <Icon name="folder" size={20} />
       <span class="path" title={folder}>{folder}</span>
@@ -103,7 +105,7 @@
     <Status />
   {:else if items.length}
     <div class="summary">
-      <h2 class="section-title">{layout.mobile ? 'En el móvil' : 'En este equipo'} · {songs(items.length)} · {mb(totalSize)}</h2>
+      <h2 class="section-title">{api.inPwa ? 'En este navegador' : layout.mobile ? 'En el móvil' : 'En este equipo'} · {songs(items.length)} · {mb(totalSize)}</h2>
       {#if !confirmRemoveAll}
         <button class="ghost" onclick={() => (confirmRemoveAll = true)}><Icon name="trash" size={16} /> Quitar todas</button>
       {/if}
@@ -137,6 +139,11 @@
 </section>
 
 <style>
+  .storage-note {
+    margin: 0 12px 16px;
+    color: var(--muted);
+    font-size: 14px;
+  }
   .folder {
     display: flex;
     align-items: center;

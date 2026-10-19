@@ -1,0 +1,312 @@
+{
+  "testedAt": "2026-10-19T06:00:19.984Z",
+  "build": "065c52bfb2862900",
+  "query": "Radiohead Creep",
+  "runKind": "UI and persistence follow-up",
+  "checks": [
+    {
+      "name": "initial install stays small; opening downloads the full app on demand",
+      "pass": true,
+      "initialApplicationRequests": 0,
+      "downloadedPaths": [
+        "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "/pletina/application/assets/index-8oArVTX_.js",
+        "/pletina/application/assets/index-Dhe7ruI3.css",
+        "/pletina/application/index.2f22c5e22ddc2ff9.html",
+        "/pletina/application/launcher.521daaa5d52b8067.js"
+      ],
+      "cachedPaths": [
+        "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "/pletina/application/assets/index-8oArVTX_.js",
+        "/pletina/application/assets/index-Dhe7ruI3.css",
+        "/pletina/application/index.2f22c5e22ddc2ff9.html",
+        "/pletina/application/launcher.521daaa5d52b8067.js"
+      ]
+    },
+    {
+      "name": "name and artist search renders real internal song results",
+      "pass": true,
+      "results": [
+        {
+          "title": "Creep",
+          "artist": "E Radiohead"
+        },
+        {
+          "title": "Creep (Acoustic)",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Million Dollar Question",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Yes I Am",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Inside My Head",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Blow Out (Remix)",
+          "artist": "Radiohead"
+        },
+        {
+          "title": "Creep (Cover of Radiohead)",
+          "artist": "Glee Cast"
+        },
+        {
+          "title": "2 + 2 = 5 (Live)",
+          "artist": "Radiohead"
+        }
+      ],
+      "screenshot": "parity-ui-local-065c52bfb2862900-desktop-search.png"
+    },
+    {
+      "name": "favorite, manual queue and playlist use the real UI",
+      "pass": true,
+      "playlist": "QA web persistente",
+      "favoriteSaved": true,
+      "queuedItems": 1
+    },
+    {
+      "name": "reload restores favorites and playlist from IndexedDB",
+      "pass": true,
+      "favoriteTitle": "Creep",
+      "databases": [
+        {
+          "name": "pletina-web-downloads",
+          "version": 1
+        },
+        {
+          "name": "pletina-web-library",
+          "version": 2
+        }
+      ]
+    },
+    {
+      "name": "offline reload opens cached UI and locally stored playlist/favorite metadata",
+      "pass": true,
+      "online": false,
+      "playlistCount": 2,
+      "meaning": "App shell and IndexedDB metadata available offline; no offline media playback tested or claimed"
+    },
+    {
+      "name": "Android UI emulated in desktop Chrome",
+      "pass": true,
+      "layout": {
+        "width": 393,
+        "viewportWidth": 393,
+        "documentWidth": 393,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "input": {
+          "x": 59,
+          "right": 368,
+          "width": 309
+        }
+      }
+    },
+    {
+      "name": "iPhone UI emulated in desktop Chrome",
+      "pass": true,
+      "layout": {
+        "width": 390,
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "input": {
+          "x": 59,
+          "right": 365,
+          "width": 306
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "network": [
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "music.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "music.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "www.youtube.com",
+      "status": 200,
+      "resourceType": "fetch"
+    },
+    {
+      "host": "www.youtube.com",
+      "resourceType": "fetch",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "host": "www.youtube.com",
+      "resourceType": "fetch",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "status": 200,
+      "resourceType": "script"
+    },
+    {
+      "host": "api.deezer.com",
+      "resourceType": "script",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "resourceType": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "resourceType": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "resourceType": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "resourceType": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    }
+  ],
+  "scope": "Real Chrome desktop network/audio. Mobile layouts use desktop Chrome emulation only.",
+  "physicalScreenOffVerified": false,
+  "iOSPlaybackVerified": false,
+  "outputSilencedByChromeLaunchArgument": true,
+  "mediaElementMuted": false,
+  "backgroundTransitionAcceleratedBySeek": true,
+  "offlineMusicClaimed": false,
+  "originKind": "ephemeral localhost static QA server",
+  "browser": "Chrome/148.0.7778.97",
+  "emulatedLayouts": [
+    {
+      "name": "Android UI emulated in desktop Chrome",
+      "width": 393,
+      "viewportWidth": 393,
+      "documentWidth": 393,
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ],
+      "input": {
+        "x": 59,
+        "right": 368,
+        "width": 309
+      },
+      "screenshot": "parity-ui-local-065c52bfb2862900-android-ui-emulated.png",
+      "playbackVerified": false
+    },
+    {
+      "name": "iPhone UI emulated in desktop Chrome",
+      "width": 390,
+      "viewportWidth": 390,
+      "documentWidth": 390,
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ],
+      "input": {
+        "x": 59,
+        "right": 365,
+        "width": 306
+      },
+      "screenshot": "parity-ui-local-065c52bfb2862900-iphone-ui-emulated.png",
+      "playbackVerified": false
+    }
+  ],
+  "finalAudio": {
+    "instances": [
+      {
+        "index": 0,
+        "srcPresent": false,
+        "sourceRevision": 0,
+        "currentTime": 0,
+        "duration": null,
+        "paused": true,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "readyState": 0,
+        "networkState": 0,
+        "errorCode": null
+      }
+    ],
+    "events": [],
+    "hidden": false,
+    "online": true,
+    "iframeCount": 0,
+    "handlers": [
+      "play",
+      "pause",
+      "previoustrack",
+      "nexttrack",
+      "seekto"
+    ],
+    "mediaSession": {
+      "playbackState": "paused",
+      "title": "Creep",
+      "artist": "Radiohead"
+    }
+  },
+  "finalUI": {
+    "title": "Pletina",
+    "online": true,
+    "notices": [
+      "1 canción"
+    ]
+  },
+  "finishedAt": "2026-10-19T06:00:24.877Z",
+  "passed": true
+}

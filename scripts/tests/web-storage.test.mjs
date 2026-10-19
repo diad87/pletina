@@ -14,6 +14,9 @@ const show = (id = PODCAST + 1, extra = {}) => ({ id, title: 'Programa', author:
   feedUrl: 'https://podcasts.example/feed.xml', language: 'es', episodeCount: 20, ...extra })
 const choice = (extra = {}) => ({ videoId: 'abcdefghijk', title: 'Vídeo', channel: 'Canal',
   duration: 123, score: 100, verified: true, ...extra })
+const episode = (guid = 'episodio-1', extra = {}) => ({ id: 0, guid, title: `Episodio ${guid}`,
+  description: 'Descripción del episodio', publishedAt: '2026-10-19T08:00:00Z', duration: 3600,
+  audioUrl: `https://audio.example/${guid}.mp3`, image: null, explicit: false, ...extra })
 
 function setup(t) {
   const factory = new IDBFactory()
@@ -227,6 +230,175 @@ test('el progreso de cada episodio sobrevive al cierre, limita la posición y pe
     await assert.rejects(reopened.storageInvoke('save_podcast_progress', { progress: { id: EPISODE + 2, position, duration: 0, completed: false } }), /posición/)
   }
   await assert.rejects(reopened.storageInvoke('save_podcast_progress', { progress: { id: 1, position: 0, duration: 0, completed: false } }), /episodio/)
+})
+
+test('los programas y episodios tienen identidad estable por feed y GUID aunque cambie la dirección del audio', async (t) => {
+  const { store, factory, name, invoke } = setup(t)
+  const [program] = await store.savePodcastShows([show(0)])
+  assert.equal(program.id, PODCAST + 1)
+  const first = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('guid-estable'), episode('segundo')] })
+  assert.equal(first.podcast.id, program.id)
+  assert.deepEqual(first.episodes.map((value) => value.id), [EPISODE + 1, EPISODE + 2])
+  const id = first.episodes[0].id
+  await invoke('save_podcast_progress', { progress: { id, position: 123.5, duration: 3600, completed: false } })
+  await invoke('set_podcast_saved', { id: program.id, saved: true })
+  const track = song(id, { title: first.episodes[0].title, albumId: program.id })
+  const list = await invoke('create_playlist', { name: 'Episodios', tracks: [track, track] })
+  await invoke('record_play', { track })
+  const updated = await store.savePodcastDetail({ podcast: show(0, { title: 'Programa actualizado' }), episodes: [
+    episode('segundo'), episode('guid-estable', { title: 'Título actualizado', audioUrl: 'https://audio.example/new.mp3?token=published-rss-token' }),
+  ] })
+  assert.deepEqual(updated.episodes.map((value) => value.id), [EPISODE + 2, id])
+  assert.equal(await store.readPodcastFeedUrl(program.id), show().feedUrl)
+  assert.equal(await invoke('podcast_feed_url', { id: program.id }), show().feedUrl)
+  const source = await store.readPodcastEpisode(id)
+  assert.equal(source.guid, 'guid-estable')
+  assert.equal(source.podcastId, program.id)
+  assert.equal(source.audioUrl, 'https://audio.example/new.mp3?token=published-rss-token')
+  assert.equal(source.feedUrl, show().feedUrl)
+  assert.equal((await invoke('library')).podcasts[0].title, 'Programa actualizado')
+  assert.equal((await invoke('playlist', { id: list.id })).entries[0].track.title, 'Título actualizado')
+  assert.equal((await invoke('history', { limit: 1 }))[0].track.albumTitle, 'Programa actualizado')
+  assert.deepEqual(await invoke('podcast_progress', { ids: [id] }), [{ id, position: 123.5, duration: 3600, completed: false }])
+  await store.close()
+  const reopened = createWebStorage({ indexedDB: factory, name })
+  t.after(() => reopened.close())
+  assert.deepEqual(await reopened.readPodcastDetail(show().feedUrl + '#fragment-not-sent-to-server'), updated)
+  assert.deepEqual(await reopened.readPodcastEpisode(id), source)
+  const copy = await reopened.readPodcastDetail(show().feedUrl)
+  copy.episodes[0].title = 'Mutación local'
+  assert.equal((await reopened.readPodcastDetail(show().feedUrl)).episodes[0].title, updated.episodes[0].title)
+})
+
+test('los episodios fuera del RSS actual conservan fuente, progreso y referencias al quitar un programa guardado', async (t) => {
+  const { store, invoke } = setup(t)
+  const first = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('viejo'), episode('actual'), episode('actual')] })
+  assert.equal(first.episodes.length, 2, 'duplicate GUID in one feed is a single episode')
+  const old = first.episodes[0]
+  await invoke('set_podcast_saved', { id: first.podcast.id, saved: true })
+  await invoke('save_podcast_progress', { progress: { id: old.id, position: 3600, duration: 3600, completed: true } })
+  await invoke('set_liked', { track: song(old.id), liked: true })
+  const second = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('actual')] })
+  assert.equal(second.episodes[0].id, first.episodes[1].id)
+  assert.equal((await invoke('library')).podcasts[0].episodeCount, 2, 'saved library counts all known episodes as the native store does')
+  await invoke('set_podcast_saved', { id: first.podcast.id, saved: false })
+  assert.deepEqual((await invoke('library')).podcasts, [])
+  assert.equal((await store.readPodcastEpisode(old.id)).audioUrl, old.audioUrl)
+  assert.equal((await store.readPodcastDetail(show().feedUrl)).episodes.length, 1)
+  assert.deepEqual((await invoke('library')).likedIds, [old.id])
+  assert.equal((await invoke('podcast_progress', { ids: [old.id] }))[0].completed, true)
+  const youtube = await store.savePodcastDetail({ podcast: show(0, { feedUrl: 'youtube:PLpodcast', title: 'YouTube' }),
+    episodes: [episode('viejo', { audioUrl: 'youtube:abcdefghijk' })] })
+  assert.notEqual(youtube.podcast.id, first.podcast.id)
+  assert.notEqual(youtube.episodes[0].id, old.id, 'same GUID in another feed has a separate identity')
+  assert.equal((await store.readPodcastEpisode(youtube.episodes[0].id)).audioUrl, 'youtube:abcdefghijk')
+})
+
+test('dos conexiones importan el mismo feed y GUID sin IDs duplicados ni progreso perdido', async (t) => {
+  const { store, factory, name, invoke } = setup(t)
+  const other = createWebStorage({ indexedDB: factory, name })
+  t.after(() => other.close())
+  const details = await Promise.all(Array.from({ length: 12 }, (_, i) => (i % 2 ? store : other).savePodcastDetail({
+    podcast: show(0), episodes: [episode('compartido')],
+  })))
+  assert.equal(new Set(details.map((value) => value.podcast.id)).size, 1)
+  assert.equal(new Set(details.map((value) => value.episodes[0].id)).size, 1)
+  const id = details[0].episodes[0].id
+  await invoke('save_podcast_progress', { progress: { id, position: 92, duration: 3600, completed: false } })
+  const refreshed = await other.savePodcastShows([show(0, { title: 'Ficha nueva', episodeCount: 0 })])
+  assert.equal(refreshed[0].id, details[0].podcast.id)
+  assert.equal(refreshed[0].episodeCount, 1, 'a search result cannot erase the known detail count')
+  assert.equal((await store.readPodcastDetail(show().feedUrl)).episodes[0].id, id)
+  assert.equal((await invoke('podcast_progress', { ids: [id] }))[0].position, 92)
+  const database = await dump(factory, name)
+  assert.equal(database.podcasts.length, 1)
+  assert.equal(database.episodes.length, 1)
+})
+
+test('el esquema v2 conserva la biblioteca v1 y no adjudica progreso o canciones antiguos a episodios nuevos', async (t) => {
+  const factory = new IDBFactory(), name = 'upgrade-from-v1'
+  const opening = factory.open(name, 1)
+  const oldStores = ['tracks', 'likes', 'albums', 'artists', 'podcasts', 'playlists', 'entries', 'history', 'progress', 'youtube', 'sources', 'meta']
+  opening.onupgradeneeded = () => {
+    const db = opening.result
+    for (const store of oldStores) db.createObjectStore(store, {
+      keyPath: store === 'likes' ? 'trackId' : ['entries', 'history'].includes(store) ? 'entryId'
+        : ['youtube', 'sources'].includes(store) ? 'trackId' : store === 'meta' ? 'key' : 'id',
+      autoIncrement: ['entries', 'history', 'playlists'].includes(store),
+    })
+    opening.transaction.objectStore('entries').createIndex('playlistId', 'playlistId')
+    opening.transaction.objectStore('youtube').createIndex('videoId', 'videoId', { unique: true })
+  }
+  const db = await result(opening)
+  const transaction = db.transaction(oldStores, 'readwrite')
+  const oldProgram = show(PODCAST + 25)
+  transaction.objectStore('podcasts').put({ id: oldProgram.id, value: oldProgram, saved: true, at: 1, order: 1 })
+  // This was legal in v1. The new non-unique feed index must not make upgrade fail.
+  transaction.objectStore('podcasts').put({ id: PODCAST + 26, value: show(PODCAST + 26), saved: false, at: 1, order: 2 })
+  transaction.objectStore('tracks').put(song(1))
+  transaction.objectStore('tracks').put(song(EPISODE + 2))
+  transaction.objectStore('likes').put({ trackId: 1, at: 1, order: 2 })
+  transaction.objectStore('playlists').put({ id: 1, name: 'Lista antigua', order: 3 })
+  transaction.objectStore('entries').put({ entryId: 1, playlistId: 1, trackId: 1, position: 0, at: 1 })
+  transaction.objectStore('progress').put({ id: EPISODE + 1, position: 57, duration: 600, completed: false })
+  transaction.objectStore('sources').put({ trackId: 1, choice: choice() })
+  transaction.objectStore('meta').put({ key: 'order', value: 3 })
+  await new Promise((resolve, reject) => { transaction.oncomplete = resolve; transaction.onabort = () => reject(transaction.error) })
+  db.close()
+  const store = createWebStorage({ indexedDB: factory, name })
+  t.after(() => store.close())
+  assert.deepEqual((await store.storageInvoke('library')).likedIds, [1])
+  assert.equal((await store.storageInvoke('playlist', { id: 1 })).entries[0].track.id, 1)
+  assert.equal((await store.storageInvoke('library')).podcasts[0].id, oldProgram.id)
+  assert.deepEqual(await store.readSourceChoice(1), choice())
+  const detail = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('nuevo')] })
+  assert.equal(detail.podcast.id, oldProgram.id)
+  assert.equal(detail.episodes[0].id, EPISODE + 3)
+  assert.equal((await store.storageInvoke('podcast_progress', { ids: [EPISODE + 1] }))[0].position, 57)
+  const [newProgram] = await store.savePodcastShows([show(0, { feedUrl: 'https://other.example/feed.xml' })])
+  assert.equal(newProgram.id, PODCAST + 27)
+  const upgraded = await result(factory.open(name))
+  assert.equal(upgraded.version, 2)
+  assert.equal(upgraded.transaction('episodes').objectStore('episodes').index('identity').unique, true)
+  upgraded.close()
+})
+
+test('una importación de episodios fallida revierte ficha, fuentes, metadatos y contadores en la misma transacción', async (t) => {
+  const { store, factory, name } = setup(t)
+  await store.savePodcastDetail({ podcast: show(0), episodes: [episode('conservado')] })
+  const before = await dump(factory, name)
+  const original = IDBObjectStore.prototype.put
+  let writes = 0
+  IDBObjectStore.prototype.put = function (...args) {
+    if (this.name === 'episodes' && ++writes === 2) throw new DOMException('Cuota simulada', 'QuotaExceededError')
+    return original.apply(this, args)
+  }
+  try {
+    await assert.rejects(store.savePodcastDetail({ podcast: show(0, { title: 'No guardar' }), episodes: [episode('a'), episode('b')] }), { name: 'QuotaExceededError' })
+  } finally { IDBObjectStore.prototype.put = original }
+  assert.deepEqual(await dump(factory, name), before)
+  const after = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('a')] })
+  assert.equal(after.episodes[0].id, EPISODE + 2, 'failed allocation did not consume an ID')
+})
+
+test('los episodios conservan solo fuentes publicadas y metadatos validados, nunca URLs resueltas de YouTube ni extras', async (t) => {
+  const { store, factory, name, invoke } = setup(t)
+  const detail = await store.savePodcastDetail({ podcast: show(0), episodes: [episode('limpio', {
+    streamUrl: 'DO_NOT_PERSIST', bytes: new Uint8Array([1, 2]), path: 'secret-audio.mp3',
+  })] })
+  assert.equal(JSON.stringify(await dump(factory, name)).includes('DO_NOT_PERSIST'), false)
+  assert.equal(JSON.stringify(await dump(factory, name)).includes('secret-audio.mp3'), false)
+  for (const audioUrl of ['https://rr1.googlevideo.com/videoplayback?sig=DO_NOT_PERSIST', 'youtube:bad', 'file:///private.mp3', 'data:audio/mp3;base64,AAA', 'https://user:pass@example.com/audio.mp3']) {
+    await assert.rejects(store.savePodcastDetail({ podcast: show(0), episodes: [episode('bad', { audioUrl })] }), /audio|vídeo/)
+  }
+  await assert.rejects(store.savePodcastDetail({ podcast: show(0), episodes: [episode('')] }), /identidad/)
+  assert.equal(await store.readPodcastEpisode(EPISODE + 999), null)
+  assert.equal(await store.readPodcastFeedUrl(PODCAST + 999), null)
+  assert.equal(await store.readPodcastDetail('https://missing.example/rss.xml'), null)
+  await assert.rejects(invoke('podcast_feed_url', { id: PODCAST + 999 }), /No se encuentra/)
+  await assert.rejects(store.readPodcastEpisode(PODCAST + 1), /episodio/)
+  await assert.rejects(store.readPodcastFeedUrl(EPISODE + 1), /pódcast/)
+  assert.equal((await store.readPodcastDetail(show().feedUrl)).episodes[0].id, detail.episodes[0].id)
 })
 
 test('las elecciones de fuente y las entidades guardan solo metadatos permitidos, nunca streams o audio', async (t) => {

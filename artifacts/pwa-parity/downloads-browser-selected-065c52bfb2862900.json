@@ -1,0 +1,412 @@
+{
+  "testedAt": "2026-10-19T06:04:29.624Z",
+  "query": "A solas con un ritmo lirico de violadores del verso",
+  "checks": [
+    {
+      "name": "minimal install opens compiled mobile UI with all four tabs",
+      "passed": true,
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ]
+    },
+    {
+      "name": "the requested song can be found by title and artist",
+      "passed": true,
+      "usedQuery": "A solas con un ritmo",
+      "index": 2,
+      "title": "A Solas Con un RItmo Lírico",
+      "artist": "Violadores del Verso"
+    },
+    {
+      "name": "tapping the searched artist text plays that song and keeps the song list visible",
+      "passed": true,
+      "selectedTitle": "A Solas Con un RItmo Lírico",
+      "tag": "SPAN",
+      "audio": {
+        "title": "A Solas Con un RItmo Lírico",
+        "online": true,
+        "events": [
+          {
+            "type": "loadedmetadata",
+            "index": 0,
+            "at": 3006,
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "index": 0,
+            "at": 3063,
+            "time": 0,
+            "error": null
+          }
+        ],
+        "instances": [
+          {
+            "index": 0,
+            "sourcePresent": true,
+            "localCache": false,
+            "time": 1.003057,
+            "duration": 117.413333,
+            "paused": false,
+            "readyState": 4,
+            "error": null,
+            "muted": false,
+            "volume": 0.8
+          }
+        ]
+      }
+    },
+    {
+      "name": "real download validates bytes through production SW before completing",
+      "passed": true,
+      "downloaded": {
+        "id": 3240252511,
+        "title": "A Solas Con un RItmo Lírico"
+      },
+      "database": {
+        "cacheEntries": 1,
+        "rows": [
+          {
+            "id": 3240252511,
+            "title": "A Solas Con un RItmo Lírico",
+            "size": 1903359,
+            "stageKeyValid": true,
+            "cachePresent": true,
+            "cacheType": "opaque"
+          }
+        ]
+      }
+    },
+    {
+      "name": "offline reload restores the queue paused and can reopen Downloads",
+      "passed": true,
+      "audio": {
+        "title": "A Solas Con un RItmo Lírico",
+        "online": false,
+        "events": [],
+        "instances": [
+          {
+            "index": 0,
+            "sourcePresent": false,
+            "localCache": false,
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "readyState": 0,
+            "error": null,
+            "muted": false,
+            "volume": 0.8
+          }
+        ]
+      },
+      "database": {
+        "cacheEntries": 1,
+        "rows": [
+          {
+            "id": 3240252511,
+            "title": "A Solas Con un RItmo Lírico",
+            "size": 1903359,
+            "stageKeyValid": true,
+            "cachePresent": true,
+            "cacheType": "opaque"
+          }
+        ]
+      }
+    },
+    {
+      "name": "offline Play and seek use the stable local cache route",
+      "passed": true,
+      "audio": {
+        "title": "A Solas Con un RItmo Lírico",
+        "online": false,
+        "events": [
+          {
+            "type": "loadedmetadata",
+            "index": 0,
+            "at": 169,
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "index": 0,
+            "at": 174,
+            "time": 1.133661,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "index": 0,
+            "at": 175,
+            "time": 1.133661,
+            "error": null
+          }
+        ],
+        "instances": [
+          {
+            "index": 0,
+            "sourcePresent": true,
+            "localCache": true,
+            "time": 59,
+            "duration": 117.413333,
+            "paused": false,
+            "readyState": 1,
+            "error": null,
+            "muted": false,
+            "volume": 0.8
+          }
+        ]
+      }
+    },
+    {
+      "name": "removing a download removes UI entry, DB pointer and cache body without network fallback",
+      "passed": true,
+      "database": {
+        "cacheEntries": 0,
+        "rows": []
+      },
+      "missingMediaStatus": 404
+    }
+  ],
+  "searchAttempts": [
+    {
+      "query": "A solas con un ritmo lirico de violadores del verso",
+      "passed": false,
+      "error": "No song results for this search",
+      "ui": {
+        "input": "A solas con un ritmo lirico de violadores del verso",
+        "notices": [
+          "No hay resultados para «A solas con un ritmo lirico de violadores del verso» Revisa cómo está escrito o prueba con menos palabras."
+        ],
+        "titles": []
+      }
+    },
+    {
+      "query": "A solas con un ritmo",
+      "passed": true,
+      "result": {
+        "index": 2,
+        "title": "A Solas Con un RItmo Lírico",
+        "artist": "Violadores del Verso"
+      }
+    }
+  ],
+  "downloadAttempts": [
+    {
+      "query": "A solas con un ritmo",
+      "title": "A Solas Con un RItmo Lírico",
+      "events": [
+        {
+          "trackId": 3240252511,
+          "state": "queued",
+          "progress": 0,
+          "error": null
+        },
+        {
+          "trackId": 3240252511,
+          "state": "downloading",
+          "progress": 0,
+          "error": null
+        },
+        {
+          "trackId": 3240252511,
+          "state": "done",
+          "progress": 1,
+          "error": null
+        }
+      ],
+      "database": {
+        "cacheEntries": 1,
+        "rows": [
+          {
+            "id": 3240252511,
+            "title": "A Solas Con un RItmo Lírico",
+            "size": 1903359,
+            "stageKeyValid": true,
+            "cachePresent": true,
+            "cacheType": "opaque"
+          }
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "network": [
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "status": 200
+    },
+    {
+      "host": "music.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "rr1---sn-uxax4vopj5xn-cpvl.googlevideo.com",
+      "type": "media",
+      "status": 206
+    },
+    {
+      "host": "music.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "rr1---sn-uxax4vopj5xn-cpvl.googlevideo.com",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "api.deezer.com",
+      "type": "script",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    },
+    {
+      "host": "www.youtube.com",
+      "type": "fetch",
+      "failure": "net::ERR_INTERNET_DISCONNECTED"
+    }
+  ],
+  "scope": "Desktop Chrome emulates Android layout/taps; actual public music, compiled PWA and production SW. No physical phone, iOS, screen-off or cars claim.",
+  "browser": "Chrome/148.0.7778.97",
+  "build": "065c52bfb2862900",
+  "finishedAt": "2026-10-19T06:04:35.336Z",
+  "finalAudio": {
+    "title": "A Solas Con un RItmo Lírico",
+    "online": false,
+    "events": [
+      {
+        "type": "loadedmetadata",
+        "index": 0,
+        "at": 169,
+        "time": 0,
+        "error": null
+      },
+      {
+        "type": "seeked",
+        "index": 0,
+        "at": 174,
+        "time": 1.133661,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "index": 0,
+        "at": 175,
+        "time": 1.133661,
+        "error": null
+      },
+      {
+        "type": "seeked",
+        "index": 0,
+        "at": 390,
+        "time": 59.013554,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "index": 0,
+        "at": 390,
+        "time": 59.013805,
+        "error": null
+      },
+      {
+        "type": "pause",
+        "index": 0,
+        "at": 461,
+        "time": 59.062993,
+        "error": null
+      }
+    ],
+    "instances": [
+      {
+        "index": 0,
+        "sourcePresent": true,
+        "localCache": true,
+        "time": 59.062993,
+        "duration": 117.413333,
+        "paused": true,
+        "readyState": 4,
+        "error": null,
+        "muted": false,
+        "volume": 0.8
+      }
+    ]
+  },
+  "finalDatabase": {
+    "cacheEntries": 0,
+    "rows": []
+  },
+  "finalUI": {
+    "headings": [
+      "Descargas"
+    ],
+    "notices": [
+      "Aún no has descargado nada Pulsa ⬇ en un disco o una playlist, o «Descargar» en el menú ⋯ de una canción, para escucharla sin conexión.",
+      "Descarga quitada"
+    ],
+    "rows": []
+  },
+  "passed": true
+}

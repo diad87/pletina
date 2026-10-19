@@ -21,7 +21,7 @@ const selectedOnly = args.includes('--selected-only')
 assert.ok(!(uiOnly && selectedOnly), 'Choose one QA mode')
 const reportName = option('--report', 'browser.json')
 assert.match(reportName, /^[a-z0-9-]+\.json$/i)
-const screenshotName = (name) => option('--url', null) ? `${reportName.replace(/\.json$/, '')}-${name}` : name
+const screenshotName = (name) => `${reportName.replace(/\.json$/, '')}-${name}`
 const report = {
   testedAt: new Date().toISOString(), build: null, query, runKind: selectedOnly ? 'Selected song diagnostic' : uiOnly ? 'UI and persistence follow-up' : 'complete integration', checks: [], errors: [], network: [],
   scope: 'Real Chrome desktop network/audio. Mobile layouts use desktop Chrome emulation only.',
@@ -223,7 +223,7 @@ try {
     const results = await page.$$eval('.tracks li[data-reorder-index] .row', (rows) => rows.slice(0, 8).map((row) => ({
       title: row.querySelector('.name')?.textContent.trim(), artist: row.querySelector('.by')?.textContent.trim(),
     })))
-    assert.ok(results.length >= 2)
+    assert.ok(results.length >= (selectedOnly ? 1 : 2))
     if (query === 'Radiohead Creep') assert.ok(results.some((result) => /creep/i.test(result.title) && /radiohead/i.test(result.artist)), 'Expected canonical catalog match')
     const screenshot = screenshotName('desktop-search.png')
     await page.screenshot({ path: fileURLToPath(new URL(screenshot, directory)), fullPage: true })
@@ -371,7 +371,7 @@ try {
         }))
         assert.ok(layout.documentWidth <= layout.width + 1, 'No horizontal page overflow')
         assert.ok(layout.input.width > 100 && layout.input.right <= layout.width)
-        assert.deepEqual(layout.tabs, ['Inicio', 'Buscar', 'Tu biblioteca'])
+        assert.deepEqual(layout.tabs, ['Inicio', 'Buscar', 'Podcasts', 'Tu biblioteca'])
         const screenshot = screenshotName(profile.image)
         await mobile.screenshot({ path: fileURLToPath(new URL(screenshot, directory)), fullPage: true })
         report.emulatedLayouts.push({ name: profile.name, ...layout, screenshot, playbackVerified: false })

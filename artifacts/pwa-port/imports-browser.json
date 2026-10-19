@@ -1,0 +1,131 @@
+{
+  "testedAt": "2026-10-19T05:50:22.443Z",
+  "browser": "153.0.8010.52",
+  "playlistId": "37i9dQZF1DXcBWIGoYBM5M",
+  "origin": "https://diad87.github.io",
+  "documentKind": "QA HTML supplied by a local browser route at the HTTPS origin; no deployed files changed.",
+  "userLogin": false,
+  "userToken": false,
+  "proxy": false,
+  "spotifyPlaybackRequested": false,
+  "probes": [
+    {
+      "name": "product-adapter",
+      "readable": false,
+      "errorName": "Error",
+      "message": "No se pudo leer directamente esta playlist de Spotify desde el navegador. Spotify puede bloquear esta lectura; exporta la playlist como CSV e importa ese archivo."
+    },
+    {
+      "name": "public-embed-fetch",
+      "readable": false,
+      "errorName": "TypeError"
+    },
+    {
+      "name": "oembed-iframe-url-fetch",
+      "readable": false,
+      "errorName": "TypeError"
+    },
+    {
+      "name": "oembed-fetch",
+      "readable": true,
+      "status": 200,
+      "responseType": "cors",
+      "contentType": "application/json",
+      "bytes": 728,
+      "jsonKeys": [
+        "html",
+        "iframe_url",
+        "width",
+        "height",
+        "version",
+        "provider_name",
+        "provider_url",
+        "type",
+        "title",
+        "thumbnail_url",
+        "thumbnail_width",
+        "thumbnail_height"
+      ],
+      "hasTrackList": false,
+      "htmlHasNextData": false
+    },
+    {
+      "name": "public-api-without-token",
+      "readable": true,
+      "status": 401,
+      "responseType": "cors",
+      "contentType": "application/json",
+      "bytes": 94,
+      "jsonKeys": [
+        "error"
+      ],
+      "hasTrackList": false,
+      "htmlHasNextData": false
+    },
+    {
+      "name": "oembed-jsonp",
+      "callbackCalled": false,
+      "outcome": "script-error"
+    },
+    {
+      "name": "official-iframe-api",
+      "ready": true,
+      "methods": [
+        "setIframeDimensions",
+        "onWindowMessages",
+        "addListener",
+        "removeListener",
+        "on",
+        "off",
+        "once",
+        "emitEvent",
+        "onPlayerReady",
+        "onPlaybackStarted",
+        "onPlaybackUpdate",
+        "appendCommonParams",
+        "loadEntityInput",
+        "loadUri",
+        "loadEntity",
+        "playerReadyAck",
+        "play",
+        "playFromStart",
+        "restart",
+        "pause",
+        "resume",
+        "togglePlay",
+        "seek",
+        "onFullscreenChange",
+        "onFullscreenError",
+        "sendMessageToEmbed",
+        "flushCommandQ",
+        "destroy"
+      ],
+      "parentCanReadFrame": false,
+      "accessError": "SecurityError",
+      "documentedPlaylistExportMethod": false,
+      "note": "Official documented controls/events do not expose a playlist track list.",
+      "publicMessageShapes": [
+        {
+          "keys": [
+            "type"
+          ],
+          "type": "ready"
+        }
+      ]
+    }
+  ],
+  "officialReferences": [
+    "https://developer.spotify.com/documentation/embeds/reference/oembed",
+    "https://developer.spotify.com/documentation/embeds/references/iframe-api",
+    "https://developer.spotify.com/documentation/web-api/reference/get-playlists-items"
+  ],
+  "csvSmoke": {
+    "count": 2,
+    "name": "Importada",
+    "duplicatesPreserved": true
+  },
+  "actualPublicPlaylistImported": false,
+  "conclusion": "No tested direct browser path supplied an importable playlist track list. CSV works; URL import is not feature-equivalent to the APK in this run.",
+  "temporaryBundleRemoved": true,
+  "finishedAt": "2026-10-19T05:50:24.753Z"
+}

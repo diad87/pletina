@@ -15,7 +15,7 @@ class Layout {
   }
   /** Descargas para escuchar sin conexión: en el escritorio (yt-dlp) y en Android (motor propio). */
   get canDownload() {
-    return import.meta.env.MODE !== 'pwa' && (!this.mobile || android)
+    return import.meta.env.MODE === 'pwa' || !this.mobile || android
   }
 
   constructor() {

@@ -5,9 +5,65 @@ const OPTIONAL = __OPTIONAL_FILES__
 const ROOT = new URL(self.registration.scope)
 const PREFIX = `pletina-pwa:${encodeURIComponent(ROOT.href)}:`
 const CACHE = PREFIX + VERSION
+// Audio separado de los archivos de la app: una actualización conserva las descargas.
+const AUDIO_CACHE = 'pletina-audio-downloads:v1'
+const AUDIO_DATABASE = 'pletina-web-downloads'
+const audioPath = new URL('__audio__/', ROOT).pathname
 const indexURL = new URL('index.html', ROOT).href
 const required = new Map(FILES.map((file) => [new URL(file.url, ROOT).href, file]))
 const assets = new Map([...FILES, ...OPTIONAL].map((file) => [new URL(file.url, ROOT).href, file]))
+
+function audioKey(url, id) {
+  if (url.origin !== ROOT.origin || url.pathname !== audioPath + id || url.hash) return false
+  const stage = url.searchParams.get('stage')
+  return url.searchParams.size === 1 && typeof stage === 'string' && /^[0-9]{10,16}-[a-zA-Z0-9-]{1,64}$/.test(stage)
+}
+
+function downloadedKey(id) {
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (value) => { if (!settled) { settled = true; resolve(value) } }
+    let opening
+    try { opening = indexedDB.open(AUDIO_DATABASE) } catch { finish(null); return }
+    // El módulo de descargas crea el esquema. No crear una base vacía por abrir un audio inexistente.
+    opening.onupgradeneeded = () => opening.transaction.abort()
+    opening.onerror = () => finish(null)
+    opening.onblocked = () => finish(null)
+    opening.onsuccess = () => {
+      const database = opening.result
+      if (settled || !database.objectStoreNames.contains('files')) { database.close(); finish(null); return }
+      try {
+        const tx = database.transaction('files', 'readonly')
+        const request = tx.objectStore('files').get(Number(id))
+        let key = null
+        request.onsuccess = () => {
+          const row = request.result
+          try {
+            if (row?.id === Number(id) && typeof row.cacheKey === 'string' && audioKey(new URL(row.cacheKey), id)) key = row.cacheKey
+          } catch { /* Los metadatos incompletos nunca apuntan a otra ruta u origen. */ }
+        }
+        tx.oncomplete = () => { database.close(); finish(key) }
+        tx.onerror = tx.onabort = () => { database.close(); finish(null) }
+      } catch { database.close(); finish(null) }
+    }
+  })
+}
+
+async function downloadedAudio(url) {
+  const id = url.pathname.slice(audioPath.length)
+  if (!/^[1-9][0-9]{0,14}$/.test(id) || !Number.isSafeInteger(Number(id))) return new Response('', { status: 404 })
+  let key
+  if (url.search) {
+    if (!audioKey(url, id)) return new Response('', { status: 404 })
+    // Solo se utiliza para comprobar que un archivo temporal se puede decodificar antes de confirmarlo.
+    key = url.href
+  } else key = await downloadedKey(id)
+  if (!key) return new Response('', { status: 404 })
+  const cache = await caches.open(AUDIO_CACHE)
+  const response = await cache.match(key)
+  // La respuesta opaca completa conserva sus bytes; HTMLAudio gestiona su lectura y búsqueda local.
+  return response || new Response('', { status: 404 })
+}
 
 async function verifiedResponse(url, file) {
   const response = await fetch(new Request(url, { cache: 'reload' }))
@@ -64,6 +120,10 @@ self.addEventListener('fetch', (event) => {
   const request = event.request
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
+  if (url.pathname.startsWith(audioPath)) {
+    event.respondWith(downloadedAudio(url).catch(() => new Response('', { status: 404 })))
+    return
+  }
   const isHome = request.mode === 'navigate' && (url.pathname === ROOT.pathname || url.pathname === new URL(indexURL).pathname)
   const key = isHome ? indexURL : new URL(url.pathname, ROOT.origin).href
   if (request.mode === 'navigate' && !assets.has(key) && url.pathname.startsWith(new URL('application/index.', ROOT).pathname) && /\.[a-f0-9]{16}\.html$/.test(url.pathname)) {

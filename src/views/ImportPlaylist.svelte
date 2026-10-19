@@ -147,7 +147,7 @@
     <p>Trae tus listas a Pletina. Las canciones se buscan en el catálogo de Pletina y podrás revisar el resultado antes de guardarlo.</p>
   </header>
 
-  {#if !api.inTauri}
+  {#if !api.inTauri && !api.inPwa}
     <p class="notice demo"><strong>Vista de demostración.</strong> En el navegador, tanto los enlaces como los archivos CSV usan datos de ejemplo. La importación real está disponible en la app.</p>
   {/if}
 
@@ -161,11 +161,15 @@
       <p>En Spotify, abre una lista pública y elige Compartir → Copiar enlace de la playlist.</p>
       <label for="spotify-url">Enlace de Spotify</label>
       <input id="spotify-url" type="text" inputmode="url" bind:value={url} placeholder="https://open.spotify.com/playlist/…" autocomplete="off" spellcheck="false" required />
-      <p class="hint">El enlace público puede incluir solo las primeras 100 canciones. Para listas privadas o más largas, usa un archivo CSV.</p>
+      {#if api.inPwa}
+        <p class="hint">La importación por enlace aún no está disponible en la PWA. Usa un archivo CSV con tus canciones.</p>
+      {:else}
+        <p class="hint">El enlace público puede incluir solo las primeras 100 canciones. Para listas privadas o más largas, usa un archivo CSV.</p>
+      {/if}
       <button class="pill primary" type="submit" disabled={!url.trim()}>Buscar canciones</button>
     </form>
 
-    <details class="card csv">
+    <details class="card csv" open={api.inPwa}>
       <summary>Importar un archivo CSV</summary>
       <p>Si ya tienes una exportación de tu lista de Spotify, selecciona el archivo con los títulos y artistas.</p>
       <label for="playlist-csv">Archivo de la playlist</label>

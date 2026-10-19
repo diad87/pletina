@@ -33,6 +33,7 @@ const javascript = ts.transpileModule(source, { compilerOptions: {
 const compiled = commonJs(compileModule(javascript, { filename: 'diagnostic-player.svelte.js' }).js.code)
 const queue = commonJs(await readFile(join(workspace, 'src', 'lib', 'queue.ts'), 'utf8'))
 const sleepTimer = commonJs(await readFile(join(workspace, 'src', 'lib', 'sleep-timer.ts'), 'utf8'))
+const queuePersistence = commonJs(await readFile(join(workspace, 'web-port', 'queue-persistence.ts'), 'utf8'))
 const report = {
   testedAt: new Date().toISOString(), sourcePlayerSha256: createHash('sha256').update(source).digest('hex'),
   scope: 'Real compiled Player with controlled API adapter and real Chrome Audio decoding local WAV. Explicit renderer freezing/throttling only; no physical screen-off equivalence.',
@@ -130,6 +131,7 @@ window.qaResolve=async(track,refresh)=>{
 window.qaRelease=()=>{window.qaScenario.blockAutoplay=false;window.qaScenario.blockLateResolver=false;for(const resolve of window.qaPending.splice(0))resolve()};
 const queue={};new Function('exports',${JSON.stringify(queue)})(queue);
 const sleepTimer={};new Function('exports',${JSON.stringify(sleepTimer)})(sleepTimer);
+const queuePersistence={};new Function('exports',${JSON.stringify(queuePersistence)})(queuePersistence);
 const modules={
  'svelte/internal/client':svelte,
  '@tauri-apps/api/core':{convertFileSrc(){throw Error('Unexpected native path')}},
@@ -142,6 +144,7 @@ const modules={
  './toast.svelte':{toast:{show:message=>log('toast',{message})}},
  './podcast-progress.svelte':{episodeProgress:{position:async()=>0,save:async()=>{},flush:async()=>{}}},
  './player-android.svelte':{isAndroid:false},'./queue':{...queue,load:(_key,fallback)=>fallback,save(){}},'./sleep-timer':sleepTimer,
+ '../../web-port/queue-persistence':queuePersistence,
 };
 const exports={};new Function('require','exports',${JSON.stringify(compiled)})(name=>{if(!(name in modules))throw Error('Unknown diagnostic module '+name);return modules[name]},exports);
 window.qaPlayer=exports.player;

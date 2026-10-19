@@ -192,6 +192,7 @@ function dedupeAlbums(albums: Album[]): Album[] {
 }
 
 export async function search(query: string, options: CatalogOptions = {}): Promise<WebSearchResults> {
+  if (typeof query !== 'string' || query.length > 2000) throw new Error('La búsqueda debe tener como máximo 2000 caracteres.')
   const q = encodeURIComponent(query.trim())
   if (!q) return { artists: [], albums: [], tracks: [], localArtists: [], localAlbums: [], failedSections: [] }
   const sections = await Promise.allSettled([
@@ -199,6 +200,19 @@ export async function search(query: string, options: CatalogOptions = {}): Promi
     requestCatalog(`/search/album?q=${q}&limit=30`, options).then((value) => rows(value).map(mapAlbum)),
     requestCatalog(`/search/track?q=${q}&limit=25`, options).then((value) => rows(value).map(mapTopTrack)),
   ])
+  if (options.signal?.aborted) throw new DOMException('Cancelado.', 'AbortError')
+  // El catálogo puede interpretar «título de artista» como una frase literal sin resultados.
+  // Solo una respuesta vacía válida permite reintentar las canciones; artistas y discos conservan
+  // la consulta original y un fallo de conexión nunca se convierte en «sin resultados».
+  if (sections[2].status === 'fulfilled' && sections[2].value.length === 0 && /(^|\s)(?:de|by)(?=\s|$)/i.test(query)) {
+    const fallback = query.replace(/(^|\s)(?:de|by)(?=\s|$)/gi, '$1').replace(/\s+/g, ' ').trim()
+    if (fallback) {
+      try {
+        const value = await requestCatalog(`/search/track?q=${encodeURIComponent(fallback)}&limit=25`, options)
+        sections[2] = { status: 'fulfilled', value: rows(value).map(mapTopTrack) }
+      } catch (reason) { sections[2] = { status: 'rejected', reason } }
+    }
+  }
   if (options.signal?.aborted) throw new DOMException('Cancelado.', 'AbortError')
   if (sections.every((section) => section.status === 'rejected')) throw new Error('No se pudo buscar en el catálogo. Comprueba la conexión.')
   return {

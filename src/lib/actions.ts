@@ -96,7 +96,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
   } else if (downloads.done.has(id)) {
     items.push({ label: 'Quitar descarga', icon: 'trash', action: () => downloads.remove([id]) })
     // En el móvil las descargas están dentro de la app: no hay carpeta que enseñar.
-    if (!layout.mobile) items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) })
+    if (!layout.mobile && !api.inPwa) items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealDownload(id).catch(() => {}) })
   } else if ((!podcast || youtubeEpisodes.has(id)) && !downloads.active.has(id) && layout.canDownload) {
     items.push({ label: 'Descargar', icon: 'download', action: () => downloads.start([item]) })
   }

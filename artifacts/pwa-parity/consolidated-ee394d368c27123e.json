@@ -1,0 +1,232 @@
+{
+  "testedAt": "2026-10-19T06:13:56.907Z",
+  "build": "ee394d368c27123e",
+  "evidence": "Desktop Chrome 148, Android user agent and 393px viewport. Each feature below cites its actual run; no single complete rerun is claimed.",
+  "physicalPhoneVerified": false,
+  "iOSPlaybackVerified": false,
+  "offlineMusicClaimed": false,
+  "checks": [
+    {
+      "name": "mobile navigation has all four native tabs",
+      "pass": true,
+      "labels": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ],
+      "size": {
+        "viewport": 393,
+        "document": 393
+      },
+      "sourceReport": "youtube-focused-ee394d368c27123e.json"
+    },
+    {
+      "name": "browser Back/Forward preserve the app route and visible bottom navigation",
+      "pass": true,
+      "sameURL": true,
+      "querySurvivedReload": true,
+      "dock": {
+        "top": 788.0625,
+        "bottom": 852,
+        "height": 63.9375,
+        "viewport": 852
+      },
+      "sourceReport": "navigation-settled-ee394d368c27123e.json"
+    },
+    {
+      "name": "podcast search keeps RSS and YouTube catalogs in the native view",
+      "pass": true,
+      "rss": 5,
+      "youtube": 20,
+      "language": "es",
+      "sourceReport": "youtube-focused-ee394d368c27123e.json"
+    },
+    {
+      "name": "RSS detail renders 300 episodes and saving the show is durable",
+      "pass": true,
+      "episodeCount": 300,
+      "title": "Nadie Sabe Nada",
+      "sourceReport": "podcasts-focused-ee394d368c27123e.json"
+    },
+    {
+      "name": "RSS episode plays; seek/pause stores its resume position",
+      "pass": true,
+      "audio": {
+        "online": true,
+        "origin": "http://127.0.0.1:52195",
+        "path": "/pletina/application/index.f574f746af5205fd.html",
+        "headings": [
+          "Nadie Sabe Nada",
+          "Episodios"
+        ],
+        "navigation": {
+          "index": 2,
+          "route": {
+            "name": "podcast",
+            "id": 500000000000001,
+            "feedUrl": "https://fapi-top.prisasd.com/podcast/playser/nadie_sabe_nada/itunestfp/podcast.xml"
+          },
+          "historyLength": 5
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "audio": [
+          {
+            "time": 45.093,
+            "duration": 3424.608,
+            "paused": true,
+            "muted": false,
+            "srcPresent": true,
+            "error": null
+          }
+        ],
+        "notices": []
+      },
+      "seekThroughPositionControl": 45,
+      "target": {
+        "x": 251,
+        "y": 390.5625,
+        "hit": true,
+        "hitTag": "path",
+        "hitClass": null,
+        "label": "Reproducir: Nadie Sabe Nada | 14x07 | Refra y Neo entre momias depiladas"
+      },
+      "sourceReport": "podcasts-focused-ee394d368c27123e.json"
+    },
+    {
+      "name": "YouTube podcast detail opens as native episodes rather than an external link",
+      "pass": true,
+      "title": "NADIE SABE NADA | Temporada 14",
+      "episodes": 8,
+      "internalFeed": true,
+      "backClosedMenu": true,
+      "audio": [
+        {
+          "time": 2.146,
+          "duration": 3401.700136,
+          "paused": false,
+          "muted": false,
+          "srcPresent": true,
+          "error": null
+        }
+      ],
+      "sourceReport": "youtube-focused-ee394d368c27123e.json"
+    },
+    {
+      "name": "CSV import uses real catalog matches and preserves repeated entries",
+      "pass": true,
+      "matches": [
+        "2",
+        "0"
+      ],
+      "titles": [
+        "Creep",
+        "Creep"
+      ],
+      "spotifyURLReportedLimitation": "No se pudo leer la lista: No se pudo leer directamente esta playlist de Spotify desde el navegador. Spotify puede bloquear esta lectura; exporta la playlist como CSV e importa ese archivo.",
+      "sourceReport": "ui-browser-ee394d368c27123e.json"
+    },
+    {
+      "name": "downloads show browser storage without native folder controls in either layout",
+      "pass": true,
+      "nativeFolderControls": false,
+      "sourceReport": "ui-browser-ee394d368c27123e.json"
+    },
+    {
+      "name": "offline reload retains saved podcast detail and imported playlist metadata",
+      "pass": true,
+      "online": false,
+      "offlineMediaNotClaimed": true,
+      "state": {
+        "online": false,
+        "origin": "http://127.0.0.1:52195",
+        "path": "/pletina/application/index.f574f746af5205fd.html",
+        "headings": [
+          "Nadie Sabe Nada",
+          "Episodios"
+        ],
+        "navigation": {
+          "index": 6,
+          "route": {
+            "name": "podcast",
+            "id": 500000000000001,
+            "feedUrl": "https://fapi-top.prisasd.com/podcast/playser/nadie_sabe_nada/itunestfp/podcast.xml"
+          },
+          "historyLength": 8
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "audio": [
+          {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "muted": false,
+            "srcPresent": false,
+            "error": null
+          }
+        ],
+        "notices": []
+      },
+      "sourceReport": "podcasts-focused-ee394d368c27123e.json"
+    }
+  ],
+  "historicalRunnerFailures": [
+    {
+      "name": "browser Back/Forward preserve the app route and visible bottom navigation",
+      "sourceReport": "ui-browser-ee394d368c27123e.json",
+      "error": "Waiting failed: 30000ms exceeded",
+      "stage": null
+    },
+    {
+      "name": "RSS episode plays; seek/pause stores its resume position",
+      "sourceReport": "ui-browser-ee394d368c27123e.json",
+      "error": "Waiting failed: 60000ms exceeded",
+      "stage": null
+    },
+    {
+      "name": "offline reload retains saved podcast detail and imported playlist metadata",
+      "sourceReport": "ui-browser-ee394d368c27123e.json",
+      "error": "Error: failed to find element matching selector \".episodes .episode:first-child .listening-progress\"",
+      "stage": null
+    },
+    {
+      "name": "browser Back/Forward preserve the app route and visible bottom navigation",
+      "sourceReport": "navigation-ee394d368c27123e.json",
+      "error": "Waiting failed: 30000ms exceeded",
+      "stage": "query stored in history"
+    },
+    {
+      "name": "YouTube podcast detail opens as native episodes rather than an external link",
+      "sourceReport": "podcasts-focused-ee394d368c27123e.json",
+      "error": "Gesture obstructed: {\"x\":251,\"y\":777.2184448242188,\"hit\":false,\"hitTag\":\"DIV\",\"hitClass\":\"mini svelte-1jla3sy\",\"label\":\"Reproducir: NADIE SABE NADA 14x07 | Refra y Neo entre momias depiladas\"}",
+      "stage": "YouTube episode gesture"
+    }
+  ],
+  "corrections": [
+    "Search focus/select scheduled by BottomNav raced early Puppeteer typing; wait two animation frames before typing.",
+    "Episode gestures raced nav.ready scroll restoration or were obscured by the mini player. Wait view animation, center target and validate elementFromPoint before a real mouse click."
+  ],
+  "offlineImportedPlaylistEvidence": {
+    "sourceReport": "ui-browser-ee394d368c27123e.json",
+    "verifiedRows": 2,
+    "note": "That run passed the offline playlist restoration assertions before failing the later RSS resume assertion. The RSS resume assertion passed in the focused run."
+  },
+  "sourceReports": [
+    "ui-browser-ee394d368c27123e.json",
+    "navigation-ee394d368c27123e.json",
+    "navigation-settled-ee394d368c27123e.json",
+    "podcasts-focused-ee394d368c27123e.json",
+    "youtube-focused-ee394d368c27123e.json"
+  ],
+  "passed": true
+}

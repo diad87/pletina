@@ -1,0 +1,192 @@
+{
+  "testedAt": "2026-10-19T06:08:00.546Z",
+  "build": "ee394d368c27123e",
+  "checks": [
+    {
+      "name": "mobile navigation has all four native tabs",
+      "pass": true,
+      "labels": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ],
+      "size": {
+        "viewport": 393,
+        "document": 393
+      }
+    },
+    {
+      "name": "browser Back/Forward preserve the app route and visible bottom navigation",
+      "pass": false,
+      "error": "Waiting failed: 30000ms exceeded",
+      "state": {
+        "online": true,
+        "origin": "http://127.0.0.1:59178",
+        "path": "/pletina/application/index.f574f746af5205fd.html",
+        "headings": [
+          "Canciones",
+          "Resultado principal",
+          "Artistas",
+          "Discos"
+        ],
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "audio": [
+          {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "muted": false,
+            "srcPresent": false,
+            "error": null
+          }
+        ],
+        "notices": []
+      }
+    },
+    {
+      "name": "podcast search keeps RSS and YouTube catalogs in the native view",
+      "pass": true,
+      "rss": 5,
+      "youtube": 20,
+      "language": "es"
+    },
+    {
+      "name": "RSS detail renders 300 episodes and saving the show is durable",
+      "pass": true,
+      "episodeCount": 300,
+      "title": "Nadie Sabe Nada"
+    },
+    {
+      "name": "RSS episode plays; seek/pause stores its resume position",
+      "pass": false,
+      "error": "Waiting failed: 60000ms exceeded",
+      "state": {
+        "online": true,
+        "origin": "http://127.0.0.1:59178",
+        "path": "/pletina/application/index.f574f746af5205fd.html",
+        "headings": [
+          "Nadie Sabe Nada",
+          "Episodios"
+        ],
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "audio": [
+          {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "muted": false,
+            "srcPresent": false,
+            "error": null
+          }
+        ],
+        "notices": []
+      }
+    },
+    {
+      "name": "YouTube podcast detail opens as native episodes rather than an external link",
+      "pass": true,
+      "title": "NADIE SABE NADA | Temporada 14",
+      "episodes": 8,
+      "internalFeed": true
+    },
+    {
+      "name": "CSV import uses real catalog matches and preserves repeated entries",
+      "pass": true,
+      "matches": [
+        "2",
+        "0"
+      ],
+      "titles": [
+        "Creep",
+        "Creep"
+      ],
+      "spotifyURLReportedLimitation": "No se pudo leer la lista: No se pudo leer directamente esta playlist de Spotify desde el navegador. Spotify puede bloquear esta lectura; exporta la playlist como CSV e importa ese archivo."
+    },
+    {
+      "name": "downloads show browser storage without native folder controls in either layout",
+      "pass": true,
+      "nativeFolderControls": false
+    },
+    {
+      "name": "offline reload retains saved podcast detail and imported playlist metadata",
+      "pass": false,
+      "error": "Error: failed to find element matching selector \".episodes .episode:first-child .listening-progress\"",
+      "state": {
+        "online": false,
+        "origin": "http://127.0.0.1:59178",
+        "path": "/pletina/application/index.f574f746af5205fd.html",
+        "headings": [
+          "Nadie Sabe Nada",
+          "Episodios"
+        ],
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "audio": [
+          {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "muted": false,
+            "srcPresent": false,
+            "error": null
+          }
+        ],
+        "notices": []
+      }
+    }
+  ],
+  "errors": [],
+  "network": [],
+  "evidence": "Desktop Chrome; Android user agent and 393px viewport check mobile UI only.",
+  "physicalPhoneVerified": false,
+  "iOSPlaybackVerified": false,
+  "offlineMusicClaimed": false,
+  "target": {
+    "origin": "http://127.0.0.1:59178",
+    "path": "/pletina/"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "finalState": {
+    "online": false,
+    "origin": "http://127.0.0.1:59178",
+    "path": "/pletina/application/index.f574f746af5205fd.html",
+    "headings": [
+      "Nadie Sabe Nada",
+      "Episodios"
+    ],
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "audio": [
+      {
+        "time": 0,
+        "duration": null,
+        "paused": true,
+        "muted": false,
+        "srcPresent": false,
+        "error": null
+      }
+    ],
+    "notices": []
+  },
+  "finishedAt": "2026-10-19T06:09:40.936Z",
+  "passed": false
+}

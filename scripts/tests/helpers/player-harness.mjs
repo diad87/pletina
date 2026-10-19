@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 import { compileModule } from 'svelte/compiler'
 import * as svelte from 'svelte/internal/client'
 import ts from 'typescript'
+import * as queuePersistence from '../../../web-port/queue-persistence.ts'
 
 const source = await readFile(new URL('../../../src/lib/player.svelte.ts', import.meta.url), 'utf8')
 const javascript = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText
@@ -35,9 +36,12 @@ export const item = (id = 1) => ({
 export const playable = (id = 1, local = false) => ({ url: local ? `/music/${id}.mp3` : `https://audio.test/${id}`, local })
 
 export function harness({ resolve = async (track) => playable(track.id), play, mediaSession, metadata,
-  progress = new Map(), duration = () => 180, inTauri = false, flushProgress = async () => {} } = {}) {
+  progress = new Map(), duration = () => 180, inTauri = false, inPwa = false, storage,
+  location = 'https://app.example/pletina/application/app.html', flushProgress = async () => {} } = {}) {
   const audios = [], messages = [], resolutions = [], sources = [], records = []
   const events = new EventTarget()
+  events.localStorage = storage
+  events.location = { href: location }
   let closeHandler, destroyed = false
   const timers = new Map()
   let now = 0, timerId = 0, stopped = 0
@@ -83,7 +87,7 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
       onCloseRequested: async (fn) => { closeHandler = fn }, destroy: async () => { destroyed = true },
     }) },
     './api': {
-      inTauri,
+      inTauri, inPwa,
       resolve: (track, refresh) => { resolutions.push([track.id, refresh]); return resolve(track, refresh) },
       chooseSource: (track) => resolve(track, true),
       recordPlay: async (item) => { records.push(item.track.id) },
@@ -103,6 +107,7 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
     './player-android.svelte': { isAndroid: false },
     './sleep-timer': sleepTimer,
+    '../../web-port/queue-persistence': queuePersistence,
     './queue': {
       load: (_key, fallback) => fallback,
       playOrder: queue.playOrder,

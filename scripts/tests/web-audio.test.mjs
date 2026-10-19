@@ -7,7 +7,7 @@ import ts from 'typescript'
 const compile = async (name) => ts.transpileModule(await readFile(new URL(`../../web-port/${name}.ts`, import.meta.url), 'utf8'), {
   compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
 }).outputText
-const [youtubeCode, audioCode] = await Promise.all([compile('youtube'), compile('audio')])
+const [youtubeCode, audioCode, podcastCode] = await Promise.all([compile('youtube'), compile('audio'), compile('podcast-audio')])
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 const id = 'aqz-KE-bpKQ', second = '9RfVp-GhKfs', third = 'aaaaaaaaaaa', fourth = 'bbbbbbbbbbb'
@@ -36,9 +36,9 @@ function browserTransport() {
   return { ...exports, frames, args, send }
 }
 
-function engine(overrides = {}, savedChoice = null, directVideo = id) {
+function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpisode = null, downloaded = null) {
   const youtube = browserTransport()
-  const calls = [], writes = []
+  const calls = [], writes = [], removedDownloads = []
   const mocks = {
     ...youtube,
     searchMusic: async () => { calls.push('music'); return [candidate()] },
@@ -50,10 +50,18 @@ function engine(overrides = {}, savedChoice = null, directVideo = id) {
     readSourceChoice: async () => savedChoice,
     saveSourceChoice: async (trackId, choice) => { writes.push({ trackId, choice }); savedChoice = choice },
     readYouTubeVideo: async () => directVideo,
+    readPodcastEpisode: async (episodeId) => {
+      calls.push(`podcast:${episodeId}`)
+      return typeof podcastEpisode === 'function' ? podcastEpisode(episodeId) : podcastEpisode
+    },
   }
+  const downloads = { readDownloadedPlayable: async () => downloaded, removeDownloadedTrack: async (trackId) => { downloaded = null; removedDownloads.push(trackId) } }
+  const podcasts = {}
+  const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
+  new Function('exports', 'require', podcastCode)(podcasts, dependency)
   const exports = {}
-  new Function('exports', 'require', audioCode)(exports, (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`))
-  return { ...exports, youtube, calls, writes }
+  new Function('exports', 'require', audioCode)(exports, (path) => path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
+  return { ...exports, youtube, calls, writes, podcasts, removedDownloads }
 }
 
 const musicFixture = (items) => ({ contents: { tabbedSearchResultsRenderer: { tabs: [{ tabRenderer: { content: { sectionListRenderer: { contents: [{ musicShelfRenderer: { contents: items } }] } } } }] } } })
@@ -115,6 +123,24 @@ test('player solo selecciona audio MP4 del origen permitido y calcula caducidad 
   assert.throws(() => yt.parsePlayer({ playabilityStatus: { status: 'UNPLAYABLE' } }, id), (error) => error.code === 'unavailable')
   fixture.streamingData.adaptiveFormats = [{ mimeType: 'audio/mp4', url: 'https://r1.googlevideo.com/audio?expire=1' }]
   assert.throws(() => yt.parsePlayer(fixture, id), /caducado/)
+})
+
+test('contentLength corresponde al formato seleccionado y solo admite enteros positivos hasta 2 GiB', () => {
+  const yt = browserTransport(), fixture = playerFixture()
+  fixture.streamingData.adaptiveFormats[0].contentLength = '123456'
+  fixture.streamingData.adaptiveFormats.push({ mimeType: 'video/mp4', bitrate: 999999, contentLength: '987654', url: 'https://r1.googlevideo.com/video' })
+  assert.equal(yt.parsePlayer(fixture, id).contentLength, 123456)
+  for (const value of ['0', '-1', '1.5', '1e3', '2147483649', Number.MAX_SAFE_INTEGER, NaN, Infinity]) {
+    fixture.streamingData.adaptiveFormats[0].contentLength = value
+    assert.equal(yt.parsePlayer(fixture, id).contentLength, undefined)
+  }
+  fixture.streamingData.adaptiveFormats[0].contentLength = 2 * 1024 ** 3
+  assert.equal(yt.parsePlayer(fixture, id).contentLength, 2 * 1024 ** 3)
+  delete fixture.streamingData.adaptiveFormats[0].contentLength
+  fixture.streamingData.adaptiveFormats[0].url += '&clen=54321'
+  assert.equal(yt.parsePlayer(fixture, id).contentLength, 54321)
+  fixture.streamingData.adaptiveFormats[0].contentLength = '54322'
+  assert.equal(yt.parsePlayer(fixture, id).contentLength, undefined, 'contradictory sizes cannot be used as a download completion guarantee')
 })
 
 test('sandbox valida emisor/ID, escapa cierre de script y se limpia al cancelar', async () => {
@@ -247,4 +273,64 @@ test('resolve concurrente espera elección manual pendiente y cancelar limpia op
   slow.resolve(info())
   await rejected
   assert.equal(cancel.writes.length, 0)
+})
+
+test('episodios RSS usan su fuente persistida sin buscar ni resolver en YouTube', async () => {
+  const track = { ...query, id: 750_000_000_000_001 }
+  const episode = { id: track.id, audioUrl: 'https://audio.example.org/episode.mp3?public=1&x=2#fragment' }
+  const audio = engine({}, null, id, episode)
+  assert.deepEqual(await audio.resolveTrack(track), { videoId: '', url: 'https://audio.example.org/episode.mp3?public=1&x=2', title: track.title, channel: track.artist, local: false })
+  assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+  assert.deepEqual(audio.writes, [])
+  await assert.rejects(() => audio.alternatives(track), /audio original del pódcast/)
+  await assert.rejects(() => audio.chooseSource(track, second), /audio original del pódcast/)
+  for (const source of ['http://audio.example.org/e.mp3', 'javascript:alert(1)', 'data:audio/mp3,hi', 'file:///secret.mp3',
+    'https://user:password@audio.example.org/e.mp3', 'https://audio.example.org/\ne.mp3']) {
+    assert.throws(() => audio.podcasts.podcastAudioUrl(source))
+  }
+})
+
+test('episodios YouTube conservan namespace y renuevan solo el stream temporal en RAM', async () => {
+  const track = { ...query, id: 750_000_000_000_002 }, loaded = []
+  const audio = engine({ stream: async (...args) => { loaded.push(args); return info(args[0]) } }, null, id,
+    { id: track.id, audioUrl: `youtube:${second}` })
+  assert.equal((await audio.resolveTrack(track)).videoId, second)
+  await audio.resolveTrack(track, true)
+  assert.deepEqual(loaded.map(([videoId, refresh]) => [videoId, refresh]), [[second, false], [second, true]])
+  assert.ok(!audio.calls.includes('music') && !audio.calls.includes('youtube'))
+  assert.deepEqual(audio.writes, [], 'a podcast stream must never become a music source choice')
+})
+
+test('programas y episodios desconocidos o corruptos no caen en el matching musical', async () => {
+  for (const [episodeId, row] of [[500_000_000_000_001, null], [750_000_000_000_001, null],
+    [750_000_000_000_001, { id: 750_000_000_000_002, audioUrl: 'https://audio.example/e.mp3' }],
+    [750_000_000_000_001, { id: 750_000_000_000_001, audioUrl: 'youtube:invalid' }]]) {
+    const audio = engine({}, null, id, row)
+    await assert.rejects(() => audio.resolveTrack({ ...query, id: episodeId }))
+    assert.ok(!audio.calls.includes('music') && !audio.calls.includes('youtube'))
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('cancelar mientras se lee un episodio impide iniciar después su extractor', async () => {
+  const pendingEpisode = deferred(), episodeId = 750_000_000_000_003
+  const audio = engine({}, null, id, () => pendingEpisode.promise)
+  const pending = audio.resolveTrack({ ...query, id: episodeId })
+  const rejected = assert.rejects(pending, { name: 'AbortError' })
+  await flush()
+  audio.cancelAudioRequests()
+  pendingEpisode.resolve({ id: episodeId, audioUrl: `youtube:${second}` })
+  await rejected
+  assert.deepEqual(audio.calls, [`podcast:${episodeId}`])
+})
+
+test('copia descargada se reproduce sin red y cambiar fuente elimina la copia anterior', async () => {
+  const local = { videoId: '', url: 'https://app.example/pletina/__audio__/1', title: 'Airbag', channel: 'Radiohead', local: true }
+  const audio = engine({}, null, id, null, local)
+  assert.deepEqual(await audio.resolveTrack(query), local)
+  assert.deepEqual(audio.calls, [])
+  assert.equal((await audio.resolveRemoteTrack(query)).local, false, 'the downloader can resolve a remote source without selecting its own cache')
+  await audio.chooseSource(query, second)
+  assert.deepEqual(audio.removedDownloads, [query.id])
+  assert.equal((await audio.resolveTrack(query)).videoId, second)
 })

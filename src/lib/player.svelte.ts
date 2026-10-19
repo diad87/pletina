@@ -11,6 +11,7 @@ import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import type { Playable } from './types'
 import { isSleepMinutes, type SleepTimerState } from './sleep-timer'
+import { readWebQueue, writeWebQueue, type QueueStorage } from '../../web-port/queue-persistence'
 
 export { toQuery, type QueueItem, type Repeat }
 
@@ -20,6 +21,8 @@ const RESOLVE_TIMEOUT = 120_000
 const AUDIO_TIMEOUT = 30_000
 /** Lo que espera el cierre de la ventana a que se guarde el punto del pódcast. */
 const CLOSE_TIMEOUT = 1_500
+const PREPARE_AHEAD = 60_000
+const PREPARE_RETRY = 60_000
 
 /** También limita las promesas del navegador que no llegan a resolver ni rechazar. */
 function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promise<T> {
@@ -40,6 +43,18 @@ function audioError(audio: HTMLAudioElement): string {
 /** Linux sirve los archivos por HTTP local porque WebKitGTK no reproduce audio desde asset://. */
 function audioSrc(p: Playable): string {
   if (!p.local) return p.url
+  if (api.inPwa) {
+    try {
+      const scope = new URL('../', window.location.href)
+      const url = new URL(p.url)
+      const prefix = scope.pathname + '__audio__/'
+      const id = url.pathname.startsWith(prefix) ? url.pathname.slice(prefix.length) : ''
+      const secure = url.protocol === 'https:' || url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+      if (secure && url.origin === scope.origin && !url.username && !url.password && !url.search && !url.hash &&
+        /^[1-9]\d{0,15}$/.test(id) && Number.isSafeInteger(Number(id))) return url.href
+    } catch { /* Una copia web solo se sirve por la ruta de su propio service worker. */ }
+    throw new Error('La copia descargada no tiene una dirección local válida.')
+  }
   if (p.url.startsWith('http://127.0.0.1:')) {
     try {
       const url = new URL(p.url)
@@ -84,8 +99,10 @@ class Player implements PlayerApi {
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
   #inFlight = new Map<number, Promise<Playable>>()
   /** Una sola fuente siguiente, solo en RAM: ended no tiene que volver a abrir IndexedDB. */
-  #preparedNext: { id: number; playable: Playable; expiresAt: number } | null = null
+  #preparedNext: { id: number; playable: Playable; expiresAt: number; position: number } | null = null
   #preparation = 0
+  #preparingNext: { id: number; preparation: number } | null = null
+  #prepareRetry: { id: number; at: number } | null = null
   #retried = false
   #sourceLocal = true
   #playable: Playable | null = null
@@ -109,6 +126,8 @@ class Player implements PlayerApi {
   #positionKnown = false
   #sleepTimeout: ReturnType<typeof setTimeout> | undefined
   #sleepDeadline = 0
+  #queueSaveQueued = false
+  #lastQueueSaved = 0
 
   constructor() {
     if (api.inPwa) {
@@ -119,13 +138,18 @@ class Player implements PlayerApi {
     }
     this.#audio = this.#createAudio()
     this.#setupMediaSession()
-    window.addEventListener('pagehide', () => this.#saveProgress(true))
+    if (api.inPwa) this.#restoreQueue()
+    window.addEventListener('pagehide', () => {
+      this.#saveProgress(true)
+      this.#saveQueue(true)
+    })
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.#saveProgress(true)
+        this.#saveQueue()
         if (api.inPwa && this.#wantsPlay) this.#prefetchNext()
       }
-      else this.#checkSleepTimer()
+      else if (!this.#checkSleepTimer() && api.inPwa && this.#wantsPlay) this.#prefetchNext()
     })
     window.addEventListener('focus', () => this.#checkSleepTimer())
     if (api.inTauri) {
@@ -144,6 +168,59 @@ class Player implements PlayerApi {
     }
   }
 
+  #queueStorage(): QueueStorage | undefined {
+    try { return window.localStorage } catch { return undefined }
+  }
+
+  #restoreQueue() {
+    // Reading localStorage is synchronous: no late restore can overwrite a user's
+    // selection, and no network/decoder is started until an explicit Play action.
+    const saved = readWebQueue(this.#queueStorage())
+    if (!saved) return
+    this.queue = saved.queue
+    this.order = saved.order
+    this.pos = saved.pos
+    this.context = saved.context
+    this.userQueue = saved.userQueue
+    this.manual = saved.manual
+    this.time = saved.position
+    this.duration = saved.duration
+    this.repeat = saved.repeat
+    this.shuffle = saved.shuffle
+    this.#recorded = saved.recorded
+    this.#nextKey = saved.userQueue.reduce((next, value) => Math.max(next, value.key + 1), 1)
+    this.#positionKnown = Boolean(this.current)
+    this.status = this.current ? 'paused' : 'idle'
+    if (this.current) {
+      this.#updateMediaSession(this.current)
+      this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+    }
+  }
+
+  #saveQueue(immediate = false) {
+    if (!api.inPwa) return
+    if (!immediate) {
+      if (this.#queueSaveQueued) return
+      this.#queueSaveQueued = true
+      queueMicrotask(() => {
+        this.#queueSaveQueued = false
+        this.#saveQueue(true)
+      })
+      return
+    }
+    this.#lastQueueSaved = Date.now()
+    // Construct the snapshot now, not when the microtask was requested: a newer
+    // queue edit wins. In ended, src/play handoff finishes before this write.
+    const position = this.#activeItem?.track.id === this.current?.track.id && this.status !== 'loading' &&
+      this.#metadataReady && !this.#resumeAt && Number.isFinite(this.#audio.currentTime)
+      ? Math.max(0, this.#audio.currentTime) : this.time
+    writeWebQueue(this.#queueStorage(), {
+      version: 1, savedAt: Date.now(), queue: this.queue, order: this.order, pos: this.pos,
+      context: this.context, userQueue: this.userQueue, manual: this.manual,
+      position, duration: this.duration, repeat: this.repeat, shuffle: this.shuffle, recorded: this.#recorded,
+    })
+  }
+
   /** El escritorio renueva el elemento por carga; la PWA conserva el activado por el usuario. */
   #createAudio() {
     const a = new Audio()
@@ -158,6 +235,8 @@ class Player implements PlayerApi {
       this.#watchProgress()
       this.#maybeRecord()
       this.#saveProgress()
+      if (Date.now() - this.#lastQueueSaved >= 10000) this.#saveQueue()
+      if (api.inPwa && this.#wantsPlay) this.#prefetchNext()
     })
     a.addEventListener('loadedmetadata', () => {
       if (a !== this.#audio) return
@@ -186,12 +265,14 @@ class Player implements PlayerApi {
       this.#watchProgress()
       this.#syncPosition()
       this.#withMediaSession((ms) => { ms.playbackState = 'playing' })
+      this.#saveQueue()
     })
     a.addEventListener('pause', () => {
       if (a !== this.#audio || !a.paused) return
       this.#clearProgressTimer()
       if (this.status === 'playing') this.status = 'paused'
       this.#saveProgress(true)
+      this.#saveQueue()
       this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
     })
     a.addEventListener('seeked', () => {
@@ -199,6 +280,7 @@ class Player implements PlayerApi {
       this.#syncPosition()
       this.#watchProgress()
       this.#saveProgress(true)
+      this.#saveQueue()
     })
     a.addEventListener('ended', () => {
       if (a !== this.#audio || !this.#wantsPlay || this.status === 'loading') return
@@ -283,6 +365,7 @@ class Player implements PlayerApi {
     toast.show(items.length === 1 ? `«${items[0].track.title}» añadida a la cola` : `${items.length} canciones añadidas a la cola`)
     this.#startIfIdle()
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   /** Al principio de tu cola: suenan justo después de la actual. */
@@ -292,6 +375,7 @@ class Player implements PlayerApi {
     toast.show(items.length === 1 ? `«${items[0].track.title}» sonará a continuación` : `${items.length} canciones sonarán a continuación`)
     this.#startIfIdle()
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   /** Inserta en tu cola en una posición concreta (al arrastrar al panel de la cola). */
@@ -301,11 +385,13 @@ class Player implements PlayerApi {
     this.userQueue = list
     this.#startIfIdle()
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   removeFromQueue(key: number) {
     this.userQueue = this.userQueue.filter((e) => e.key !== key)
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   moveInQueue(key: number, to: number) {
@@ -316,11 +402,13 @@ class Player implements PlayerApi {
     list.splice(Math.max(0, Math.min(to, list.length)), 0, moved)
     this.userQueue = list
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   clearQueue() {
     this.userQueue = []
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   /** Reproduce ya una canción de tu cola; las que iban delante se quitan (como en Spotify). */
@@ -354,6 +442,7 @@ class Player implements PlayerApi {
     this.#audio.pause()
     this.status = 'paused'
     this.#saveProgress(true)
+    this.#saveQueue()
   }
 
   async #resume() {
@@ -401,12 +490,14 @@ class Player implements PlayerApi {
         ++this.#token
         this.#resetAudio()
         this.status = 'idle'
+        this.#saveQueue()
         return
       }
       this.#pause()
       this.#audio.currentTime = 0
       this.time = 0
       this.status = 'paused'
+      this.#saveQueue()
     }
   }
 
@@ -428,6 +519,7 @@ class Player implements PlayerApi {
         this.#resumeAt = 0
         this.#audio.currentTime = seconds
       } else this.#resumeAt = seconds
+      this.#saveQueue()
       return
     }
     this.#resumeAt = 0
@@ -436,6 +528,7 @@ class Player implements PlayerApi {
     this.#clearProgressTimer()
     this.#watchProgress()
     this.#saveProgress(true)
+    this.#saveQueue()
   }
 
   setVolume(v: number) {
@@ -454,6 +547,7 @@ class Player implements PlayerApi {
   toggleShuffle() {
     this.shuffle = !this.shuffle
     save('musify:shuffle', this.shuffle)
+    this.#saveQueue()
     if (!this.queue[this.order[this.pos]]) return
     // La que suena se queda; cambia el orden del resto.
     const index = this.order[this.pos]
@@ -466,6 +560,7 @@ class Player implements PlayerApi {
     this.repeat = this.repeat === 'off' ? 'all' : this.repeat === 'all' ? 'one' : 'off'
     save('musify:repeat', this.repeat)
     if (api.inPwa) this.#prefetchNext()
+    this.#saveQueue()
   }
 
   async setSleepTimer(minutes: number): Promise<boolean> {
@@ -587,6 +682,7 @@ class Player implements PlayerApi {
     if (this.#recorded || !item || this.status !== 'playing') return
     if (a.currentTime < Math.min(30, (a.duration || 60) / 2)) return
     this.#recorded = true
+    this.#saveQueue()
     api
       .recordPlay(toLib(item))
       .then(() => library.historyVersion++)
@@ -612,7 +708,9 @@ class Player implements PlayerApi {
 
   async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
     const prepared = api.inPwa && !refresh && startAt === 0 && this.#preparedNext?.id === item.track.id &&
-      this.#preparedNext.expiresAt > Date.now() ? this.#preparedNext.playable : null
+      this.#preparedNext.expiresAt > Date.now() ? this.#preparedNext : null
+    const sameEpisode = this.#activeItem?.track.id === item.track.id
+    const previousPosition = this.#completed ? 0 : this.time
     if (api.inPwa) this.#clearPrepared()
     this.#saveProgress(true)
     this.#activeItem = null
@@ -629,6 +727,7 @@ class Player implements PlayerApi {
     this.status = 'loading'
     this.time = startAt
     this.duration = item.track.duration
+    this.#saveQueue()
     try {
       if (prepared) {
         // Cambiar src y llamar a play en la misma tarea que ended, sin descargar el elemento
@@ -636,7 +735,9 @@ class Player implements PlayerApi {
         this.#clearProgressTimer()
         this.#updateMediaSession(item)
         this.#retried = false
-        await this.#playAudio(prepared)
+        const position = restore && isPodcast(item.track.id)
+          ? sameEpisode ? previousPosition : prepared.position : startAt
+        await this.#playAudio(prepared.playable, position)
         if (token !== this.#token) return
         this.#prefetchNext()
         return
@@ -785,14 +886,20 @@ class Player implements PlayerApi {
   #clearPrepared() {
     ++this.#preparation
     this.#preparedNext = null
+    this.#preparingNext = null
+    this.#prepareRetry = null
   }
 
-  #preparedExpiry(source: Playable): number {
+  #preparedExpiry(source: Playable, id: number): number {
     const now = Date.now()
     try {
-      const expiration = Number(new URL(source.url).searchParams.get('expire')) * 1000
+      const params = new URL(source.url).searchParams
+      const expiration = Number(params.get('expire') || params.get('expires')) * 1000
       if (Number.isFinite(expiration) && expiration > 0) return Math.min(now + 20 * 60_000, expiration - 60_000)
     } catch { /* Un origen sin caducidad explícita tiene una reserva corta. */ }
+    // El enclosure RSS publicado no es una URL temporal de YouTube: puede esperar al siguiente
+    // episodio aunque el actual dure horas. El navegador comprobará su disponibilidad al cargarlo.
+    if (isPodcast(id) && !source.videoId) return Infinity
     return now + 5 * 60_000
   }
 
@@ -803,19 +910,31 @@ class Player implements PlayerApi {
       if (following && following !== this.current) this.#resolve(following, false).catch(() => {})
       return
     }
-    if (following && this.#preparedNext?.id === following.track.id && this.#preparedNext.expiresAt > Date.now()) return
-    this.#clearPrepared()
-    if (!following) return
+    if (!following) { this.#clearPrepared(); return }
     const id = following.track.id
+    const now = Date.now()
+    if (this.#preparedNext?.id === id && this.#preparedNext.expiresAt > now + PREPARE_AHEAD) return
+    if (this.#preparingNext?.id === id || this.#prepareRetry?.id === id && this.#prepareRetry.at > now) return
+    const previous = this.#preparedNext?.id === id ? this.#preparedNext : null
+    this.#clearPrepared()
+    // Una renovación de red fallida no inutiliza una fuente que todavía no ha caducado.
+    if (previous && previous.expiresAt > now) this.#preparedNext = previous
     const preparation = this.#preparation
+    this.#preparingNext = { id, preparation }
     // Una aparición duplicada de la canción actual puede reutilizar su fuente vigente.
-    const pending = id === this.current?.track.id && this.#playable
-      ? Promise.resolve(this.#playable) : this.#resolve(following, false)
-    pending.then((playable) => {
+    const pending = !previous && id === this.current?.track.id && this.#playable
+      ? Promise.resolve(this.#playable) : this.#resolve(following, !!previous)
+    const position = isPodcast(id) && id !== this.current?.track.id ? episodeProgress.position(id) : Promise.resolve(0)
+    Promise.all([pending, position]).then(([playable, position]) => {
       if (preparation !== this.#preparation || this.#following()?.track.id !== id) return
-      const expiresAt = this.#preparedExpiry(playable)
-      if (expiresAt > Date.now()) this.#preparedNext = { id, playable, expiresAt }
-    }).catch(() => {})
+      const expiresAt = this.#preparedExpiry(playable, id)
+      if (expiresAt > Date.now()) this.#preparedNext = { id, playable, expiresAt, position }
+      else this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
+    }).catch(() => {
+      if (preparation === this.#preparation) this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
+    }).finally(() => {
+      if (this.#preparingNext?.preparation === preparation) this.#preparingNext = null
+    })
   }
 
   #resolve(item: QueueItem, refresh: boolean): Promise<Playable> {

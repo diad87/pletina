@@ -61,7 +61,7 @@
     else if (e.altKey && e.key === 'ArrowRight') nav.forward()
     else if (e.ctrlKey && (e.key === 'k' || e.key === 'l')) nav.focusSearch()
     else if (e.key === ' ' && !isTyping(e.target) && !player.picking) player.toggle()
-    else if (e.key === 'Escape' && theme.nowPlaying) theme.nowPlaying = false
+    else if (e.key === 'Escape' && closeOverlay()) { /* Cierra solo el panel superior. */ }
     else return
     e.preventDefault()
   }
@@ -71,9 +71,7 @@
     target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ||
     (target instanceof HTMLElement && target.isContentEditable)
 
-  // Botón "atrás" de Android (MainActivity.kt): cierra lo que haya abierto o vuelve a la página
-  // anterior. Si no queda nada, la app pasa a segundo plano.
-  ;(window as unknown as { __musifyBack: () => boolean }).__musifyBack = () => {
+  function closeOverlay(): boolean {
     const sleepDialog = document.querySelector<HTMLDialogElement>('dialog[data-sleep-timer][open]')
     if (sleepDialog) {
       sleepDialog.close()
@@ -83,19 +81,37 @@
     else if (player.picking) player.picking = null
     else if (theme.queueSheet && layout.mobile) theme.queueSheet = false
     else if (theme.nowPlaying) theme.nowPlaying = false
-    else if (nav.canBack) nav.back()
     else return false
     return true
   }
 
+  // Los diálogos HTML tienen su propio comportamiento Atrás. Los paneles de la app
+  // usan una entrada temporal en la PWA; en Tauri este método no hace nada.
+  $effect(() => {
+    nav.overlay(Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay)
+  })
+
+  // Botón "atrás" de Android (MainActivity.kt): conserva el contrato nativo.
+  ;(window as unknown as { __musifyBack: () => boolean }).__musifyBack = () => {
+    if (closeOverlay()) return true
+    if (!nav.canBack) return false
+    nav.back()
+    return true
+  }
+
   // Botones laterales del ratón: atrás / adelante.
+  function onMousedown(e: MouseEvent) {
+    if (e.button === 3 || e.button === 4) e.preventDefault()
+  }
   function onMouseup(e: MouseEvent) {
     if (e.button === 3) nav.back()
     else if (e.button === 4) nav.forward()
+    else return
+    e.preventDefault()
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} onmouseup={onMouseup} />
+<svelte:window onkeydown={onKeydown} onmousedown={onMousedown} onmouseup={onMouseup} />
 
 {#snippet page()}
   {#key nav.index}
@@ -222,17 +238,19 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    height: 100dvh;
+    height: var(--pletina-viewport-height, 100dvh);
     padding: 0;
   }
   .app.mobile .main {
     flex: 1;
+    min-height: 0;
     border-radius: 0;
   }
   .dock {
     position: relative;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
     gap: 4px;
     padding-top: 6px;
     background: var(--bg);
