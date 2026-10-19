@@ -1,13 +1,69 @@
 // El build sustituye estos valores. No publicar los fuentes directamente.
-const VERSION = "74d9ad3aebca421b"
-const FILES = [{"url":"app.6db75ee077c243ae.js","sha256":"6db75ee077c243ae833dd780670f577f3fb60e2cd47c169adcefd63741a8121d"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"85dee1800dd956a6d51ebed330e390e54fa805c311339a4b081b13bf8d95d887"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
-const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-C3UQ1I-9.css","sha256":"90d78faada3bdc75578bf6e9a3e3d0b667307a8fc7abfef1e633e9c44b670113"},{"url":"application/assets/index-pDy3iFgl.js","sha256":"08efdf5c1fd5c48422b76589fe4cad38a036982b5dd142d44d3f51a94ca2a2c4"},{"url":"application/index.7537ce85bd4c59da.html","sha256":"7537ce85bd4c59da50207e5c4e9562dac1b9f75e996d5b2aa484e1f852499d63"},{"url":"application/launcher.a6034df63563257c.js","sha256":"a6034df63563257c582943fadc14700a0efb67e4c36e16e104f83ce8c3b2162b"}]
+const VERSION = "ee394d368c27123e"
+const FILES = [{"url":"app.7dccf8a4275bffdd.js","sha256":"7dccf8a4275bffddc24699dfbecb80dcd2d7aa11881c132db5dbce3f5a4b9af9"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"a2bcd1209dd4c1c2cbac9d110d4076f298fa193b88e59bffb0749e5d7bdbfd2f"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
+const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-B8eT0LIO.js","sha256":"d1d63afddc9f0da034467af7fe320c9e1190a81562111b67a5f018bdb35596bb"},{"url":"application/assets/index-Dhe7ruI3.css","sha256":"8aa749e9eff0f9bdd3db461c93e9dc98872bafee37a8e6bf1f415ba812d1e298"},{"url":"application/index.f574f746af5205fd.html","sha256":"f574f746af5205fd65bbd0e8507c6feca341ddaae447d2cab6d1ed3fcf9cd013"},{"url":"application/launcher.aa82a15baad8d03c.js","sha256":"aa82a15baad8d03c20a322d13bf919d7ad815bd0ce7e75627a4ee8c2a18ec8fd"}]
 const ROOT = new URL(self.registration.scope)
 const PREFIX = `pletina-pwa:${encodeURIComponent(ROOT.href)}:`
 const CACHE = PREFIX + VERSION
+// Audio separado de los archivos de la app: una actualización conserva las descargas.
+const AUDIO_CACHE = 'pletina-audio-downloads:v1'
+const AUDIO_DATABASE = 'pletina-web-downloads'
+const audioPath = new URL('__audio__/', ROOT).pathname
 const indexURL = new URL('index.html', ROOT).href
 const required = new Map(FILES.map((file) => [new URL(file.url, ROOT).href, file]))
 const assets = new Map([...FILES, ...OPTIONAL].map((file) => [new URL(file.url, ROOT).href, file]))
+
+function audioKey(url, id) {
+  if (url.origin !== ROOT.origin || url.pathname !== audioPath + id || url.hash) return false
+  const stage = url.searchParams.get('stage')
+  return url.searchParams.size === 1 && typeof stage === 'string' && /^[0-9]{10,16}-[a-zA-Z0-9-]{1,64}$/.test(stage)
+}
+
+function downloadedKey(id) {
+  return new Promise((resolve) => {
+    let settled = false
+    const finish = (value) => { if (!settled) { settled = true; resolve(value) } }
+    let opening
+    try { opening = indexedDB.open(AUDIO_DATABASE) } catch { finish(null); return }
+    // El módulo de descargas crea el esquema. No crear una base vacía por abrir un audio inexistente.
+    opening.onupgradeneeded = () => opening.transaction.abort()
+    opening.onerror = () => finish(null)
+    opening.onblocked = () => finish(null)
+    opening.onsuccess = () => {
+      const database = opening.result
+      if (settled || !database.objectStoreNames.contains('files')) { database.close(); finish(null); return }
+      try {
+        const tx = database.transaction('files', 'readonly')
+        const request = tx.objectStore('files').get(Number(id))
+        let key = null
+        request.onsuccess = () => {
+          const row = request.result
+          try {
+            if (row?.id === Number(id) && typeof row.cacheKey === 'string' && audioKey(new URL(row.cacheKey), id)) key = row.cacheKey
+          } catch { /* Los metadatos incompletos nunca apuntan a otra ruta u origen. */ }
+        }
+        tx.oncomplete = () => { database.close(); finish(key) }
+        tx.onerror = tx.onabort = () => { database.close(); finish(null) }
+      } catch { database.close(); finish(null) }
+    }
+  })
+}
+
+async function downloadedAudio(url) {
+  const id = url.pathname.slice(audioPath.length)
+  if (!/^[1-9][0-9]{0,14}$/.test(id) || !Number.isSafeInteger(Number(id))) return new Response('', { status: 404 })
+  let key
+  if (url.search) {
+    if (!audioKey(url, id)) return new Response('', { status: 404 })
+    // Solo se utiliza para comprobar que un archivo temporal se puede decodificar antes de confirmarlo.
+    key = url.href
+  } else key = await downloadedKey(id)
+  if (!key) return new Response('', { status: 404 })
+  const cache = await caches.open(AUDIO_CACHE)
+  const response = await cache.match(key)
+  // La respuesta opaca completa conserva sus bytes; HTMLAudio gestiona su lectura y búsqueda local.
+  return response || new Response('', { status: 404 })
+}
 
 async function verifiedResponse(url, file) {
   const response = await fetch(new Request(url, { cache: 'reload' }))
@@ -64,6 +120,10 @@ self.addEventListener('fetch', (event) => {
   const request = event.request
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
+  if (url.pathname.startsWith(audioPath)) {
+    event.respondWith(downloadedAudio(url).catch(() => new Response('', { status: 404 })))
+    return
+  }
   const isHome = request.mode === 'navigate' && (url.pathname === ROOT.pathname || url.pathname === new URL(indexURL).pathname)
   const key = isHome ? indexURL : new URL(url.pathname, ROOT.origin).href
   if (request.mode === 'navigate' && !assets.has(key) && url.pathname.startsWith(new URL('application/index.', ROOT).pathname) && /\.[a-f0-9]{16}\.html$/.test(url.pathname)) {
