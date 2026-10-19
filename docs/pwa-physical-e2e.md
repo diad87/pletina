@@ -1,6 +1,8 @@
 # E2E física pendiente
 
-El usuario dispone de un Xiaomi 15T Pro. No hay un runner físico ejecutado en esta batería ni un iPhone disponible. Este documento es un protocolo: sus pasos no cuentan como resultados superados. El build web de referencia es ee394d368c27123e; si cambia, anotar el nuevo antes de empezar.
+El usuario dispone de un Xiaomi 15T Pro. Esta batería no ha ejecutado un runner en teléfonos físicos: **Android e iPhone siguen pendientes**. Este documento es un protocolo; sus pasos no cuentan como resultados superados.
+
+La release actual publicada en [Pletina](https://diad87.github.io/pletina/) y el build de referencia son **`fb6f83d340d7857a`** (`gh-pages`: `0ad01788b2a9a0dea12ae4c65f20bab87a9ee65a`). La [verificación pública HTTP/SHA-256](../artifacts/pwa-deploy/public-files-fb6f83d340d7857a.json) pasa **22/22 archivos** y la [prueba pública de navegador](../artifacts/pwa-port/browser-public-e2e-user-song-fb6f83d340d7857a.json), **3/3 comprobaciones**. Es evidencia de distribución y navegador de escritorio, no de instalación o reproducción física. Antes de comenzar, actualizar si hace falta y confirmar ese build en la entrada; si cambia la release, registrar el nuevo.
 
 Registrar modelo, versión del sistema, versión del navegador, build mostrado en la entrada, modo Chrome/Safari o icono instalado, conexión y fecha. Conservar resultado de cada paso, captura si falla y el JSON de «Enviar registro» cuando afecte al audio. No publicar URLs temporales del audio ni datos personales.
 

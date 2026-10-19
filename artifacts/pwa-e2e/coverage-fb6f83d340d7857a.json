@@ -1,0 +1,2299 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-19T07:36:45.053Z",
+  "build": "fb6f83d340d7857a",
+  "allRequestedPlatformsVerified": false,
+  "sources": [
+    "artifacts/pwa-e2e/release-fb6f83d340d7857a-win/summary.json",
+    "artifacts/pwa-e2e/release-fb6f83d340d7857a-linux/summary.json"
+  ],
+  "profiles": [
+    {
+      "profile": "chromium-android-layout",
+      "engine": "chromium",
+      "browserVersion": "153.0.8010.52",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "source": "artifacts/pwa-e2e/release-fb6f83d340d7857a-win/summary.json",
+      "unexpectedErrors": [],
+      "expectedHandledErrors": [],
+      "counts": {
+        "pass": 56,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 2
+      },
+      "checks": [
+        {
+          "name": "install.minimal: initial entry avoids all application assets",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.manifest: stable scope, standalone identity and icon resources",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.guide: platform instructions open and close",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.offline: cached entry reloads with the network disconnected",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.native-prompt: actual phone installation",
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        },
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.navigation: four tabs, browser history, reload and viewport",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.discovery: home cards and empty history",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: tracks, artists, albums and expanded results",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: natural song de artist retries the empty literal query",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: empty results and partial-provider retry remain explicit",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.artist: detail, favorites and discography filters",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.album: detail, save, pin and library persistence",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.favorites: like, search, clear and remove one song",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: create, rename/cancel and pin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: append album, duplicate entries, filter and reorder",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.youtube: preview, edit, save/update and remove personal link",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.persistence: saved artist/album and pin removal survive reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.contextual-playlist: create from a song and delete the temporary list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.selection-html-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-seek-next-previous-one-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.media-session-metadata-and-idempotent-actions",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.dj-duplicates-reorder-play-remove-clear",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.home-surprise-album-starts-saved-album-in-track-order",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.artist-radio-builds-bounded-mixed-queue-and-plays",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.context-play-next-prepends-dj-priority-without-interrupting-current",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.shuffle-preserves-current-and-queue-membership",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-one-real-ended",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-all-wraps-after-final-entry",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.automatic-next-real-ended-same-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-at-end-does-not-start-prepared-successor",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-custom-validation-and-one-minute-deadline",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-during-delayed-resolution-prevents-late-autoplay",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rapid-song-selection-ignores-obsolete-player-response",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.reload-restores-current-dj-position-and-paused-intent",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-removal-clears-pointer-body-and-ui",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-quotaFailure-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-storageFailure-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-failMedia-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-retry-after-provider-failure-succeeds",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+          "status": "unsupported",
+          "reason": "This engine delegates file sharing to an OS picker; automated recipient selection is outside browser-only E2E."
+        },
+        {
+          "name": "library.history: recorded plays, cancel clear, clear and reload",
+          "status": "pass",
+          "reason": null
+        }
+      ]
+    },
+    {
+      "profile": "firefox-narrow",
+      "engine": "firefox",
+      "browserVersion": "153.0",
+      "kind": "desktop-browser-narrow",
+      "physical": false,
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "source": "artifacts/pwa-e2e/release-fb6f83d340d7857a-win/summary.json",
+      "unexpectedErrors": [],
+      "expectedHandledErrors": [],
+      "counts": {
+        "pass": 57,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "checks": [
+        {
+          "name": "install.minimal: initial entry avoids all application assets",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.manifest: stable scope, standalone identity and icon resources",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.guide: platform instructions open and close",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.offline: cached entry reloads with the network disconnected",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.native-prompt: actual phone installation",
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        },
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.navigation: four tabs, browser history, reload and viewport",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.discovery: home cards and empty history",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: tracks, artists, albums and expanded results",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: natural song de artist retries the empty literal query",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: empty results and partial-provider retry remain explicit",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.artist: detail, favorites and discography filters",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.album: detail, save, pin and library persistence",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.favorites: like, search, clear and remove one song",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: create, rename/cancel and pin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: append album, duplicate entries, filter and reorder",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.youtube: preview, edit, save/update and remove personal link",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.persistence: saved artist/album and pin removal survive reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.contextual-playlist: create from a song and delete the temporary list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.selection-html-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-seek-next-previous-one-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.media-session-metadata-and-idempotent-actions",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.dj-duplicates-reorder-play-remove-clear",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.home-surprise-album-starts-saved-album-in-track-order",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.artist-radio-builds-bounded-mixed-queue-and-plays",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.context-play-next-prepends-dj-priority-without-interrupting-current",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.shuffle-preserves-current-and-queue-membership",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-one-real-ended",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-all-wraps-after-final-entry",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.automatic-next-real-ended-same-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-at-end-does-not-start-prepared-successor",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-custom-validation-and-one-minute-deadline",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-during-delayed-resolution-prevents-late-autoplay",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rapid-song-selection-ignores-obsolete-player-response",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.reload-restores-current-dj-position-and-paused-intent",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-removal-clears-pointer-body-and-ui",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-quotaFailure-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-storageFailure-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-failMedia-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-retry-after-provider-failure-succeeds",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.history: recorded plays, cancel clear, clear and reload",
+          "status": "pass",
+          "reason": null
+        }
+      ]
+    },
+    {
+      "profile": "webkit-iphone-layout",
+      "engine": "webkit",
+      "browserVersion": "26.5",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "source": "artifacts/pwa-e2e/release-fb6f83d340d7857a-linux/summary.json",
+      "unexpectedErrors": [],
+      "expectedHandledErrors": [
+        {
+          "name": "Fetch API cannot load https",
+          "message": "/open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M due to access control checks.",
+          "observedAt": 1792394741055,
+          "duringCheck": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "handledExpected": true,
+          "scope": "library.csv.spotify-unsupported"
+        }
+      ],
+      "counts": {
+        "pass": 56,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 2
+      },
+      "checks": [
+        {
+          "name": "install.minimal: initial entry avoids all application assets",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.manifest: stable scope, standalone identity and icon resources",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.guide: platform instructions open and close",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.offline: cached entry reloads with the network disconnected",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "install.native-prompt: actual phone installation",
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        },
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.navigation: four tabs, browser history, reload and viewport",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.discovery: home cards and empty history",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: tracks, artists, albums and expanded results",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: natural song de artist retries the empty literal query",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.search: empty results and partial-provider retry remain explicit",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.artist: detail, favorites and discography filters",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.album: detail, save, pin and library persistence",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.favorites: like, search, clear and remove one song",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: create, rename/cancel and pin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: append album, duplicate entries, filter and reorder",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.youtube: preview, edit, save/update and remove personal link",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.persistence: saved artist/album and pin removal survive reload",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.contextual-playlist: create from a song and delete the temporary list",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.selection-html-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-seek-next-previous-one-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.media-session-metadata-and-idempotent-actions",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.dj-duplicates-reorder-play-remove-clear",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.home-surprise-album-starts-saved-album-in-track-order",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.artist-radio-builds-bounded-mixed-queue-and-plays",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.context-play-next-prepends-dj-priority-without-interrupting-current",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.shuffle-preserves-current-and-queue-membership",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-one-real-ended",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.repeat-all-wraps-after-final-entry",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.automatic-next-real-ended-same-audio",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-at-end-does-not-start-prepared-successor",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.sleep-custom-validation-and-one-minute-deadline",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.pause-during-delayed-resolution-prevents-late-autoplay",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rapid-song-selection-ignores-obsolete-player-response",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.reload-restores-current-dj-position-and-paused-intent",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-removal-clears-pointer-body-and-ui",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-quotaFailure-rollback-and-no-false-done",
+          "status": "unsupported",
+          "reason": "This browser does not expose navigator.storage.estimate; the quota-estimation failure cannot be injected without fabricating a platform API."
+        },
+        {
+          "name": "media.download-storageFailure-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-failMedia-rollback-and-no-false-done",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.download-retry-after-provider-failure-succeeds",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+          "status": "pass",
+          "reason": null
+        },
+        {
+          "name": "library.history: recorded plays, cancel clear, clear and reload",
+          "status": "pass",
+          "reason": null
+        }
+      ]
+    }
+  ],
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "matrix": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "install.minimal: initial entry avoids all application assets",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "install.manifest: stable scope, standalone identity and icon resources",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "install.guide: platform instructions open and close",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "install.offline: cached entry reloads with the network disconnected",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "install.native-prompt: actual phone installation",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        },
+        "firefox-narrow": {
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        },
+        "webkit-iphone-layout": {
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+        }
+      }
+    },
+    {
+      "name": "library.navigation: four tabs, browser history, reload and viewport",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.discovery: home cards and empty history",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.search: tracks, artists, albums and expanded results",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.search: natural song de artist retries the empty literal query",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.search: empty results and partial-provider retry remain explicit",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.artist: detail, favorites and discography filters",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.album: detail, save, pin and library persistence",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.favorites: like, search, clear and remove one song",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.playlists: create, rename/cancel and pin",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.playlists: append album, duplicate entries, filter and reorder",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.youtube: preview, edit, save/update and remove personal link",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.persistence: saved artist/album and pin removal survive reload",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.contextual-playlist: create from a song and delete the temporary list",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "library.history: recorded plays, cancel clear, clear and reload",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.selection-html-audio",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.pause-seek-next-previous-one-audio",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.media-session-metadata-and-idempotent-actions",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.home-surprise-album-starts-saved-album-in-track-order",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.artist-radio-builds-bounded-mixed-queue-and-plays",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.context-play-next-prepends-dj-priority-without-interrupting-current",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.dj-duplicates-reorder-play-remove-clear",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.shuffle-preserves-current-and-queue-membership",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.repeat-one-real-ended",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.repeat-all-wraps-after-final-entry",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.automatic-next-real-ended-same-audio",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.sleep-at-end-does-not-start-prepared-successor",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.sleep-custom-validation-and-one-minute-deadline",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.pause-during-delayed-resolution-prevents-late-autoplay",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.rapid-song-selection-ignores-obsolete-player-response",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.reload-restores-current-dj-position-and-paused-intent",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.download-removal-clears-pointer-body-and-ui",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.download-quotaFailure-rollback-and-no-false-done",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "unsupported",
+          "reason": "This browser does not expose navigator.storage.estimate; the quota-estimation failure cannot be injected without fabricating a platform API."
+        }
+      }
+    },
+    {
+      "name": "media.download-storageFailure-rollback-and-no-false-done",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.download-failMedia-rollback-and-no-false-done",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.download-retry-after-provider-failure-succeeds",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "pass",
+          "reason": null
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+      "profiles": {
+        "chromium-android-layout": {
+          "status": "unsupported",
+          "reason": "This engine delegates file sharing to an OS picker; automated recipient selection is outside browser-only E2E."
+        },
+        "firefox-narrow": {
+          "status": "pass",
+          "reason": null
+        },
+        "webkit-iphone-layout": {
+          "status": "pass",
+          "reason": null
+        }
+      }
+    }
+  ],
+  "additionalEvidence": [
+    {
+      "kind": "service-worker-update-and-data-migration",
+      "source": "artifacts/pwa-port/update-e2e-fb6f83d340d7857a.json",
+      "testedAt": "2026-10-19T07:25:17.697Z",
+      "finishedAt": "2026-10-19T07:25:23.738Z",
+      "baseDistributionVersion": "fb6f83d340d7857a",
+      "passed": true,
+      "checks": [
+        {
+          "name": "full A installs without application downloads; app opens on demand",
+          "status": "pass"
+        },
+        {
+          "name": "UI-created playlist and duplicate entries persist in real IndexedDB before update",
+          "status": "pass"
+        },
+        {
+          "name": "v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update",
+          "status": "pass"
+        },
+        {
+          "name": "B waits behind the real update banner without replacing A or eagerly caching its app",
+          "status": "pass"
+        },
+        {
+          "name": "a failed application preparation keeps A active and the playlist intact",
+          "status": "pass"
+        },
+        {
+          "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+          "status": "pass"
+        },
+        {
+          "name": "updated B reopens offline with playlist, podcast progress and identical downloaded/cache-route bytes",
+          "status": "pass"
+        }
+      ],
+      "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+      "physical": false
+    },
+    {
+      "kind": "live-provider-search-and-playback",
+      "source": "artifacts/pwa-port/browser-public-e2e-user-song-fb6f83d340d7857a.json",
+      "passed": true,
+      "checks": [
+        {
+          "name": "initial install stays small; opening downloads the full app on demand",
+          "status": "pass"
+        },
+        {
+          "name": "name and artist search renders real internal song results",
+          "status": "pass"
+        },
+        {
+          "name": "the selected first song itself reaches audible playback",
+          "status": "pass"
+        }
+      ],
+      "scope": "Real Chrome desktop network/audio. Mobile layouts use desktop Chrome emulation only.",
+      "physical": false
+    }
+  ],
+  "runErrors": [],
+  "inventory": [
+    {
+      "id": "install.minimal",
+      "actions": [
+        "initial installer",
+        "no application assets before opening"
+      ]
+    },
+    {
+      "id": "install.manifest",
+      "actions": [
+        "stable id and scope",
+        "standalone display",
+        "Android and Apple icons"
+      ]
+    },
+    {
+      "id": "install.guide",
+      "actions": [
+        "platform instructions",
+        "close instructions"
+      ]
+    },
+    {
+      "id": "install.offline",
+      "actions": [
+        "service worker activation",
+        "cached installer reload offline"
+      ]
+    },
+    {
+      "id": "install.native-prompt",
+      "actions": [
+        "real OS installation confirmation requires an installed physical browser"
+      ]
+    },
+    {
+      "id": "library.navigation",
+      "actions": [
+        "four mobile tabs",
+        "browser Back/Forward",
+        "query replacement",
+        "reload",
+        "viewport bounds"
+      ]
+    },
+    {
+      "id": "library.discovery",
+      "actions": [
+        "discovery cards",
+        "artist detail",
+        "album detail",
+        "recently viewed navigation",
+        "pinned tile navigation",
+        "unpin on Home"
+      ]
+    },
+    {
+      "id": "library.search",
+      "actions": [
+        "songs/artists/albums",
+        "natural title de artist fallback",
+        "expand/collapse tracks",
+        "empty results",
+        "partial-provider retry",
+        "artist discography filters"
+      ]
+    },
+    {
+      "id": "library.favorites",
+      "actions": [
+        "save/remove artist",
+        "save/remove album",
+        "like/filter/unlike song"
+      ]
+    },
+    {
+      "id": "library.playlists",
+      "actions": [
+        "create empty/from track menu",
+        "rename/cancel",
+        "pin/unpin",
+        "append album",
+        "duplicates",
+        "filter/clear",
+        "reorder",
+        "remove entry",
+        "delete/cancel"
+      ]
+    },
+    {
+      "id": "library.csv",
+      "actions": [
+        "invalid/oversized file",
+        "provider failure",
+        "retry/cancel",
+        "all omitted",
+        "empty name",
+        "review matches/omissions",
+        "save duplicate entries",
+        "reload"
+      ]
+    },
+    {
+      "id": "library.spotify",
+      "actions": [
+        "unsupported public URL has a visible explanation"
+      ]
+    },
+    {
+      "id": "library.youtube",
+      "actions": [
+        "reject invalid link",
+        "preview/change link",
+        "edit/validate metadata",
+        "save/update without duplicate",
+        "remove saved link"
+      ]
+    },
+    {
+      "id": "library.source-picker",
+      "actions": [
+        "choose listed candidate",
+        "invalid link",
+        "manual choice",
+        "remember choice",
+        "native dialog close"
+      ]
+    },
+    {
+      "id": "library.podcasts",
+      "actions": [
+        "RSS and YouTube search",
+        "language filters",
+        "episode detail",
+        "save/remove show",
+        "reload persistence"
+      ]
+    },
+    {
+      "id": "library.history",
+      "actions": [
+        "empty history",
+        "recorded history after media scenarios",
+        "cancel clear",
+        "clear and reload"
+      ]
+    },
+    {
+      "id": "responsive.resize",
+      "actions": [
+        "portrait to desktop layout",
+        "short landscape viewport",
+        "restore portrait",
+        "query and navigation survive",
+        "no horizontal overflow"
+      ]
+    },
+    {
+      "id": "responsive.resume",
+      "actions": [
+        "resize and page visibility lifecycle",
+        "reload on search",
+        "four navigation destinations remain accessible"
+      ]
+    },
+    {
+      "id": "media.selection-html-audio"
+    },
+    {
+      "id": "media.pause-seek-next-previous-one-audio"
+    },
+    {
+      "id": "media.media-session-metadata-and-idempotent-actions"
+    },
+    {
+      "id": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin"
+    },
+    {
+      "id": "media.home-surprise-album-starts-saved-album-in-track-order"
+    },
+    {
+      "id": "media.artist-radio-builds-bounded-mixed-queue-and-plays"
+    },
+    {
+      "id": "media.context-play-next-prepends-dj-priority-without-interrupting-current"
+    },
+    {
+      "id": "media.dj-duplicates-reorder-play-remove-clear"
+    },
+    {
+      "id": "media.shuffle-preserves-current-and-queue-membership"
+    },
+    {
+      "id": "media.repeat-one-real-ended"
+    },
+    {
+      "id": "media.repeat-all-wraps-after-final-entry"
+    },
+    {
+      "id": "media.automatic-next-real-ended-same-audio"
+    },
+    {
+      "id": "media.sleep-at-end-does-not-start-prepared-successor"
+    },
+    {
+      "id": "media.sleep-custom-validation-and-one-minute-deadline"
+    },
+    {
+      "id": "media.pause-during-delayed-resolution-prevents-late-autoplay"
+    },
+    {
+      "id": "media.rapid-song-selection-ignores-obsolete-player-response"
+    },
+    {
+      "id": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers"
+    },
+    {
+      "id": "media.reload-restores-current-dj-position-and-paused-intent"
+    },
+    {
+      "id": "media.downloads-serial-duplicate-suppression-and-cancel-pending"
+    },
+    {
+      "id": "media.download-offline-reload-play-seek-from-local-service-worker"
+    },
+    {
+      "id": "media.download-removal-clears-pointer-body-and-ui"
+    },
+    {
+      "id": "media.download-quotaFailure-rollback-and-no-false-done"
+    },
+    {
+      "id": "media.download-storageFailure-rollback-and-no-false-done"
+    },
+    {
+      "id": "media.download-failMedia-rollback-and-no-false-done"
+    },
+    {
+      "id": "media.download-retry-after-provider-failure-succeeds"
+    },
+    {
+      "id": "media.rss-podcast-direct-audio-progress-reload-and-resume"
+    },
+    {
+      "id": "media.rss-completion-next-episode-and-relisten-from-zero"
+    },
+    {
+      "id": "media.youtube-podcast-keeps-episode-namespace-and-progress"
+    },
+    {
+      "id": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses"
+    }
+  ],
+  "interpretation": "Rows are actual executed checks, including grouped actions. A failed grouped check does not prove later actions ran. Browser layout emulation, synthetic providers, virtual clocks and DOM gestures do not verify physical operating systems or cars.",
+  "counts": {
+    "pass": 169,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 5
+  },
+  "missingChecks": [],
+  "coverageComplete": true,
+  "noBrowserFailuresOrBlocks": true,
+  "everyBrowserCasePassed": false
+}

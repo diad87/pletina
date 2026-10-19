@@ -4,7 +4,9 @@ La referencia es la APK **0.11.2**, commit nativo `4b5691ff50d659fbd048f5a9cff1d
 
 Dirección: **https://diad87.github.io/pletina/**. GitHub Pages distribuye archivos estáticos. El catálogo y el audio se consultan directamente desde el navegador, sin backend propio, proxy ni microservidor en el móvil. La entrada pequeña muestra **Instalar** y prepara la aplicación completa al pulsar **Abrir Pletina**.
 
-**Publicado y verificado: `ee394d368c27123e`.** Pasan 326/326 pruebas, tipos sin errores ni avisos, compilación web/nativa y [22/22 archivos públicos con SHA-256 coincidente](../artifacts/pwa-deploy/public-files-ee394d368c27123e.json). La [canción solicitada reproduce desde Pages](../artifacts/pwa-port/browser-public-user-song-confirmed-ee394d368c27123e.json); el [resumen de entrega](../artifacts/pwa-parity/release-ee394d368c27123e.json) recoge los recorridos, su alcance y las comprobaciones físicas pendientes. La entrada tiene 38.720 bytes y la aplicación bajo demanda 466.208, sin comprimir.
+**Publicado y verificado: `fb6f83d340d7857a`**, código `0086a25`, commit de distribución `0ad01788b2a9a0dea12ae4c65f20bab87a9ee65a`. Pasan **333/333 pruebas**, tipos con **0 errores y 0 avisos**, compilaciones nativa y PWA y auditoría de dependencias con **0 vulnerabilidades**. Los [22/22 archivos públicos coinciden por HTTP y SHA-256](../artifacts/pwa-deploy/public-files-fb6f83d340d7857a.json). La entrada tiene **38.720 bytes** y la aplicación bajo demanda **466.906**, sin comprimir.
+
+La [matriz E2E de esta versión](../artifacts/pwa-e2e/coverage-fb6f83d340d7857a.md) reúne **169 comprobaciones correctas, 0 fallos, 0 bloqueadas y 5 no compatibles con el entorno**, de 174: Chrome 56 correctas, Firefox 57 y WebKit 56. Son navegadores de escritorio con diseños móviles y respuestas de proveedores controladas, usando la aplicación, almacenamiento, worker y audio reales. El [mapa de funciones](pwa-e2e-function-map.md) detalla acciones y huecos. Además pasan la [actualización A→B, 7/7](../artifacts/pwa-port/update-e2e-fb6f83d340d7857a.json), y la [reproducción pública de la canción solicitada, 3/3](../artifacts/pwa-port/browser-public-e2e-user-song-fb6f83d340d7857a.json). Estos resultados no sustituyen las pruebas físicas pendientes.
 
 El cambio actual recupera las cuatro pestañas **Inicio, Buscar, Podcasts y Tu biblioteca**, la importación CSV, los podcasts RSS y YouTube, las descargas y el registro de audio compartible. También se adaptan la restauración de cola, el botón Atrás y el tamaño del viewport al reabrir. **No se declara paridad total:** la importación Spotify por URL sigue bloqueada y falta probar físicamente iPhone.
 
@@ -42,6 +44,10 @@ Podcasts conserva búsqueda y filtros. Los programas RSS se descubren en Apple y
 
 El reproductor mantiene cola y cola DJ, anterior/siguiente, avance, aleatorio, repetición, temporizador y Media Session. Conserva la cola y su posición sin guardar fuentes temporales de audio; al reabrir restaura pausado y obtiene una fuente al pulsar reproducir. **Enviar registro** comparte o descarga un JSON local acotado de estados, sin títulos ni URLs.
 
+La corrección web de reanudación reconoce dos muestras de avance decodificado cuando WebKit reproduce pero deja pendiente la promesa nativa de `play()` y no emite `playing`. La [prueba dirigida en WebKit/WPE de Linux](../artifacts/pwa-e2e/resume-fixed-fb6f83d340d7857a/report.json) registra cinco reanudaciones con avance real y estado de reproducción correcto. No es una prueba de Safari en un iPhone.
+
+Los proveedores no tienen disponibilidad garantizada. Un [intento local de esta versión](../artifacts/pwa-port/browser-local-e2e-user-song-fb6f83d340d7857a.json) encontró la canción, pero sus peticiones multimedia fueron bloqueadas por ORB antes de decodificar. Se conserva ese fallo; el [control HTTPS recién ejecutado con la versión anterior](../artifacts/pwa-port/browser-public-provider-control-ee394d368c27123e.json) y la [prueba pública actual](../artifacts/pwa-port/browser-public-e2e-user-song-fb6f83d340d7857a.json) sí reprodujeron la canción. No se extrapola ese resultado a todo el catálogo.
+
 ## Importación
 
 CSV conserva lectura, matching real, pausa/reintento, revisión y guardado, con duplicados y orden. Aplica las reglas nativas de delimitadores, comillas, 10 MB y 10.000 filas.
@@ -62,7 +68,7 @@ Tras la primera apertura completa, interfaz y datos locales pueden abrirse sin r
 
 El usuario confirmó en Xiaomi 15T Pro continuidad y cambio de canción con pantalla apagada en la prueba y el reproductor básico anteriores. En el primer port completo informó continuidad sin siguiente canción. La corrección posterior prepara la siguiente fuente en RAM y cambia el audio dentro del evento de fin, sin esperar a IndexedDB ni vaciarlo. Pasó en escritorio con pestaña oculta; el usuario indicó después que pasó a la siguiente, sin precisar bloqueo o build.
 
-No se da por cerrada la incidencia física. El nuevo cambio conserva esa preparación y añade posiciones de episodios y fuentes locales descargadas. Historial: [pantalla apagada](pwa-screen-off-results.md), [reproductor inicial](pwa-player-results.md), [primer port](pwa-port-0.11.2.md). La emulación móvil en Chrome no acredita Android o Safari. **iPhone/iPad y pantalla apagada en iOS siguen sin validación física.** Android Auto y CarPlay permanecen aplazados.
+No se da por cerrada la incidencia física. La [transición de esta versión, 2/2](../artifacts/pwa-port/transition-e2e-fb6f83d340d7857a.json), pasa de Creep a Million Dollar Question con la pestaña oculta y el mismo Audio; es escritorio, sin bloqueo físico de pantalla. Historial: [pantalla apagada](pwa-screen-off-results.md), [reproductor inicial](pwa-player-results.md), [primer port](pwa-port-0.11.2.md). **La repetición en Xiaomi con el build identificado e iPhone/iPad siguen pendientes.** Android Auto y CarPlay no están implementados en esta distribución PWA.
 
 ## Publicación
 
