@@ -189,6 +189,162 @@ test('PWA retains its user-activated Audio across automatic and explicit song ch
   assert.equal(h.messages.length, 0)
 })
 
+test('PWA resumes after native play resolves even when the browser omits playing', async () => {
+  let attempt = 0
+  const h = pwaHarness({ play: (audio) => {
+    if (++attempt === 1) return audio.begin()
+    audio.paused = false
+    return Promise.resolve()
+  } })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  const audio = h.audio
+  audio.currentTime = 12
+  audio.dispatchEvent(new Event('timeupdate'))
+  h.player.toggle()
+  assert.equal(h.player.status, 'paused')
+  h.player.toggle()
+  await flush()
+  assert.equal(audio.paused, false)
+  assert.equal(h.player.status, 'playing', 'resolved native playback must restore the pause/seek controls without another playing event')
+  audio.currentTime = 13
+  audio.dispatchEvent(new Event('timeupdate'))
+  assert.equal(h.player.time, 13)
+  audio.currentTime = 180
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  await flush()
+  assert.equal(h.player.current.track.id, 2)
+  assert.equal(h.player.status, 'playing')
+})
+
+test('PWA ignores an obsolete resolved play promise while a new song is still loading', async () => {
+  const first = deferred(), second = deferred()
+  let attempt = 0
+  const h = pwaHarness({ play: (audio) => {
+    audio.paused = false
+    return ++attempt === 1 ? first.promise : second.promise
+  } })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  h.player.playAt(1)
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  first.resolve()
+  await flush()
+  assert.equal(h.player.current.track.id, 2)
+  assert.equal(h.player.status, 'loading', 'the old source cannot confirm playback of the new one')
+  second.resolve()
+  await flush()
+  assert.equal(h.player.status, 'playing')
+})
+
+test('PWA ignores a resolved play promise after the user has paused the pending start', async () => {
+  const pending = deferred()
+  const h = pwaHarness({ play: (audio) => { audio.paused = false; return pending.promise } })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  h.player.toggle()
+  assert.equal(h.player.status, 'paused')
+  pending.resolve()
+  await flush()
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.audio.paused, true)
+  assert.equal(h.player.current.track.id, 1)
+})
+
+test('PWA resolved play without playing still repairs and stops a decoder that never advances', async () => {
+  const h = pwaHarness({ resolve: async (track, refresh) => playable(track.id + (refresh ? 1000 : 0)),
+    play: (audio) => { audio.paused = false; return Promise.resolve() } })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  await h.advance(30000)
+  assert.equal(h.audios.length, 2, 'the existing watchdog must still rebuild a stalled decoder')
+  assert.equal(h.audio.src, 'https://audio.test/1001')
+  assert.equal(h.player.status, 'playing')
+  await h.advance(30000)
+  assert.equal(h.player.status, 'idle', 'a second stall must stop boundedly')
+  assert.equal(h.audios.length, 2)
+  assert.equal(h.messages.length, 1)
+  assert.match(h.messages[0], /El audio no avanza/)
+})
+
+test('PWA confirms two advancing samples when WebKit leaves resume play pending without playing', async () => {
+  const pending = deferred()
+  let attempt = 0
+  const h = pwaHarness({ play: (audio) => {
+    if (++attempt !== 2) return audio.begin()
+    audio.paused = false
+    return pending.promise
+  } })
+  h.player.playQueue([item(750_000_000_000_001), item(750_000_000_000_002)], 0)
+  await flush()
+  const audio = h.audio
+  audio.currentTime = 8
+  audio.dispatchEvent(new Event('timeupdate'))
+  h.player.toggle(); h.player.toggle()
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  audio.currentTime = 8.25
+  audio.dispatchEvent(new Event('timeupdate'))
+  await flush()
+  assert.equal(h.player.status, 'loading', 'one sample cannot distinguish playback from a position jump')
+  audio.currentTime = 8.55
+  audio.dispatchEvent(new Event('timeupdate'))
+  await flush()
+  assert.equal(h.player.status, 'playing', 'real advancement must settle the pending start and restore UI controls')
+  audio.currentTime = 8.8
+  audio.dispatchEvent(new Event('timeupdate'))
+  assert.equal(h.player.time, 8.8)
+  h.player.toggle()
+  assert.equal(h.progressWrites.at(-1).position, 8.8)
+  h.player.toggle()
+  await flush()
+  audio.currentTime = 180; audio.paused = true; audio.dispatchEvent(new Event('ended'))
+  await flush()
+  assert.equal(h.player.current.track.id, 750_000_000_000_002)
+  assert.equal(h.player.status, 'playing')
+  pending.resolve()
+  await flush()
+  assert.equal(h.player.current.track.id, 750_000_000_000_002)
+})
+
+test('PWA never treats a seek jump as playback while native play remains pending', async () => {
+  const pending = deferred()
+  const h = pwaHarness({ play: (audio) => { audio.paused = false; return pending.promise } })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  const audio = h.audio
+  audio.currentTime = 0.2; audio.dispatchEvent(new Event('timeupdate'))
+  audio.seeking = true; audio.dispatchEvent(new Event('seeking'))
+  audio.currentTime = 45; audio.dispatchEvent(new Event('timeupdate'))
+  audio.seeking = false; audio.dispatchEvent(new Event('seeked'))
+  audio.dispatchEvent(new Event('timeupdate'))
+  audio.dispatchEvent(new Event('timeupdate'))
+  await flush()
+  assert.equal(h.player.status, 'loading', 'seeking and repeated stationary samples must not confirm playback')
+  audio.currentTime = 45.3; audio.dispatchEvent(new Event('timeupdate'))
+  await flush()
+  assert.equal(h.player.status, 'playing')
+})
+
+test('PWA late progress and play settlement after pause cannot restore playing intent', async () => {
+  const pending = deferred()
+  const h = pwaHarness({ play: (audio) => { audio.paused = false; return pending.promise } })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  const audio = h.audio
+  audio.currentTime = 0.3; audio.dispatchEvent(new Event('timeupdate'))
+  h.player.toggle()
+  audio.currentTime = 0.6; audio.dispatchEvent(new Event('timeupdate'))
+  pending.resolve()
+  await flush()
+  assert.equal(h.player.status, 'paused')
+  assert.equal(audio.paused, true)
+  assert.equal(h.player.current.track.id, 1)
+})
+
 test('PWA ignores a late autoplay rejection from a previous song without pausing the new one', async () => {
   const firstPlay = deferred()
   let attempt = 0

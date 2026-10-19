@@ -254,18 +254,8 @@ class Player implements PlayerApi {
       this.#syncPosition()
     })
     a.addEventListener('playing', () => {
-      if (a !== this.#audio || this.#checkSleepTimer() || !this.#wantsPlay) {
-        a.pause()
-        return
-      }
-      if (a.paused || a.error) return
-      this.status = 'playing'
-      this.#requestedSeek = null
-      this.#failures = 0
-      this.#watchProgress()
-      this.#syncPosition()
-      this.#withMediaSession((ms) => { ms.playbackState = 'playing' })
-      this.#saveQueue()
+      if (a !== this.#audio) { a.pause(); return }
+      this.#confirmPlaying(a, this.#token)
     })
     a.addEventListener('pause', () => {
       if (a !== this.#audio || !a.paused) return
@@ -304,6 +294,22 @@ class Player implements PlayerApi {
     })
     a.addEventListener('error', () => { if (a === this.#audio) this.#onAudioError() })
     return a
+  }
+
+  #confirmPlaying(a: HTMLAudioElement, token: number) {
+    if (a !== this.#audio || token !== this.#token) return
+    if (this.#checkSleepTimer() || !this.#wantsPlay) {
+      a.pause()
+      return
+    }
+    if (a.paused || a.error) return
+    this.status = 'playing'
+    this.#requestedSeek = null
+    this.#failures = 0
+    this.#watchProgress()
+    this.#syncPosition()
+    this.#withMediaSession((ms) => { ms.playbackState = 'playing' })
+    this.#saveQueue()
   }
 
   #resetAudio(recreate = false) {
@@ -800,9 +806,32 @@ class Player implements PlayerApi {
   async #playElement(a: HTMLAudioElement) {
     const token = this.#token
     let onError: () => void = () => {}
+    let stopProgress = () => {}
     const started = new Promise<void>((resolve, reject) => {
       onError = () => reject(new Error(audioError(a)))
       a.addEventListener('error', onError)
+      if (api.inPwa) {
+        // WebKit también puede dejar pendiente play() aunque el audio ya avance.
+        // Dos muestras, ajenas a un seek, acreditan el inicio de esta fuente concreta.
+        const source = a.src
+        const id = this.#activeItem?.track.id
+        let previous: number | null = null
+        const reset = () => { previous = null }
+        const progress = () => {
+          if (a !== this.#audio || token !== this.#token || a.src !== source) { resolve(); return }
+          if (!this.#wantsPlay || !this.#metadataReady || this.#resumeAt || a.paused || a.error || a.seeking ||
+            id === undefined || id !== this.#activeItem?.track.id || id !== this.current?.track.id ||
+            (a.currentSrc || a.src) !== source || !Number.isFinite(a.currentTime)) { reset(); return }
+          if (previous !== null && a.currentTime > previous + 0.05) resolve()
+          else previous = a.currentTime
+        }
+        a.addEventListener('timeupdate', progress)
+        for (const type of ['loadedmetadata', 'seeking', 'seeked']) a.addEventListener(type, reset)
+        stopProgress = () => {
+          a.removeEventListener('timeupdate', progress)
+          for (const type of ['loadedmetadata', 'seeking', 'seeked']) a.removeEventListener(type, reset)
+        }
+      }
       try {
         if (a.error) throw new Error(audioError(a))
         a.play().then(resolve, reject)
@@ -812,6 +841,9 @@ class Player implements PlayerApi {
     })
     try {
       await withTimeout(started, AUDIO_TIMEOUT, 'El reproductor no ha podido iniciar el audio (30 s). Vuelve a intentarlo')
+      // Al reanudar, WebKit puede resolver play() sin repetir el evento playing.
+      // Conserva el mismo vigilante de avance: una promesa resuelta no basta para el decoder.
+      if (api.inPwa) this.#confirmPlaying(a, token)
     } catch (error) {
       if (api.inPwa && error instanceof DOMException && error.name === 'NotAllowedError') {
         if (a !== this.#audio || token !== this.#token) return
@@ -824,6 +856,7 @@ class Player implements PlayerApi {
       throw error
     } finally {
       a.removeEventListener('error', onError)
+      stopProgress()
     }
   }
 
