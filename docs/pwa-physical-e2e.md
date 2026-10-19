@@ -1,6 +1,10 @@
-# E2E física pendiente
+# Pruebas físicas de la PWA
 
-El usuario dispone de un Xiaomi 15T Pro. Esta batería no ha ejecutado un runner en teléfonos físicos: **Android e iPhone siguen pendientes**. Este documento es un protocolo; sus pasos no cuentan como resultados superados.
+El usuario dispone de un Xiaomi 15T Pro y no tiene un iPhone disponible. Esta batería no ha ejecutado un runner en teléfonos físicos. Hay una confirmación manual parcial descrita abajo; **el protocolo completo de Android y las pruebas de iPhone siguen pendientes**. Los pasos del protocolo no cuentan como resultados superados por estar enumerados aquí.
+
+El **19 de octubre de 2026**, el usuario respondió «todo bien» al recorrido desde el icono: buscar «A solas con un ritmo lirico de violadores del verso», tocar el título para reproducir, volver con Atrás a Inicio y comprobar las cuatro pestañas tras reabrir. Añadió que el audio se detiene al salir y la app reaparece pausada; aclaró que salir significa **pulsar Atrás hasta abandonar la app**. Se registra como confirmación manual de búsqueda/reproducción y navegación/reapertura, no como reproducción continuada en segundo plano. [Evidencia y respuesta literal](../artifacts/pwa-port/android-installed-navigation-user-report-2026-10-19.json).
+
+No proporcionó el hash abierto ni versiones de Android/navegador; no se atribuye este resultado al build publicado. Tampoco acredita salir con Inicio, quitar la app de recientes, bloqueo de pantalla, avance automático de canción ni conservación exacta del segundo de reproducción. La restauración pausada sí coincide con el diseño del Player, que no reproduce automáticamente al iniciar una nueva página.
 
 La release actual publicada en [Pletina](https://diad87.github.io/pletina/) y el build de referencia son **`fb6f83d340d7857a`** (`gh-pages`: `0ad01788b2a9a0dea12ae4c65f20bab87a9ee65a`). La [verificación pública HTTP/SHA-256](../artifacts/pwa-deploy/public-files-fb6f83d340d7857a.json) pasa **22/22 archivos** y la [prueba pública de navegador](../artifacts/pwa-port/browser-public-e2e-user-song-fb6f83d340d7857a.json), **3/3 comprobaciones**. Es evidencia de distribución y navegador de escritorio, no de instalación o reproducción física. Antes de comenzar, actualizar si hace falta y confirmar ese build en la entrada; si cambia la release, registrar el nuevo.
 
