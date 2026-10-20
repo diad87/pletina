@@ -1,0 +1,2232 @@
+{
+  "schemaVersion": 1,
+  "build": "4c2aaa1c19512425",
+  "startedAt": "2026-10-20T06:10:31.916Z",
+  "runKind": "compiled-application-back-regression",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "profiles": [
+    {
+      "build": "4c2aaa1c19512425",
+      "checks": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "startedAt": "2026-10-20T06:10:35.929Z",
+          "status": "pass",
+          "signal": {
+            "standalone": true,
+            "browser": false,
+            "navigatorStandalone": false
+          },
+          "finishedAt": "2026-10-20T06:10:36.622Z"
+        },
+        {
+          "name": "library.navigation: four tabs, browser history, reload and viewport",
+          "startedAt": "2026-10-20T06:10:36.626Z",
+          "status": "pass",
+          "sameURL": true,
+          "restoredQuery": true,
+          "viewport": {
+            "width": 393,
+            "document": 393,
+            "height": 852,
+            "bottom": 852,
+            "navHeight": 63.9375
+          },
+          "finishedAt": "2026-10-20T06:10:37.908Z"
+        },
+        {
+          "name": "library.discovery: home cards and empty history",
+          "startedAt": "2026-10-20T06:10:37.910Z",
+          "status": "pass",
+          "discoveryCards": true,
+          "initiallyEmptyHistory": true,
+          "finishedAt": "2026-10-20T06:10:39.487Z"
+        },
+        {
+          "name": "library.search: tracks, artists, albums and expanded results",
+          "startedAt": "2026-10-20T06:10:39.488Z",
+          "status": "pass",
+          "tracks": 12,
+          "artists": 2,
+          "albums": 3,
+          "finishedAt": "2026-10-20T06:10:40.816Z"
+        },
+        {
+          "name": "library.search: natural song de artist retries the empty literal query",
+          "startedAt": "2026-10-20T06:10:40.816Z",
+          "status": "pass",
+          "naturalQuery": "Canción QA Uno de Artista QA Uno",
+          "selectedTrackId": 101,
+          "title": "Canción QA Uno",
+          "interceptedTrackRequests": 2,
+          "artistOpenedWithoutPlayback": true,
+          "finishedAt": "2026-10-20T06:10:42.811Z"
+        },
+        {
+          "name": "library.search: empty results and partial-provider retry remain explicit",
+          "startedAt": "2026-10-20T06:10:42.812Z",
+          "status": "pass",
+          "emptyState": true,
+          "partialResultsUsable": true,
+          "retriedFailedSection": true,
+          "finishedAt": "2026-10-20T06:10:44.205Z"
+        },
+        {
+          "name": "library.artist: detail, favorites and discography filters",
+          "startedAt": "2026-10-20T06:10:44.206Z",
+          "status": "pass",
+          "artist": "Artista QA Uno",
+          "favorite": true,
+          "filters": [
+            "Todo",
+            "Álbumes1",
+            "Sencillos y EP1"
+          ],
+          "finishedAt": "2026-10-20T06:10:45.854Z"
+        },
+        {
+          "name": "library.album: detail, save, pin and library persistence",
+          "startedAt": "2026-10-20T06:10:45.855Z",
+          "status": "pass",
+          "album": "Disco QA Uno",
+          "tracks": 4,
+          "savedAndPinnedAcrossReload": true,
+          "finishedAt": "2026-10-20T06:10:49.645Z"
+        },
+        {
+          "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+          "startedAt": "2026-10-20T06:10:49.646Z",
+          "status": "pass",
+          "menuBackClosedOnlyOverlay": true,
+          "songArtistAndAlbumNavigation": true,
+          "pinnedTileAndRecentArtistOpened": true,
+          "directHomeUnpin": true,
+          "surpriseEnabledOnlyWithSavedAlbum": true,
+          "finishedAt": "2026-10-20T06:10:57.326Z"
+        },
+        {
+          "name": "library.favorites: like, search, clear and remove one song",
+          "startedAt": "2026-10-20T06:10:57.327Z",
+          "status": "pass",
+          "accentInsensitiveSearch": true,
+          "removedOnlyOne": true,
+          "remaining": "Canción QA Uno",
+          "finishedAt": "2026-10-20T06:11:01.344Z"
+        },
+        {
+          "name": "library.playlists: create, rename/cancel and pin",
+          "startedAt": "2026-10-20T06:11:01.345Z",
+          "status": "pass",
+          "playlistName": "E2E Biblioteca Renombrada",
+          "renameCancel": true,
+          "pinned": true,
+          "finishedAt": "2026-10-20T06:11:03.677Z"
+        },
+        {
+          "name": "library.playlists: append album, duplicate entries, filter and reorder",
+          "startedAt": "2026-10-20T06:11:03.678Z",
+          "status": "pass",
+          "duplicateEntriesIndependent": true,
+          "filteredReorderDisabled": true,
+          "reorderedAndPersisted": true,
+          "remaining": 5,
+          "finishedAt": "2026-10-20T06:11:09.422Z"
+        },
+        {
+          "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "startedAt": "2026-10-20T06:11:09.423Z",
+          "status": "pass",
+          "found": 3,
+          "omitted": 1,
+          "retriedProviderFailure": true,
+          "repeatedEntriesPreserved": true,
+          "spotifyUnsupportedVisible": true,
+          "expectedHandledNetworkErrors": 0,
+          "finishedAt": "2026-10-20T06:11:13.620Z"
+        },
+        {
+          "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+          "startedAt": "2026-10-20T06:11:13.621Z",
+          "status": "pass",
+          "oversizedFileRejected": true,
+          "allOmittedCannotSave": true,
+          "blankNameCannotSave": true,
+          "importAnotherReset": true,
+          "cancelledPausedImport": true,
+          "createdPlaylist": false,
+          "finishedAt": "2026-10-20T06:11:19.126Z"
+        },
+        {
+          "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+          "startedAt": "2026-10-20T06:11:19.127Z",
+          "status": "pass",
+          "listedCandidateChosen": true,
+          "invalidInputRejected": true,
+          "manualChoiceRemembered": true,
+          "selected": "Canción QA Tres",
+          "finishedAt": "2026-10-20T06:11:23.738Z"
+        },
+        {
+          "name": "library.youtube: preview, edit, save/update and remove personal link",
+          "startedAt": "2026-10-20T06:11:23.739Z",
+          "status": "pass",
+          "invalidLinkRejected": true,
+          "changeLinkResetReview": true,
+          "blankTitleCannotSave": true,
+          "editedMetadata": true,
+          "sameVideoUpdatedWithoutDuplicate": true,
+          "removed": true,
+          "finishedAt": "2026-10-20T06:11:27.101Z"
+        },
+        {
+          "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+          "startedAt": "2026-10-20T06:11:27.102Z",
+          "status": "pass",
+          "languageFilters": [
+            "es",
+            "all",
+            "en"
+          ],
+          "rssEpisodes": 2,
+          "savedAcrossReload": true,
+          "rssLeftSavedForMediaScenarios": true,
+          "finishedAt": "2026-10-20T06:11:34.208Z"
+        },
+        {
+          "name": "library.persistence: saved artist/album and pin removal survive reload",
+          "startedAt": "2026-10-20T06:11:34.209Z",
+          "status": "pass",
+          "artistRemoved": true,
+          "albumRemoved": true,
+          "albumUnpinned": true,
+          "finishedAt": "2026-10-20T06:11:37.469Z"
+        },
+        {
+          "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+          "startedAt": "2026-10-20T06:11:37.470Z",
+          "status": "pass",
+          "cancelKeptList": true,
+          "deletedPlaylistAndPin": true,
+          "importedPlaylistKeptForMediaScenarios": "E2E CSV Duplicados",
+          "finishedAt": "2026-10-20T06:11:41.247Z"
+        },
+        {
+          "name": "library.contextual-playlist: create from a song and delete the temporary list",
+          "startedAt": "2026-10-20T06:11:41.248Z",
+          "status": "pass",
+          "createdFromTrackMenu": true,
+          "firstTrackPreserved": true,
+          "temporaryListDeleted": true,
+          "finishedAt": "2026-10-20T06:11:44.547Z"
+        },
+        {
+          "name": "back.setup: native window mode, controlled RSS and real audio",
+          "startedAt": "2026-10-20T06:11:44.548Z",
+          "status": "pass",
+          "signal": {
+            "standalone": true,
+            "browser": false,
+            "navigatorStandalone": false
+          },
+          "root": {
+            "index": 0,
+            "name": "home",
+            "overlay": false,
+            "pops": 24
+          },
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 7.67339,
+          "physicalInstallationVerified": false,
+          "finishedAt": "2026-10-20T06:11:55.231Z"
+        },
+        {
+          "name": "back.root: repeated native history Back keeps audio and document",
+          "startedAt": "2026-10-20T06:11:55.232Z",
+          "status": "pass",
+          "observations": [
+            {
+              "events": [
+                {
+                  "sequence": 25,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home"
+                },
+                {
+                  "sequence": 26,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home"
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 26,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 7.822553
+            },
+            {
+              "events": [
+                {
+                  "sequence": 27,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home"
+                },
+                {
+                  "sequence": 28,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home"
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 28,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 7.955121
+            },
+            {
+              "events": [
+                {
+                  "sequence": 29,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home"
+                },
+                {
+                  "sequence": 30,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home"
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 30,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 8.104434
+            },
+            {
+              "events": [
+                {
+                  "sequence": 31,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home"
+                },
+                {
+                  "sequence": 32,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home"
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 32,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 8.236983
+            },
+            {
+              "events": [
+                {
+                  "sequence": 33,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home"
+                },
+                {
+                  "sequence": 34,
+                  "session": "mvgab48u-7gx9q8028um",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home"
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 34,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 8.390027
+            }
+          ],
+          "finishedAt": "2026-10-20T06:11:55.948Z"
+        },
+        {
+          "name": "back.search-forward: Back reaches Home and Forward restores search",
+          "startedAt": "2026-10-20T06:11:55.949Z",
+          "status": "pass",
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 10.537708,
+          "finishedAt": "2026-10-20T06:11:58.099Z"
+        },
+        {
+          "name": "back.overlays: queue then now-playing close without losing Forward",
+          "startedAt": "2026-10-20T06:11:58.100Z",
+          "status": "pass",
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 12.083199,
+          "finishedAt": "2026-10-20T06:11:59.649Z"
+        },
+        {
+          "name": "back.overlay-traversal: go(-2) crosses the boundary and closes the overlay",
+          "startedAt": "2026-10-20T06:11:59.650Z",
+          "status": "pass",
+          "events": [
+            {
+              "sequence": 47,
+              "session": "mvgab48u-7gx9q8028um",
+              "index": 0,
+              "overlay": false,
+              "boundary": true,
+              "protected": true,
+              "route": "home"
+            },
+            {
+              "sequence": 48,
+              "session": "mvgab48u-7gx9q8028um",
+              "index": 0,
+              "overlay": false,
+              "boundary": false,
+              "protected": true,
+              "route": "home"
+            }
+          ],
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 13.291458,
+          "finishedAt": "2026-10-20T06:12:00.850Z"
+        },
+        {
+          "name": "back.reload: overlay reload restores paused state and one Back reaches Home",
+          "startedAt": "2026-10-20T06:12:00.851Z",
+          "status": "pass",
+          "documentReloaded": true,
+          "restoredPaused": true,
+          "forwardRestored": true,
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 14.992347,
+          "finishedAt": "2026-10-20T06:12:03.085Z"
+        }
+      ],
+      "errors": [],
+      "mode": "native-app-window",
+      "browserVersion": "153.0.8010.52",
+      "initialWindowSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "profile": "chromium-android-layout",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "engine": "chromium",
+      "kind": "native-desktop-app-window-mobile-layout",
+      "physical": false,
+      "startedAt": "2026-10-20T06:10:35.865Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and service worker retained.",
+      "bootstrapStage": "application-open",
+      "modeSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "counts": {
+        "pass": 26,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "libraryFirst": true,
+      "finalState": {
+        "path": "/pletina/application/index.b93829bae5b1cfd9.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Canciones",
+          "Resultado principal",
+          "Artistas",
+          "Discos"
+        ],
+        "navigation": {
+          "index": 1,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "historyLength": 33
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 14.995385,
+              "duration": 90,
+              "paused": false,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 85953,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 85953,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 85958,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 85958,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 85958,
+              "time": 13.804705,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 85966,
+              "time": 13.804705,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 85969,
+              "time": 13.804705,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 85969,
+              "time": 13.804705,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 86230,
+              "time": 14.0441,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 86489,
+              "time": 14.298634,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 86759,
+              "time": 14.567147,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 87018,
+              "time": 14.833137,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 3,
+          "api.deezer.com/chart/0/artists": 3,
+          "images.pletina.test/cover.svg": 27,
+          "api.deezer.com/search/artist": 27,
+          "api.deezer.com/search/album": 27,
+          "api.deezer.com/search/track": 35,
+          "api.deezer.com/artist/7": 2,
+          "api.deezer.com/artist/7/albums": 6,
+          "api.deezer.com/artist/7/top": 2,
+          "api.deezer.com/album/11": 4,
+          "api.deezer.com/album/11/tracks": 4,
+          "api.deezer.com/artist/7/related": 4,
+          "api.deezer.com/artist/8/albums": 4,
+          "music.youtube.com/youtubei/v1/search": 13,
+          "www.youtube.com/youtubei/v1/search": 5,
+          "www.youtube.com/youtubei/v1/player": 6,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1,
+          "open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M": 1,
+          "i.ytimg.com/vi/qaAudio008h/mqdefault.jpg": 2,
+          "i.ytimg.com/vi/qaAudio003c/mqdefault.jpg": 2,
+          "i.ytimg.com/vi/qaAudio003c/hqdefault.jpg": 1,
+          "itunes.apple.com/search": 3,
+          "feeds.pletina.test/rss": 3,
+          "feeds.pletina.test/english": 3,
+          "music.youtube.com/youtubei/v1/browse": 3,
+          "media.pletina.test/episode-0.m4a": 2
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/top",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/top",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "open.spotify.com",
+            "path": "/embed/playlist/37i9dQZF1DXcBWIGoYBM5M",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio008h/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio008h/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-20T06:12:23.719Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    },
+    {
+      "build": "4c2aaa1c19512425",
+      "checks": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "startedAt": "2026-10-20T06:12:24.132Z",
+          "status": "pass",
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "finishedAt": "2026-10-20T06:12:24.909Z"
+        },
+        {
+          "name": "back.setup: native window mode, controlled RSS and real audio",
+          "startedAt": "2026-10-20T06:12:24.910Z",
+          "status": "pass",
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "root": {
+            "index": 0,
+            "name": "home",
+            "overlay": false,
+            "pops": 3
+          },
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 1.433221,
+          "physicalInstallationVerified": false,
+          "finishedAt": "2026-10-20T06:12:29.376Z"
+        },
+        {
+          "name": "back.browser: normal root Back can leave the application",
+          "startedAt": "2026-10-20T06:12:29.377Z",
+          "status": "pass",
+          "previousDocumentRestored": true,
+          "applicationExited": true,
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "physicalAndroidBackClaimed": false,
+          "finishedAt": "2026-10-20T06:12:29.439Z"
+        }
+      ],
+      "errors": [],
+      "mode": "normal-browser",
+      "browserVersion": "153.0.8010.52",
+      "profile": "chromium-android-layout",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "engine": "chromium",
+      "kind": "desktop-browser-mobile-layout",
+      "physical": false,
+      "startedAt": "2026-10-20T06:12:24.030Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and service worker retained.",
+      "bootstrapStage": "application-open",
+      "modeSignal": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "finalState": {
+        "path": "/pletina/",
+        "online": true,
+        "title": "Pletina",
+        "headings": [],
+        "navigation": {
+          "historyLength": 7
+        },
+        "tabs": [],
+        "notices": [],
+        "audio": {
+          "instances": [],
+          "events": [],
+          "handlers": []
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 6,
+          "api.deezer.com/search/artist": 2,
+          "api.deezer.com/search/album": 2,
+          "api.deezer.com/search/track": 2,
+          "itunes.apple.com/search": 1,
+          "music.youtube.com/youtubei/v1/search": 1,
+          "feeds.pletina.test/rss": 1,
+          "feeds.pletina.test/english": 1,
+          "media.pletina.test/episode-0.m4a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-20T06:12:29.619Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "errors": [],
+  "scope": "Real headless Chromium desktop app window (--app), native display-mode and Audio, compiled app/SW/IDB, controlled HTTP provider responses. No OS installation, phone or Android system Back is asserted.",
+  "physicalInstallationVerified": false,
+  "androidSystemBackVerified": false,
+  "signalMocked": false,
+  "keyboardEvidence": "AltLeft inside App is handled by App.onKeydown and calls nav.back. It is not a browser Back actuator. Only the two plain HTML control documents assess the headless browser accelerator.",
+  "protocolReference": "https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setEmulatedMedia",
+  "distributionSnapshot": "An isolated temporary copy is served throughout the run. The source distribution is not modified.",
+  "modeProbe": [
+    {
+      "appArgument": false,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    },
+    {
+      "appArgument": true,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "browserUIBack": {
+    "status": "blocked",
+    "scope": "Desktop browser keyboard accelerator control, separate from DOM History API traversal and physical Android Back."
+  },
+  "allRequestedBackInputsVerified": false,
+  "serverClosed": true,
+  "temporarySiteRemoved": true,
+  "finishedAt": "2026-10-20T06:12:29.623Z",
+  "counts": {
+    "pass": 29,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "passed": true,
+  "applicationChecksExecuted": true,
+  "applicationPassed": true
+}

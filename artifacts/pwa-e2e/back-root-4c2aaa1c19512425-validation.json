@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-20T06:15:52.385Z",
+  "build": "4c2aaa1c19512425",
+  "request": "Mantener abierta la PWA instalada al pulsar Atrás desde Inicio, conservando la reproducción.",
+  "sourceCommit": "991f2b23361ca3f5789a732375d8152cccf1c84e",
+  "nativeReference": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "behavior": {
+    "installedRoot": "Remain in the same document and audio instance",
+    "normalBrowserRoot": "Allow normal site departure",
+    "backendAdded": false
+  },
+  "unit": {
+    "pass": 355,
+    "fail": 0,
+    "skipped": 0,
+    "navigationIncluded": 33,
+    "report": "artifacts/pwa-e2e/back-root-4c2aaa1c19512425-unit.txt"
+  },
+  "staticAndBuildChecks": {
+    "svelteErrors": 0,
+    "svelteWarnings": 0,
+    "typescriptExitCode": 0,
+    "pwaBuildExitCode": 0,
+    "nativeFrontendBuildExitCode": 0
+  },
+  "browserChecks": [
+    {
+      "scope": "Ordinary desktop Chrome and Firefox with mobile layouts, controlled HTTP providers, real compiled app/SW/IDB",
+      "pass": 42,
+      "fail": 0,
+      "report": "artifacts/pwa-e2e/back-root-4c2aaa1c19512425-library/summary.json"
+    },
+    {
+      "scope": "Native desktop Chromium --app standalone mode plus normal browser control; 19 library cases and 10 navigation/audio checks",
+      "pass": 29,
+      "fail": 0,
+      "report": "artifacts/pwa-e2e/back-root-library-4c2aaa1c19512425/summary.json"
+    },
+    {
+      "scope": "Targeted long-history playlist menu regression, same live component after compaction",
+      "pass": 2,
+      "fail": 0,
+      "report": "artifacts/pwa-e2e/back-root-contextual-4c2aaa1c19512425/summary.json"
+    }
+  ],
+  "regressionControl": {
+    "build": "e40b7797b8e470d8",
+    "expectedFailure": "Compaction unmounted the playlist, leaving the menu action bound to the old view",
+    "report": "artifacts/pwa-e2e/back-root-contextual-e40b7797b8e470d8/summary.json"
+  },
+  "browserUIBack": {
+    "status": "blocked",
+    "reason": "Headless Chrome delivered trusted keyboard events on independent plain HTML pages without performing the browser Back accelerator. DOM History API checks and App AltLeft are separate evidence."
+  },
+  "physical": {
+    "androidSystemBackVerified": false,
+    "iphoneVerified": false,
+    "xiaomi": "Xiaomi 15T Pro manual test requested; response pending for this build",
+    "androidAuto": "unsupported in this PWA distribution",
+    "carPlay": "unsupported in this PWA distribution"
+  },
+  "cleanup": {
+    "serverClosed": true,
+    "temporarySiteRemoved": true,
+    "appAndControlBrowserProcessesClosed": true,
+    "forcedShutdownUsed": false
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "7d44ca9a2331703bb84c90b9b7f495b954737b65",
+    "tree": "9cbb5a21154c3c6c3e220513b188b607647b29b2",
+    "source_hash": "e0a7c45a839f7d97a80ecd398597219501419e021a8813e2e05e003cf137dc73",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "4c2aaa1c19512425",
+    "publicFilesPassed": 22,
+    "publicFilesFailed": 0,
+    "report": "artifacts/pwa-deploy/public-files-4c2aaa1c19512425.json",
+    "initialPropagation": "First HTTP check ran while GitHub Pages was building the new commit; 6 files were stale or not yet published. The final check matches all 22 files.",
+    "initialReport": "artifacts/pwa-deploy/public-files-4c2aaa1c19512425-initial-propagation.json",
+    "liveSelectedSongPass": 3,
+    "liveSelectedSongFail": 0,
+    "liveReport": "artifacts/pwa-port/browser-public-back-root-4c2aaa1c19512425.json"
+  },
+  "assets": {
+    "initialBytes": 38720,
+    "onDemandBytes": 469512
+  },
+  "historicalFullMatrix": {
+    "build": "fb6f83d340d7857a",
+    "pass": 169,
+    "total": 174,
+    "rerunInFullOnThisBuild": false
+  }
+}

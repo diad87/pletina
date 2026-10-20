@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "build": "4c2aaa1c19512425",
+  "startedAt": "2026-10-20T06:09:58.439Z",
+  "runKind": "compiled-application-back-regression",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "profiles": [
+    {
+      "build": "4c2aaa1c19512425",
+      "checks": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "startedAt": "2026-10-20T06:10:02.732Z",
+          "status": "pass",
+          "signal": {
+            "standalone": true,
+            "browser": false,
+            "navigatorStandalone": false
+          },
+          "finishedAt": "2026-10-20T06:10:03.477Z"
+        },
+        {
+          "name": "back.contextual-probe: opening a long-history playlist menu retains its live action",
+          "startedAt": "2026-10-20T06:10:03.478Z",
+          "status": "pass",
+          "longHistory": 35,
+          "livePlaylistRetained": true,
+          "confirmationVisible": true,
+          "deleted": true,
+          "finishedAt": "2026-10-20T06:10:22.351Z"
+        }
+      ],
+      "errors": [],
+      "mode": "native-app-window",
+      "browserVersion": "153.0.8010.52",
+      "initialWindowSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "profile": "chromium-android-layout",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "engine": "chromium",
+      "kind": "native-desktop-app-window-mobile-layout",
+      "physical": false,
+      "startedAt": "2026-10-20T06:10:02.660Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and service worker retained.",
+      "bootstrapStage": "application-open",
+      "modeSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "counts": {
+        "pass": 2,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "contextualTrace": [
+        {
+          "name": "track menu",
+          "phase": "before",
+          "index": 1,
+          "distance": 2,
+          "length": 2,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "overlay": false,
+          "boundary": false,
+          "menu": [],
+          "confirmations": [],
+          "pops": 0
+        },
+        {
+          "name": "track menu",
+          "phase": "after",
+          "index": 1,
+          "distance": 3,
+          "length": 2,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Reproducir a continuación",
+            "Añadir a la cola",
+            "Añadir a Canciones que te gustan",
+            "Añadir a playlist",
+            "Descargar",
+            "Ir al artista",
+            "Ir al disco",
+            "¿No es esta canción?"
+          ],
+          "confirmations": [],
+          "pops": 0
+        },
+        {
+          "name": "add to playlist",
+          "phase": "before",
+          "index": 1,
+          "distance": 3,
+          "length": 2,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Reproducir a continuación",
+            "Añadir a la cola",
+            "Añadir a Canciones que te gustan",
+            "Añadir a playlist",
+            "Descargar",
+            "Ir al artista",
+            "Ir al disco",
+            "¿No es esta canción?"
+          ],
+          "confirmations": [],
+          "pops": 0
+        },
+        {
+          "name": "add to playlist",
+          "phase": "after",
+          "index": 1,
+          "distance": 3,
+          "length": 2,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Añadir a playlist",
+            "Nueva playlist"
+          ],
+          "confirmations": [],
+          "pops": 0
+        },
+        {
+          "name": "new playlist",
+          "phase": "before",
+          "index": 1,
+          "distance": 3,
+          "length": 2,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Añadir a playlist",
+            "Nueva playlist"
+          ],
+          "confirmations": [],
+          "pops": 0
+        },
+        {
+          "name": "new playlist",
+          "phase": "after",
+          "index": 2,
+          "distance": 3,
+          "length": 3,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": false,
+          "boundary": false,
+          "menu": [],
+          "confirmations": [],
+          "heading": "Mi playlist n.º 1",
+          "pops": 1
+        },
+        {
+          "name": "before more-options rebase",
+          "index": 34,
+          "distance": 35,
+          "length": 35,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": false,
+          "boundary": false,
+          "menu": [],
+          "confirmations": [],
+          "heading": "E2E Contextual Probe",
+          "pops": 1
+        },
+        {
+          "name": "playlist more options",
+          "phase": "before",
+          "index": 34,
+          "distance": 35,
+          "length": 35,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": false,
+          "boundary": false,
+          "menu": [],
+          "confirmations": [],
+          "heading": "E2E Contextual Probe",
+          "pops": 1
+        },
+        {
+          "name": "playlist more options",
+          "phase": "after",
+          "index": 16,
+          "distance": 18,
+          "length": 17,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Reproducir a continuación",
+            "Añadir a la cola",
+            "Cambiar nombre",
+            "Eliminar playlist"
+          ],
+          "confirmations": [],
+          "heading": "E2E Contextual Probe",
+          "pops": 1
+        },
+        {
+          "name": "hero identity after opening menu",
+          "retained": true,
+          "index": 16,
+          "distance": 18,
+          "length": 17,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Reproducir a continuación",
+            "Añadir a la cola",
+            "Cambiar nombre",
+            "Eliminar playlist"
+          ],
+          "confirmations": [],
+          "heading": "E2E Contextual Probe",
+          "pops": 1
+        },
+        {
+          "name": "delete playlist menu action",
+          "phase": "before",
+          "index": 16,
+          "distance": 18,
+          "length": 17,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": true,
+          "boundary": false,
+          "menu": [
+            "Reproducir a continuación",
+            "Añadir a la cola",
+            "Cambiar nombre",
+            "Eliminar playlist"
+          ],
+          "confirmations": [],
+          "heading": "E2E Contextual Probe",
+          "pops": 1
+        },
+        {
+          "name": "delete playlist menu action",
+          "phase": "after",
+          "index": 16,
+          "distance": 17,
+          "length": 17,
+          "route": {
+            "name": "playlist",
+            "id": 1
+          },
+          "overlay": false,
+          "boundary": false,
+          "menu": [],
+          "confirmations": [
+            "¿Eliminar «E2E Contextual Probe»? No se puede deshacer. Cancelar Eliminar"
+          ],
+          "heading": "E2E Contextual Probe",
+          "pops": 2
+        }
+      ],
+      "contextualHeroRetained": true,
+      "finalState": {
+        "path": "/pletina/application/index.b93829bae5b1cfd9.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Buenos días",
+          "Descubre música",
+          "Artistas para descubrir"
+        ],
+        "navigation": {
+          "index": 17,
+          "route": {
+            "name": "home"
+          },
+          "historyLength": 50
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [
+          "Eliminada «E2E Contextual Probe»"
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": false,
+              "local": false,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 3,
+          "api.deezer.com/search/artist": 1,
+          "api.deezer.com/search/album": 1,
+          "api.deezer.com/search/track": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-20T06:10:23.580Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "errors": [],
+  "scope": "Real headless Chromium desktop app window (--app), native display-mode and Audio, compiled app/SW/IDB, controlled HTTP provider responses. No OS installation, phone or Android system Back is asserted.",
+  "physicalInstallationVerified": false,
+  "androidSystemBackVerified": false,
+  "signalMocked": false,
+  "keyboardEvidence": "AltLeft inside App is handled by App.onKeydown and calls nav.back. It is not a browser Back actuator. Only the two plain HTML control documents assess the headless browser accelerator.",
+  "protocolReference": "https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setEmulatedMedia",
+  "distributionSnapshot": "An isolated temporary copy is served throughout the run. The source distribution is not modified.",
+  "modeProbe": [
+    {
+      "appArgument": false,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    },
+    {
+      "appArgument": true,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "browserUIBack": {
+    "status": "blocked",
+    "scope": "Desktop browser keyboard accelerator control, separate from DOM History API traversal and physical Android Back."
+  },
+  "allRequestedBackInputsVerified": false,
+  "serverClosed": true,
+  "temporarySiteRemoved": true,
+  "finishedAt": "2026-10-20T06:10:23.584Z",
+  "counts": {
+    "pass": 2,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "passed": true,
+  "applicationChecksExecuted": true,
+  "applicationPassed": true
+}
