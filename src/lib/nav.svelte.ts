@@ -24,7 +24,7 @@ export interface NavigationDriver {
   replace(stack: Route[], index: number): void
   back(): void
   forward(): void
-  overlay(open: boolean, close: () => boolean): void
+  overlay(open: boolean, close: () => boolean, remaining?: () => boolean): void
 }
 
 /** Historial propio (atrás / adelante) sin router: una pila de rutas y un índice. */
@@ -49,7 +49,7 @@ class Nav {
     this.index = index
   }
 
-  overlay(open: boolean, close: () => boolean) { this.#driver?.overlay(open, close) }
+  overlay(open: boolean, close: () => boolean, remaining?: () => boolean) { this.#driver?.overlay(open, close, remaining) }
 
   get route(): Route {
     return this.stack[this.index]

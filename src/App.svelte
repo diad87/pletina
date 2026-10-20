@@ -88,7 +88,8 @@
   // Los diálogos HTML tienen su propio comportamiento Atrás. Los paneles de la app
   // usan una entrada temporal en la PWA; en Tauri este método no hace nada.
   $effect(() => {
-    nav.overlay(Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay)
+    nav.overlay(Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay,
+      () => Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying))
   })
 
   // Botón "atrás" de Android (MainActivity.kt): conserva el contrato nativo.

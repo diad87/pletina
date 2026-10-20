@@ -16,24 +16,33 @@ function navigation() {
   new Function('exports', 'require', compiled)(exports, (name) => name === 'svelte' ? { untrack: (fn) => fn() } : svelte)
   return exports.nav
 }
-function browser() {
+function browser({ standalone = false, iosStandalone = false, historyLimit = Infinity } = {}) {
   const window = new EventTarget(), items = [null], storage = new Map(), events = []
-  let position = 0
+  let position = 0, departures = 0
   const history = {
     get state() { return structuredClone(items[position]) },
     replaceState(value, _, url) { assert.equal(url, window.location.href); items[position] = structuredClone(value) },
-    pushState(value, _, url) { assert.equal(url, window.location.href); items.splice(position + 1); items.push(structuredClone(value)); position++ },
-    back() { if (position > 0) { position--; events.push(items[position]) } },
+    pushState(value, _, url) { assert.equal(url, window.location.href); items.splice(position + 1); items.push(structuredClone(value)); position++;
+      while (items.length > historyLimit) { items.shift(); position-- } },
+    back() { if (position > 0) { position--; events.push(items[position]) } else departures++ },
     forward() { if (position < items.length - 1) { position++; events.push(items[position]) } },
     go(delta) { const target = position + delta; if (target >= 0 && target < items.length) { position = target; events.push(items[position]) } },
   }
   Object.assign(window, { history, location: { href: 'https://example.test/pletina/application/index.hash.html' },
+    matchMedia: (query) => ({ matches: query === '(display-mode: standalone)' && standalone }),
+    navigator: { standalone: iosStandalone },
     sessionStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } })
-  return { window, items, get position() { return position }, flush() {
-    while (events.length) { const event = new Event('popstate'); Object.defineProperty(event, 'state', { value: structuredClone(events.shift()) }); window.dispatchEvent(event) }
-  } }
+  const flushOne = () => {
+    if (!events.length) return
+    const event = new Event('popstate')
+    Object.defineProperty(event, 'state', { value: structuredClone(events.shift()) })
+    window.dispatchEvent(event)
+  }
+  return { window, items, get position() { return position }, get departures() { return departures },
+    setStandalone(value) { standalone = value }, flushOne, discardEvents() { events.length = 0 },
+    flush() { let count = 0; while (events.length) { assert.ok(++count < 100, 'History traversal must settle'); flushOne() } } }
 }
-function setup() { const nav = navigation(), h = browser(); const dispose = initWebNavigation(nav, h.window); return { nav, h, dispose } }
+function setup(options) { const nav = navigation(), h = browser(options); const dispose = initWebNavigation(nav, h.window); return { nav, h, dispose } }
 
 test('native navigation remains synchronous without installing browser history', () => {
   const nav = navigation()
@@ -131,4 +140,255 @@ test('rapid overlay reopen/close cancels obsolete queued guards', () => {
   nav.overlay(true, () => true); nav.overlay(false, () => false)
   h.flush()
   nav.back(); h.flush(); assert.equal(nav.route.name, 'home')
+})
+
+test('installed Home consumes repeated system Back without leaving or growing history', () => {
+  const { nav, h } = setup({ standalone: true })
+  const length = h.items.length
+  for (let press = 0; press < 12; press++) {
+    h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home')
+    assert.equal(h.window.history.state.rootBoundary, undefined)
+  }
+  assert.equal(h.departures, 0)
+  assert.equal(h.items.length, length)
+})
+
+test('normal browser tabs can still leave Home with Back', () => {
+  const { h } = setup()
+  h.window.history.back(); h.flush()
+  assert.equal(h.departures, 1)
+  assert.equal(h.items.length, 1)
+})
+
+test('iOS standalone detection also protects Home without display-mode support', () => {
+  const { nav, h } = setup({ iosStandalone: true })
+  h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('installed root bounce preserves previous views and the browser Forward branch', () => {
+  const { nav, h } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Canción' }); nav.go({ name: 'album', id: 12 })
+  h.window.history.back(); h.flush(); assert.equal(nav.route.query, 'Canción')
+  h.window.history.back(); h.flush(); assert.equal(nav.route.name, 'home')
+  const length = h.items.length
+  h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(nav.canForward, true)
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.query, 'Canción')
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.name, 'album')
+  assert.equal(h.items.length, length); assert.equal(h.departures, 0)
+})
+
+test('installed Home overlay closes before the protected root consumes another Back', () => {
+  const { nav, h } = setup({ standalone: true })
+  let closes = 0
+  nav.overlay(true, () => { closes++; return true })
+  h.window.history.back(); h.flush()
+  assert.equal(closes, 1); assert.equal(nav.route.name, 'home')
+  nav.overlay(false, () => false)
+  h.window.history.back(); h.flush()
+  assert.equal(closes, 1); assert.equal(h.departures, 0)
+})
+
+test('reloading an installed route does not add another root boundary', () => {
+  const { nav, h, dispose } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Conservada' })
+  const length = h.items.length
+  dispose()
+  const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush()
+  assert.equal(h.items.length, length); assert.equal(reloaded.route.query, 'Conservada')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(reloaded.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('legacy installed navigation gains a root boundary without losing query or Forward', () => {
+  const { nav, h, dispose } = setup()
+  nav.go({ name: 'search', query: 'Anterior' }); nav.go({ name: 'album', id: 12 })
+  nav.back(); h.flush(); dispose(); h.setStandalone(true)
+  const migrated = navigation(); initWebNavigation(migrated, h.window); h.flush()
+  assert.equal(migrated.route.query, 'Anterior'); assert.equal(migrated.canForward, true)
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(migrated.route.name, 'home'); assert.equal(h.departures, 0)
+  h.window.history.forward(); h.flush(); h.window.history.forward(); h.flush()
+  assert.equal(migrated.route.name, 'album')
+})
+
+test('installed overlay reload after Back repairs Forward and keeps the root protected', () => {
+  const { nav, h, dispose } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Podcast' }); nav.go({ name: 'album', id: 12 })
+  nav.back(); h.flush(); nav.overlay(true, () => true); h.flush(); dispose()
+  const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush()
+  assert.equal(reloaded.route.query, 'Podcast'); assert.equal(reloaded.canForward, true)
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(reloaded.route.name, 'home'); assert.equal(h.departures, 0)
+  h.window.history.forward(); h.flush(); h.window.history.forward(); h.flush()
+  assert.equal(reloaded.route.name, 'album')
+})
+
+test('navigation during a pending root bounce waits for Home before adding its route', () => {
+  const { nav, h } = setup({ standalone: true })
+  h.window.history.back(); h.flushOne()
+  nav.go({ name: 'library' })
+  h.flush()
+  assert.equal(nav.route.name, 'library')
+  h.window.history.back(); h.flush(); assert.equal(nav.route.name, 'home')
+  h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+})
+
+test('reload while on the root boundary returns to Home and preserves Forward', () => {
+  const { nav, h, dispose } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Guardada' }); nav.back(); h.flush()
+  h.window.history.back(); dispose(); h.discardEvents()
+  const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush()
+  assert.equal(reloaded.route.name, 'home'); assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.forward(); h.flush(); assert.equal(reloaded.route.query, 'Guardada')
+  assert.equal(h.departures, 0)
+})
+
+test('large legacy histories migrate in a bounded batch while retaining the current route', () => {
+  const h = browser({ standalone: true }), nav = navigation()
+  const stack = [{ name: 'home' }, ...Array.from({ length: 100 }, (_, i) => ({ name: 'search', query: `Consulta ${i}` }))]
+  h.window.history.replaceState({ pletinaNavigation: 1, session: 'legacy', index: 40, overlay: false,
+    snapshot: { stack, index: 40 } }, '', h.window.location.href)
+  initWebNavigation(nav, h.window); h.flush()
+  assert.equal(nav.route.query, 'Consulta 39')
+  assert.ok(h.items.length <= 65)
+  while (nav.canBack) { nav.back(); h.flush() }
+  h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('jumping from an installed Home overlay to the boundary closes it without a phantom Forward', () => {
+  const { nav, h } = setup({ standalone: true })
+  let closes = 0
+  nav.overlay(true, () => { closes++; return true })
+  h.window.history.go(-2); h.flush()
+  assert.equal(closes, 1); assert.equal(nav.route.name, 'home')
+  const length = h.items.length
+  h.window.history.forward(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(nav.canForward, false)
+  assert.equal(h.items.length, length)
+  nav.overlay(false, () => false)
+  nav.go({ name: 'library' }); h.flush()
+  assert.equal(nav.route.name, 'library')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('jumping over routes and an overlay repairs the installed Forward branch once', () => {
+  const { nav, h } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Salto' }); nav.go({ name: 'album', id: 12 }); nav.back(); h.flush()
+  let closes = 0
+  nav.overlay(true, () => { closes++; return true })
+  h.window.history.go(-3); h.flush()
+  assert.equal(closes, 1); assert.equal(nav.route.name, 'home')
+  nav.overlay(false, () => false)
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.query, 'Salto')
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.name, 'album')
+  assert.equal(h.position, h.items.length - 1)
+  assert.equal(h.departures, 0)
+})
+
+test('large legacy overlay reload performs only the bounded root reconstruction', () => {
+  const h = browser({ standalone: true }), nav = navigation()
+  const stack = [{ name: 'home' }, ...Array.from({ length: 999 }, (_, i) => ({ name: 'search', query: `Q${i}` }))]
+  h.window.history.replaceState({ pletinaNavigation: 1, session: 'legacy', index: 0, overlay: true,
+    snapshot: { stack, index: 0 } }, '', h.window.location.href)
+  let pushes = 0
+  const push = h.window.history.pushState
+  h.window.history.pushState = (...args) => { pushes++; push(...args) }
+  initWebNavigation(nav, h.window); h.flush()
+  assert.ok(pushes <= 64); assert.equal(nav.route.name, 'home')
+  nav.go({ name: 'library' }); h.flush(); assert.equal(nav.route.name, 'library')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('invalid persisted entry indices and boundary flags cannot restore a broken route', () => {
+  for (const corrupt of [{ index: -1 }, { index: undefined }, { index: 2 }, { index: 0, rootBoundary: true, overlay: true }]) {
+    const h = browser({ standalone: true }), nav = navigation()
+    h.window.history.replaceState({ pletinaNavigation: 1, session: 'legacy', overlay: false, protectedRoot: true,
+      snapshot: { stack: [{ name: 'home' }], index: 0 }, ...corrupt }, '', h.window.location.href)
+    initWebNavigation(nav, h.window); h.flush()
+    assert.equal(nav.route.name, 'home')
+    h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+  }
+})
+
+test('installed overlay Back closes without pushState so browser history stays eligible for UI Back', () => {
+  const { nav, h } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Adelante' }); nav.go({ name: 'album', id: 12 }); nav.back(); h.flush()
+  nav.overlay(true, () => true); h.flush()
+  h.window.history.pushState = () => assert.fail('Handling Back must not create entries without a user activation')
+  h.window.history.back(); h.flush(); assert.equal(nav.route.query, 'Adelante')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.query, 'Adelante')
+  h.window.history.forward(); h.flush(); assert.equal(nav.route.name, 'album')
+})
+
+test('installed long sessions retain a root boundary when the browser prunes old entries', () => {
+  const { nav, h } = setup({ standalone: true, historyLimit: 50 })
+  for (let index = 0; index < 120; index++) { nav.go({ name: 'search', query: `Búsqueda ${index}` }); h.flush() }
+  assert.equal(nav.route.query, 'Búsqueda 119')
+  while (nav.canBack) { h.window.history.back(); h.flush() }
+  for (let index = 0; index < 4; index++) { h.window.history.back(); h.flush() }
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('closing an installed overlay during forward preparation queues the next navigation until it settles', () => {
+  const { nav, h } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Antes' }); nav.go({ name: 'album', id: 12 }); nav.back(); h.flush()
+  nav.overlay(true, () => true)
+  nav.overlay(false, () => false)
+  nav.go({ name: 'library' }); h.flush()
+  assert.equal(nav.route.name, 'library')
+  h.window.history.back(); h.flush(); assert.equal(nav.route.query, 'Antes')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('choosing a destination from an installed overlay discards obsolete Forward without an extra Back', () => {
+  const { nav, h } = setup({ standalone: true })
+  nav.go({ name: 'search', query: 'Menú' }); nav.go({ name: 'album', id: 12 }); nav.back(); h.flush()
+  nav.overlay(true, () => true); h.flush()
+  nav.go({ name: 'artist', id: 7 }); nav.overlay(false, () => false); h.flush()
+  assert.equal(nav.route.name, 'artist'); assert.equal(nav.canForward, false)
+  h.window.history.back(); h.flush(); assert.equal(nav.route.query, 'Menú')
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('nested installed panels reuse the consumed guard without pushState after Back', async () => {
+  const { nav, h } = setup({ standalone: true })
+  let layers = 2
+  const remaining = () => layers > 0
+  const close = () => {
+    if (!layers) return false
+    layers--
+    queueMicrotask(() => nav.overlay(remaining(), close, remaining))
+    return true
+  }
+  nav.overlay(true, close, remaining)
+  h.window.history.pushState = () => assert.fail('The remaining panel must reuse its marker after system Back')
+  h.window.history.back(); h.flush(); await Promise.resolve(); h.flush()
+  assert.equal(layers, 1); assert.equal(h.window.history.state.overlay, true)
+  h.window.history.back(); h.flush(); await Promise.resolve(); h.flush()
+  assert.equal(layers, 0); assert.equal(h.window.history.state.overlay, false)
+  h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('jumping nested panels directly to the installed boundary closes every remaining layer', async () => {
+  const { nav, h } = setup({ standalone: true })
+  let layers = 2
+  const remaining = () => layers > 0
+  const close = () => { if (!layers) return false; layers--; return true }
+  nav.overlay(true, close, remaining)
+  h.window.history.pushState = () => assert.fail('A boundary traversal must not create another overlay entry')
+  h.window.history.go(-2); h.flush()
+  nav.overlay(remaining(), close, remaining); h.flush()
+  assert.equal(layers, 0); assert.equal(nav.route.name, 'home')
+  h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
 })
