@@ -1,7 +1,7 @@
 import type { NavigationDriver, Route } from '../src/lib/nav.svelte'
 
 type Snapshot = { stack: Route[]; index: number }
-type Navigation = Snapshot & { restore(stack: Route[], index: number): void; installDriver(driver: NavigationDriver): void }
+type Navigation = Snapshot & { restore(stack: Route[], index: number, preserveView?: boolean): void; installDriver(driver: NavigationDriver): void }
 type Entry = { pletinaNavigation: 1; session: string; index: number; overlay: boolean; snapshot: Snapshot;
   protectedRoot?: true; rootBoundary?: true; rootDistance?: number; preparedOverlay?: true }
 
@@ -97,7 +97,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
       const end = Math.min(current.stack.length, current.index + (current.index ? 16 : 32))
       current = { stack: [current.stack[0], ...current.stack.slice(start, end)],
         index: current.index ? current.index - start + 1 : 0 }
-      nav.restore(current.stack, current.index)
+      nav.restore(current.stack, current.index, true)
     }
     protectedRoot = true
     rootDistance = 0

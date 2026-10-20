@@ -47,8 +47,11 @@ function setup(options) { const nav = navigation(), h = browser(options); const 
 test('native navigation remains synchronous without installing browser history', () => {
   const nav = navigation()
   nav.go({ name: 'search', query: 'Creep' }); nav.go({ name: 'artist', id: 1 })
+  assert.equal(nav.viewKey, nav.index)
   nav.back(); assert.deepEqual(nav.route, { name: 'search', query: 'Creep' })
+  assert.equal(nav.viewKey, nav.index)
   nav.forward(); assert.equal(nav.route.name, 'artist')
+  assert.equal(nav.viewKey, nav.index)
 })
 test('Android/browser Back and Forward move the app without changing its URL', () => {
   const { nav, h } = setup()
@@ -335,6 +338,23 @@ test('installed long sessions retain a root boundary when the browser prunes old
   while (nav.canBack) { h.window.history.back(); h.flush() }
   for (let index = 0; index < 4; index++) { h.window.history.back(); h.flush() }
   assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+})
+
+test('compacting installed history while opening a menu preserves its current view and callbacks', () => {
+  const { nav, h } = setup({ standalone: true, historyLimit: 50 })
+  for (let index = 0; index < 33; index++) { nav.go({ name: 'search', query: `Consulta ${index}` }); h.flush() }
+  nav.go({ name: 'playlist', id: 3 }); h.flush()
+  const index = nav.index, viewKey = nav.viewKey
+  assert.equal(typeof viewKey, 'number')
+  nav.overlay(true, () => true); h.flush()
+  assert.ok(nav.index < index, 'Opening this menu must exercise history compaction')
+  assert.equal(nav.viewKey, viewKey, 'The keyed view and its menu action closure must remain mounted')
+  assert.deepEqual(nav.route, { name: 'playlist', id: 3 })
+  nav.overlay(false, () => false); h.flush()
+  assert.equal(nav.viewKey, viewKey, 'Closing the menu must preserve local confirmation state')
+  nav.back(); h.flush()
+  assert.notEqual(nav.viewKey, viewKey, 'A real route traversal must still change the keyed view')
+  assert.equal(nav.route.name, 'search')
 })
 
 test('closing an installed overlay during forward preparation queues the next navigation until it settles', () => {

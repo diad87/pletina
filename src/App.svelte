@@ -115,7 +115,7 @@
 <svelte:window onkeydown={onKeydown} onmousedown={onMousedown} onmouseup={onMouseup} />
 
 {#snippet page()}
-  {#key nav.index}
+  {#key nav.viewKey}
     <div class="view">
       {#if route.name === 'home'}
         <Home />

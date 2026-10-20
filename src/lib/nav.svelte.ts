@@ -31,6 +31,10 @@ export interface NavigationDriver {
 class Nav {
   stack = $state<Route[]>([{ name: 'home' }])
   index = $state(0)
+  #viewOffset = $state(0)
+
+  /** Compactar el historial web no debe desmontar la pantalla que abrió un menú. */
+  get viewKey() { return this.index + this.#viewOffset }
 
   /** Contenedor con scroll de la vista; lo registra App. */
   scroller: HTMLElement | null = null
@@ -43,8 +47,9 @@ class Nav {
   /** Solo la entrada web instala un historial de navegador; Tauri conserva su pila. */
   installDriver(driver: NavigationDriver) { this.#driver = driver }
 
-  restore(stack: Route[], index: number) {
+  restore(stack: Route[], index: number, preserveView = false) {
     this.#saveScroll()
+    if (preserveView) this.#viewOffset += this.index - index
     this.stack = stack
     this.index = index
   }
