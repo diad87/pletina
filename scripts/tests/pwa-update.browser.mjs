@@ -1,6 +1,7 @@
 // Real desktop Chrome, temporary profile/site, no musical network or production output changes.
 // node scripts/tests/pwa-update.browser.mjs --playwright packageOrPath --chrome executable
 //   [--application dist-web-port] [--prototype pathToOldDist] [--report update-browser.json]
+//   [--cold-only] [--shell-source readonlyPwaSourceSnapshot]
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
@@ -15,6 +16,8 @@ import { createPwaServer } from '../preview-pwa.mjs'
 const workspace = fileURLToPath(new URL('../../', import.meta.url))
 const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
+const coldOnly = args.includes('--cold-only')
+assert.ok(!coldOnly || !option('--prototype', null), '--cold-only cannot also test prototype migration')
 const { chromium } = createRequire(import.meta.url)(option('--playwright', 'playwright'))
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const artifactDirectory = join(workspace, 'artifacts', 'pwa-port')
@@ -26,8 +29,9 @@ const report = {
   osShortcutInstallationVerified: false, androidVerified: false, iOSVerified: false,
   externalMusicNetworkUsed: false, productionDirectoriesMutated: false,
   updateTrigger: 'registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.',
-  playlistFixture: 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
-  audioFixture: 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
+  playlistFixture: coldOnly ? 'No playlist or metadata fixture is seeded in the cold-installer-only run.' : 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
+  audioFixture: coldOnly ? 'No audio fixture is seeded in the cold-installer-only run.' : 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
+  runKind: coldOnly ? 'cold-installer-update-only' : 'cold-installer-and-opened-application-updates',
 }
 const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '[URL]')
   .replace(/[A-Z]:[\\/][^\s\n"']+/gi, '[path]').replace(/\u001b\[[0-9;]*m/g, '').slice(0, 700)
@@ -42,6 +46,11 @@ async function check(name, action) {
     process.stdout.write('passed\n')
   } catch (error) {
     report.checks.push({ name, pass: false, error: scrub(error.message) })
+    if (phase.startsWith('cold-') && page) {
+      report.coldFailure = await coldState().catch(failure => ({ diagnosticError: scrub(failure.message) }))
+      report.coldFailure.requests = requests.filter(request => request.phase.startsWith('cold-'))
+      await page.screenshot({ path: join(artifactDirectory, reportName.replace(/\.json$/, '-cold-failure.png')), fullPage: true }).catch(() => {})
+    }
     process.stdout.write('FAILED\n')
     throw error
   }
@@ -93,10 +102,22 @@ async function newPage(browserContext) {
   return result
 }
 async function installed() {
-  await page.waitForFunction(async () => {
-    const registration = await navigator.serviceWorker.getRegistration()
-    return navigator.serviceWorker.controller && registration?.active?.state === 'activated'
-  }, { timeout: 30000 })
+  await waitForWorkerState('active')
+}
+async function waitForWorkerState(kind) {
+  // Playwright 1.62 treats an async predicate's Promise as truthy; poll the
+  // resolved boolean ourselves so a false first read cannot advance the server.
+  const deadline = Date.now() + 30000
+  while (Date.now() < deadline) {
+    const ready = await page.evaluate(async kind => {
+      const registration = await navigator.serviceWorker.getRegistration()
+      return kind === 'waiting' ? registration?.waiting?.state === 'installed'
+        : Boolean(navigator.serviceWorker.controller && registration?.active?.state === 'activated')
+    }, kind)
+    if (ready) return
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  throw new Error('Timed out waiting for service worker state: ' + kind)
 }
 async function snapshot() {
   return page.evaluate(async () => {
@@ -113,6 +134,15 @@ async function snapshot() {
       cacheInfo,
     }
   })
+}
+async function coldState() {
+  return { serviceWorker: await snapshot(), ...await page.evaluate(() => ({
+    path: location.pathname, status: document.querySelector('#status')?.textContent,
+    version: document.querySelector('#version')?.textContent,
+    button: { text: document.querySelector('#open-player')?.textContent, disabled: document.querySelector('#open-player')?.disabled },
+    appVisible: Boolean(document.querySelector('.app')), controller: Boolean(navigator.serviceWorker.controller),
+    openedBefore: localStorage.getItem('pletina:web:opened'), online: navigator.onLine,
+  })) }
 }
 async function database() {
   return page.evaluate(() => new Promise((resolve, reject) => {
@@ -229,19 +259,21 @@ async function openPlaylist(name) {
 }
 async function prepareWaiting() {
   await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration()).update() })
-  await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting), { timeout: 30000 })
+  await waitForWorkerState('waiting')
 }
 
 try {
   await mkdir(artifactDirectory, { recursive: true })
   temporary = await mkdtemp(join(tmpdir(), 'pletina-update-browser-'))
   const shell = join(temporary, 'shell')
-  await cp(sourceDirectory, shell, { recursive: true })
+  await cp(resolve(workspace, option('--shell-source', sourceDirectory)), shell, { recursive: true })
+  report.sourceShellAppSha256 = digest(await readFile(join(shell, 'app.js')))
   const application = resolve(workspace, option('--application', 'dist-web-port'))
   const applicationSnapshot = join(temporary, 'application-base')
   await cp(application, applicationSnapshot, { recursive: true })
   const baseBuild = await buildPwa({ source: shell, application: applicationSnapshot, output: join(temporary, 'site-base') })
   report.baseDistributionVersion = baseBuild.version
+  process.stdout.write('Immutable source snapshot ready: ' + baseBuild.version + '\n')
   const compiledHtml = await readFile(join(applicationSnapshot, 'index.html'), 'utf8')
   report.sourceCompiledHtmlSha256 = digest(compiledHtml)
   const builds = {}
@@ -268,7 +300,9 @@ try {
   server = createServer(async (request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname
     const version = live
-    requests.push({ phase, version, path: pathname })
+    const observed = { phase, version, path: pathname }
+    requests.push(observed)
+    response.once('finish', () => { observed.status = response.statusCode })
     if (pathname === failingPath) { response.writeHead(503, { 'Cache-Control': 'no-store' }); response.end('QA interrupted download'); return }
     if (gate?.path === pathname && version === 'B') { gate.entered.resolve(); await gate.release.promise }
     servers.get(version).emit('request', request, response)
@@ -279,6 +313,87 @@ try {
   browser = await chromium.launch({ headless: true,
     ...(option('--chrome', null) ? { executablePath: option('--chrome') } : {}) })
   report.browser = browser.version()
+  const coldContext = await context()
+  page = await newPage(coldContext)
+  const retiredA = builds.A.optionalFiles.filter(path => !builds.B.optionalFiles.includes(path)).map(path => '/pletina/' + path)
+  const allOptional = new Set([...builds.A.optionalFiles, ...builds.B.optionalFiles].map(path => '/pletina/' + path))
+  report.coldInstaller = { applicationOpenedBeforeUpdate: false, retiredOptionalPaths: retiredA }
+  phase = 'cold-minimal-A-waiting-B'
+  await check('cold installer A waits for B without ever requesting or caching the application', async () => {
+    live = 'A'
+    await page.goto(url, { waitUntil: 'load' }); await installed()
+    const initial = await coldState()
+    assert.ok(initial.version.includes(builds.A.version))
+    assert.equal(initial.openedBefore, null)
+    assert.equal(initial.appVisible, false)
+    assert.equal(requests.filter(request => request.phase === phase && allOptional.has(request.path)).length, 0)
+    assert.equal(initial.serviceWorker.cacheInfo.flatMap(cache => cache.paths).filter(path => allOptional.has(path)).length, 0)
+    live = 'B'; await prepareWaiting()
+    const waiting = await coldState()
+    assert.equal(waiting.serviceWorker.waiting, 'installed')
+    assert.ok(waiting.version.includes(builds.A.version))
+    assert.equal(waiting.serviceWorker.cacheInfo.flatMap(cache => cache.paths).filter(path => allOptional.has(path)).length, 0)
+    assert.equal(requests.filter(request => request.phase === phase && allOptional.has(request.path)).length, 0)
+    report.coldInstaller.beforeOpen = waiting
+    return { oldVersion: builds.A.version, waitingVersion: builds.B.version, initialOptionalDownloads: 0, applicationOpened: false }
+  })
+  phase = 'cold-primary-open-failed'
+  failingPath = '/pletina/' + builds.B.applicationPage
+  await check('cold primary open prepares waiting B and a failed preparation preserves A with a visible retry', async () => {
+    await page.locator('#open-player').click()
+    await page.locator('#status').filter({ hasText: 'No se pudo' }).waitFor({ timeout: 20000 })
+    await page.waitForFunction(() => !document.querySelector('#open-player').disabled)
+    const state = await coldState()
+    report.coldInstaller.failedPreparation = state
+    assert.equal(state.serviceWorker.waiting, 'installed')
+    assert.ok(state.version.includes(builds.A.version))
+    assert.equal(state.appVisible, false)
+    assert.equal(state.path, '/pletina/')
+    const messages = report.messages.filter(message => message.phase === phase)
+    assert.ok(messages.some(message => message.type === 'PREPARE_APPLICATION' && message.state === 'installed'), 'Primary open must prepare the waiting worker before importing any retired A launcher')
+    assert.equal(messages.filter(message => message.type === 'ACTIVATE_UPDATE').length, 0)
+    assert.ok(requests.some(request => request.phase === phase && request.path === failingPath && request.status === 503), 'Preparation must actually fetch the failing B application')
+    assert.equal(requests.filter(request => request.phase.startsWith('cold-') && retiredA.includes(request.path)).length, 0, 'The primary action must not request retired A optional files')
+    assert.deepEqual(state.serviceWorker.cacheInfo.find(cache => cache.version === builds.A.version),
+      report.coldInstaller.beforeOpen.serviceWorker.cacheInfo.find(cache => cache.version === builds.A.version),
+      'Every active A cached resource must survive failed preparation')
+    return { waitingVersion: builds.B.version, activationMessages: 0, retryEnabled: true, activeACachePreserved: true }
+  })
+  phase = 'cold-primary-open-retry'
+  failingPath = null
+  gate = { path: '/pletina/' + builds.B.applicationPage, entered: defer(), release: defer() }
+  await check('cold primary retry prepares all of B before activation, opens it automatically and reloads offline', async () => {
+    await page.locator('#open-player').click()
+    let timeout
+    try { await Promise.race([gate.entered.promise, new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error('Cold retry never requested the gated B application')), 20000) })]) }
+    finally { clearTimeout(timeout) }
+    assert.equal((await snapshot()).waiting, 'installed')
+    assert.equal(await page.locator('#open-player').isDisabled(), true)
+    assert.ok((await coldState()).version.includes(builds.A.version))
+    assert.equal(report.messages.filter(message => message.phase === phase && message.type === 'ACTIVATE_UPDATE').length, 0)
+    gate.release.resolve(); gate = null
+    await page.waitForURL(origin + '/pletina/' + builds.B.applicationPage, { waitUntil: 'load', timeout: 30000 })
+    await page.locator('.app .sidebar').waitFor()
+    assert.equal(await page.title(), 'Pletina QA B')
+    const messages = report.messages.filter(message => message.phase === phase).map(message => message.type)
+    assert.ok(messages.indexOf('PREPARE_APPLICATION') >= 0)
+    assert.ok(messages.indexOf('ACTIVATE_UPDATE') > messages.indexOf('PREPARE_APPLICATION'))
+    assert.equal(requests.filter(request => request.phase.startsWith('cold-') && retiredA.includes(request.path)).length, 0)
+    const installedB = await snapshot()
+    assert.deepEqual(installedB.cacheInfo.map(cache => cache.version), [builds.B.version])
+    for (const path of builds.B.optionalFiles) assert.ok(installedB.cacheInfo[0].paths.includes('/pletina/' + path))
+    await coldContext.setOffline(true)
+    await page.reload({ waitUntil: 'load', timeout: 20000 })
+    await page.locator('.app .sidebar').waitFor()
+    assert.equal(await page.title(), 'Pletina QA B')
+    assert.equal(await page.evaluate(() => navigator.onLine), false)
+    assert.equal((await snapshot()).waiting, null)
+    report.coldInstaller.completed = { messageOrder: messages, oldOptionalRequests: 0, offline: true }
+    return { newApplicationPath: new URL(page.url()).pathname, messageOrder: messages, allOptionalFilesCached: true, oldOptionalRequests: 0, offline: true }
+  })
+  await coldContext.close(); page = null
+  failingPath = null; live = 'A'
+  if (!coldOnly) {
   const fullContext = await context()
   page = await newPage(fullContext)
   const playlistName = 'QA actualización persistente'
@@ -287,7 +402,7 @@ try {
   await check('full A installs without application downloads; app opens on demand', async () => {
     await page.goto(url, { waitUntil: 'load' })
     await installed()
-    assert.equal(requests.filter((request) => request.path.includes('/application/')).length, 0)
+    assert.equal(requests.filter((request) => request.phase === phase && request.path.includes('/application/')).length, 0)
     await seedLegacyLibrary()
     await openApplication()
     assert.equal(await page.title(), 'Pletina QA A')
@@ -357,7 +472,19 @@ try {
     assert.equal(waiting.paths.filter((path) => path.includes('/application/')).length, 0)
     assert.deepEqual(await database(), expectedDatabase)
     assert.deepEqual(await downloadSnapshot(), expectedDownload)
-    return { waitingVersion: builds.B.version, currentApplication: 'A', initialOptionalDownloads: 0 }
+    const messageMark = report.messages.length
+    await page.goto(url + '?open=app', { waitUntil: 'load' })
+    await page.waitForURL(/\/application\/index\.[a-f0-9]{16}\.html$/, { waitUntil: 'load', timeout: 30000 })
+    await page.locator('.app .sidebar').waitFor()
+    report.warmReentry = { title: await page.title(), ...await coldState(), messages: report.messages.slice(messageMark) }
+    assert.equal(report.warmReentry.title, 'Pletina QA A', 'Automatic re-entry must reopen cached A while B waits for an explicit update gesture')
+    assert.equal(report.warmReentry.messages.filter(message => ['PREPARE_APPLICATION', 'ACTIVATE_UPDATE'].includes(message.type)).length, 0,
+      'Automatic re-entry must not prepare or activate B without an explicit update gesture')
+    assert.equal((await snapshot()).waiting, 'installed')
+    assert.deepEqual(await database(), expectedDatabase)
+    assert.deepEqual(await downloadSnapshot(), expectedDownload)
+    await page.locator('.web-update button').waitFor()
+    return { waitingVersion: builds.B.version, currentApplication: 'A', initialOptionalDownloads: 0, automaticReentryKeptA: true, automaticUpdateMessages: 0 }
   })
   phase = 'failed-preparation'
   failingPath = `/pletina/${builds.B.applicationPage}`
@@ -475,6 +602,7 @@ try {
     await migrationContext.close()
     page = null
   } else report.pending = ['Prototype migration requires --prototype pointing to an existing compiled prototype.']
+  }
 } catch (error) {
   report.fatal = scrub(error.message)
 } finally {
@@ -494,7 +622,7 @@ try {
   }
   report.blockedExternalHosts = [...blockedHosts].sort()
   report.finishedAt = new Date().toISOString()
-  report.passed = !report.fatal && report.checks.length >= (option('--prototype', null) ? 8 : 7)
+  report.passed = !report.fatal && report.checks.length >= (coldOnly ? 3 : option('--prototype', null) ? 11 : 10)
     && report.checks.every((check) => check.pass) && report.errors.length === 0
   await mkdir(artifactDirectory, { recursive: true })
   await writeFile(join(artifactDirectory, reportName), `${JSON.stringify(report, null, 2)}\n`)
