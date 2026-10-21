@@ -120,12 +120,15 @@
           bind:value={link}
           oninput={() => (linkError = false)}
           placeholder="…o pega aquí un enlace de YouTube"
+          aria-label="Enlace o ID del vídeo de YouTube"
+          aria-invalid={linkError}
+          aria-describedby={linkError ? 'source-link-error' : undefined}
           spellcheck="false"
           class:invalid={linkError}
         />
         <button class="pill" type="submit" disabled={!link.trim() || choosing !== null}>Usar</button>
       </form>
-      {#if linkError}<p class="link-error">Ese enlace no parece de un vídeo de YouTube.</p>{/if}
+      {#if linkError}<p class="link-error" id="source-link-error" role="alert">Ese enlace no parece de un vídeo de YouTube.</p>{/if}
     </div>
   {/if}
 </dialog>

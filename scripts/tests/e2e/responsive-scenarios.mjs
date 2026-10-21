@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 export const responsiveScenarioInventory = [
   { id: 'responsive.resize', actions: ['portrait to desktop layout', 'short landscape viewport', 'restore portrait', 'query and navigation survive', 'no horizontal overflow'] },
   { id: 'responsive.resume', actions: ['resize and page visibility lifecycle', 'reload on search', 'four navigation destinations remain accessible'] },
+  { id: 'responsive.keyboard-navigation', actions: ['named navigation landmark', 'Tab and Enter activate music/podcast search', 'search focus', 'Escape clears search', 'one current destination'] },
+  { id: 'responsive.source-dialog-accessibility', actions: ['named source input', 'Enter submits invalid link', 'associated live error', 'editing clears invalid state', 'Escape closes native dialog'] },
 ]
 
 export async function runResponsiveScenarios(ctx) {
@@ -66,6 +68,52 @@ export async function runResponsiveScenarios(ctx) {
         assert.ok(state.dock.bottom <= state.height + 1)
       }
       return { syntheticLifecycleSignals: true, realReload: true, physicalProcessRestoreClaimed: false }
+    })
+    await check('responsive.keyboard-navigation: Tab and Enter reach named searches with a current destination', async () => {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await ctx.tab('Inicio')
+      const navigation = page.getByRole('navigation', { name: 'Navegación principal', exact: true })
+      const home = navigation.getByRole('button', { name: 'Inicio', exact: true })
+      assert.equal(await home.getAttribute('aria-current'), 'page')
+      // Establish the start of this keyboard traversal; subsequent actions use real key events.
+      await home.focus()
+      await page.keyboard.press('Tab')
+      assert.equal(await navigation.getByRole('button', { name: 'Buscar', exact: true }).evaluate(node => node === document.activeElement), true)
+      await page.keyboard.press('Enter')
+      await page.waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Buscar música')
+      await page.keyboard.type(query)
+      await page.locator('ol.tracks > li[data-reorder-index]').first().waitFor()
+      await page.keyboard.press('Escape')
+      assert.equal(await page.getByRole('textbox', { name: 'Buscar música', exact: true }).inputValue(), '')
+      assert.equal(await navigation.getByRole('button', { name: 'Buscar', exact: true }).getAttribute('aria-current'), 'page')
+      assert.equal(await navigation.locator('[aria-current="page"]').count(), 1)
+      await home.focus()
+      await page.keyboard.press('Tab'); await page.keyboard.press('Tab'); await page.keyboard.press('Enter')
+      assert.equal(await navigation.getByRole('button', { name: 'Podcasts', exact: true }).getAttribute('aria-current'), 'page')
+      await page.getByRole('textbox', { name: 'Buscar podcasts', exact: true }).waitFor()
+      return { keyboardActions: ['Tab', 'Enter', 'typing', 'Escape'], currentDestination: 'Podcasts', screenReaderDeviceClaimed: false }
+    })
+    await check('responsive.source-dialog-accessibility: keyboard validation exposes and clears its associated error', async () => {
+      await ctx.fillSearch('Buscar', query)
+      await page.locator('ol.tracks > li[data-reorder-index="0"]').waitFor()
+      await ctx.tap('ol.tracks > li[data-reorder-index="0"] button.more')
+      await ctx.clickText('[role="menuitem"]', '¿No es esta canción?')
+      const dialog = page.getByRole('dialog', { name: 'Elegir otro vídeo', exact: true })
+      const input = dialog.getByRole('textbox', { name: 'Enlace o ID del vídeo de YouTube', exact: true })
+      await dialog.locator('button.alt').first().waitFor()
+      await input.fill('enlace no válido'); await input.press('Enter')
+      const error = dialog.getByRole('alert')
+      await error.waitFor()
+      assert.equal(await input.getAttribute('aria-invalid'), 'true')
+      assert.equal(await input.getAttribute('aria-describedby'), await error.getAttribute('id'))
+      assert.match(await error.textContent(), /no parece/)
+      await input.press('Control+a'); await input.press('Backspace')
+      assert.equal(await input.getAttribute('aria-invalid'), 'false')
+      assert.equal(await input.getAttribute('aria-describedby'), null)
+      await error.waitFor({ state: 'detached' })
+      await page.keyboard.press('Escape')
+      await dialog.waitFor({ state: 'hidden' })
+      return { nativeDialogClosedByEscape: true, labelledInputAndError: true, screenReaderDeviceClaimed: false }
     })
   } finally {
     await page.setViewportSize(original)

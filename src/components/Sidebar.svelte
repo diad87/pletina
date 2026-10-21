@@ -58,14 +58,14 @@
         {/if}
       {/if}
     </div>
-    <nav>
-      <button class:active={route.name === 'home'} onclick={() => nav.go({ name: 'home' })}>
+    <nav aria-label="Navegación principal">
+      <button class:active={route.name === 'home'} aria-current={route.name === 'home' ? 'page' : undefined} onclick={() => nav.go({ name: 'home' })}>
         <Icon name="home" size={24} /> Inicio
       </button>
-      <button class:active={route.name === 'search'} onclick={openSearch}>
+      <button class:active={route.name === 'search'} aria-current={route.name === 'search' ? 'page' : undefined} onclick={openSearch}>
         <Icon name="search" size={24} /> Buscar
       </button>
-      <button class:active={route.name === 'podcasts' || route.name === 'podcast'} onclick={() => nav.go({ name: 'podcasts', query: '' })}>
+      <button class:active={route.name === 'podcasts' || route.name === 'podcast'} aria-current={route.name === 'podcasts' || route.name === 'podcast' ? 'page' : undefined} onclick={() => nav.go({ name: 'podcasts', query: '' })}>
         <Icon name="podcast" size={24} /> Podcasts
       </button>
     </nav>

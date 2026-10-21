@@ -29,9 +29,9 @@
   }
 </script>
 
-<nav class="bottom-nav" style:--tabs={TABS.length}>
+<nav class="bottom-nav" aria-label="Navegación principal" style:--tabs={TABS.length}>
   {#each TABS as t (t.tab)}
-    <button class:active={active === t.tab} onclick={() => open(t)}>
+    <button class:active={active === t.tab} aria-current={active === t.tab ? 'page' : undefined} onclick={() => open(t)}>
       <Icon name={t.icon} size={24} />
       <span>{t.label}</span>
     </button>

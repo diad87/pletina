@@ -7,12 +7,15 @@ export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
   'now-playing-synthetic-touch-swipe-threshold-and-interactive-origin',
   'home-surprise-album-starts-saved-album-in-track-order', 'artist-radio-builds-bounded-mixed-queue-and-plays',
+  'artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning',
+  'source-change-during-playback-keeps-song-and-one-audio-through-resume',
   'context-play-next-prepends-dj-priority-without-interrupting-current',
   'dj-duplicates-reorder-play-remove-clear', 'shuffle-preserves-current-and-queue-membership', 'repeat-one-real-ended',
   'repeat-all-wraps-after-final-entry', 'automatic-next-real-ended-same-audio', 'sleep-at-end-does-not-start-prepared-successor',
   'sleep-custom-validation-and-one-minute-deadline', 'pause-during-delayed-resolution-prevents-late-autoplay',
   'rapid-song-selection-ignores-obsolete-player-response', 'provider-errors-stop-boundedly-and-explicit-retry-recovers',
   'reload-restores-current-dj-position-and-paused-intent', 'downloads-serial-duplicate-suppression-and-cancel-pending',
+  'download-remove-all-cancel-preserves-files-and-reload-ui',
   'download-offline-reload-play-seek-from-local-service-worker', 'download-removal-clears-pointer-body-and-ui',
   'download-quotaFailure-rollback-and-no-false-done', 'download-storageFailure-rollback-and-no-false-done',
   'download-failMedia-rollback-and-no-false-done', 'download-retry-after-provider-failure-succeeds',
@@ -310,6 +313,92 @@ export async function runMediaScenarios(ctx) {
     const value = await playing(saved.queue[1].track.title); await closeOverlays(); await pause()
     return { context, trackIds: ids, artistIds: artists, audio: value }
   })
+  await run('artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning', async () => {
+    await fixture.reset(); await music(); await tap('.top-result')
+    await page.locator('.banner h1').waitFor()
+    const seed = fixture.artists[0], path = '/artist/' + seed.id + '/related', mark = fixture.requests.length
+    fixture.failNext(path)
+    try {
+      await tap('button.radio')
+      await wait(() => document.querySelector('#artist-radio-status')?.textContent.includes('Algunos artistas no se han podido cargar') &&
+        document.querySelector('button.radio')?.getAttribute('aria-busy') === 'false')
+      assert.ok(fixture.requests.slice(mark).some(request => request.host === 'api.deezer.com' && request.path === path), 'The failed related-artist request must reach the HTTP fixture')
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
+      const expected = fixture.tracks.filter(track => track.artist.id === seed.id).map(track => track.id)
+      assert.equal(saved.context, 'Radio de ' + seed.name)
+      assert.deepEqual(saved.queue.map(item => item.track.id).sort((a, b) => a - b), expected.sort((a, b) => a - b))
+      assert.equal(new Set(saved.queue.map(item => item.track.id)).size, expected.length)
+      assert.ok(saved.queue.every(item => item.track.artist.id === seed.id))
+      assert.equal(await page.locator('#artist-radio-status.error').count(), 0, 'A usable partial radio must remain available')
+      const value = await playing(saved.queue[0].track.title); await pause()
+      return { failedPath: path, seedTrackIds: expected, warningVisible: true, audio: value, cancellationClaimed: false }
+    } finally { await fixture.reset() }
+  })
+  await run('source-change-during-playback-keeps-song-and-one-audio-through-resume', async () => {
+    const { titles, state: before } = await start(0), index = active(before).index
+    const oldVideoId = await page.evaluate(index => new URL(window.__qaAudio.instances[index].currentSrc).pathname.split('/').at(-1), index)
+    assert.match(oldVideoId, /^[\w-]{11}$/)
+    const chosen = media.tracks.find(track => track.videoId !== oldVideoId)
+    assert.ok(chosen, 'The replacement must differ from the currently decoded fixture video')
+    const dialog = page.locator('dialog[aria-label="Elegir otro vídeo"]')
+    try {
+      await nowPlaying(); await tap('.np .extras button:has-text("¿No es esta canción?")')
+      await dialog.locator('button.alt').first().waitFor()
+      await dialog.locator('form input').fill(chosen.videoId)
+      await tap(dialog.locator('form button'))
+      await dialog.waitFor({ state: 'hidden' })
+      await wait(({ index, videoId }) => {
+        const audio = window.__qaAudio.instances[index]
+        return !audio.paused && !audio.error && audio.currentTime > .15 &&
+          new URL(audio.currentSrc || audio.src).pathname === '/audio/' + videoId
+      }, { index, videoId: chosen.videoId })
+      let value = await playing(titles[0])
+      assert.equal(value.audios.length, before.audios.length); assert.equal(active(value).index, index)
+      await page.evaluate(index => {
+        const qa = window.__qaAudio, audio = qa.instances[index]
+        qa.sourceObservations = []
+        const observe = event => {
+          if (audio.paused) return
+          let videoId = null
+          try {
+            const source = new URL(audio.currentSrc || audio.src)
+            if (source.hostname === 'fixture.googlevideo.com') videoId = source.pathname.match(/^\/audio\/([\w-]{11})$/)?.[1] ?? null
+          } catch { /* An empty source is recorded as invalid rather than throwing from the observer. */ }
+          qa.sourceObservations.push({ type: event.type, index, time: audio.currentTime,
+            videoId,
+            activeCount: qa.instances.filter(item => !item.paused).length })
+          if (qa.sourceObservations.length > 100) qa.sourceObservations.shift()
+        }
+        for (const type of ['playing', 'timeupdate']) audio.addEventListener(type, observe)
+        qa.stopSourceObservation = () => { for (const type of ['playing', 'timeupdate']) audio.removeEventListener(type, observe) }
+      }, index)
+      await closeOverlays(); await pause(); await tap('.mini button[aria-label="Reproducir"]')
+      value = await playing(titles[0])
+      const at = active(value).time
+      await wait(({ index, at }) => !window.__qaAudio.instances[index].paused && window.__qaAudio.instances[index].currentTime > at + .3, { index, at })
+      await nowPlaying(); await tap('.np .extras button:has-text("¿No es esta canción?")')
+      await dialog.locator('button.alt.current img').waitFor()
+      const remembered = await dialog.locator('button.alt.current img').getAttribute('src')
+      assert.equal(new URL(remembered).pathname, '/vi/' + chosen.videoId + '/mqdefault.jpg')
+      await tap(dialog.locator('button[title="Cerrar (Esc)"]'))
+      const observations = await page.evaluate(() => window.__qaAudio.sourceObservations)
+      assert.ok(observations.some(sample => sample.type === 'timeupdate'), 'The new source must advance after a trusted pause/resume')
+      assert.ok(observations.every(sample => sample.videoId === chosen.videoId && sample.activeCount === 1), 'The old source cannot return or overlap the selected source')
+      value = await state()
+      assert.equal(value.title, titles[0]); assert.equal(value.audios.length, before.audios.length)
+      assert.equal(value.audios.filter(audio => audio.playing).length, 1); assert.equal(active(value).index, index)
+      await closeOverlays(); await pause()
+      return { title: titles[0], previousVideoId: oldVideoId, selectedVideoId: chosen.videoId, observations, audio: value,
+        scope: 'Synthetic AAC sources; verifies source identity, decoder continuity and UI, not recording content' }
+    } finally {
+      await page.evaluate(() => {
+        const qa = window.__qaAudio
+        qa?.stopSourceObservation?.()
+        if (qa) { delete qa.stopSourceObservation; delete qa.sourceObservations }
+      }).catch(() => {})
+      if (await dialog.isVisible().catch(() => false)) await tap(dialog.locator('button[title="Cerrar (Esc)"]')).catch(() => {})
+    }
+  })
   await run('context-play-next-prepends-dj-priority-without-interrupting-current', async () => {
     const { titles } = await start(0)
     await menu(1, 'Añadir a la cola'); await menu(2, 'Reproducir a continuación')
@@ -436,6 +525,25 @@ export async function runMediaScenarios(ctx) {
     assert.equal(await page.locator('[role="menuitem"]:text-is("Descargar")').count(), 0)
     await page.keyboard.press('Escape')
     return { database: value, progress: 'Opaque bodies report queued/downloading/done; byte percentages are not invented.' }
+  })
+  await run('download-remove-all-cancel-preserves-files-and-reload-ui', async () => {
+    if (!downloaded) return { status: 'blocked', reason: 'No validated downloaded file is available from the preceding queue scenario.' }
+    await downloadsView()
+    const before = await downloadState(), titles = await page.locator('.tracks li[data-reorder-index] .name').allTextContents()
+    assert.ok(before.rows.length > 0 && before.rows.every(file => file.present))
+    await tap('.summary button:has-text("Quitar todas")')
+    await page.locator('.confirm button.danger').waitFor()
+    assert.deepEqual(await downloadState(), before, 'Opening the confirmation cannot remove database entries or cache bodies')
+    await clickText('.confirm button', 'Cancelar')
+    await page.locator('.confirm').waitFor({ state: 'hidden' })
+    assert.deepEqual(await downloadState(), before)
+    await reload(); await page.locator('h1.page-title:text-is("Descargas")').waitFor()
+    const after = await downloadState()
+    assert.deepEqual(after, before, 'Cancellation must survive reload without deleting downloaded audio')
+    assert.deepEqual(await page.locator('.tracks li[data-reorder-index] .name').allTextContents(), titles)
+    assert.equal(await page.locator('.confirm').count(), 0)
+    assert.equal(await visible('.summary button:has-text("Quitar todas")'), true)
+    return { databaseBefore: before, databaseAfterReload: after, titles, confirmationCancelled: true }
   })
   await run('download-offline-reload-play-seek-from-local-service-worker', async () => {
     if (!downloaded) return { status: 'blocked', reason: 'No validated downloaded file is available from the preceding queue scenario.' }

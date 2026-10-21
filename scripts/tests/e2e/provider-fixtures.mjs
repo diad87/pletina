@@ -68,10 +68,84 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   const castAudio = await readFile(new URL('./fixtures/silence-90s.m4a', import.meta.url))
   const flags = {}, failures = [], requests = [], counts = {}
   const pending = new Set()
-  const release = () => { for (const resolve of pending) resolve(); pending.clear() }
+  const catalogGates = new Set()
+  const releaseDownloads = () => { for (const resolve of pending) resolve(); pending.clear() }
+  const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release() }
+  // A single real JSONP response can remain in flight while the user cancels or
+  // leaves import. No application promise, parser or storage module is replaced.
+  function holdNextCatalogSearch() {
+    let reached, delivered, resume, claimed = false, released = false
+    const entered = new Promise(resolve => { reached = resolve })
+    const completed = new Promise(resolve => { delivered = resolve })
+    const blocked = new Promise(resolve => { resume = resolve })
+    const bounded = async (promise, description, timeout = 15000) => {
+      let timer
+      try {
+        return await Promise.race([promise, new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error(description)), timeout)
+        })])
+      } finally { clearTimeout(timer) }
+    }
+    const gate = {
+      get claimed() { return claimed },
+      claim(row) { claimed = true; row.catalogGate = 'held'; reached(row); return blocked },
+      release() { released = true; resume(); catalogGates.delete(gate) },
+      delivered(row) { row.catalogGate = 'delivered'; delivered(row) },
+      waitForRequest: () => bounded(entered, 'The CSV import did not issue the catalog request held by its fixture.'),
+      waitForDelivery: () => bounded(completed, 'The released catalog response was not delivered.'),
+      get released() { return released },
+    }
+    catalogGates.add(gate)
+    return gate
+  }
+  async function abortNextLibraryWrite(store) {
+    if (!['likes', 'playlists', 'entries'].includes(store)) throw new Error('Unsupported library fault store.')
+    const page = context.pages().find(page => page.url().includes('/application/'))
+    if (!page) throw new Error('A compiled application page is required for the library transaction fault.')
+    await page.evaluate(store => {
+      if (window.__e2eLibraryAbort) throw new Error('A library transaction fault is already armed.')
+      const prototype = IDBObjectStore.prototype
+      const fault = window.__e2eLibraryAbort = { store, attempts: 0, successfulNativeWrites: 0, transactionAborts: 0,
+        originals: {}, wrappers: {} }
+      for (const method of ['put', 'add']) {
+        const original = fault.originals[method] = prototype[method]
+        prototype[method] = fault.wrappers[method] = function(...args) {
+          const request = Reflect.apply(original, this, args)
+          if (this.transaction.db.name === 'pletina-web-library' && this.name === store && fault.attempts === 0) {
+            fault.attempts++
+            const transaction = this.transaction
+            // First allow the native write, then abort its real transaction.
+            // This exercises rollback; it does not fabricate a quota error.
+            request.addEventListener('success', () => {
+              fault.successfulNativeWrites++
+              transaction.addEventListener('abort', () => { fault.transactionAborts++ }, { once: true })
+              transaction.abort()
+            }, { once: true })
+          }
+          return request
+        }
+      }
+    }, store)
+    return {
+      snapshot: () => page.evaluate(() => {
+        const fault = window.__e2eLibraryAbort
+        if (!fault) throw new Error('The library transaction fault is no longer installed.')
+        return { database: 'pletina-web-library', store: fault.store, attempts: fault.attempts,
+          successfulNativeWrites: fault.successfulNativeWrites, transactionAborts: fault.transactionAborts }
+      }),
+      restore: () => page.evaluate(() => {
+        const fault = window.__e2eLibraryAbort
+        if (!fault) return
+        for (const method of ['put', 'add']) {
+          if (IDBObjectStore.prototype[method] === fault.wrappers[method]) IDBObjectStore.prototype[method] = fault.originals[method]
+        }
+        delete window.__e2eLibraryAbort
+      }),
+    }
+  }
   async function set(values) {
     Object.assign(flags, values)
-    if (values.holdDownload === false) release()
+    if (values.holdDownload === false) releaseDownloads()
     if (Object.hasOwn(values, 'quotaFailure') || Object.hasOwn(values, 'storageFailure')) for (const page of context.pages()) {
       const capabilities = await page.evaluate(values => {
         if (typeof navigator.storage?.estimate === 'function') {
@@ -91,7 +165,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
   }
   function failNext(path, count = 1) { failures.push({ path, remaining: count }) }
-  async function reset() { await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0) }
+  async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0) }
   const handler = async route => {
     const request = route.request(), url = new URL(request.url())
     if (baseURL && url.origin === new URL(baseURL).origin) return route.continue()
@@ -108,6 +182,9 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS',
       'access-control-allow-headers': '*', 'cache-control': 'no-store' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' })
+    const catalogGate = url.hostname === 'api.deezer.com' && url.pathname === '/search/track'
+      ? [...catalogGates].find(gate => !gate.claimed) : null
+    if (catalogGate) await catalogGate.claim(row)
     const failed = failures.find(failure => failure.remaining > 0 && (url.pathname.includes(failure.path) || request.url().includes(failure.path)))
     if (failed) {
       failed.remaining--
@@ -116,8 +193,11 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.abort('failed')
     }
     const json = value => route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify(value) })
-    const jsonp = value => route.fulfill({ status: 200, headers, contentType: 'text/javascript',
-      body: (url.searchParams.get('callback') || '__pletinaPodcasts') + '(' + JSON.stringify(value) + ');' })
+    const jsonp = async value => {
+      await route.fulfill({ status: 200, headers, contentType: 'text/javascript',
+        body: (url.searchParams.get('callback') || '__pletinaPodcasts') + '(' + JSON.stringify(value) + ');' })
+      catalogGate?.delivered(row)
+    }
     if (url.hostname === 'api.deezer.com') {
       const q = url.searchParams.get('q') || ''
       if (url.pathname === '/chart/0/albums' || url.pathname === '/search/album') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : albums })
@@ -201,6 +281,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     if (routingActive && context.unroute) { await context.unroute('**/*', handler); routingActive = false }
   }
   await resumeRoutes()
-  return { data: { artists, albums, tracks }, artists, albums, tracks, media, requests, counts, flags, set, reset, failNext, release, suspendRoutes, resumeRoutes,
+  return { data: { artists, albums, tracks }, artists, albums, tracks, media, requests, counts, flags, set, reset, failNext,
+    holdNextCatalogSearch, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
     source: 'Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.' }
 }

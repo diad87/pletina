@@ -8,7 +8,7 @@ export const libraryScenarioInventory = [
   { id: 'library.search', actions: ['songs/artists/albums', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
   { id: 'library.favorites', actions: ['save/remove artist', 'save/remove album', 'like/filter/unlike song'] },
   { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
-  { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'all omitted', 'empty name', 'review matches/omissions', 'save duplicate entries', 'reload'] },
+  { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'cancel pending catalog response', 'navigate away during pending match', 'ignore obsolete matches without saving', 'all omitted', 'empty name', 'review matches/omissions', 'transaction abort rollback and retry', 'save duplicate entries', 'reload'] },
   { id: 'library.spotify', actions: ['unsupported public URL has a visible explanation'] },
   { id: 'library.youtube', actions: ['reject invalid link', 'preview/change link', 'edit/validate metadata', 'save/update without duplicate', 'remove saved link'] },
   { id: 'library.source-picker', actions: ['choose listed candidate', 'invalid link', 'manual choice', 'remember choice', 'native dialog close'] },
@@ -63,6 +63,26 @@ function ui(ctx) {
     await wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
   }
   return { settle, tap, text, wait, mobile, tab, library, fill, search, rows, titles, rowMenu, menu, addToPlaylist, rename }
+}
+
+// Inspect the real database without creating a schema or changing product data.
+// The report contains only the unchanged assertion and row counts, never rows.
+async function readLibraryState(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const opening = indexedDB.open('pletina-web-library')
+    opening.onupgradeneeded = () => opening.transaction.abort()
+    opening.onerror = () => reject(opening.error)
+    opening.onsuccess = () => {
+      const db = opening.result, stores = ['tracks', 'playlists', 'entries', 'meta'], rows = {}
+      const tx = db.transaction(stores, 'readonly')
+      tx.oncomplete = () => { db.close(); resolve(rows) }
+      tx.onabort = () => { db.close(); reject(tx.error || new Error('Library inspection aborted.')) }
+      for (const store of stores) {
+        const request = tx.objectStore(store).getAll()
+        request.onsuccess = () => { rows[store] = request.result }
+      }
+    }
+  }))
 }
 
 export async function runLibraryScenarios(ctx) {
@@ -404,6 +424,124 @@ export async function runLibraryScenarios(ctx) {
     assert.equal(await page.locator('[role="alert"]').count(), 0)
     return { oversizedFileRejected: true, allOmittedCannotSave: true, blankNameCannotSave: true,
       importAnotherReset: true, cancelledPausedImport: true, createdPlaylist: false }
+  })
+
+  await check('library.csv-in-flight: cancel ignores the old response while a new import reaches review', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    await u.wait(() => !document.querySelector('iframe[hidden][aria-hidden="true"]'))
+    const before = await readLibraryState(page)
+    const searches = () => fixture.requests.filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length
+    const requestCount = searches()
+    const csv = values => ['Track Name,Artist Name(s)', ...values.map(track =>
+      `"${track.title.replaceAll('"', '""')}","${trackArtist.replaceAll('"', '""')}"`)].join('\n')
+    const upload = (name, values) => page.locator('#playlist-csv').setInputFiles({ name, mimeType: 'text/csv', buffer: Buffer.from(csv(values)) })
+    const gate = fixture.holdNextCatalogSearch()
+    try {
+      await upload('E2E CSV Obsoleta.csv', [first, second, third])
+      await u.text('details.csv button', 'Buscar canciones del CSV')
+      await gate.waitForRequest()
+      assert.match(await page.locator('.progress-label').textContent(), /0 de 3/)
+      await u.text('.actions button', 'Cancelar')
+      await page.locator('#playlist-csv').waitFor()
+      assert.equal(await page.locator('#playlist-csv').evaluate(input => input.files.length), 0)
+      await upload('E2E CSV Nueva.csv', [second])
+      await u.text('details.csv button', 'Buscar canciones del CSV')
+      await page.locator('#playlist-name').waitFor()
+      assert.equal(await page.locator('#playlist-name').inputValue(), 'E2E CSV Nueva')
+      assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['1', '0'])
+      gate.release(); await gate.waitForDelivery()
+      await u.wait(() => !document.querySelector('iframe[hidden][aria-hidden="true"]'))
+      await u.settle()
+      assert.equal(await page.locator('#playlist-name').inputValue(), 'E2E CSV Nueva')
+      assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['1', '0'])
+      assert.equal(await page.locator('[role="alert"]').count(), 0)
+      assert.equal(searches() - requestCount, 2, 'The cancelled three-track import must not request its remaining tracks')
+      assert.deepEqual(await readLibraryState(page), before, 'Neither import may write library rows before the user saves')
+      await u.text('.actions button', 'Importar otra lista')
+      await page.reload({ waitUntil: 'load' }); await page.locator('#playlist-csv').waitFor()
+      assert.deepEqual(await readLibraryState(page), before, 'Cancellation must remain free of persisted changes after reload')
+      return { heldCatalogResponseConsumed: true, oldImportCancelled: true, newReviewPreserved: true,
+        matchingRequests: 2, remainingOldTracksRequested: false, persistedLibraryUnchanged: true, reloadUnchanged: true }
+    } finally { gate.release() }
+  })
+
+  await check('library.csv-in-flight: leaving the view prevents late matching, saving or navigation', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    await u.wait(() => !document.querySelector('iframe[hidden][aria-hidden="true"]'))
+    const before = await readLibraryState(page)
+    const searches = () => fixture.requests.filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length
+    const requestCount = searches(), gate = fixture.holdNextCatalogSearch()
+    try {
+      const csv = ['Track Name,Artist Name(s)', ...[first, second, third].map(track =>
+        `"${track.title.replaceAll('"', '""')}","${trackArtist.replaceAll('"', '""')}"`)].join('\n')
+      await page.locator('#playlist-csv').setInputFiles({ name: 'E2E CSV Abandonada.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+      await u.text('details.csv button', 'Buscar canciones del CSV')
+      await gate.waitForRequest()
+      assert.match(await page.locator('.progress-label').textContent(), /0 de 3/)
+      await u.tab('Inicio')
+      await page.locator('.greeting').waitFor()
+      const destination = await page.evaluate(() => ({ url: location.href, index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] }))
+      gate.release(); await gate.waitForDelivery()
+      await u.wait(() => !document.querySelector('iframe[hidden][aria-hidden="true"]'))
+      await u.settle()
+      assert.deepEqual(await page.evaluate(() => ({ url: location.href, index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] })), destination)
+      assert.equal(await page.locator('.greeting').count(), 1)
+      assert.equal(await page.locator('.import-page, #playlist-name').count(), 0)
+      assert.equal(searches() - requestCount, 1, 'The disposed import must stop before matching another row')
+      assert.deepEqual(await readLibraryState(page), before, 'Leaving an unsaved import must not write library rows')
+      await u.tab('Tu biblioteca'); await u.tap('button.import')
+      await page.locator('#playlist-csv').waitFor()
+      assert.equal(await page.locator('#playlist-csv').evaluate(input => input.files.length), 0)
+      assert.equal(await page.locator('#playlist-name, .result, [role="alert"]').count(), 0)
+      await page.reload({ waitUntil: 'load' }); await page.locator('#playlist-csv').waitFor()
+      assert.deepEqual(await readLibraryState(page), before)
+      return { heldCatalogResponseConsumed: true, navigationPreserved: true, destination: 'home',
+        matchingRequests: 1, remainingOldTracksRequested: false, reopenedImportEmpty: true,
+        persistedLibraryUnchanged: true, reloadUnchanged: true }
+    } finally { gate.release() }
+  })
+
+  await check('library.csv-storage: a real transaction abort rolls back partial save and permits retry', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    const name = 'E2E CSV Reintento IDB'
+    const csv = ['Track Name,Artist Name(s)', ...[first, second].map(track =>
+      `"${track.title.replaceAll('"', '""')}","${trackArtist.replaceAll('"', '""')}"`)].join('\n')
+    await page.locator('#playlist-csv').setInputFiles({ name: name + '.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+    await u.text('details.csv button', 'Buscar canciones del CSV')
+    await page.locator('#playlist-name').waitFor()
+    assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['2', '0'])
+    const before = await readLibraryState(page)
+    const routeBefore = await page.evaluate(() => ({ index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] }))
+    const searchesBeforeSave = fixture.requests.filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length
+    const fault = await fixture.abortNextLibraryWrite('entries')
+    let observed
+    try {
+      await u.text('.actions button', 'Guardar playlist')
+      await page.locator('.import-page [role="alert"]').waitFor()
+      assert.match(await page.locator('.import-page [role="alert"]').textContent(), /No se pudo guardar la playlist/)
+      observed = await fault.snapshot()
+      assert.deepEqual(observed, { database: 'pletina-web-library', store: 'entries', attempts: 1,
+        successfulNativeWrites: 1, transactionAborts: 1 })
+      assert.deepEqual(await readLibraryState(page), before, 'An aborted first entry must roll back playlist, metadata and sequence writes together')
+      assert.deepEqual(await page.evaluate(() => ({ index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] })), routeBefore)
+      assert.equal(await page.locator('#playlist-name').inputValue(), name)
+      assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['2', '0'])
+      assert.equal(await page.getByRole('button', { name: 'Guardar playlist', exact: true }).isEnabled(), true)
+    } finally { await fault.restore() }
+    await u.text('.actions button', 'Guardar playlist')
+    await u.wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
+    assert.deepEqual((await u.titles()).map(title => title.trim()), [first.title, second.title])
+    assert.equal(fixture.requests.filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length, searchesBeforeSave,
+      'Retrying persistence must reuse the reviewed matches without another catalog lookup')
+    await page.reload({ waitUntil: 'load' })
+    await u.wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
+    assert.deepEqual((await u.titles()).map(title => title.trim()), [first.title, second.title])
+    await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+    await u.text('.confirm button', 'Eliminar'); await page.locator('.greeting').waitFor()
+    await u.tab('Tu biblioteca')
+    assert.ok(!(await page.locator('.items .title').allTextContents()).includes(name))
+    return { fault: observed, realTransactionRollback: true, noLateNavigationOnFailure: true,
+      reviewPreserved: true, retrySavedReviewedTracks: true, retryPersistedAcrossReload: true, temporaryPlaylistDeleted: true }
   })
 
   await check('library.source-picker: candidates, invalid link, manual choice and remembered source', async () => {
