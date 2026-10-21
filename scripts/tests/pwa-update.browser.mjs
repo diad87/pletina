@@ -561,24 +561,34 @@ try {
     await cp(resolve(prototype), old, { recursive: true })
     const worker = await readFile(join(old, 'sw.js'), 'utf8')
     report.prototypeVersion = worker.match(/const VERSION = "([a-f0-9]{16})"/)?.[1] ?? null
+    const previousOptional = JSON.parse(worker.match(/const OPTIONAL = (\[[^\n]+\])/)?.[1] ?? '[]').map(file => file.url)
+    const previousFull = previousOptional.some(path => path.startsWith('application/'))
     const oldManifest = JSON.parse(await readFile(join(old, 'manifest.webmanifest'), 'utf8'))
     assert.deepEqual({ id: oldManifest.id, scope: oldManifest.scope, start_url: oldManifest.start_url }, report.manifestIdentity)
     servers.set('prototype', createPwaServer({ directory: old }))
     live = 'prototype'
     const migrationContext = await context()
     page = await newPage(migrationContext)
-    await check('existing prototype migrates to full app through the same scope and manifest identity', async () => {
+    await check(previousFull ? 'existing cold full distribution migrates through explicit legacy update and the same scope'
+      : 'existing prototype migrates to full app through the same scope and manifest identity', async () => {
       await page.goto(url, { waitUntil: 'load' })
       await installed()
-      await page.locator('#open-player').click()
-      await page.waitForFunction(() => !document.querySelector('#player-screen').hidden)
+      if (!previousFull) {
+        await page.locator('#open-player').click()
+        await page.waitForFunction(() => !document.querySelector('#player-screen').hidden)
+      }
       await page.evaluate(async () => {
         localStorage.setItem('qa:migration-sentinel', 'kept')
         await (await caches.open('qa:unrelated-cache')).put(new Request(new URL('qa-sentinel', location.href)), new Response('kept'))
       })
       const before = await snapshot()
-      assert.ok(before.cacheInfo.some((cache) => cache.paths.some((path) => path.includes('/player/'))))
-      await page.locator('#back-home').click()
+      if (previousFull) {
+        assert.equal(before.cacheInfo.flatMap(cache => cache.paths).filter(path => path.includes('/application/')).length, 0)
+        assert.equal(await page.evaluate(() => localStorage.getItem('pletina:web:opened')), null)
+      } else {
+        assert.ok(before.cacheInfo.some((cache) => cache.paths.some((path) => path.includes('/player/'))))
+        await page.locator('#back-home').click()
+      }
       live = 'A'
       await prepareWaiting()
       await page.locator('#apply-update').waitFor({ state: 'visible' })
@@ -595,8 +605,14 @@ try {
         sentinel: localStorage.getItem('qa:migration-sentinel'), unrelatedCache: (await caches.keys()).includes('qa:unrelated-cache'),
       }))
       assert.deepEqual(preserved, { sentinel: 'kept', unrelatedCache: true })
+      const retired = previousOptional.filter(path => !builds.A.optionalFiles.includes(path)).map(path => '/pletina/' + path)
+      assert.equal(requests.filter(request => request.phase === phase && retired.includes(request.path)).length, 0)
       return { prototypeVersion: report.prototypeVersion, newVersion: builds.A.version, scope: after.scope,
-        registrationCount: after.registrations, manifestIdentityUnchanged: true, legacyPlayerCacheRemoved: true,
+        previousDistributionKind: previousFull ? 'cold-full-application' : 'opened-player-prototype',
+        previousApplicationOpened: !previousFull, explicitLegacySecondaryUpdateButtonUsed: true,
+        newPrimaryOpenUsedAfterUpdate: true, legacyPrimaryAutoMigrationClaimed: false, retiredOptionalRequests: 0,
+        registrationCount: after.registrations, manifestIdentityUnchanged: true, oldVersionCacheRemoved: true,
+        ...(!previousFull ? { legacyPlayerCacheRemoved: true } : {}),
         localStoragePreserved: true, unrelatedCachePreserved: true, osShortcutMigrationVerified: false }
     })
     await migrationContext.close()
