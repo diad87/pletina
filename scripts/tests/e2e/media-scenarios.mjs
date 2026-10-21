@@ -314,15 +314,20 @@ export async function runMediaScenarios(ctx) {
     return { context, trackIds: ids, artistIds: artists, audio: value }
   })
   await run('artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning', async () => {
-    await fixture.reset(); await music(); await tap('.top-result')
+    // The preceding successful radio legitimately caches related artists for an hour.
+    // A real document reload gives this failure case a fresh API cache without mocking it.
+    await fixture.reset(); await reload(); await music(); await tap('.top-result')
     await page.locator('.banner h1').waitFor()
     const seed = fixture.artists[0], path = '/artist/' + seed.id + '/related', mark = fixture.requests.length
     fixture.failNext(path)
     try {
       await tap('button.radio')
+      const received = () => fixture.requests.slice(mark).some(request => request.host === 'api.deezer.com' && request.path === path)
+      const deadline = Date.now() + 5000
+      while (!received() && Date.now() < deadline) await page.waitForTimeout(25)
+      assert.ok(received(), 'The related-artist request must reach the HTTP fixture after a real cache-clearing reload')
       await wait(() => document.querySelector('#artist-radio-status')?.textContent.includes('Algunos artistas no se han podido cargar') &&
         document.querySelector('button.radio')?.getAttribute('aria-busy') === 'false')
-      assert.ok(fixture.requests.slice(mark).some(request => request.host === 'api.deezer.com' && request.path === path), 'The failed related-artist request must reach the HTTP fixture')
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
       const expected = fixture.tracks.filter(track => track.artist.id === seed.id).map(track => track.id)
       assert.equal(saved.context, 'Radio de ' + seed.name)
