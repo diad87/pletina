@@ -11,7 +11,7 @@ const guideSteps = document.querySelector('#guide-steps')
 const playerButton = document.querySelector('#open-player')
 const homeScreen = document.querySelector('#home-screen')
 const playerScreen = document.querySelector('#player-screen')
-const playerURL = new URL('./application/launcher.383f95ea3229cd32.js', location.href)
+const playerURL = new URL('./application/launcher.7aaf43104c065f63.js', location.href)
 const portable = location.protocol === 'file:' || document.documentElement.hasAttribute('data-portable')
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 const say = (message) => { status.textContent = message }
@@ -27,6 +27,8 @@ let reloading = false
 let controlled = !portable && Boolean(navigator.serviceWorker?.controller)
 let player
 let playerLoadFailed = false
+let opening = false
+let applying = false
 
 if (portable) {
   playerButton.hidden = true
@@ -36,13 +38,23 @@ if (portable) {
   if (version.textContent.includes('__BUILD_VERSION__')) version.textContent = 'local'
 }
 
-playerButton.addEventListener('click', async () => {
-  if (playerLoadFailed) { location.reload(); return }
-  playerButton.disabled = true
+async function openPletina(updateOnly = false, allowUpdate = true) {
+  if (opening || applying) return
+  opening = true
+  playerButton.disabled = applyButton.disabled = true
   try {
-    if (!player) {
+    if (!player || updateOnly) {
       say('Preparando Pletina…')
       await waitForController()
+      registration ||= await navigator.serviceWorker.getRegistration()
+      if (allowUpdate) {
+        await waitForInstalling()
+        // Una entrada mínima antigua puede no tener su launcher guardado. Si ya
+        // hay una actualización, preparamos esa versión antes de retirar la actual.
+        if (await applyAndOpen()) return
+      }
+      if (updateOnly) { showState(); return }
+      if (playerLoadFailed) { location.reload(); return }
       const { mountPlayer } = await import(playerURL.href)
       player = await mountPlayer(document.querySelector('#player-host'))
     }
@@ -52,10 +64,63 @@ playerButton.addEventListener('click', async () => {
     document.querySelector('#back-home').focus()
   } catch {
     playerLoadFailed = true
-    playerButton.textContent = 'Recargar para reintentar'
-    say('No se pudo abrir Pletina. Comprueba la conexión y recarga para reintentar.')
-  } finally { playerButton.disabled = false }
-})
+    // La actualización puede haber terminado mientras fallaba el recurso antiguo.
+    // El siguiente clic debe ofrecer B, en lugar de recargar A indefinidamente.
+    try { await checkForUpdate(); await waitForInstalling() } catch { /* Conserva la versión activa. */ }
+    showState()
+    say(registration?.waiting
+      ? 'No se pudo abrir la versión anterior. Pulsa «Actualizar y abrir».'
+      : 'No se pudo abrir Pletina. Comprueba la conexión y recarga para reintentar.')
+  } finally {
+    opening = false
+    playerButton.disabled = applyButton.disabled = applying
+  }
+}
+playerButton.addEventListener('click', () => openPletina())
+
+async function waitForInstalling() {
+  const worker = registration?.installing
+  if (!worker) return
+  await new Promise((resolve, reject) => {
+    let timer
+    const cleanup = () => { clearTimeout(timer); worker.removeEventListener('statechange', inspect) }
+    const inspect = () => {
+      if (['installed', 'activated', 'redundant'].includes(worker.state)) { cleanup(); resolve() }
+    }
+    worker.addEventListener('statechange', inspect)
+    timer = setTimeout(() => { cleanup(); reject(new Error('No se pudo preparar la actualización.')) }, 30000)
+    inspect()
+  })
+  registration = await navigator.serviceWorker.getRegistration() || registration
+}
+
+async function applyAndOpen() {
+  const worker = registration?.waiting
+  if (!worker) return false
+  applying = true
+  say('Preparando la nueva versión…')
+  try {
+    await new Promise((resolve, reject) => {
+      const channel = new MessageChannel()
+      const finish = (error) => { clearTimeout(timer); channel.port1.close(); error ? reject(error) : resolve() }
+      const timer = setTimeout(() => finish(new Error('La descarga tardó demasiado.')), 120000)
+      channel.port1.onmessage = (event) => finish(event.data?.ok ? null : new Error('No se pudo completar la descarga.'))
+      try { worker.postMessage({ type: 'PREPARE_APPLICATION' }, [channel.port2]) }
+      catch (error) { channel.port2.close(); finish(error) }
+    })
+    // No activar otro worker que haya sustituido al que acabamos de verificar.
+    if (registration.waiting !== worker || worker.state !== 'installed') throw new Error('La actualización ha cambiado.')
+    const destination = new URL(location.href)
+    destination.searchParams.set('open', 'app')
+    history.replaceState(history.state, '', destination.href)
+    say('Abriendo la nueva versión…')
+    worker.postMessage({ type: 'ACTIVATE_UPDATE' })
+  } catch {
+    applying = false
+    say('No se pudo completar la actualización. Conservas tu versión. Reintenta con conexión.')
+  }
+  return true
+}
 
 function waitForController() {
   if (navigator.serviceWorker?.controller) return Promise.resolve()
@@ -150,7 +215,10 @@ window.addEventListener('appinstalled', () => {
 })
 
 function showState() {
+  if (applying) return
   applyButton.hidden = !registration?.waiting
+  if (!player) playerButton.textContent = registration?.waiting ? 'Actualizar y abrir'
+    : playerLoadFailed ? 'Recargar para reintentar' : 'Abrir Pletina'
   if (registration?.waiting) {
     say('Hay una nueva versión lista.')
   } else if (registration?.installing) {
@@ -192,12 +260,7 @@ async function checkForUpdate(manual = false) {
   }
 }
 checkButton.addEventListener('click', () => checkForUpdate(true))
-applyButton.addEventListener('click', () => {
-  if (!registration?.waiting) { applyButton.hidden = true; showState(); return }
-  applyButton.disabled = true
-  say('Abriendo la nueva versión…')
-  registration.waiting.postMessage({ type: 'ACTIVATE_UPDATE' })
-})
+applyButton.addEventListener('click', () => openPletina(true))
 
 if (!portable && 'serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -231,5 +294,6 @@ if (!portable && 'serviceWorker' in navigator && window.isSecureContext) {
 if (!portable) {
   let reopen = new URL(location.href).searchParams.get('open') === 'app'
   try { reopen ||= standalone() && localStorage.getItem('pletina:web:opened') === '1' } catch { /* Sin persistencia. */ }
-  if (reopen) playerButton.click()
+  // Reabrir la app guardada no equivale a consentir una actualización pendiente.
+  if (reopen) void openPletina(false, false)
 }
