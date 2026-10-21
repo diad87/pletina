@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-21T21:39:16.968Z",
+  "build": "fbb03046132d7478",
+  "sourceCommit": "6a586c114acb9f1aa58a018a52050bf9875ef1cd",
+  "runnerCommit": "3108698fe4e4fc50193064fdaebb87d112fcc684",
+  "nativeReference": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "changes": [
+    "Eight E2E cases for imports in flight, native transaction rollback, playback source changes, partial artist radio failure, cancelled downloads deletion and keyboard accessibility",
+    "Named navigation landmarks/current destinations and associated source validation errors without visual changes",
+    "Minimal installer prepares and verifies waiting application before activation; failed preparation keeps old version and permits retry",
+    "Automatic reopening keeps the cached app and does not consent to a waiting update"
+  ],
+  "unit": {
+    "pass": 355,
+    "fail": 0,
+    "skipped": 0,
+    "navigationIncluded": 33,
+    "report": "artifacts/pwa-e2e/unit-fbb03046132d7478.txt"
+  },
+  "staticAndBuildChecks": {
+    "svelteErrors": 0,
+    "svelteWarnings": 0,
+    "typescriptExitCode": 0,
+    "pwaBuildExitCode": 0,
+    "nativeFrontendBuildExitCode": 0,
+    "nativeFrontendScope": "Shared Svelte source build passed before installer-only changes; no later native source changes"
+  },
+  "browser": {
+    "counts": {
+      "pass": 193,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 5
+    },
+    "total": 198,
+    "missingChecks": 0,
+    "noBrowserFailuresOrBlocks": true,
+    "everyBrowserCasePassed": false,
+    "report": "artifacts/pwa-e2e/coverage-fbb03046132d7478.json",
+    "scope": "Rows are actual executed checks, including grouped actions. A failed grouped check does not prove later actions ran. Browser layout emulation, synthetic providers, virtual clocks and DOM gestures do not verify physical operating systems or cars."
+  },
+  "standalone": {
+    "counts": {
+      "pass": 32,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "report": "artifacts/pwa-e2e/back-root-library-fbb03046132d7478/summary.json",
+    "browserUIBack": {
+      "status": "blocked",
+      "scope": "Desktop browser keyboard accelerator control, separate from DOM History API traversal and physical Android Back."
+    },
+    "scope": "Desktop Chrome app mode and normal browser control; not physical Android Back"
+  },
+  "update": {
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-fbb03046132d7478.json",
+    "previousDistribution": "d0e466bf9a8d978a",
+    "scope": "Real service worker and IDB; cold legacy d0 requires its explicit secondary update button. A/B QA copies derive from current source. Seeded WAV validates persistence, not provider audio playback.",
+    "cleanup": {
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    }
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "9760e5621d5bea66f0e28bd2c6ece184a2799806",
+    "tree": "2996489cd306a9cbfeaa95e9ca965c957e31c8a9",
+    "source_hash": "15d54eadf98fd12373b4ac511954d83e1048871ea6258bffe09a420ea7f0ff87",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "fbb03046132d7478",
+    "status": "published-and-http-verified",
+    "publicFilesPassed": 22,
+    "publicFilesFailed": 0,
+    "report": "artifacts/pwa-deploy/public-files-fbb03046132d7478.json",
+    "liveSelectedSongPass": 3,
+    "liveSelectedSongFail": 0,
+    "liveReport": "artifacts/pwa-port/browser-public-fbb03046132d7478.json",
+    "liveScope": "Desktop Chrome with live providers and decoder progress; no physical speaker or phone verification"
+  },
+  "assets": {
+    "initialBytes": 41790,
+    "onDemandBytes": 469984
+  },
+  "preservedControls": {
+    "explanation": "Initial d0 full runs failed because the related-artist result was cached before the HTTP fault. Fixture isolation was corrected and final current-source all runs selected explicitly. The first cold negative exposed an async harness wait, the readywait negative reproduces removed legacy launcher, and the 384 negative proves undesired activation on automatic reopen. None are erased or counted as current passes.",
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/release-d0e466bf9a8d978a-win/summary.json",
+        "build": "d0e466bf9a8d978a",
+        "counts": {
+          "pass": 127,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 3
+        },
+        "passed": null,
+        "errors": []
+      },
+      {
+        "path": "artifacts/pwa-e2e/release-d0e466bf9a8d978a-linux/summary.json",
+        "build": "d0e466bf9a8d978a",
+        "counts": {
+          "pass": 63,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 2
+        },
+        "passed": null,
+        "errors": [
+          {
+            "profile": "webkit-iphone-layout",
+            "name": "Fetch API cannot load https",
+            "message": "/open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M due to access control checks.",
+            "observedAt": 1792616718114,
+            "duringCheck": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+            "handledExpected": true,
+            "scope": "library.csv.spotify-unsupported"
+          }
+        ]
+      },
+      {
+        "path": "artifacts/pwa-port/update-cold-negative-d0e466bf9a8d978a.json",
+        "build": "d0e466bf9a8d978a",
+        "counts": null,
+        "passed": false,
+        "errors": []
+      },
+      {
+        "path": "artifacts/pwa-port/update-cold-negative-readywait-d0e466bf9a8d978a.json",
+        "build": "d0e466bf9a8d978a",
+        "counts": null,
+        "passed": false,
+        "errors": []
+      },
+      {
+        "path": "artifacts/pwa-port/update-bootstrap-negative-autoopen-384c351ffd4fbd4e.json",
+        "build": "384c351ffd4fbd4e",
+        "counts": null,
+        "passed": false,
+        "errors": []
+      }
+    ]
+  },
+  "platformStatus": {
+    "androidPhysical": "Pending: new fbb Xiaomi 15T Pro Back test requested; no answer at recording time",
+    "iphonePhysical": "Pending: no physical iPhone available",
+    "androidAuto": "Not implemented in this PWA distribution",
+    "carPlay": "Not implemented in this PWA distribution",
+    "allRequestedPlatformsVerified": false,
+    "androidSystemBackVerified": false,
+    "iphonePhysicalVerified": false
+  },
+  "backendAdded": false
+}

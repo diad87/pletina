@@ -1,0 +1,172 @@
+{
+  "testedAt": "2026-10-21T21:18:14.980Z",
+  "browser": "153.0.8010.52",
+  "checks": [
+    {
+      "name": "cold installer A waits for B without ever requesting or caching the application",
+      "pass": false,
+      "error": "page.evaluate: TypeError: Failed to update a ServiceWorker for scope ('[URL]') with script ('Unknown'): Not found"
+    }
+  ],
+  "errors": [],
+  "messages": [],
+  "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+  "osShortcutInstallationVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "externalMusicNetworkUsed": false,
+  "productionDirectoriesMutated": false,
+  "updateTrigger": "registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.",
+  "playlistFixture": "Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.",
+  "audioFixture": "Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.",
+  "runKind": "cold-installer-update-only",
+  "sourceShellAppSha256": "35f8ebe61571e33c0dcd338d78f99ecfde1fb12fc101dd80e3526ca27ff8f3af",
+  "baseDistributionVersion": "d0e466bf9a8d978a",
+  "sourceCompiledHtmlSha256": "40c36740ef39418122121a7288f372aef727d0640678dda6d908108228b70af1",
+  "builds": {
+    "A": {
+      "version": "9a232c6ff8d5802d",
+      "applicationPage": "application/index.7cc1bce5621c8162.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-C3Q37fvp.js",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/index.7cc1bce5621c8162.html",
+        "application/launcher.ee9590aaee833532.js"
+      ]
+    },
+    "B": {
+      "version": "ccf5bcf3ae0de442",
+      "applicationPage": "application/index.e3d85c206f580a89.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-C3Q37fvp.js",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/index.e3d85c206f580a89.html",
+        "application/launcher.235073c8776e2f30.js"
+      ]
+    }
+  },
+  "sourceApplicationAssets": [
+    {
+      "url": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+    },
+    {
+      "url": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+    },
+    {
+      "url": "application/assets/index-C3Q37fvp.js",
+      "sha256": "1826e138af7f6e365d640748e1084e44310c0729ed4827bf916ad62ecb7d7535"
+    },
+    {
+      "url": "application/assets/index-Dhe7ruI3.css",
+      "sha256": "8aa749e9eff0f9bdd3db461c93e9dc98872bafee37a8e6bf1f415ba812d1e298"
+    }
+  ],
+  "manifestIdentity": {
+    "id": "./",
+    "scope": "./",
+    "start_url": "./"
+  },
+  "coldInstaller": {
+    "applicationOpenedBeforeUpdate": false,
+    "retiredOptionalPaths": [
+      "/pletina/application/index.7cc1bce5621c8162.html",
+      "/pletina/application/launcher.ee9590aaee833532.js"
+    ]
+  },
+  "coldFailure": {
+    "serviceWorker": {
+      "scope": null,
+      "registrations": 0,
+      "active": null,
+      "waiting": null,
+      "cacheInfo": []
+    },
+    "path": "/pletina/",
+    "status": "No se pudo preparar la app. Reintenta con conexión.",
+    "version": "9a232c6ff8d5802d",
+    "button": {
+      "text": "Abrir Pletina",
+      "disabled": false
+    },
+    "appVisible": false,
+    "controller": false,
+    "openedBefore": null,
+    "online": true,
+    "requests": [
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/app.b56f26dd9357b0ed.js",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/sw.js",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "A",
+        "path": "/pletina/app.b56f26dd9357b0ed.js",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "B",
+        "path": "/pletina/icons/apple-touch-icon.png",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "B",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "B",
+        "path": "/pletina/icons/icon-512.png",
+        "status": 200
+      },
+      {
+        "phase": "cold-minimal-A-waiting-B",
+        "version": "B",
+        "path": "/pletina/index.html",
+        "status": 200
+      }
+    ]
+  },
+  "fatal": "page.evaluate: TypeError: Failed to update a ServiceWorker for scope ('[URL]') with script ('Unknown'): Not found",
+  "browserClosed": true,
+  "browserProfile": "Disposable Playwright launch profile; browser.close releases it.",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "blockedExternalHosts": [],
+  "finishedAt": "2026-10-21T21:18:17.873Z",
+  "passed": false
+}
