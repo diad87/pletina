@@ -793,9 +793,27 @@ export async function runLibraryScenarios(ctx) {
       stage = 'reload and local downloaded playback'
       await page.reload({ waitUntil: 'load' }); await page.locator('.app').waitFor(); await assertEditedRow(true)
       for (const label of [listName, 'Canciones que te gustan', 'Descargas']) { await u.library(label); await assertEditedRow(label === 'Canciones que te gustan') }
+      const waitForLocalPlayback = async () => {
+        await u.wait(() => document.querySelector('.mini button[aria-label="Pausa"]') &&
+          window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && !audio.error && audio.readyState >= 2 &&
+            audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin &&
+            new URL(audio.src, location.href).pathname.includes('/__audio__/')))
+        const ready = await page.evaluate(() => {
+          const index = window.__qaAudio.instances.findIndex(audio => !audio.paused)
+          return { index, time: window.__qaAudio.instances[index].currentTime }
+        })
+        // A restored seek position is not proof of playback. Observe further real
+        // progress after the UI and native media are ready, before reading metadata.
+        await u.wait(({ index, time }) => {
+          const audio = window.__qaAudio.instances[index]
+          return document.querySelector('.mini button[aria-label="Pausa"]') && audio && !audio.paused &&
+            !audio.seeking && !audio.error && audio.readyState >= 2 && audio.currentTime > time + 0.05 &&
+            new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')
+        }, ready)
+      }
       const beforeLocalMedia = mediaRequests()
       await u.tap('ol.tracks .name')
-      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')))
+      await waitForLocalPlayback()
       // Shared APK behavior: clicking the current ID resumes its existing queue
       // item. Editing the library does not rewrite that live/restored queue copy.
       assert.equal(await page.locator('.mini .title').textContent(), original.title)
@@ -804,8 +822,7 @@ export async function runLibraryScenarios(ctx) {
       // The collection play button explicitly builds a new queue from the
       // canonical Downloads rows, so this is the fresh-selection metadata check.
       await u.tap('.actions button.big-play[title="Reproducir"]')
-      await u.wait(title => document.querySelector('.mini .title')?.textContent === title &&
-        window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')), edited.title)
+      await waitForLocalPlayback()
       assert.equal(await page.locator('.mini .title').textContent(), edited.title)
       assert.equal(await page.locator('.mini .artist').textContent(), edited.artist)
       await pause()
