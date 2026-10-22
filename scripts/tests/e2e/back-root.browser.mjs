@@ -152,11 +152,28 @@ async function runProfile(app, baseURL) {
     ctx = await createHarness({ browser: app ? await nativeAppBrowser(baseURL, report) : pw, baseURL,
       profile: 'chromium-android-layout', engine: 'chromium', directory: join(output, id), report, networkTransport: bridge })
     report.kind = app ? 'native-desktop-app-window-mobile-layout' : 'desktop-browser-mobile-layout'
+    report.lifecycle = []
+    await ctx.context.exposeBinding('__qaRecordBackLifecycle', (_source, value) => {
+      report.lifecycle.push({ ...value, stage: report.exitControlStage ?? null })
+      if (report.lifecycle.length > 250) report.lifecycle.shift()
+    })
     await ctx.context.addInitScript(() => {
       if (window !== top) return
       window.__qaBackPops = 0
       window.__qaDocumentToken = crypto.randomUUID()
       window.__qaBackEvents = []
+      const record = (type, event) => {
+        const state = history.state
+        void window.__qaRecordBackLifecycle({ type, persisted: event?.persisted ?? null,
+          path: location.pathname, documentToken: window.__qaDocumentToken,
+          index: state?.index ?? null, boundary: state?.rootBoundary === true,
+          rootId: state?.rootId ?? null, at: performance.now() }).catch(() => {})
+      }
+      for (const type of ['pageshow', 'pagehide', 'popstate']) addEventListener(type, event => record(type, event))
+      for (const type of ['back', 'forward']) {
+        const original = history[type]
+        history[type] = function (...args) { record('history.' + type); return original.apply(this, args) }
+      }
       addEventListener('popstate', event => {
         window.__qaBackPops++
         const s = event.state
@@ -395,6 +412,7 @@ async function runProfile(app, baseURL) {
       return { documentReloaded: true, restoredPaused: true, forwardRestored: true, ...await advancingSame() }
     })
     await check('back.double-root: two quick history Back gestures leave the app and Forward can restore it', async () => {
+      report.exitControlStage = 'fresh-predecessor'
       // A long library session can prune the original external document from Chrome's
       // history. Keep all earlier long-session checks, then create a recent real predecessor
       // for the exit control; API back cannot simulate the OS action beyond an empty history.
@@ -407,9 +425,11 @@ async function runProfile(app, baseURL) {
         window.__qaAudio.instances[0].currentTime > 0.2 && !window.__qaAudio.instances[0].error)
       identity = await capture()
       const time = await identity.audio.evaluate(audio => audio.currentTime)
+      report.exitControlStage = 'first-back'
       await page.evaluate(() => history.back())
       await page.waitForFunction(() => history.state?.rootBoundary === true)
-      const departed = page.waitForURL(priorURL, { timeout: 10000 })
+      const departed = page.waitForURL(priorURL, { waitUntil: 'commit', timeout: 10000 })
+      void departed.catch(() => {}) // El evaluate también puede fallar antes de que se espere esta promesa.
       const first = await page.evaluate(({ document: previous, audio, time }) => {
         const s = history.state, last = window.__qaBackEvents.findLast(event => event.boundary)
         const value = { sameDocument: document === previous, sameAudio: window.__qaAudio.instances[0] === audio,
@@ -422,15 +442,19 @@ async function runProfile(app, baseURL) {
         history.back()
         return value
       }, { ...identity, time })
+      report.firstExitBack = first
       await departed
+      report.exitControlStage = 'departed'
       assert.ok(first.elapsedSinceFirstBack < 800, 'The second gesture must reach the browser during the 800 ms exit window')
       await page.locator('button').waitFor()
       assert.equal(await page.locator('.app').count(), 0, 'The real previous control document must replace the application')
-      await Promise.all([page.waitForURL(ctx.getappURL()), page.evaluate(() => history.forward())])
+      report.exitControlStage = 'forward-return'
+      await Promise.all([page.waitForURL(ctx.getappURL(), { waitUntil: 'commit' }), page.evaluate(() => history.forward())])
       await page.locator('.app').waitFor()
       await page.waitForFunction(() => history.state?.index === 0 && history.state?.overlay === false &&
         history.state?.protectedRoot === true && !history.state?.rootBoundary)
       await page.locator('.greeting').waitFor()
+      report.exitControlStage = 'first-back-after-forward'
       const returnedDocument = await page.evaluate(() => window.__qaDocumentToken)
       await protectedBack()
       assert.equal(page.url(), ctx.getappURL())
