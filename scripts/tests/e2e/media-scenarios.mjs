@@ -4,7 +4,8 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 export const mediaScenarioInventory = Object.freeze([
-  'selection-html-audio', 'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
+  'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
+  'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
   'now-playing-synthetic-touch-swipe-threshold-and-interactive-origin',
   'home-surprise-album-starts-saved-album-in-track-order', 'artist-radio-builds-bounded-mixed-queue-and-plays',
   'artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning',
@@ -94,7 +95,12 @@ export async function runMediaScenarios(ctx) {
   async function music() {
     await closeOverlays(); await pause(); await controlsOff()
     await ctx.fillSearch('Buscar', media.query)
-    await page.locator(row(0) + ' .name').waitFor()
+    // Search deliberately keeps its previous rows during the debounce/network
+    // phase. An existing row can still belong to the preceding rescue query.
+    await wait(titles => {
+      const rows = [...document.querySelectorAll('.tracks li[data-reorder-index] .name')]
+      return titles.every((title, index) => rows[index]?.textContent.trim() === title)
+    }, media.tracks.map(track => track.title))
     return page.locator('.tracks li[data-reorder-index] .name').allTextContents()
   }
   async function playing(title, timeout = 15000) {
@@ -199,6 +205,90 @@ export async function runMediaScenarios(ctx) {
     for (const scenario of mediaScenarioInventory.slice(1)) await check(scenario.id, async () => ({ status: 'blocked', reason: 'The initial compiled-player audio prerequisite failed.' }))
     return
   }
+
+  await run('music-unplayable-rescues-distinct-web-source-without-skipping-song', async () => {
+    const rescue = media.webRescue
+    assert.ok(rescue?.track && rescue.musicVideoId !== rescue.webVideoId)
+    const readChoice = () => page.evaluate(id => new Promise((resolve, reject) => {
+      const request = indexedDB.open('pletina-web-library')
+      request.onupgradeneeded = () => request.transaction.abort()
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const db = request.result, tx = db.transaction('sources', 'readonly')
+        let choice = null
+        const get = tx.objectStore('sources').get(id)
+        get.onsuccess = () => { choice = get.result?.choice ?? null }
+        tx.oncomplete = () => { db.close(); resolve(choice) }
+        tx.onabort = () => { db.close(); reject(tx.error) }
+      }
+    }), rescue.track.id)
+    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
+    assert.equal(await readChoice(), null, 'The dedicated song must not reuse a previously saved source')
+    const mark = fixture.requests.length
+    const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'music-unplayable-web-rescue')
+      .map(({ operation, candidateIds, videoId, playability }) => ({ operation,
+        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(playability ? { playability } : {}) }))
+    let completed = false
+    try {
+      await fixture.set({ musicUnplayableWebRescue: true })
+      await ctx.fillSearch('Buscar', rescue.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, rescue.track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 2,
+        'A healthy second song makes an unintended skip observable')
+      await tap(row(0) + ' .name')
+      const before = await playing(rescue.track.title), first = active(before)
+      await wait(({ index, time }) => {
+        const audio = window.__qaAudio.instances[index]
+        return audio && !audio.paused && !audio.seeking && !audio.error && audio.readyState >= 2 && audio.currentTime > time + 0.1
+      }, { index: first.index, time: first.time })
+      const value = await state()
+      assert.equal(value.title, rescue.track.title)
+      assert.equal(value.audios.length, 1)
+      assert.equal(active(value).index, first.index)
+      assert.ok(active(value).duration >= 11 && active(value).duration < 14, 'The real 12-second AAC must decode')
+      const mediaSessionAvailable = await page.evaluate(() => 'mediaSession' in navigator)
+      if (mediaSessionAvailable) {
+        assert.equal(value.metadata?.title, rescue.track.title)
+        assert.equal(value.metadata?.artist, rescue.track.artistName)
+      }
+      const saved = await readChoice()
+      assert.equal(saved?.videoId, rescue.webVideoId, 'Persist the working WEB recording, never the unavailable Music result')
+      assert.equal(saved.verified, false)
+      assert.ok(saved.score >= 70)
+      await wait(id => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return queue?.queue[queue.order[queue.pos]]?.track.id === id
+      }, rescue.track.id)
+      const queue = await page.evaluate(() => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1'))
+        return { currentId: queue.queue[queue.order[queue.pos]].track.id, ids: queue.queue.map(item => item.track.id) }
+      })
+      assert.equal(queue.currentId, rescue.track.id)
+      assert.deepEqual(queue.ids, [rescue.track.id, rescue.nextTrackId])
+      const trace = attempts(), players = trace.filter(attempt => attempt.operation === 'player')
+      assert.deepEqual(players.map(({ videoId, playability }) => ({ videoId, playability })), [
+        { videoId: rescue.musicVideoId, playability: 'UNPLAYABLE' }, { videoId: rescue.webVideoId, playability: 'OK' },
+      ])
+      const music = trace.findIndex(attempt => attempt.operation === 'music-search')
+      const denied = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.musicVideoId)
+      const web = trace.findIndex(attempt => attempt.operation === 'web-search')
+      const accepted = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.webVideoId)
+      assert.ok(music >= 0 && denied > music && web > denied && accepted > web,
+        'A high-confidence Music result must fail playback before the distinct WEB rescue is searched and tried')
+      assert.deepEqual(trace[music].candidateIds, [rescue.musicVideoId])
+      assert.deepEqual(trace[web].candidateIds, [rescue.webVideoId])
+      assert.ok(trace.some(attempt => attempt.operation === 'media' && attempt.videoId === rescue.webVideoId))
+      assert.ok(!trace.some(attempt => attempt.operation === 'media' && attempt.videoId === rescue.musicVideoId))
+      completed = true
+      return { requestedTrackId: rescue.track.id, currentTrackId: queue.currentId, savedVideoId: saved.videoId,
+        attempts: trace, sameSong: true, realDecoderProgress: true, audioInstances: value.audios.length,
+        mediaSession: mediaSessionAvailable ? { status: 'pass', metadata: value.metadata } : { status: 'unsupported', reason: 'MediaSession is not exposed by this engine.' },
+        scope: 'Controlled HTTP Music UNPLAYABLE / distinct WEB OK; real silent AAC, no live-provider or physical-phone claim.' }
+    } finally {
+      ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
+      await closeOverlays(); await pause(); await fixture.reset()
+    }
+  })
 
   await run('pause-seek-next-previous-one-audio', async () => {
     const { titles, state: before } = await start(0), index = active(before).index

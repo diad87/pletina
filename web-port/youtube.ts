@@ -24,6 +24,7 @@ export class YouTubeError extends Error {
     super(message)
     this.name = 'YouTubeError'
   }
+  override toString(): string { return this.message }
 }
 
 const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/
@@ -245,7 +246,7 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
   const status = string(at(response, 'playabilityStatus', 'status'))
   if (status !== 'OK') {
     throw status === 'ERROR' || status === 'UNPLAYABLE'
-      ? new YouTubeError('Este vídeo ya no está disponible para reproducirlo aquí.', 'unavailable')
+      ? new YouTubeError('YouTube no permite reproducir esta fuente de audio en Pletina.', 'unavailable')
       : new YouTubeError('YouTube no permite reproducir este vídeo ahora.', 'restricted')
   }
   const details = object(object(response).videoDetails)

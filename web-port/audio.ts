@@ -89,7 +89,16 @@ function splitArtist(candidate: Candidate, artist: string): Candidate {
   return candidate
 }
 
-async function search(track: TrackQuery, everywhere: boolean, signal?: AbortSignal): Promise<Scored[]> {
+async function searchWeb(track: TrackQuery, signal?: AbortSignal): Promise<Scored[]> {
+  const videos = await searchVideos(`${track.artist} ${stripBrackets(track.title)}`, signal)
+  checkAbort(signal)
+  return videos.slice(0, 8).map((original, rank) => {
+    const candidate = splitArtist(original, track.artist)
+    return { ...candidate, score: scoreCandidate(track, candidate, rank + 3), origin: 'youtube' as const }
+  })
+}
+
+async function search(track: TrackQuery, everywhere: boolean, signal?: AbortSignal): Promise<{ candidates: Scored[]; webSearched: boolean }> {
   const query = `${track.artist} ${stripBrackets(track.title)}`
   const found: Scored[] = []
   const failures: Error[] = []
@@ -98,20 +107,16 @@ async function search(track: TrackQuery, everywhere: boolean, signal?: AbortSign
     checkAbort(signal)
     found.push(...music.slice(0, 10).map((candidate, rank) => ({ ...candidate, score: scoreCandidate(track, candidate, rank), origin: 'music' as const })))
   } catch (error) { checkAbort(signal); failures.push(error instanceof Error ? error : new Error('No se pudo buscar en YouTube Music.')) }
-  if (everywhere || Math.max(-Infinity, ...found.map((candidate) => candidate.score)) < CONFIDENT_SCORE) {
+  const webSearched = everywhere || Math.max(-Infinity, ...found.map((candidate) => candidate.score)) < CONFIDENT_SCORE
+  if (webSearched) {
     try {
-      const videos = await searchVideos(query, signal)
-      checkAbort(signal)
-      found.push(...videos.slice(0, 8).map((original, rank) => {
-        const candidate = splitArtist(original, track.artist)
-        return { ...candidate, score: scoreCandidate(track, candidate, rank + 3), origin: 'youtube' as const }
-      }))
+      found.push(...await searchWeb(track, signal))
     } catch (error) { checkAbort(signal); failures.push(error instanceof Error ? error : new Error('No se pudo buscar en YouTube.')) }
   }
   if (!found.length && failures.length) throw failures[0]
   found.sort((a, b) => b.score - a.score)
   const seen = new Set<string>()
-  return found.filter((candidate) => !seen.has(candidate.videoId) && !!seen.add(candidate.videoId))
+  return { candidates: found.filter((candidate) => !seen.has(candidate.videoId) && !!seen.add(candidate.videoId)), webSearched }
 }
 
 export async function resolveTrack(track: TrackQuery, refresh = false): Promise<Playable> {
@@ -145,26 +150,48 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       try { return playable(await stream(saved.videoId, refresh, signal), saved.title, saved.channel) }
       catch (error) {
         checkAbort(signal)
-        if (error instanceof YouTubeError && error.code === 'unavailable') missing = saved.videoId
+        if (error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')) missing = saved.videoId
         else throw error
       }
     }
-    const candidates = (await search(track, false, signal)).filter((candidate) => candidate.score >= MIN_SCORE && candidate.videoId !== missing).slice(0, 3)
+    const result = await search(track, false, signal)
+    const attempted = new Set<string>(missing ? [missing] : [])
+    let sourceRejected = missing !== null
+    let transientFailure = false
     let lastError: Error = new Error('No se ha encontrado una grabación compatible en YouTube. Prueba «¿No es esta canción?».')
-    for (const candidate of candidates) {
-      checkAbort(signal)
-      let info: StreamInfo
-      try {
-        info = await stream(candidate.videoId, refresh, signal)
-      } catch (error) {
+    const attempt = async (candidates: Scored[]): Promise<Playable | null> => {
+      let count = 0
+      for (const candidate of candidates) {
+        if (candidate.score < MIN_SCORE || attempted.has(candidate.videoId)) continue
+        if (count++ >= 3) break
+        attempted.add(candidate.videoId)
         checkAbort(signal)
-        lastError = error instanceof Error ? error : new Error('No se pudo cargar el audio.')
-        continue
+        let info: StreamInfo
+        try {
+          info = await stream(candidate.videoId, refresh, signal)
+        } catch (error) {
+          checkAbort(signal)
+          lastError = error instanceof Error ? error : new Error('No se pudo cargar el audio.')
+          if (error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')) sourceRejected = true
+          else transientFailure = true
+          continue
+        }
+        checkAbort(signal)
+        await saveSourceChoice(track.id, choice(candidate, candidate.score, false))
+        checkAbort(signal)
+        return playable(info, candidate.title, candidate.artists.join(', '))
       }
-      checkAbort(signal)
-      await saveSourceChoice(track.id, choice(candidate, candidate.score, false))
-      checkAbort(signal)
-      return playable(info, candidate.title, candidate.artists.join(', '))
+      return null
+    }
+    const initial = await attempt(result.candidates)
+    if (initial) return initial
+    // Una buena coincidencia de Music puede estar retirada o no ofrecer MP4.
+    // Ampliar una sola vez, sin repetir vídeos ni sustituir por fallos de red.
+    if (!result.webSearched && sourceRejected && !transientFailure) {
+      const fallback = await searchWeb(track, signal)
+      fallback.sort((a, b) => b.score - a.score)
+      const recovered = await attempt(fallback)
+      if (recovered) return recovered
     }
     throw lastError
   })
@@ -175,7 +202,7 @@ export async function alternatives(track: TrackQuery): Promise<Alternative[]> {
   if (isPodcast(track)) throw new Error('Los episodios usan el audio original del pódcast.')
   if (isDirect(track)) throw new Error('Esta canción usa el enlace de YouTube que añadiste.')
   const saved = await readSourceChoice(track.id)
-  const rows: Alternative[] = (await search(track, true)).slice(0, 16).map((candidate) => ({ videoId: candidate.videoId,
+  const rows: Alternative[] = (await search(track, true)).candidates.slice(0, 16).map((candidate) => ({ videoId: candidate.videoId,
     title: candidate.title, artists: candidate.artists.join(', '), album: candidate.album, duration: candidate.duration,
     score: candidate.score, origin: candidate.origin, current: candidate.videoId === saved?.videoId }))
   if (saved && !rows.some((row) => row.current)) rows.unshift({ videoId: saved.videoId, title: saved.title,

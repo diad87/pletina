@@ -187,6 +187,30 @@ test('stream conserva URL solo en RAM y refresh fuerza otro player conservando s
   assert.equal(yt.frames.length, 0)
 })
 
+test('un refresh rechazado invalida la URL anterior y el siguiente intento pide otro player', async () => {
+  const yt = browserTransport()
+  const initial = yt.stream(id)
+  yt.send({ responseContext: { visitorData: 'anonymous-fixture' } })
+  await flush()
+  yt.send(playerFixture())
+  const previous = await initial
+  const renewal = yt.stream(id, true)
+  const rejected = assert.rejects(renewal, (error) => error.code === 'unavailable')
+  await flush()
+  assert.equal(yt.args().body.videoId, id)
+  yt.send({ playabilityStatus: { status: 'UNPLAYABLE' } })
+  await rejected
+  const retry = yt.stream(id)
+  await flush()
+  assert.equal(yt.frames.length, 1, 'the failed refresh must not leave the previous URL reusable in RAM')
+  assert.equal(yt.args().url.includes('/player?'), true)
+  const replacement = playerFixture()
+  replacement.streamingData.adaptiveFormats[0].url += '&attempt=2'
+  yt.send(replacement)
+  assert.notEqual((await retry).url, previous.url)
+  assert.equal(yt.frames.length, 0)
+})
+
 test('resolve usa matching, deduplica cargas y guarda elección sin URL firmada', async () => {
   const gate = deferred()
   let searches = 0
@@ -209,6 +233,124 @@ test('fallback WEB y máximo tres candidatos, sin guardar un fallo como una elec
   await assert.rejects(() => audio.resolveTrack(query), /No audio/)
   assert.deepEqual(attempted, [id, second, third])
   assert.equal(audio.writes.length, 0)
+})
+
+test('Music de confianza sin audio amplía a WEB y corta al encontrar la misma canción reproducible', async () => {
+  for (const code of ['unavailable', 'format']) {
+    const events = []
+    const audio = engine({
+      searchMusic: async () => { events.push('music'); return [candidate()] },
+      searchVideos: async () => { events.push('web'); return [second, third, fourth].map((videoId) => candidate(videoId, { title: 'Radiohead - Airbag', album: null })) },
+      stream: async (videoId) => {
+        events.push(videoId)
+        if (videoId !== third) throw new audio.youtube.YouTubeError('Audio rechazado', code)
+        return info(videoId)
+      },
+    })
+    const resolved = await audio.resolveTrack(query)
+    assert.equal(resolved.videoId, third, code)
+    assert.equal(resolved.title, query.title)
+    assert.deepEqual(events, ['music', id, 'web', second, third], 'WEB is a later phase and stops immediately after success')
+    assert.deepEqual(audio.writes.map((row) => row.choice.videoId), [third])
+    assert.equal(Object.hasOwn(audio.writes[0].choice, 'url'), false)
+  }
+})
+
+test('una fuente guardada rechazada no se reintenta aunque aparezca sola en Music y duplicada en WEB', async () => {
+  for (const code of ['unavailable', 'format']) {
+    const events = []
+    const saved = { videoId: id, title: 'Elección anterior', channel: 'Radiohead', duration: 287, score: 100, verified: true }
+    const audio = engine({
+      searchMusic: async () => { events.push('music'); return [candidate(), candidate()] },
+      searchVideos: async () => { events.push('web'); return [candidate(), candidate(second, { title: 'Radiohead - Airbag', album: null }), candidate()] },
+      stream: async (videoId) => {
+        events.push(videoId)
+        if (videoId === id) throw new audio.youtube.YouTubeError('Fuente guardada rechazada', code)
+        return info(videoId)
+      },
+    }, saved)
+    assert.equal((await audio.resolveTrack(query)).videoId, second, code)
+    assert.deepEqual(events, [id, 'music', 'web', second], 'saved and search duplicates must share the attempted-ID set')
+    assert.deepEqual(audio.writes.map((row) => row.choice.videoId), [second])
+  }
+})
+
+test('el presupuesto permite tres intentos Music y tres WEB distintos dentro de la misma operación', async () => {
+  const attempts = [], phases = [], signals = []
+  const webIds = ['ccccccccccc', 'ddddddddddd', 'eeeeeeeeeee', 'fffffffffff']
+  const audio = engine({
+    searchMusic: async (_query, signal) => { phases.push('music'); signals.push(signal); return [id, second, third, fourth].map((videoId) => candidate(videoId)) },
+    searchVideos: async (_query, signal) => {
+      phases.push('web'); signals.push(signal)
+      return [id, second, third, ...webIds].map((videoId) => candidate(videoId, { title: 'Radiohead - Airbag', album: null }))
+    },
+    stream: async (videoId, _refresh, signal) => {
+      attempts.push(videoId); signals.push(signal)
+      throw new audio.youtube.YouTubeError('Sin formato compatible', 'format')
+    },
+  })
+  await assert.rejects(() => audio.resolveTrack(query), (error) => error.code === 'format')
+  assert.deepEqual(phases, ['music', 'web'])
+  assert.deepEqual(attempts, [id, second, third, ...webIds.slice(0, 3)])
+  assert.equal(new Set(attempts).size, 6)
+  assert.ok(signals[0] instanceof AbortSignal)
+  assert.ok(signals.every((signal) => signal === signals[0]), 'fallback phases must share cancellation and the existing 45-second operation deadline')
+  assert.deepEqual(audio.writes, [])
+})
+
+test('un éxito dentro de Music evita ampliar WEB incluso tras rechazos previos', async () => {
+  const attempts = []
+  let webSearches = 0
+  const audio = engine({
+    searchMusic: async () => [id, second, third, fourth].map((videoId) => candidate(videoId)),
+    searchVideos: async () => { webSearches++; return [candidate(fourth)] },
+    stream: async (videoId) => {
+      attempts.push(videoId)
+      if (videoId !== third) throw new audio.youtube.YouTubeError('Vídeo retirado', 'unavailable')
+      return info(videoId)
+    },
+  })
+  assert.equal((await audio.resolveTrack(query)).videoId, third)
+  assert.deepEqual(attempts, [id, second, third])
+  assert.equal(webSearches, 0)
+  assert.deepEqual(audio.writes.map((row) => row.choice.videoId), [third])
+})
+
+test('network, timeout y restricted no amplían WEB ni sustituyen una elección explícita', async () => {
+  for (const code of ['network', 'timeout', 'restricted']) {
+    for (const hasSaved of [false, true]) {
+      const events = []
+      const saved = hasSaved ? { videoId: id, title: 'Elegida', channel: 'Radiohead', duration: 287, score: 100, verified: true } : null
+      let failure
+      const audio = engine({
+        searchMusic: async () => { events.push('music'); return [candidate()] },
+        searchVideos: async () => { events.push('web'); return [candidate(second)] },
+        stream: async (videoId) => { events.push(videoId); failure = new audio.youtube.YouTubeError('Fallo transitorio o restricción', code); throw failure },
+      }, saved)
+      await assert.rejects(() => audio.resolveTrack(query), (error) => error === failure)
+      assert.deepEqual(events, hasSaved ? [id] : ['music', id], `${code}, saved=${hasSaved}`)
+      assert.deepEqual(audio.writes, [])
+    }
+  }
+})
+
+test('cancelar antes del rechazo de Music impide que ese rechazo abra el fallback WEB', async () => {
+  const pendingStream = deferred(), attempts = []
+  let webSearches = 0
+  const audio = engine({
+    searchMusic: async () => [candidate()],
+    searchVideos: async () => { webSearches++; return [candidate(second)] },
+    stream: async (videoId) => { attempts.push(videoId); return pendingStream.promise },
+  })
+  const resolving = audio.resolveTrack(query)
+  const cancelled = assert.rejects(resolving, { name: 'AbortError' })
+  await flush()
+  assert.deepEqual(attempts, [id])
+  audio.cancelAudioRequests()
+  pendingStream.reject(new audio.youtube.YouTubeError('Vídeo retirado', 'unavailable'))
+  await cancelled
+  assert.equal(webSearches, 0)
+  assert.deepEqual(audio.writes, [])
 })
 
 test('fuente guardada no se sustituye por un error de red; un vídeo retirado sí permite otro', async () => {
@@ -238,6 +380,19 @@ test('YouTube añadido usa mapeo inmutable, y alternativas incluyen la elección
   assert.equal(alternatives[0].videoId, second)
   assert.equal(alternatives[0].current, true)
   assert.equal(alternatives[1].current, false)
+})
+
+test('un YouTube añadido no busca sustitutos ni cambia su ID tras rechazo y refresh', async () => {
+  const attempts = [], direct = { ...query, id: 250_000_000_000_001 }
+  const audio = engine({ stream: async (videoId, refresh) => {
+    attempts.push([videoId, refresh])
+    throw new audio.youtube.YouTubeError('Vídeo directo retirado', 'unavailable')
+  } })
+  await assert.rejects(() => audio.resolveTrack(direct), (error) => error.code === 'unavailable')
+  await assert.rejects(() => audio.resolveTrack(direct, true), (error) => error.code === 'unavailable')
+  assert.deepEqual(attempts, [[id, false], [id, true]])
+  assert.deepEqual(audio.calls, [], 'direct-video failures cannot enter either catalog search')
+  assert.deepEqual(audio.writes, [])
 })
 
 test('elegir fuente cancela resolución vieja y ningún resultado tardío sobrescribe la elección', async () => {

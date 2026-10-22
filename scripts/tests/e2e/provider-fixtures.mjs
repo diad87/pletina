@@ -15,16 +15,24 @@ const tracks = titles.map((name, i) => ({ id: 101 + i, title: 'Canción QA ' + n
   title_version: '', duration: 12, artist: artists[i >= 8 ? 1 : 0], artistName: artists[i >= 8 ? 1 : 0].name,
   album: albums[Math.floor(i / 4)], track_position: i % 4 + 1, disk_number: 1, explicit_lyrics: false,
   isrc: 'QATEST' + String(i).padStart(6, '0'), videoId: 'qaAudio' + String(i + 1).padStart(3, '0') + String.fromCharCode(97 + i) }))
+const webRescueTrack = { ...tracks[0], id: 190, title: 'Canción QA Rescate WEB', title_short: 'Canción QA Rescate WEB',
+  videoId: 'qaMusicBad1' }
+const webRescue = { query: 'QA Rescate WEB', track: webRescueTrack, musicVideoId: webRescueTrack.videoId,
+  webVideoId: 'qaWebGood1a', nextTrackId: tracks[3].id }
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
 const runs = (...texts) => ({ runs: texts.map(text => ({ text })) })
 const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0')
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 function selected(query) {
   const q = normalize(query)
+  // The search queue includes another healthy song: skipping the requested song
+  // must not masquerade as successful recovery. Audio matching sees only song 190.
+  if (q === normalize(webRescue.query)) return [webRescueTrack, tracks[3]]
+  if (q.includes(normalize(webRescueTrack.title))) return [webRescueTrack]
   // Regression: the catalog returns no literal result for "title de artist";
   // the real adapter must issue its second query without the linking word.
   if (q === 'cancion qa uno de artista qa uno') return []
@@ -213,7 +221,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp(tracks.find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -240,7 +248,13 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/browse')) return json(podcastDetail)
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
-        const selectedTracks = selected(body.query || '')
+        let selectedTracks = selected(body.query || '')
+        if (flags.musicUnplayableWebRescue && selectedTracks.length === 1 && selectedTracks[0].id === webRescueTrack.id) {
+          const music = url.hostname === 'music.youtube.com'
+          selectedTracks = [{ ...webRescueTrack, videoId: music ? webRescue.musicVideoId : webRescue.webVideoId }]
+          Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: music ? 'music-search' : 'web-search',
+            candidateIds: selectedTracks.map(track => track.videoId) })
+        }
         if (url.hostname === 'music.youtube.com') return json({ contents: { tabbedSearchResultsRenderer: { tabs: [{ tabRenderer: {
           content: { sectionListRenderer: { contents: [{ musicShelfRenderer: { contents: selectedTracks.map(musicRow) } }] } },
         } }] } } })
@@ -250,10 +264,17 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       }
       if (url.pathname.endsWith('/player')) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
-        if (flags.failPlayer) return json({ playabilityStatus: { status: 'UNPLAYABLE' } })
-        const track = tracks.find(track => track.videoId === body.videoId), cast = castVideos.indexOf(body.videoId)
-        const bytes = cast >= 0 ? castAudio : audio
         const videoId = body.videoId || tracks[0].videoId
+        const rescue = flags.musicUnplayableWebRescue && [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId)
+        if (rescue) Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'player', videoId })
+        if (flags.failPlayer || rescue && videoId === webRescue.musicVideoId) {
+          if (rescue) row.playability = 'UNPLAYABLE'
+          return json({ playabilityStatus: { status: 'UNPLAYABLE' } })
+        }
+        if (rescue) row.playability = 'OK'
+        const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
+          : tracks.find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
+        const bytes = cast >= 0 ? castAudio : audio
         return json({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: track?.title || 'Episodio QA YouTube ' + titles[Math.max(0, cast)],
           author: track?.artist.name || 'Autor QA', lengthSeconds: String(cast >= 0 ? 90 : 12) },
         streamingData: { adaptiveFormats: [{ mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 64000,
@@ -262,6 +283,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.abort()
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test') {
+      const videoId = /^\/audio\/([\w-]{11})$/.exec(url.pathname)?.[1]
+      if (flags.musicUnplayableWebRescue && [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId)) {
+        Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'media', videoId })
+      }
       const download = request.resourceType() === 'fetch'
       if (flags.holdDownload && download) await new Promise(resolve => pending.add(resolve))
       if (flags.failMedia) return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'Fixture denied audio' })
