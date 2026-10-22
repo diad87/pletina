@@ -1,18 +1,36 @@
 # Pruebas por plataforma de la PWA
 
-Revisión del **22 de octubre de 2026**. Esta guía separa funciones y entorno de ejecución. La release publicada y verificada en [Pletina](https://diad87.github.io/pletina/) es **`92345453b622660a`**, código de producto `7da533f`, runner final `d989a10`, commit de distribución `33bffb339b59db5be991c7295d6a779c4ed5958e`. La [verificación HTTP/SHA-256](../artifacts/pwa-deploy/public-files-92345453b622660a.json) pasa **22/22 archivos** y la [canción solicitada en Pages](../artifacts/pwa-port/browser-public-92345453b622660a.json), **3/3**. La [matriz actual](../artifacts/pwa-e2e/coverage-92345453b622660a.md) registra **205 correctas, 0 fallidas, 0 bloqueadas y 5 no compatibles de 210**, sin acreditar teléfonos físicos. Los resultados fbb y fb6 permanecen históricos. El estado de distribución se conserva también en [pwa.md](pwa.md).
+Revisión del **22 de octubre de 2026**. Esta guía separa funciones y entorno. La distribución **`dd284152f0526576` está publicada y verificada** en [Pletina](https://diad87.github.io/pletina/), commit `bee125e255472bd791ad5db3ddc48ea3a969c85d`: [22/22 archivos HTTP/SHA-256](../artifacts/pwa-deploy/public-files-dd284152f0526576.json) y [3/3 de reproducción pública](../artifacts/pwa-port/browser-public-dd284152f0526576.json). Fuente y runner general `82faa01710ee2f3b46df7ceed2274faa8040b304`; runner standalone final `9a845b1d2df9bf46047c30a5de9c35b0eb7b82ed`. Los resultados de 923 y anteriores permanecen históricos. Véase también [pwa.md](pwa.md).
 
 El [preflight reproducible](../scripts/tests/e2e/platform-preflight.mjs) genera [platform-preflight.json](../artifacts/pwa-e2e/platform-preflight.json). Comprueba motores y APIs de navegador usando un origen localhost efímero, datos de prueba y un WAV conocido. **No es una prueba E2E de funciones de Pletina**, ni acredita teléfonos, instalación desde la pantalla de inicio o coches. Los recorridos de producto tienen sus propios resultados; la [matriz de paridad](pwa-parity-0.11.2.md) conserva los anteriores.
 
-## Cambios publicados el 22 de octubre
+## Resultados actuales: `dd284152f0526576`
+
+Pasan **393/393 pruebas de lógica, incluidas 46 de navegación, tipos 0/0** y compilaciones del frontend de referencia y de la PWA. Entrada de **41.790 bytes**, aplicación de **472.779**. El [consolidado actual](../artifacts/pwa-e2e/coverage-dd284152f0526576.md), sus [datos JSON](../artifacts/pwa-e2e/coverage-dd284152f0526576.json) y el [resumen de validación](../artifacts/pwa-e2e/validation-dd284152f0526576.json) conservan los gates finales.
+
+| Perfil y host | `pass` | `fail` | `blocked` | `unsupported` | Evidencia |
+| --- | --- | --- | --- | --- | --- |
+| Chromium Android layout, Windows | 68 | 0 | 0 | 2 | [Windows](../artifacts/pwa-e2e/release-dd284152f0526576-win/summary.json) |
+| Firefox estrecho, Windows | 69 | 0 | 0 | 1 | [Windows](../artifacts/pwa-e2e/release-dd284152f0526576-win/summary.json) |
+| WebKit iPhone layout, Linux bajo WSL2 | 68 | 0 | 0 | 2 | [Linux](../artifacts/pwa-e2e/release-dd284152f0526576-linux/summary.json) |
+
+Son **205 correctas, 0 fallidas, 0 bloqueadas y 5 no compatibles de 210**, sin errores inesperados y con recursos cerrados. Las cinco no compatibles siguen siendo instalación física en tres perfiles, selector nativo Web Share de Chromium y estimación de cuota ausente en WebKit Linux. No se cuentan como aprobadas ni acreditan teléfonos o coches.
+
+Protege Atrás simple y doble rápido desde Inicio instalado mediante dos entradas de guarda y reparación agrupada que vuelve al Inicio lógico exacto. Paneles y rutas interiores conservan prioridad. El aviso es «Usa Inicio del móvil para seguir escuchando en segundo plano.». No existe una ventana de 800 ms para salir: esa era la conducta anterior de 923. La PWA no fuerza Home ni minimiza Android; Inicio del sistema y la continuidad física se verifican aparte.
+
+El [corto](../artifacts/pwa-e2e/back-root-short-dd284152f0526576/summary.json) pasa **11/11** y el [integrado final](../artifacts/pwa-e2e/back-root-library-dd284152f0526576-final/summary.json), **35/35**, mediante API. El [integrado inicial](../artifacts/pwa-e2e/back-root-library-dd284152f0526576/summary.json) conserva **34/35**: aceptaba el seek restaurado antes del avance real. El runner standalone final espera medio preparado, fuera de seek y con avance; mantiene aserciones, caché y cero transferencias adicionales, sin cambiar el producto. La [actualización actual pasa 11/11](../artifacts/pwa-port/update-e2e-dd284152f0526576.json), con migración desde **923**, no desde fbb. Los [controles preservados](../artifacts/pwa-e2e/preserved-controls-dd284152f0526576.json) no se borran ni se renombran. Todos estos recorridos son separados de los 210 y no convierten la API en botón Android.
+
+El [control estático de interfaz](../artifacts/pwa-e2e/ui-parity-dd284152f0526576.json) registra seis de siete archivos idénticos a la referencia 0.11.2; BottomNav solo añade accesibilidad y una variable de cuatro columnas, manteniendo Inicio/Buscar/Podcasts/Tu biblioteca. TrackList vuelve a ser idéntico, con artista/programa clicable. `library.search` comprueba título→audio, artista→ficha sin reproducir y un historial vacío, con audio pausado antes de su umbral. La búsqueda de canciones pedida se mantiene. No se afirma paridad de píxeles ni prueba física.
+
+## Antecedentes publicados: `92345453b622660a`
 
 `92345453b622660a` añade cuatro casos: metadatos YouTube frente a copias antiguas, error/reintento RSS y vacío auténtico, renovación de descarga y oclusión del teclado. Cada motor ejecuta **70 comprobaciones**; sus resultados se detallan abajo. Reanudar el mismo ID conserva la copia de cola, igual que la APK; una selección nueva desde Descargas toma los metadatos editados y el audio local sin nueva transferencia.
 
 La oclusión se prueba con descriptores de `visualViewport.height/scale` inyectados por QA y restaurados en `finally`, conservando el constructor y el código de interfaz del producto. Foco sin oclusión, una variación pequeña y zoom no deben ocultar el dock; recuperar altura manteniendo foco, o perder foco, debe restaurarlo. Esto no abre un teclado del sistema. El [control negativo de fbb](../artifacts/pwa-e2e/keyboard-negative-fbb03046132d7478/summary.json) y el [positivo dirigido de un candidato anterior](../artifacts/pwa-e2e/keyboard-fixed-6e6a63db0409e132/summary.json) conservan sus hashes; no se renombran como la ejecución final.
 
-El primer Atrás en la raíz instalada conserva documento/audio y arma una ventana de **800 ms**; el segundo permite abandonar mediante navegador/SO. Paneles y rutas interiores no cuentan como ese primer toque de salida. El retorno debe rearmar la protección, sin consumir otra vez una entrada externa ni crear entradas desde `popstate`. El recorrido observado de Adelante cargó una app nueva; el rearme BFCache está cubierto por lógica dentro de las **45 pruebas de navegación**, no por BFCache físico de la app. El canal UI de Atrás sigue bloqueado aparte de la API. No se fuerza Home ni se minimiza Android; la repetición física sigue pendiente.
+En 923, el primer Atrás protegía documento/audio y armaba una ventana de **800 ms**; el segundo permitía abandonar. Ese contrato queda como antecedente, no como el comportamiento de dd284. El Adelante observado cargó una app nueva; BFCache tenía pruebas de lógica dentro de sus 45 casos de navegación, sin prueba física de esa restauración. El [informe manual de Xiaomi](../artifacts/pwa-port/android-installed-double-back-user-report-2026-10-22.json) es parcial y registra audio detenido al salir; no se atribuye a dd284. El canal UI de Atrás sigue bloqueado aparte de la API y el nuevo comportamiento físico aún está pendiente.
 
-## Resultados actuales: `92345453b622660a`
+## Resultados históricos: `92345453b622660a`
 
 El [consolidado](../artifacts/pwa-e2e/coverage-92345453b622660a.md), sus [datos JSON](../artifacts/pwa-e2e/coverage-92345453b622660a.json) y el [resumen de validación](../artifacts/pwa-e2e/validation-92345453b622660a.json) conservan los informes completos y sus límites.
 
