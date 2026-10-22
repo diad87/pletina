@@ -1,0 +1,72 @@
+{
+  "testedAt": "2026-10-22T20:11:56.712Z",
+  "scope": "Exact APK 0.11.2 recipe body differences tested from real public PWA origin via browser opaque text/plain fetch. No Node provider requests, proxy, native bridge, forbidden HTTP header override, browser policy override, or product edits.",
+  "apkCommit": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "sources": [
+    "src-tauri/recipe/youtube.json",
+    "src-tauri/src/native.rs",
+    "src/lib/extractor/youtubei.ts",
+    "src/lib/extractor/fetch.ts",
+    "web-port/youtube.ts"
+  ],
+  "newDifferences": [
+    "context.client.userAgent from APK recipe",
+    "context.client.hl=en",
+    "playbackContext.contentPlaybackContext.vis=0,splay=false,lactMilliseconds=-1",
+    "visitor GET /sw.js_data instead of WEB search, if browser-readable"
+  ],
+  "visitorAccess": [
+    {
+      "mode": "opaque",
+      "method": "GET",
+      "path": "/sw.js_data",
+      "noForgedReferer": true,
+      "readable": false,
+      "error": "Error: TypeError\n    at finish (<anonymous>:1:253)\n    at receive (<anonymous>:1:345)"
+    },
+    {
+      "mode": "top",
+      "method": "GET",
+      "path": "/sw.js_data",
+      "noForgedReferer": true,
+      "readable": false,
+      "error": "TypeError: Failed to fetch\n    at <anonymous>:1:26"
+    }
+  ],
+  "results": [
+    {
+      "videoId": "fV-IUsecSsU",
+      "visitorSource": "PWA WEB search",
+      "body": "Exact APK recipe client/context/playback fields; browser-controlled headers remain browser-controlled",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "reason": "This video is not available",
+      "title": "Iritsi da Eguna",
+      "duration": 170,
+      "audioFormats": []
+    },
+    {
+      "videoId": "PStEJ1pAR6s",
+      "visitorSource": "PWA WEB search",
+      "body": "Exact APK recipe client/context/playback fields; browser-controlled headers remain browser-controlled",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "reason": "This video is not available",
+      "title": "IRITSI DA EGUNA -  Eskerrik asko!",
+      "duration": 170,
+      "audioFormats": []
+    }
+  ],
+  "network": [],
+  "errors": [],
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "screenOffVerified": false,
+  "audioVerified": false,
+  "signedMediaUrlsOrTokensPersisted": false,
+  "browser": "Chrome/153.0.8010.52",
+  "build": "e7b0aa14685bb4fa",
+  "contextClosed": true,
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T20:11:58.346Z"
+}

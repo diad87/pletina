@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "referenceCommit": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "referenceVersion": "0.11.2",
+  "method": "Read-only git show of the exact native reference revision, compared with current PWA source. No Android process, device inspection, native playback test or product modification.",
+  "apkExactSongPlaybackConfirmed": false,
+  "chain": [
+    {
+      "step": "Android Svelte controller",
+      "finding": "isAndroid requires Tauri plus Android UA. Song selection sends setQueue through player_native; the AndroidPlayer is a command/state UI, not the decoder.",
+      "sources": [
+        {
+          "file": "src/lib/player-android.svelte.ts",
+          "line": 19,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src/lib/player-android.svelte.ts#L19"
+        },
+        {
+          "file": "src/lib/player-android.svelte.ts",
+          "line": 314,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src/lib/player-android.svelte.ts#L314"
+        },
+        {
+          "file": "src/lib/player-android.svelte.ts",
+          "line": 324,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src/lib/player-android.svelte.ts#L324"
+        }
+      ]
+    },
+    {
+      "step": "Native playback service",
+      "finding": "PlaybackService extends MediaLibraryService; ExoPlayer uses ResolvingDataSource and a native DefaultHttpDataSource with redirect support and network wake mode. Its worker calls MusifyCore.resolve, independent of the browser UI.",
+      "sources": [
+        {
+          "file": "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt",
+          "line": 63,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt#L63"
+        },
+        {
+          "file": "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt",
+          "line": 115,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt#L115"
+        },
+        {
+          "file": "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt",
+          "line": 126,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt#L126"
+        },
+        {
+          "file": "src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt",
+          "line": 409,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/gen/android/app/src/main/java/dev/musify/desktop/PlaybackService.kt#L409"
+        }
+      ]
+    },
+    {
+      "step": "JNI and shared Rust resolver",
+      "finding": "Android core loads saved extractors, selects propio, and runs player::resolve on a Rust runtime. Resolver first accepts existing local/downloaded audio, then a saved source, then ranked Music candidates up to three.",
+      "sources": [
+        {
+          "file": "src-tauri/src/android.rs",
+          "line": 67,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/android.rs#L67"
+        },
+        {
+          "file": "src-tauri/src/android.rs",
+          "line": 104,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/android.rs#L104"
+        },
+        {
+          "file": "src-tauri/src/player.rs",
+          "line": 47,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/player.rs#L47"
+        },
+        {
+          "file": "src-tauri/src/player.rs",
+          "line": 95,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/player.rs#L95"
+        },
+        {
+          "file": "src-tauri/src/player.rs",
+          "line": 110,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/player.rs#L110"
+        },
+        {
+          "file": "src-tauri/src/player.rs",
+          "line": 123,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/player.rs#L123"
+        }
+      ]
+    },
+    {
+      "step": "Actual Android extractor",
+      "finding": "Mobile init and available-engine list select only propio. propio first calls native::resolve. youtubei.js is another selectable desktop engine and is not Android's default path. yt-dlp ready explicitly fails on mobile; its desktop program is not Android's extractor.",
+      "sources": [
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 47,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L47"
+        },
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 64,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L64"
+        },
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 81,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L81"
+        },
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 171,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L171"
+        },
+        {
+          "file": "src-tauri/src/ytdlp.rs",
+          "line": 88,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/ytdlp.rs#L88"
+        }
+      ]
+    },
+    {
+      "step": "Recipe-driven direct audio",
+      "finding": "Native resolver tries a verified downloaded recipe then bundled recipe, two visitor/player attempts per client, and a native ranged HTTP status check near 80% before caching a successful stream. Gone responses stop the retry for that client.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 114,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L114"
+        },
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 121,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L121"
+        },
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 126,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L126"
+        },
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 263,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L263"
+        }
+      ]
+    },
+    {
+      "step": "Capture fallback availability",
+      "finding": "propio can call official after native failure in shared source, but mobile compilation substitutes capture_mobile.rs, whose stream always returns UNAVAILABLE. The hidden official-video capture implementation is a desktop path; it does not explain Android APK playback.",
+      "sources": [
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 81,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L81"
+        },
+        {
+          "file": "src-tauri/src/extractor.rs",
+          "line": 94,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractor.rs#L94"
+        },
+        {
+          "file": "src-tauri/src/lib.rs",
+          "line": 4,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/lib.rs#L4"
+        },
+        {
+          "file": "src-tauri/src/capture_mobile.rs",
+          "line": 17,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/capture_mobile.rs#L17"
+        }
+      ]
+    }
+  ],
+  "bundledRecipe": {
+    "version": 1,
+    "client": "VISIONOS",
+    "clientVersion": "1.02",
+    "clientId": 101,
+    "deviceMake": "Apple",
+    "deviceModel": "RealityDevice17,1",
+    "osName": "visionOS",
+    "osVersion": "26.5.23O471",
+    "platform": "MOBILE",
+    "preferredMimePrefixes": [
+      "audio/webm",
+      "audio/mp4"
+    ],
+    "sources": [
+      {
+        "file": "src-tauri/extractors.json",
+        "line": 3,
+        "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+        "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/extractors.json#L3"
+      },
+      {
+        "file": "src-tauri/recipe/youtube.json",
+        "line": 3,
+        "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+        "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/recipe/youtube.json#L3"
+      }
+    ]
+  },
+  "comparison": [
+    {
+      "aspect": "Visitor bootstrap",
+      "native": "GET www.youtube.com/sw.js_data through Rust with browser UA and Referer www.youtube.com/sw.js; visitor cache three hours.",
+      "pwa": "Anonymous WEB search JSON via opaque browser iframe; visitor cache 15 minutes.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 159,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L159"
+        }
+      ],
+      "pwaFile": "web-port/youtube.ts",
+      "pwaLine": 235
+    },
+    {
+      "aspect": "Player body",
+      "native": "VISIONOS recipe context plus clientName/version, userAgent string, hl=en and visitorData; contentCheckOk/racyCheckOk; contentPlaybackContext {vis:0,splay:false,lactMilliseconds:'-1'}.",
+      "pwa": "Same bundled VISIONOS name/version/device context, but current production body omits the native userAgent string, hl=en and contentPlaybackContext fields.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 191,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L191"
+        }
+      ],
+      "pwaFile": "web-port/youtube.ts",
+      "pwaLine": 288
+    },
+    {
+      "aspect": "Transport and headers",
+      "native": "reqwest sends application/json, client User-Agent, X-Youtube-Client-Name, X-Youtube-Client-Version, X-Goog-Visitor-Id and Origin https://www.youtube.com; native HTTP is not subject to browser CORS.",
+      "pwa": "Browser fetch with text/plain and credentials omit in opaque sandbox. Browser chooses Origin and forbids impersonating the native HTTP Origin/User-Agent transport; custom client headers require server-approved CORS preflight.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 205,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L205"
+        }
+      ],
+      "pwaFile": "web-port/youtube.ts",
+      "pwaLine": 85
+    },
+    {
+      "aspect": "Format selection",
+      "native": "Direct URL only, preferred WebM/Opus then MP4/AAC; excludes DRC and non-default audio tracks.",
+      "pwa": "Direct MP4/AAC only, same DRC/default-track filters; validates https googlevideo origin.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 224,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L224"
+        }
+      ],
+      "pwaFile": "web-port/youtube.ts",
+      "pwaLine": 254
+    },
+    {
+      "aspect": "URL proof and cache",
+      "native": "Ranged native GET near 80% accepts HTTP200/206; URLs RAM-cached until ten minutes before declared expiry.",
+      "pwa": "Actual HTMLAudio load proves decode; URLs RAM-cached conservatively at most 20 minutes, with expiry margin and refresh invalidation. No equivalent unreadable cross-origin ranged response is promoted as successful validation.",
+      "sources": [
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 114,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L114"
+        },
+        {
+          "file": "src-tauri/src/native.rs",
+          "line": 263,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/native.rs#L263"
+        }
+      ],
+      "pwaFile": "web-port/youtube.ts",
+      "pwaLine": 280
+    },
+    {
+      "aspect": "Search fallback",
+      "native": "Music candidates use existing matcher. Normal YouTube fallback calls yt-dlp search, whose ready method fails on mobile; unavailable desktop program cannot be assumed to supply Android fallback matches.",
+      "pwa": "Music and normal WEB JSON searches work through web adapter, with bounded distinct WEB rescue after unavailable/format and existing thresholds preserved.",
+      "sources": [
+        {
+          "file": "src-tauri/src/player.rs",
+          "line": 272,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/player.rs#L272"
+        },
+        {
+          "file": "src-tauri/src/ytdlp.rs",
+          "line": 224,
+          "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+          "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/ytdlp.rs#L224"
+        }
+      ],
+      "pwaFile": "web-port/audio.ts",
+      "pwaLine": 174
+    }
+  ],
+  "updates": {
+    "finding": "The APK can use a newer separately downloaded, signed recipe without changing visible APK version. Source revision and version alone do not prove the installed runtime recipe or chosen video ID. Bundled recipe is version 1; active recipe, saved source, download state and exact-song playback need separate evidence.",
+    "sources": [
+      {
+        "file": "src-tauri/src/extractors.rs",
+        "line": 149,
+        "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+        "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractors.rs#L149"
+      },
+      {
+        "file": "src-tauri/src/extractors.rs",
+        "line": 166,
+        "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+        "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractors.rs#L166"
+      },
+      {
+        "file": "src-tauri/src/extractors.rs",
+        "line": 191,
+        "revision": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+        "url": "https://github.com/diad87/pletina/blob/4b5691ff50d659fbd048f5a9cff1ddfa91c22a79/src-tauri/src/extractors.rs#L191"
+      }
+    ]
+  },
+  "portableWithoutNativeServer": [
+    "Matching, ranking and bounded retries; much is already ported.",
+    "JSON player-body fields and context values, without assuming that adding them reproduces native transport privileges.",
+    "Recipe data/versioning and signed static updates, if delivered with browser-readable HTTPS/CORS.",
+    "Additional codec selection where HTMLAudio supports it, with real playback verification.",
+    "Safe RAM caches, cancellation and queue preparation."
+  ],
+  "requiresCapabilitiesUnavailableToOrdinaryPwa": [
+    "Rust/JNI/Tauri/native ExoPlayer and Android MediaLibraryService network wake mode.",
+    "Native HTTP bypass of browser CORS or choosing a forged HTTP Origin/User-Agent.",
+    "Reading a cross-origin media response that lacks required Access-Control-Allow-Origin simply by moving the same code to a service worker.",
+    "The desktop capture fallback, which is also explicitly unavailable to the Android reference build."
+  ],
+  "conclusion": "The exact APK source does not contain a separate Android hidden-video trick or yt-dlp path to transplant. Its direct extraction algorithm is similar to the PWA but runs over native HTTP and a native media service. Body/context and codec differences are testable web candidates, not a validated fix. This audit does not establish that Iritsi da Eguna currently works in the APK, nor that direct/background PWA playback of the song has been solved.",
+  "productChanged": false,
+  "newBuildPublished": false,
+  "signedMediaUrlsOrTokensPersisted": false
+}

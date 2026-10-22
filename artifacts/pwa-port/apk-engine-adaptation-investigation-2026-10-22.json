@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "referenceCommit": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "referenceVersion": "0.11.2",
+  "publishedPwaBuild": "e7b0aa14685bb4fa",
+  "request": "Inspect how APK 0.11.2 obtains audio and try to adapt the same method to a pure PWA without a server",
+  "reports": {
+    "sourceAudit": "apk-0.11.2-native-extraction-audit-2026-10-22.json",
+    "publishedRecipe": "apk-current-published-recipe-comparison-2026-10-22.json",
+    "initialNativeHarness": "apk-native-recipe-rust-harness-2026-10-22.json",
+    "reproducibleNativeHarness": "apk-native-recipe-rust-harness-2026-10-22T20-15-04.521Z.json",
+    "browserPortableBodyProbe": "apk-recipe-body-browser-difference-2026-10-22.json",
+    "userApkSearch": "apk-exact-song-search-user-report-2026-10-22.json"
+  },
+  "nativeAndroidChain": ["AndroidPlayer", "PlaybackService with ExoPlayer", "JNI MusifyCore.resolve", "player::resolve", "propio extractor", "native::resolve"],
+  "findings": [
+    "The exact Android reference uses direct native Rust HTTP and a native media service. It does not run yt-dlp, youtubei.js, or the desktop hidden-WebView capture path. Mobile capture is explicitly unavailable.",
+    "The PWA already ports the VISIONOS client and matching logic, but does not have the native HTTP and media-service capabilities. Portable JSON differences were individually tested, not assumed to work.",
+    "Adding the APK context.client.userAgent, hl=en and playbackContext fields in real browser requests leaves both exact-song video IDs UNPLAYABLE with no audio formats. The APK visitor GET is not browser-readable in the two origins tested.",
+    "The unchanged original native.rs and its original helpers and bundled recipe were compiled and called in a standalone desktop Rust harness. Both exact-song IDs are rejected. A separate known-good song resolves to Opus and passes the original native ranged-status check. This does not execute the APK, its catalog search, decoder, phone networking or Android background service.",
+    "The current published recipe file is version 1 and byte-identical to the bundled APK recipe, with matching SHA-256. This check does not inspect the actual installed phone recipe or newly verify its cryptographic signature.",
+    "The user reports that the exact song does not appear in the APK search. No claim is made that the APK currently plays this song successfully."
+  ],
+  "nativeHarnessSource": "../../scripts/tests/apk-native-engine.audit.mjs",
+  "nativeSourceByteIdentityVerified": true,
+  "nativeSourceSha256": "aefda151bb9f0e2da56a7883bf056abee66e881838c4ed1b842cd398abc224dd",
+  "bundledAndPublishedRecipeSha256": "33900ac011fd0aa05c59738a4cf37a0ab197ddd5151c0ee573ed770719078c3f",
+  "interpretation": "No APK-only working extraction route for this song was found to port. Tested portable request differences do not solve it, while both exact IDs fail even in the original native fast extractor on this desktop. This is bounded evidence, not a universal impossibility claim or a physical APK playback test.",
+  "exactSongDirectPwaPlaybackSolved": false,
+  "exactSongBackgroundPwaPlaybackSolved": false,
+  "physicalApkPlaybackTestPerformed": false,
+  "productChanged": false,
+  "newPwaBuildPublished": false,
+  "runtimeServerAdded": false,
+  "apkOrNativeWrapperAddedToPwa": false,
+  "urlsOrTokensPersisted": false,
+  "validationScope": "Reference source audit, live browser request probes, public recipe HTTP/SHA comparison, and two successful executions of the native extractor diagnostic harness. No product build or existing full E2E suite was rerun."
+}
