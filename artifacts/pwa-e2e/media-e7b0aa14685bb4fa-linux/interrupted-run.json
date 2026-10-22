@@ -1,0 +1,152 @@
+{
+  "build": "e7b0aa14685bb4fa",
+  "completed": false,
+  "interruptedByAgent": true,
+  "reason": "The former bounded-error fixture returned UNPLAYABLE, which now intentionally opens automatic visible playback. Its old toast expectation timed out and left the modal intercepting later actions. The generic restricted-error fixture is adapted without changing product code; the matching UNPLAYABLE path remains covered separately.",
+  "completedChecks": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "status": "pass"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "status": "pass"
+    },
+    {
+      "name": "media.selection-html-audio",
+      "status": "pass"
+    },
+    {
+      "name": "media.music-unplayable-rescues-distinct-web-source-without-skipping-song",
+      "status": "pass"
+    },
+    {
+      "name": "media.pause-seek-next-previous-one-audio",
+      "status": "pass"
+    },
+    {
+      "name": "media.now-playing-synthetic-touch-swipe-threshold-and-interactive-origin",
+      "status": "pass"
+    },
+    {
+      "name": "media.media-session-metadata-and-idempotent-actions",
+      "status": "pass"
+    },
+    {
+      "name": "media.dj-duplicates-reorder-play-remove-clear",
+      "status": "pass"
+    },
+    {
+      "name": "media.home-surprise-album-starts-saved-album-in-track-order",
+      "status": "pass"
+    },
+    {
+      "name": "media.artist-radio-builds-bounded-mixed-queue-and-plays",
+      "status": "pass"
+    },
+    {
+      "name": "media.artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning",
+      "status": "pass"
+    },
+    {
+      "name": "media.source-change-during-playback-keeps-song-and-one-audio-through-resume",
+      "status": "pass"
+    },
+    {
+      "name": "media.context-play-next-prepends-dj-priority-without-interrupting-current",
+      "status": "pass"
+    },
+    {
+      "name": "media.shuffle-preserves-current-and-queue-membership",
+      "status": "pass"
+    },
+    {
+      "name": "media.repeat-one-real-ended",
+      "status": "pass"
+    },
+    {
+      "name": "media.repeat-all-wraps-after-final-entry",
+      "status": "pass"
+    },
+    {
+      "name": "media.automatic-next-real-ended-same-audio",
+      "status": "pass"
+    },
+    {
+      "name": "media.sleep-at-end-does-not-start-prepared-successor",
+      "status": "pass"
+    },
+    {
+      "name": "media.sleep-custom-validation-and-one-minute-deadline",
+      "status": "pass"
+    },
+    {
+      "name": "media.pause-during-delayed-resolution-prevents-late-autoplay",
+      "status": "pass"
+    },
+    {
+      "name": "media.rapid-song-selection-ignores-obsolete-player-response",
+      "status": "pass"
+    },
+    {
+      "name": "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+      "status": "fail",
+      "error": "page.waitForFunction: Timeout 25000ms exceeded."
+    },
+    {
+      "name": "media.reload-restores-current-dj-position-and-paused-intent",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button.open')\n    - locator resolved to <button aria-label=\"Sonando ahora\" class=\"open svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').filter({ hasText: /^\\s*Tu biblioteca\\s*$/ }).first()\n    - locator resolved to <button class=\"svelte-msgxbw\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.download-remove-all-cancel-preserves-files-and-reload-ui",
+      "status": "blocked"
+    },
+    {
+      "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+      "status": "blocked"
+    },
+    {
+      "name": "media.download-removal-clears-pointer-body-and-ui",
+      "status": "blocked"
+    },
+    {
+      "name": "media.download-automatic-renewal-after-one-transfer-failure-and-offline-play",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').filter({ hasText: /^\\s*Tu biblioteca\\s*$/ }).first()\n    - locator resolved to <button class=\"svelte-msgxbw\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.download-quotaFailure-rollback-and-no-false-done",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').filter({ hasText: /^\\s*Tu biblioteca\\s*$/ }).first()\n    - locator resolved to <button class=\"svelte-msgxbw\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.download-storageFailure-rollback-and-no-false-done",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').filter({ hasText: /^\\s*Tu biblioteca\\s*$/ }).first()\n    - locator resolved to <button class=\"svelte-msgxbw\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.download-failMedia-rollback-and-no-false-done",
+      "status": "fail",
+      "error": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.bottom-nav button').filter({ hasText: /^\\s*Tu biblioteca\\s*$/ }).first()\n    - locator resolved to <button class=\"svelte-msgxbw\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.download-retry-after-provider-failure-succeeds",
+      "status": "fail",
+      "error": "locator.click: Target page, context or browser has been closed\nCall log:\n  - waiting for locator('.mini button.open')\n    - locator resolved to <button aria-label=\"Sonando ahora\" class=\"open svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n    - waiting 20ms\n    2 × waiting for element to be visible, enabled and stable\n      - element is visible, enabled and stable\n      - scrolling into view if needed\n      - done scrolling\n      - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n    - retrying click action\n      - waiting 100ms\n    28 × waiting for element to be visible, enabled and stable\n       - element is visible, enabled and stable\n       - scrolling into view if needed\n       - done scrolling\n       - <dialog open=\"\" class=\"svelte-3gniv2\" data-official-youtube=\"\" aria-label=\"Ver en YouTube\" aria-describedby=\"official-youtube-help\">…</dialog> intercepts pointer events\n     - retrying click action\n       - waiting 500ms\n"
+    },
+    {
+      "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+      "status": "fail",
+      "error": "page.waitForFunction: Target page, context or browser has been closed"
+    }
+  ],
+  "originalReport": "webkit-iphone-layout/report.json",
+  "rerun": "../media-e7b0aa14685bb4fa-linux-final/summary.json",
+  "cleanupScope": "SIGINT sent through the exec session. Browser finalization fields from an interrupted run are not fabricated."
+}

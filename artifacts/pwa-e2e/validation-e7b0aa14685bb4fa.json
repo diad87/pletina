@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "build": "e7b0aa14685bb4fa",
+  "sourceCommit": "dd01d88fc74ed4ee63d992fc5d886273756aa29b",
+  "finalMediaRunnerCommit": "23317090fa04ffddb34bae75bacc90f7390df3ae",
+  "finalLiveRunnerCommit": "7c194518e39d112212ce402276107b5ed4694ae0",
+  "deployment": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "8cce5f1c7988013006009ca66862515962c39101",
+    "tree": "7f94cc9a32048c9d72a1552935ac026849974538",
+    "source_hash": "bcd189e528647380451a439cfa14826adeda09a5acb36704558a39114f987da6",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "e7b0aa14685bb4fa"
+  },
+  "feature": "A normal song tap may exhaust eligible unavailable/format direct sources; the active PWA player then opens the already matched visible official video and requests unmuted autoplay, without a menu, second search, source choice or iframe Play click. Prefetch and downloads cannot open UI.",
+  "runtimeBackendAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "matchingThresholdsLowered": false,
+  "mediaUrlsOrProviderTokensPersisted": false,
+  "initialBytes": 48320,
+  "optionalApplicationBytes": 488591,
+  "logic": {
+    "pass": 434,
+    "fail": 0,
+    "newTestsSince287": 20,
+    "log": "artifacts/pwa-e2e/logs-e7b0aa14685bb4fa/logic.json"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "log": "artifacts/pwa-e2e/logs-e7b0aa14685bb4fa/types.json"
+  },
+  "builds": {
+    "pwa": "artifacts/pwa-e2e/logs-e7b0aa14685bb4fa/build-pwa.json",
+    "referenceFrontend": "artifacts/pwa-e2e/logs-e7b0aa14685bb4fa/build-reference.json",
+    "nativeApkBuilt": false
+  },
+  "media": {
+    "pass": 106,
+    "fail": 0,
+    "unsupported": 2,
+    "total": 108,
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/media-e7b0aa14685bb4fa-win-final/summary.json",
+        "profiles": [
+          {
+            "profile": "chromium-android-layout",
+            "counts": {
+              "pass": 35,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 1
+            }
+          },
+          {
+            "profile": "firefox-narrow",
+            "counts": {
+              "pass": 36,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      },
+      {
+        "path": "artifacts/pwa-e2e/media-e7b0aa14685bb4fa-linux-final/summary.json",
+        "profiles": [
+          {
+            "profile": "webkit-iphone-layout",
+            "counts": {
+              "pass": 35,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 1
+            }
+          }
+        ]
+      }
+    ],
+    "scope": "34 controlled-provider scenarios and two setup checks per desktop engine; real silent AAC/MP4. Not a full all-suite rerun or physical-phone test."
+  },
+  "officialFallback": {
+    "pass": 33,
+    "fail": 0,
+    "total": 33,
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-e7b0aa14685bb4fa-win/summary.json",
+        "profiles": [
+          {
+            "profile": "chromium-android-layout",
+            "counts": {
+              "pass": 11,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          },
+          {
+            "profile": "firefox-narrow",
+            "counts": {
+              "pass": 11,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      },
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-e7b0aa14685bb4fa-linux/summary.json",
+        "profiles": [
+          {
+            "profile": "webkit-iphone-layout",
+            "counts": {
+              "pass": 11,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      }
+    ],
+    "scope": "Eight manual and three automatic UI scenarios per desktop engine, benign iframe fixture. Automatic normal tap, cancellation before held rejection and prefetch rejection are checked separately. No YouTube media or autoplay-policy claim from fixtures."
+  },
+  "update": {
+    "from": "28771011d17e6c4c",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-e7b0aa14685bb4fa.json"
+  },
+  "publicFiles": {
+    "pass": 22,
+    "total": 22,
+    "report": "artifacts/pwa-deploy/public-files-e7b0aa14685bb4fa.json"
+  },
+  "publicAudioControl": {
+    "pass": 3,
+    "fail": 0,
+    "report": "artifacts/pwa-port/browser-public-e7b0aa14685bb4fa.json",
+    "query": "A solas con un ritmo lirico de violadores del verso",
+    "scope": "Existing direct HTMLAudio route and exact selected catalog song in desktop Chrome."
+  },
+  "automaticOfficialLive": {
+    "pass": 6,
+    "fail": 0,
+    "report": "artifacts/pwa-port/automatic-youtube-live-e7b0aa14685bb4fa-public-final.json",
+    "title": "Iritsi da Eguna",
+    "videoId": "fV-IUsecSsU",
+    "scope": "Public compiled PWA and real providers, normal selected-song click, no further interaction before standard HTML video progress >2 seconds without silence or ad indicators. All observation RPC explicitly userGesture:false; no parent SDK, policy flags, response interception or API play calls."
+  },
+  "browserPolicyProbe": {
+    "report": "artifacts/pwa-port/provider-official-autoplay-one-parent-gesture-no-cdp-activation-2026-10-22.json",
+    "scope": "Desktop Chrome public-origin probe. One parent gesture with immediate and eight-second delayed iframe autoplay succeeded; fresh no-gesture control remained paused. Separate from the integrated public check.",
+    "invalidEarlierProbe": "artifacts/pwa-port/provider-official-autoplay-one-parent-gesture-2026-10-22.json",
+    "invalidEarlierProbeReason": "Puppeteer observation granted user activation; explicitly excluded from autoplay evidence."
+  },
+  "earlierIntegratedAttempt": {
+    "report": "artifacts/pwa-port/automatic-youtube-live-e7b0aa14685bb4fa-public.json",
+    "pass": 3,
+    "fail": 1,
+    "interpretation": "Actual unmuted media progressed beyond 43 seconds, but a desktop-only title selector returned null. The final test reads the observed touch-layout title, watch link and canonical ID; title and exact ID assertions are retained and strengthened."
+  },
+  "preservedInterruptedMediaRuns": [
+    "artifacts/pwa-e2e/media-e7b0aa14685bb4fa-win/interrupted-run.json",
+    "artifacts/pwa-e2e/media-e7b0aa14685bb4fa-linux/interrupted-run.json"
+  ],
+  "interruptedRunInterpretation": "The former generic bounded-error fixture returned UNPLAYABLE and expected a toast. The new intentional automatic fallback opened a modal, invalidating that old assertion and intercepting later cases. The generic fixture now returns LOGIN_REQUIRED, retains stop/retry assertions and adds no-video/request-budget assertions; dedicated UNPLAYABLE recovery and new automatic cases remain. Product/distribution were not changed during this QA correction.",
+  "limitations": [
+    "Browser permission is not guaranteed universally. The human Xiaomi report confirms one-tap startup for the requested release without an observed hash; physical iPhone autoplay and complete device protocols remain pending.",
+    "The fallback remains a visible individual YouTube player, separate from Pletina queue/history/downloads/sleep timer and full MediaSession controls. Direct audio for Iritsi da Eguna remains unavailable.",
+    "No guarantee of background, screen-off or offline playback in official mode. No hidden or muted workaround is used.",
+    "YouTube can consume Escape while focus is inside the frame; visible Close and browser-history Back provide teardown. No physical Android Back claim.",
+    "No claim that removed/private/embedding-disabled videos become playable or that all catalog recordings work.",
+    "Android Auto and CarPlay remain outside this feature and unverified."
+  ],
+  "primaryReferences": [
+    "https://developer.chrome.com/blog/autoplay",
+    "https://webkit.org/blog/6784/new-video-policies-for-ios/",
+    "https://developers.google.com/youtube/iframe_api_reference#onAutoplayBlocked",
+    "https://developers.google.com/youtube/terms/developer-policies#controlling-content-and-user-experience"
+  ],
+  "allRequestedPlatformsVerified": false,
+  "physicalUserReport": {
+    "path": "artifacts/pwa-port/android-automatic-youtube-user-report-2026-10-22.json",
+    "schemaVersion": 1,
+    "recordedDate": "2026-10-22",
+    "source": "Human reply in this conversation after the new automatic PWA was published",
+    "device": "Xiaomi 15T Pro, identified earlier in this conversation",
+    "requestedBuild": "e7b0aa14685bb4fa",
+    "observedBuildReportedByUser": null,
+    "requestedFlow": "Update Pletina; search Iritsi da Eguna; tap its title once normally, without opening a menu or touching the video.",
+    "userResponse": "Sí, suena con un solo toque",
+    "confirmed": [
+      "The selected song starts with a single normal tap in Pletina, without the menu or an additional video Play gesture."
+    ],
+    "notConfirmed": [
+      "The exact build hash observed on the device.",
+      "Background, screen-off, offline download, automatic next track or sleep timer in official mode.",
+      "Physical iPhone autoplay, Android Auto or CarPlay."
+    ],
+    "scope": "Partial manual device confirmation; separate from automated desktop counts."
+  }
+}

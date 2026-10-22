@@ -1,0 +1,2940 @@
+{
+  "testedAt": "2026-10-22T19:49:53.854Z",
+  "build": "e7b0aa14685bb4fa",
+  "query": "Pirritx eta Porrotx Iritsi da Eguna",
+  "checks": [
+    {
+      "name": "open the expected compiled PWA without observer-created user activation",
+      "pass": true,
+      "build": "e7b0aa14685bb4fa",
+      "observerDidNotActivateLandingPage": true
+    },
+    {
+      "name": "find the exact catalog song and click its normal play row once",
+      "pass": true,
+      "selected": {
+        "title": "Iritsi da Eguna",
+        "artist": "Pirritx eta Porrotx"
+      },
+      "songRowClicks": 1
+    },
+    {
+      "name": "direct-source failure opens a visible matching autoplay iframe automatically",
+      "pass": true,
+      "videoId": "fV-IUsecSsU",
+      "rejectedDirectSources": [
+        {
+          "client": "VISIONOS",
+          "videoId": "fV-IUsecSsU",
+          "httpStatus": 200,
+          "playabilityStatus": "UNPLAYABLE"
+        },
+        {
+          "client": "VISIONOS",
+          "videoId": "PStEJ1pAR6s",
+          "httpStatus": 200,
+          "playabilityStatus": "UNPLAYABLE"
+        }
+      ],
+      "noAdditionalPlaybackClick": true
+    },
+    {
+      "name": "the exact content advances unmuted without another click or test API play call",
+      "pass": false,
+      "error": "Two real content samples must advance by >1s, reach >2s, remain unmuted, and show no ad/error"
+    }
+  ],
+  "errors": [],
+  "providerPlayback": [
+    {
+      "client": "VISIONOS",
+      "videoId": "fV-IUsecSsU",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    },
+    {
+      "client": "VISIONOS",
+      "videoId": "PStEJ1pAR6s",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    }
+  ],
+  "scope": "Compiled PWA, real catalog and provider, desktop Chrome, foreground automatic fallback only.",
+  "proofMethod": "One real song-row mouse click; read-only CDP observations with userGesture:false; no follow-up interaction before playback proof.",
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "backgroundVerified": false,
+  "screenOffVerified": false,
+  "offlinePlaybackVerified": false,
+  "providerResponsesMocked": false,
+  "productMethodsReplaced": false,
+  "playerSdkInjected": false,
+  "browserPolicyOverrides": false,
+  "outputSilencedByChromeLaunchArgument": false,
+  "observationRpcCalls": 172,
+  "observationRpcWithGesture": 0,
+  "primaryAttempt": {
+    "songRowClicks": 1,
+    "sourceClicks": 0,
+    "menuClicks": 0,
+    "iframeClicks": 0,
+    "testApiPlayCalls": 0,
+    "samples": [
+      {
+        "media": {
+          "time": 0,
+          "duration": null,
+          "paused": true,
+          "ended": false,
+          "readyState": 0,
+          "errorCode": null,
+          "muted": false,
+          "volume": 1,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 278
+      },
+      {
+        "media": {
+          "time": 0,
+          "duration": null,
+          "paused": true,
+          "ended": false,
+          "readyState": 0,
+          "errorCode": null,
+          "muted": false,
+          "volume": 1,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 587
+      },
+      {
+        "media": {
+          "time": 0,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 0,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 895
+      },
+      {
+        "media": {
+          "time": 0.1352,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 1206
+      },
+      {
+        "media": {
+          "time": 0.445787,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 1517
+      },
+      {
+        "media": {
+          "time": 0.756523,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 1828
+      },
+      {
+        "media": {
+          "time": 1.064791,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 2136
+      },
+      {
+        "media": {
+          "time": 1.373014,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 2444
+      },
+      {
+        "media": {
+          "time": 1.683299,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 2754
+      },
+      {
+        "media": {
+          "time": 1.993046,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 3064
+      },
+      {
+        "media": {
+          "time": 2.302379,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 3373
+      },
+      {
+        "media": {
+          "time": 2.612979,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 3684
+      },
+      {
+        "media": {
+          "time": 2.923762,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 3995
+      },
+      {
+        "media": {
+          "time": 3.233249,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 4304
+      },
+      {
+        "media": {
+          "time": 3.54503,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 4616
+      },
+      {
+        "media": {
+          "time": 3.853706,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 4925
+      },
+      {
+        "media": {
+          "time": 4.163148,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 5234
+      },
+      {
+        "media": {
+          "time": 4.470318,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 5541
+      },
+      {
+        "media": {
+          "time": 4.776869,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 5848
+      },
+      {
+        "media": {
+          "time": 5.087137,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 6158
+      },
+      {
+        "media": {
+          "time": 5.398995,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 6470
+      },
+      {
+        "media": {
+          "time": 5.7088,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 6780
+      },
+      {
+        "media": {
+          "time": 6.018854,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 7090
+      },
+      {
+        "media": {
+          "time": 6.32501,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 7396
+      },
+      {
+        "media": {
+          "time": 6.636143,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 7707
+      },
+      {
+        "media": {
+          "time": 6.946347,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 8017
+      },
+      {
+        "media": {
+          "time": 7.255664,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 8327
+      },
+      {
+        "media": {
+          "time": 7.563861,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 8635
+      },
+      {
+        "media": {
+          "time": 7.872415,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 8943
+      },
+      {
+        "media": {
+          "time": 8.181531,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 9252
+      },
+      {
+        "media": {
+          "time": 8.490989,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 9562
+      },
+      {
+        "media": {
+          "time": 8.80053,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 9871
+      },
+      {
+        "media": {
+          "time": 9.110483,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 10181
+      },
+      {
+        "media": {
+          "time": 9.419677,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 10490
+      },
+      {
+        "media": {
+          "time": 9.728644,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 10800
+      },
+      {
+        "media": {
+          "time": 10.03881,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 11110
+      },
+      {
+        "media": {
+          "time": 10.347791,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 11419
+      },
+      {
+        "media": {
+          "time": 10.650784,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 11722
+      },
+      {
+        "media": {
+          "time": 10.954,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 12025
+      },
+      {
+        "media": {
+          "time": 11.264046,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 12335
+      },
+      {
+        "media": {
+          "time": 11.577068,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 12648
+      },
+      {
+        "media": {
+          "time": 11.888894,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 12960
+      },
+      {
+        "media": {
+          "time": 12.196709,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 13267
+      },
+      {
+        "media": {
+          "time": 12.508569,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 13579
+      },
+      {
+        "media": {
+          "time": 12.817912,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 13889
+      },
+      {
+        "media": {
+          "time": 13.128232,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 14199
+      },
+      {
+        "media": {
+          "time": 13.438745,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 14509
+      },
+      {
+        "media": {
+          "time": 13.747887,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 14819
+      },
+      {
+        "media": {
+          "time": 14.05501,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 15126
+      },
+      {
+        "media": {
+          "time": 14.36332,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 15434
+      },
+      {
+        "media": {
+          "time": 14.674,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 15745
+      },
+      {
+        "media": {
+          "time": 14.983379,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 16054
+      },
+      {
+        "media": {
+          "time": 15.292984,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 16364
+      },
+      {
+        "media": {
+          "time": 15.602785,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 16673
+      },
+      {
+        "media": {
+          "time": 15.913848,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 16985
+      },
+      {
+        "media": {
+          "time": 16.221795,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 17292
+      },
+      {
+        "media": {
+          "time": 16.529573,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 17600
+      },
+      {
+        "media": {
+          "time": 16.839014,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 17910
+      },
+      {
+        "media": {
+          "time": 17.148601,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 18219
+      },
+      {
+        "media": {
+          "time": 17.458337,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 18529
+      },
+      {
+        "media": {
+          "time": 17.767835,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 18838
+      },
+      {
+        "media": {
+          "time": 18.077395,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 19148
+      },
+      {
+        "media": {
+          "time": 18.386647,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 19457
+      },
+      {
+        "media": {
+          "time": 18.69689,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 19768
+      },
+      {
+        "media": {
+          "time": 19.007033,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 20078
+      },
+      {
+        "media": {
+          "time": 19.315768,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 20386
+      },
+      {
+        "media": {
+          "time": 19.624756,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 20695
+      },
+      {
+        "media": {
+          "time": 19.934588,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 21005
+      },
+      {
+        "media": {
+          "time": 20.244288,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 21315
+      },
+      {
+        "media": {
+          "time": 20.555472,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 21626
+      },
+      {
+        "media": {
+          "time": 20.867047,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 21938
+      },
+      {
+        "media": {
+          "time": 21.175074,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 22246
+      },
+      {
+        "media": {
+          "time": 21.488327,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 22559
+      },
+      {
+        "media": {
+          "time": 21.798344,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 22869
+      },
+      {
+        "media": {
+          "time": 22.108753,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 23179
+      },
+      {
+        "media": {
+          "time": 22.420177,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 23491
+      },
+      {
+        "media": {
+          "time": 22.72872,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 23799
+      },
+      {
+        "media": {
+          "time": 23.038464,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 24109
+      },
+      {
+        "media": {
+          "time": 23.349149,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 24420
+      },
+      {
+        "media": {
+          "time": 23.657891,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 24728
+      },
+      {
+        "media": {
+          "time": 23.965036,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 25035
+      },
+      {
+        "media": {
+          "time": 24.274122,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 25345
+      },
+      {
+        "media": {
+          "time": 24.585233,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 25656
+      },
+      {
+        "media": {
+          "time": 24.894667,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 25965
+      },
+      {
+        "media": {
+          "time": 25.201636,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 26272
+      },
+      {
+        "media": {
+          "time": 25.512465,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 26583
+      },
+      {
+        "media": {
+          "time": 25.819969,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 26890
+      },
+      {
+        "media": {
+          "time": 26.129602,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 27200
+      },
+      {
+        "media": {
+          "time": 26.4377,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 27508
+      },
+      {
+        "media": {
+          "time": 26.747356,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 27818
+      },
+      {
+        "media": {
+          "time": 27.055719,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 28126
+      },
+      {
+        "media": {
+          "time": 27.367897,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 28438
+      },
+      {
+        "media": {
+          "time": 27.678072,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 28748
+      },
+      {
+        "media": {
+          "time": 27.986054,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 29056
+      },
+      {
+        "media": {
+          "time": 28.299555,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 29370
+      },
+      {
+        "media": {
+          "time": 28.607313,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 29678
+      },
+      {
+        "media": {
+          "time": 28.918555,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 29989
+      },
+      {
+        "media": {
+          "time": 29.229138,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 30299
+      },
+      {
+        "media": {
+          "time": 29.540033,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 30610
+      },
+      {
+        "media": {
+          "time": 29.8499,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 30920
+      },
+      {
+        "media": {
+          "time": 30.158118,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 31228
+      },
+      {
+        "media": {
+          "time": 30.467787,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 31538
+      },
+      {
+        "media": {
+          "time": 30.775624,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 31846
+      },
+      {
+        "media": {
+          "time": 31.087767,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 32158
+      },
+      {
+        "media": {
+          "time": 31.398284,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 32469
+      },
+      {
+        "media": {
+          "time": 31.70593,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 32776
+      },
+      {
+        "media": {
+          "time": 32.016519,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 33087
+      },
+      {
+        "media": {
+          "time": 32.326972,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 33397
+      },
+      {
+        "media": {
+          "time": 32.638208,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 33708
+      },
+      {
+        "media": {
+          "time": 32.948477,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 34019
+      },
+      {
+        "media": {
+          "time": 33.259535,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 34330
+      },
+      {
+        "media": {
+          "time": 33.568413,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 34639
+      },
+      {
+        "media": {
+          "time": 33.875964,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 34946
+      },
+      {
+        "media": {
+          "time": 34.186892,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 35257
+      },
+      {
+        "media": {
+          "time": 34.495392,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 35566
+      },
+      {
+        "media": {
+          "time": 34.808651,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 35879
+      },
+      {
+        "media": {
+          "time": 35.118262,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 36188
+      },
+      {
+        "media": {
+          "time": 35.428825,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 36499
+      },
+      {
+        "media": {
+          "time": 35.738349,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 36809
+      },
+      {
+        "media": {
+          "time": 36.049987,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 37120
+      },
+      {
+        "media": {
+          "time": 36.363685,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 37434
+      },
+      {
+        "media": {
+          "time": 36.672533,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 37744
+      },
+      {
+        "media": {
+          "time": 36.979332,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 38049
+      },
+      {
+        "media": {
+          "time": 37.290029,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 38360
+      },
+      {
+        "media": {
+          "time": 37.598794,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 38669
+      },
+      {
+        "media": {
+          "time": 37.906584,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 38977
+      },
+      {
+        "media": {
+          "time": 38.21503,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 39285
+      },
+      {
+        "media": {
+          "time": 38.52505,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 39595
+      },
+      {
+        "media": {
+          "time": 38.834218,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 39904
+      },
+      {
+        "media": {
+          "time": 39.142254,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 40212
+      },
+      {
+        "media": {
+          "time": 39.451062,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 40521
+      },
+      {
+        "media": {
+          "time": 39.765009,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 40835
+      },
+      {
+        "media": {
+          "time": 40.076629,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 41147
+      },
+      {
+        "media": {
+          "time": 40.383034,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 41453
+      },
+      {
+        "media": {
+          "time": 40.693159,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 41763
+      },
+      {
+        "media": {
+          "time": 41.003319,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 42073
+      },
+      {
+        "media": {
+          "time": 41.309839,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 42380
+      },
+      {
+        "media": {
+          "time": 41.619158,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 42689
+      },
+      {
+        "media": {
+          "time": 41.928434,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 42998
+      },
+      {
+        "media": {
+          "time": 42.239152,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 43309
+      },
+      {
+        "media": {
+          "time": 42.548539,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 43618
+      },
+      {
+        "media": {
+          "time": 42.856758,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 43927
+      },
+      {
+        "media": {
+          "time": 43.165166,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 44235
+      },
+      {
+        "media": {
+          "time": 43.474641,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 44545
+      },
+      {
+        "media": {
+          "time": 43.786433,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": null,
+        "contentVideoId": null,
+        "elapsed": 44856
+      }
+    ],
+    "activationBeforeSongClick": {
+      "active": true,
+      "ever": true
+    },
+    "startedAt": "2026-10-22T19:49:55.635Z",
+    "fallback": {
+      "appPresent": true,
+      "dialogOpen": true,
+      "embed": {
+        "host": "www.youtube.com",
+        "videoId": "fV-IUsecSsU",
+        "declaredVideoId": "fV-IUsecSsU",
+        "autoplay": "1",
+        "playsinline": "1",
+        "apiEnabled": "1",
+        "originMatches": true,
+        "autoplayDelegated": true,
+        "width": 718,
+        "height": 403.875,
+        "visibleFraction": 1,
+        "visible": true,
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "dialogTrack": "Iritsi da Eguna · Pirritx eta Porrotx",
+      "mediaTitle": "Iritsi da Eguna",
+      "mediaPlaybackState": "paused",
+      "activation": {
+        "active": true,
+        "ever": true
+      }
+    }
+  },
+  "inputActions": [
+    {
+      "kind": "real mouse click",
+      "purpose": "open Pletina from the installer"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "focus the normal music search input"
+    },
+    {
+      "kind": "real keyboard typing",
+      "purpose": "search the catalog",
+      "characters": 35
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "play the selected catalog song"
+    }
+  ],
+  "originKind": "supplied HTTPS/HTTP landing page",
+  "browser": "Chrome/153.0.8010.52",
+  "initialCookieCount": 0,
+  "activationBeforeInteraction": {
+    "active": false,
+    "ever": false
+  },
+  "applicationActivationBeforeSearch": {
+    "active": false,
+    "ever": true
+  },
+  "selected": {
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx"
+  },
+  "failure": {
+    "name": "AssertionError",
+    "message": "Two real content samples must advance by >1s, reach >2s, remain unmuted, and show no ad/error"
+  },
+  "finalParentState": {
+    "appPresent": true,
+    "dialogOpen": true,
+    "embed": {
+      "host": "www.youtube.com",
+      "videoId": "fV-IUsecSsU",
+      "declaredVideoId": "fV-IUsecSsU",
+      "autoplay": "1",
+      "playsinline": "1",
+      "apiEnabled": "1",
+      "originMatches": true,
+      "autoplayDelegated": true,
+      "width": 718,
+      "height": 403.875,
+      "visibleFraction": 1,
+      "visible": true,
+      "referrerPolicy": "strict-origin-when-cross-origin"
+    },
+    "dialogTrack": "Iritsi da Eguna · Pirritx eta Porrotx",
+    "mediaTitle": "Iritsi da Eguna",
+    "mediaPlaybackState": "paused",
+    "activation": {
+      "active": false,
+      "ever": true
+    }
+  },
+  "failureScreenshot": "automatic-youtube-live-e7b0aa14685bb4fa-public-failure.png",
+  "contextClosed": true,
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T19:50:43.452Z"
+}

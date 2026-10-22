@@ -1,0 +1,500 @@
+{
+  "testedAt": "2026-10-22T19:53:09.064Z",
+  "build": "e7b0aa14685bb4fa",
+  "query": "Pirritx eta Porrotx Iritsi da Eguna",
+  "checks": [
+    {
+      "name": "open the expected compiled PWA without observer-created user activation",
+      "pass": true,
+      "build": "e7b0aa14685bb4fa",
+      "observerDidNotActivateLandingPage": true
+    },
+    {
+      "name": "find the exact catalog song and click its normal play row once",
+      "pass": true,
+      "selected": {
+        "title": "Iritsi da Eguna",
+        "artist": "Pirritx eta Porrotx"
+      },
+      "songRowClicks": 1
+    },
+    {
+      "name": "direct-source failure opens a visible matching autoplay iframe automatically",
+      "pass": true,
+      "videoId": "fV-IUsecSsU",
+      "rejectedDirectSources": [
+        {
+          "client": "VISIONOS",
+          "videoId": "fV-IUsecSsU",
+          "httpStatus": 200,
+          "playabilityStatus": "UNPLAYABLE"
+        },
+        {
+          "client": "VISIONOS",
+          "videoId": "PStEJ1pAR6s",
+          "httpStatus": 200,
+          "playabilityStatus": "UNPLAYABLE"
+        }
+      ],
+      "noAdditionalPlaybackClick": true
+    },
+    {
+      "name": "the exact content advances unmuted without another click or test API play call",
+      "pass": true,
+      "initialContentSample": {
+        "time": 0.359508,
+        "elapsed": 1207
+      },
+      "finalContentSample": {
+        "media": {
+          "time": 2.214343,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 3062
+      },
+      "screenshot": "automatic-youtube-live-e7b0aa14685bb4fa-public-final-playing.png",
+      "songRowClicks": 1,
+      "iframeClicks": 0,
+      "sourceClicks": 0,
+      "menuClicks": 0,
+      "testApiPlayCalls": 0,
+      "observerGestureGranted": false
+    },
+    {
+      "name": "the visible close control removes the official player",
+      "pass": true,
+      "iframeRemoved": true,
+      "applicationStillOpen": true
+    },
+    {
+      "name": "a separate normal play attempt reopens the fallback and browser Back removes it",
+      "pass": true,
+      "separateSongRowClicks": 1,
+      "iframeRemoved": true,
+      "applicationStillOpen": true,
+      "scope": "Browser history API cleanup only; no physical Android Back claim"
+    }
+  ],
+  "errors": [],
+  "providerPlayback": [
+    {
+      "client": "VISIONOS",
+      "videoId": "fV-IUsecSsU",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    },
+    {
+      "client": "VISIONOS",
+      "videoId": "PStEJ1pAR6s",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    },
+    {
+      "client": "VISIONOS",
+      "videoId": "fV-IUsecSsU",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    },
+    {
+      "client": "VISIONOS",
+      "videoId": "PStEJ1pAR6s",
+      "httpStatus": 200,
+      "playabilityStatus": "UNPLAYABLE"
+    }
+  ],
+  "scope": "Compiled PWA, real catalog and provider, desktop Chrome, foreground automatic fallback only.",
+  "proofMethod": "One real song-row mouse click; read-only CDP observations with userGesture:false; no follow-up interaction before playback proof.",
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "backgroundVerified": false,
+  "screenOffVerified": false,
+  "offlinePlaybackVerified": false,
+  "providerResponsesMocked": false,
+  "productMethodsReplaced": false,
+  "playerSdkInjected": false,
+  "browserPolicyOverrides": false,
+  "outputSilencedByChromeLaunchArgument": false,
+  "observationRpcCalls": 59,
+  "observationRpcWithGesture": 0,
+  "primaryAttempt": {
+    "songRowClicks": 1,
+    "sourceClicks": 0,
+    "menuClicks": 0,
+    "iframeClicks": 0,
+    "testApiPlayCalls": 0,
+    "samples": [
+      {
+        "media": {
+          "time": 0,
+          "duration": null,
+          "paused": true,
+          "ended": false,
+          "readyState": 0,
+          "errorCode": null,
+          "muted": false,
+          "volume": 1,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna - YouTube",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider document.title"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 258
+      },
+      {
+        "media": {
+          "time": 0,
+          "duration": null,
+          "paused": true,
+          "ended": false,
+          "readyState": 0,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 592
+      },
+      {
+        "media": {
+          "time": 0.046744,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 895
+      },
+      {
+        "media": {
+          "time": 0.359508,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 1207
+      },
+      {
+        "media": {
+          "time": 0.661873,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 1510
+      },
+      {
+        "media": {
+          "time": 0.976334,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 1824
+      },
+      {
+        "media": {
+          "time": 1.284308,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 2132
+      },
+      {
+        "media": {
+          "time": 1.593402,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 2441
+      },
+      {
+        "media": {
+          "time": 1.905054,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 2753
+      },
+      {
+        "media": {
+          "time": 2.214343,
+          "duration": 169.661,
+          "paused": false,
+          "ended": false,
+          "readyState": 4,
+          "errorCode": null,
+          "muted": false,
+          "volume": 0.6266138646723354,
+          "playbackRate": 1
+        },
+        "adShowing": false,
+        "visibleAdBadges": 0,
+        "visibleErrors": [],
+        "contentTitle": "Iritsi da Eguna",
+        "contentVideoId": "fV-IUsecSsU",
+        "canonicalVideoId": "fV-IUsecSsU",
+        "titleEvidence": {
+          "kind": "provider DOM title link",
+          "class": "ytmVideoInfoVideoTitle"
+        },
+        "documentTitle": "Iritsi da Eguna - YouTube",
+        "elapsed": 3062
+      }
+    ],
+    "activationBeforeSongClick": {
+      "active": true,
+      "ever": true
+    },
+    "startedAt": "2026-10-22T19:53:12.642Z",
+    "fallback": {
+      "appPresent": true,
+      "dialogOpen": true,
+      "embed": {
+        "host": "www.youtube.com",
+        "videoId": "fV-IUsecSsU",
+        "declaredVideoId": "fV-IUsecSsU",
+        "autoplay": "1",
+        "playsinline": "1",
+        "apiEnabled": "1",
+        "originMatches": true,
+        "autoplayDelegated": true,
+        "width": 718,
+        "height": 403.875,
+        "visibleFraction": 1,
+        "visible": true,
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "dialogTrack": "Iritsi da Eguna · Pirritx eta Porrotx",
+      "mediaTitle": "Iritsi da Eguna",
+      "mediaPlaybackState": "paused",
+      "activation": {
+        "active": true,
+        "ever": true
+      }
+    },
+    "provedAt": "2026-10-22T19:53:17.784Z",
+    "noAdditionalPlaybackInteraction": true,
+    "lastParentState": {
+      "appPresent": true,
+      "dialogOpen": true,
+      "embed": {
+        "host": "www.youtube.com",
+        "videoId": "fV-IUsecSsU",
+        "declaredVideoId": "fV-IUsecSsU",
+        "autoplay": "1",
+        "playsinline": "1",
+        "apiEnabled": "1",
+        "originMatches": true,
+        "autoplayDelegated": true,
+        "width": 718,
+        "height": 403.875,
+        "visibleFraction": 1,
+        "visible": true,
+        "referrerPolicy": "strict-origin-when-cross-origin"
+      },
+      "dialogTrack": "Iritsi da Eguna · Pirritx eta Porrotx",
+      "mediaTitle": "Iritsi da Eguna",
+      "mediaPlaybackState": "paused",
+      "activation": {
+        "active": false,
+        "ever": true
+      }
+    }
+  },
+  "inputActions": [
+    {
+      "kind": "real mouse click",
+      "purpose": "open Pletina from the installer"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "focus the normal music search input"
+    },
+    {
+      "kind": "real keyboard typing",
+      "purpose": "search the catalog",
+      "characters": 35
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "play the selected catalog song"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "close after automatic playback was proved"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "separate reopen for Back cleanup after playback proof"
+    }
+  ],
+  "originKind": "supplied HTTPS/HTTP landing page",
+  "browser": "Chrome/153.0.8010.52",
+  "initialCookieCount": 0,
+  "activationBeforeInteraction": {
+    "active": false,
+    "ever": false
+  },
+  "applicationActivationBeforeSearch": {
+    "active": false,
+    "ever": true
+  },
+  "selected": {
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx"
+  },
+  "contextClosed": true,
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T19:53:19.766Z"
+}
