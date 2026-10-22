@@ -124,7 +124,7 @@ export async function buildPortablePwa({ directory = outputDirectory, output = j
   html = html.replace('<html lang="es">', '<html lang="es" data-portable>')
     .replace(/    <link rel="(?:manifest|icon|apple-touch-icon)"[^>]*>\r?\n/g, '')
     .replace(script[0], '')
-    .replace('src="./icons/icon-192.png"', `src="data:image/png;base64,${icon}"`)
+    .replaceAll('src="./icons/icon-192.png"', `src="data:image/png;base64,${icon}"`)
     .replace('</body>', `  <script>${javascript}</script>\n  </body>`)
   await mkdir(dirname(output), { recursive: true })
   await writeFile(output, html)
