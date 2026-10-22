@@ -1,0 +1,325 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-22T20:50:45.171Z",
+  "scope": "JioSaavn and Gaana own-domain public metadata APIs from the actual PWA Pages origin. Normal browser CORS, then bounded opaque/JSONP availability controls if needed. No Node provider requests, third-party proxy, server, login, API key, user-agent/header spoofing, licensed key extraction, DRM decryption, browser security override or product modification.",
+  "primarySources": [
+    "https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/yt_dlp/extractor/jiosaavn.py",
+    "https://raw.githubusercontent.com/sumitkolhe/jiosaavn-api/main/src/common/constants/endpoint.constant.ts",
+    "https://raw.githubusercontent.com/sumitkolhe/jiosaavn-api/main/src/modules/search/use-cases/search-songs/search-songs.use-case.ts",
+    "https://raw.githubusercontent.com/sumitkolhe/jiosaavn-api/main/src/common/helpers/fetch.helper.ts",
+    "https://raw.githubusercontent.com/ZingyTomato/GaanaPy/main/api/endpoints.py"
+  ],
+  "song": {
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "isrc": "QM6N21424821",
+    "duration": 169
+  },
+  "requests": [
+    {
+      "provider": "jiosaavn",
+      "query": "Leja Re",
+      "mode": "top",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "jiosaavn",
+      "query": "Leja Re",
+      "mode": "opaque",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "jiosaavn",
+      "query": "Leja Re",
+      "mode": "jsonp",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "No public JSONP callback",
+      "callbackExecuted": false,
+      "validProviderTransportEvidence": false
+    },
+    {
+      "provider": "jiosaavn",
+      "query": "Iritsi da Eguna",
+      "mode": "top",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "jiosaavn",
+      "query": "Pirritx eta Porrotx",
+      "mode": "top",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "jiosaavn",
+      "query": "QM6N21424821",
+      "mode": "top",
+      "endpointHost": "www.jiosaavn.com",
+      "endpointPath": "/api.php",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "gaana",
+      "query": "Leja Re",
+      "mode": "top",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "gaana",
+      "query": "Leja Re",
+      "mode": "opaque",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "gaana",
+      "query": "Leja Re",
+      "mode": "jsonp",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "No public JSONP callback",
+      "callbackExecuted": false,
+      "validProviderTransportEvidence": false
+    },
+    {
+      "provider": "gaana",
+      "query": "Iritsi da Eguna",
+      "mode": "top",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "gaana",
+      "query": "Pirritx eta Porrotx",
+      "mode": "top",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "provider": "gaana",
+      "query": "QM6N21424821",
+      "mode": "top",
+      "endpointHost": "gaana.com",
+      "endpointPath": "/apiv2",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    }
+  ],
+  "network": [
+    {
+      "event": "response",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "www.jiosaavn.com",
+      "path": "/api.php",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": "text/html"
+    },
+    {
+      "event": "failed",
+      "host": "gaana.com",
+      "path": "/apiv2",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    }
+  ],
+  "errors": [],
+  "metadataExactMatchFound": false,
+  "actualFullAudioVerified": false,
+  "audioAttempted": false,
+  "productChanged": false,
+  "published": false,
+  "runtimeBackendAdded": false,
+  "physicalDeviceVerified": false,
+  "signedMediaUrlsOrTokensPersisted": false,
+  "browser": "Chrome/153.0.8010.52",
+  "build": "e7b0aa14685bb4fa",
+  "conclusion": "Metadata transport/control results are kept separate from catalog absence. No full-audio source or playback is claimed without a browser-readable playable control. URL descriptor obfuscation is not itself evidence of content DRM; no decryption key or protected-media route was used.",
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T20:51:00.693Z",
+  "probeLimitations": [
+    "The two initial JSONP controls had a probe construction error: document.body did not exist when appending the remote script. Their callback timeouts are not provider evidence. The corrected controls are retained in jiosaavn-gaana-own-api-jsonp-controls-browser-2026-10-22.json. Top-level and opaque fetch requests are unaffected."
+  ]
+}

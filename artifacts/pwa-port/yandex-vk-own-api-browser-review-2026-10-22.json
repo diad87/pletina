@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-22T20:55:27.969Z",
+  "scope": "Bounded unauthenticated Yandex Music metadata search from the actual Pletina Pages origin, with normal browser security and credentials omitted. VK Music is a primary-source session-dependency review only. No protected audio endpoints, login, scraping, signatures, keys, SDK installation, proxy, runtime server, or product changes.",
+  "song": {
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "duration": 169,
+    "isrc": "QM6N21424821"
+  },
+  "primarySources": {
+    "yandexSearch": "https://raw.githubusercontent.com/MarshalX/yandex-music-api/main/yandex_music/_client/search.py",
+    "yandexTracks": "https://raw.githubusercontent.com/MarshalX/yandex-music-api/main/yandex_music/_client/tracks.py",
+    "vkAudio": "https://raw.githubusercontent.com/python273/vk_api/master/vk_api/audio.py"
+  },
+  "yandexSourceReview": {
+    "search": "SearchMixin.search builds GET /search with text, type and page parameters. The per-method implementation does not explicitly require a token; runtime anonymous browser support is tested separately.",
+    "audio": "tracks_file_info documents that authorization is required; lossless requires a subscription. This probe does not call /get-file-info or /download-info and does not construct signatures or obtain media URLs.",
+    "references": {
+      "searchParametersLines": "53-62",
+      "protectedAudioRequirementsLines": "93-112"
+    }
+  },
+  "vkSourceReview": {
+    "inspected": true,
+    "runtimeRequestsMade": false,
+    "finding": "The reviewed VkAudio client depends on the supplied VkApi session: it obtains the current user ID via users.get, stores the session in self._vk, initializes cookies and performs audio search through self._vk.http.post to /al_audio.php with owner_id=self.user_id. This source does not establish an account-free full-audio browser route. No login, scraping, session reuse, or borrowed keys was attempted.",
+    "references": {
+      "sessionInitializationLines": "78-85",
+      "audioSearchLines": "289-307"
+    }
+  },
+  "requests": [
+    {
+      "tag": "1:top",
+      "query": "Billie Eilish bad guy",
+      "mode": "top",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    },
+    {
+      "tag": "2:top",
+      "query": "Pirritx eta Porrotx Iritsi da Eguna",
+      "mode": "top",
+      "readable": false,
+      "http": null,
+      "jsonParsed": false,
+      "error": "TypeError"
+    }
+  ],
+  "network": [
+    {
+      "event": "response",
+      "tag": "1:top",
+      "host": "api.music.yandex.net",
+      "path": "/search",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": null
+    },
+    {
+      "event": "failed",
+      "tag": "1:top",
+      "host": "api.music.yandex.net",
+      "path": "/search",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    },
+    {
+      "event": "response",
+      "tag": "2:top",
+      "host": "api.music.yandex.net",
+      "path": "/search",
+      "status": 403,
+      "allowOrigin": null,
+      "contentType": null
+    },
+    {
+      "event": "failed",
+      "tag": "2:top",
+      "host": "api.music.yandex.net",
+      "path": "/search",
+      "error": "net::ERR_FAILED",
+      "corsError": "MissingAllowOriginHeader"
+    }
+  ],
+  "errors": [],
+  "audioAttempted": false,
+  "actualFullAudioPlaybackVerified": false,
+  "productChanged": false,
+  "published": false,
+  "runtimeBackendAdded": false,
+  "physicalDeviceVerified": false,
+  "protectedAudioRoutesRequested": false,
+  "signedMediaUrlsOrTokensPersisted": false,
+  "browser": "Chrome/153.0.8010.52",
+  "origin": "https://diad87.github.io",
+  "build": "e7b0aa14685bb4fa",
+  "opaqueControlSkipped": "The initial control was denied with HTTP 403; no alternate transport or retry attempted.",
+  "conclusion": "Readable metadata responses, empty result sets and transport denials are separate outcomes. This bounded probe establishes neither anonymous full audio nor a solution for Iritsi da Eguna. VK was reviewed for session requirements only; no account-free route was validated.",
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T20:55:29.436Z"
+}

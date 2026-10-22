@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "publishedPwaBuild": "e7b0aa14685bb4fa",
+  "requestVerbatim": "No hay mas posibilidades de fuentes?",
+  "previousReview": "pwa-catalog-provider-feasibility-2026-10-22.json",
+  "constraints": {
+    "purePwa": true,
+    "noIntermediaryServer": true,
+    "noListenerLogin": true,
+    "noSubscriptions": true,
+    "broadSearchableCatalogPreferred": true
+  },
+  "providers": [
+    {
+      "name": "HearThis.at",
+      "publicSearchValidated": true,
+      "publicFullAudioControlValidated": true,
+      "exactSongRecovered": false,
+      "finding": "Public API JSON can be read by the actual Pages origin with no application key or account. A 301-second control advances unmuted after one trusted Play click and after a seek to 120 seconds. Iritsi search instead returns a 4287-second DJ mix with a different title and artist, which is rejected; the artist search reports no results. This proves provider transport feasibility, not a matching catalog fallback or mobile background behavior. The control disallows downloading and has no declared open license.",
+      "reports": ["open-catalogs-browser-search-2026-10-22.json", "open-catalogs-public-audio-control-2026-10-22.json"],
+      "sources": ["https://hearthis.at/api-v2/"]
+    },
+    {
+      "name": "Internet Archive",
+      "publicSearchValidated": true,
+      "publicFullAudioControlValidated": true,
+      "exactSongRecovered": false,
+      "finding": "Broader Pirritx/Porrotx full-text search returns 24 audio items, unlike the earlier exact and creator-only searches. The related Egiozu Euskaraz item uploaded by AEK has readable metadata and a full 126.8325-second MP3; unmuted playback advances at the beginning and after a middle seek. It is not Iritsi da Eguna. The uploader declares Public Domain Mark; this is recorded metadata, not independent verification of rights or original-master identity.",
+      "reports": ["iritsi-internet-archive-browser-search-2026-10-22.json", "open-catalogs-browser-search-2026-10-22.json", "open-catalogs-public-audio-control-2026-10-22.json"],
+      "sources": ["https://archive.org/developers/md-read.html", "https://archive.org/details/EgiozuEuskarazPirritxPorrotxEtaMarimotots"]
+    },
+    {
+      "name": "Jamendo",
+      "potentialAnonymousReadIntegration": true,
+      "ownApplicationRegistered": false,
+      "actualFullPlaybackValidated": false,
+      "finding": "The official read API requires a developer-registered application client_id, not a login by each listener. Public read methods do not inherently need user OAuth or a backend. The documented test application is suspended in the earlier browser probe; this does not rule out the provider or prove an empty catalog. A valid own application ID and real browser/audio validation remain necessary.",
+      "reports": ["iritsi-audius-jamendo-browser-catalog-2026-10-22.json", "jamendo-bandcamp-catalog-browser-2026-10-22.json"],
+      "sources": ["https://developer.jamendo.com/v3.0/authentication"]
+    },
+    {
+      "name": "JioSaavn / Gaana",
+      "anonymousBrowserCatalogValidated": false,
+      "actualFullPlaybackValidated": false,
+      "finding": "Ten bounded public API fetches from Pages and opaque-origin controls return network HTTP 403 with unreadable CORS responses. Two corrected public JSONP controls also return HTTP 403 without callbacks. The initial two JSONP timeouts had a probe setup bug and are explicitly excluded. These results do not establish that the exact song is absent. No third-party API proxy was used.",
+      "reports": ["jiosaavn-gaana-own-api-browser-2026-10-22.json", "jiosaavn-gaana-own-api-jsonp-controls-browser-2026-10-22.json"]
+    },
+    {
+      "name": "QQ Music",
+      "publicSearchValidated": true,
+      "exactSongMetadataFound": true,
+      "actualFullPlaybackValidated": false,
+      "exactSongRecovered": false,
+      "finding": "An isolated anonymous provider JSONP search returns the exact title, artist, album and 169-second duration (public ID 216035983, mid 003EcCKt0Wd30D), plus a valid control. Both the initial vkey requests and a final check with corrected standard AAC filenames return result 104003 and no media URL for exact and control. The final check uses already verified public IDs, avoiding a repeated search that returned service 2001. Searching successfully and payPlay=0 metadata do not prove full audio availability; no undocumented cause is assigned to those codes.",
+      "reports": ["qq-netease-public-browser-catalog-2026-10-22.json", "qq-public-audio-browser-2026-10-22.json", "qq-public-audio-browser-standard-filenames-2026-10-22.json", "qq-public-audio-browser-corrected-filenames-final-2026-10-22.json"]
+    },
+    {
+      "name": "NetEase Cloud Music / ccMixter",
+      "anonymousBrowserCatalogValidated": false,
+      "actualFullPlaybackValidated": false,
+      "finding": "The bounded exact and control fetches are unreadable from the Pages origin. ccMixter diagnostics identify MissingAllowOriginHeader. No catalog-absence conclusion is drawn from transport failures.",
+      "reports": ["qq-netease-public-browser-catalog-2026-10-22.json", "open-catalogs-browser-search-2026-10-22.json", "open-catalogs-public-audio-control-2026-10-22.json"]
+    },
+    {
+      "name": "Yandex Music / VK Music",
+      "anonymousBrowserCatalogValidated": false,
+      "actualFullPlaybackValidated": false,
+      "finding": "Yandex exact and positive-control search requests both receive network HTTP 403 and MissingAllowOriginHeader from Pages; metadata is unreadable, so no absence claim is made. No protected file-info or signing route is attempted. The reviewed VK client uses a logged-in session, cookies and the current user's ID. No anonymous static full-audio route is established for VK; it was a client-source review, not an authenticated playback test.",
+      "reports": ["yandex-vk-own-api-browser-review-2026-10-22.json"]
+    },
+    {
+      "name": "Free Music Archive / PeerTube",
+      "actualBrowserPlaybackTested": false,
+      "finding": "These remain separate documentation leads. Free Music Archive states its API was retired and requires permission for hotlinking or automated search. PeerTube provides per-instance video/file search APIs and federated discovery; it is not a single complete commercial music catalog. No playback or exact-song recovery is claimed for either.",
+      "sources": ["https://freemusicarchive.org/app-developers", "https://docs.joinpeertube.org/api-rest-reference.html"]
+    }
+  ],
+  "conclusion": "There are additional viable public-audio catalogs: HearThis and Internet Archive join the previously tested Audius as browser-compatible candidates. None of the new tests establishes recovery of Iritsi da Eguna or a general canonical commercial-catalog fallback. Jamendo remains a possible read-only integration with an own registered app ID. No empty provider framework or unverified source was added to playback.",
+  "productChanged": false,
+  "newBuildPublished": false,
+  "runtimeServerAdded": false,
+  "accountsOrSubscriptionsAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "matchingThresholdsRelaxed": false,
+  "mediaFilesOrSignedUrlsPersisted": false,
+  "physicalDeviceOrBackgroundVerificationPerformed": false,
+  "existingProductE2eSuiteRerun": false
+}
