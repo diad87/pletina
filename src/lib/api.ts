@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { webInvoke } from '../../web-port/invoke'
+import { getOfficialFallback } from '../../web-port/audio'
+import { openAutomaticOfficialYouTube } from '../../web-port/official-youtube.svelte'
 import type {
   AlbumDetail,
   Album,
@@ -117,6 +119,11 @@ export const resolve = (track: TrackQuery, refresh = false) => invoke<Playable>(
 /** Recurso visible de la PWA cuando una fuente no permite obtener audio directo. */
 export const openYouTubePlayer = (track: TrackQuery) =>
   inPwa ? invoke<void>('open_youtube_player', { track }) : Promise.resolve()
+/** Solo la carga activa decide abrir el recurso; resolver o precargar nunca muestra UI. */
+export const automaticYouTubeSource = (track: TrackQuery, reason: unknown): Alternative | null =>
+  inPwa ? getOfficialFallback(track, reason) : null
+export const openAutomaticYouTubePlayer = (track: TrackQuery, source: Alternative, startAt = 0): boolean =>
+  inPwa && openAutomaticOfficialYouTube(track, source, startAt)
 
 export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('alternatives', { track })
 

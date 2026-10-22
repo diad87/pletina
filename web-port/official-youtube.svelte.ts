@@ -1,9 +1,11 @@
 import type { Alternative, TrackQuery } from '../src/lib/types'
-import { searchOfficialSources, validateOfficialTrack, type OfficialSourceOptions } from './official-youtube'
+import { searchOfficialSources, validateAutomaticOfficialSource, validateOfficialStartAt, validateOfficialTrack, type OfficialSourceOptions } from './official-youtube'
 
 type Options = Omit<OfficialSourceOptions, 'signal'>
 export class OfficialYouTubeController {
   opened = $state(false)
+  automatic = $state(false)
+  startAt = $state(0)
   track = $state<TrackQuery | null>(null)
   status = $state<'idle' | 'loading' | 'ready' | 'error'>('idle')
   sources = $state<Alternative[]>([])
@@ -16,6 +18,8 @@ export class OfficialYouTubeController {
 
   open(input: TrackQuery): void {
     this.#invalidate()
+    this.automatic = false
+    this.startAt = 0
     this.opened = true
     this.sources = []
     this.selected = null
@@ -30,9 +34,30 @@ export class OfficialYouTubeController {
     void this.#load()
   }
 
+  openAutomatic(input: TrackQuery, source: Alternative, startAt = 0): boolean {
+    this.close()
+    try {
+      const track = validateOfficialTrack(input)
+      const selected = validateAutomaticOfficialSource(track, source)
+      const start = validateOfficialStartAt(startAt)
+      this.track = track
+      this.sources = [selected]
+      this.selected = { ...selected }
+      this.status = 'ready'
+      this.automatic = true
+      this.startAt = start
+      this.opened = true
+      return true
+    } catch {
+      return false
+    }
+  }
+
   retry(): void {
     if (!this.opened || !this.track) return
     this.#invalidate()
+    this.automatic = false
+    this.startAt = 0
     this.selected = null
     this.sources = []
     this.error = null
@@ -50,6 +75,8 @@ export class OfficialYouTubeController {
   close(): void {
     this.#invalidate()
     this.opened = false
+    this.automatic = false
+    this.startAt = 0
     this.selected = null
     this.sources = []
     this.track = null
@@ -86,4 +113,5 @@ export class OfficialYouTubeController {
 export const createOfficialYouTubeController = (options: Options = {}) => new OfficialYouTubeController(options)
 export const officialYouTube = createOfficialYouTubeController()
 export const openOfficialYouTube = (track: TrackQuery): void => officialYouTube.open(track)
+export const openAutomaticOfficialYouTube = (track: TrackQuery, source: Alternative, startAt = 0): boolean => officialYouTube.openAutomatic(track, source, startAt)
 export const closeOfficialYouTube = (): void => officialYouTube.close()

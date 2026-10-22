@@ -64,6 +64,49 @@ const playable = (info: StreamInfo, title = info.title, channel = info.channel):
 const choice = (candidate: Candidate, score: number, verified: boolean) => ({ videoId: candidate.videoId, title: candidate.title,
   channel: candidate.artists.join(', '), duration: candidate.duration, score, verified })
 
+type OfficialFallbackReason = 'unavailable' | 'format'
+export interface OfficialFallback {
+  readonly trackId: number
+  readonly source: Alternative
+  readonly reason: OfficialFallbackReason
+}
+
+const unavailableAudio = (error: unknown): error is YouTubeError & { code: OfficialFallbackReason } =>
+  error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')
+const karaoke = (title: string) => /(?:^|[^\p{L}\p{N}])karaoke(?:a)?(?:$|[^\p{L}\p{N}])/iu.test(title)
+
+/** Only metadata can cross into the visible player; signed audio URLs stay in the resolver. */
+function officialSource(track: TrackQuery, source: Alternative): Alternative | null {
+  if (!source || !validVideoId(source.videoId) || !Number.isFinite(source.score) || source.score < MIN_SCORE ||
+    typeof source.title !== 'string' || !source.title.trim() || typeof source.artists !== 'string' || !source.artists.trim() ||
+    (source.album !== null && typeof source.album !== 'string') ||
+    (source.duration !== null && (!Number.isFinite(source.duration) || source.duration <= 0 || source.duration > 604800)) ||
+    !['music', 'youtube'].includes(source.origin) ||
+    (karaoke(source.title) && !karaoke(track.title) && !source.current)) return null
+  return { videoId: source.videoId, title: source.title.trim().slice(0, 500), artists: source.artists.trim().slice(0, 500),
+    album: source.album?.slice(0, 500) ?? null, duration: source.duration, score: source.score, origin: source.origin, current: Boolean(source.current) }
+}
+
+/** A direct-audio failure may offer a matched visible video, never open or start it itself. */
+export class OfficialFallbackError extends YouTubeError {
+  readonly fallback: OfficialFallback
+  constructor(readonly originalError: YouTubeError & { code: OfficialFallbackReason }, track: TrackQuery, source: Alternative) {
+    super(originalError.message, originalError.code)
+    const valid = officialSource(track, source)
+    if (!valid) throw new Error('La fuente alternativa de YouTube no es válida.')
+    this.cause = originalError
+    this.fallback = Object.freeze({ trackId: track.id, source: Object.freeze(valid), reason: originalError.code })
+  }
+}
+
+/** The active player must still check its own cancellation token before opening the video. */
+export function getOfficialFallback(track: TrackQuery, error: unknown): Alternative | null {
+  try { validTrack(track) } catch { return null }
+  if (isPodcast(track) || !(error instanceof OfficialFallbackError) || error.fallback.trackId !== track.id ||
+    !unavailableAudio(error) || error.fallback.reason !== error.code) return null
+  return officialSource(track, error.fallback.source)
+}
+
 function operation(track: TrackQuery, kind: Operation['kind'], refresh: boolean, work: (signal: AbortSignal) => Promise<Playable>): Promise<Playable> {
   const previous = operations.get(track.id)
   if (kind === 'resolve' && previous && (!refresh || previous.kind === 'choose')) return previous.promise
@@ -141,16 +184,28 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       const videoId = await readYouTubeVideo(track.id)
       checkAbort(signal)
       if (!validVideoId(videoId)) throw new Error('No se encuentra el vídeo de esta canción de YouTube.')
-      return playable(await stream(videoId, refresh, signal), track.title, track.artist)
+      try { return playable(await stream(videoId, refresh, signal), track.title, track.artist) }
+      catch (error) {
+        checkAbort(signal)
+        if (unavailableAudio(error)) throw new OfficialFallbackError(error, track, { videoId, title: track.title,
+          artists: track.artist, album: track.album || null, duration: track.duration || null, score: 100, origin: 'youtube', current: true })
+        throw error
+      }
     }
     const saved = await readSourceChoice(track.id)
     checkAbort(signal)
     let missing: string | null = null
+    const rejected: { source: Alternative; error: YouTubeError & { code: OfficialFallbackReason }; manual: boolean }[] = []
     if (saved && validVideoId(saved.videoId)) {
       try { return playable(await stream(saved.videoId, refresh, signal), saved.title, saved.channel) }
       catch (error) {
         checkAbort(signal)
-        if (error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')) missing = saved.videoId
+        if (unavailableAudio(error)) {
+          missing = saved.videoId
+          const source = officialSource(track, { videoId: saved.videoId, title: saved.title, artists: saved.channel,
+            album: null, duration: saved.duration, score: saved.score, origin: 'youtube', current: saved.verified })
+          if (source) rejected.push({ source, error, manual: saved.verified })
+        }
         else throw error
       }
     }
@@ -172,7 +227,13 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         } catch (error) {
           checkAbort(signal)
           lastError = error instanceof Error ? error : new Error('No se pudo cargar el audio.')
-          if (error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')) sourceRejected = true
+          if (unavailableAudio(error)) {
+            sourceRejected = true
+            const source = officialSource(track, { videoId: candidate.videoId, title: candidate.title,
+              artists: candidate.artists.join(', '), album: candidate.album, duration: candidate.duration,
+              score: candidate.score, origin: candidate.origin, current: false })
+            if (source) rejected.push({ source, error, manual: false })
+          }
           else transientFailure = true
           continue
         }
@@ -192,6 +253,11 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       fallback.sort((a, b) => b.score - a.score)
       const recovered = await attempt(fallback)
       if (recovered) return recovered
+    }
+    if (sourceRejected && !transientFailure) {
+      rejected.sort((a, b) => Number(b.manual) - Number(a.manual) || b.source.score - a.source.score)
+      const fallback = rejected[0]
+      if (fallback) throw new OfficialFallbackError(unavailableAudio(lastError) ? lastError : fallback.error, track, fallback.source)
     }
     throw lastError
   })

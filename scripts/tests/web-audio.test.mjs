@@ -334,6 +334,168 @@ test('network, timeout y restricted no amplían WEB ni sustituyen una elección 
   }
 })
 
+test('el rechazo de audio ofrece la mejor coincidencia ya obtenida sin búsquedas, URLs ni escrituras adicionales', async () => {
+  for (const code of ['unavailable', 'format']) {
+    const events = [], failures = new Map()
+    const audio = engine({
+      searchMusic: async () => { events.push('music'); return [candidate(id, { url: 'https://r1.googlevideo.com/DO_NOT_FORWARD' })] },
+      searchVideos: async () => { events.push('web'); return [candidate(second, { album: null })] },
+      stream: async (videoId) => {
+        events.push(videoId)
+        const error = new audio.youtube.YouTubeError('Audio no permitido', code)
+        failures.set(videoId, error)
+        throw error
+      },
+    })
+    let failure
+    await assert.rejects(audio.resolveTrack(query), error => {
+      failure = error
+      assert.ok(error instanceof audio.OfficialFallbackError)
+      assert.ok(error instanceof audio.youtube.YouTubeError)
+      assert.equal(error.code, code)
+      assert.equal(error.toString(), 'Audio no permitido')
+      assert.equal(error.originalError, failures.get(second))
+      assert.equal(error.cause, error.originalError)
+      return true
+    })
+    assert.deepEqual(events, ['music', id, 'web', second])
+    const source = audio.getOfficialFallback(query, failure)
+    assert.equal(source.videoId, id)
+    assert.equal(source.score, 112)
+    assert.equal(source.current, false)
+    assert.equal(failure.fallback.trackId, query.id)
+    assert.equal(failure.fallback.reason, code)
+    assert.ok(Object.isFrozen(failure.fallback) && Object.isFrozen(failure.fallback.source))
+    assert.doesNotMatch(JSON.stringify(failure.fallback), /DO_NOT_FORWARD|googlevideo|\"url\"/)
+    source.title = 'Caller copy'
+    assert.equal(audio.getOfficialFallback(query, failure).title, query.title)
+    assert.deepEqual(audio.writes, [])
+    assert.deepEqual(audio.removedDownloads, [])
+  }
+})
+
+test('la alternativa conserva la fuente manual exacta aunque otra coincidencia tenga mayor puntuación', async () => {
+  const saved = { videoId: fourth, title: 'Airbag (versión elegida)', channel: 'Canal elegido', duration: 290, score: 100, verified: true }
+  const events = []
+  const audio = engine({
+    searchMusic: async () => { events.push('music'); return [candidate()] },
+    searchVideos: async () => { events.push('web'); return [] },
+    stream: async videoId => { events.push(videoId); throw new audio.youtube.YouTubeError('Sin audio', 'unavailable') },
+  }, saved)
+  await assert.rejects(audio.resolveTrack(query), error => {
+    const source = audio.getOfficialFallback(query, error)
+    assert.equal(source.videoId, fourth)
+    assert.equal(source.title, saved.title)
+    assert.equal(source.artists, saved.channel)
+    assert.equal(source.duration, saved.duration)
+    assert.equal(source.current, true)
+    assert.equal(source.score, 100)
+    return true
+  })
+  assert.deepEqual(events, [fourth, 'music', id, 'web'])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('elegir los metadatos de la mejor alternativa conserva el último mensaje y clasificación del resolver', async () => {
+  let final
+  const audio = engine({
+    searchVideos: async () => [candidate(second, { album: null })],
+    stream: async videoId => {
+      const error = new audio.youtube.YouTubeError(videoId === id ? 'Retirada' : 'Sin MP4', videoId === id ? 'unavailable' : 'format')
+      if (videoId === second) final = error
+      throw error
+    },
+  })
+  await assert.rejects(audio.resolveTrack(query), error => {
+    assert.equal(error.originalError, final)
+    assert.equal(error.code, 'format')
+    assert.equal(error.toString(), 'Sin MP4')
+    assert.equal(error.fallback.reason, 'format')
+    assert.equal(audio.getOfficialFallback(query, error).videoId, id)
+    return true
+  })
+})
+
+test('un fallo transitorio entre rechazos de formato impide la alternativa automática y conserva el error original', async () => {
+  for (const code of ['network', 'timeout', 'restricted', 'response']) {
+    let final
+    const audio = engine({
+      searchMusic: async () => [candidate(), candidate(second), candidate(third)],
+      searchVideos: async () => assert.fail('A mixed failure must not add a WEB search'),
+      stream: async videoId => {
+        const error = new audio.youtube.YouTubeError('Fallo ' + videoId, videoId === second ? code : 'format')
+        if (videoId === third) final = error
+        throw error
+      },
+    })
+    await assert.rejects(audio.resolveTrack(query), error => {
+      assert.equal(error, final)
+      assert.equal(audio.getOfficialFallback(query, error), null)
+      return true
+    })
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('la alternativa rechaza karaoke no solicitado y coincidencias por debajo del umbral', async () => {
+  for (const row of [candidate(id, { title: 'Airbag (Karaoke)' }), candidate(id, { title: 'Other song', artists: ['Another artist'], duration: 200, album: null })]) {
+    const audio = engine({
+      searchMusic: async () => [row], searchVideos: async () => [],
+      stream: async () => { throw new audio.youtube.YouTubeError('Sin audio', 'unavailable') },
+    })
+    await assert.rejects(audio.resolveTrack(query), error => {
+      assert.equal(audio.getOfficialFallback(query, error), null)
+      return true
+    })
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('la lectura de alternativa valida tipo y canción sin reinterpretar errores ni namespace de pódcast', async () => {
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('Sin formato', 'format') } })
+  let failure
+  await assert.rejects(audio.resolveTrack(query), error => { failure = error; return true })
+  for (const track of [{ ...query, id: 2 }, { ...query, id: 750_000_000_000_001 }, { ...query, id: 1_000_000_000_000_001 }, null]) {
+    assert.equal(audio.getOfficialFallback(track, failure), null)
+  }
+  for (const error of [new Error('Sin formato'), new audio.youtube.YouTubeError('Sin formato', 'format'),
+    { ...failure, fallback: { ...failure.fallback, source: { ...failure.fallback.source, videoId: 'bad' } } }]) {
+    assert.equal(audio.getOfficialFallback(query, error), null)
+  }
+})
+
+test('resolver una descarga devuelve solo el mismo rechazo tipado y nunca abre un reproductor ni guarda la selección', async () => {
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('Sin audio', 'unavailable') } })
+  await assert.rejects(audio.resolveRemoteTrack(query), error => {
+    assert.equal(audio.getOfficialFallback(query, error).videoId, id)
+    return true
+  })
+  // The module harness permits only transport/storage/download imports, with no player/controller/UI dependency.
+  assert.deepEqual(audio.writes, [])
+  assert.deepEqual(audio.calls, ['music', 'youtube'])
+})
+
+test('un vídeo añadido ofrece solo su ID original y los pódcast no ofrecen alternativa al fallar YouTube', async () => {
+  const direct = { ...query, id: 250_000_000_000_001 }
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('Sin audio', 'unavailable') } }, null, second)
+  await assert.rejects(audio.resolveTrack(direct), error => {
+    const source = audio.getOfficialFallback(direct, error)
+    assert.equal(source.videoId, second)
+    assert.equal(source.title, direct.title)
+    assert.equal(source.current, true)
+    return true
+  })
+  assert.deepEqual(audio.calls, [], 'No music or WEB search for a direct video')
+  const podcast = { ...query, id: 750_000_000_000_002 }
+  const episode = engine({ stream: async () => { throw new episode.youtube.YouTubeError('Sin audio', 'unavailable') } }, null, id,
+    { id: podcast.id, audioUrl: `youtube:${third}` })
+  await assert.rejects(episode.resolveTrack(podcast), error => {
+    assert.equal(episode.getOfficialFallback(podcast, error), null)
+    assert.equal(error instanceof episode.OfficialFallbackError, false)
+    return true
+  })
+})
+
 test('cancelar antes del rechazo de Music impide que ese rechazo abra el fallback WEB', async () => {
   const pendingStream = deferred(), attempts = []
   let webSearches = 0

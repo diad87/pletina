@@ -120,6 +120,26 @@ function directedTransport(underlying, requests, control) {
           return route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8',
             headers: { 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" }, body: embedDocument })
         }
+        if (url.hostname === 'www.youtube.com' && url.pathname === '/youtubei/v1/player') {
+          if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors, body: '' })
+          let body
+          try { body = request.postDataJSON() ?? {} } catch { body = {} }
+          if (control.rejectIds?.has(body.videoId)) {
+            const row = { operation: 'direct-player-rejection', videoId: body.videoId, playability: 'UNPLAYABLE' }
+            requests.push(row)
+            const gate = control.playerGate && !control.playerGate.claimed ? control.playerGate : null
+            if (gate) { row.delivery = 'held'; gate.claim(); await gate.released }
+            try {
+              await route.fulfill({ status: 200, headers: cors, contentType: 'application/json',
+                body: JSON.stringify({ playabilityStatus: { status: 'UNPLAYABLE' } }) })
+              row.delivery = gate ? 'released-after-pause' : 'delivered'
+            } catch (error) {
+              if (!gate?.closed || !/interception|intercept|cancel|abort|invalid.*id|request.*not.*found|already.*handled|disposed|target.*closed/i.test(error.message)) throw error
+              row.delivery = 'cancelled-request-rejected-delivery'
+            } finally { gate?.finish() }
+            return
+          }
+        }
         if (['www.youtube.com', 'music.youtube.com'].includes(url.hostname) && url.pathname === '/youtubei/v1/search') {
           if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors, body: '' })
           let body
@@ -144,6 +164,13 @@ function directedTransport(underlying, requests, control) {
             } finally { gate?.finish() }
             return
           }
+          if (control.observeTitle && String(body.query ?? '').includes(control.observeTitle)) {
+            const row = { operation: url.hostname === 'music.youtube.com' ? 'prefetch-music-search' : 'prefetch-web-search' }
+            requests.push(row)
+            await handler(route)
+            row.delivery = 'delivered'
+            return
+          }
         }
         return handler(route)
       }) }
@@ -164,9 +191,9 @@ async function installObservers(context) {
       }
     }
     document.addEventListener('click', event => {
-      const button = event.target instanceof Element ? event.target.closest('[role="menuitem"],[data-official-source],#official-youtube-close,#official-youtube-retry') : null
+      const button = event.target instanceof Element ? event.target.closest('[role="menuitem"],[data-official-source],#official-youtube-close,#official-youtube-retry,.tracks .name') : null
       if (!button) return
-      qa.clicks.push({ kind: button.hasAttribute('data-official-source') ? 'choose' : button.id || 'menu',
+      qa.clicks.push({ kind: button.matches('.tracks .name') ? 'track' : button.hasAttribute('data-official-source') ? 'choose' : button.id || 'menu',
         label: button.getAttribute('role') === 'menuitem' ? button.textContent.trim() : null,
         videoId: button.getAttribute('data-video-id'), trusted: event.isTrusted })
     }, true)
@@ -335,7 +362,7 @@ async function scenarios(ctx, requests, directory, control) {
     } finally { gate.release(); control.gate = null }
   })
   if (!cancelled) return
-  await ctx.check('official.offline-open-does-not-search-or-embed', async () => {
+  const offline = await ctx.check('official.offline-open-does-not-search-or-embed', async () => {
     const searches = searchCount(), embeds = embedCount()
     // No navigation is needed: this is the browser's real offline signal on the
     // loaded app, including WebKit. No navigator.onLine replacement is used.
@@ -354,6 +381,118 @@ async function scenarios(ctx, requests, directory, control) {
       return { navigatorOnline: false, newSearches: 0, newEmbeds: 0, savedSourceWrites: 0, offlineSignalMocked: false }
     } finally { await ctx.goOffline(false) }
   })
+  if (!offline) return
+
+  // Reload the real document to clear only its in-memory stream cache. IDB,
+  // service worker, saved source and queue remain real and are compared below.
+  const reloadSearch = async () => {
+    await page.reload({ waitUntil: 'load' })
+    await page.locator('.app').waitFor()
+    await ctx.fillSearch('Buscar', ctx.fixture.media.query)
+    await page.waitForFunction(title => document.querySelector('ol.tracks > li[data-reorder-index] .name')?.textContent.trim() === title, fixtureTrack.title)
+    await ctx.settle()
+    return storedState(page)
+  }
+  const firstTitle = () => page.locator('ol.tracks > li[data-reorder-index]').first().locator('.name')
+  const automatic = await ctx.check('official.normal-song-click-automatically-opens-matched-visible-iframe-without-second-selection', async () => {
+    const before = await reloadSearch(), searchMark = searchCount(), embedMark = embedCount(), requestMark = requests.length
+    control.rejectIds = new Set([fixtureIds.first, fixtureIds.second])
+    try {
+      await tap(firstTitle())
+      await dialog.waitFor({ state: 'visible' })
+      await frames.waitFor({ state: 'visible' })
+      await page.frameLocator('dialog[data-official-youtube] iframe[data-official-video]').locator('#control').waitFor()
+      const source = new URL(await frames.getAttribute('src'))
+      assert.equal(source.pathname, '/embed/' + fixtureIds.first)
+      assert.equal(source.searchParams.get('autoplay'), '1')
+      assert.equal(source.searchParams.get('controls'), '1')
+      assert.equal(await options.count(), 0, 'Automatic recovery cannot require a source-selection button')
+      const clicks = await page.evaluate(() => window.__officialYouTubeQA.clicks)
+      assert.deepEqual(clicks.map(row => row.kind), ['track'], 'Only the original trusted song click may precede the automatic embed')
+      assert.equal(clicks[0].trusted, true)
+      assert.equal(searchCount() - searchMark, 2, 'One Music and one WEB resolver search, with no repeated modal search')
+      assert.deepEqual(requests.slice(requestMark).filter(row => row.operation === 'direct-player-rejection').map(row => row.videoId),
+        [fixtureIds.first, fixtureIds.second], 'The resolver rejects the saved source and the distinct matching alternative once each')
+      assert.equal(embedCount() - embedMark, 1)
+      assert.ok(await page.evaluate(() => window.__qaAudio.instances.every(audio => audio.paused && !audio.src)))
+      assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)
+      assert.deepEqual(await storedState(page), before, 'Automatic video cannot advance or overwrite the native queue or save an unsuccessful audio source')
+      const bounds = await frameBounds()
+      await page.screenshot({ path: join(directory, 'official-automatic-visible-frame.png'), fullPage: true })
+      await tap('#official-youtube-close')
+      await dialog.waitFor({ state: 'hidden' })
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.deepEqual(await storedState(page), before)
+      return { trigger: 'trusted normal song-title click', videoId: fixtureIds.first, autoplayRequested: true,
+        extraSourceSelections: 0, resolverSearches: 2, additionalModalSearches: 0, savedSourceWrites: 0,
+        queueAndCurrentPreserved: true, nativeAudioStopped: true, closeDestroysFrame: true, bounds,
+        embedContent: 'benign static fixture', youtubePlaybackVerified: false, browserAutoplayPolicyVerified: false }
+    } finally { control.rejectIds = null }
+  })
+  if (!automatic) return
+
+  const paused = await ctx.check('official.pause-before-held-player-rejection-prevents-late-automatic-modal', async () => {
+    const before = await reloadSearch(), embedMark = embedCount(), searchMark = searchCount()
+    const gate = holdNextSearch({})
+    control.playerGate = gate
+    control.rejectIds = new Set([fixtureIds.first, fixtureIds.second])
+    try {
+      await tap(firstTitle())
+      await bounded(gate.reached, 'The normal song click did not reach the held direct-player response')
+      assert.equal(await dialog.isVisible(), false)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.match(await page.locator('.mini .artist').textContent(), /Cargando/)
+      // This real public button pauses an in-flight load although its icon is
+      // still the Play icon; the app owns the loading/cancellation transition.
+      await tap('.mini button[aria-label="Reproducir"]')
+      await page.waitForFunction(() => !document.querySelector('.mini .artist')?.textContent.includes('Cargando'))
+      gate.closed = true
+      gate.release()
+      await bounded(gate.delivered, 'The held direct-player response did not finish after the pause')
+      for (let attempt = 0; attempt < 60 && searchCount() - searchMark < 2; attempt++) await page.waitForTimeout(50)
+      assert.equal(searchCount() - searchMark, 2, 'The late bounded resolver actually finishes both candidate searches')
+      await page.waitForTimeout(150)
+      await ctx.settle()
+      assert.equal(await dialog.isVisible(), false)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.equal(embedCount(), embedMark)
+      assert.ok(await page.evaluate(() => window.__qaAudio.instances.every(audio => audio.paused)))
+      assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)
+      assert.deepEqual(await storedState(page), before)
+      return { heldHttpPlayerResponse: true, cancellation: 'trusted mini-player button', lateResolverDelivered: true,
+        reopened: false, newEmbeds: 0, queueAndCurrentPreserved: true, savedSourceWrites: 0 }
+    } finally { gate.release(); control.playerGate = null; control.rejectIds = null }
+  })
+  if (!paused) return
+
+  await ctx.check('official.failed-next-song-prefetch-never-opens-video-over-current-native-audio', async () => {
+    const before = await reloadSearch(), embedMark = embedCount(), mark = requests.length
+    const following = ctx.fixture.media.tracks[1]
+    control.rejectIds = new Set([following.videoId])
+    control.observeTitle = following.title
+    try {
+      await tap(firstTitle())
+      await page.waitForFunction(() => window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > .15))
+      for (let attempt = 0; attempt < 80 && !requests.slice(mark).some(row => row.operation === 'prefetch-web-search' && row.delivery === 'delivered'); attempt++) await page.waitForTimeout(50)
+      assert.ok(requests.slice(mark).some(row => row.operation === 'direct-player-rejection' && row.videoId === following.videoId && row.delivery === 'delivered'),
+        'The real following-song prefetch must receive its controlled UNPLAYABLE response')
+      assert.ok(requests.slice(mark).some(row => row.operation === 'prefetch-web-search' && row.delivery === 'delivered'),
+        'The following-song resolver must finish its existing WEB recovery search')
+      const at = await page.evaluate(() => window.__qaAudio.instances.find(audio => !audio.paused).currentTime)
+      await page.waitForFunction(at => window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > at + .25), at)
+      assert.equal(await dialog.isVisible(), false)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.equal(embedCount(), embedMark)
+      assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)
+      const after = await storedState(page)
+      assert.deepEqual(after.queue, before.queue)
+      assert.deepEqual(after.sources, before.sources)
+      assert.equal(await page.evaluate(id => window.__officialYouTubeQA.sourceWrites.filter(row => row.trackId === id).length, following.id), 0)
+      await tap('.mini button[aria-label="Pausa"]')
+      return { currentTrackId: fixtureTrack.id, rejectedPrefetchTrackId: following.id, rejectedPrefetchVideoId: following.videoId,
+        nativeAudioContinuedAdvancing: true, newEmbeds: 0, rejectedSourceWrites: 0, queueAndCurrentPreserved: true }
+    } finally { control.rejectIds = null; control.observeTitle = null }
+  })
 }
 
 try {
@@ -364,7 +503,7 @@ try {
     const spec = PROFILES[profile], directory = join(output, profile)
     const report = { build, profile, engine: spec.engine, checks: [], errors: [], directedRequests: [] }
     summary.profiles.push(report)
-    const control = { gate: null }
+    const control = { gate: null, playerGate: null, rejectIds: null, observeTitle: null }
     let ctx, platformTransport, processHandle, profileDirectory
     try {
       if (spec.engine === 'webkit' && process.platform !== 'win32') {
@@ -390,6 +529,7 @@ try {
       report.checks.push({ name: ctx ? 'suite.execution' : 'setup.browser', status: unavailable ? 'blocked' : 'fail', error: scrub(error.message) })
     } finally {
       control.gate?.release()
+      control.playerGate?.release()
       await ctx?.close()
       await browser?.close().catch(error => report.errors.push({ name: 'BrowserCleanupError', message: scrub(error.message) }))
       await puppeteerBrowser?.close().catch(error => report.errors.push({ name: 'PuppeteerCleanupError', message: scrub(error.message) }))
@@ -420,7 +560,7 @@ finally {
   summary.serverClosed = !server?.listening
   summary.finishedAt = new Date().toISOString()
   summary.featureChecksPassed = summary.profiles.length === requested.length && summary.profiles.every(report =>
-    report.checks.length === 8 && report.checks.every(check => check.status === 'pass') && !report.errors.length &&
+    report.checks.length === 11 && report.checks.every(check => check.status === 'pass') && !report.errors.length &&
     report.contextClosed && report.browserClosed && report.networkTransportClosed !== false &&
     report.browserProcessClosed !== false && report.ephemeralProfileRemoved !== false) && !summary.errors.length
   await persist()

@@ -766,8 +766,21 @@ class Player implements PlayerApi {
     } catch (e) {
       // Un AbortError de esta carga también es un fallo; solo se ignoran las cargas sustituidas.
       if (token !== this.#token) return
+      if (this.#checkSleepTimer()) return
       if (this.#canRefreshSource()) {
         this.#start(item, true, this.#requestedSeek ?? this.time)
+        return
+      }
+      const official = api.inPwa ? api.automaticYouTubeSource(toQuery(item), e) : null
+      if (official) {
+        const at = this.#requestedSeek ?? this.time
+        // Conserva canción y cola; invalida esta carga y detiene el Audio antes
+        // de abrir el vídeo visible. No se lanza desde el resolver o la precarga.
+        this.#pause()
+        this.#clearPrepared()
+        this.#resetAudio()
+        if (api.openAutomaticYouTubePlayer(toQuery(item), official, at)) return
+        this.#fail(item, String(e), this.#token)
         return
       }
       this.#fail(item, String(e), token)

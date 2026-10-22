@@ -23,9 +23,10 @@ new Function('exports', commonJs(await readFile(new URL('../../src/lib/queue.ts'
 // sin cambiarlo y modela el reinicio de error/metadatos al sustituir la fuente de un Audio real.
 function pwaHarness({ resolve = async (track) => playable(track.id), play, progress = new Map(), progressPosition,
   location = 'https://app.example/pletina/application/app.html',
+  automaticYouTubeSource = () => null, openAutomaticYouTubePlayer = () => true,
   chooseSource = async (track, videoId) => ({ ...playable(track.id), videoId }) } = {}) {
   const audios = [], sources = [], resolutions = [], messages = [], records = [], audioOperations = [], sourceChoices = []
-  const progressReads = [], progressWrites = []
+  const progressReads = [], progressWrites = [], officialOpens = []
   const events = new EventTarget()
   events.location = { href: location }
   const timers = new Map()
@@ -81,6 +82,11 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
       inPwa: true,
       inTauri: false,
       resolve(track, refresh) { resolutions.push([track.id, refresh]); return resolve(track, refresh) },
+      automaticYouTubeSource,
+      openAutomaticYouTubePlayer(track, source, at) {
+        officialOpens.push({ id: track.id, videoId: source.videoId, at, status: exports.player.status, audioPaused: audios.at(-1).paused, src: audios.at(-1).src })
+        return openAutomaticYouTubePlayer(track, source, at)
+      },
       chooseSource(track, videoId) { sourceChoices.push([track.id, videoId]); return chooseSource(track, videoId) },
       recordPlay: async (value) => { records.push(value.track.id) },
     },
@@ -114,7 +120,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
     (id) => timers.delete(id), events, events, { now: () => now }, Clock,
   )
   return {
-    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites,
+    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites, officialOpens,
     get audio() { return audios.at(-1) },
     jumpWall(ms) { wallOffset += ms },
     async advance(ms) {
@@ -816,4 +822,78 @@ test('PWA rejects downloaded sources outside its scope, origin or stable numeric
     assert.deepEqual(h.sources, [])
     assert.ok(h.messages.some((message) => message.includes('dirección local válida')))
   }
+})
+
+const officialSource = { videoId: 'fV-IUsecSsU', title: 'Canción', artists: 'Artista', album: null,
+  duration: 170, score: 90, current: false, origin: 'music' }
+
+test('PWA active unavailable source opens prepared official playback without skipping the song or resolving again', async () => {
+  const unavailable = new Error('Direct source rejected')
+  const h = pwaHarness({ resolve: async () => { throw unavailable },
+    automaticYouTubeSource: (_track, error) => error === unavailable ? officialSource : null })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.pos, 0)
+  assert.deepEqual(h.resolutions, [[1, false]], 'No new search or next-track start')
+  assert.deepEqual(h.officialOpens, [{ id: 1, videoId: 'fV-IUsecSsU', at: 0, status: 'paused', audioPaused: true, src: '' }])
+  assert.deepEqual(h.sources, [])
+  assert.deepEqual(h.messages, [], 'A handled direct-source rejection is not reported as a skipped song')
+})
+
+test('PWA late unavailable result after pause or next cannot open an automatic video', async () => {
+  for (const action of ['pause', 'next']) {
+    const pending = deferred(), unavailable = new Error('Late unavailable source')
+    const h = pwaHarness({ resolve: track => track.id === 1 ? pending.promise : Promise.resolve(playable(track.id)),
+      automaticYouTubeSource: (_track, error) => error === unavailable ? officialSource : null })
+    h.player.playQueue([item(1), item(2)], 0)
+    await flush()
+    if (action === 'pause') h.player.toggle()
+    else h.player.next()
+    pending.reject(unavailable)
+    await flush()
+    assert.deepEqual(h.officialOpens, [], action)
+    assert.equal(h.player.current.track.id, action === 'pause' ? 1 : 2)
+    assert.equal(h.player.status, action === 'pause' ? 'paused' : 'playing')
+  }
+})
+
+test('PWA prefetch rejection never opens the official player while another song is playing', async () => {
+  const unavailable = new Error('Upcoming source rejected')
+  const h = pwaHarness({ resolve: async track => { if (track.id === 2) throw unavailable; return playable(track.id) },
+    automaticYouTubeSource: (_track, error) => error === unavailable ? officialSource : null })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  assert.ok(h.resolutions.some(([id]) => id === 2), 'The next source was actually requested')
+  assert.deepEqual(h.officialOpens, [])
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.status, 'playing')
+})
+
+test('PWA unavailable renewal carries listening position to automatic playback and clears direct Audio first', async () => {
+  const unavailable = new Error('Renewed direct source rejected')
+  const h = pwaHarness({ resolve: async (track, refresh) => { if (refresh) throw unavailable; return playable(track.id) },
+    automaticYouTubeSource: (_track, error) => error === unavailable ? officialSource : null })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  h.audio.currentTime = 47
+  h.audio.dispatchEvent(new Event('timeupdate'))
+  h.audio.fail(4)
+  await flush()
+  assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+  assert.deepEqual(h.officialOpens, [{ id: 1, videoId: 'fV-IUsecSsU', at: 47, status: 'paused', audioPaused: true, src: '' }])
+  assert.equal(h.player.current.track.id, 1)
+})
+
+test('PWA rejected official launch returns to the bounded normal failure path', async () => {
+  const unavailable = new Error('No compatible source')
+  const h = pwaHarness({ resolve: async track => { if (track.id === 1) throw unavailable; return playable(track.id) },
+    automaticYouTubeSource: (_track, error) => error === unavailable ? officialSource : null,
+    openAutomaticYouTubePlayer: () => false })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  assert.equal(h.officialOpens.length, 1)
+  assert.equal(h.player.current.track.id, 2)
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.messages.length, 1)
 })

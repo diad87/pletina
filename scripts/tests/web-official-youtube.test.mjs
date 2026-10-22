@@ -103,6 +103,20 @@ test('official iframe URLs have visible controls, no autoplay and validated vide
   }
 })
 
+test('automatic iframe URLs request autoplay and preserve a bounded whole-second playback position', () => {
+  const h = harness(), url = new URL(h.officialEmbedUrl(videoId, 'https://app.example', true, 47.9))
+  assert.equal(url.searchParams.get('autoplay'), '1')
+  assert.equal(url.searchParams.get('start'), '47')
+  assert.equal(url.searchParams.get('controls'), '1')
+  assert.equal(url.searchParams.get('playsinline'), '1')
+  assert.equal(url.searchParams.get('origin'), 'https://app.example')
+  assert.equal(new URL(h.officialEmbedUrl(videoId, 'https://app.example', true)).searchParams.has('start'), false)
+  assert.equal(new URL(h.officialEmbedUrl(videoId, 'https://app.example')).searchParams.get('autoplay'), '0')
+  for (const position of [-1, Infinity, NaN, 604_801, '47', null]) {
+    assert.throws(() => h.officialEmbedUrl(videoId, 'https://app.example', true, position))
+  }
+})
+
 test('official search resolves metadata only once and neither resolves MP4 nor persists a selected source', async () => {
   const h = harness(), calls = []
   const result = await h.searchOfficialSources(track, { online: () => true, alternatives: async (query, signal) => {
@@ -161,6 +175,7 @@ test('controller opening presents choices without auto-selecting and only permit
   const h = harness(), c = h.createOfficialYouTubeController({ online: () => true, alternatives: async () => [alternative(), alternative(secondId, 70)] })
   try {
     c.open(track); await flush()
+    assert.equal(c.automatic, false); assert.equal(c.startAt, 0)
     assert.equal(c.opened, true); assert.equal(c.status, 'ready'); assert.equal(c.selected, null)
     assert.equal(c.select('not-valid'), false)
     assert.equal(c.select(thirdId), false, 'A valid but unoffered ID cannot enter the iframe')
@@ -172,6 +187,109 @@ test('controller opening presents choices without auto-selecting and only permit
     c.close()
     assert.equal(c.opened, false); assert.equal(c.selected, null); assert.equal(c.track, null)
   } finally { c.close() }
+})
+
+test('automatic opening selects a prepared source synchronously without a provider query or persistence', () => {
+  const h = harness(), calls = [], c = h.createOfficialYouTubeController({ online: () => true,
+    alternatives: async () => { calls.push('search'); return [] } })
+  const prepared = alternative(videoId, 45, { title: '  Airbag  ', url: 'https://attacker.example/not-the-iframe' })
+  try {
+    assert.equal(c.openAutomatic(track, prepared, 47.9), true)
+    assert.equal(c.opened, true); assert.equal(c.automatic, true); assert.equal(c.status, 'ready')
+    assert.equal(c.error, null); assert.equal(c.track.id, track.id); assert.equal(c.startAt, 47)
+    assert.equal(c.selected.videoId, videoId); assert.equal(c.selected.title, 'Airbag')
+    assert.deepEqual(c.sources.map(row => row.videoId), [videoId])
+    assert.equal(Object.hasOwn(c.selected, 'url'), false)
+    prepared.videoId = secondId
+    assert.equal(c.selected.videoId, videoId, 'A later mutation of the prepared source cannot replace the selected video')
+    assert.deepEqual(calls, [])
+    c.close()
+    assert.equal(c.opened, false); assert.equal(c.automatic, false); assert.equal(c.selected, null)
+    assert.equal(c.startAt, 0); assert.equal(c.status, 'idle'); assert.equal(c.track, null)
+  } finally { c.close() }
+})
+
+test('automatic opening rejects malformed or low-scoring prepared sources without fallback searching', () => {
+  const h = harness(), c = h.createOfficialYouTubeController({ online: () => true,
+    alternatives: async () => assert.fail('An invalid prepared source must not trigger another query') })
+  const invalid = [null, {}, alternative('../' + videoId), alternative(videoId, 44),
+    alternative(videoId, Infinity), alternative(videoId, 100, { title: 'Airbag (Karaoke)' }),
+    alternative(videoId, 90, { duration: NaN }), alternative(videoId, 90, { origin: 'external' })]
+  try {
+    for (const value of invalid) {
+      assert.equal(c.openAutomatic(track, alternative()), true)
+      assert.equal(c.openAutomatic(track, value), false)
+      assert.equal(c.opened, false); assert.equal(c.automatic, false); assert.equal(c.status, 'idle')
+      assert.equal(c.track, null); assert.equal(c.selected, null); assert.equal(c.sources.length, 0)
+    }
+    for (const startAt of [-1, Infinity, NaN, 604_801, '47', null]) {
+      assert.equal(c.openAutomatic(track, alternative(), startAt), false)
+      assert.equal(c.opened, false); assert.equal(c.startAt, 0)
+    }
+    assert.equal(c.openAutomatic({ ...track, id: 500_000_000_000_000 }, alternative()), false)
+    assert.equal(c.opened, false)
+  } finally { c.close() }
+})
+
+test('automatic opening preserves an explicitly selected karaoke source without admitting an unsolicited substitute', () => {
+  const h = harness(), c = h.createOfficialYouTubeController({ online: () => true,
+    alternatives: async () => assert.fail('An explicit version must not trigger another query') })
+  const selected = alternative(videoId, 45, { title: 'Airbag (Karaoke)', current: true })
+  try {
+    assert.equal(c.openAutomatic(track, selected), true)
+    assert.equal(c.selected.videoId, videoId); assert.equal(c.selected.current, true)
+    assert.equal(c.selected.title, selected.title)
+    assert.deepEqual(h.filterOfficialSources(track, [selected]), [], 'Manual discovery must still reject unsolicited karaoke')
+    assert.equal(c.openAutomatic(track, { ...selected, current: false }), false)
+    assert.equal(c.openAutomatic(track, { ...selected, current: 'true' }), false)
+    assert.equal(c.openAutomatic(track, { ...selected, score: 44 }), false, 'Explicit choice does not lower the score boundary')
+  } finally { c.close() }
+})
+
+test('automatic opening cancels a previous manual search and ignores late results or rejection', async () => {
+  for (const rejectOld of [false, true]) {
+    const h = harness(), pending = deferred(), calls = []
+    const c = h.createOfficialYouTubeController({ online: () => true, alternatives: async (query, signal) => {
+      calls.push({ id: query.id, signal }); return pending.promise
+    } })
+    try {
+      c.open(track); await flush()
+      assert.equal(c.status, 'loading')
+      assert.equal(c.openAutomatic({ ...track, id: 102, title: 'Second track' }, alternative(secondId), 30), true)
+      assert.equal(calls[0].signal.aborted, true)
+      if (rejectOld) pending.reject(new Error('Obsolete search failed'))
+      else pending.resolve([alternative(thirdId)])
+      await flush()
+      assert.equal(calls.length, 1)
+      assert.equal(c.track.id, 102); assert.equal(c.automatic, true); assert.equal(c.status, 'ready')
+      assert.equal(c.selected.videoId, secondId); assert.equal(c.startAt, 30); assert.equal(c.error, null)
+      c.close(); await flush()
+      assert.equal(c.opened, false); assert.equal(c.selected, null); assert.equal(c.status, 'idle')
+    } finally { c.close() }
+  }
+})
+
+test('a later manual opening restores explicit choice without retaining automatic playback or its position', async () => {
+  const h = harness(), pending = deferred(), c = h.createOfficialYouTubeController({ online: () => true,
+    alternatives: async () => pending.promise })
+  try {
+    assert.equal(c.openAutomatic(track, alternative(), 47), true)
+    c.open({ ...track, id: 102 })
+    assert.equal(c.automatic, false); assert.equal(c.startAt, 0); assert.equal(c.selected, null)
+    assert.equal(c.status, 'loading')
+    pending.resolve([alternative(secondId)]); await flush()
+    assert.equal(c.automatic, false); assert.equal(c.status, 'ready'); assert.equal(c.selected, null)
+    assert.equal(c.select(secondId), true)
+  } finally { c.close() }
+})
+
+test('the application automatic entry point exposes only a validated ready selection', () => {
+  const h = harness()
+  try {
+    assert.equal(h.openAutomaticOfficialYouTube(track, alternative(secondId), 12.9), true)
+    assert.equal(h.officialYouTube.selected.videoId, secondId)
+    assert.equal(h.officialYouTube.automatic, true); assert.equal(h.officialYouTube.startAt, 12)
+  } finally { h.closeOfficialYouTube() }
 })
 
 test('closing during official search aborts it and a late completion cannot reopen or select a video', async () => {

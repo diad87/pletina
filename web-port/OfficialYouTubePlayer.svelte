@@ -10,7 +10,7 @@
   let dialog: HTMLDialogElement | undefined = $state()
   let previousTrack: TrackQuery | null = null
   let wasOpened = false
-  const sourceUrl = $derived(officialYouTube.selected ? officialEmbedUrl(officialYouTube.selected.videoId, window.location.origin) : null)
+  const sourceUrl = $derived(officialYouTube.selected ? officialEmbedUrl(officialYouTube.selected.videoId, window.location.origin, officialYouTube.automatic, officialYouTube.startAt) : null)
 
   $effect(() => {
     const opened = officialYouTube.opened, track = officialYouTube.track
@@ -47,13 +47,19 @@
   onclose={closeDialog} oncancel={cancel} onclick={backdrop}>
   {#if officialYouTube.opened}
     <header>
-      <div><h2>Ver en YouTube</h2>{#if officialYouTube.track}<p class="track">{officialYouTube.track.title} · {officialYouTube.track.artist}</p>{/if}</div>
+      <div><h2>{officialYouTube.automatic ? 'Reproducción' : 'Ver en YouTube'}</h2>{#if officialYouTube.track}<p class="track">{officialYouTube.track.title} · {officialYouTube.track.artist}</p>{/if}</div>
       <button id="official-youtube-close" type="button" class="close" aria-label="Cerrar reproductor de YouTube" onclick={closeOfficialYouTube}><Icon name="close" size={22} /></button>
     </header>
     <div class="content">
       <p id="official-youtube-help" class="notice">YouTube necesita el vídeo abierto. Sin descarga ni reproducción en segundo plano garantizada.</p>
-      <p class="individual">Reproducción individual con los controles de YouTube.</p>
-      {#if officialYouTube.status === 'loading'}
+      {#if officialYouTube.automatic}
+        <p class="individual">Si el navegador bloquea el inicio automático, usa el botón del vídeo.</p>
+      {:else}
+        <p class="individual">Reproducción individual con los controles de YouTube.</p>
+      {/if}
+      {#if officialYouTube.automatic && officialYouTube.selected}
+        <p class="sr-only" role="status">Abriendo reproducción…</p>
+      {:else if officialYouTube.status === 'loading'}
         <p class="status" role="status">Buscando vídeos…</p>
       {:else if officialYouTube.error}
         <p class="error" role="alert">{officialYouTube.error}</p>
@@ -103,6 +109,7 @@
   .error { color: var(--text); }
   .intro { margin: 20px 0 12px; color: var(--muted); }
   .individual { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   .sources { display: grid; gap: 8px; }
   .source { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; text-align: left; }
   .source:hover { background: var(--hover); }

@@ -30,6 +30,10 @@ const karaoke = (title: string) => /(?:^|[^\p{L}\p{N}])karaoke(?:a)?(?:$|[^\p{L}
 
 /** Scores are produced by the existing audio matcher; this view never raises them. */
 export function filterOfficialSources(input: TrackQuery, values: Alternative[]): Alternative[] {
+  return filteredSources(input, values, false)
+}
+
+function filteredSources(input: TrackQuery, values: Alternative[], preserveSelectedKaraoke: boolean): Alternative[] {
   const track = validateOfficialTrack(input)
   if (!Array.isArray(values)) throw new Error('YouTube no devolvió una lista de vídeos válida.')
   const seen = new Set<string>()
@@ -38,11 +42,19 @@ export function filterOfficialSources(input: TrackQuery, values: Alternative[]):
       typeof row.title !== 'string' || !row.title.trim() || typeof row.artists !== 'string' || !row.artists.trim() ||
       (row.album !== null && typeof row.album !== 'string') ||
       (row.duration !== null && (!Number.isFinite(row.duration) || row.duration <= 0 || row.duration > 604_800)) ||
-      !['music', 'youtube'].includes(row.origin) || (karaoke(row.title) && !karaoke(track.title))) return false
+      !['music', 'youtube'].includes(row.origin) ||
+      (karaoke(row.title) && !karaoke(track.title) && !(preserveSelectedKaraoke && row.current === true))) return false
     return true
   }).sort((a, b) => b.score - a.score).filter((row) => !seen.has(row.videoId) && !!seen.add(row.videoId)).slice(0, 3)
     .map((row) => ({ videoId: row.videoId, title: row.title.trim().slice(0, 500), artists: row.artists.trim().slice(0, 500),
       album: row.album?.slice(0, 500) ?? null, duration: row.duration, score: row.score, origin: row.origin, current: Boolean(row.current) }))
+}
+
+/** Accept only an already matched source; never carry a caller-supplied URL into the iframe. */
+export function validateAutomaticOfficialSource(input: TrackQuery, source: Alternative): Alternative {
+  const selected = filteredSources(input, [source], true)[0]
+  if (!selected) throw new Error('No se ha encontrado una coincidencia válida para esta canción.')
+  return selected
 }
 
 export async function searchOfficialSources(input: TrackQuery, options: OfficialSourceOptions = {}): Promise<Alternative[]> {
@@ -83,15 +95,22 @@ export async function searchOfficialSources(input: TrackQuery, options: Official
   }
 }
 
-export function officialEmbedUrl(videoId: string, origin: string): string {
+export function validateOfficialStartAt(value: number): number {
+  if (!Number.isFinite(value) || value < 0 || value > 604_800) throw new Error('La posición de reproducción no es válida.')
+  return Math.floor(value)
+}
+
+export function officialEmbedUrl(videoId: string, origin: string, autoplay = false, startAt = 0): string {
   if (!validVideoId(videoId)) throw new Error('El vídeo de YouTube no es válido.')
+  const start = validateOfficialStartAt(startAt)
   const parent = new URL(origin)
   if (parent.origin !== origin || !['https:', 'http:'].includes(parent.protocol)) throw new Error('El origen de la página no es válido.')
   const url = new URL(`https://www.youtube.com/embed/${videoId}`)
   url.searchParams.set('playsinline', '1')
-  url.searchParams.set('autoplay', '0')
+  url.searchParams.set('autoplay', autoplay ? '1' : '0')
   url.searchParams.set('controls', '1')
   url.searchParams.set('enablejsapi', '1')
   url.searchParams.set('origin', parent.origin)
+  if (start > 0) url.searchParams.set('start', String(start))
   return url.href
 }
