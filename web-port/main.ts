@@ -3,6 +3,7 @@ import { mount } from 'svelte'
 import '../src/app.css'
 import App from '../src/App.svelte'
 import UpdateBanner from './UpdateBanner.svelte'
+import OfficialYouTubePlayer from './OfficialYouTubePlayer.svelte'
 import { initWebUpdates } from './updates.svelte'
 import { initWebNavigation } from './navigation'
 import { initWebViewport } from './viewport'
@@ -15,5 +16,6 @@ initWebViewport((visible) => { layout.keyboard = visible })
 initWebNavigation(nav, window, { onRootBack: () => toast.show('Usa Inicio del móvil para seguir escuchando en segundo plano.') })
 mount(App, { target: document.getElementById('app')! })
 mount(UpdateBanner, { target: document.body })
+mount(OfficialYouTubePlayer, { target: document.body })
 void initWebUpdates()
 try { localStorage.setItem('pletina:web:opened', '1') } catch { /* Sin persistencia. */ }

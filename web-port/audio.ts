@@ -197,16 +197,19 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
   })
 }
 
-export async function alternatives(track: TrackQuery): Promise<Alternative[]> {
+export async function alternatives(track: TrackQuery, signal?: AbortSignal): Promise<Alternative[]> {
+  checkAbort(signal)
   validTrack(track)
   if (isPodcast(track)) throw new Error('Los episodios usan el audio original del pódcast.')
   if (isDirect(track)) throw new Error('Esta canción usa el enlace de YouTube que añadiste.')
   const saved = await readSourceChoice(track.id)
-  const rows: Alternative[] = (await search(track, true)).candidates.slice(0, 16).map((candidate) => ({ videoId: candidate.videoId,
+  checkAbort(signal)
+  const rows: Alternative[] = (await search(track, true, signal)).candidates.slice(0, 16).map((candidate) => ({ videoId: candidate.videoId,
     title: candidate.title, artists: candidate.artists.join(', '), album: candidate.album, duration: candidate.duration,
     score: candidate.score, origin: candidate.origin, current: candidate.videoId === saved?.videoId }))
   if (saved && !rows.some((row) => row.current)) rows.unshift({ videoId: saved.videoId, title: saved.title,
     artists: saved.channel, album: null, duration: saved.duration, score: saved.score, origin: 'youtube', current: true })
+  checkAbort(signal)
   return rows
 }
 

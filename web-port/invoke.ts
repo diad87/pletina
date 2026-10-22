@@ -2,6 +2,7 @@ import type { InvokeArgs } from '@tauri-apps/api/core'
 import type { ImportTrack, LibraryData, LibTrack, TrackQuery } from '../src/lib/types'
 import * as catalog from './catalog'
 import * as audio from './audio'
+import { openOfficialYouTube } from './official-youtube.svelte'
 import * as podcasts from './podcasts'
 import { readPlaylistCsv, readSpotifyPlaylist } from './imports'
 import { shareWebLog } from './diagnostics'
@@ -41,6 +42,10 @@ export async function webInvoke<T = unknown>(command: string, args?: InvokeArgs)
     case 'resolve': result = await audio.resolveTrack(values.track as TrackQuery, values.refresh === true); break
     case 'alternatives': result = await audio.alternatives(values.track as TrackQuery); break
     case 'choose_source': result = await audio.chooseSource(values.track as TrackQuery, String(values.videoId ?? '')); break
+    case 'open_youtube_player': {
+      result = await openOfficialYouTube(values.track as TrackQuery)
+      break
+    }
     case 'preview_youtube_track': result = await audio.previewYouTube(String(values.url ?? '')); break
     case 'match_import_track': result = await catalog.matchImportTrack(values.track as ImportTrack); break
     case 'local_library': result = { folders: [], albums: [], artists: [], tracks: 0, scanning: false }; break

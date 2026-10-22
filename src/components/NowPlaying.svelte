@@ -1,10 +1,12 @@
 <script lang="ts">
   // Pantalla completa "Sonando ahora": carátula grande sobre su propio color difuminado, y la cola.
   import { duration } from '../lib/format'
+  import * as api from '../lib/api'
   import { library } from '../lib/library.svelte'
   import { isLocal, isPodcast, isYouTubeTrack, mediaUrl } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
-  import { player } from '../lib/player.svelte'
+  import { player, toQuery } from '../lib/player.svelte'
+  import { toast } from '../lib/toast.svelte'
   import { theme } from '../lib/theme.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
@@ -116,6 +118,11 @@
         <Transport big />
         <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
         <div class="extras">
+          {#if api.inPwa && player.status === 'idle' && !podcast && !isLocal(current.track.id)}
+            <button onclick={() => api.openYouTubePlayer(toQuery(current)).catch(() => toast.show('No se pudo abrir el reproductor de YouTube.'))}>
+              <Icon name="play" size={20} /> Reproducir con YouTube
+            </button>
+          {/if}
           {#if !podcast && !youtube}
             <button onclick={() => (player.picking = current)} disabled={isLocal(current.track.id)}>
               <Icon name="swap" size={20} /> ¿No es esta canción?

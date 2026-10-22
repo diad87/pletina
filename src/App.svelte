@@ -17,6 +17,8 @@
   import { player } from './lib/player.svelte'
   import { theme } from './lib/theme.svelte'
   import { toast } from './lib/toast.svelte'
+  import { inPwa } from './lib/api'
+  import { officialYouTube, closeOfficialYouTube } from '../web-port/official-youtube.svelte'
   import { updates } from './lib/updates.svelte'
   import AlbumView from './views/AlbumView.svelte'
   import ArtistView from './views/ArtistView.svelte'
@@ -72,6 +74,10 @@
     (target instanceof HTMLElement && target.isContentEditable)
 
   function closeOverlay(): boolean {
+    if (inPwa && officialYouTube.opened) {
+      closeOfficialYouTube()
+      return true
+    }
     const sleepDialog = document.querySelector<HTMLDialogElement>('dialog[data-sleep-timer][open]')
     if (sleepDialog) {
       sleepDialog.close()
@@ -88,8 +94,8 @@
   // Los diálogos HTML tienen su propio comportamiento Atrás. Los paneles de la app
   // usan una entrada temporal en la PWA; en Tauri este método no hace nada.
   $effect(() => {
-    nav.overlay(Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay,
-      () => Boolean(menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying))
+    nav.overlay(Boolean((inPwa && officialYouTube.opened) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay,
+      () => Boolean((inPwa && officialYouTube.opened) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying))
   })
 
   // Botón "atrás" de Android (MainActivity.kt): conserva el contrato nativo.

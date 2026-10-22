@@ -114,6 +114,9 @@ export const album = (id: number) =>
 
 // Sin caché aquí: el backend ya guarda el vídeo elegido y la URL mientras no caduque.
 export const resolve = (track: TrackQuery, refresh = false) => invoke<Playable>('resolve', { track, refresh })
+/** Recurso visible de la PWA cuando una fuente no permite obtener audio directo. */
+export const openYouTubePlayer = (track: TrackQuery) =>
+  inPwa ? invoke<void>('open_youtube_player', { track }) : Promise.resolve()
 
 export const alternatives = (track: TrackQuery) => invoke<Alternative[]>('alternatives', { track })
 

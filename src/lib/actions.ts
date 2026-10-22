@@ -10,7 +10,7 @@ import { isLocal, isPodcast, isYouTubeTrack } from './media'
 import { youtubeEpisodes } from './podcasts'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
-import { player, type QueueItem } from './player.svelte'
+import { player, toQuery, type QueueItem } from './player.svelte'
 import { pins } from './pins.svelte'
 import { justCreated } from '../views/PlaylistView.svelte'
 
@@ -134,6 +134,10 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
   }
   if (!isLocal(id) && !podcast && !youtube) {
     items.push({ label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) })
+  }
+  if (api.inPwa && !isLocal(id) && !podcast) {
+    items.push({ label: 'Reproducir con YouTube', icon: 'play', separated: true,
+      action: () => api.openYouTubePlayer(toQuery(item)).catch(() => toast.show('No se pudo abrir el reproductor de YouTube.')) })
   }
   return items
 }
