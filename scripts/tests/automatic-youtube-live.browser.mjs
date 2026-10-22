@@ -122,9 +122,16 @@ const frameMedia = frame => noGesture(frame, () => {
     const rect = node.getBoundingClientRect(), style = getComputedStyle(node)
     return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden'
   }
-  const titleLink = document.querySelector('.ytp-title-link')
+  // YouTube currently serves both desktop and touch embed markup to Chrome.
+  // The touch title/link was observed in the real provider DOM, not inferred
+  // from the requested iframe ID or Pletina's catalog label.
+  const titleLink = document.querySelector('.ytp-title-link,.ytmVideoInfoVideoTitle')
+  const canonical = document.querySelector('link[rel="canonical"]')
   let contentVideoId = null
   try { if (titleLink?.href) contentVideoId = new URL(titleLink.href).searchParams.get('v') } catch {}
+  let canonicalVideoId = null
+  try { if (canonical?.href) canonicalVideoId = new URL(canonical.href).searchParams.get('v') } catch {}
+  if (!contentVideoId) contentVideoId = canonicalVideoId
   return {
     media: media ? { time: media.currentTime, duration: Number.isFinite(media.duration) ? media.duration : null,
       paused: media.paused, ended: media.ended, readyState: media.readyState, errorCode: media.error?.code ?? null,
@@ -132,7 +139,9 @@ const frameMedia = frame => noGesture(frame, () => {
     adShowing: player ? player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting') : null,
     visibleAdBadges: [...document.querySelectorAll('.ytp-ad-text,.ytp-ad-simple-ad-badge,.ytp-ad-badge,.ytp-ad-preview-text')].filter(visible).length,
     visibleErrors: [...document.querySelectorAll('.ytp-error-content-wrap,.ytp-error-content')].filter(visible).map(node => node.textContent.trim()).filter(Boolean).slice(0, 2),
-    contentTitle: titleLink?.textContent.trim() ?? null, contentVideoId,
+    contentTitle: titleLink?.textContent.trim() || document.title || null, contentVideoId, canonicalVideoId,
+    titleEvidence: titleLink ? { kind: 'provider DOM title link', class: titleLink.className } : { kind: 'provider document.title' },
+    documentTitle: document.title,
   }
 })
 
@@ -255,7 +264,8 @@ try {
       const media = sample.media
       const validContent = media && !media.paused && !media.ended && !media.muted && media.volume > 0 && media.readyState >= 3 &&
         media.playbackRate === 1 && Math.abs(media.duration - 169.6) < 2 && sample.adShowing === false && sample.visibleAdBadges === 0 &&
-        /iritsi da eguna/i.test(sample.contentTitle ?? '') && (!sample.contentVideoId || sample.contentVideoId === report.primaryAttempt.fallback.embed.videoId)
+        /iritsi da eguna/i.test(sample.contentTitle ?? '') && sample.contentVideoId === report.primaryAttempt.fallback.embed.videoId &&
+        (!sample.canonicalVideoId || sample.canonicalVideoId === report.primaryAttempt.fallback.embed.videoId)
       if (validContent && media.time > 0.1 && !anchor) anchor = { time: media.time, elapsed: sample.elapsed }
       if (validContent && anchor && media.time > 2 && media.time - anchor.time > 1 && sample.elapsed - anchor.elapsed > 1000) { passed = true; break }
       await delay(300)
