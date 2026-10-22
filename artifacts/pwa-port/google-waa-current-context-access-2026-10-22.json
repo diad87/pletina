@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-22T18:51:30.072Z",
+  "scope": "One CORS GET of YouTube homepage per context (published PWA and opaque iframe), plus one opaque current att/get POST. Response bodies, identifiers and tokens are never returned or persisted. No Google VM or media execution.",
+  "sources": [
+    "https://github.com/Brainicism/bgutil-ytdlp-pot-provider/blob/master/server/src/session_manager.ts",
+    "https://github.com/LuanRT/BgUtils/blob/v4.0.3/examples/index-innertube.ts"
+  ],
+  "credentials": "omit",
+  "persistedResponseBodies": false,
+  "persistedIdentifiers": false,
+  "runtimeVMExecuted": false,
+  "contexts": [
+    {
+      "context": "published-pwa",
+      "origin": "https://diad87.github.io",
+      "secureContext": true,
+      "homepage": {
+        "fetchResolved": false,
+        "errorName": "TypeError",
+        "failure": "browser-fetch-rejected",
+        "elapsedMs": 170
+      }
+    },
+    {
+      "context": "opaque-allow-scripts",
+      "origin": "null",
+      "secureContext": true,
+      "homepage": {
+        "fetchResolved": false,
+        "errorName": "TypeError",
+        "failure": "browser-fetch-rejected",
+        "elapsedMs": 166
+      },
+      "attestation": {
+        "fetchResolved": true,
+        "status": 200,
+        "responseType": "cors",
+        "jsonReadable": true,
+        "topLevelKeys": [
+          "bgChallenge",
+          "challenge",
+          "responseContext"
+        ],
+        "challengeKeys": [
+          "clientExperimentsStateBlob",
+          "globalName",
+          "interpreterHash",
+          "interpreterUrl",
+          "program"
+        ],
+        "contextFieldNames": [
+          "webResponseContextExtensionData"
+        ],
+        "eventParameterNames": [],
+        "treeInspectionComplete": true,
+        "programPresent": true,
+        "interpreterUrlPresent": true,
+        "elapsedMs": 83
+      }
+    }
+  ],
+  "browserVersion": "Chrome/153.0.8010.52",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "browserClosed": true,
+  "browserProcessClosed": true,
+  "ephemeralProfileRemoved": true,
+  "finishedAt": "2026-10-22T18:51:31.126Z"
+}

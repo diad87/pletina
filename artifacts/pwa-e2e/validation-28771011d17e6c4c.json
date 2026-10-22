@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "build": "28771011d17e6c4c",
+  "sourceCommit": "727492ebfa1cd6f42bbdff6e62aba5ad34d7f66e",
+  "finalLiveRunnerCommit": "8ee7423590807fc49b856a3669d4c22052921722",
+  "deployment": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "f6fb14c9921e3f5fe625a8735f50bdbbb06cd117",
+    "tree": "c70ed3c278e3a4c65e76436da39b0409bdc4fd49",
+    "source_hash": "304f10890550e83cade88cd8920b2d08ed7a79a5a1caaefb898771cbf48ff4cb",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "28771011d17e6c4c"
+  },
+  "feature": "Explicit visible official YouTube fallback inside the PWA for catalog songs and immutable saved YouTube IDs. No automatic substitution of the primary audio player.",
+  "runtimeBackendAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "matchingThresholdsLowered": false,
+  "mediaUrlsOrProviderTokensPersisted": false,
+  "initialBytes": 48320,
+  "optionalApplicationBytes": 485082,
+  "logic": {
+    "pass": 414,
+    "fail": 0,
+    "includedNewOfficialUnitTests": 13,
+    "log": "artifacts/pwa-e2e/logs-28771011d17e6c4c/logic.json"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "log": "artifacts/pwa-e2e/logs-28771011d17e6c4c/types.json"
+  },
+  "builds": {
+    "pwa": "artifacts/pwa-e2e/logs-28771011d17e6c4c/build-pwa.json",
+    "referenceFrontend": "artifacts/pwa-e2e/logs-28771011d17e6c4c/build-reference.json",
+    "nativeApkBuilt": false
+  },
+  "media": {
+    "pass": 106,
+    "fail": 0,
+    "unsupported": 2,
+    "total": 108,
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/media-28771011d17e6c4c-win/summary.json",
+        "profiles": [
+          {
+            "profile": "chromium-android-layout",
+            "counts": {
+              "pass": 35,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 1
+            }
+          },
+          {
+            "profile": "firefox-narrow",
+            "counts": {
+              "pass": 36,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      },
+      {
+        "path": "artifacts/pwa-e2e/media-28771011d17e6c4c-linux/summary.json",
+        "profiles": [
+          {
+            "profile": "webkit-iphone-layout",
+            "counts": {
+              "pass": 35,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 1
+            }
+          }
+        ]
+      }
+    ],
+    "scope": "34 controlled-provider media scenarios and two setup checks per desktop engine; real silent AAC/MP4. No full all-suite rerun or physical phone claim."
+  },
+  "officialFallback": {
+    "pass": 24,
+    "fail": 0,
+    "total": 24,
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-28771011d17e6c4c-win/summary.json",
+        "profiles": [
+          {
+            "profile": "chromium-android-layout",
+            "counts": {
+              "pass": 8,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          },
+          {
+            "profile": "firefox-narrow",
+            "counts": {
+              "pass": 8,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      },
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-28771011d17e6c4c-linux/summary.json",
+        "profiles": [
+          {
+            "profile": "webkit-iphone-layout",
+            "counts": {
+              "pass": 8,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            }
+          }
+        ]
+      }
+    ],
+    "scope": "Eight scenarios per desktop engine; actual PWA/modal/history, controlled provider metadata and benign iframe fixture. Pauses real AAC; validates selection, dimensions, close, Back, late cancellation and offline retry. Does not claim real YouTube media."
+  },
+  "update": {
+    "from": "74604b084b6450d0",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-28771011d17e6c4c.json"
+  },
+  "publicFiles": {
+    "pass": 22,
+    "total": 22,
+    "report": "artifacts/pwa-deploy/public-files-28771011d17e6c4c.json",
+    "initialPropagationFailure": "artifacts/pwa-deploy/public-files-28771011d17e6c4c-propagation.json"
+  },
+  "publicAudioControl": {
+    "pass": 3,
+    "fail": 0,
+    "report": "artifacts/pwa-port/browser-public-28771011d17e6c4c.json",
+    "query": "A solas con un ritmo lirico de violadores del verso",
+    "scope": "Existing HTMLAudio path, exact selected catalog song in desktop Chrome."
+  },
+  "exactSongOfficialLive": {
+    "pass": 6,
+    "fail": 0,
+    "report": "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-public-dom-complete.json",
+    "title": "Iritsi da Eguna",
+    "videoId": "fV-IUsecSsU",
+    "scope": "Published compiled PWA, real catalog, real visible official iframe, user Play click, unmuted HTML video with >2 s progress and about 170 s duration, no ad detected. Visible Close and browser-history Back remove iframe. No parent SDK injected."
+  },
+  "directAudioInvestigation": {
+    "exactSongResolved": false,
+    "report": "artifacts/pwa-port/iritsi-direct-playback-investigation-2026-10-22.json"
+  },
+  "preservedEarlierIntegratedAttempts": [
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-local.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-local-final.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-local-diagnostic.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-public.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-public-final.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-public-html-media.json",
+    "artifacts/pwa-port/official-youtube-live-28771011d17e6c4c-public-dom-final.json",
+    "artifacts/pwa-port/official-youtube-public-dom-28771011d17e6c4c.json"
+  ],
+  "preservedAttemptInterpretation": "Local origin with SDK observation produced provider error 150. Public SDK-observed attempts did not satisfy the state/progress assertions; no cause assigned. Read-only real-media observation without an added SDK proves public playback separately. An Escape attempt from inside the cross-origin frame did not close it. A follow-up initially clicked Search before remount completed; the final runner waits for the actual row and preserves the same close/Back assertions.",
+  "limitations": [
+    "The exact song still does not play as direct HTMLAudio. Official mode is an explicit visible video workaround, not complete APK parity.",
+    "Official mode does not integrate Pletina queue, listening history, downloads, sleep timer or automatic next song. It uses YouTube controls and never resumes the old audio automatically.",
+    "No background, screen-off or offline playback guarantee for official mode. Human Xiaomi reply confirms playback/Close only; physical iPhone and complete device protocols remain pending.",
+    "YouTube can consume Escape while focus is inside its cross-origin frame; use the visible Close control or Back. Browser-history Back was tested, not a physical Android button.",
+    "No claim that every restricted, removed, private or unavailable YouTube recording will play. Matching and provider restrictions remain.",
+    "Android Auto and CarPlay remain unverified/unsupported as previously documented."
+  ],
+  "allRequestedPlatformsVerified": false,
+  "physicalUserReport": {
+    "path": "artifacts/pwa-port/android-official-youtube-user-report-2026-10-22.json",
+    "device": "Xiaomi 15T Pro",
+    "confirmed": [
+      "official video playback inside Pletina",
+      "Close stops playback"
+    ],
+    "requestedBuild": "28771011d17e6c4c",
+    "observedBuild": null,
+    "scope": "Partial human confirmation; no phone automation or build-hash observation claim"
+  }
+}

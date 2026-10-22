@@ -1,0 +1,55 @@
+{
+  "testedAt": "2026-10-22T18:33:54.817Z",
+  "sourceCommit": "5f4c152",
+  "scope": "Read-only exact two-video + public Big Buck Bunny control; anonymous sandbox text/plain, credentials omitted. Signed URLs/visitor only in memory, no arbitrary remote JS execution. Desktop Chrome and WPE only.",
+  "results": [
+    {
+      "videoId": "fV-IUsecSsU",
+      "control": false,
+      "client": "TV_SAMSUNG",
+      "clientName": "TVHTML5",
+      "clientVersion": "5.20260707",
+      "error": "Probe network failure"
+    }
+  ],
+  "network": [
+    {
+      "event": "responseExtraInfo",
+      "phase": "fV-IUsecSsU:TV_SAMSUNG",
+      "host": "youtubei.googleapis.com",
+      "method": "OPTIONS",
+      "status": 403,
+      "contentType": "text/html; charset=UTF-8",
+      "length": "1103",
+      "contentRange": null,
+      "locationHost": null
+    },
+    {
+      "event": "loadingFailed",
+      "phase": "fV-IUsecSsU:TV_SAMSUNG",
+      "host": "youtubei.googleapis.com",
+      "method": "POST",
+      "failure": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": "PreflightMissingAllowOriginHeader",
+      "failedParameter": ""
+    }
+  ],
+  "errors": [],
+  "build": "74604b084b6450d0",
+  "chromeCapability": {
+    "hls": "maybe",
+    "hlsLegacy": "maybe",
+    "dash": "",
+    "mp4": "probably"
+  },
+  "signatureTimestampSource": "Published watch HTML STS field",
+  "signatureTimestamp": 20746,
+  "playerHost": "youtubei.googleapis.com",
+  "webKit": {
+    "tested": false,
+    "reason": "No HLS manifest returned by the bounded client probes."
+  },
+  "chromeClosed": true,
+  "finishedAt": "2026-10-22T18:33:57.546Z"
+}

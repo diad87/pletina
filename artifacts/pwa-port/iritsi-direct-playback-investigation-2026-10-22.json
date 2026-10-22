@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "sourceCommit": "5f4c152",
+  "publishedBuild": "74604b084b6450d0",
+  "scope": "Investigación posterior a la publicación. Pruebas de proveedores en navegadores de escritorio con perfiles desechables; ninguna acredita Android o iPhone físicos.",
+  "song": {
+    "catalogId": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "duration": 169,
+    "matchingVideoIds": [
+      "fV-IUsecSsU",
+      "PStEJ1pAR6s"
+    ]
+  },
+  "exactSongResolvedInPwaAudioPlayer": false,
+  "runtimeBackendAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "matchingThresholdsLowered": false,
+  "signedMediaUrlsOrTokensPersisted": false,
+  "findings": [
+    {
+      "route": "Búsqueda de otra grabación",
+      "result": "Las consultas adicionales con álbum y título entre comillas no hallaron otra fuente que cumpliese los umbrales existentes. No se aceptaron karaoke ni otra canción.",
+      "reports": [
+        "iritsi-album-query-probe-2026-10-22.json"
+      ]
+    },
+    {
+      "route": "IOS y WEB_KIDS",
+      "result": "IOS devuelve descriptores MP4, pero la petición real del medio acaba HTTP 403, ORB y MediaError 4, sin avance. No ofrece HLS ni DASH. WEB_KIDS no ofrece formatos. El nombre del cliente IOS no significa que se haya probado un iPhone.",
+      "reports": [
+        "provider-ios-hls-kids-74604b084b6450d0.json"
+      ]
+    },
+    {
+      "route": "TV Samsung y TV actual con timestamp real",
+      "result": "Las peticiones JSON sencillas son rechazadas por el proveedor. Las cabeceras de cliente que requieren preflight son bloqueadas por CORS antes de obtener una respuesta usable. También se comprobó el host youtubei.googleapis.com. No se desactivó la seguridad del navegador ni se añadió un proxy.",
+      "reports": [
+        "provider-tv-samsung-74604b084b6450d0.json",
+        "provider-tv-samsung-sts-74604b084b6450d0.json",
+        "provider-tv-current-sts-74604b084b6450d0.json",
+        "provider-tv-samsung-sts-headers-74604b084b6450d0.json",
+        "provider-tv-samsung-sts-googleapi-74604b084b6450d0.json",
+        "provider-tv-samsung-sts-headers-googleapi-74604b084b6450d0.json"
+      ]
+    },
+    {
+      "route": "WEB_SAFARI",
+      "result": "La respuesta de la canción no proporciona un manifiesto HLS ni DASH ni una URL AAC utilizable. No llegó a existir un manifiesto con el que verificar el decoder.",
+      "reports": [
+        "provider-web-safari-hls-74604b084b6450d0.json"
+      ]
+    },
+    {
+      "route": "YouTube Music WEB_REMIX y transformación de firma/n",
+      "result": "La respuesta declara el AAC original itag 140 sin DRM. El experimento transforma firma y n dentro de un iframe opaco y Worker sin red, pero la petición real del audio recibe HTTP 403 y no avanza. Añadir los campos reales de versión y sesión de reproducción tampoco lo hace reproducible. El código del proveedor obtenido para este experimento no se incorporó al producto.",
+      "reports": [
+        "provider-web-remix-formats-74604b084b6450d0.json",
+        "provider-music-cipher-spike-74604b084b6450d0.json",
+        "provider-music-cipher-complete-client-spike-74604b084b6450d0.json",
+        "provider-player-asset-cors-74604b084b6450d0.json"
+      ]
+    },
+    {
+      "route": "Verificación de origen del navegador",
+      "result": "Los endpoints WAA permiten ciertas peticiones CORS, pero el flujo real no produjo un integrityToken válido. Ocurrió tanto en iframe opaco como en el control de mismo origen. No se inventó ni se trató un token de fallback como prueba válida. No se ha identificado la causa exacta del rechazo.",
+      "reports": [
+        "google-waa-browser-cors-2026-10-22.json",
+        "google-waa-content-token-2026-10-22.json",
+        "google-waa-origin-control-2026-10-22.json"
+      ]
+    },
+    {
+      "route": "Contexto actual de la página de YouTube",
+      "result": "La PWA no puede leer la homepage por CORS, y att/get no ofrece el ytcfg/EVENT_ID necesario para esta variante. Un control que obtuvo la pareja fresca mediante Node tampoco generó un token válido. Ese control no es una solución PWA sin servidor: Node elude una restricción que sigue presente en el navegador. No se integró.",
+      "reports": [
+        "google-waa-current-context-access-2026-10-22.json",
+        "google-waa-homepage-context-control-2026-10-22.json"
+      ]
+    }
+  ],
+  "interpretation": "Se ha confirmado un rechazo de la petición real del audio en las rutas experimentales que llegan a una URL. No se demuestra que todos esos rechazos tengan idéntica causa ni que sea imposible encontrar otra ruta PWA. La declaración de formato o estado OK no cuenta como reproducción.",
+  "physicalDeviceValidation": "No ejecutada en esta investigación.",
+  "experimentalDirectAudioRoutesIntegrated": false,
+  "experimentalDirectAudioBuildPublished": false,
+  "referenceBuildBehavior": "Permanece el rescate WEB acotado de 746. La canción exacta sigue pendiente; no se suman estos experimentos a sus pruebas de reproducción correctas.",
+  "subsequentOfficialFallback": {
+    "build": "28771011d17e6c4c",
+    "published": true,
+    "exactSongForegroundVideoVerified": true,
+    "directAudioStillUnresolved": true,
+    "report": "official-youtube-live-28771011d17e6c4c-public-dom-complete.json",
+    "physicalUserReport": "android-official-youtube-user-report-2026-10-22.json",
+    "runtimeBackendAdded": false,
+    "scope": "Explicit visible official video, separate from the failed direct-audio experiments; no background/offline equivalence."
+  }
+}
