@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-22T21:33:07.762Z",
+  "scope": "Real Audius and Deezer requests from GitHub Pages; native HTMLAudio and full-file in-memory decode. Desktop only.",
+  "noProviderMocks": true,
+  "noRuntimeBackend": true,
+  "noLoginOrApplicationKey": true,
+  "physicalDevice": false,
+  "phoneScreenOffVerified": false,
+  "mediaOrSignedUrlsPersisted": false,
+  "checks": [
+    {
+      "name": "Canonical catalog recording matches with independent public ISRC lookup",
+      "controls": [
+        {
+          "query": {
+            "id": 4260344111,
+            "title": "The One",
+            "titleVersion": "",
+            "artist": "JAMES V",
+            "album": "The One",
+            "duration": 220,
+            "isrc": "GXLEX2692321"
+          },
+          "source": {
+            "videoId": "",
+            "url": "https://api.audius.co/v1/tracks/daMWzaJ/stream",
+            "title": "The One",
+            "channel": "JAMES V",
+            "local": false,
+            "source": {
+              "provider": "audius",
+              "id": "daMWzaJ",
+              "expiresAt": 1792705089338,
+              "download": {
+                "allowed": false,
+                "duration": 220
+              }
+            }
+          }
+        },
+        {
+          "query": {
+            "id": 4248921261,
+            "title": "Dancefloor",
+            "titleVersion": "",
+            "artist": "Quinn Ayers",
+            "album": "Dancefloor",
+            "duration": 155,
+            "isrc": "QMDA72636635"
+          },
+          "source": {
+            "videoId": "",
+            "url": "https://api.audius.co/v1/tracks/q7r1Kgb/stream",
+            "title": "Dancefloor",
+            "channel": "Quinn Ayers",
+            "local": false,
+            "source": {
+              "provider": "audius",
+              "id": "q7r1Kgb",
+              "expiresAt": 1792705089907,
+              "download": {
+                "allowed": false,
+                "duration": 155
+              }
+            }
+          }
+        },
+        {
+          "query": {
+            "id": 4164219782,
+            "title": "On The Run",
+            "titleVersion": "",
+            "artist": "Allwack",
+            "album": "On The Run",
+            "duration": 201,
+            "isrc": "QZVN42200039"
+          },
+          "source": {
+            "videoId": "",
+            "url": "https://api.audius.co/v1/tracks/dydyr4K/stream",
+            "title": "On The Run",
+            "channel": "Allwack",
+            "local": false,
+            "source": {
+              "provider": "audius",
+              "id": "dydyr4K",
+              "expiresAt": 1792705090431,
+              "download": {
+                "allowed": false,
+                "duration": 201
+              }
+            }
+          }
+        }
+      ],
+      "hydrated": {
+        "videoId": "",
+        "url": "https://api.audius.co/v1/tracks/daMWzaJ/stream",
+        "title": "The One",
+        "channel": "JAMES V",
+        "local": false,
+        "source": {
+          "provider": "audius",
+          "id": "daMWzaJ",
+          "expiresAt": 1792705090559,
+          "download": {
+            "allowed": false,
+            "duration": 220
+          }
+        }
+      },
+      "wrongArtist": null,
+      "remix": null,
+      "exactMissing": null
+    },
+    {
+      "name": "Unmuted native audio advances and seeks after one trusted click; complete file decodes",
+      "initial": {
+        "time": 2.161606,
+        "duration": 220,
+        "paused": false,
+        "muted": false,
+        "volume": 0.25,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "afterSeek": {
+        "time": 111.03358,
+        "duration": 220,
+        "paused": false,
+        "muted": false,
+        "volume": 0.25,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "hiddenBefore": {
+        "time": 111.079085,
+        "duration": 220,
+        "paused": false,
+        "muted": false,
+        "volume": 0.25,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      },
+      "hiddenAfter": {
+        "time": 121.084371,
+        "duration": 220,
+        "paused": false,
+        "muted": false,
+        "volume": 0.25,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      },
+      "bytes": {
+        "status": 200,
+        "contentType": "audio/mpeg",
+        "byteLength": 8802468,
+        "sha256": "198e9b6feec79a6fab3a51bd46111fcf43df1af287b17ea96dba89f6cc5ee5b5",
+        "decodedDuration": 220,
+        "decodedChannels": 2,
+        "sampleRate": 48000
+      }
+    }
+  ],
+  "pass": true
+}

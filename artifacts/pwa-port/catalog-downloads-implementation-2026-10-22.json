@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "compiledBuild": "fc56a244ebcc9e6e",
+  "productFiles": ["web-port/downloads.ts", "pwa/sw.js"],
+  "behavior": {
+    "legacyYouTubeOpaqueRoutePreserved": true,
+    "isrcAndTitleVersionPassedToResolver": true,
+    "externalSourcesNeverCallYouTubeStream": true,
+    "externalPermissionRequired": "source.download.allowed must explicitly equal true; listening-only verified/ALEA sources produce a clear refusal before any media request.",
+    "externalDownloadRoute": "Only Audius, ASCII alphanumeric ID and exact https://api.audius.co/v1/tracks/{id}/stream are accepted. No URL from JSON or arbitrary verified-provider URL can be downloaded.",
+    "corsRequired": true,
+    "credentials": "omit",
+    "referrerPolicy": "no-referrer",
+    "httpStatusRequired": 200,
+    "partialContentRejected": true,
+    "audioMimeRequired": true,
+    "maximumBytes": 268435456,
+    "streamingBodyCounter": true,
+    "completeBodyBeforeCommit": true,
+    "knownContentLengthMustMatch": true,
+    "actualStreamedBytesRecordedInMetadata": true,
+    "quotaCheckedBeforeAndDuringTransfer": true,
+    "conditionalSha256": "Only if the source advertises a checksum, read the bounded cached file into RAM for WebCrypto and compare before committing metadata. Normal transfers have no additional full-file JS array buffer.",
+    "durationAndTailValidation": "External copies must have the expected full duration within 3 seconds and yield decodable data after seeking to the final quarter second; metadata alone cannot mark a preview or truncated file done.",
+    "serialQueueCancellationRollbackRenewOnceAndOriginalDeadlinePreserved": true,
+    "signedUrlsInDatabase": false
+  },
+  "serviceWorker": {
+    "opaqueResponsesUntouched": true,
+    "readableCachedAudio": "Answers a normal local request with byte length and Accept-Ranges, and single valid byte requests with 206, Content-Range and Content-Length. Uses local cached Blob slices; never fetches remote audio.",
+    "ranges": ["bounded", "open-ended", "suffix"],
+    "invalidMultipleOrUnsatisfiedRangeStatus": 416,
+    "scopeInstallerOrUpdateIdentityChanged": false
+  },
+  "liveProof": {
+    "report": "catalog-downloads-audius-live-2026-10-22T21-53-09-091Z.json",
+    "priorPassingBuildReport": "catalog-downloads-audius-live-2026-10-22T21-47-01-182Z.json",
+    "passed": true,
+    "checks": 2,
+    "runtime": "Desktop Chrome, real Audius metadata/media, static compiled PWA worker on temporary loopback QA origin, production download manager/CacheStorage/IDB. Temporary QA HTTP server was closed; no runtime product server was added.",
+    "control": {"providerId": "dloY13J", "title": "ohnoitsdoug x diskade - Sound System Check [FREE DOWNLOAD]", "artist": "DISKADE", "duration": 192, "isrc": null},
+    "controlIsCanonicalCatalogMatch": false,
+    "controlSourceSelection": "Injected only from actual public provider metadata whose explicit download permission, stream access and ungated status were checked. Provider responses were not mocked.",
+    "fileBytes": 7682106,
+    "offlineSha256": "b41a802eac8c815f9f98878fd2fac5e1d7f2bd094d8081a0073d88baf582785f",
+    "offlinePlaybackAdvances": true,
+    "offlineMiddleSeekAdvances": true,
+    "trustedPlaybackClick": true,
+    "mediaElementMuted": false,
+    "physicalAndroidOrIosVerified": false,
+    "phoneScreenOffVerified": false
+  },
+  "retainedEarlierDiagnostics": [
+    {"report": "catalog-downloads-audius-live-2026-10-22T21-41-23-225Z.json", "result": "Failed safe during tail validation against the old published worker; no completed download claimed."},
+    {"report": "catalog-downloads-audius-live-2026-10-22T21-43-04-271Z.json", "result": "Observer confirms full 192-second metadata but tail seek returns to zero under old worker. Motivated local readable Range support; not counted as an offline success."}
+  ],
+  "unitTests": {
+    "command": "node --test scripts/tests/pwa-downloads.test.mjs scripts/tests/web-downloads.test.mjs",
+    "passed": 35,
+    "failed": 0,
+    "downloadManager": 28,
+    "workerAudioRoutes": 7
+  },
+  "newProductPublishedByThisSubtask": false
+}

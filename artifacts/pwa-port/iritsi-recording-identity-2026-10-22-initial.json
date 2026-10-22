@@ -1,0 +1,307 @@
+{
+  "testedAt": "2026-10-22T21:31:44.869Z",
+  "scope": "Real Pages-origin JSONP metadata and CORS audio decode; normalized waveform correlation in browser RAM. No playback or phone background proof.",
+  "catalog": {
+    "id": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "isrc": "QM6N21424821",
+    "durationSeconds": 169
+  },
+  "candidate": {
+    "provider": "ALEA / Kantari",
+    "article": "https://alea.eus/araba/1473099329086-iritsi-da-eguna-pirritx-eta-porrotx",
+    "publicAudio": "https://alea.tok-md.com/iritsidaeguna.mp3"
+  },
+  "browserPolicyOverrides": false,
+  "outputMuted": false,
+  "observationWithUserGesture": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "productSourceActivated": false,
+  "wholeRecordingIdentityProven": false,
+  "mediaPersisted": false,
+  "signedUrlsPersisted": false,
+  "stages": [
+    {
+      "name": "Official catalog metadata and reference selection",
+      "result": {
+        "exact": {
+          "id": 3250715431,
+          "title": "Iritsi da Eguna",
+          "artist": "Pirritx eta Porrotx",
+          "album": "Eskerrik Asko!",
+          "duration": 169,
+          "isrc": "QM6N21424821",
+          "previewAvailable": true
+        },
+        "negative": {
+          "id": 3250715401,
+          "title": "Ipuintxoa - bi Izar",
+          "artist": "Pirritx eta Porrotx",
+          "album": "Eskerrik Asko!",
+          "duration": 37,
+          "isrc": "QM6N21424818",
+          "previewAvailable": true
+        },
+        "identityAccepted": true,
+        "albumTracks": 30
+      }
+    },
+    {
+      "name": "CORS complete file fetch and in-memory decode",
+      "result": [
+        {
+          "label": "candidate",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 4633634,
+          "sha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+          "durationSeconds": 187.1684126984127,
+          "sampleRate": 44100,
+          "channels": 2
+        },
+        {
+          "label": "exactReference",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 479827,
+          "sha256": "0fe6a8b150d8b1356f30a7ee2d4cd1538a913a01ca55b9fe11338ff27a5c04d8",
+          "durationSeconds": 29.98857142857143,
+          "sampleRate": 44100,
+          "channels": 2
+        },
+        {
+          "label": "negativeReference",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 479827,
+          "sha256": "6fda40c83992377f084b165490228547c33b9d042cd593c27cd170d34e0304c5",
+          "durationSeconds": 29.98857142857143,
+          "sampleRate": 44100,
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "name": "Waveform identity comparison with distinct-song and self controls",
+      "result": {
+        "algorithm": "Mean-removed normalized waveform cross-correlation, FFT convolution; mono box-filter downsample to 2205 Hz; exhaustive offset scan.",
+        "results": [
+          {
+            "label": "exactReference",
+            "full": {
+              "correlation": 0.9703016013081601,
+              "offsetSeconds": 8.766893424036281,
+              "referenceSeconds": 29.988208616780046,
+              "sampleRate": 2205,
+              "coarseWholeSecondControls": [
+                {
+                  "offsetSeconds": 12,
+                  "correlation": 0.18750104272009435
+                },
+                {
+                  "offsetSeconds": 6,
+                  "correlation": 0.15114761477869249
+                },
+                {
+                  "offsetSeconds": 18,
+                  "correlation": 0.1424270548643672
+                }
+              ]
+            },
+            "windows": [
+              {
+                "referenceStartSeconds": 0,
+                "correlation": 0.9116055595006445,
+                "offsetSeconds": 8.766893424036281,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 13,
+                    "correlation": 0.03942763496030982
+                  },
+                  {
+                    "offsetSeconds": 5,
+                    "correlation": 0.03356774686284032
+                  },
+                  {
+                    "offsetSeconds": 12,
+                    "correlation": 0.03131761354753126
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.766893424036281
+              },
+              {
+                "referenceStartSeconds": 10,
+                "correlation": 0.9607540253332865,
+                "offsetSeconds": 18.76689342403628,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 28,
+                    "correlation": 0.1334712961626095
+                  },
+                  {
+                    "offsetSeconds": 88,
+                    "correlation": 0.09064165935850774
+                  },
+                  {
+                    "offsetSeconds": 40,
+                    "correlation": 0.08456175374985296
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.76689342403628
+              },
+              {
+                "referenceStartSeconds": 20,
+                "correlation": 0.9803967833064827,
+                "offsetSeconds": 28.76689342403628,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 32,
+                    "correlation": 0.24106999197982756
+                  },
+                  {
+                    "offsetSeconds": 38,
+                    "correlation": 0.17919874676959557
+                  },
+                  {
+                    "offsetSeconds": 26,
+                    "correlation": 0.17748876374304284
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.76689342403628
+              }
+            ],
+            "alignmentSpreadSeconds": 1.7763568394002505e-15
+          },
+          {
+            "label": "negativeReference",
+            "full": {
+              "correlation": 0.018697727814613374,
+              "offsetSeconds": 93.22585034013605,
+              "referenceSeconds": 29.988208616780046,
+              "sampleRate": 2205,
+              "coarseWholeSecondControls": [
+                {
+                  "offsetSeconds": 122,
+                  "correlation": 0.011390825826208286
+                },
+                {
+                  "offsetSeconds": 15,
+                  "correlation": 0.010102781103018117
+                },
+                {
+                  "offsetSeconds": 7,
+                  "correlation": 0.009710515889868935
+                }
+              ]
+            },
+            "windows": [
+              {
+                "referenceStartSeconds": 0,
+                "correlation": 0.04308324785314111,
+                "offsetSeconds": 2.9170068027210885,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 3,
+                    "correlation": 0.027671305788285985
+                  },
+                  {
+                    "offsetSeconds": 55,
+                    "correlation": 0.0208185836195447
+                  },
+                  {
+                    "offsetSeconds": 34,
+                    "correlation": 0.020097477981163583
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 2.9170068027210885
+              },
+              {
+                "referenceStartSeconds": 10,
+                "correlation": 0.044313340722587594,
+                "offsetSeconds": 178.1705215419501,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 49,
+                    "correlation": 0.02724718823528783
+                  },
+                  {
+                    "offsetSeconds": 132,
+                    "correlation": 0.019949115245354195
+                  },
+                  {
+                    "offsetSeconds": 135,
+                    "correlation": 0.019476450407935064
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 168.1705215419501
+              },
+              {
+                "referenceStartSeconds": 20,
+                "correlation": 0.08123252751186032,
+                "offsetSeconds": 1.2811791383219955,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 56,
+                    "correlation": 0.015596107156340635
+                  },
+                  {
+                    "offsetSeconds": 122,
+                    "correlation": 0.015472911311184997
+                  },
+                  {
+                    "offsetSeconds": 160,
+                    "correlation": 0.015467007755501895
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": -18.718820861678005
+              }
+            ],
+            "alignmentSpreadSeconds": 186.88934240362812
+          }
+        ],
+        "selfControl": {
+          "correlation": 1.000000000005442,
+          "offsetSeconds": 40,
+          "referenceSeconds": 8,
+          "sampleRate": 2205,
+          "coarseWholeSecondControls": [
+            {
+              "offsetSeconds": 40,
+              "correlation": 1.000000000005442
+            },
+            {
+              "offsetSeconds": 94,
+              "correlation": 0.3252163883766161
+            },
+            {
+              "offsetSeconds": 34,
+              "correlation": 0.2785761933233037
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "origin": "https://diad87.github.io",
+  "referenceExcerptCompatible": true,
+  "conclusion": "The complete official reference excerpt and its separated windows strongly match the candidate at a consistent offset. This supports the same recorded excerpt, not verification of all unreferenced seconds or complete master identity."
+}

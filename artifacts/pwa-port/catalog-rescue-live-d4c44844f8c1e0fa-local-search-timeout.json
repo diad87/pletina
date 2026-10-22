@@ -1,0 +1,149 @@
+{
+  "testedAt": "2026-10-22T21:46:56.522Z",
+  "expectedBuild": "d4c44844f8c1e0fa",
+  "build": "d4c44844f8c1e0fa",
+  "checks": [
+    {
+      "name": "launcher opens the expected compiled app through its normal control",
+      "pass": true,
+      "activationBeforeInput": {
+        "active": false,
+        "ever": false
+      },
+      "tabs": [
+        "Inicio",
+        "Buscar",
+        "Podcasts",
+        "Tu biblioteca"
+      ]
+    },
+    {
+      "name": "search and select the exact song with one normal title click",
+      "pass": false,
+      "error": "Matching catalog row timed out",
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "empty",
+            "sourceRevision": 0,
+            "blob": null,
+            "currentTime": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [],
+        "hidden": false,
+        "online": true,
+        "current": null,
+        "repeat": null,
+        "videoIframeCount": 0,
+        "mediaSession": {
+          "title": null,
+          "artist": null,
+          "playbackState": "none"
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "nowPlayingOpen": false,
+        "notices": [],
+        "navigation": {
+          "route": "search"
+        }
+      }
+    }
+  ],
+  "errors": [
+    {
+      "kind": "terminal",
+      "message": "Matching catalog row timed out"
+    }
+  ],
+  "network": [],
+  "inputActions": [
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Pletina from installer"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus song search"
+    }
+  ],
+  "scope": "Real compiled PWA UI, real catalog and ALEA recording, desktop Chrome mobile layout; no phone or installed-PWA claim.",
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "screenOffVerified": false,
+  "browserSecurityOverrides": false,
+  "backgroundThrottleOverrides": false,
+  "outputMuted": false,
+  "providerResponsesMocked": false,
+  "observationRpcCalls": 254,
+  "observationRpcWithGesture": 0,
+  "primarySongClicks": 0,
+  "sourceMenuClicks": 0,
+  "iframePlaybackClicks": 0,
+  "mediaFilesWritten": false,
+  "mediaUrlsPersisted": false,
+  "networkOfflineFaultInjection": false,
+  "target": {
+    "origin": "http://127.0.0.1:58760",
+    "path": "/pletina/",
+    "temporaryStaticQaPreview": true
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "finalState": {
+    "audio": [
+      {
+        "index": 0,
+        "sourceKind": "empty",
+        "sourceRevision": 0,
+        "blob": null,
+        "currentTime": 0,
+        "duration": null,
+        "paused": true,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "events": [],
+    "hidden": false,
+    "online": true,
+    "current": null,
+    "repeat": null,
+    "videoIframeCount": 0,
+    "mediaSession": {
+      "title": null,
+      "artist": null,
+      "playbackState": "none"
+    },
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "nowPlayingOpen": false,
+    "notices": [],
+    "navigation": {
+      "route": "search"
+    }
+  },
+  "pass": false
+}

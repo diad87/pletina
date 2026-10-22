@@ -1,0 +1,933 @@
+
+> musify@0.11.2 test
+> node --test scripts/tests/*.test.mjs
+
+✔ builds 45 real queue entries, starts with seed, alternates artists, and leaves source data unchanged (3.3881ms)
+✔ deduplicates track IDs and ISRC across albums and handles duplicate related artists (0.4654ms)
+✔ rejects local, podcast, YouTube and malformed seeds without calling catalogue sources (0.6505ms)
+✔ filters non-catalog related artists and tracks before building the radio (0.6029ms)
+✔ uses successful sources after partial failures and falls back to seed if related lookup fails (0.6913ms)
+✔ empty catalogue returns no items and related requests remain bounded (0.5303ms)
+✔ snapshot accepts fresh Android array wrappers and DJ additions, rejects replaced queue and changed playback (0.374ms)
+✔ CORE-DL-010: initial persisted downloads remain available offline (4.0426ms)
+✔ CORE-DL-007: completed/active/local/RSS are skipped, YouTube episodes are eligible (2.836ms)
+✔ CORE-DL-010: rejected start clears only its batch and permits a retry (1.6465ms)
+✔ CORE-DL-010: a late start rejection cannot clear a newer attempt (3.2675ms)
+✔ CORE-DL-010: failed removal keeps badges and version, successful retry clears them (1.4221ms)
+✔ CORE-DL-007: cancel pending tracks while an active transfer finishes (6.4514ms)
+✔ CORE-DL-010: partial removal failure reconciles only downloads actually removed (12.1231ms)
+✔ CORE-DL-010: stale reconciliation cannot remove a newly downloaded replacement (0.9277ms)
+✔ CORE-DL-010: mixed success/error reports correct track and completion count (2.4623ms)
+✔ CORE-DL-010 REGRESSION: a rejected cancellation must be observable (1.7636ms)
+✔ CORE-DL-010 adversarial events: duplicate terminal event should not duplicate completion (0.6246ms)
+✔ CORE-DL-010 adversarial events: late progress must not resurrect a completed job (0.5984ms)
+✔ CORE-DL-007: duplicate playlist entries enqueue a track only once (0.5644ms)
+✔ CORE-DL-010: cancelled/failed jobs ignore late progress and accept an explicit retry (2.2727ms)
+✔ CORE-DL-010: removal and a fresh download reset terminal state (0.806ms)
+✔ CORE-DL-010: an already persisted download ignores stale progress (0.5063ms)
+✔ CORE-IMP-012: cancel pending CSV read prevents parsing and late UI mutation (2.6738ms)
+✔ CORE-IMP-012: an old read cannot overwrite a newer import (2.6596ms)
+✔ CORE-IMP-012: dispose during matching suppresses late results and navigation (1.6014ms)
+✔ CORE-IMP-012: cancelling during throttle prevents the next lookup (1.2959ms)
+✔ CORE-IMP-011: oversized CSV is rejected before its contents or parser are accessed (0.8124ms)
+✔ CORE-IMP-013: matching failure retains progress, retry starts at the pending row, duplicates survive (2.0365ms)
+✔ CORE-IMP-013: double save creates one playlist and cancel during save cannot discard the commit (1.4499ms)
+✔ CORE-IMP-013: leaving during save preserves the committed library update without navigation (0.8849ms)
+✔ CORE-IMP-013: failed playlist write remains reviewable and retry retains the same contents (1.0087ms)
+✔ slow resolution and slow audio can each finish just before their separate deadlines (14.946ms)
+✔ a timed-out song advances once, and late resolution cannot replace the next song (3.216ms)
+✔ offline resolution stops after three songs; reconnect and manual retry recover the same queue (5.6861ms)
+✔ offline downloaded audio can still play after remote resolution failed (3.2258ms)
+✔ a middle-of-song network error renews a manual queue song without losing position or album order (13.3073ms)
+✔ a user skip during slow HTTP 403 recovery ignores the old URL when it arrives (3.5047ms)
+✔ a refresh timeout during a middle-of-song cutoff advances only once (3.7053ms)
+✔ a temporary buffering stall that recovers by itself retains the track and queue (2.154ms)
+✔ REGRESSION: a permanent buffering stall cannot remain shown as playing indefinitely (3.0004ms)
+ℹ {"status":"idle","time":60,"song":1,"renewals":1,"messages":["No se pudo reproducir «Canción 1»: El audio no avanza. Pulsa Reproducir para volver a intentarlo"],"timers":0}
+✔ REGRESSION: a rejected resume must report a retryable playback error (2.998ms)
+ℹ {"status":"idle","plays":2,"messages":["No se pudo reproducir «Canción 1»: AbortError: Playback was interrupted"],"timers":0}
+✔ REGRESSION: a pending resume must have a bounded wait like the initial play (4.8365ms)
+ℹ {"status":"idle","plays":2,"messages":["No se pudo reproducir «Canción 1»: Error: El reproductor no ha podido iniciar el audio (30 s). Vuelve a intentarlo"],"timers":0}
+✔ guardar una canción y recuperarla de biblioteca conserva la identidad enviada al resolvedor (2.4423ms)
+✔ una ficha nativa antigua o con identidad nula conserva la compatibilidad al volver a la cola (0.3554ms)
+✔ a queued pause event after resume does not stop the new progress watchdog (63.8108ms)
+✔ a browser-originated pause remains resumable without toggling pause a second time (3.221ms)
+✔ a silent stall rebuilds the current local decoder once, preserving position and history (40.5805ms)
+✔ a silent remote stall renews the same track and retains the manual queue position (29.7789ms)
+✔ pause during stall renewal cancels autoplay even when the renewed source arrives later (25.976ms)
+✔ pausing a pending resume ignores its late playing event and rejected promise (3.4442ms)
+✔ pause during initial resolution keeps the loaded queue without starting the late URL (4.6686ms)
+✔ MediaSession play and pause commands are idempotent and preserve pause intent (12.953ms)
+✔ duplicate playing and stationary timeupdate events cannot postpone the watchdog (3.2631ms)
+✔ a backwards seek resets the watchdog baseline and ongoing progress avoids recovery (4.1329ms)
+✔ skip while stall renewal is pending discards its late errors and source (2.6389ms)
+✔ remote errors while paused do not start playback, and explicit resume can refresh them (3.0004ms)
+✔ a media error from the repaired decoder stops on the current track instead of skipping it (4.3445ms)
+✔ repeat-one restart is bounded when play rejects (2.4732ms)
+✔ repeat-one restart is bounded when play hangs (9.5164ms)
+✔ late native or sourceless web metadata preserves a seek and observed playback position (32.449ms)
+✔ local audio plays even when optional MediaSession APIs throw (4.8788ms)
+✔ local loopback transport uses its URL unchanged and never refreshes it as a remote source (7.2627ms)
+✔ local path or unsupported transport still passes through convertFileSrc: C:\Music\song.mp3 (2.6405ms)
+✔ local path or unsupported transport still passes through convertFileSrc: \\server\Music\song.mp3 (2.6982ms)
+✔ local path or unsupported transport still passes through convertFileSrc: http://127.0.0.1:32123@remote.test/song.mp3 (1.526ms)
+✔ local path or unsupported transport still passes through convertFileSrc: http://127.0.0.1:99999/song.mp3 (1.7337ms)
+✔ local path or unsupported transport still passes through convertFileSrc: https://127.0.0.1:32123/song.mp3 (1.5882ms)
+✔ unresolved backend request times out, can be retried, and cannot start late audio (3.2188ms)
+✔ a hung audio decoder times out, releases its source, and ignores late events (3.2642ms)
+✔ a current AbortError leaves loading and reports one failure (2.0596ms)
+✔ duplicate errors after one remote refresh skip only one song and ignore old events (26.8734ms)
+✔ selecting a new song while resolving prevents an old result from replacing it (2.8751ms)
+✔ network failure during startup refreshes once without a duplicate queue advance (3.0577ms)
+✔ an expired remote URL reported as code 4 refreshes and recovers during startup (2.4255ms)
+✔ code 4 during remote playback refreshes once and preserves the position (2.6849ms)
+✔ unsupported local audio fails without re-extracting or diagnosing the format as certain (6.5503ms)
+✔ local playback error 2 does not refresh a file source (2.2763ms)
+✔ local playback error 4 does not refresh a file source (1.629ms)
+✔ repeated unsupported audio stops after three failures and releases every source (3.1399ms)
+✔ choosing an alternative source also times out and returns to a retryable state (2.5687ms)
+✔ a chosen remote source reported as code 4 refreshes before reporting success (2.2948ms)
+✔ cancelling the final song during resolution does not restart it later (1.3187ms)
+✔ an interrupted play from a replaced audio element leaves the current song alone (1.8513ms)
+✔ loads saved RSS and YouTube programs independently of liked episodes (6.2771ms)
+✔ save and remove programs only after IPC succeeds, ignoring repeated clicks while busy (1.8693ms)
+✔ failed writes retain the previous favorites and release the busy state for retry (1.4555ms)
+✔ independent program saves can complete in either order without dropping a favorite (1.2386ms)
+✔ failed library reload keeps the last available favorites (7.8914ms)
+✔ successful library reads prune playlist pins using the returned playlist IDs (0.987ms)
+✔ a library response started before a successful save cannot erase it (0.8114ms)
+✔ a library response started before a successful removal cannot restore it (0.8268ms)
+✔ a stale initial load still recovers other favorites while retaining the new save (0.9632ms)
+✔ podcast checkpoints belong to each episode and survive replacing both queue and player (38.3324ms)
+✔ completed episodes start again at zero and music never writes podcast progress (4.0354ms)
+✔ late audio cannot seek a newer episode and a shorter source clamps the stored position (2.4696ms)
+✔ explicit seek to 0 during resolution wins over resume, including pause and later play (2.7837ms)
+✔ explicit seek to 25 during resolution wins over resume, including pause and later play (1.8735ms)
+✔ pausing initial resolution preserves stored progress and does not autoplay the late result (2.4035ms)
+✔ seek to 0 between metadata and playing saves later progress (2.0123ms)
+✔ seek to 42 between metadata and playing saves later progress (1.6404ms)
+✔ podcast decoder repair preserves position without overwriting it with zero (2.92ms)
+✔ window close waits for the final checkpoint before destroying the window (2.2932ms)
+✔ window close does not hang when the final checkpoint never finishes (2.1831ms)
+✔ startup URL renewal retains the restored podcast position (3.3048ms)
+✔ el build conserva la entrada mínima y publica el grafo Vite completo como opcional con SHA correctos (2644.318ms)
+✔ instalar y activar la PWA no solicita ni necesita los archivos de la aplicación (829.004ms)
+✔ cada archivo opcional pedido se verifica y después se sirve offline, incluidos CSS y fuentes binarias (289.1267ms)
+✔ el launcher espera todos los recursos verificados antes de navegar a la página publicada (240.242ms)
+✔ el launcher no navega si un recurso de la aplicación falla la comprobación de integridad (263.7647ms)
+✔ el waiting worker prepara toda la aplicación antes de activar sin interrumpir la versión actual (293.6116ms)
+✔ preparar una actualización con fallo de HTTP conserva la activa, responde false y permite reintentar (201.2778ms)
+✔ preparar una actualización con fallo de integridad conserva la activa, responde false y permite reintentar (174.5296ms)
+✔ preparar una actualización con fallo de redirección conserva la activa, responde false y permite reintentar (176.4171ms)
+✔ el redirect de una página antigua y la caché se limitan al origen, ámbito, navegación y GET esperados (104.939ms)
+✔ el build rechaza una aplicación sin index.html sin producir una salida parcial (59.8464ms)
+✔ a downloaded route resolves committed metadata and cached bytes without network, including range requests (57.7245ms)
+✔ readable downloaded audio serves bounded, open-ended and suffix byte ranges locally (31.6805ms)
+✔ invalid, multiple, reversed or unsatisfied readable ranges return 416 without remote traffic (5.5712ms)
+✔ opaque legacy YouTube bodies pass through unchanged even when audio asks for a range (11.0754ms)
+✔ a staging route validates cached media before any completed database row exists (20.4837ms)
+✔ uncommitted, evicted, malformed and foreign paths cannot become completed downloads or fetch remote audio (6.561ms)
+✔ app cache cleanup preserves downloaded audio while leaving other scopes and methods to the browser (2.2063ms)
+✔ el build publica un grafo determinista con hashes calculados después de reescribir imports (1769.0297ms)
+✔ los módulos reales se publican como opcionales y su grafo se puede importar sin iniciar reproducción (640.2716ms)
+✔ la instalación y la activación no descargan opcionales aunque no estén disponibles (167.3348ms)
+✔ cada módulo se descarga y verifica al pedirlo y se puede volver a abrir offline (509.1614ms)
+✔ un opcional con fallo de HTTP se rechaza sin contaminar la caché ni perder la instalación (405.3657ms)
+✔ un opcional con fallo de integridad se rechaza sin contaminar la caché ni perder la instalación (229.4335ms)
+✔ un opcional con fallo de redirección se rechaza sin contaminar la caché ni perder la instalación (199.0332ms)
+✔ la verificación compartida también evita mezclar el shell si se pierde una entrada obligatoria (206.906ms)
+✔ un cambio solo en resolver propaga los hashes y la actualización conserva el scope y la carga bajo demanda (247.5777ms)
+✔ solo se interceptan los GET de opcionales declarados dentro del origen y ámbito correctos (138.9649ms)
+✔ acepta IDs y enlaces habituales sin confundir dominios parecidos (2.1801ms)
+✔ solo acepta audio HTTPS del dominio de Google Video sin credenciales ni puertos ajenos (1.8639ms)
+✔ la cola conserva el orden y las repeticiones, e identifica la línea incorrecta (2.0732ms)
+✔ el build sustituye todas las versiones antes de calcular la integridad y es determinista (1416.7527ms)
+✔ el build rechaza un worker sin marcador de versión antes de producir la distribución (895.9115ms)
+✔ cambiar solo el worker genera una versión de caché nueva sin borrar la anterior al instalar (1094.1601ms)
+✔ el precache completo sirve la raíz, el índice y los scripts sin red incluso con query (109.7792ms)
+✔ activar una actualización elimina solo las versiones anteriores de su propio ámbito (347.0411ms)
+✔ un fallo de HTTP durante install limpia la versión parcial y conserva la activa (253.6552ms)
+✔ un fallo de integridad durante install limpia la versión parcial y conserva la activa (184.1767ms)
+✔ un fallo de redirección durante install limpia la versión parcial y conserva la activa (170.4676ms)
+✔ un fallo de red durante install limpia la versión parcial y conserva la activa (155.7197ms)
+✔ si se pierde un recurso de caché, el fallback rechaza otra versión y solo repone bytes verificados (43.998ms)
+✔ el worker no intercepta audio, YouTube, la PWA principal, recursos ajenos ni métodos distintos de GET (39.9434ms)
+✔ el build es determinista y referencia el JavaScript publicado por su contenido (2170.8116ms)
+✔ la copia portable contiene sus recursos en un solo HTML y no aumenta la descarga de Pages (511.8919ms)
+✔ el manifiesto mantiene identidad relativa y los PNG tienen las dimensiones anunciadas (456.6491ms)
+✔ un cambio exclusivo del service worker genera otra versión y otra caché (425.528ms)
+✔ la instalación guarda los assets iniciales y permite navegar sin red a la raíz y al índice con query (102.5938ms)
+✔ una actualización conserva la versión activa hasta su activación y respeta las cachés de otros scopes (289.4033ms)
+✔ un fallo de HTTP rechaza la instalación incompleta y conserva la caché anterior (199.9703ms)
+✔ un fallo de integridad rechaza la instalación incompleta y conserva la caché anterior (208.1135ms)
+✔ el worker deja al navegador las peticiones ajenas, los POST y otros orígenes (61.8892ms)
+✔ cold start labels popular suggestions and excludes non-catalog IDs and duplicates (3.6128ms)
+✔ chooses at most three musical seeds and excludes history, favourites and saved albums (1.4068ms)
+✔ interleaves seeds, discovers albums from two new artists and caps deduplicated results (20.8575ms)
+✔ does not duplicate the same album returned by different seeds (1.0507ms)
+✔ keeps usable personal recommendations when independent requests fail (0.8548ms)
+✔ falls back clearly to popular suggestions when the personalized catalog is exhausted (0.9634ms)
+✔ reports total failure and permits a subsequent successful retry (0.7354ms)
+✔ YouTube, podcasts and local music alone use discovery without artist lookups (0.345ms)
+✔ Android starts a collection at a random song and preserves its original context order (10.5511ms)
+✔ Android keeps an explicitly selected song first with shuffle enabled (2.8149ms)
+✔ Android collection playback without shuffle starts at the beginning; explicit positions stay intact (2.0668ms)
+✔ Android retains the DJ queue after the selected start in both playback modes (6.4648ms)
+✔ Android toggles shuffle without changing the current song, position or DJ queue (5.1138ms)
+✔ Android restores the shuffle preference for subsequent collection playback (2.9599ms)
+✔ collection Play chooses its first song at random and plays each entry once (16.177ms)
+✔ every song can be the first, including the first and last entries (4.9965ms)
+✔ selecting a particular song keeps it first with shuffle on (3.8875ms)
+✔ ordinary collection Play and explicit selection retain their sequential order (4.3578ms)
+✔ toggling shuffle keeps the current audio and position and preserves DJ priority (6.4458ms)
+✔ shuffle preserves duplicate playlist entries and handles empty and single-song collections (4.8777ms)
+✔ sleep presets and custom minutes accept only whole minutes from 1 to 1440 (2.8212ms)
+✔ a timed stop pauses at the current position, saves the podcast and keeps its queue (20.6956ms)
+✔ invalid custom durations preserve the timer; replacing and cancelling remove previous deadlines (4.7518ms)
+✔ end-of-item stops before repeat or the DJ queue starts another item (6.1592ms)
+✔ the end timer is consumed once and replacing it with a timed stop removes the end stop (3.8832ms)
+✔ arming end-of-item after the queue ended survives replay of the same item (2.6374ms)
+✔ timed expiry invalidates unresolved loads and explicit play can resume afterwards (2.6585ms)
+✔ late playing, source errors and watchdog callbacks after expiry cannot restart playback (1.7788ms)
+✔ a late load rejection after expiry cannot skip or report a playback failure (1.7263ms)
+✔ seek retains the end timer, selecting another item cancels it and a timed stop survives selection (2.7019ms)
+✔ an unplayable item with an end timer stops without advancing the queue (1.6525ms)
+✔ a local decoder failure with an end timer resumes the same position with one Play (2.4916ms)
+✔ an end timer survives automatic decoder recovery and applies to the replacement audio (2.3845ms)
+✔ an overdue timer is enforced after frozen UI callbacks resume (12.0373ms)
+✔ clock corrections cannot shorten or lengthen the selected duration (33.3945ms)
+✔ Android restores the native timer and synchronizes it after returning from the background (3.3861ms)
+✔ Android sends only valid timer commands and waits for native confirmation (4.01ms)
+✔ Android status events retain native timer state and failed commands leave it intact (1.4431ms)
+✔ a timer requires an item but cancelling is allowed with an empty player (2.0323ms)
+✔ el matching conserva puntuaciones y penalizaciones de Rust 0.11.2 (11.3369ms)
+✔ parsers mantienen metadatos y excluyen anuncios, recomendaciones, lives y shorts (3.0796ms)
+✔ IDs y enlaces se validan sin visitar dominios arbitrarios (1.0479ms)
+✔ player solo selecciona audio MP4 del origen permitido y calcula caducidad conservadora (1.1377ms)
+✔ contentLength corresponde al formato seleccionado y solo admite enteros positivos hasta 2 GiB (1.1133ms)
+✔ sandbox valida emisor/ID, escapa cierre de script y se limpia al cancelar (2.0646ms)
+✔ stream conserva URL solo en RAM y refresh fuerza otro player conservando sesión anónima (1.8099ms)
+✔ un refresh rechazado invalida la URL anterior y el siguiente intento pide otro player (1.442ms)
+✔ resolve usa matching, deduplica cargas y guarda elección sin URL firmada (2.8446ms)
+✔ fallback WEB y máximo tres candidatos, sin guardar un fallo como una elección (2.2075ms)
+✔ Music de confianza sin audio amplía a WEB y corta al encontrar la misma canción reproducible (5.0252ms)
+✔ una fuente guardada rechazada no se reintenta aunque aparezca sola en Music y duplicada en WEB (4.5043ms)
+✔ el presupuesto permite tres intentos Music y tres WEB distintos dentro de la misma operación (2.7034ms)
+✔ un éxito dentro de Music evita ampliar WEB incluso tras rechazos previos (1.6625ms)
+✔ network, timeout y restricted no amplían WEB ni sustituyen una elección explícita (5.6973ms)
+✔ el rechazo de audio ofrece la mejor coincidencia ya obtenida sin búsquedas, URLs ni escrituras adicionales (1.7468ms)
+✔ la alternativa conserva la fuente manual exacta aunque otra coincidencia tenga mayor puntuación (0.6043ms)
+✔ elegir los metadatos de la mejor alternativa conserva el último mensaje y clasificación del resolver (1.2475ms)
+✔ un fallo transitorio entre rechazos de formato impide la alternativa automática y conserva el error original (2.0634ms)
+✔ la alternativa rechaza karaoke no solicitado y coincidencias por debajo del umbral (1.5075ms)
+✔ la lectura de alternativa valida tipo y canción sin reinterpretar errores ni namespace de pódcast (0.8481ms)
+✔ resolver una descarga devuelve solo el mismo rechazo tipado y nunca abre un reproductor ni guarda la selección (0.6899ms)
+✔ un vídeo añadido ofrece solo su ID original y los pódcast no ofrecen alternativa al fallar YouTube (1.1728ms)
+✔ cancelar antes del rechazo de Music impide que ese rechazo abra el fallback WEB (1.2906ms)
+✔ fuente guardada no se sustituye por red; una selección automática retirada permite otro vídeo (1.0364ms)
+✔ YouTube añadido usa mapeo inmutable, y alternativas incluyen la elección actual (1.2973ms)
+✔ un YouTube añadido no busca sustitutos ni cambia su ID tras rechazo y refresh (0.8012ms)
+✔ elegir fuente cancela resolución vieja y ningún resultado tardío sobrescribe la elección (0.8919ms)
+✔ resolve concurrente espera elección manual pendiente y cancelar limpia operaciones (1.163ms)
+✔ episodios RSS usan su fuente persistida sin buscar ni resolver en YouTube (0.954ms)
+✔ episodios YouTube conservan namespace y renuevan solo el stream temporal en RAM (0.652ms)
+✔ programas y episodios desconocidos o corruptos no caen en el matching musical (11.9384ms)
+✔ cancelar mientras se lee un episodio impide iniciar después su extractor (1.0483ms)
+✔ copia descargada se reproduce sin red y cambiar fuente elimina la copia anterior (0.8337ms)
+✔ a verified recording is resolved before text search and never persisted as a YouTube source (0.5263ms)
+✔ catalog rescue follows definitive YouTube rejection and retains complete recording identity (0.7052ms)
+✔ an empty YouTube search may recover a strict catalog recording; provider failure preserves the existing fallback (1.1465ms)
+✔ temporary network failures and manual sources do not trigger an alternate catalog (2.6158ms)
+✔ downloaded songs, podcasts and directly added videos never enter catalog rescue (1.0921ms)
+✔ cancelling a delayed external source prevents its completion and disposes checked blobs (0.7814ms)
+✔ generic ISRC lookup accepts the same recording and returns only a constructed provider URL (48.0517ms)
+✔ another valid ISRC is not tied to a closed list of test recordings (0.846ms)
+✔ ISRC normalization accepts conventional hyphens and rejects non-ISRC identifiers (0.3689ms)
+✔ same title by another artist or with a different ISRC/duration never substitutes (1.6448ms)
+✔ live, cover, karaoke, instrumental, remix and changed versions are rejected even with matching ISRC (2.0407ms)
+✔ the requested version must be present and artist prefixes only identify that same artist (0.5055ms)
+✔ gated, unavailable, deleted, non-streamable and unknown provider IDs are rejected (2.1081ms)
+✔ download is allowed only when explicitly downloadable and ungated, independently of stream access (0.9042ms)
+✔ missing ISRC is hydrated from the same numeric catalog recording before provider access (0.908ms)
+✔ hydration never imports an ISRC from a different ID, artist, album, title, duration or version (1.693ms)
+✔ direct YouTube, podcasts, local tracks and invalid queries trigger no hydration or provider request (1.0047ms)
+✔ empty valid responses return null but HTTP, transport and malformed payload failures remain typed (3.4774ms)
+✔ hydration network/protocol errors are not confused with catalog absence (12.3434ms)
+✔ chunked oversized payloads stop at the byte bound and cancel the reader (1.3515ms)
+✔ already aborted input starts no work and abort during hydration cannot advance to Audius (0.8501ms)
+✔ aborting an in-flight provider request preserves the reason and clears listeners/timer (0.7913ms)
+✔ provider deadline is finite and its timeout remains distinct from an empty result (0.5324ms)
+✔ natural query retries only an empty track section and preserves original artist/album results (10.3327ms)
+✔ a successful original track response never incurs a natural-query fallback (2.0891ms)
+✔ isolated connectors work in English/case variants and substrings are never removed (7.0751ms)
+✔ an original track network error is reported without retrying it as an empty response (0.8561ms)
+✔ fallback failures remain failedSections and do not erase successful original sections (1.0499ms)
+✔ invalid fallback metadata is reported as a failed track section instead of silently dropping it (0.927ms)
+✔ the original input is capped before requests, including text a connector could shorten (2.3242ms)
+✔ fallback encodes arbitrary text as query data inside the existing isolated JSONP transport (1.4753ms)
+✔ cancelling the fallback removes its iframe and a late message cannot finish the obsolete search (1.7028ms)
+✔ una importación identificada por ISRC conserva la grabación y versión en la ficha de biblioteca (3.1072ms)
+✔ una ficha YouTube editada actualiza lista y resolución local tras reabrir sin alterar bytes ni staging (65.2932ms)
+✔ una biblioteca sin ficha YouTube mantiene la copia descargada y su resolución sin red (4.9886ms)
+✔ un fallo al leer la biblioteca canónica conserva la descarga utilizable sin escrituras cruzadas (4.0031ms)
+✔ catálogo y episodios conservan su snapshot sin consultar el lector canónico de YouTube (4.9285ms)
+✔ descargas conservan ISRC y versión tras reabrir con sólo bytes locales y metadatos permitidos (13.6244ms)
+✔ el lector registrado por el adaptador se aplica también a una descarga creada antes del wiring (15.3642ms)
+✔ download metadata survives reopening and contains only library fields and an internal cache key (55.2138ms)
+✔ download store rejects unsafe IDs, signed metadata, and nonlocal or malformed staging routes (2.4391ms)
+✔ downloads are serial, skip duplicates, and report done only after media validation and metadata commit (7.9006ms)
+✔ cancel discards only pending jobs while the active transfer finishes (3.216ms)
+✔ metadata failure or cache.put failure rolls back staging and cannot report a completed download (41.8718ms)
+✔ known size and available browser quota are checked before requesting media bytes (2.8932ms)
+✔ removing an active source prevents its late validation from committing stale media (3.0203ms)
+✔ removal during the initial cached lookup cannot announce the removed copy as completed (3.3156ms)
+✔ cache eviction removes stale metadata and download removal deletes both metadata and cached response (13.3732ms)
+✔ a hung resolver times out without committing or blocking the next queued transfer (53.7008ms)
+✔ an interrupted transfer renews its source once and completes without exposing a failed attempt (14.9633ms)
+✔ a rejected cached audio is removed before retrying a fresh complete copy (8.5073ms)
+✔ a persistent transfer failure is bounded to two attempts and does not hold the next queued song (18.4745ms)
+✔ quota, abort, timeout and metadata write errors do not trigger another download attempt (5.7219ms)
+✔ removing a song while its renewed source is pending prevents a late retry from fetching or committing (6.7064ms)
+✔ cancelling the queued songs during source renewal still lets the active retry finish alone (17.9311ms)
+✔ the original transfer deadline also bounds retry waiting and the next queued download can still finish (43.4831ms)
+✔ external permitted audio uses CORS, preserves ISRC/version and never asks YouTube for its stream (14.0369ms)
+✔ listening-only sources such as ALEA refuse downloads before media requests (2.4933ms)
+✔ external downloads reject arbitrary URLs, unknown providers and unsafe IDs before fetching (5.4215ms)
+✔ external HTTP errors, partial bodies and non-audio responses cannot become completed downloads (88.1423ms)
+✔ expected and declared lengths must match the whole streamed body, with one bounded renewed attempt (52.8499ms)
+✔ a response without Content-Length records counted bytes only after the stream closes (4.772ms)
+✔ stream errors roll back a partial external cache and renew the same source once (21.8349ms)
+✔ unknown-size external audio enforces available storage while consuming and never retries quota failures (2.5377ms)
+✔ a declared checksum is checked against the full cached body before metadata commit (13.5989ms)
+✔ a preview duration fails validation and cannot mark its external song as downloaded (12.7055ms)
+✔ default external audio validation requires expected duration plus decodable tail; legacy two-argument validation remains compatible (2.4811ms)
+✔ Exportify conserva BOM, orden, duplicados, comillas, comas de artistas, duración e ISRC como APK (15.1634ms)
+✔ CSV usa coma, punto y coma o tabulador, cabeceras alternativas, multilínea y terminadores CR/LF (0.9333ms)
+✔ CSV conserva la leniencia nativa de csv-core sin aceptar columnas desiguales (0.9018ms)
+✔ CSV omite episodios, archivos locales y filas insuficientes, con avisos y duración opcional exactos (0.6307ms)
+✔ CSV aplica límites en bytes UTF8, 10000 registros y 100 caracteres de nombre sin deduplicar (142.4238ms)
+✔ Spotify valida exactamente enlaces completos y URI admitidos sin seguir hosts del usuario (1.1149ms)
+✔ la vista pública conserva identidad, orden y artistas con comas sin ejecutar HTML o scripts (5.6538ms)
+✔ la vista pública conserva los avisos nativos de truncamiento y entradas omitidas (4.722ms)
+✔ el lector Spotify usa solo el embed HTTPS validado, sin cookies, redirecciones ni credenciales (38.8719ms)
+✔ CORS o errores públicos producen fallo visible, nunca una playlist ficticia ni búsqueda por nombre (2.8318ms)
+✔ la lectura pública limita los bytes anunciados y reales y rechaza UTF8 inválido (20.8146ms)
+✔ native navigation remains synchronous without installing browser history (9.5677ms)
+✔ Android/browser Back and Forward move the app without changing its URL (5.5156ms)
+✔ a branch after Back discards old Forward routes coherently (1.8747ms)
+✔ Back closes a custom overlay first, then returns to the previous route (2.0786ms)
+✔ an overlay on Home consumes Back without leaving the installed app (0.9357ms)
+✔ closing an overlay then navigating before popstate does not lose the route (1.2546ms)
+✔ navigating directly from a menu replaces its guard instead of adding a phantom Back (1.0602ms)
+✔ reload restores the current query and both navigation directions from the same session (1.577ms)
+✔ reload with an open overlay consumes its temporary entry without a phantom Back (1.7991ms)
+✔ opening and closing an overlay after Back preserves the existing Forward route (5.3711ms)
+✔ rapid overlay reopen/close cancels obsolete queued guards (1.0939ms)
+✔ installed Home consumes isolated Back gestures without leaving or growing history (3.4069ms)
+✔ normal browser tabs can still leave Home with Back (0.7669ms)
+✔ iOS standalone detection also protects Home without display-mode support (0.7148ms)
+✔ installed root bounce preserves previous views and the browser Forward branch (1.703ms)
+✔ installed Home overlay closes before the protected root consumes another Back (1.1403ms)
+✔ reloading an installed route does not add another root boundary (1.6059ms)
+✔ legacy installed navigation gains a root boundary without losing query or Forward (1.6834ms)
+✔ installed overlay reload after Back repairs Forward and keeps the root protected (1.684ms)
+✔ navigation during a pending root bounce waits for Home before adding its route (0.9009ms)
+✔ reload while on the root boundary returns to Home and preserves Forward (1.4378ms)
+✔ large legacy histories migrate in a bounded batch while retaining the current route (6.2697ms)
+✔ jumping from an installed Home overlay to the boundary closes it without a phantom Forward (1.6117ms)
+✔ jumping over routes and an overlay repairs the installed Forward branch once (2.5293ms)
+✔ large legacy overlay reload performs only the bounded root reconstruction (13.3497ms)
+✔ invalid persisted entry indices and boundary flags cannot restore a broken route (2.3977ms)
+✔ installed overlay Back closes without pushState so browser history stays eligible for UI Back (1.2688ms)
+✔ installed long sessions retain a root boundary when the browser prunes old entries (55.2214ms)
+✔ compacting installed history while opening a menu preserves its current view and callbacks (8.9385ms)
+✔ closing an installed overlay during forward preparation queues the next navigation until it settles (1.1663ms)
+✔ choosing a destination from an installed overlay discards obsolete Forward without an extra Back (1.2553ms)
+✔ nested installed panels reuse the consumed guard without pushState after Back (1.1093ms)
+✔ jumping nested panels directly to the installed boundary closes every remaining layer (1.2479ms)
+✔ two Home Back calls in the same task cannot cross either installed root guard (1.1608ms)
+✔ a second Home Back after the first popstate still returns to the protected Home anchor (1.3435ms)
+✔ a second queued Back can interrupt the pending root repair without stranding Home or consuming Forward (1.9366ms)
+✔ rapid Back from interior routes returns Home and further gestures cannot leave it (1.1109ms)
+✔ a route or overlay chosen while a root bounce is pending remains operable (1.6507ms)
+✔ repeated root protection leaves native and application Forward routes intact (2.4497ms)
+✔ double Back after compaction cannot enter older session entries or create new history (37.9487ms)
+✔ installed guards keep double Back away from unknown and foreign-session predecessors (2.2468ms)
+✔ 923 installed state with one old guard migrates to two guards while retaining routes and Forward (3.3246ms)
+✔ reload from either pending installed guard returns Home without duplicating its protected history (3.166ms)
+✔ a multi-entry Back across compacted roots restores the current Home and stays protected (26.1401ms)
+✔ page-cache restoration from either guard anchors Home even when its initial popstate is omitted (3.4607ms)
+✔ background and focus lifecycle do not weaken a pending Home guard after time passes (3.6293ms)
+✖ official playback rejects malformed metadata and non-song namespaces before provider work (5.7172ms)
+✖ official candidates keep the existing inclusive 45-point threshold with bounded valid unique choices (1.5428ms)
+✖ official filtering excludes unsolicited karaoke without excluding an explicitly requested karaoke version (1.4474ms)
+✖ official iframe URLs have visible controls, no autoplay and validated video and parent origin (1.2928ms)
+✖ automatic iframe URLs request autoplay and preserve a bounded whole-second playback position (1.0791ms)
+✖ official search resolves metadata only once and neither resolves MP4 nor persists a selected source (1.2645ms)
+✖ direct YouTube entries use their stored immutable video ID without catalog matching (0.9093ms)
+✖ offline and already cancelled official searches perform no provider or stored-ID reads (0.9862ms)
+✖ the official search deadline aborts the real provider signal and cannot leave a hung promise (0.8957ms)
+✖ cancelling a pending official search rejects even when a provider ignores its signal (1.119ms)
+✖ controller opening presents choices without auto-selecting and only permits an explicit eligible ID (0.8553ms)
+✖ automatic opening selects a prepared source synchronously without a provider query or persistence (0.7712ms)
+✖ automatic opening rejects malformed or low-scoring prepared sources without fallback searching (0.7401ms)
+✖ automatic opening preserves an explicitly selected karaoke source without admitting an unsolicited substitute (0.741ms)
+✖ automatic opening cancels a previous manual search and ignores late results or rejection (0.9093ms)
+✖ a later manual opening restores explicit choice without retaining automatic playback or its position (0.8443ms)
+✖ the application automatic entry point exposes only a validated ready selection (0.6585ms)
+✖ closing during official search aborts it and a late completion cannot reopen or select a video (1.1242ms)
+✖ opening another song aborts stale work and ignores both late results and late rejection (1.0009ms)
+✖ official retry starts a new bounded attempt without retaining the earlier selection (1.2225ms)
+✔ PWA autoplay rejection keeps the first source and queue ready for a second user tap (13.397ms)
+✔ PWA retains its user-activated Audio across automatic and explicit song changes (3.718ms)
+✔ PWA resumes after native play resolves even when the browser omits playing (4.7092ms)
+✔ PWA ignores an obsolete resolved play promise while a new song is still loading (4.1069ms)
+✔ PWA ignores a resolved play promise after the user has paused the pending start (2.2882ms)
+✔ PWA resolved play without playing still repairs and stops a decoder that never advances (3.8973ms)
+✔ PWA confirms two advancing samples when WebKit leaves resume play pending without playing (4.7644ms)
+✔ PWA never treats a seek jump as playback while native play remains pending (2.3888ms)
+✔ PWA late progress and play settlement after pause cannot restore playing intent (2.0721ms)
+✔ PWA ignores a late autoplay rejection from a previous song without pausing the new one (3.3625ms)
+✔ PWA source renewal keeps the same Audio and listening position (3.2568ms)
+✔ PWA decoder repair may recreate Audio while preserving the current song and position (3.313ms)
+✔ PWA pause during resolution prevents the late URL from starting playback (3.08ms)
+✔ PWA pause during play() rejects late playing events without replacing the prepared source (2.6386ms)
+✔ PWA starts its prepared next song synchronously at ended without resolving, pausing or unloading (3.1896ms)
+✔ PWA prepares the latest DJ order and never consumes the previously reserved song (3.2976ms)
+✔ PWA repeated queue entries start synchronously even when they share the same object (3.5892ms)
+✔ PWA repeat-one restarts the current song instead of consuming its prepared successor (2.0171ms)
+✔ PWA a prefetch completing during pause never starts audio and is usable after resume (2.0162ms)
+✔ PWA choosing the upcoming source replaces its prepared URL before the track ends (9.954ms)
+✔ PWA a pending old prefetch cannot become the reservation after choosing a new source (2.0098ms)
+✔ PWA a late prefetch from the previous collection cannot replace the new next song (2.5482ms)
+✔ PWA never consumes an expired prepared URL and can resolve a replacement normally (2.0346ms)
+✔ PWA empieza en el silencio verificado y conserva tiempo y duración reales, sin repetir play ni metadata seeks (1.9978ms)
+✔ PWA precarga e inicia la siguiente grabación en el punto verificado dentro del mismo ended (2.0286ms)
+✔ PWA repetir una grabación verificada conserva el archivo y vuelve al inicio audible con un solo play (1.6485ms)
+✔ PWA reconstruir una fuente desde cero vuelve al punto verificado; un seek explícito pendiente conserva cero (2.7399ms)
+✔ PWA los metadatos tardíos no sustituyen un seek explícito por el inicio verificado tras playing (2.1131ms)
+✔ PWA rechaza offsets inválidos o fuera del audio y no aplica el salto a podcasts ni archivos locales (8.8202ms)
+✔ PWA la caducidad declarada por la fuente limita la reserva aunque la URL tenga más vigencia (2.105ms)
+✔ PWA una URL anterior al vencimiento declarado tampoco se reutiliza y NaN o infinito no alargan el TTL (5.0885ms)
+✔ PWA repetir y precargar una aparición duplicada renuevan una fuente que ya ha caducado (3.6239ms)
+✔ PWA sleep at end stops instead of starting the already prepared next source (1.5921ms)
+✔ PWA prepares podcast resume position before ended and starts synchronously at that position (1.3219ms)
+✔ PWA a repeated completed podcast restarts at zero instead of its earlier resume point (1.0886ms)
+✔ PWA permanent RSS reserves do not expire during a long current episode (1.1618ms)
+✔ PWA refreshes a temporary upcoming podcast while current audio still advances (1.4136ms)
+✔ PWA temporary source refresh backs off after failure and keeps an unexpired reservation (2.9526ms)
+✔ PWA a late saved position from a cancelled preparation cannot replace the current DJ reserve (3.3931ms)
+✔ PWA cached audio uses only the same-origin service worker media route and remains local (5.5811ms)
+✔ PWA rejects downloaded sources outside its scope, origin or stable numeric route (13.1273ms)
+✔ PWA active unavailable source opens prepared official playback without skipping the song or resolving again (1.2453ms)
+✔ PWA late unavailable result after pause or next cannot open an automatic video (1.8792ms)
+✔ PWA prefetch rejection never opens the official player while another song is playing (0.9282ms)
+✔ PWA unavailable renewal carries listening position to automatic playback and clears direct Audio first (1.6891ms)
+✔ PWA rejected official launch returns to the bounded normal failure path (1.4485ms)
+✔ language normalization follows RSS declarations, not country names (2.6482ms)
+✔ RSS duration handles seconds, hours, invalid fields and u32 overflow (0.4371ms)
+✔ public feed/media URLs are HTTP(S), relative URLs resolve and HTTPS is preferred for playback (1.8099ms)
+✔ descriptions are bounded inert text and XML byte decoding respects declared encodings (1.3246ms)
+✔ directory results deduplicate feed identity and do not turn Apple IDs into internal IDs (0.6218ms)
+✔ Apple fallback maps full episode URLs/GUIDs, excludes previews/video, and never guesses language (4.8289ms)
+✔ Apple JSONP is allowlisted and script payload escapes source markup (2.5577ms)
+✔ JSONP ignores a different frame, nonopaque origin and wrong request ID (0.9875ms)
+✔ abort cancels a JSONP frame and prevents late completion (1.1028ms)
+✔ a language-filtered search reports unreadable RSS rather than a false empty catalog (43.3085ms)
+✔ the unreadable-RSS error is retained when YouTube fails as well (1.3008ms)
+✔ a retry after unreadable RSS can return a newly available YouTube result (1.7207ms)
+✔ a genuinely empty directory and YouTube result remains a successful empty search (0.655ms)
+✔ YouTube results survive total RSS failure with a language filter (0.9232ms)
+✔ all languages preserves the permissive Apple-directory fallback alongside YouTube (0.8911ms)
+✔ snapshot solo guarda metadatos permitidos, orden y duplicados; nunca Playable ni URLs de audio (3.5533ms)
+✔ restaurar la cola conserva la grabación y versión para resolver otra vez, sin persistir la fuente (10.5184ms)
+✔ colas antiguas sin identificación y metadatos nulos siguen siendo resolubles sin inventar una versión (0.3095ms)
+✔ restaurar cero aplica el inicio verificado al pulsar play y una posición posterior conserva los segundos reales (3.603ms)
+✔ corrupción de cursores, permutación, claves DJ, duración o versión rechaza la cola entera (0.7146ms)
+✔ persistencia acotada y fallos de almacenamiento no dejan una cola antigua que pueda reaparecer (5.1694ms)
+✔ cola vacía y reproducción DJ sin disco original se serializan sin inventar posiciones (0.4045ms)
+✔ pausar y reiniciar rehidrata la misma cola y segundo sin autoplay; Play vuelve a resolver la fuente (4.7798ms)
+✔ cola DJ activa, apariciones duplicadas, reordenación, nuevas claves y vaciado sobreviven al reinicio (5.315ms)
+✔ snapshot síncrono no puede restaurar tarde ni un write pendiente sustituir una elección más nueva (2.4857ms)
+✔ timeupdate guarda como máximo cada diez segundos; pagehide conserva el cursor exacto inmediatamente (1.9192ms)
+✔ ended entrega src/play antes de escribir; fin de cola restaura pausado en cero (2.1264ms)
+✔ reiniciar no duplica historial y conserva aleatorio, repetición y posición de episodio (5.5558ms)
+✔ restaurar y reproducir una descarga usa resolve y la ruta local del service worker sin volver a red (1.2176ms)
+✔ el reproductor nativo no lee ni escribe el snapshot web (1.0353ms)
+✔ PWA events keep the Tauri payload shape, event isolation and unlisten contract without IPC (2.7581ms)
+✔ audio log is bounded, persists locally, and never serializes source URLs, title or media error text (16.1191ms)
+✔ diagnostics sanitizes saved rows, tolerates unavailable storage and throttles timeupdate (2.2815ms)
+✔ capture observes each Audio once while keeping source changes and load behavior (0.6682ms)
+✔ sharing sends a local JSON file when supported; cancellation does not start a second download (1.1304ms)
+✔ unsupported or rejected sharing falls back to a local JSON download and releases its object URL (0.7751ms)
+✔ favoritos, álbumes, artistas y programas se conservan al cerrar y reabrir la base (30.3228ms)
+✔ ISRC y versión sobreviven a playlists, historial y favoritos; una copia antigua no borra la identidad (7.1352ms)
+✔ quitar favoritos conserva las canciones de playlists e historial y los metadatos del programa (10.0625ms)
+✔ las playlists conservan apariciones duplicadas con entryId únicos y permiten mover y quitar una sola (9.1108ms)
+✔ dos conexiones que añaden a la vez no pierden entradas ni repiten identificadores (34.6299ms)
+✔ una cuota agotada después de escribir parte de una operación revierte canciones y entradas (4.1221ms)
+✔ validar un lote impide guardar parcialmente canciones inválidas o metadatos de otro formato (4.7853ms)
+✔ el historial conserva escuchas repetidas en orden y al limpiarlo mantiene la biblioteca (11.0681ms)
+✔ YouTube asigna IDs seguros estables, actualiza metadatos y no rompe referencias al quitar del listado (7.661ms)
+✔ copias antiguas de YouTube no revierten la edición con record_play (12.5672ms)
+✔ copias antiguas de YouTube no revierten la edición con set_liked (5.8638ms)
+✔ copias antiguas de YouTube no revierten la edición con create_playlist (5.4644ms)
+✔ copias antiguas de YouTube no revierten la edición con add_to_playlist (6.3563ms)
+✔ el progreso de cada episodio sobrevive al cierre, limita la posición y permite volver a cero (2.6832ms)
+✔ los programas y episodios tienen identidad estable por feed y GUID aunque cambie la dirección del audio (8.7241ms)
+✔ los episodios fuera del RSS actual conservan fuente, progreso y referencias al quitar un programa guardado (7.7357ms)
+✔ dos conexiones importan el mismo feed y GUID sin IDs duplicados ni progreso perdido (7.3157ms)
+✔ el esquema v2 conserva la biblioteca v1 y no adjudica progreso o canciones antiguos a episodios nuevos (4.1173ms)
+✔ una importación de episodios fallida revierte ficha, fuentes, metadatos y contadores en la misma transacción (5.0737ms)
+✔ los episodios conservan solo fuentes publicadas y metadatos validados, nunca URLs resueltas de YouTube ni extras (4.4677ms)
+✔ las elecciones de fuente y las entidades guardan solo metadatos permitidos, nunca streams o audio (3.7085ms)
+✔ los comandos sin soporte rechazan de forma explícita sin abrir una base ni simular éxito (0.575ms)
+✔ un fallo de apertura se propaga y se puede reintentar sin pasar a almacenamiento ficticio (3.4948ms)
+✔ curated identity rejects homonyms, another artist, album, edition, ISRC, catalog ID and duration (2.5684ms)
+✔ the exact full checked bytes become the playback Blob, with no second media request or persistent URL (40.9573ms)
+✔ integrity rejects changed, truncated and excess bytes before creating an Audio URL (5.1227ms)
+✔ transport failures are not cached as missing songs and another recording never triggers a request (1.4366ms)
+✔ abort and disposal prevent a late checked response becoming a playable Blob (3.9659ms)
+✔ concurrent checked resolutions share the same Blob without revoking audio already handed to the player (6.4034ms)
+✔ HTTP denial and unreadable opaque bodies cannot become a verified source (3.0384ms)
+✔ the transfer deadline cancels the request and cannot cache a failed source (46.252ms)
+✔ oversized streaming bodies are cancelled before the rest of the file is read (2.2075ms)
+✔ a keyboard-sized visual viewport constrains the dock then pageshow restores the full app height (3.7881ms)
+✔ returning from the background refreshes stale viewport dimensions and cleanup releases listeners (0.7679ms)
+✔ invalid visual viewport metrics fall back to a finite window height (0.5691ms)
+✔ a text input plus substantial visual occlusion hides the dock until the keyboard closes even if focus remains (1.7519ms)
+✔ blur, pageshow and cleanup cannot leave the dock hidden after typing (0.8925ms)
+✔ pinch zoom, browser chrome and non-text controls never imply a keyboard (1.8482ms)
+✔ search returns only valid shows in source order, deduplicated and bounded (3.3179ms)
+✔ detail preserves episode order, stable video GUIDs and safe thumbnails (3.0305ms)
+✔ Spanish dates and durations match native podcast metadata semantics (0.5361ms)
+✔ detail stops at the native limit of 300 unique episodes (12.6779ms)
+✔ invalid identifiers, long search and aborted operations perform no DOM work (1.4153ms)
+ℹ tests 498
+ℹ suites 0
+ℹ pass 478
+ℹ fail 20
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5630.3522
+
+✖ failing tests:
+
+test at scripts\tests\web-official-youtube.test.mjs:51:1
+✖ official playback rejects malformed metadata and non-song namespaces before provider work (5.7172ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:52:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.start (node:internal/test_runner/test:1096:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:67:1
+✖ official candidates keep the existing inclusive 45-point threshold with bounded valid unique choices (1.5428ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:68:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:81:1
+✖ official filtering excludes unsolicited karaoke without excluding an explicitly requested karaoke version (1.4474ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:82:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:87:1
+✖ official iframe URLs have visible controls, no autoplay and validated video and parent origin (1.2928ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:88:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:106:1
+✖ automatic iframe URLs request autoplay and preserve a bounded whole-second playback position (1.0791ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:107:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:120:1
+✖ official search resolves metadata only once and neither resolves MP4 nor persists a selected source (1.2645ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:121:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:132:1
+✖ direct YouTube entries use their stored immutable video ID without catalog matching (0.9093ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:133:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:142:1
+✖ offline and already cancelled official searches perform no provider or stored-ID reads (0.9862ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:143:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:152:1
+✖ the official search deadline aborts the real provider signal and cannot leave a hung promise (0.8957ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:153:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:163:1
+✖ cancelling a pending official search rejects even when a provider ignores its signal (1.119ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:164:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:174:1
+✖ controller opening presents choices without auto-selecting and only permits an explicit eligible ID (0.8553ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:175:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:192:1
+✖ automatic opening selects a prepared source synchronously without a provider query or persistence (0.7712ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:193:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:212:1
+✖ automatic opening rejects malformed or low-scoring prepared sources without fallback searching (0.7401ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:213:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:234:1
+✖ automatic opening preserves an explicitly selected karaoke source without admitting an unsolicited substitute (0.741ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:235:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:249:1
+✖ automatic opening cancels a previous manual search and ignores late results or rejection (0.9093ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:251:15)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:272:1
+✖ a later manual opening restores explicit choice without retaining automatic playback or its position (0.8443ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:273:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:286:1
+✖ the application automatic entry point exposes only a validated ready selection (0.6585ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:287:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:295:1
+✖ closing during official search aborts it and a late completion cannot reopen or select a video (1.1242ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:296:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:309:1
+✖ opening another song aborts stale work and ignores both late results and late rejection (1.0009ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:311:15)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-official-youtube.test.mjs:328:1
+✖ official retry starts a new bounded attempt without retaining the earlier selection (1.2225ms)
+  AssertionError [ERR_ASSERTION]: Unexpected audio import ./catalog-sources
+      at requireAudio (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:37:16)
+      at eval (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:3), <anonymous>:19:27)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:38:48)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-official-youtube.test.mjs:329:13)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1201:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:831:18)
+      at Test.postRun (node:internal/test_runner/test:1330:19)
+      at Test.run (node:internal/test_runner/test:1258:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:831:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }

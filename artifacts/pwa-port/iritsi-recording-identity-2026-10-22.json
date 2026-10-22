@@ -1,0 +1,423 @@
+{
+  "testedAt": "2026-10-22T21:32:30.467Z",
+  "scope": "Real Pages-origin JSONP metadata and CORS audio decode; normalized waveform correlation in browser RAM. No playback or phone background proof.",
+  "catalog": {
+    "id": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "isrc": "QM6N21424821",
+    "durationSeconds": 169
+  },
+  "candidate": {
+    "provider": "ALEA / Kantari",
+    "article": "https://alea.eus/araba/1473099329086-iritsi-da-eguna-pirritx-eta-porrotx",
+    "publicAudio": "https://alea.tok-md.com/iritsidaeguna.mp3"
+  },
+  "browserPolicyOverrides": false,
+  "outputMuted": false,
+  "observationWithUserGesture": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "productSourceActivated": false,
+  "wholeRecordingIdentityProven": false,
+  "mediaPersisted": false,
+  "signedUrlsPersisted": false,
+  "stages": [
+    {
+      "name": "Official catalog metadata and reference selection",
+      "result": {
+        "exact": {
+          "id": 3250715431,
+          "title": "Iritsi da Eguna",
+          "artist": "Pirritx eta Porrotx",
+          "album": "Eskerrik Asko!",
+          "duration": 169,
+          "isrc": "QM6N21424821",
+          "previewAvailable": true
+        },
+        "negative": {
+          "id": 3250715411,
+          "title": "Bi Izar",
+          "artist": "Pirritx eta Porrotx",
+          "album": "Eskerrik Asko!",
+          "duration": 253,
+          "isrc": "QM6N21424819",
+          "previewAvailable": true
+        },
+        "appleSearch": {
+          "total": 8,
+          "identityMatched": true
+        },
+        "apple": {
+          "id": 1804714528,
+          "title": "Iritsi da Eguna",
+          "artist": "Pirritx eta Porrotx",
+          "album": "Eskerrik Asko!",
+          "duration": 169.64,
+          "isrcAvailable": false,
+          "previewAvailable": true
+        },
+        "identityAccepted": true,
+        "albumTracks": 30
+      }
+    },
+    {
+      "name": "CORS complete file fetch and in-memory decode",
+      "result": [
+        {
+          "label": "candidate",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 4633634,
+          "sha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+          "durationSeconds": 187.1684126984127,
+          "sampleRate": 44100,
+          "channels": 2
+        },
+        {
+          "label": "exactReference",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 479827,
+          "sha256": "0fe6a8b150d8b1356f30a7ee2d4cd1538a913a01ca55b9fe11338ff27a5c04d8",
+          "durationSeconds": 29.98857142857143,
+          "sampleRate": 44100,
+          "channels": 2
+        },
+        {
+          "label": "negativeReference",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/mpeg",
+          "bytes": 479827,
+          "sha256": "f23ae244bb0671dea8fa23b4c59bb32f22e3f7980d4e876d26db4b7be4370eea",
+          "durationSeconds": 29.98857142857143,
+          "sampleRate": 44100,
+          "channels": 2
+        },
+        {
+          "label": "appleReference",
+          "status": 200,
+          "corsReadable": true,
+          "contentType": "audio/x-m4p",
+          "bytes": 1000127,
+          "sha256": "6e4cbaf7cd1e73c38b2dcf7af7f66b0104ac2742ef0f7fbf00d46d0860e37f48",
+          "durationSeconds": 29.952290249433105,
+          "sampleRate": 44100,
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "name": "Waveform identity comparison with distinct-song and self controls",
+      "result": {
+        "algorithm": "Mean-removed normalized waveform cross-correlation, FFT convolution; mono box-filter downsample to 2205 Hz; exhaustive offset scan.",
+        "results": [
+          {
+            "label": "exactReference",
+            "full": {
+              "correlation": 0.9703016013081601,
+              "offsetSeconds": 8.766893424036281,
+              "referenceSeconds": 29.988208616780046,
+              "sampleRate": 2205,
+              "coarseWholeSecondControls": [
+                {
+                  "offsetSeconds": 12,
+                  "correlation": 0.18750104272009435
+                },
+                {
+                  "offsetSeconds": 6,
+                  "correlation": 0.15114761477869249
+                },
+                {
+                  "offsetSeconds": 18,
+                  "correlation": 0.1424270548643672
+                }
+              ]
+            },
+            "windows": [
+              {
+                "referenceStartSeconds": 0,
+                "correlation": 0.9116055595006445,
+                "offsetSeconds": 8.766893424036281,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 13,
+                    "correlation": 0.03942763496030982
+                  },
+                  {
+                    "offsetSeconds": 5,
+                    "correlation": 0.03356774686284032
+                  },
+                  {
+                    "offsetSeconds": 12,
+                    "correlation": 0.03131761354753126
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.766893424036281
+              },
+              {
+                "referenceStartSeconds": 10,
+                "correlation": 0.9607540253332865,
+                "offsetSeconds": 18.76689342403628,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 28,
+                    "correlation": 0.1334712961626095
+                  },
+                  {
+                    "offsetSeconds": 88,
+                    "correlation": 0.09064165935850774
+                  },
+                  {
+                    "offsetSeconds": 40,
+                    "correlation": 0.08456175374985296
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.76689342403628
+              },
+              {
+                "referenceStartSeconds": 20,
+                "correlation": 0.9803967833064827,
+                "offsetSeconds": 28.76689342403628,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 32,
+                    "correlation": 0.24106999197982756
+                  },
+                  {
+                    "offsetSeconds": 38,
+                    "correlation": 0.17919874676959557
+                  },
+                  {
+                    "offsetSeconds": 26,
+                    "correlation": 0.17748876374304284
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.76689342403628
+              }
+            ],
+            "alignmentSpreadSeconds": 1.7763568394002505e-15
+          },
+          {
+            "label": "negativeReference",
+            "full": {
+              "correlation": 0.01899094418603424,
+              "offsetSeconds": 58.02766439909297,
+              "referenceSeconds": 29.988208616780046,
+              "sampleRate": 2205,
+              "coarseWholeSecondControls": [
+                {
+                  "offsetSeconds": 16,
+                  "correlation": 0.01052068302149004
+                },
+                {
+                  "offsetSeconds": 117,
+                  "correlation": 0.0073032384479493504
+                },
+                {
+                  "offsetSeconds": 153,
+                  "correlation": 0.007217400637933804
+                }
+              ]
+            },
+            "windows": [
+              {
+                "referenceStartSeconds": 0,
+                "correlation": 0.0525242221044676,
+                "offsetSeconds": 58.045804988662134,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 147,
+                    "correlation": 0.020006624174602063
+                  },
+                  {
+                    "offsetSeconds": 57,
+                    "correlation": 0.017841108909055096
+                  },
+                  {
+                    "offsetSeconds": 153,
+                    "correlation": 0.016361919836055776
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 58.045804988662134
+              },
+              {
+                "referenceStartSeconds": 10,
+                "correlation": 0.04285049033973576,
+                "offsetSeconds": 10.504308390022675,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 163,
+                    "correlation": 0.016153483302594245
+                  },
+                  {
+                    "offsetSeconds": 7,
+                    "correlation": 0.014947714098995923
+                  },
+                  {
+                    "offsetSeconds": 148,
+                    "correlation": 0.01470781682516777
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 0.5043083900226755
+              },
+              {
+                "referenceStartSeconds": 20,
+                "correlation": 0.04527198279594939,
+                "offsetSeconds": 60.40589569160998,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 129,
+                    "correlation": 0.016994857087307493
+                  },
+                  {
+                    "offsetSeconds": 60,
+                    "correlation": 0.016927665022432786
+                  },
+                  {
+                    "offsetSeconds": 152,
+                    "correlation": 0.01569757923836329
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 40.40589569160998
+              }
+            ],
+            "alignmentSpreadSeconds": 57.541496598639455
+          },
+          {
+            "label": "appleReference",
+            "full": {
+              "correlation": 0.8840807583776862,
+              "offsetSeconds": 8.791836734693877,
+              "referenceSeconds": 29.951927437641725,
+              "sampleRate": 2205,
+              "coarseWholeSecondControls": [
+                {
+                  "offsetSeconds": 10,
+                  "correlation": 0.03710477161932993
+                },
+                {
+                  "offsetSeconds": 144,
+                  "correlation": 0.03631465883907415
+                },
+                {
+                  "offsetSeconds": 70,
+                  "correlation": 0.03395168636614118
+                }
+              ]
+            },
+            "windows": [
+              {
+                "referenceStartSeconds": 0,
+                "correlation": 0.641392453561129,
+                "offsetSeconds": 8.791836734693877,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 13,
+                    "correlation": 0.06535458828933993
+                  },
+                  {
+                    "offsetSeconds": 144,
+                    "correlation": 0.02730092054605089
+                  },
+                  {
+                    "offsetSeconds": 142,
+                    "correlation": 0.015823445530538542
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.791836734693877
+              },
+              {
+                "referenceStartSeconds": 10,
+                "correlation": 0.8431710332759129,
+                "offsetSeconds": 18.791836734693877,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 89,
+                    "correlation": 0.03568375476961585
+                  },
+                  {
+                    "offsetSeconds": 20,
+                    "correlation": 0.034537413178213835
+                  },
+                  {
+                    "offsetSeconds": 166,
+                    "correlation": 0.029141885794219464
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.791836734693877
+              },
+              {
+                "referenceStartSeconds": 20,
+                "correlation": 0.9269714878214388,
+                "offsetSeconds": 28.791836734693877,
+                "referenceSeconds": 8,
+                "sampleRate": 2205,
+                "coarseWholeSecondControls": [
+                  {
+                    "offsetSeconds": 25,
+                    "correlation": 0.05445708402634328
+                  },
+                  {
+                    "offsetSeconds": 90,
+                    "correlation": 0.05382974351675737
+                  },
+                  {
+                    "offsetSeconds": 30,
+                    "correlation": 0.05067232262594383
+                  }
+                ],
+                "inferredPreviewStartInCandidateSeconds": 8.791836734693877
+              }
+            ],
+            "alignmentSpreadSeconds": 0
+          }
+        ],
+        "selfControl": {
+          "correlation": 1.000000000005442,
+          "offsetSeconds": 40,
+          "referenceSeconds": 8,
+          "sampleRate": 2205,
+          "coarseWholeSecondControls": [
+            {
+              "offsetSeconds": 40,
+              "correlation": 1.000000000005442
+            },
+            {
+              "offsetSeconds": 94,
+              "correlation": 0.3252163883766161
+            },
+            {
+              "offsetSeconds": 34,
+              "correlation": 0.2785761933233037
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "origin": "https://diad87.github.io",
+  "referenceExcerptCompatible": true,
+  "conclusion": "The complete official reference excerpt and its separated windows strongly match the candidate at a consistent offset. This supports the same recorded excerpt, not verification of all unreferenced seconds or complete master identity."
+}

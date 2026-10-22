@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "scope": "Strict alternative-source adapter for the static PWA, without a runtime proxy, account, subscription or bundled media.",
+  "enabledProviders": ["audius"],
+  "matching": {
+    "genericIsrcLookup": true,
+    "catalogIdRange": "0 < id < 250000000000000",
+    "missingIsrc": "Hydrate this numeric Deezer track ID through the existing isolated JSONP transport. Cross-check ID, effective title/version, artist, album when present and duration before accepting its ISRC.",
+    "audiusChecks": [
+      "Valid normalized 12-character ISRC equals the requested recording identifier.",
+      "Artist name equals the requested artist after Unicode/punctuation normalization; uploader/label names are not guessed as artist aliases.",
+      "Effective title/version equals the requested title/version. Only the exact artist's own 'Artist - ' title prefix can be removed.",
+      "Duration differs by no more than 3 seconds.",
+      "Available, not deleted, streamable, not stream-gated and public stream access explicitly true.",
+      "Cover, remix-parent and stem declarations are rejected.",
+      "ASCII alphanumeric provider ID only; no arbitrary stream URL from provider JSON is used."
+    ],
+    "knownLimits": [
+      "Provider metadata, including ISRC, is not an acoustic fingerprint and cannot guarantee that a malicious or erroneous upload contains the advertised master.",
+      "Audius does not expose a directly comparable album title in these responses; the shared recording ISRC identifies the recording independently of album reissues.",
+      "Missing ISRC without a matching catalog detail produces no guessed text-search fallback.",
+      "No acoustic-comparison implementation or automatic approval of the ALEA recording is included in this adapter."
+    ]
+  },
+  "transport": {
+    "request": "https://api.audius.co/v1/tracks?isrc={ISRC}&limit=25",
+    "returnedMedia": "https://api.audius.co/v1/tracks/{validated-ASCII-ID}/stream",
+    "credentials": "omit",
+    "referrerPolicy": "no-referrer",
+    "apiRedirectPolicy": "error",
+    "deadlineMs": 6500,
+    "jsonByteAndCharacterLimit": 1048576,
+    "chunkedOversizeCancelsReader": true,
+    "maxResults": 25,
+    "timeoutNetworkAndProtocolDistinctFromEmpty": true,
+    "abortCleanup": true,
+    "temporaryMediaUrlsPersisted": false,
+    "recordingIdsHardcodedInAdapter": false
+  },
+  "downloads": "The separate is_downloadable flag, non-gated download status and download access must all explicitly permit download. Stream access alone never enables it.",
+  "liveGate": {
+    "report": "catalog-sources-audius-canonical-live-2026-10-22T21-36-35-572Z.json",
+    "initialReport": "catalog-sources-audius-canonical-live-2026-10-22T21-33-07-762Z.json",
+    "origin": "https://diad87.github.io",
+    "threeCanonicalMatches": true,
+    "recordings": [
+      {"catalogId": 4260344111, "providerId": "daMWzaJ", "title": "The One", "artist": "JAMES V", "isrc": "GXLEX2692321", "duration": 220},
+      {"catalogId": 4248921261, "providerId": "q7r1Kgb", "title": "Dancefloor", "artist": "Quinn Ayers", "isrc": "QMDA72636635", "duration": 155},
+      {"catalogId": 4164219782, "providerId": "dydyr4K", "title": "On The Run", "artist": "Allwack", "isrc": "QZVN42200039", "duration": 201}
+    ],
+    "wrongArtistAndVersionRejected": true,
+    "noIsrcHydrationValidated": true,
+    "iritsiDaEgunaRecovered": false,
+    "fullAudio": {
+      "providerId": "daMWzaJ",
+      "trustedClick": true,
+      "muted": false,
+      "seekAdvances": true,
+      "hiddenTabSeconds": 10,
+      "hiddenTabAdvancesSeconds": 10,
+      "completeRamFileBytes": 8802468,
+      "completeRamDecodeDuration": 220,
+      "sha256": "198e9b6feec79a6fab3a51bd46111fcf43df1af287b17ea96dba89f6cc5ee5b5",
+      "mediaFilePersisted": false
+    },
+    "physicalAndroidOrIosTest": false,
+    "phoneScreenOffVerified": false,
+    "noProviderInterceptionOrFixture": true
+  },
+  "pendingProviders": [
+    {"provider": "archive", "reason": "Public transport and full-audio controls are established, but no acoustic or otherwise trusted mapping to a requested canonical catalog recording was verified. Generic fuzzy substitutions remain disabled."},
+    {"provider": "hearthis", "reason": "Public transport and full-audio controls are established, but exact requested recording identity is not established. DJ mixes and same-title matches must not substitute automatically."},
+    {"provider": "jamendo", "reason": "Requires an own registered application client_id and live browser identity/full-audio validation. Users would not inherently need accounts for public read methods."}
+  ],
+  "unitTests": {
+    "command": "node --test scripts/tests/web-catalog-sources.test.mjs",
+    "passed": 17,
+    "failed": 0
+  }
+}

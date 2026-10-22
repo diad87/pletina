@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-22T22:01:11.307506+00:00",
+  "build": "fc56a244ebcc9e6e",
+  "sourceCommit": "ebd11100ec0958a02dac3b51d9653d94a8bd1352",
+  "deployment": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "609b0e3730067bb56f4b0dbc1e35668e1901dade",
+    "tree": "18cad36b48a29ff11cd0931501d4aa33c906aa8b",
+    "source_hash": "dde6133ef4ca3bc63c2cc9e897a2d7ed887a430e9ad701b627ac328d77555e0a",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "fc56a244ebcc9e6e"
+  },
+  "feature": "Strict Audius ISRC rescue and two curated recordings verified against official excerpts and full-file SHA-256, using the existing HTMLAudio player without video.",
+  "runtimeBackendAdded": false,
+  "listenerAccountOrSubscriptionAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "entryBytes": 49831,
+  "optionalApplicationBytes": 505408,
+  "allDistributedBytes": 600812,
+  "musicFilesBundled": false,
+  "enabledSources": {
+    "audius": {
+      "genericIsrcLookup": true,
+      "identityChecks": [
+        "ISRC",
+        "effective title/version",
+        "artist",
+        "duration",
+        "public full stream access"
+      ],
+      "sourceMetadataIsNotAcousticProof": true,
+      "gate": "artifacts/pwa-port/catalog-sources-audius-canonical-live-2026-10-22T21-36-35-572Z.json"
+    },
+    "aleaCurated": {
+      "catalogId": 3250715431,
+      "isrc": "QM6N21424821",
+      "bytes": 4633634,
+      "startAtSeconds": 8.94,
+      "downloadAllowed": false,
+      "identityReport": "artifacts/pwa-port/iritsi-recording-identity-2026-10-22-final.json",
+      "completeMasterIndependentlyCompared": false
+    },
+    "archiveCurated": {
+      "catalogId": 3266797141,
+      "isrc": "QM6N21489808",
+      "bytes": 2029320,
+      "startAtSeconds": 0,
+      "downloadAllowed": false,
+      "otherEditionRejected": 3266743431,
+      "identityReport": "artifacts/pwa-port/archive-egiozu-recording-identity-2026-10-22-padding-fix.json",
+      "completeMasterIndependentlyCompared": false
+    }
+  },
+  "invariants": [
+    "Downloaded audio, podcasts and explicitly added YouTube entries retain their own identity/source.",
+    "An explicitly selected source is not silently replaced after rejection.",
+    "Only catalog matches can use the new rescue; no automatic fuzzy Archive or HearThis substitution.",
+    "Curated complete files must pass byte count and SHA-256 before the exact checked bytes become a RAM Blob.",
+    "Only a proven exactly-zero prefix is skipped; real duration/timeline and explicit seeks are preserved.",
+    "Playable source URLs, capabilities and signed media addresses are never serialized into queue/library metadata."
+  ],
+  "logic": {
+    "pass": 501,
+    "fail": 0,
+    "log": "artifacts/pwa-e2e/logs-catalog-rescue-2026-10-22/logic-with-archive.txt"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "log": "artifacts/pwa-e2e/logs-catalog-rescue-2026-10-22/types-with-archive.txt"
+  },
+  "builds": {
+    "pwa": "artifacts/pwa-e2e/logs-catalog-rescue-2026-10-22/build-pwa-with-archive.txt",
+    "referenceFrontend": "artifacts/pwa-e2e/logs-catalog-rescue-2026-10-22/build-reference.txt",
+    "nativeApkBuilt": false
+  },
+  "media": {
+    "counts": {
+      "pass": 112,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 2
+    },
+    "reports": [
+      "artifacts/pwa-e2e/media-fc56a244ebcc9e6e-win/summary.json",
+      "artifacts/pwa-e2e/media-fc56a244ebcc9e6e-linux/summary.json"
+    ],
+    "scope": "36 controlled-provider media scenarios plus two setup checks per desktop engine; real AAC. Includes matching Audius fallback, homonym rejection and automatic next with the same Audio. Not a new all-suite run or physical phone test."
+  },
+  "officialVideoRegression": {
+    "counts": {
+      "pass": 33,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-fc56a244ebcc9e6e-win/summary.json",
+      "artifacts/pwa-e2e/official-youtube-fc56a244ebcc9e6e-linux/summary.json"
+    ],
+    "scope": "Benign iframe HTTP fixtures; no YouTube playback/autoplay claim."
+  },
+  "compiledRealLocalUi": {
+    "pass": 12,
+    "fail": 0,
+    "reports": [
+      "artifacts/pwa-port/catalog-rescue-live-fc56a244ebcc9e6e-iritsi-local.json",
+      "artifacts/pwa-port/catalog-rescue-live-fc56a244ebcc9e6e-egiozu-local.json"
+    ],
+    "scope": "Six UI checks each for Iritsi and Egiozu: one normal title click, full checked Blob, seek, repeat with offline network and hidden tab, and Back/navigation. Desktop Chrome; no physical screen lock."
+  },
+  "compiledRealPublicUi": {
+    "pass": 12,
+    "fail": 0,
+    "reports": [
+      "artifacts/pwa-port/catalog-rescue-live-fc56a244ebcc9e6e-iritsi-public.json",
+      "artifacts/pwa-port/catalog-rescue-live-fc56a244ebcc9e6e-egiozu-public.json"
+    ],
+    "scope": "The same six UI cases per curated song, repeated against actual published Pages assets and real providers with one title click, standard browser security and userGesture:false observation. Desktop Chrome, not a physical phone."
+  },
+  "audiusDownloads": {
+    "pass": 2,
+    "fail": 0,
+    "report": "artifacts/pwa-port/catalog-downloads-audius-live-2026-10-22T21-53-09-091Z.json",
+    "scope": "Real permitted Audius control, full CORS transfer, duration/tail validation, product CacheStorage/IDB and service worker, offline native audio and seek; control is transport proof, not a new catalog association."
+  },
+  "update": {
+    "from": "e7b0aa14685bb4fa",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-fc56a244ebcc9e6e.json",
+    "scope": "Real controlling service worker, playlist/duplicate/library/podcast/download bytes persist through update; desktop isolated site."
+  },
+  "publicFiles": {
+    "pass": 22,
+    "total": 22,
+    "report": "artifacts/pwa-deploy/public-files-fc56a244ebcc9e6e.json"
+  },
+  "unchangedVisualAssets": [
+    {
+      "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+      "identicalToPublishedBuild": "e7b0aa14685bb4fa"
+    },
+    {
+      "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+      "identicalToPublishedBuild": "e7b0aa14685bb4fa"
+    },
+    {
+      "path": "application/assets/index-BzWVG3zr.css",
+      "sha256": "0a89e5ae40d6c3e7488e53dcc10a1ff949f267f9523981781bfee3e62ed2dd25",
+      "identicalToPublishedBuild": "e7b0aa14685bb4fa"
+    }
+  ],
+  "earlierAttempts": [
+    {
+      "report": "artifacts/pwa-e2e/logs-catalog-rescue-2026-10-22/logic.txt",
+      "pass": 478,
+      "fail": 20,
+      "reason": "Official-player test harness had not declared the two new forbidden resolver dependencies. Updated harness imports preserve forbidden-call assertions; final 501 tests pass."
+    },
+    {
+      "build": "d4c44844f8c1e0fa",
+      "published": false,
+      "reason": "Pre-Archive candidate; all its reports retain their own build and are not reassigned to the final release."
+    },
+    {
+      "reports": [
+        "artifacts/pwa-port/catalog-rescue-live-d4c44844f8c1e0fa-local-observer-initial.json",
+        "artifacts/pwa-port/catalog-rescue-live-d4c44844f8c1e0fa-local-search-timeout.json",
+        "artifacts/pwa-port/catalog-rescue-live-d4c44844f8c1e0fa-local-back-target-failure.json"
+      ],
+      "reason": "QA observer/protocol/UI-target corrections only: old Chrome offline wrapper incompatibility, autofocus/frame wait, and selecting a real album page before testing its Back control. No second playback gesture was used to rescue autoplay."
+    },
+    {
+      "reports": [
+        "artifacts/pwa-port/catalog-downloads-audius-live-2026-10-22T21-41-23-225Z.json",
+        "artifacts/pwa-port/catalog-downloads-audius-live-2026-10-22T21-43-04-271Z.json"
+      ],
+      "reason": "Earlier published worker returned full 200 bodies to readable Range requests, leaving final seek validation pending. Final product adds local readable 206/416 responses; final full/offline gate passes."
+    }
+  ],
+  "limitations": [
+    "Generic Audius matching relies on provider metadata and cannot prove the audio of a malicious/mislabeled upload.",
+    "Curated acoustic comparisons cover approximately 30-second official excerpts, not every second of the master; full-file SHA binds playback to the file actually checked.",
+    "ALEA playback retains its real padded-file duration (about 187 seconds; browser MP3 estimates can vary after seeking); it does not rewrite or truncate musical audio.",
+    "Curated RAM Blobs can repeat offline in the open document, but are not persistent offline downloads. ALEA/Archive downloading is disabled.",
+    "Physical Xiaomi and iPhone background/screen-off checks for this build remain pending; previous device reports do not validate this release.",
+    "HearThis and Jamendo are not enabled. Archive is a curated exact association, not a general fuzzy catalog fallback.",
+    "Android Auto and CarPlay remain outside this static PWA distribution."
+  ],
+  "physicalDeviceVerification": {
+    "status": "pending-user-test",
+    "requestedDevice": "Xiaomi 15T Pro",
+    "requestedBuild": "fc56a244ebcc9e6e",
+    "iphonePhysicalVerified": false
+  },
+  "allRequestedPlatformsVerified": false
+}
