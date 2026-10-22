@@ -756,6 +756,16 @@ export async function runLibraryScenarios(ctx) {
       const beforeLocalMedia = mediaRequests()
       await u.tap('ol.tracks .name')
       await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')))
+      // Shared APK behavior: clicking the current ID resumes its existing queue
+      // item. Editing the library does not rewrite that live/restored queue copy.
+      assert.equal(await page.locator('.mini .title').textContent(), original.title)
+      assert.equal(await page.locator('.mini .artist').textContent(), original.artist)
+      await pause()
+      // The collection play button explicitly builds a new queue from the
+      // canonical Downloads rows, so this is the fresh-selection metadata check.
+      await u.tap('.actions button.big-play[title="Reproducir"]')
+      await u.wait(title => document.querySelector('.mini .title')?.textContent === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')), edited.title)
       assert.equal(await page.locator('.mini .title').textContent(), edited.title)
       assert.equal(await page.locator('.mini .artist').textContent(), edited.artist)
       await pause()
@@ -765,6 +775,7 @@ export async function runLibraryScenarios(ctx) {
         oldCurrentHistoryCanonical: true, playlistFavoriteHistoryDownloadsSurviveReload: true, sameId: savedId,
         storedDownloadAndCacheUnchanged: true, cacheType: cachedBefore.type,
         readableBodySha256Compared: cachedBefore.type !== 'opaque', opaqueBodyNotReadable: cachedBefore.type === 'opaque',
+        sameIdRowResumesSavedQueueCopy: true, explicitDownloadCollectionUsesCanonicalMetadata: true,
         metadataAudioRequests: 0, localPlaybackAudioRequests: 0 }
     } catch (error) {
       failure = error
