@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-22T07:32:24.593Z",
+  "build": "92345453b622660a",
+  "sourceCommit": "7da533f48d825d925d77db7dabf5777815852a7a",
+  "runnerCommit": "d989a102177af048ec504e5d692e77a1c33707f8",
+  "nativeReference": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "changes": [
+    "Installed Home: first Back preserves document/audio and shows a prompt; a second within 800 ms permits native browser exit. Routes and overlays retain priority.",
+    "Exit protection rearms after return, expired holds, visibility changes and BFCache restoration; BFCache app path has unit coverage, not a physical mobile claim.",
+    "Visual keyboard occlusion controls the bottom dock while focus-only, pinch zoom and small height changes remain excluded.",
+    "Canonical edited YouTube metadata survives stale queue consumers, likes, history, playlists and saved downloads without refetching saved audio. Resuming the current ID keeps its queue copy, matching APK; fresh collection playback uses current library metadata.",
+    "A failed download transfer can renew its source once with bounded retry and preserved cancellation/rollback.",
+    "Total RSS failure with requested-language candidates surfaces an error and retry; genuine empty results and partial results remain distinct."
+  ],
+  "unit": {
+    "pass": 392,
+    "fail": 0,
+    "skipped": 0,
+    "navigationIncluded": 45,
+    "report": "artifacts/pwa-e2e/unit-92345453b622660a.txt"
+  },
+  "staticAndBuildChecks": {
+    "svelteErrors": 0,
+    "svelteWarnings": 0,
+    "typescriptExitCode": 0,
+    "pwaBuildExitCode": 0,
+    "nativeFrontendBuildExitCode": 0,
+    "nativeFrontendScope": "Native frontend build passed after shared changes; final lifecycle fixes and subsequent runner edits affect only web navigation/tests."
+  },
+  "browser": {
+    "counts": {
+      "pass": 205,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 5
+    },
+    "total": 210,
+    "missingChecks": 0,
+    "noBrowserFailuresOrBlocks": true,
+    "everyBrowserCasePassed": false,
+    "report": "artifacts/pwa-e2e/coverage-92345453b622660a.json",
+    "scope": "Rows are actual executed checks, including grouped actions. A failed grouped check does not prove later actions ran. Browser layout emulation, synthetic providers, virtual clocks and DOM gestures do not verify physical operating systems or cars."
+  },
+  "standalone": {
+    "counts": {
+      "pass": 35,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "report": "artifacts/pwa-e2e/back-root-library-92345453b622660a-final/summary.json",
+    "shortPass": 11,
+    "shortReport": "artifacts/pwa-e2e/back-root-short-92345453b622660a-retry2/summary.json",
+    "browserUIBack": {
+      "status": "blocked",
+      "scope": "Desktop browser keyboard accelerator control remains separate from History API traversal and physical Android Back."
+    },
+    "forwardAppObservation": "New document load observed on app Forward; external control restoration used BFCache. App BFCache rearm is covered by unit tests.",
+    "scope": "Desktop Chrome app mode and normal-browser control, real Audio/History API; no Android system Back/Home/minimize claim."
+  },
+  "update": {
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-92345453b622660a-final.json",
+    "previousDistribution": "fbb03046132d7478",
+    "scope": "Real service worker, IndexedDB and CacheStorage. Independent legacy migration uses a fresh disposable Chrome process with the same version/options, without prior ServiceWorker CDP or receiver instrumentation. Seeded WAV validates persistence and route bytes, not provider audio playback.",
+    "cleanup": {
+      "previousBrowserClosed": true,
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    }
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "33bffb339b59db5be991c7295d6a779c4ed5958e",
+    "tree": "d4d2369995a5eb374622a48c2eda7e551c505ae9",
+    "source_hash": "fa73398f6f6beaa5065c2c30053cde2a04eaef37456c418202aa0eacd55a7563",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "92345453b622660a",
+    "status": "published-and-http-verified",
+    "publicFilesPassed": 22,
+    "publicFilesFailed": 0,
+    "report": "artifacts/pwa-deploy/public-files-92345453b622660a.json",
+    "liveSelectedSongPass": 3,
+    "liveSelectedSongFail": 0,
+    "liveReport": "artifacts/pwa-port/browser-public-92345453b622660a.json",
+    "liveScope": "Desktop Chrome with live providers and decoder progress; no physical speaker or phone verification."
+  },
+  "assets": {
+    "initialBytes": 41790,
+    "onDemandBytes": 473210,
+    "compressed": false
+  },
+  "preservedControls": {
+    "manifest": "artifacts/pwa-e2e/preserved-controls-92345453b622660a.json",
+    "manifestSha256": "da49564ebeeb91d9f0974a238cc1545e944c3e1a63709e5c2145ac9756727336",
+    "entries": 28,
+    "explanation": "Original failures and diagnostics are preserved with their own builds and counts. Old same-ID mini-player expectation was corrected to match APK. Reusing one QA Chrome process stalled skipWaiting; isolation was observed to remove it without identifying the internal mechanism. Earlier red runs are not counted as final passes."
+  },
+  "platformStatus": {
+    "androidPhysical": "Pending: new 923 Xiaomi 15T Pro single/double Back confirmation requested; no answer at recording time.",
+    "iphonePhysical": "Pending: no physical iPhone available.",
+    "androidAuto": "Not implemented in this PWA distribution.",
+    "carPlay": "Not implemented in this PWA distribution.",
+    "allRequestedPlatformsVerified": false,
+    "androidSystemBackVerified": false,
+    "iphonePhysicalVerified": false
+  },
+  "backendAdded": false
+}

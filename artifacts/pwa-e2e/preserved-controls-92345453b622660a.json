@@ -1,0 +1,2189 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-22T07:27:27.927Z",
+  "candidateBuild": "92345453b622660a",
+  "purpose": "Inventario de contrastes y fallos conservados de esta tanda. Referencias a JSON originales; no reemplaza la validación final central.",
+  "scope": "QA de navegadores de escritorio con layouts móviles y proveedores HTTP controlados. No acredita Android/iPhone físicos, Android Auto ni CarPlay.",
+  "interpretationRules": [
+    "Los resultados y recuentos de cada fuente permanecen iguales; clasificar el motivo de un fallo no lo convierte en PASS.",
+    "No se suman recuentos entre fuentes: hay repeticiones deliberadas y resúmenes con perfiles que duplican sus informes individuales.",
+    "Los diagnósticos sin checks no reciben recuentos PASS/FAIL inventados. applicationEntered conserva su significado observado y qaPassClaimed sigue false.",
+    "La copia de una canción actual conservada al reanudar el mismo ID también existe en APK0.11.2; no se presenta como defecto de persistencia nativo.",
+    "La activación mejora al aislar el escenario en un proceso Chrome nuevo. No se atribuye a carga, offline, wrapper, título ni un mecanismo interno específico sin prueba.",
+    "Los informes de las suites all finales que estaban en marcha al solicitar el inventario quedan fuera."
+  ],
+  "classificationDefinitions": {
+    "harness": "Expectativa, gesto, espera, bootstrap o aislamiento del runner; el resultado histórico no cambia.",
+    "product-baseline": "Control sobre una base anterior que expone una diferencia concreta de persistencia/geometría, con alcance descrito.",
+    "diagnostic": "Observación o contraste cuyo resultado no demuestra por sí solo una causa o paridad completa."
+  },
+  "excludedInProgressRuns": [
+    "artifacts/pwa-e2e/release-92345453b622660a-win-final",
+    "artifacts/pwa-e2e/release-92345453b622660a-linux-final",
+    "artifacts/pwa-e2e/back-root-library-92345453b622660a-final"
+  ],
+  "entries": [
+    {
+      "id": "youtube-baseline-initial",
+      "classification": "harness",
+      "explanation": "Primer control sobre fbb. El intento YT quedó afectado por blur/renombrado y cleanup que ocultó la aserción primaria; no sirve por sí solo para acreditar ese defecto. El error RSS de esa base también queda conservado.",
+      "sourceJson": "artifacts/pwa-e2e/youtube-metadata-before-fbb03046132d7478/summary.json",
+      "sourceSha256": "fe5b36cce38bce15bbc80857bbb20ed37dbeb39fff76afe51c0ef285c31086ba",
+      "build": "fbb03046132d7478",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 24,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:38:04.379Z",
+      "finishedAt": "2026-10-22T06:40:17.649Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "locator.scrollIntoViewIfNeeded: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.items .item').filter({ hasText: 'E2E YouTube Cola Guardada' }).first()\n"
+        },
+        {
+          "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+          "status": "fail",
+          "errorExcerpt": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.status').getByRole('button', { name: 'Reintentar', exact: true }) to be visible\n"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/youtube-metadata-before-fbb03046132d7478/chromium-android-layout/report.json",
+          "sourceSha256": "f0769342d63d3f241188b1767b79dc26755d3b8ccb6a95fadb99de10fdc30985",
+          "counts": {
+            "values": {
+              "pass": 24,
+              "fail": 2,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "locator.scrollIntoViewIfNeeded: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.items .item').filter({ hasText: 'E2E YouTube Cola Guardada' }).first()\n"
+            },
+            {
+              "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+              "status": "fail",
+              "errorExcerpt": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.status').getByRole('button', { name: 'Reintentar', exact: true }) to be visible\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "youtube-baseline-confirmed",
+      "classification": "product-baseline",
+      "explanation": "Sobre fbb, guardar favorito/playlist desde una copia antigua revertía la ficha canónica editada. La aserción falló antes de la expectativa posterior del miniplayer. El caso RSS también falla en esta base anterior. Esto es distinto de reanudar una copia ya existente de la cola.",
+      "sourceJson": "artifacts/pwa-e2e/youtube-metadata-before-fbb03046132d7478-confirmed/summary.json",
+      "sourceSha256": "a90533e7de1f003492784e7a357dad96b22d7e4faf9dcd01c777ca55496c2c1a",
+      "build": "fbb03046132d7478",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 24,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:41:27.771Z",
+      "finishedAt": "2026-10-22T06:43:21.930Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "Expected values to be strictly equal:\n\n0 !== 1\n"
+        },
+        {
+          "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+          "status": "fail",
+          "errorExcerpt": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.status').getByRole('button', { name: 'Reintentar', exact: true }) to be visible\n"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/youtube-metadata-before-fbb03046132d7478-confirmed/chromium-android-layout/report.json",
+          "sourceSha256": "ef608be8bc599a8e5199bc55cb905ab84146f48d54422fcd2898b40f57357e38",
+          "counts": {
+            "values": {
+              "pass": 24,
+              "fail": 2,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "Expected values to be strictly equal:\n\n0 !== 1\n"
+            },
+            {
+              "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+              "status": "fail",
+              "errorExcerpt": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.status').getByRole('button', { name: 'Reintentar', exact: true }) to be visible\n"
+            }
+          ],
+          "youtubeFailureStage": "favorite and playlist from the old current item"
+        }
+      ]
+    },
+    {
+      "id": "keyboard-baseline-fbb",
+      "classification": "product-baseline",
+      "explanation": "Control negativo de geometría visual: el dock seguía visible con entrada enfocada y oclusión emulada. No equivale a teclado físico Android/iPhone.",
+      "sourceJson": "artifacts/pwa-e2e/keyboard-negative-fbb03046132d7478/summary.json",
+      "sourceSha256": "87e7118e22b682c24e7079b467478cca35728378812f72304b115a46bfeeb926",
+      "build": "fbb03046132d7478",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 6,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:32:54.066Z",
+      "finishedAt": "2026-10-22T06:33:09.788Z",
+      "failures": [
+        {
+          "name": "responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard",
+          "status": "fail",
+          "errorExcerpt": "focused-entry-with-occlusion: {\"step\":\"focused-entry-with-occlusion\",\"innerHeight\":844,\"visualHeight\":506,\"scale\":1,\"hidden\":false,\"display\":\"flex\",\"searchFocused\":true,\"tabs\":[\"Inicio\",\"Buscar\",\"Podcasts\",\"Tu biblioteca\"]}\n\nfalse !== true\n"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/keyboard-negative-fbb03046132d7478/chromium-android-layout/report.json",
+          "sourceSha256": "e7689ffb920cf89833732949ca952715641d34cf380c46228ee3ff4a6ea3b8a8",
+          "counts": {
+            "values": {
+              "pass": 6,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": [
+            {
+              "name": "responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard",
+              "status": "fail",
+              "errorExcerpt": "focused-entry-with-occlusion: {\"step\":\"focused-entry-with-occlusion\",\"innerHeight\":844,\"visualHeight\":506,\"scale\":1,\"hidden\":false,\"display\":\"flex\",\"searchFocused\":true,\"tabs\":[\"Inicio\",\"Buscar\",\"Podcasts\",\"Tu biblioteca\"]}\n\nfalse !== true\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "keyboard-fixed-6e6",
+      "classification": "diagnostic",
+      "explanation": "Control dirigido de la geometría corregida. Conserva sus siete comprobaciones registradas; no acredita dispositivos físicos.",
+      "sourceJson": "artifacts/pwa-e2e/keyboard-fixed-6e6a63db0409e132/summary.json",
+      "sourceSha256": "f7d6cdf1398526fa1c017166853794beee1ac41c3c2d2d29965f6725ebdd3ecd",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "browserFeatureChecksPassed": true
+      },
+      "counts": {
+        "values": {
+          "pass": 7,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:42:31.754Z",
+      "finishedAt": "2026-10-22T06:42:43.240Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/keyboard-fixed-6e6a63db0409e132/chromium-android-layout/report.json",
+          "sourceSha256": "1a1175189ad7e37ca2f15856a0f6e927a7fa1fde319f60fc1316ded3d9fea964",
+          "counts": {
+            "values": {
+              "pass": 7,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "full-windows-6e6",
+      "classification": "harness",
+      "explanation": "Los dos fallos de esta ejecución son el mismo tap del miniplayer interceptado por Sonando ahora abierto, uno por perfil. Se corrigió el helper cerrando overlays antes de pausar. Los fallos originales permanecen fallos.",
+      "sourceJson": "artifacts/pwa-e2e/release-6e6a63db0409e132-win/summary.json",
+      "sourceSha256": "cce26b5921c90f8fd61d9e06cc26255525f8a832cfed3689346c2fa0a3528dd0",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 135,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 3
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:42:35.938Z",
+      "finishedAt": "2026-10-22T06:51:23.597Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+        },
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-6e6a63db0409e132-win/chromium-android-layout/report.json",
+          "sourceSha256": "21cf54ca45a6c20cae4a2d4a3e693d8f43ddc63db8c0635a1acf1ee554808fe8",
+          "counts": {
+            "values": {
+              "pass": 67,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 2
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+            }
+          ],
+          "youtubeFailureStage": "record history from the old current item"
+        },
+        {
+          "profile": "firefox-narrow",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-6e6a63db0409e132-win/firefox-narrow/report.json",
+          "sourceSha256": "a0b8ffdd17e99bd60b388e03b3085e7a3ac4234d934816bc7c0340e489664e13",
+          "counts": {
+            "values": {
+              "pass": 68,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 1
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+            }
+          ],
+          "youtubeFailureStage": "record history from the old current item"
+        }
+      ]
+    },
+    {
+      "id": "full-webkit-linux-6e6",
+      "classification": "harness",
+      "explanation": "Fallo del mismo helper de pausa bajo el overlay. La excepción Spotify esperada y los casos unsupported permanecen separados del resultado de comprobaciones. WebKit Linux no demuestra Safari iPhone físico.",
+      "sourceJson": "artifacts/pwa-e2e/release-6e6a63db0409e132-linux/summary.json",
+      "sourceSha256": "39a3005cc18cb68182d882357a044d5645e3235dadedc1d5f7f630bf3806485f",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 67,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 2
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 1,
+        "handledExpected": 1,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 1,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T06:43:17.467Z",
+      "finishedAt": "2026-10-22T06:48:00.224Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+        }
+      ],
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "profiles": [
+        {
+          "profile": "webkit-iphone-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-6e6a63db0409e132-linux/webkit-iphone-layout/report.json",
+          "sourceSha256": "62e0bf955d85efe1138460764be3e9acc11cfc558c4ba12512d4198e09961238",
+          "counts": {
+            "values": {
+              "pass": 67,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 2
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 1,
+            "handledExpected": 1,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "networkTransportClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+            }
+          ],
+          "youtubeFailureStage": "record history from the old current item"
+        }
+      ]
+    },
+    {
+      "id": "back-library-6e6-initial",
+      "classification": "harness",
+      "explanation": "El bootstrap standalone no llegó a abrir la app en este intento. Se conserva el timeout y el alcance reducido; no se atribuye a un defecto funcional de Back sin haber abierto la app.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132/summary.json",
+      "sourceSha256": "0e9126cb71bf7f5f2986b3c07d905f746ed90be933685a96b789c3dd02b440bb",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "passed": false,
+        "applicationPassed": false,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 3,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:43:52.977Z",
+      "finishedAt": "2026-10-22T06:44:19.618Z",
+      "failures": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 15000ms exceeded."
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132/native-app-window/report.json",
+          "sourceSha256": "fa57b04bd3e723eb6d42e873a5edbd9eba1c91c1502793db08237deb2ec2c5bb",
+          "counts": {
+            "values": {
+              "pass": 0,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [
+            {
+              "name": "back.open: compiled application retains the native window mode",
+              "status": "fail",
+              "errorExcerpt": "page.waitForFunction: Timeout 15000ms exceeded."
+            }
+          ]
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132/normal-browser/report.json",
+          "sourceSha256": "b18c652c84cd1cfeb76519fb983d2cd306df187179af7d18a979609288df8fb4",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "back-library-6e6-retry",
+      "classification": "diagnostic",
+      "explanation": "Contiene el fallo del helper YT bajo overlay y un timeout de salida/vuelta del control Back anterior. El log de ese intento no aísla por sí solo el problema de lifecycle; no se convierte en PASS ni se atribuye automáticamente todo al producto.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132-retry1/summary.json",
+      "sourceSha256": "bf20749c38df5dde45c5feeb56d93405cdf1dd489f2eb77874d0b0c774e532ab",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "passed": false,
+        "applicationPassed": false,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 33,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:45:25.188Z",
+      "finishedAt": "2026-10-22T06:48:17.519Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+        },
+        {
+          "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+          "status": "fail",
+          "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132-retry1/native-app-window/report.json",
+          "sourceSha256": "c2cf3af79a3fcd6c742a256c0bb9ec75f83c7fca2e28bbd2dcc099a4479e7ca4",
+          "counts": {
+            "values": {
+              "pass": 30,
+              "fail": 2,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "locator.click: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini button[aria-label=\"Pausa\"]')\n    - locator resolved to <button aria-label=\"Pausa\" class=\"icon svelte-1jla3sy\">…</button>\n  - attempting click action\n    2 × waiting for element to be visible, enable"
+            },
+            {
+              "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+              "status": "fail",
+              "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to \"[URL]\"\n  navigated to"
+            }
+          ],
+          "youtubeFailureStage": "record history from the old current item"
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-6e6a63db0409e132-retry1/normal-browser/report.json",
+          "sourceSha256": "78f87f88a46995e587d86578712aeb6be63bac8f636d2a326a37bbc842f6eecc",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "full-windows-923-first",
+      "classification": "harness",
+      "explanation": "Los dos fallos son la última expectativa YT: tocar la fila del mismo ID reanuda la copia existente de la cola, comportamiento idéntico al APK0.11.2. Persistencia canónica previa y audio local habían pasado. Se corrigió sólo el test, verificando después nueva selección mediante el botón de colección Descargas.",
+      "sourceJson": "artifacts/pwa-e2e/release-92345453b622660a-win/summary.json",
+      "sourceSha256": "973f39a1d427448a1a7c9f746e0179f77d0b2736d44795e028ed786bb7a13f2a",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 135,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 3
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T07:14:41.413Z",
+      "finishedAt": "2026-10-22T07:23:23.487Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+        },
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-92345453b622660a-win/chromium-android-layout/report.json",
+          "sourceSha256": "a697cd9474c2d6aaf66c5c4a077242b4fbeb45c2aedfcb393dd1a9abbcc0a5d8",
+          "counts": {
+            "values": {
+              "pass": 67,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 2
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+            }
+          ],
+          "youtubeFailureStage": "reload and local downloaded playback"
+        },
+        {
+          "profile": "firefox-narrow",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-92345453b622660a-win/firefox-narrow/report.json",
+          "sourceSha256": "2a9da3a6f16b21038e0aa7b6510d952756602fba1f381ff831eb2d8036ff3888",
+          "counts": {
+            "values": {
+              "pass": 68,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 1
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+            }
+          ],
+          "youtubeFailureStage": "reload and local downloaded playback"
+        }
+      ]
+    },
+    {
+      "id": "full-webkit-linux-923-first",
+      "classification": "harness",
+      "explanation": "Misma expectativa errónea del miniplayer al reanudar el mismo ID. No es una regresión nativa de metadatos; la ficha canónica se comprueba mediante una nueva cola explícita. Se preservan error esperado Spotify y unsupported.",
+      "sourceJson": "artifacts/pwa-e2e/release-92345453b622660a-linux/summary.json",
+      "sourceSha256": "44b3952fe7a9741372c6b0fe0c2584a38d18a32c172870b4cec4779430bf3d67",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "browserFeatureChecksPassed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 67,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 2
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 1,
+        "handledExpected": 1,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 1,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T07:14:49.875Z",
+      "finishedAt": "2026-10-22T07:19:27.715Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+        }
+      ],
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "profiles": [
+        {
+          "profile": "webkit-iphone-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/release-92345453b622660a-linux/webkit-iphone-layout/report.json",
+          "sourceSha256": "eb422e2a31446db2df2a65d9438eb2b56d797012bb7f0c5f94b5b4154c608650",
+          "counts": {
+            "values": {
+              "pass": 67,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 2
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 1,
+            "handledExpected": 1,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "networkTransportClosed": true
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+            }
+          ],
+          "youtubeFailureStage": "reload and local downloaded playback"
+        }
+      ]
+    },
+    {
+      "id": "back-short-923-first",
+      "classification": "harness",
+      "explanation": "El control externo ya se restauraba por BFCache, pero waitForURL esperaba load. Esa espera falló antes de ejecutar Adelante. No demuestra que Adelante del producto fallara.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a/summary.json",
+      "sourceSha256": "d0ea684910f93051fd2bbca3e6059df5ca5ecf17ab32e326ea3b7f31f2d5fead",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false,
+        "applicationPassed": false,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:14:33.861Z",
+      "finishedAt": "2026-10-22T07:15:31.089Z",
+      "failures": [
+        {
+          "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+          "status": "fail",
+          "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  \"networkidle\" event fired\n============================================================"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a/native-app-window/report.json",
+          "sourceSha256": "af4149ca595976dd5d6f9b7caf3c57d7c19f4c3d143c5c2bb55a7063e29aeafc",
+          "counts": {
+            "values": {
+              "pass": 7,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [
+            {
+              "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+              "status": "fail",
+              "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  \"networkidle\" event fired\n============================================================"
+            }
+          ]
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a/normal-browser/report.json",
+          "sourceSha256": "4d66406fc182ff9f4fffb4ffab12cf217cc1fd9d3341b97769fccdf91eab32b3",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "back-short-923-lifecycle",
+      "classification": "harness",
+      "explanation": "La traza identifica stage first-back y pageshow.persisted=true del control externo. El segundo Atrás llegó dentro de800ms; faltaba el load que el harness esperaba. Adelante aún no había sido ejecutado.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-diagnostic1/summary.json",
+      "sourceSha256": "d01f5b45f829a23b7c937f9380148b07b4b2765e2df6630f6be0239d01760f66",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false,
+        "applicationPassed": false,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:17:16.496Z",
+      "finishedAt": "2026-10-22T07:17:58.432Z",
+      "failures": [
+        {
+          "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+          "status": "fail",
+          "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  \"networkidle\" event fired\n============================================================"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-diagnostic1/native-app-window/report.json",
+          "sourceSha256": "8c810d788bf57355c7cf7a3ed3d2f67eb346fa3e5b097f2decad2db6fc0cc525",
+          "counts": {
+            "values": {
+              "pass": 7,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [
+            {
+              "name": "back.double-root: two quick history Back gestures leave the app and Forward can restore it",
+              "status": "fail",
+              "errorExcerpt": "page.waitForURL: Timeout 10000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n  \"networkidle\" event fired\n============================================================"
+            }
+          ],
+          "exitControlStage": "first-back"
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-diagnostic1/normal-browser/report.json",
+          "sourceSha256": "9544f97b8a8da7f658e23e8f2b71ed62e7367b2e98a9490931d2c834111b344b",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "back-short-923-retry",
+      "classification": "harness",
+      "explanation": "Contraste tras esperar commit más URL/DOM reales, sin cambiar el producto. Volver a la app fue una carga nueva (pageshow.persisted=false); no acredita BFCache de la app, que conserva su cobertura unitaria separada.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-retry2/summary.json",
+      "sourceSha256": "6ec6ebc4b10d0eb6107ec1a2323be62a927582e26c1c239434afa37e6efdea9b",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": true,
+        "applicationPassed": true,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:18:39.664Z",
+      "finishedAt": "2026-10-22T07:19:12.391Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-retry2/native-app-window/report.json",
+          "sourceSha256": "abd28ac34e7df5a57736563ecbafb1c8c74d2f902045353102a4de9e957e6f91",
+          "counts": {
+            "values": {
+              "pass": 8,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [],
+          "exitControlStage": "first-back-after-forward"
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-short-92345453b622660a-retry2/normal-browser/report.json",
+          "sourceSha256": "f9dec1fb652d973a499d103e6f6da852c4bfa683714628fc8778ee89ff8d6401",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "back-library-923-first",
+      "classification": "harness",
+      "explanation": "Los controles Back de la ejecución larga pasan; su único fallo es la expectativa errónea de título al reanudar el mismo ID, compartida con APK. No se reetiqueta el resultado total como PASS.",
+      "sourceJson": "artifacts/pwa-e2e/back-root-library-92345453b622660a/summary.json",
+      "sourceSha256": "24bbf093e9f5e9d33c5f7b0785ede535db868d0e8dfc3e3eec7ca7c4885606bc",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false,
+        "applicationPassed": false,
+        "applicationChecksExecuted": true
+      },
+      "counts": {
+        "values": {
+          "pass": 34,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:19:27.597Z",
+      "finishedAt": "2026-10-22T07:21:54.344Z",
+      "failures": [
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "status": "fail",
+          "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+        }
+      ],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": "native-app-window",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-92345453b622660a/native-app-window/report.json",
+          "sourceSha256": "faf4352619d9e0291edef29375c92e6706233af8a6df3fd029e16b2df72663c7",
+          "counts": {
+            "values": {
+              "pass": 31,
+              "fail": 1,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "status": "fail",
+              "errorExcerpt": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'E2E YouTube Cola Anterior'\n- 'E2E YouTube Ficha Corregida'\n               ^\n"
+            }
+          ],
+          "youtubeFailureStage": "reload and local downloaded playback",
+          "exitControlStage": "first-back-after-forward"
+        },
+        {
+          "profile": "chromium-android-layout",
+          "mode": "normal-browser",
+          "sourceJson": "artifacts/pwa-e2e/back-root-library-92345453b622660a/normal-browser/report.json",
+          "sourceSha256": "03c6db8907ecfbf0d07a590f71a2726a4c3f7088cefe1f2067df5dc711dfc3ae",
+          "counts": {
+            "values": {
+              "pass": 3,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true,
+            "browserProcessClosed": true,
+            "closeErrors": []
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "library-metadata-parity-923",
+      "classification": "harness",
+      "explanation": "Biblioteca dirigida tras corregir sólo la expectativa: fila del mismo ID conserva oldcopy y reproduce local; botón grande Descargas crea cola nueva con metadatos canónicos. Caché conservada y cero peticiones adicionales de audio. Respuesta opaque: no se afirma SHA de su cuerpo ilegible en navegador.",
+      "sourceJson": "artifacts/pwa-e2e/library-metadata-parity-92345453b622660a/summary.json",
+      "sourceSha256": "f89a8b4d4c1ee0fe34b21781ba090bb917477f2763f3b7567acbfb063561e4c0",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "browserFeatureChecksPassed": true
+      },
+      "counts": {
+        "values": {
+          "pass": 26,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "source.counts"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0,
+        "sourceExpectedHandledErrors": 0,
+        "sourceUnexpectedErrors": 0
+      },
+      "cleanup": {
+        "serverClosed": true
+      },
+      "startedAt": "2026-10-22T07:19:47.804Z",
+      "finishedAt": "2026-10-22T07:21:41.134Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "mode": null,
+          "sourceJson": "artifacts/pwa-e2e/library-metadata-parity-92345453b622660a/chromium-android-layout/report.json",
+          "sourceSha256": "e6b746d8e2cca9c7762ae7e30fb9408ef40ce9165d5bfe6fb56efc77aba23fc1",
+          "counts": {
+            "values": {
+              "pass": 26,
+              "fail": 0,
+              "blocked": 0,
+              "unsupported": 0
+            },
+            "origin": "source.counts"
+          },
+          "recordedResult": {},
+          "errorCounts": {
+            "reportedEvents": 0,
+            "handledExpected": 0,
+            "unexpected": 0
+          },
+          "cleanup": {
+            "contextClosed": true,
+            "browserClosed": true,
+            "puppeteerBrowserClosed": true
+          },
+          "failures": []
+        }
+      ]
+    },
+    {
+      "id": "update-6e6-first",
+      "classification": "diagnostic",
+      "explanation": "Diez controles pasan; migración fbb queda esperando activación. El log de emisor sólo prueba intento de envío, no recepción. Fallo conservado.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-6e6a63db0409e132.json",
+      "sourceSha256": "fb6ce37be1bf6b2ebe79408e6e33ddf55e814dfe6b0cd7fc919b2c8c9edb85f0",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:44:07.633Z",
+      "finishedAt": "2026-10-22T06:44:46.417Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478"
+    },
+    {
+      "id": "update-6e6-warm-diagnostic",
+      "classification": "diagnostic",
+      "explanation": "Se detuvo en el control9 de actualización warm, antes de la migración11. No se completa artificialmente hasta once casos ni se atribuye a carga sin evidencia.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-6e6a63db0409e132-migration-diagnostic.json",
+      "sourceSha256": "3d0704b070b07c3ae40b28f0628054ee918e8b0e5c37435e5ae94a88ce3674ff",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 8,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:48:11.100Z",
+      "finishedAt": "2026-10-22T06:48:47.490Z",
+      "failures": [
+        {
+          "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+          "status": "fail",
+          "errorExcerpt": "page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n============================================================"
+        }
+      ],
+      "fatal": "page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n============================================================"
+    },
+    {
+      "id": "update-6e6-worker-diagnostic",
+      "classification": "diagnostic",
+      "explanation": "Diez controles pasan; root fbb, waiting installed y caché nueva completa al timeout. El informe antecede a los campos de identidad ampliados del runner.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-6e6a63db0409e132-worker-diagnostic.json",
+      "sourceSha256": "e1d13beb2981432d81a3104b5f4ab744d25eb2fd100c0dcc2e7ace6c869a0ed8",
+      "build": "6e6a63db0409e132",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:49:54.815Z",
+      "finishedAt": "2026-10-22T06:50:32.731Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478",
+      "failureState": {
+        "path": "/pletina/",
+        "status": "Abriendo la nueva versión…",
+        "version": "fbb03046132d7478",
+        "workers": null,
+        "active": "activated",
+        "waiting": "installed",
+        "cacheVersions": [
+          "fbb03046132d7478",
+          "27bc2051b9b58d97"
+        ]
+      }
+    },
+    {
+      "id": "update-923-isolated-process-old-gate",
+      "classification": "diagnostic",
+      "explanation": "Gate ejecutado sin otros navegadores QA en paralelo: reproduce diez PASS y migración11 detenida. El primer diagnóstico CDP se intentó en Browser target y registró explícitamente que ServiceWorker.enable no estaba disponible ahí. No es prueba de recepción.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a.json",
+      "sourceSha256": "a279f0e68bae8e4f0e8669d5c89cb866c7295e52aaf0a3ac867831b77746455e",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T06:57:45.638Z",
+      "finishedAt": "2026-10-22T06:58:23.357Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478",
+      "passiveDiagnosticError": "cdpSession.send: Protocol error (ServiceWorker.enable): 'ServiceWorker.enable' wasn't found",
+      "failureState": {
+        "path": "/pletina/",
+        "status": "Abriendo la nueva versión…",
+        "version": "fbb03046132d7478",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "active": "activated",
+        "waiting": "installed",
+        "cacheVersions": [
+          "fbb03046132d7478",
+          "e0e3dafe8fe62dcf"
+        ]
+      }
+    },
+    {
+      "id": "update-923-page-cdp",
+      "classification": "diagnostic",
+      "explanation": "Observar el dominio ServiceWorker desde Page antes del clic no elimina el stall del gate largo. Identidades y estados de ambos workers quedan registrados; ausencia de errores sólo cubre su ventana observada.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a-page-cdp.json",
+      "sourceSha256": "72c19ab7cc48fa16b5e95ea82d3b4fd84f7fb822e8cd0ff1d950669c9c11f70a",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:05:50.711Z",
+      "finishedAt": "2026-10-22T07:06:28.795Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478",
+      "cdpBeforeMigration": true,
+      "failureState": {
+        "path": "/pletina/",
+        "status": "Abriendo la nueva versión…",
+        "version": "fbb03046132d7478",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "active": "activated",
+        "waiting": "installed",
+        "cacheVersions": [
+          "fbb03046132d7478",
+          "e0e3dafe8fe62dcf"
+        ]
+      }
+    },
+    {
+      "id": "update-923-receiver-trace",
+      "classification": "diagnostic",
+      "explanation": "Traza instrumental en ambos workers reales identificados por VERSION. El waiting correcto recibe PREPARE_APPLICATION y ACTIVATE_UPDATE y llama al skipWaiting nativo; no registra resolución ni rechazo dentro de la ventana y sigue installed. El worker antiguo reinicia su contexto. No se invoca skipWaiting por separado ni se afirma una causa interna.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a-receiver-diagnostic.json",
+      "sourceSha256": "6eab61dcaa141007a9d16d181b73c7d414528fede83f16636dbe040e010c714f",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:09:01.241Z",
+      "finishedAt": "2026-10-22T07:09:39.016Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478",
+      "cdpBeforeMigration": true,
+      "receiverInstrumentation": "Diagnostic message observers and delegating wrappers on both real workers, identified by VERSION. Native skipWaiting is never invoked separately; original promise returned unchanged. This instrumented run is diagnostic evidence.",
+      "failureState": {
+        "path": "/pletina/",
+        "status": "Abriendo la nueva versión…",
+        "version": "fbb03046132d7478",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "active": "activated",
+        "waiting": "installed",
+        "cacheVersions": [
+          "fbb03046132d7478",
+          "e0e3dafe8fe62dcf"
+        ]
+      },
+      "receiverTraceSummary": [
+        {
+          "version": "fbb03046132d7478",
+          "observedVersion": "fbb03046132d7478",
+          "traceReset": true,
+          "events": []
+        },
+        {
+          "version": "e0e3dafe8fe62dcf",
+          "observedVersion": "e0e3dafe8fe62dcf",
+          "traceReset": false,
+          "events": [
+            {
+              "event": "message-received",
+              "type": "PREPARE_APPLICATION",
+              "at": "2026-10-22T07:09:08.667Z"
+            },
+            {
+              "event": "native-skipWaiting-called",
+              "type": null,
+              "at": "2026-10-22T07:09:08.706Z"
+            },
+            {
+              "event": "message-received",
+              "type": "ACTIVATE_UPDATE",
+              "at": "2026-10-22T07:09:08.706Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "update-923-online-cleanup-control",
+      "classification": "diagnostic",
+      "explanation": "Restaurar sólo fullContext.setOffline(false) antes de cerrarlo no corrige el stall. El control10 sigue verificando offline antes de esa limpieza. No se atribuye la causa a esta emulación.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a-online-cleanup-control.json",
+      "sourceSha256": "ea45fce7a6ee45e1c82a0e298d407bcd596e3b2fc46bd8723435d7e26767ed13",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": false
+      },
+      "counts": {
+        "values": {
+          "pass": 10,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:11:09.955Z",
+      "finishedAt": "2026-10-22T07:11:47.855Z",
+      "failures": [
+        {
+          "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+          "status": "fail",
+          "errorExcerpt": "page.waitForFunction: Timeout 30000ms exceeded."
+        }
+      ],
+      "fatal": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "baselineVersion": "fbb03046132d7478",
+      "cdpBeforeMigration": true,
+      "fullContextNetworkRestoredBeforeClose": true,
+      "failureState": {
+        "path": "/pletina/",
+        "status": "Abriendo la nueva versión…",
+        "version": "fbb03046132d7478",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "active": "activated",
+        "waiting": "installed",
+        "cacheVersions": [
+          "fbb03046132d7478",
+          "e0e3dafe8fe62dcf"
+        ]
+      }
+    },
+    {
+      "id": "activation-passive-initial",
+      "classification": "harness",
+      "explanation": "La activación sí alcanzó el root923, pero el primer runner diagnóstico abortó al leer durante una navegación. Se conserva el fatal Execution context destroyed; no se marca como PASS ni como fallo de activación.",
+      "sourceJson": "artifacts/pwa-port/activation-passive-fbb-to-92345453b622660a.json",
+      "sourceSha256": "3120fc8e483a639c8ace5a625185d5fc95389e19709c20d28e63022f5885c0f2",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "qaPassClaimed": false,
+        "diagnosticOnly": true
+      },
+      "counts": null,
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "contextClosed": true,
+        "browserClosed": true,
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:01:44.974Z",
+      "finishedAt": "2026-10-22T07:01:48.989Z",
+      "failures": [],
+      "fatal": "page.evaluate: Execution context was destroyed, most likely because of a navigation",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "baselineVersion": "fbb03046132d7478",
+      "nextVersion": "92345453b622660a",
+      "finalDiagnosticState": {
+        "path": "/pletina/",
+        "displayedVersion": "92345453b622660a",
+        "appVisible": false,
+        "waiting": null,
+        "cacheVersions": [
+          "92345453b622660a"
+        ]
+      }
+    },
+    {
+      "id": "activation-passive-complete",
+      "classification": "diagnostic",
+      "explanation": "Migración mínima entre distribuciones reales, CDP pasivo, sin wrapper de emisor/receptor: abre la app canónica923. Es observación diagnóstica, no una suite QA ni prueba física.",
+      "sourceJson": "artifacts/pwa-port/activation-passive-fbb-to-92345453b622660a-complete.json",
+      "sourceSha256": "197ce09b62bc0434f9d0193b7884e00aaee95faec51533bfd259a4a56cd23b31",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "qaPassClaimed": false,
+        "diagnosticOnly": true,
+        "applicationEntered": true
+      },
+      "counts": null,
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "contextClosed": true,
+        "browserClosed": true,
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:02:55.595Z",
+      "finishedAt": "2026-10-22T07:03:00.039Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "baselineVersion": "fbb03046132d7478",
+      "nextVersion": "92345453b622660a",
+      "finalDiagnosticState": {
+        "path": "/pletina/application/index.31173812f4d4929b.html",
+        "displayedVersion": null,
+        "appVisible": true,
+        "waiting": null,
+        "cacheVersions": [
+          "92345453b622660a"
+        ]
+      }
+    },
+    {
+      "id": "activation-sender-wrapper",
+      "classification": "diagnostic",
+      "explanation": "El control mínimo con el wrapper del emisor abre la app. Este factor aislado no reproduce el stall del gate largo; no prueba que el wrapper sea inocuo bajo toda combinación.",
+      "sourceJson": "artifacts/pwa-port/activation-sender-wrapper-fbb-to-92345453b622660a.json",
+      "sourceSha256": "a2cd3f5979aa5543c6c395ed8cdda11d5982577db5da9e8c2ef9a873b96a345f",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "qaPassClaimed": false,
+        "diagnosticOnly": true,
+        "applicationEntered": true
+      },
+      "counts": null,
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "contextClosed": true,
+        "browserClosed": true,
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:04:19.027Z",
+      "finishedAt": "2026-10-22T07:04:23.633Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "baselineVersion": "fbb03046132d7478",
+      "nextVersion": "92345453b622660a",
+      "finalDiagnosticState": {
+        "path": "/pletina/application/index.31173812f4d4929b.html",
+        "displayedVersion": null,
+        "appVisible": true,
+        "waiting": null,
+        "cacheVersions": [
+          "92345453b622660a"
+        ]
+      }
+    },
+    {
+      "id": "activation-qa-title",
+      "classification": "diagnostic",
+      "explanation": "El control mínimo con título/metaQA A abre la variante e0e3. Primero reconstruye el canónico923 con bytes idénticos. El campo qaTitleVariant/qaVariantChange es el alcance preciso; la frase estática No A/B title variants del scope histórico no aplica a este control. No fue reescrito el archivo histórico.",
+      "sourceJson": "artifacts/pwa-port/activation-qa-title-fbb-to-92345453b622660a.json",
+      "sourceSha256": "a23fecf4c2e4cd8d7a666fca73dc1e0dad9798a67112459c544e89894c1e0dc6",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "qaPassClaimed": false,
+        "diagnosticOnly": true,
+        "applicationEntered": true
+      },
+      "counts": null,
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "contextClosed": true,
+        "browserClosed": true,
+        "serverClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:04:31.048Z",
+      "finishedAt": "2026-10-22T07:04:35.656Z",
+      "failures": [],
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "baselineVersion": "fbb03046132d7478",
+      "nextVersion": "e0e3dafe8fe62dcf",
+      "canonicalNextVersion": "92345453b622660a",
+      "finalDiagnosticState": {
+        "path": "/pletina/application/index.a64720f40ad6aea5.html",
+        "displayedVersion": null,
+        "appVisible": true,
+        "waiting": null,
+        "cacheVersions": [
+          "e0e3dafe8fe62dcf"
+        ]
+      }
+    },
+    {
+      "id": "update-923-fresh-chrome-control",
+      "classification": "diagnostic",
+      "explanation": "Mismo gate y misma versión Chrome, proceso nuevo para el escenario11 independiente: once PASS con CDP pasivo. Se retiró el control especial de restaurar offline. Aísla estado acumulado del proceso QA, sin identificar su mecanismo interno ni cambiar el producto.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a-fresh-browser-control.json",
+      "sourceSha256": "4b53b42a9c674fb7915f06e50127629dc1486d7abb2a557cca7de142c58408a2",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": true
+      },
+      "counts": {
+        "values": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:13:44.319Z",
+      "finishedAt": "2026-10-22T07:13:55.503Z",
+      "failures": [],
+      "baselineVersion": "fbb03046132d7478",
+      "migrationBrowserIsolation": {
+        "previousBrowserClosed": true,
+        "mode": "Fresh disposable Chrome process with the same launch options; no previous test contexts or emulation.",
+        "previousBrowserVersion": "153.0.8010.52",
+        "migrationBrowserVersion": "153.0.8010.52"
+      },
+      "cdpBeforeMigration": true
+    },
+    {
+      "id": "update-923-final",
+      "classification": "harness",
+      "explanation": "Once controles PASS con proceso Chrome nuevo para migración independiente, sin CDP previo ni wrapper del receptor. Se mantienen intactos los fallos anteriores; resultado condicionado al aislamiento explícito del escenario, sin afirmar reparación de un mecanismo interno del navegador.",
+      "sourceJson": "artifacts/pwa-port/update-e2e-92345453b622660a-final.json",
+      "sourceSha256": "7f1f27d18f9f4b564c79102ea6ac96e72d120aceab7ffcb155a9cc9b043b24ba",
+      "build": "92345453b622660a",
+      "recordedResult": {
+        "passed": true
+      },
+      "counts": {
+        "values": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "origin": "computed from source checks without changing status"
+      },
+      "errorCounts": {
+        "reportedEvents": 0,
+        "handledExpected": 0,
+        "unexpected": 0
+      },
+      "cleanup": {
+        "browserClosed": true,
+        "localServerClosed": true,
+        "temporarySiteRemoved": true
+      },
+      "startedAt": "2026-10-22T07:14:27.403Z",
+      "finishedAt": "2026-10-22T07:14:38.832Z",
+      "failures": [],
+      "baselineVersion": "fbb03046132d7478",
+      "migrationBrowserIsolation": {
+        "previousBrowserClosed": true,
+        "mode": "Fresh disposable Chrome process with the same launch options; no previous test contexts or emulation.",
+        "previousBrowserVersion": "153.0.8010.52",
+        "migrationBrowserVersion": "153.0.8010.52"
+      },
+      "cdpBeforeMigration": false
+    }
+  ],
+  "validation": {
+    "allSourceJsonReadAndParsed": true,
+    "allSourcesUnchangedDuringInventory": true,
+    "entryCount": 28,
+    "uniqueSourceJsonCount": 51,
+    "countsNotAggregatedAcrossRuns": true,
+    "finalAllRunsExcluded": true
+  }
+}

@@ -1,0 +1,753 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-22T06:42:31.754Z",
+  "build": "6e6a63db0409e132",
+  "suite": "responsive",
+  "profiles": [
+    {
+      "profile": "chromium-android-layout",
+      "engine": "chromium",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-22T06:42:32.877Z",
+          "status": "pass",
+          "build": "6e6a63db0409e132",
+          "applicationPath": "/pletina/application/index.159e327ae5ead24a.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-22T06:42:33.715Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-22T06:42:33.716Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-22T06:42:35.138Z"
+        },
+        {
+          "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+          "startedAt": "2026-10-22T06:42:35.142Z",
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 390,
+              "height": 844,
+              "documentWidth": 390,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ],
+              "dock": {
+                "top": 780.0625,
+                "bottom": 844,
+                "height": 63.9375
+              },
+              "sidebar": false,
+              "query": "QA Media"
+            },
+            {
+              "width": 1100,
+              "height": 650,
+              "documentWidth": 1100,
+              "tabs": [],
+              "sidebar": true,
+              "query": "QA Media"
+            },
+            {
+              "width": 700,
+              "height": 390,
+              "documentWidth": 700,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ],
+              "dock": {
+                "top": 326.0625,
+                "bottom": 390,
+                "height": 63.9375
+              },
+              "sidebar": false,
+              "query": "QA Media"
+            },
+            {
+              "width": 390,
+              "height": 650,
+              "documentWidth": 390,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ],
+              "dock": {
+                "top": 586.0625,
+                "bottom": 650,
+                "height": 63.9375
+              },
+              "sidebar": false,
+              "query": "QA Media"
+            }
+          ],
+          "physicalRotationClaimed": false,
+          "finishedAt": "2026-10-22T06:42:36.939Z"
+        },
+        {
+          "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+          "startedAt": "2026-10-22T06:42:36.946Z",
+          "status": "pass",
+          "syntheticLifecycleSignals": true,
+          "realReload": true,
+          "physicalProcessRestoreClaimed": false,
+          "finishedAt": "2026-10-22T06:42:39.525Z"
+        },
+        {
+          "name": "responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard",
+          "startedAt": "2026-10-22T06:42:39.526Z",
+          "status": "pass",
+          "syntheticViewportMetrics": true,
+          "physicalKeyboardClaimed": false,
+          "samples": [
+            {
+              "step": "focus-without-occlusion",
+              "innerHeight": 844,
+              "visualHeight": 844,
+              "scale": 1,
+              "hidden": false,
+              "display": "flex",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "small-height-change",
+              "innerHeight": 844,
+              "visualHeight": 754,
+              "scale": 1,
+              "hidden": false,
+              "display": "flex",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "focused-entry-with-occlusion",
+              "innerHeight": 844,
+              "visualHeight": 506,
+              "scale": 1,
+              "hidden": true,
+              "display": "none",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "height-recovery-with-focus-retained",
+              "innerHeight": 844,
+              "visualHeight": 844,
+              "scale": 1,
+              "hidden": false,
+              "display": "flex",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "pinch-zoom-is-not-a-keyboard",
+              "innerHeight": 844,
+              "visualHeight": 422,
+              "scale": 2,
+              "hidden": false,
+              "display": "flex",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "occlusion-after-zoom-reset",
+              "innerHeight": 844,
+              "visualHeight": 506,
+              "scale": 1,
+              "hidden": true,
+              "display": "none",
+              "searchFocused": true,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            },
+            {
+              "step": "blur-with-occlusion-still-reported",
+              "innerHeight": 844,
+              "visualHeight": 506,
+              "scale": 1,
+              "hidden": false,
+              "display": "flex",
+              "searchFocused": false,
+              "tabs": [
+                "Inicio",
+                "Buscar",
+                "Podcasts",
+                "Tu biblioteca"
+              ]
+            }
+          ],
+          "descriptorsRestored": true,
+          "finishedAt": "2026-10-22T06:42:40.022Z"
+        },
+        {
+          "name": "responsive.keyboard-navigation: Tab and Enter reach named searches with a current destination",
+          "startedAt": "2026-10-22T06:42:40.024Z",
+          "status": "pass",
+          "keyboardActions": [
+            "Tab",
+            "Enter",
+            "typing",
+            "Escape"
+          ],
+          "currentDestination": "Podcasts",
+          "screenReaderDeviceClaimed": false,
+          "finishedAt": "2026-10-22T06:42:41.014Z"
+        },
+        {
+          "name": "responsive.source-dialog-accessibility: keyboard validation exposes and clears its associated error",
+          "startedAt": "2026-10-22T06:42:41.015Z",
+          "status": "pass",
+          "nativeDialogClosedByEscape": true,
+          "labelledInputAndError": true,
+          "screenReaderDeviceClaimed": false,
+          "finishedAt": "2026-10-22T06:42:42.927Z"
+        }
+      ],
+      "errors": [],
+      "build": "6e6a63db0409e132",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "puppeteerVersion": "25.14.0",
+      "browserVersion": "153.0.8010.52",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-22T06:42:32.663Z",
+      "networkTransport": "Puppeteer HTTP interception + Playwright UI; unchanged provider fixtures and production service worker.",
+      "counts": {
+        "pass": 7,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "keyboardOcclusion": {
+        "syntheticViewportMetrics": true,
+        "physicalKeyboardClaimed": false,
+        "samples": [
+          {
+            "step": "focus-without-occlusion",
+            "innerHeight": 844,
+            "visualHeight": 844,
+            "scale": 1,
+            "hidden": false,
+            "display": "flex",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "small-height-change",
+            "innerHeight": 844,
+            "visualHeight": 754,
+            "scale": 1,
+            "hidden": false,
+            "display": "flex",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "focused-entry-with-occlusion",
+            "innerHeight": 844,
+            "visualHeight": 506,
+            "scale": 1,
+            "hidden": true,
+            "display": "none",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "height-recovery-with-focus-retained",
+            "innerHeight": 844,
+            "visualHeight": 844,
+            "scale": 1,
+            "hidden": false,
+            "display": "flex",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "pinch-zoom-is-not-a-keyboard",
+            "innerHeight": 844,
+            "visualHeight": 422,
+            "scale": 2,
+            "hidden": false,
+            "display": "flex",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "occlusion-after-zoom-reset",
+            "innerHeight": 844,
+            "visualHeight": 506,
+            "scale": 1,
+            "hidden": true,
+            "display": "none",
+            "searchFocused": true,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          },
+          {
+            "step": "blur-with-occlusion-still-reported",
+            "innerHeight": 844,
+            "visualHeight": 506,
+            "scale": 1,
+            "hidden": false,
+            "display": "flex",
+            "searchFocused": false,
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ]
+          }
+        ],
+        "descriptorsRestored": true
+      },
+      "finalState": {
+        "path": "/pletina/application/index.159e327ae5ead24a.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Canciones",
+          "Resultado principal",
+          "Artistas",
+          "Discos"
+        ],
+        "navigation": {
+          "index": 11,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "historyLength": 15
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": false,
+              "local": false,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 2,
+          "api.deezer.com/chart/0/artists": 2,
+          "images.pletina.test/cover.svg": 5,
+          "api.deezer.com/search/artist": 8,
+          "api.deezer.com/search/album": 8,
+          "api.deezer.com/search/track": 8,
+          "itunes.apple.com/search": 1,
+          "music.youtube.com/youtubei/v1/search": 2,
+          "feeds.pletina.test/rss": 1,
+          "feeds.pletina.test/english": 1,
+          "www.youtube.com/youtubei/v1/search": 1,
+          "i.ytimg.com/vi/qaAudio001a/mqdefault.jpg": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio001a/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-22T06:42:42.980Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 7,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-22T06:42:43.240Z",
+  "browserFeatureChecksPassed": true
+}
