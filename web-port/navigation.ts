@@ -3,9 +3,9 @@ import type { NavigationDriver, Route } from '../src/lib/nav.svelte'
 type Snapshot = { stack: Route[]; index: number }
 type Navigation = Snapshot & { restore(stack: Route[], index: number, preserveView?: boolean): void; installDriver(driver: NavigationDriver): void }
 type Entry = { pletinaNavigation: 1; session: string; index: number; overlay: boolean; snapshot: Snapshot;
-  protectedRoot?: true; rootBoundary?: true; rootDistance?: number; rootId?: string; preparedOverlay?: true }
-type Options = { onExitArmed?: () => void }
-export const ROOT_EXIT_WINDOW_MS = 800
+  protectedRoot?: true; rootBoundary?: true; rootDistance?: number; rootId?: string; rootGuardDepth?: 2; preparedOverlay?: true }
+type Options = { onRootBack?: () => void }
+const ROOT_GUARD_DEPTH = 2
 const markerId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
 function route(value: unknown): value is Route {
@@ -35,6 +35,7 @@ function navigationEntry(value: unknown): value is Entry {
     item.index === item.snapshot.index && item.index < item.snapshot.stack.length &&
     (item.protectedRoot === undefined || item.protectedRoot === true && Number.isInteger(item.rootDistance) && item.rootDistance! >= 0) &&
     (item.rootId === undefined || item.protectedRoot === true && typeof item.rootId === 'string' && /^[a-z0-9-]{8,100}$/.test(item.rootId)) &&
+    (item.rootGuardDepth === undefined || item.protectedRoot === true && item.rootGuardDepth === ROOT_GUARD_DEPTH) &&
     (item.preparedOverlay === undefined || item.preparedOverlay === true && item.overlay) &&
     (item.rootBoundary === undefined || item.rootBoundary === true && item.protectedRoot === true && !item.overlay && item.index === 0)
 }
@@ -66,27 +67,30 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
   let overlaysRemain: () => boolean = () => false
   let reclaimOverlay = false
   let pending: (() => void)[] = []
-  let protectedRoot = standalone && previous?.protectedRoot === true && previous.rootId !== undefined
+  let protectedRoot = standalone && previous?.protectedRoot === true && previous.rootId !== undefined && previous.rootGuardDepth === ROOT_GUARD_DEPTH
   let rootId = protectedRoot ? previous!.rootId! : markerId()
   let rootDistance = protectedRoot ? previous!.rootDistance! : 0
   let rootTravel = false
-  let exitHeld: { rootId: string; deadline: number } | null = null
-  let exitTimer: number | undefined
-  let restoreAfterHide = false
-  let returnedBoundary: string | null = null
-  let leaving = false
-  let exitSteps = 0
-  const stopExitHold = () => {
-    browser.clearTimeout(exitTimer)
-    exitTimer = undefined
-    exitHeld = null
-    restoreAfterHide = false
+  let rootRepairTimer: number | undefined
+  let returnedBoundary: { rootId: string; distance: number } | null = null
+  const stopRootRepair = () => {
+    browser.clearTimeout(rootRepairTimer)
+    rootRepairTimer = undefined
   }
-  const restoreExpiredHold = () => {
-    if (!exitHeld || !restoreAfterHide && Date.now() < exitHeld.deadline) return
-    stopExitHold()
-    rootTravel = true
-    history.forward()
+  const repairRoot = () => {
+    stopRootRepair()
+    // Los dos Atrás pueden invalidar una travesía pedida desde el primer pop.
+    // Se agrupan los eventos antes de leer el estado real, y se vuelve al ancla
+    // exacta: pedir varios Adelante podría acabar en la rama de búsqueda.
+    rootRepairTimer = browser.setTimeout(() => {
+      rootRepairTimer = undefined
+      const value = history.state
+      if (!navigationEntry(value) || value.session !== session) return
+      if (value.rootId !== rootId) history.forward()
+      else if (value.rootBoundary && value.rootDistance! < ROOT_GUARD_DEPTH) {
+        history.go(ROOT_GUARD_DEPTH - value.rootDistance!)
+      }
+    }, 0)
   }
   if (standalone && !protectedRoot) {
     // La migración sustituye también cualquier overlay antiguo en una sola
@@ -99,7 +103,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
     try { browser.sessionStorage.setItem(storageKey, JSON.stringify({ session, snapshot: current })) } catch { /* Historial sigue operativo sin storage. */ }
   }
   const entry = (overlay = false, index = current.index): Entry => ({ pletinaNavigation: 1, session, index, overlay,
-    ...(protectedRoot ? { protectedRoot: true as const, rootDistance, rootId } : {}),
+    ...(protectedRoot ? { protectedRoot: true as const, rootDistance, rootId, rootGuardDepth: ROOT_GUARD_DEPTH } : {}),
     ...(overlay && standalone ? { preparedOverlay: true as const } : {}),
     snapshot: { stack: JSON.parse(JSON.stringify(current.stack)) as Route[], index } })
   const replace = () => { history.replaceState(entry(guarded), '', browser.location.href); persist() }
@@ -112,8 +116,8 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
   }
   const protect = (rebuild = false) => {
     if (!standalone || protectedRoot && !rebuild) return
-    // Una sesión antigua no tiene entrada debajo de Inicio. Reconstruimos solo
-    // su historial interno; nunca cambiamos de documento ni tocamos el audio.
+    // Adaptar las sesiones antiguas a los dos límites solo reconstruye
+    // su historial interno; nunca cambia de documento ni toca el audio.
     // Acotamos esta migración para no superar el límite de llamadas de Safari.
     if (current.stack.length > 32) {
       const start = Math.max(1, current.index - 15)
@@ -126,6 +130,10 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
     rootId = markerId()
     rootDistance = 0
     history.replaceState({ ...entry(false, 0), rootBoundary: true }, '', browser.location.href)
+    // Dos gestos pueden llegar antes del primer popstate. Ambos deben seguir
+    // dentro del documento para conservar el HTMLAudio del reproductor.
+    rootDistance++
+    history.pushState({ ...entry(false, 0), rootBoundary: true }, '', browser.location.href)
     for (let index = 0; index < current.stack.length; index++) {
       push(false, index)
     }
@@ -138,55 +146,24 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
   if (!closingGuard && !previous?.rootBoundary) replace()
 
   const run = (action: () => void) => {
-    if (leaving) {
-      // Una acción nueva reclama el historial sin seguir recorriendo una salida pendiente.
-      leaving = false
-      pending.push(action)
-      protect(true)
-      drain()
-    } else if (exitHeld) {
-      pending.push(action)
-      stopExitHold()
-      rootTravel = true
-      history.forward()
-    } else if (closingGuard || rootTravel || openingGuard) pending.push(action)
+    if (closingGuard || rootTravel || openingGuard) pending.push(action)
     else action()
   }
   const onPop = (event: PopStateEvent) => {
     const value = navigationEntry(event.state) ? event.state : null
     if (returnedBoundary !== null) {
-      const restored = value?.session === session && value.rootBoundary && value.rootId === returnedBoundary
+      const restored = value?.session === session && value.rootBoundary && value.rootId === returnedBoundary.rootId &&
+        value.rootDistance === returnedBoundary.distance
       returnedBoundary = null
       // pageshow ya ha pedido Adelante. Algunos motores notifican además el pop
       // del límite restaurado; no debe solicitar un segundo salto.
       if (restored) return
     }
-    if (leaving) {
-      // Las compactaciones dejan límites antiguos. Solo se recorren nuestros marcadores
-      // validados; cada back reduce el historial, sin pushState ni volver hacia delante.
-      if (value?.session === session && exitSteps-- > 0) history.back()
-      return
-    }
-    if (exitHeld) {
-      const held = exitHeld.rootId
-      stopExitHold()
-      if (value?.session === session && value.rootId === held && value.index === 0 && !value.overlay && !value.rootBoundary) {
-        // Adelante durante la ventana cancela la salida y conserva su sentido de navegación.
-        if (current.stack.length > 1) { history.forward(); return }
-      } else {
-        // El segundo Atrás ya ha atravesado el límite de forma nativa. Si aún queda
-        // historial interno de esta sesión, se consume hasta entregar el control al navegador.
-        leaving = true
-        exitSteps = Math.max(1, history.length)
-        if (value?.session === session) history.back()
-        return
-      }
-    }
     if (standalone && protectedRoot && value?.session === session && value.rootId !== rootId) {
       // Un salto iniciado fuera de Inicio puede alcanzar una raíz compactada anterior.
-      // Se vuelve hacia nuestra raíz vigente sin tratarlo como el segundo toque de salida.
+      // Se vuelve hacia nuestra raíz vigente sin abandonar el documento.
       rootTravel = true
-      history.forward()
+      repairRoot()
       return
     }
     if (value?.session === session && value.protectedRoot) rootDistance = value.rootDistance!
@@ -194,7 +171,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
       // En modo instalado, Atrás en la raíz conserva el documento y la rama
       // Adelante. En una pestaña normal se permite abandonar la página.
       if (standalone) {
-        const canExit = current.index === 0 && current.stack[0].name === 'home' && !guarded &&
+        const notifyRootBack = current.index === 0 && current.stack[0].name === 'home' && !guarded &&
           !closingGuard && !openingGuard && !rootTravel && !overlayWanted && !overlaysRemain() && pending.length === 0
         const repair = repairForward
         const close = guarded
@@ -218,27 +195,17 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
           drain()
           return
         }
-        if (canExit) {
-          // El primer Atrás se queda en el límite: un segundo gesto nativo puede salir
-          // incluso cuando no existe documento anterior para history.back(). No se cierra
-          // la ventana por JavaScript; el navegador/SO decide el destino de ese gesto.
-          exitHeld = { rootId, deadline: Date.now() + ROOT_EXIT_WINDOW_MS }
-          exitTimer = browser.setTimeout(() => {
-            if (!exitHeld) return
-            stopExitHold()
-            rootTravel = true
-            history.forward()
-          }, ROOT_EXIT_WINDOW_MS)
-          try { options.onExitArmed?.() } catch { /* El aviso no controla la navegación. */ }
-        } else {
-          rootTravel = true
-          history.forward()
+        rootTravel = true
+        repairRoot()
+        if (notifyRootBack) {
+          try { options.onRootBack?.() } catch { /* El aviso no controla la navegación. */ }
         }
       }
       else history.back()
       return
     }
     if (rootTravel) {
+      stopRootRepair()
       rootTravel = false
       if (value?.pletinaNavigation === 1 && value.session === session && snapshot(value.snapshot) &&
         Number.isInteger(value.index) && value.index! >= 0 && value.index! < current.stack.length) {
@@ -304,33 +271,19 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
     drain()
   }
   const onPageShow = (event: PageTransitionEvent) => {
-    if (!event.persisted) { restoreExpiredHold(); return }
-    // BFCache conserva las variables de la salida anterior. Adelante debe restaurar
-    // el ancla antes de admitir otro doble Atrás, sin consumir de nuevo la página ajena.
-    stopExitHold()
-    leaving = false
+    if (!event.persisted) return
+    // Restaurar desde cualquiera de los dos límites debe recuperar Inicio.
+    // Algunos motores omiten el popstate del límite restaurado.
     const value = navigationEntry(history.state) ? history.state : null
     if (standalone && value?.session === session && (value.rootBoundary || value.rootId !== rootId)) {
       rootTravel = true
-      returnedBoundary = value.rootBoundary ? value.rootId ?? null : null
-      history.forward()
+      if (value.rootId === rootId) rootDistance = value.rootDistance!
+      returnedBoundary = value.rootBoundary && value.rootId ? { rootId: value.rootId, distance: value.rootDistance! } : null
+      repairRoot()
     }
-  }
-  const onPageHide = () => {
-    if (!exitHeld) return
-    restoreAfterHide = true
-    browser.clearTimeout(exitTimer)
-    exitTimer = undefined
-  }
-  const onVisibility = () => {
-    if (browser.document.hidden) { if (exitHeld) restoreAfterHide = true }
-    else restoreExpiredHold()
   }
   browser.addEventListener('popstate', onPop)
   browser.addEventListener('pageshow', onPageShow)
-  browser.addEventListener('pagehide', onPageHide)
-  browser.addEventListener('focus', restoreExpiredHold)
-  browser.document.addEventListener('visibilitychange', onVisibility)
   nav.installDriver({
     push(stack, index) {
       const next = JSON.parse(JSON.stringify({ stack, index })) as Snapshot
@@ -410,18 +363,16 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
       }
     },
   })
-  if (closingGuard) history.back()
+  if (standalone && !protectedRoot) protect()
+  else if (closingGuard) history.back()
   else if (previous?.rootBoundary) {
-    if (standalone) { rootTravel = true; history.forward() }
+    if (standalone) { rootTravel = true; repairRoot() }
     else history.back()
   }
   else protect()
   return () => {
-    stopExitHold()
+    stopRootRepair()
     browser.removeEventListener('popstate', onPop)
     browser.removeEventListener('pageshow', onPageShow)
-    browser.removeEventListener('pagehide', onPageHide)
-    browser.removeEventListener('focus', restoreExpiredHold)
-    browser.document.removeEventListener('visibilitychange', onVisibility)
   }
 }

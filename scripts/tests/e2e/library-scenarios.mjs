@@ -6,7 +6,7 @@ import { runPodcastRecoveryScenario } from './podcast-recovery-scenario.mjs'
 export const libraryScenarioInventory = [
   { id: 'library.navigation', actions: ['four mobile tabs', 'browser Back/Forward', 'query replacement', 'reload', 'viewport bounds'] },
   { id: 'library.discovery', actions: ['discovery cards', 'artist detail', 'album detail', 'recently viewed navigation', 'pinned tile navigation', 'unpin on Home'] },
-  { id: 'library.search', actions: ['songs/artists/albums', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
+  { id: 'library.search', actions: ['songs/artists/albums', 'title plays selected song', 'artist button opens detail without playback', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
   { id: 'library.favorites', actions: ['save/remove artist', 'save/remove album', 'like/filter/unlike song'] },
   { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
   { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'cancel pending catalog response', 'navigate away during pending match', 'ignore obsolete matches without saving', 'all omitted', 'empty name', 'review matches/omissions', 'transaction abort rollback and retry', 'save duplicate entries', 'reload'] },
@@ -156,7 +156,47 @@ export async function runLibraryScenarios(ctx) {
     assert.equal(await u.rows().count(), 8)
     assert.equal(await page.locator('.top-result .top-name').textContent(), artistName)
     assert.ok(await page.locator('.grid .card .hit').count() >= albums.length)
-    return { tracks: tracks.length, artists: artists.length, albums: albums.length }
+    const pauseButton = page.locator('.mini button[aria-label="Pausa"], .player button[title="Pausa (espacio)"]').first()
+    const playbackState = () => page.evaluate(() => {
+      const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+      return { selectedId: queue?.queue[queue.order[queue.pos]]?.track.id ?? null,
+        audios: window.__qaAudio.instances.map(audio => ({ paused: audio.paused, time: audio.currentTime, duration: audio.duration, error: audio.error?.code ?? null })),
+        playingEvents: window.__qaAudio.events.filter(event => event.type === 'playing').length,
+        title: document.querySelector('.mini .title, .player .info .title')?.textContent.trim() }
+    })
+    let selected, afterArtist
+    try {
+      await u.tap(u.rows().first().locator('.name'))
+      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > .15 && !audio.error))
+      await pauseButton.waitFor()
+      await u.tap(pauseButton)
+      await u.wait(() => window.__qaAudio.instances.every(audio => audio.paused))
+      selected = await playbackState()
+      assert.equal(selected.selectedId, first.id)
+      assert.equal(selected.title, first.title)
+      assert.ok(selected.audios.some(audio => audio.time > 0 && audio.duration > 0 && audio.time < Math.min(30, audio.duration / 2)),
+        'Pause before the product records this short playback in history')
+      const playingEvents = selected.playingEvents
+      // Choose another row: accidentally bubbling to its play handler would select a different song.
+      const artistLink = u.rows().nth(1).locator('.by button.link')
+      assert.equal((await artistLink.textContent()).trim(), trackArtist)
+      await u.tap(artistLink)
+      await u.wait(name => document.querySelector('.banner h1')?.textContent === name, trackArtist)
+      assert.equal(await currentRoute(), 'artist')
+      afterArtist = await playbackState()
+      assert.equal(afterArtist.selectedId, first.id)
+      assert.equal(afterArtist.title, first.title)
+      assert.equal(afterArtist.playingEvents, playingEvents)
+      assert.ok(afterArtist.audios.every(audio => audio.paused), 'Artist navigation must not play or resume a song')
+      await u.library('Historial')
+      assert.match(await page.locator('.empty-state').textContent(), /Aún no has escuchado nada/)
+      await u.search(query)
+    } finally {
+      if (await pauseButton.isVisible().catch(() => false)) await u.tap(pauseButton)
+    }
+    return { tracks: tracks.length, artists: artists.length, albums: albums.length,
+      titleStartedTrackId: selected.selectedId, artistOpenedWithoutPlayback: true,
+      pausedBeforeHistoryThreshold: true, historyRemainedEmpty: true, audioAfterArtist: afterArtist.audios }
   })
 
   await check('library.search: natural song de artist retries the empty literal query', async () => {

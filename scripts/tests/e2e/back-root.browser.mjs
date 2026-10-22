@@ -154,7 +154,7 @@ async function runProfile(app, baseURL) {
     report.kind = app ? 'native-desktop-app-window-mobile-layout' : 'desktop-browser-mobile-layout'
     report.lifecycle = []
     await ctx.context.exposeBinding('__qaRecordBackLifecycle', (_source, value) => {
-      report.lifecycle.push({ ...value, stage: report.exitControlStage ?? null })
+      report.lifecycle.push({ ...value, stage: report.backControlStage ?? null })
       if (report.lifecycle.length > 250) report.lifecycle.shift()
     })
     await ctx.context.addInitScript(() => {
@@ -185,7 +185,7 @@ async function runProfile(app, baseURL) {
     })
     const { page, check, tap } = ctx
     // An earlier Pletina installer may auto-open its optional app in standalone mode.
-    // This real external control document measures leaving the app without that redirect.
+    // A real predecessor also detects accidental departures from the installed app.
     const priorURL = app ? new URL('/__qa_back_control__/before', baseURL).href : baseURL + '?back-root-prior=1'
     const opened = await check('back.open: compiled application retains the native window mode', async () => {
       if (app) {
@@ -349,7 +349,7 @@ async function runProfile(app, baseURL) {
       })
       return
     }
-    await check('back.root: isolated history Back rearms after the exit window and keeps audio and document', async () => {
+    await check('back.root: isolated history Back stays protected and keeps audio and document', async () => {
       const observations = []
       for (let n = 0; n < 5; n++) { const events = await protectedBack(); observations.push({ events, ...await route(), ...await advancingSame() }) }
       return { observations }
@@ -411,11 +411,12 @@ async function runProfile(app, baseURL) {
       await advancingSame(); await traverse('forward', 'search')
       return { documentReloaded: true, restoredPaused: true, forwardRestored: true, ...await advancingSame() }
     })
-    await check('back.double-root: two quick history Back gestures leave the app and Forward can restore it', async () => {
-      report.exitControlStage = 'fresh-predecessor'
+    await check('back.double-root: same-task and first-popstate double Back keep the app and audio alive', async () => {
+      report.backControlStage = 'fresh-predecessor'
       // A long library session can prune the original external document from Chrome's
       // history. Keep all earlier long-session checks, then create a recent real predecessor
-      // for the exit control; API back cannot simulate the OS action beyond an empty history.
+      // so an unintended exit really would replace the document, rather than reach an empty
+      // history where API back does nothing. This is not an Android system Back control.
       await page.goto(priorURL, { waitUntil: 'load' })
       await page.goto(ctx.getappURL(), { waitUntil: 'load' })
       await page.locator('.app').waitFor()
@@ -424,44 +425,70 @@ async function runProfile(app, baseURL) {
       await page.waitForFunction(() => window.__qaAudio.instances.length === 1 && !window.__qaAudio.instances[0].paused &&
         window.__qaAudio.instances[0].currentTime > 0.2 && !window.__qaAudio.instances[0].error)
       identity = await capture()
-      const time = await identity.audio.evaluate(audio => audio.currentTime)
-      report.exitControlStage = 'first-back'
-      await page.evaluate(() => history.back())
-      await page.waitForFunction(() => history.state?.rootBoundary === true)
-      const departed = page.waitForURL(priorURL, { waitUntil: 'commit', timeout: 10000 })
-      void departed.catch(() => {}) // El evaluate también puede fallar antes de que se espere esta promesa.
-      const first = await page.evaluate(({ document: previous, audio, time }) => {
-        const s = history.state, last = window.__qaBackEvents.findLast(event => event.boundary)
-        const value = { sameDocument: document === previous, sameAudio: window.__qaAudio.instances[0] === audio,
-          audioPlaying: !audio.paused && !audio.error, time: audio.currentTime, previousTime: time,
-          route: s?.snapshot?.stack[s?.index]?.name, boundary: s?.rootBoundary === true,
-          elapsedSinceFirstBack: performance.now() - last.at, historyLength: history.length }
-        if (!value.sameDocument || !value.sameAudio || !value.audioPlaying || !value.boundary || value.route !== 'home') {
-          throw new Error('The first root Back must preserve the live application and its audio on the sentinel')
+      const observations = []
+      for (const sequence of ['same-task', 'first-popstate']) {
+        report.backControlStage = 'double-' + sequence
+        const before = await page.evaluate(() => ({ pops: window.__qaBackPops, historyLength: history.length,
+          documentToken: window.__qaDocumentToken }))
+        const input = await page.evaluate(sequence => {
+          const calls = []
+          const back = () => {
+            const state = history.state
+            calls.push({ at: performance.now(), index: state?.index ?? null,
+              boundary: state?.rootBoundary === true, pops: window.__qaBackPops })
+            history.back()
+          }
+          if (sequence === 'same-task') {
+            // No await or event-loop yield between these calls: this exercises traversals
+            // queued before the application can receive its first popstate.
+            back(); back()
+            return { calls, sequence, sameTask: true }
+          }
+          return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              removeEventListener('popstate', firstPop)
+              reject(new Error('The first root Back did not dispatch popstate'))
+            }, 5000)
+            function firstPop(event) {
+              clearTimeout(timeout)
+              const first = { at: performance.now(), boundary: event.state?.rootBoundary === true,
+                index: event.state?.index ?? null, pops: window.__qaBackPops }
+              back()
+              resolve({ calls, sequence, sameTask: false, firstPopstate: first,
+                secondCallInFirstPopstate: true })
+            }
+            addEventListener('popstate', firstPop, { once: true })
+            back()
+          })
+        }, sequence)
+        assert.equal(input.calls.length, 2)
+        if (sequence === 'same-task') {
+          assert.equal(input.calls[0].pops, input.calls[1].pops, 'Both Back calls must precede the first resulting popstate')
+        } else {
+          assert.equal(input.firstPopstate.boundary, true, 'The second call must follow the actual first root traversal')
+          assert.equal(input.secondCallInFirstPopstate, true)
         }
-        history.back()
-        return value
-      }, { ...identity, time })
-      report.firstExitBack = first
-      await departed
-      report.exitControlStage = 'departed'
-      assert.ok(first.elapsedSinceFirstBack < 800, 'The second gesture must reach the browser during the 800 ms exit window')
-      await page.locator('button').waitFor()
-      assert.equal(await page.locator('.app').count(), 0, 'The real previous control document must replace the application')
-      report.exitControlStage = 'forward-return'
-      await Promise.all([page.waitForURL(ctx.getappURL(), { waitUntil: 'commit' }), page.evaluate(() => history.forward())])
-      await page.locator('.app').waitFor()
-      await page.waitForFunction(() => history.state?.index === 0 && history.state?.overlay === false &&
-        history.state?.protectedRoot === true && !history.state?.rootBoundary)
-      await page.locator('.greeting').waitFor()
-      report.exitControlStage = 'first-back-after-forward'
-      const returnedDocument = await page.evaluate(() => window.__qaDocumentToken)
-      await protectedBack()
-      assert.equal(page.url(), ctx.getappURL())
-      assert.equal(await page.evaluate(() => window.__qaDocumentToken), returnedDocument, 'The first Back immediately after Forward must protect the returned app again')
-      return { first, historyBackCallsToExit: 2, freshExternalPredecessor: true, previousDocumentRestored: true, forwardRestoredHome: true, firstBackAfterForwardProtected: true,
-        actualBrowserHistoryTraversal: true, physicalAndroidBackClaimed: false,
-        audioContinuationAfterExitClaimed: false, systemHomeOrMinimizeClaimed: false }
+        await page.waitForFunction(before => {
+          const state = history.state
+          return window.__qaBackPops > before && state?.index === 0 && state?.overlay === false &&
+            state?.protectedRoot === true && !state?.rootBoundary && state?.snapshot?.stack[0]?.name === 'home'
+        }, before.pops)
+        await ctx.settle()
+        await page.locator('.greeting').waitFor()
+        const audio = await advancingSame()
+        const after = await page.evaluate(before => ({ documentToken: window.__qaDocumentToken, historyLength: history.length,
+          events: window.__qaBackEvents.filter(event => event.sequence > before) }), before.pops)
+        assert.equal(page.url(), ctx.getappURL(), 'Double Back must never visit the real predecessor')
+        assert.equal(after.documentToken, before.documentToken, 'Double Back must retain the live document')
+        assert.equal(after.historyLength, before.historyLength, 'Root Back must not append history entries')
+        assert.ok(after.events.some(event => event.boundary), 'The test must traverse the actual root boundary')
+        assert.equal(after.events.at(-1).boundary, false)
+        assert.equal(after.events.at(-1).protected, true)
+        await page.locator('.toast[role="status"]').filter({ hasText: /Inicio del móvil.*segundo plano/i }).waitFor()
+        observations.push({ input, ...after, ...audio, root: await route(), installedAppRetained: true })
+      }
+      return { observations, freshExternalPredecessor: true, actualBrowserHistoryTraversal: true,
+        physicalAndroidBackClaimed: false, applicationExited: false, systemHomeOrMinimizeClaimed: false }
     })
   } catch (error) { report.errors.push({ name: error.name, message: scrub(error.message), stack: scrub(error.stack) }) }
   finally {

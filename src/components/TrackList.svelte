@@ -1,7 +1,6 @@
 <script lang="ts">
   // Lista de canciones: la de un disco, favoritas, una playlist o el historial.
   import { trackMenu } from '../lib/actions'
-  import { inPwa } from '../lib/api'
   import { downloads } from '../lib/downloads.svelte'
   import { duration, songs } from '../lib/format'
   import { layout } from '../lib/layout.svelte'
@@ -218,7 +217,7 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
-                  {#if youtube || inPwa && layout.mobile}<span>{item.track.artist.name}</span>{:else}
+                  {#if youtube}<span>{item.track.artist.name}</span>{:else}
                   <button class="link" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >

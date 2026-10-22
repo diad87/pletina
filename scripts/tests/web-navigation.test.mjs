@@ -16,21 +16,32 @@ function navigation() {
   new Function('exports', 'require', compiled)(exports, (name) => name === 'svelte' ? { untrack: (fn) => fn() } : svelte)
   return exports.nav
 }
-function browser({ standalone = false, iosStandalone = false, historyLimit = Infinity } = {}) {
+function browser({ standalone = false, iosStandalone = false, historyLimit = Infinity, queuedTraversals = false } = {}) {
   const window = new EventTarget(), items = [null], storage = new Map(), events = []
+  const traversals = []
   const document = new EventTarget()
   document.hidden = false
   const timers = new Map()
   let position = 0, departures = 0, now = 0, timerId = 0
+  const performTraversal = ({ kind, delta }) => {
+    const target = position + delta
+    if (target >= 0 && target < items.length) { position = target; events.push(items[position]) }
+    else if (kind === 'back' && position === 0) departures++
+  }
+  const traverse = (kind, delta) => {
+    const request = { kind, delta }
+    if (queuedTraversals) traversals.push(request)
+    else performTraversal(request)
+  }
   const history = {
     get state() { return structuredClone(items[position]) },
     get length() { return items.length },
     replaceState(value, _, url) { assert.equal(url, window.location.href); items[position] = structuredClone(value) },
     pushState(value, _, url) { assert.equal(url, window.location.href); items.splice(position + 1); items.push(structuredClone(value)); position++;
       while (items.length > historyLimit) { items.shift(); position-- } },
-    back() { if (position > 0) { position--; events.push(items[position]) } else departures++ },
-    forward() { if (position < items.length - 1) { position++; events.push(items[position]) } },
-    go(delta) { const target = position + delta; if (target >= 0 && target < items.length) { position = target; events.push(items[position]) } },
+    back() { traverse('back', -1) },
+    forward() { traverse('forward', 1) },
+    go(delta) { traverse('go', delta) },
   }
   Object.assign(window, { history, document, location: { href: 'https://example.test/pletina/application/index.hash.html' },
     matchMedia: (query) => ({ matches: query === '(display-mode: standalone)' && standalone }),
@@ -44,8 +55,25 @@ function browser({ standalone = false, iosStandalone = false, historyLimit = Inf
     Object.defineProperty(event, 'state', { value: structuredClone(events.shift()) })
     window.dispatchEvent(event)
   }
-  const flush = () => { let count = 0; while (events.length) { assert.ok(++count < 100, 'History traversal must settle'); flushOne() } }
+  const dueTimer = () => [...timers].find(([, timer]) => timer.at <= now)
+  const flush = () => {
+    let count = 0
+    while (events.length || dueTimer()) {
+      assert.ok(++count < 100, 'History events and due zero-delay tasks must settle')
+      if (events.length) flushOne()
+      else { const [id, timer] = dueTimer(); timers.delete(id); timer.fn() }
+    }
+  }
   return { window, items, get position() { return position }, get departures() { return departures },
+    pendingTraversals: () => traversals.map(request => ({ ...request })),
+    completeTraversal(index = 0) {
+      assert.ok(index >= 0 && index < traversals.length, 'A pending traversal must exist before completing it')
+      performTraversal(traversals.splice(index, 1)[0])
+    },
+    cancelTraversal(index) {
+      assert.ok(index >= 0 && index < traversals.length, 'A pending traversal must exist before cancelling it')
+      return traversals.splice(index, 1)[0]
+    },
     setStandalone(value) { standalone = value }, flushOne, discardEvents() { events.length = 0 },
     flush,
     advance(ms) {
@@ -162,15 +190,18 @@ test('rapid overlay reopen/close cancels obsolete queued guards', () => {
 })
 
 test('installed Home consumes isolated Back gestures without leaving or growing history', () => {
-  const { nav, h } = setup({ standalone: true })
+  let notices = 0
+  const { nav, h } = setup({ standalone: true, onRootBack: () => notices++ })
   const length = h.items.length
+  assert.equal(h.position, 2, 'Two guards must precede the fresh Home entry')
   for (let press = 0; press < 12; press++) {
     h.window.history.back(); h.flush()
     assert.equal(nav.route.name, 'home')
-    assert.equal(h.window.history.state.rootBoundary, true)
-    h.advance(801)
     assert.equal(h.window.history.state.rootBoundary, undefined)
+    assert.equal(h.window.history.state.rootGuardDepth, 2)
+    assert.equal(h.position, 2, 'Each isolated Back must re-anchor immediately, without an exit window')
   }
+  assert.equal(notices, 12)
   assert.equal(h.departures, 0)
   assert.equal(h.items.length, length)
 })
@@ -186,6 +217,7 @@ test('iOS standalone detection also protects Home without display-mode support',
   const { nav, h } = setup({ iosStandalone: true })
   h.window.history.back(); h.flush()
   assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+  assert.equal(h.window.history.state.rootGuardDepth, 2); assert.equal(h.position, 2)
 })
 
 test('installed root bounce preserves previous views and the browser Forward branch', () => {
@@ -354,7 +386,7 @@ test('installed long sessions retain a root boundary when the browser prunes old
   for (let index = 0; index < 120; index++) { nav.go({ name: 'search', query: `Búsqueda ${index}` }); h.flush() }
   assert.equal(nav.route.query, 'Búsqueda 119')
   while (nav.canBack) { h.window.history.back(); h.flush() }
-  for (let index = 0; index < 4; index++) { h.window.history.back(); h.flush(); h.advance(801) }
+  for (let index = 0; index < 4; index++) { h.window.history.back(); h.window.history.back(); h.flush() }
   assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
 })
 
@@ -431,177 +463,232 @@ test('jumping nested panels directly to the installed boundary closes every rema
   h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
 })
 
-test('installed Home leaves its guard after the first Back so the second native Back needs no third gesture', () => {
-  let notices = 0
-  const { nav, h } = setup({ standalone: true, onExitArmed: () => notices++ })
+test('two Home Back calls in the same task cannot cross either installed root guard', () => {
+  const { nav, h } = setup({ standalone: true })
   const length = h.items.length
-  h.window.history.back(); h.flush()
-  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
-  assert.equal(h.position, 0, 'The first gesture must remain on the boundary, not bounce forward')
-  assert.equal(h.window.history.state.rootBoundary, true); assert.equal(notices, 1)
-  h.advance(799)
-  h.window.history.back(); h.flush()
-  assert.equal(h.departures, 1, 'The second native gesture reaches the browser boundary without another JavaScript back')
+  assert.equal(h.position, 2)
+  for (let burst = 0; burst < 6; burst++) {
+    h.window.history.back(); h.window.history.back()
+    assert.equal(h.position, 0, 'Both native traversals happen before any queued popstate is delivered')
+    assert.equal(h.departures, 0)
+    h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.position, 2)
+    assert.equal(h.window.history.state.rootBoundary, undefined)
+    assert.equal(h.window.history.state.rootGuardDepth, 2)
+  }
   assert.equal(h.items.length, length)
 })
 
-test('a second Back after the exit window is another isolated gesture and does not leave Home', () => {
-  let notices = 0
-  const { h } = setup({ standalone: true, onExitArmed: () => notices++ })
-  h.window.history.back(); h.flush(); h.advance(800)
-  assert.equal(h.position, 1); assert.equal(h.window.history.state.rootBoundary, undefined)
-  h.window.history.back(); h.flush()
-  assert.equal(h.departures, 0); assert.equal(notices, 2)
-  h.advance(800); assert.equal(h.position, 1)
+test('a second Home Back after the first popstate still returns to the protected Home anchor', () => {
+  const { nav, h } = setup({ standalone: true })
+  const length = h.items.length
+  for (let burst = 0; burst < 6; burst++) {
+    h.window.history.back(); h.flushOne()
+    h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.position, 2)
+    assert.equal(h.departures, 0); assert.equal(h.window.history.state.rootBoundary, undefined)
+  }
+  assert.equal(h.items.length, length)
 })
 
-test('two rapid Back gestures on interior screens only reach Home and do not arm exit', () => {
-  let notices = 0
-  const { nav, h } = setup({ standalone: true, onExitArmed: () => notices++ })
-  nav.go({ name: 'search', query: 'Dos gestos' }); nav.go({ name: 'artist', id: 7 })
-  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
-  assert.equal(nav.route.name, 'home'); assert.equal(notices, 0); assert.equal(h.departures, 0)
+test('a second queued Back can interrupt the pending root repair without stranding Home or consuming Forward', () => {
+  const { nav, h } = setup({ standalone: true, queuedTraversals: true })
+  nav.go({ name: 'search', query: 'Adelante tras travesías pendientes' })
+  h.window.history.back(); h.completeTraversal(); h.flush()
+  assert.equal(nav.route.name, 'home')
+  const homePosition = h.position, length = h.items.length
+  h.window.history.back(); h.window.history.back()
+  assert.equal(h.position, homePosition, 'History calls are requests; they do not complete before their queued traversal')
+  assert.deepEqual(h.pendingTraversals().map(request => request.kind), ['back', 'back'])
+  h.completeTraversal(); h.flushOne()
+  assert.equal(h.window.history.state.rootBoundary, true)
+  // A due repair task may run while the second native Back is still pending.
+  // Flushing tasks does not complete queued native traversals in this mode.
+  h.flush()
+  // Chrome reported Back pop, a Forward request, then another Back pop without
+  // completing that Forward. Represent that interruption explicitly; the test
+  // does not assert which internal browser mechanism cancels the request.
+  const repairIndex = h.pendingTraversals().findIndex(request => request.delta > 0)
+  assert.ok(repairIndex >= 0, 'Expose the requested positive traversal before completing the second Back')
+  const interruptedRepair = h.cancelTraversal(repairIndex)
+  h.completeTraversal(); h.flushOne()
+  assert.equal(h.window.history.state.rootDistance, 0)
+  h.flush()
+  let completions = 0
+  while (h.pendingTraversals().length) {
+    assert.ok(++completions < 20, 'Root recovery must finish without an unbounded traversal loop')
+    h.completeTraversal(); h.flush()
+  }
+  assert.equal(h.position, homePosition, JSON.stringify({ interruptedRepair, pending: h.pendingTraversals(), state: h.window.history.state }))
+  assert.equal(nav.route.name, 'home', 'Root repair may not overshoot into the existing Forward route')
   assert.equal(h.window.history.state.rootBoundary, undefined)
-  h.window.history.back(); h.flush(); assert.equal(notices, 1); assert.equal(h.departures, 0)
+  assert.equal(h.departures, 0); assert.equal(h.items.length, length); assert.equal(nav.canForward, true)
+  h.window.history.forward(); h.completeTraversal(); h.flush()
+  assert.equal(nav.route.query, 'Adelante tras travesías pendientes')
+  assert.equal(h.position, homePosition + 1); assert.equal(h.pendingTraversals().length, 0)
 })
 
-test('navigation or opening an overlay during the exit window anchors Home and cancels the old timer', () => {
+test('rapid Back from interior routes returns Home and further gestures cannot leave it', () => {
+  let notices = 0
+  const { nav, h } = setup({ standalone: true, onRootBack: () => notices++ })
+  nav.go({ name: 'search', query: 'Dos gestos' }); nav.go({ name: 'artist', id: 7 })
+  h.window.history.back(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+  assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.back(); h.flush()
+  assert.ok(notices > 0); assert.equal(h.departures, 0); assert.equal(nav.route.name, 'home')
+})
+
+test('a route or overlay chosen while a root bounce is pending remains operable', () => {
   for (const action of ['route', 'overlay']) {
     const { nav, h } = setup({ standalone: true })
-    h.window.history.back(); h.flush()
+    h.window.history.back(); h.flushOne()
     if (action === 'route') nav.go({ name: 'library' })
     else nav.overlay(true, () => true)
     h.flush()
     assert.equal(h.window.history.state.rootBoundary, undefined)
     assert.equal(action === 'route' ? nav.route.name : h.window.history.state.overlay, action === 'route' ? 'library' : true)
-    const position = h.position, length = h.items.length
-    h.advance(1000); assert.equal(h.position, position); assert.equal(h.items.length, length)
     h.window.history.back(); h.flush()
     assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
-    assert.equal(h.window.history.state.rootBoundary, undefined, 'Returning from the route or closing its overlay is not the first exit gesture')
+    h.window.history.back(); h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
   }
 })
 
-test('native or application Forward during the exit window restores the existing next screen once', () => {
+test('repeated root protection leaves native and application Forward routes intact', () => {
   for (const native of [true, false]) {
     const { nav, h } = setup({ standalone: true })
     nav.go({ name: 'search', query: 'Adelante sin salir' }); nav.back(); h.flush()
     const length = h.items.length
-    h.window.history.back(); h.flush()
+    h.window.history.back(); h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home', 'Queued guard pops must not overshoot into the Forward route')
+    assert.equal(h.window.history.state.index, 0); assert.equal(h.window.history.state.rootBoundary, undefined)
+    assert.equal(nav.canForward, true)
     if (native) h.window.history.forward()
     else nav.forward()
-    h.flush(); h.advance(1000)
+    h.flush()
     assert.equal(nav.route.query, 'Adelante sin salir')
     assert.equal(h.departures, 0); assert.equal(h.items.length, length)
-    h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
-    assert.equal(h.departures, 0, 'Forward must cancel the earlier exit window before returning Home')
   }
 })
 
-test('double Back crosses only this session history left by compaction without adding exit entries', () => {
+test('double Back after compaction cannot enter older session entries or create new history', () => {
   const { nav, h } = setup({ standalone: true, historyLimit: 50 })
   for (let index = 0; index < 100; index++) { nav.go({ name: 'search', query: `Compactada ${index}` }); h.flush() }
   while (nav.canBack) { h.window.history.back(); h.flush() }
-  const length = h.items.length
-  assert.ok(h.position > 1, 'Older owned entries must exist below the current root')
-  h.window.history.back(); h.flush()
-  h.window.history.pushState = () => assert.fail('Exiting may not create or repair history entries')
-  h.window.history.back(); h.flush()
-  assert.equal(h.departures, 1); assert.equal(h.position, 0)
-  assert.equal(nav.route.name, 'home', 'Owned historical routes are traversed without resurrecting old screens')
+  const length = h.items.length, homePosition = h.position, rootId = h.window.history.state.rootId
+  h.window.history.pushState = () => assert.fail('Protecting Home during Back must not create entries')
+  h.window.history.back(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+  assert.equal(h.position, homePosition); assert.equal(h.window.history.state.rootId, rootId)
   assert.equal(h.items.length, length)
 })
 
-test('double Back stops at an unknown or foreign-session entry instead of blindly skipping it', () => {
+test('installed guards keep double Back away from unknown and foreign-session predecessors', () => {
   for (const prior of [{ external: true }, { pletinaNavigation: 1, session: 'another-session', index: 0, overlay: false,
     snapshot: { stack: [{ name: 'home' }], index: 0 } }]) {
     const h = browser({ standalone: true }), nav = navigation()
     h.window.history.replaceState(prior, '', h.window.location.href)
     h.window.history.pushState(null, '', h.window.location.href)
-    initWebNavigation(nav, h.window)
-    h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
-    assert.equal(h.position, 0); assert.equal(h.departures, 0, 'The external history owner decides what happens next')
-    assert.deepEqual(h.window.history.state, prior)
-    h.advance(1000); assert.equal(h.position, 0)
+    initWebNavigation(nav, h.window); h.flush()
+    const homePosition = h.position, length = h.items.length
+    h.window.history.back(); h.window.history.back(); h.flush()
+    assert.equal(h.position, homePosition); assert.equal(h.departures, 0)
+    assert.deepEqual(h.items[0], prior)
+    assert.equal(nav.route.name, 'home'); assert.equal(h.items.length, length)
   }
 })
 
-test('reload while exit is armed clears its timer and safely restores Home with one root boundary', () => {
-  const { h, dispose } = setup({ standalone: true })
-  h.window.history.back(); h.flush()
-  const length = h.items.length
-  dispose()
-  const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush(); h.advance(1000)
-  assert.equal(reloaded.route.name, 'home'); assert.equal(h.departures, 0)
-  assert.equal(h.window.history.state.rootBoundary, undefined); assert.equal(h.items.length, length)
-  h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+test('923 installed state with one old guard migrates to two guards while retaining routes and Forward', () => {
+  for (const initial of ['route', 'boundary']) {
+    const h = browser({ standalone: true }), nav = navigation()
+    const stack = [{ name: 'home' }, { name: 'search', query: 'Guardada en923' }, { name: 'album', id: 12 }]
+    const old = index => ({ pletinaNavigation: 1, session: 'session923', index, overlay: false, protectedRoot: true,
+      rootId: 'legacy923-root', rootDistance: index + 1, snapshot: { stack, index } })
+    // The original boundary predates later views; session storage holds their Forward branch.
+    h.window.history.replaceState({ ...old(0), rootDistance: 0, rootBoundary: true,
+      snapshot: { stack: [stack[0]], index: 0 } }, '', h.window.location.href)
+    for (let index = 0; index < stack.length; index++) h.window.history.pushState(old(index), '', h.window.location.href)
+    h.window.sessionStorage.setItem('pletina:web:navigation:/pletina/', JSON.stringify({ session: 'session923',
+      snapshot: { stack, index: initial === 'boundary' ? 0 : 1 } }))
+    if (initial === 'boundary') h.window.history.go(-h.position)
+    else h.window.history.back()
+    h.discardEvents()
+    const dispose = initWebNavigation(nav, h.window); h.flush()
+    if (initial === 'route') assert.equal(nav.route.query, 'Guardada en923')
+    else assert.equal(nav.route.name, 'home')
+    assert.equal(nav.canForward, true)
+    assert.equal(h.window.history.state.rootGuardDepth, 2)
+    const rootId = h.window.history.state.rootId
+    assert.equal(h.items.filter(entry => entry?.rootId === rootId && entry.rootBoundary).length, 2)
+    const length = h.items.length
+    if (initial === 'route') { nav.back(); h.flush() }
+    assert.equal(nav.route.name, 'home')
+    const homePosition = h.position
+    h.window.history.back(); h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.position, homePosition); assert.equal(h.departures, 0)
+    nav.forward(); h.flush(); assert.equal(nav.route.query, 'Guardada en923')
+    nav.forward(); h.flush(); assert.equal(nav.route.name, 'album')
+    dispose()
+    const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush()
+    assert.equal(reloaded.route.name, 'album'); assert.equal(h.items.length, length, 'Recognized two-guard state must not migrate again')
+  }
 })
 
-test('a multi-entry Back from an interior view cannot use an older compacted root as exit permission', () => {
-  let notices = 0
-  const { nav, h } = setup({ standalone: true, historyLimit: 50, onExitArmed: () => notices++ })
+test('reload from either pending installed guard returns Home without duplicating its protected history', () => {
+  for (const calls of [1, 2]) {
+    const { h, dispose } = setup({ standalone: true })
+    const length = h.items.length
+    for (let call = 0; call < calls; call++) h.window.history.back()
+    dispose(); h.discardEvents()
+    const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush()
+    assert.equal(reloaded.route.name, 'home'); assert.equal(h.departures, 0)
+    assert.equal(h.position, 2); assert.equal(h.window.history.state.rootBoundary, undefined)
+    assert.equal(h.items.length, length)
+    h.window.history.back(); h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+  }
+})
+
+test('a multi-entry Back across compacted roots restores the current Home and stays protected', () => {
+  const { nav, h } = setup({ standalone: true, historyLimit: 50 })
   for (let index = 0; index < 60; index++) { nav.go({ name: 'search', query: `Salto ${index}` }); h.flush() }
-  assert.ok(nav.canBack)
+  const start = { route: nav.route, position: h.position, rootId: h.window.history.state.rootId }
   h.window.history.go(-h.position); h.flush()
-  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0); assert.equal(notices, 0)
+  assert.equal(nav.route.name, 'home', JSON.stringify({ start, position: h.position, state: h.window.history.state,
+    guards: h.items.flatMap((entry, index) => entry?.rootBoundary ? [{ index, rootId: entry.rootId, distance: entry.rootDistance }] : []) }))
+  assert.equal(h.departures, 0)
   assert.equal(h.window.history.state.rootBoundary, undefined)
-  h.window.history.back(); h.flush(); assert.equal(notices, 1); assert.equal(h.departures, 0)
+  h.window.history.back(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
 })
 
-test('returning from page cache by Forward resets exit traversal and protects the first Back again', () => {
-  const h = browser({ standalone: true }), nav = navigation()
-  const prior = { external: true }
-  h.window.history.replaceState(prior, '', h.window.location.href)
-  h.window.history.pushState(null, '', h.window.location.href)
-  initWebNavigation(nav, h.window)
-  const length = h.items.length
-  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
-  assert.deepEqual(h.window.history.state, prior); assert.equal(h.departures, 0)
-  h.window.history.forward()
-  const show = new Event('pageshow')
-  Object.defineProperty(show, 'persisted', { value: true })
-  h.window.dispatchEvent(show); h.flush()
-  assert.equal(nav.route.name, 'home')
-  assert.equal(h.window.history.state.rootBoundary, undefined, 'Forward must restore the Home anchor, not bounce back out of the page cache')
-  assert.equal(h.position, length - 1); assert.equal(h.items.length, length)
-  h.window.history.back(); h.flush()
-  assert.equal(h.window.history.state.rootBoundary, true); assert.equal(h.departures, 0)
-  h.window.history.back(); h.flush()
-  assert.deepEqual(h.window.history.state, prior, 'The next double gesture can leave again without traversing the foreign entry')
-  assert.equal(h.departures, 0); assert.equal(h.items.length, length)
+test('page-cache restoration from either guard anchors Home even when its initial popstate is omitted', () => {
+  for (const calls of [1, 2]) {
+    const { nav, h } = setup({ standalone: true })
+    const length = h.items.length
+    for (let call = 0; call < calls; call++) h.window.history.back()
+    h.discardEvents()
+    const show = new Event('pageshow'); Object.defineProperty(show, 'persisted', { value: true })
+    h.window.dispatchEvent(show); h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.position, 2)
+    assert.equal(h.window.history.state.rootBoundary, undefined); assert.equal(h.items.length, length)
+    h.window.history.back(); h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+  }
 })
 
-test('page-cache restoration anchors Home even when the engine omits the initial boundary pop', () => {
-  const { nav, h } = setup({ standalone: true })
-  h.window.history.back(); h.flush()
-  h.window.history.back(); h.flush()
-  const show = new Event('pageshow')
-  Object.defineProperty(show, 'persisted', { value: true })
-  h.window.dispatchEvent(show); h.flush()
-  assert.equal(nav.route.name, 'home'); assert.equal(h.window.history.state.rootBoundary, undefined)
-  h.window.history.back(); h.flush()
-  assert.equal(h.departures, 1, 'The restored first gesture must only arm exit; the old departure count cannot grow')
-  assert.equal(h.window.history.state.rootBoundary, true)
-})
-
-test('returning from hidden or pagehide clears an armed exit without waiting for a suspended timeout', (t) => {
-  t.mock.timers.enable({ apis: ['Date'], now: 1000 })
+test('background and focus lifecycle do not weaken a pending Home guard after time passes', () => {
   for (const mode of ['hidden', 'pagehide', 'focus']) {
-    const { h } = setup({ standalone: true })
-    h.window.history.back(); h.flush()
-    assert.equal(h.window.history.state.rootBoundary, true)
-    if (mode === 'hidden') {
-      h.window.document.hidden = true; h.window.document.dispatchEvent(new Event('visibilitychange'))
-    } else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pagehide'))
-    t.mock.timers.setTime(Date.now() + 5000)
-    if (mode === 'hidden') {
-      h.window.document.hidden = false; h.window.document.dispatchEvent(new Event('visibilitychange'))
-    } else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pageshow'))
+    const { nav, h } = setup({ standalone: true })
+    h.window.history.back()
+    if (mode === 'hidden') { h.window.document.hidden = true; h.window.document.dispatchEvent(new Event('visibilitychange')) }
+    else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pagehide'))
+    h.advance(5000)
+    if (mode === 'hidden') { h.window.document.hidden = false; h.window.document.dispatchEvent(new Event('visibilitychange')) }
+    else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pageshow'))
     else h.window.dispatchEvent(new Event('focus'))
     h.flush()
-    assert.equal(h.window.history.state.rootBoundary, undefined, mode)
-    h.window.history.back(); h.flush()
-    assert.equal(h.departures, 0, 'The first Back after resuming must not use an expired or hidden exit window')
-    assert.equal(h.window.history.state.rootBoundary, true)
+    assert.equal(nav.route.name, 'home'); assert.equal(h.window.history.state.rootBoundary, undefined, mode)
+    h.window.history.back(); h.window.history.back(); h.flush()
+    assert.equal(h.departures, 0); assert.equal(h.position, 2)
   }
 })
