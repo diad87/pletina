@@ -2,6 +2,8 @@
 
 Revisión del **22 de octubre de 2026**. Referencia nativa: **Pletina 0.11.2**, commit `4b5691ff50d659fbd048f5a9cff1ddfa91c22a79`. La versión publicada y verificada es **`dd284152f0526576`**, producto `82faa017` y runner final standalone `9a845b1` (suites completas con runner `82faa017`), en <https://diad87.github.io/pletina/>. Distribución `bee125e255472bd791ad5db3ddc48ea3a969c85d`; [22/22 archivos públicos verificados por HTTP/SHA-256](../artifacts/pwa-deploy/public-files-dd284152f0526576.json). No se declara paridad completa.
 
+El **22 de octubre**, en respuesta a la prueba solicitada para `dd284152f0526576`, el usuario confirmó en su Xiaomi que **Inicio de Android mantiene la música** y que **Atrás deja de abandonar Pletina al llegar al final de las pantallas**. Es una [confirmación manual parcial](../artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json): no aportó el hash observado, duración, doble toque medido, continuidad del audio tras Atrás ni confirmación individual de las cuatro pestañas. El protocolo físico completo e iPhone siguen pendientes.
+
 Todo el destino sigue siendo **PWA**, sin APK, envoltorio nativo, backend, proxy ni microservidor. GitHub Pages distribuye archivos estáticos por HTTPS; catálogo y audio se consultan directamente desde el navegador. Se reutilizan las pantallas Svelte de la APK con [adaptadores web](../web-port/invoke.ts).
 
 ## Evidencia actual: `dd284152f0526576`
@@ -25,7 +27,7 @@ El [recorrido standalone final](../artifacts/pwa-e2e/back-root-library-dd284152f
 
 Los [controles conservados](../artifacts/pwa-e2e/preserved-controls-dd284152f0526576.json) incluyen el primer candidato ebfa, que conservó audio pero quedó en un límite con doble Back (10/11), y el primer integrado dd (34/35), que leyó metadatos mientras aún cargaba el audio local. Se corrigieron respectivamente el producto y la sincronización de la prueba. Los resultados originales permanecen con su build y sus fallos.
 
-El [informe Xiaomi anterior](../artifacts/pwa-port/android-installed-double-back-user-report-2026-10-22.json) corresponde al contrato de salida de la versión anterior, sin hash observado, y conserva sus incidencias. **No valida el nuevo contrato:** faltan la prueba física identificada en Xiaomi y las de iPhone. Spotify por URL, ciclo de vida móvil e integraciones de coche continúan abiertos bajo las restricciones PWA.
+El [informe Xiaomi anterior](../artifacts/pwa-port/android-installed-double-back-user-report-2026-10-22.json) corresponde al contrato de salida de la versión anterior, sin hash observado, y conserva sus incidencias. **No valida el nuevo contrato:** existe la confirmación manual parcial descrita arriba, pero faltan el protocolo completo con build identificado en Xiaomi y las pruebas de iPhone. Spotify por URL, ciclo de vida móvil e integraciones de coche continúan abiertos bajo las restricciones PWA.
 
 ## Evidencia histórica: `fbb03046132d7478`
 

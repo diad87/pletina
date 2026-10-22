@@ -1,6 +1,8 @@
 # Mapa de funciones y pruebas de la PWA
 
-**Release `dd284152f0526576` publicada y verificada en [Pletina](https://diad87.github.io/pletina/), `gh-pages` `bee125e255472bd791ad5db3ddc48ea3a969c85d`.** Fuente y runner de suites completas: `82faa01710ee2f3b46df7ceed2274faa8040b304`. Unitarias **393/393**, incluidas **46/46** de navegación. Los recorridos físicos de este build siguen pendientes.
+**Release `dd284152f0526576` publicada y verificada en [Pletina](https://diad87.github.io/pletina/), `gh-pages` `bee125e255472bd791ad5db3ddc48ea3a969c85d`.** Fuente y runner de suites completas: `82faa01710ee2f3b46df7ceed2274faa8040b304`. Unitarias **393/393**, incluidas **46/46** de navegación. Los recorridos físicos completos de este build siguen pendientes.
+
+El **22 de octubre**, en respuesta a la prueba solicitada para `dd284152f0526576`, el usuario confirmó en su Xiaomi que **Inicio de Android mantiene la música** y que **Atrás deja de abandonar Pletina al llegar al final de las pantallas**. Es una [confirmación manual parcial](../artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json): no aportó el hash observado, duración, doble toque medido, continuidad del audio tras Atrás ni confirmación individual de las cuatro pestañas. El protocolo físico completo e iPhone siguen pendientes.
 
 Auditoría del código de la interfaz 0.11.2 y de los escenarios E2E, 22 de octubre de 2026. Este mapa describe qué acciones comprueba cada caso y qué sigue pendiente. **No afirma cobertura exhaustiva ni convierte la emulación de pantalla en una prueba de Android o iPhone.**
 

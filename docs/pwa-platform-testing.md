@@ -2,6 +2,8 @@
 
 Revisión del **22 de octubre de 2026**. Esta guía separa funciones y entorno. La distribución **`dd284152f0526576` está publicada y verificada** en [Pletina](https://diad87.github.io/pletina/), commit `bee125e255472bd791ad5db3ddc48ea3a969c85d`: [22/22 archivos HTTP/SHA-256](../artifacts/pwa-deploy/public-files-dd284152f0526576.json) y [3/3 de reproducción pública](../artifacts/pwa-port/browser-public-dd284152f0526576.json). Fuente y runner general `82faa01710ee2f3b46df7ceed2274faa8040b304`; runner standalone final `9a845b1d2df9bf46047c30a5de9c35b0eb7b82ed`. Los resultados de 923 y anteriores permanecen históricos. Véase también [pwa.md](pwa.md).
 
+El **22 de octubre**, en respuesta a la prueba solicitada para `dd284152f0526576`, el usuario confirmó en su Xiaomi que **Inicio de Android mantiene la música** y que **Atrás deja de abandonar Pletina al llegar al final de las pantallas**. Es una [confirmación manual parcial](../artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json): no aportó el hash observado, duración, doble toque medido, continuidad del audio tras Atrás ni confirmación individual de las cuatro pestañas. El protocolo físico completo e iPhone siguen pendientes.
+
 El [preflight reproducible](../scripts/tests/e2e/platform-preflight.mjs) genera [platform-preflight.json](../artifacts/pwa-e2e/platform-preflight.json). Comprueba motores y APIs de navegador usando un origen localhost efímero, datos de prueba y un WAV conocido. **No es una prueba E2E de funciones de Pletina**, ni acredita teléfonos, instalación desde la pantalla de inicio o coches. Los recorridos de producto tienen sus propios resultados; la [matriz de paridad](pwa-parity-0.11.2.md) conserva los anteriores.
 
 ## Resultados actuales: `dd284152f0526576`

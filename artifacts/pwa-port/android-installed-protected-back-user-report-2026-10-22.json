@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "evidenceType": "user-reported-physical-test",
+  "device": "Xiaomi 15T Pro",
+  "deviceFromPriorContext": true,
+  "androidVersion": null,
+  "browserVersion": null,
+  "observedBuild": null,
+  "requestedBuild": "dd284152f0526576",
+  "publishedBuildWhenRecorded": "dd284152f0526576",
+  "buildAssignmentConfirmed": false,
+  "url": "https://diad87.github.io/pletina/",
+  "originalQuestionId": "call_2c0f9559f7d7402db64411e238ac226e",
+  "requestedContext": "Update the installed PWA, open from Xiaomi icon, play a song, return to Pletina Home, use two very fast Back presses, then Android Home and check four tabs after return.",
+  "userReport": "pulsando inicio sigue la musica, si sigo pulsando hacia atras no hace nada uan vez llega al final",
+  "checks": [
+    {
+      "name": "system-Home-keeps-music-in-background",
+      "status": "user-reported-pass",
+      "scope": "User explicitly reports that pressing Android Home keeps the music playing. Duration and observed build were not provided."
+    },
+    {
+      "name": "Back-stays-in-app-at-root",
+      "status": "user-reported-pass",
+      "scope": "User reports that repeated Back presses no longer do anything once reaching the end of the internal route history. No measured double-press or separate audio-continuation result for Back was supplied."
+    }
+  ],
+  "observations": {
+    "homeButtonBackgroundContinuation": true,
+    "backStopsLeavingAtRoot": true,
+    "audioContinuesAfterBack": null,
+    "exactDoubleBackSequenceConfirmed": false,
+    "exactIntervalMs": null,
+    "fourTabsAfterReturnIndividuallyConfirmed": false,
+    "installedIconContextExplicitlyConfirmed": false,
+    "screenOffContinuation": null,
+    "automaticNextSong": null,
+    "forceStopTested": false,
+    "durationSeconds": null
+  },
+  "automaticallyVerified": false,
+  "rawDiagnosticReceived": false,
+  "fullPhysicalProtocolCompleted": false,
+  "iOSVerified": false,
+  "androidAutoVerified": false,
+  "carplayVerified": false,
+  "scope": "Partial physical feedback to the dd284 test request; the actual displayed build was not supplied. It confirms manual Android Home/background audio and root Back retention only. It does not claim that double Back invokes Android Home or that the full physical protocol passed."
+}

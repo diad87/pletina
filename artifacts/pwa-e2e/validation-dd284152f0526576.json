@@ -99,7 +99,7 @@
     "explanation": "The first candidate ebfa kept Audio alive but its same-task double Back could stall at a root boundary (10/11 short regression). Deferred/coalesced restoration fixes the tested Chrome race; the HTML control is desktop only and does not identify the physical Xiaomi cause. The first integrated dd run retained all Back passes but read the artist while local playback was still loading (34/35). The final runner waits for ready playback without changing metadata assertions or product code."
   },
   "platformStatus": {
-    "androidPhysical": "Pending for dd284152f0526576. Historical Xiaomi 15T Pro report concerns prior exit behavior without an observed build; it does not validate the new protected single/double Back.",
+    "androidPhysical": "Partial manual Xiaomi 15T Pro feedback on 2026-10-22: Android Home keeps music playing; Back stops leaving at the root. The response to the dd284 request did not provide the observed build, measured double Back, audio after Back, four-tab confirmation, duration or complete physical protocol.",
     "iphonePhysical": "Pending: no physical iPhone available.",
     "androidAuto": "Not implemented in this PWA distribution.",
     "carPlay": "Not implemented in this PWA distribution.",
@@ -116,5 +116,15 @@
     "pixelParityVerified": false,
     "physicalPhoneParityVerified": false
   },
-  "nativeWrapperAdded": false
+  "nativeWrapperAdded": false,
+  "physicalFeedback": {
+    "report": "artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json",
+    "requestedBuild": "dd284152f0526576",
+    "observedBuild": null,
+    "buildAssignmentConfirmed": false,
+    "androidHomeAudio": "user-reported-pass",
+    "rootBackRetention": "user-reported-pass",
+    "fullPhysicalProtocolCompleted": false,
+    "automaticallyVerified": false
+  }
 }
