@@ -17,8 +17,11 @@ const workspace = fileURLToPath(new URL('../../', import.meta.url))
 const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
 const coldOnly = args.includes('--cold-only')
+const traceMigrationReceiver = args.includes('--trace-migration-receiver')
+const migrationCDP = args.includes('--migration-cdp')
 assert.ok(!coldOnly || !option('--prototype', null), '--cold-only cannot also test prototype migration')
 const { chromium } = createRequire(import.meta.url)(option('--playwright', 'playwright'))
+const browserOptions = { headless: true, ...(option('--chrome', null) ? { executablePath: option('--chrome') } : {}) }
 const digest = (value) => createHash('sha256').update(value).digest('hex')
 const artifactDirectory = join(workspace, 'artifacts', 'pwa-port')
 const reportName = option('--report', 'update-browser.json')
@@ -38,8 +41,19 @@ const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '
 let temporary, browser, server, page, gate, live = 'A', phase = 'setup', origin
 const servers = new Map(), requests = [], blockedHosts = new Set()
 let failingPath = null
+const migrationTraceWorkers = []
+async function collectMigrationTrace() {
+  if (!traceMigrationReceiver || migrationTraceWorkers.length === 0) return
+  report.prototypeReceiverTrace = await Promise.all(migrationTraceWorkers.map(async ({ worker, version }) => {
+    try {
+      return { version, ...await worker.evaluate(() => ({ observedVersion: typeof VERSION === 'string' ? VERSION : null,
+        traceReset: !globalThis.__qaMigrationTrace, entries: globalThis.__qaMigrationTrace ?? [] })) }
+    } catch (error) { return { version, error: scrub(error.message) } }
+  }))
+}
 async function workerDiagnostics() {
-  const session = await browser.newBrowserCDPSession()
+  // The ServiceWorker domain belongs to a page target, not Chrome's Browser target.
+  const session = await page.context().newCDPSession(page)
   const versions = [], registrations = [], errors = []
   const path = value => { try { return new URL(value).pathname } catch { return scrub(value) } }
   session.on('ServiceWorker.workerVersionUpdated', event => versions.push(...event.versions.map(version => ({
@@ -54,10 +68,12 @@ async function workerDiagnostics() {
     errorMessage: scrub(event.errorMessage.errorMessage), sourceURL: path(event.errorMessage.sourceURL) }))
   try {
     await session.send('ServiceWorker.enable')
-    const { targetInfos } = await session.send('Target.getTargets')
+    let targetInfos = [], targetError = null
+    try { ({ targetInfos } = await session.send('Target.getTargets')) }
+    catch (error) { targetError = scrub(error.message) }
     await new Promise(resolve => setTimeout(resolve, 100))
     return { kind: 'Passive CDP snapshot; no worker method was invoked or replaced.', versions, registrations, errors,
-      errorScope: 'Only worker errors emitted during this snapshot; absence does not establish no earlier worker error.',
+      errorScope: 'Only worker errors emitted during this snapshot; absence does not establish no earlier worker error.', targetError,
       targets: targetInfos.filter(target => target.type === 'service_worker' && target.url.startsWith(origin)).map(target => ({
         targetId: target.targetId, type: target.type, scriptPath: path(target.url), attached: target.attached,
       })) }
@@ -87,6 +103,7 @@ async function check(name, action) {
       await page.screenshot({ path: join(artifactDirectory, reportName.replace(/\.json$/, '-update-failure.png')), fullPage: true }).catch(() => {})
     }
     if (browser?.isConnected()) report.workerDiagnostic = await workerDiagnostics().catch(error => ({ error: scrub(error.message) }))
+    if (phase === 'prototype-migration') await collectMigrationTrace()
     process.stdout.write('FAILED\n')
     throw error
   }
@@ -349,8 +366,7 @@ try {
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
   origin = `http://127.0.0.1:${server.address().port}`
   const url = `${origin}/pletina/`
-  browser = await chromium.launch({ headless: true,
-    ...(option('--chrome', null) ? { executablePath: option('--chrome') } : {}) })
+  browser = await chromium.launch(browserOptions)
   report.browser = browser.version()
   const coldContext = await context()
   page = await newPage(coldContext)
@@ -595,6 +611,16 @@ try {
 
   const prototype = option('--prototype', null)
   if (prototype) {
+    // This migration has an independent cold profile and data. Recreate Chrome,
+    // too: accumulated prior-context state stalled native skipWaiting in the
+    // combined QA process; the isolated real-distribution controls did not.
+    const previousBrowserVersion = browser.version()
+    await browser.close()
+    report.migrationBrowserIsolation = { previousBrowserClosed: !browser.isConnected(),
+      mode: 'Fresh disposable Chrome process with the same launch options; no previous test contexts or emulation.', previousBrowserVersion }
+    browser = await chromium.launch(browserOptions)
+    report.migrationBrowserIsolation.migrationBrowserVersion = browser.version()
+    assert.equal(browser.version(), previousBrowserVersion)
     phase = 'prototype-migration'
     const old = join(temporary, 'prototype')
     await cp(resolve(prototype), old, { recursive: true })
@@ -608,7 +634,18 @@ try {
     live = 'prototype'
     const migrationContext = await context()
     page = await newPage(migrationContext)
-    await check(previousFull ? 'existing cold full distribution migrates through explicit legacy update and the same scope'
+    const migrationSession = migrationCDP ? await migrationContext.newCDPSession(page) : null
+    report.prototypeCDP = { enabled: migrationCDP, scope: migrationCDP ? 'Passive page-target ServiceWorker observation enabled before the migration; no worker methods invoked or replaced.' : 'ServiceWorker CDP domain is not enabled before the migration.', events: [], errors: [] }
+    migrationSession?.on('ServiceWorker.workerVersionUpdated', event => report.prototypeCDP.events.push({ at: new Date().toISOString(), versions: event.versions.map(value => ({
+      versionId: value.versionId, registrationId: value.registrationId, targetId: value.targetId ?? null,
+      scriptPath: new URL(value.scriptURL).pathname, status: value.status, runningStatus: value.runningStatus, controlledClients: value.controlledClients,
+    })) }))
+    migrationSession?.on('ServiceWorker.workerErrorReported', event => {
+      const error = { phase, kind: 'workererror', ...event.errorMessage, errorMessage: scrub(event.errorMessage.errorMessage), sourceURL: scrub(event.errorMessage.sourceURL) }
+      report.prototypeCDP.errors.push(error); report.errors.push(error)
+    })
+    await migrationSession?.send('ServiceWorker.enable')
+    try { await check(previousFull ? 'existing cold full distribution migrates through explicit legacy update and the same scope'
       : 'existing prototype migrates to full app through the same scope and manifest identity', async () => {
       await page.goto(url, { waitUntil: 'load' })
       await installed()
@@ -630,6 +667,30 @@ try {
       }
       live = 'A'
       await prepareWaiting()
+      if (traceMigrationReceiver) {
+        for (const worker of migrationContext.serviceWorkers()) {
+          const version = await worker.evaluate(() => typeof VERSION === 'string' ? VERSION : null).catch(() => null)
+          if (version !== report.prototypeVersion && version !== builds.A.version) continue
+          migrationTraceWorkers.push({ worker, version })
+          await worker.evaluate(() => {
+            globalThis.__qaMigrationTrace = []
+            const add = value => { if (globalThis.__qaMigrationTrace.length < 100) globalThis.__qaMigrationTrace.push({ at: new Date().toISOString(), ...value }) }
+            self.addEventListener('message', event => add({ event: 'message-received', type: typeof event.data?.type === 'string' ? event.data.type.slice(0, 60) : null }))
+            const original = self.skipWaiting
+            self.skipWaiting = function(...args) {
+              add({ event: 'native-skipWaiting-called' })
+              let result
+              try { result = Reflect.apply(original, this, args) }
+              catch (error) { add({ event: 'native-skipWaiting-threw', error: String(error) }); throw error }
+              result.then(() => add({ event: 'native-skipWaiting-resolved' }), error => add({ event: 'native-skipWaiting-rejected', error: String(error) }))
+              return result
+            }
+          })
+        }
+        assert.ok(migrationTraceWorkers.some(value => value.version === report.prototypeVersion))
+        assert.ok(migrationTraceWorkers.some(value => value.version === builds.A.version))
+        report.prototypeReceiverInstrumentation = 'Diagnostic message observers and delegating wrappers on both real workers, identified by VERSION. Native skipWaiting is never invoked separately; original promise returned unchanged. This instrumented run is diagnostic evidence.'
+      }
       await page.locator('#apply-update').waitFor({ state: 'visible' })
       await page.locator('#apply-update').click()
       // Older shells reload to the new installer; the current public full shell
@@ -642,6 +703,7 @@ try {
       if (newPrimaryOpenUsed) await openApplication()
       else await page.locator('.app .sidebar').waitFor({ state: 'visible', timeout: 20000 })
       assert.equal(await page.title(), 'Pletina QA A')
+      await collectMigrationTrace()
       const after = await snapshot()
       assert.equal(after.scope, before.scope)
       assert.equal(after.registrations, 1)
@@ -662,7 +724,7 @@ try {
         registrationCount: after.registrations, manifestIdentityUnchanged: true, oldVersionCacheRemoved: true,
         ...(!previousFull ? { legacyPlayerCacheRemoved: true } : {}),
         localStoragePreserved: true, unrelatedCachePreserved: true, osShortcutMigrationVerified: false }
-    })
+    }) } finally { await migrationSession?.detach() }
     await migrationContext.close()
     page = null
   } else report.pending = ['Prototype migration requires --prototype pointing to an existing compiled prototype.']
