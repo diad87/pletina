@@ -149,38 +149,105 @@ function showInstallState() {
 showInstallState()
 matchMedia('(display-mode: standalone)').addEventListener('change', showInstallState)
 
+// Iconos locales: formas constantes, sin imágenes ni código de terceros.
+const guideIcons = {
+  share: 'M12 15V3m0 0L7 8m5-5 5 5M7 11H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2',
+  add: 'M8 12h8m-4-4v8M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z',
+  check: 'm7 12 3 3 7-7M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  menu: 'M12 5h.01M12 12h.01M12 19h.01',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  safari: 'm15 9-2 4-4 2 2-4 4-2ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  file: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Zm0 0v6h6M8 13h8M8 17h5',
+  install: 'M12 3v12m-4-4 4 4 4-4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3',
+  lock: 'M7 10V7a5 5 0 0 1 10 0v3M6 10h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Zm6 4v3',
+}
+function guideNode(tag, className, text) {
+  const node = document.createElement(tag)
+  node.className = className
+  if (text) node.textContent = text
+  return node
+}
+function guideIcon(name, small = false) {
+  const icon = guideNode('span', small ? 'guide-help-icon' : 'guide-icon')
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  for (const [key, value] of Object.entries({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': ['menu', 'more'].includes(name) ? '3.5' : '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })) svg.setAttribute(key, value)
+  svg.setAttribute('aria-hidden', 'true')
+  path.setAttribute('d', guideIcons[name])
+  svg.append(path)
+  icon.append(svg)
+  return icon
+}
+function guideStep(step, index) {
+  const item = document.createElement('li')
+  const number = guideNode('span', 'guide-number', String(index + 1))
+  number.setAttribute('aria-hidden', 'true')
+  const body = guideNode('div', 'guide-copy')
+  body.append(guideNode('strong', 'guide-label', step.label))
+  if (step.setting) {
+    const setting = guideNode('div', 'guide-setting')
+    const toggle = guideNode('span', 'guide-switch')
+    toggle.setAttribute('aria-hidden', 'true')
+    setting.append(toggle, guideNode('span', '', step.setting))
+    body.append(setting)
+  }
+  if (step.help) {
+    const help = guideNode('p', 'guide-help')
+    if (step.helpIcon) help.append(guideIcon(step.helpIcon, true))
+    help.append(guideNode('span', '', step.help))
+    body.append(help)
+  }
+  item.append(number, guideIcon(step.icon), body)
+  return item
+}
 function showInstallGuide() {
   let title = 'Instalar Pletina'
+  let lead = ''
   let steps
   if (!window.isSecureContext) {
-    steps = ['Abre la dirección HTTPS de Pletina en tu navegador.', 'Pulsa Instalar de nuevo desde esa dirección.']
+    steps = [
+      { icon: 'lock', label: 'Abre Pletina con HTTPS', help: 'Desde su dirección segura.' },
+      { icon: 'install', label: 'Pulsa Instalar' },
+      { icon: 'check', label: 'Confirma la instalación' },
+    ]
   } else if (iOS) {
     title = `Instalar en ${iPad ? 'iPad' : 'iPhone'}`
+    if (!safari) lead = 'Primero, abre esta página en Safari.'
     steps = [
-      ...(!safari ? ['Abre esta misma dirección en Safari.'] : []),
-      'Abre Compartir en Safari: el cuadrado con una flecha hacia arriba. Puede estar dentro de Más (···).',
-      'Pulsa Añadir a pantalla de inicio. Si no aparece, busca la opción en Editar acciones.',
-      'Deja activado Abrir como app web si aparece y pulsa Añadir.',
+      { icon: 'share', label: 'Compartir', helpIcon: 'more', help: 'Si no lo ves: Menú de página / Más → Compartir.' },
+      { icon: 'add', label: 'Añadir a pantalla de inicio', help: 'Si no aparece: Editar acciones.' },
+      { icon: 'check', label: 'Añadir', setting: 'Abrir como app web', help: 'Déjalo activado si aparece.' },
     ]
   } else if (/Android/i.test(ua)) {
     title = 'Instalar en Android'
     steps = [
-      'Abre el menú del navegador (⋮ o ☰).',
-      'Elige Instalar aplicación o Añadir a pantalla de inicio.',
-      'Confirma Instalar. Si no aparece la opción, abre esta dirección en Chrome.',
+      { icon: 'menu', label: 'Más', help: 'El menú del navegador.' },
+      { icon: 'add', label: 'Instalar y crear acceso directo', help: 'También: Añadir a pantalla de inicio o Instalar aplicación.' },
+      { icon: 'check', label: 'Instalar', help: 'Si no aparece la opción, abre esta página en Chrome.' },
     ]
   } else if (safari && /Mac/i.test(navigator.platform)) {
     title = 'Instalar en Mac'
-    steps = ['En Safari, abre el menú Archivo.', 'Elige Añadir al Dock y confirma Añadir.']
+    steps = [
+      { icon: 'file', label: 'Archivo', help: 'En el menú de Safari.' },
+      { icon: 'add', label: 'Añadir al Dock' },
+      { icon: 'check', label: 'Añadir' },
+    ]
   } else {
-    steps = ['Abre el menú del navegador y busca Instalar Pletina o Instalar aplicación.', 'También puede aparecer un icono de instalación en la barra de direcciones. Si no aparece, abre esta dirección en Chrome o Edge.']
+    steps = [
+      { icon: 'menu', label: 'Menú del navegador' },
+      { icon: 'install', label: 'Instalar Pletina', help: 'O Instalar aplicación. También puede estar en la barra de direcciones.' },
+      { icon: 'check', label: 'Instalar', help: 'Si no aparece, usa Chrome o Edge.' },
+    ]
   }
   guideTitle.textContent = title
-  guideSteps.replaceChildren(...steps.map((text) => {
-    const item = document.createElement('li')
-    item.textContent = text
-    return item
-  }))
+  document.querySelector('#guide-context').textContent = window.isSecureContext && (iOS || safari && /Mac/i.test(navigator.platform))
+    ? 'En Safari, toca estos botones.' : 'En tu navegador, toca estos botones.'
+  const guideLead = document.querySelector('#guide-lead')
+  guideLead.hidden = !lead
+  guideLead.replaceChildren(...(lead ? [guideIcon('safari', true), document.createTextNode(lead)] : []))
+  guideSteps.replaceChildren(...steps.map(guideStep))
+  installGuide.scrollTop = 0
   if (!installGuide.open) installGuide.showModal()
 }
 document.querySelector('#close-guide').addEventListener('click', () => installGuide.close())
