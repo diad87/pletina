@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises'
 
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
+  'youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio',
+  'audius-homonym-with-wrong-isrc-or-artist-never-starts-audio',
   'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
   'now-playing-synthetic-touch-swipe-threshold-and-interactive-origin',
   'home-surprise-album-starts-saved-album-in-track-order', 'artist-radio-builds-bounded-mixed-queue-and-plays',
@@ -289,6 +291,89 @@ export async function runMediaScenarios(ctx) {
       ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
       await closeOverlays(); await pause(); await fixture.reset()
     }
+  })
+
+  await run('youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio', async () => {
+    const rescue = media.audiusRescue
+    assert.ok(rescue?.track && rescue.sourceId)
+    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
+    const mark = fixture.requests.length
+    const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'audius-catalog-rescue')
+      .map(({ operation, candidateIds, videoId, playability, sourceId, isrc, requestedTrackId }) => ({ operation,
+        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(playability ? { playability } : {}),
+        ...(sourceId ? { sourceId } : {}), ...(isrc ? { isrc } : {}), ...(requestedTrackId ? { requestedTrackId } : {}) }))
+    try {
+      await fixture.set({ audiusCatalogRescue: true })
+      await ctx.fillSearch('Buscar', rescue.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, rescue.track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 2)
+      await tap(row(0) + ' .name')
+      const first = await playing(rescue.track.title), audio = active(first)
+      assert.equal(audio.host, 'api.audius.co', 'The requested recording must play from its accepted Audius ID')
+      assert.equal(first.audios.length, 1)
+      assert.ok(audio.duration >= 11 && audio.duration < 14, 'Decode the real AAC fixture, not metadata alone')
+      assert.equal(await visible('dialog[data-official-youtube][open]'), false)
+      const trace = attempts(), denied = trace.findIndex(attempt => attempt.operation === 'player' && attempt.playability === 'UNPLAYABLE')
+      const catalog = trace.findIndex(attempt => attempt.operation === 'catalog-search')
+      assert.ok(denied >= 0 && catalog > denied, 'Definitive YouTube rejection must precede catalog rescue')
+      assert.equal(trace[catalog].isrc, rescue.track.isrc)
+      assert.deepEqual(trace[catalog].candidateIds, ['WrongIsrc', 'WrongArtist', rescue.sourceId])
+      assert.ok(trace.some(attempt => attempt.operation === 'media' && attempt.sourceId === rescue.sourceId))
+      assert.ok(!trace.some(attempt => attempt.operation === 'media' && ['WrongIsrc', 'WrongArtist'].includes(attempt.sourceId)))
+      const persisted = await page.evaluate(id => new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-library')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result, tx = db.transaction('sources'), get = tx.objectStore('sources').get(id)
+          let found = null
+          get.onsuccess = () => { found = get.result ?? null }
+          tx.oncomplete = () => { db.close(); resolve(found) }
+          tx.onabort = () => { db.close(); reject(tx.error) }
+        }
+      }), rescue.track.id)
+      assert.equal(persisted, null, 'External audio is never saved as a YouTube source choice')
+      const next = fixture.tracks.find(track => track.id === rescue.nextTrackId)
+      assert.ok(next)
+      await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && !audio.error), next.title, 20000)
+      const after = await state()
+      assert.equal(after.audios.length, 1)
+      assert.equal(active(after).index, audio.index)
+      assert.equal(active(after).host, 'fixture.googlevideo.com')
+      assert.ok(after.events.some(event => event.type === 'ended' && event.index === audio.index))
+      return { requestedTrackId: rescue.track.id, acceptedSourceId: rescue.sourceId, isrc: rescue.track.isrc,
+        nextTrackId: rescue.nextTrackId, attempts: attempts(), sameAudio: true, realDecoderProgressAndEnded: true,
+        scope: 'Compiled UI + real synthetic AAC; controlled provider HTTP, no live-catalog or physical-phone claim.' }
+    } finally { await closeOverlays(); await pause(); await fixture.reset() }
+  })
+
+  await run('audius-homonym-with-wrong-isrc-or-artist-never-starts-audio', async () => {
+    const rejected = media.audiusRescue?.rejected
+    assert.ok(rejected?.track)
+    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
+    const mark = fixture.requests.length
+    try {
+      await fixture.set({ audiusCatalogRescue: true })
+      await ctx.fillSearch('Buscar', rejected.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, rejected.track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 1)
+      await tap(row(0) + ' .name')
+      await page.locator('dialog[data-official-youtube][open]').waitFor({ timeout: 15000 })
+      const trace = fixture.requests.slice(mark).filter(request => request.fixtureCase === 'audius-catalog-rescue')
+      assert.ok(trace.some(request => request.operation === 'player' && request.playability === 'UNPLAYABLE'))
+      const catalog = trace.filter(request => request.operation === 'catalog-search')
+      assert.ok(catalog.length >= 1)
+      assert.equal(catalog[0].isrc, rejected.track.isrc)
+      assert.deepEqual(catalog[0].candidateIds, ['WrongIsrc', 'WrongArtist'])
+      assert.equal(trace.filter(request => request.operation === 'media').length, 0,
+        'Matching titles with another ISRC or artist must never reach HTMLAudio')
+      const value = await state()
+      assert.ok(value.audios.every(audio => audio.paused && audio.host !== 'api.audius.co'))
+      assert.equal(value.title, rejected.track.title)
+      return { requestedTrackId: rejected.track.id, rejectedCandidateIds: catalog[0].candidateIds,
+        externalMediaRequests: 0, directAudioPaused: true, retainedExistingOfficialFallback: true,
+        scope: 'Controlled HTTP homonyms rejected by the real compiled strict mapper; no provider-content claim.' }
+    } finally { await closeOverlays(); await pause(); await fixture.reset() }
   })
 
   await run('pause-seek-next-previous-one-audio', async () => {

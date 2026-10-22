@@ -22,6 +22,8 @@ export function toQuery(item: QueueItem): TrackQuery {
     artist: item.track.artist.name,
     album: item.albumTitle,
     duration: item.track.duration,
+    isrc: item.track.isrc ?? null,
+    titleVersion: item.track.titleVersion ?? null,
   }
 }
 

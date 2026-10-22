@@ -36,7 +36,7 @@ export const item = (id = 1) => ({
 export const playable = (id = 1, local = false) => ({ url: local ? `/music/${id}.mp3` : `https://audio.test/${id}`, local })
 
 export function harness({ resolve = async (track) => playable(track.id), play, mediaSession, metadata,
-  progress = new Map(), duration = () => 180, inTauri = false, inPwa = false, storage,
+  progress = new Map(), duration = () => 180, audioMetadata = true, inTauri = false, inPwa = false, storage,
   location = 'https://app.example/pletina/application/app.html', flushProgress = async () => {} } = {}) {
   const audios = [], messages = [], resolutions = [], sources = [], records = []
   const events = new EventTarget()
@@ -64,8 +64,10 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
       this.plays++
       if (!Number.isFinite(this.duration)) {
         this.duration = duration(this)
-        this.dispatchEvent(new Event('loadedmetadata'))
-        this.dispatchEvent(new Event('durationchange'))
+        if (audioMetadata) {
+          this.dispatchEvent(new Event('loadedmetadata'))
+          this.dispatchEvent(new Event('durationchange'))
+        }
       }
       if (play) return play(this)
       this.paused = false
@@ -111,7 +113,7 @@ export function harness({ resolve = async (track) => playable(track.id), play, m
     './queue': {
       load: (_key, fallback) => fallback,
       playOrder: queue.playOrder,
-      save: () => {}, toQuery: (value) => value.track,
+      save: () => {}, toQuery: queue.toQuery,
     },
   }
   const exports = {}

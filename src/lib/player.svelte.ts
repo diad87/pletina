@@ -23,6 +23,8 @@ const AUDIO_TIMEOUT = 30_000
 const CLOSE_TIMEOUT = 1_500
 const PREPARE_AHEAD = 60_000
 const PREPARE_RETRY = 60_000
+/** Sólo se permite omitir una introducción breve y verificada, nunca la canción entera. */
+const MAX_SOURCE_START = 60
 
 /** También limita las promesas del navegador que no llegan a resolver ni rechazar. */
 function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promise<T> {
@@ -121,6 +123,8 @@ class Player implements PlayerApi {
   #progressSavedAt = 0
   #completed = false
   #resumeAt = 0
+  #resumeRequestedAt = 0
+  #resumeExplicit = false
   #requestedSeek: number | null = null
   #metadataReady = false
   #positionKnown = false
@@ -240,7 +244,14 @@ class Player implements PlayerApi {
     })
     a.addEventListener('loadedmetadata', () => {
       if (a !== this.#audio) return
+      const initial = !this.#metadataReady
       this.#metadataReady = true
+      // Una duración real más corta invalida el salto de la fuente; no permite
+      // convertir un metadato incorrecto en un seek cerca del final del audio.
+      if (initial && this.#playable && !this.#resumeExplicit && this.#sourceStart(this.#playable) > 0) {
+        this.#resumeAt = Math.max(this.#resumeRequestedAt, this.#sourceStart(this.#playable, a.duration))
+        this.time = this.#resumeAt
+      }
       if (!this.#resumeAt) return
       // YouTube y RSS pueden tener duraciones distintas; conservar los segundos sin salir del audio.
       a.currentTime = Number.isFinite(a.duration) && a.duration > 0
@@ -285,8 +296,8 @@ class Player implements PlayerApi {
       if (this.repeat === 'one') {
         this.#recorded = false
         this.#completed = false
-        a.currentTime = 0
-        this.time = 0
+        a.currentTime = this.#playable ? this.#sourceStart(this.#playable, a.duration) : 0
+        this.time = a.currentTime
         this.#resume()
       } else {
         this.next()
@@ -322,6 +333,8 @@ class Player implements PlayerApi {
     this.#playable = null
     this.#metadataReady = false
     this.#resumeAt = 0
+    this.#resumeRequestedAt = 0
+    this.#resumeExplicit = false
     stopCapture()
     previous.pause()
     previous.removeAttribute('src')
@@ -457,6 +470,11 @@ class Player implements PlayerApi {
     if (this.#checkSleepTimer()) return
     this.#wantsPlay = true
     this.#repaired = false
+    if (api.inPwa && this.#playable && !this.#playable.local && !isPodcast(item.track.id) &&
+      this.#preparedExpiry(this.#playable, item.track.id) <= Date.now()) {
+      this.#start(item, true, this.time, true)
+      return
+    }
     if (!this.#audio.src || this.status === 'idle' || !this.#activeItem) {
       this.#start(item, false, this.time, true)
       return
@@ -518,6 +536,8 @@ class Player implements PlayerApi {
   seek(seconds: number) {
     this.#completed = false
     this.#positionKnown = true
+    this.#resumeRequestedAt = seconds
+    this.#resumeExplicit = true
     if (this.status === 'loading') {
       this.#requestedSeek = seconds
       this.time = seconds
@@ -794,12 +814,23 @@ class Player implements PlayerApi {
     this.#progressSavedAt = Date.now()
     this.#positionKnown = true
     this.#metadataReady = false
-    this.#resumeAt = this.#requestedSeek ?? startAt
+    this.#resumeRequestedAt = this.#requestedSeek ?? startAt
+    this.#resumeExplicit = this.#requestedSeek !== null
+    // Un seek explícito del usuario puede volver al silencio inicial. El salto
+    // de la fuente sólo se aplica al arrancar o reconstruir la reproducción.
+    this.#resumeAt = this.#requestedSeek ?? Math.max(startAt, this.#sourceStart(playable))
     this.time = this.#resumeAt
     this.#sourceLocal = playable.local
     this.#playable = playable
     setAudioSource(a, audioSrc(playable))
     await this.#playElement(a)
+  }
+
+  #sourceStart(playable: Playable, duration = this.current?.track.duration ?? 0): number {
+    if (!api.inPwa || playable.local || !this.current || isPodcast(this.current.track.id)) return 0
+    const start = playable.source?.startAt
+    return typeof start === 'number' && Number.isFinite(start) && start > 0 && start <= MAX_SOURCE_START &&
+      (!Number.isFinite(duration) || duration <= 0 || start < duration) ? start : 0
   }
 
   #saveProgress(force = false) {
@@ -938,15 +969,23 @@ class Player implements PlayerApi {
 
   #preparedExpiry(source: Playable, id: number): number {
     const now = Date.now()
+    let expiresAt = now + 5 * 60_000
+    let temporary = false
     try {
       const params = new URL(source.url).searchParams
       const expiration = Number(params.get('expire') || params.get('expires')) * 1000
-      if (Number.isFinite(expiration) && expiration > 0) return Math.min(now + 20 * 60_000, expiration - 60_000)
+      if (Number.isFinite(expiration) && expiration > 0) {
+        expiresAt = Math.min(now + 20 * 60_000, expiration - 60_000)
+        temporary = true
+      }
     } catch { /* Un origen sin caducidad explícita tiene una reserva corta. */ }
     // El enclosure RSS publicado no es una URL temporal de YouTube: puede esperar al siguiente
     // episodio aunque el actual dure horas. El navegador comprobará su disponibilidad al cargarlo.
-    if (isPodcast(id) && !source.videoId) return Infinity
-    return now + 5 * 60_000
+    if (!temporary && isPodcast(id) && !source.videoId) expiresAt = Infinity
+    if (!source.local && !isPodcast(id) && typeof source.source?.expiresAt === 'number' && Number.isFinite(source.source.expiresAt)) {
+      expiresAt = Math.min(expiresAt, source.source.expiresAt - 60_000)
+    }
+    return expiresAt
   }
 
   /** Mientras suena una canción, se prepara la siguiente para que no haya espera. */
@@ -968,8 +1007,9 @@ class Player implements PlayerApi {
     const preparation = this.#preparation
     this.#preparingNext = { id, preparation }
     // Una aparición duplicada de la canción actual puede reutilizar su fuente vigente.
-    const pending = !previous && id === this.current?.track.id && this.#playable
-      ? Promise.resolve(this.#playable) : this.#resolve(following, !!previous)
+    const currentSource = !previous && id === this.current?.track.id ? this.#playable : null
+    const pending = currentSource && this.#preparedExpiry(currentSource, id) > now
+      ? Promise.resolve(currentSource) : this.#resolve(following, !!previous || !!currentSource)
     const position = isPodcast(id) && id !== this.current?.track.id ? episodeProgress.position(id) : Promise.resolve(0)
     Promise.all([pending, position]).then(([playable, position]) => {
       if (preparation !== this.#preparation || this.#following()?.track.id !== id) return

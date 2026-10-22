@@ -303,6 +303,7 @@ const libraryTrack = (track: TopTrack): LibTrack => ({
   id: track.id, title: track.title, duration: track.duration, explicit: track.explicitLyrics,
   artistId: track.artist.id, artistName: track.artist.name, albumId: track.album.id, albumTitle: track.album.title,
   albumArtistId: track.artist.id, cover: track.album.coverBig || track.album.coverMedium,
+  isrc: track.isrc, titleVersion: track.titleVersion,
 })
 export async function matchImportTrack(wanted: ImportTrack, options: CatalogOptions = {}): Promise<LibTrack | null> {
   if (!wanted.title.trim() || wanted.title.length > 2000 || !wanted.artists.length || !wanted.artists[0].trim()) return null

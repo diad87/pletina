@@ -72,6 +72,29 @@ test('favoritos, álbumes, artistas y programas se conservan al cerrar y reabrir
   assert.equal((await reopened.storageInvoke('liked_tracks'))[0].track.title, 'Título actualizado')
 })
 
+test('ISRC y versión sobreviven a playlists, historial y favoritos; una copia antigua no borra la identidad', async t => {
+  const { store, factory, name, invoke } = setup(t)
+  const identity = { isrc: 'QM6N21424821', titleVersion: 'Original' }
+  const signed = 'https://audio.example/stream?token=DO_NOT_PERSIST'
+  const track = song(1, { ...identity, playable: { url: signed, source: { provider: 'audius', id: 'private-source' } }, url: signed })
+  const list = await invoke('create_playlist', { name: 'Grabación correcta', tracks: [track, song(2, { isrc: null, titleVersion: null })] })
+  await invoke('set_liked', { track, liked: true })
+  await invoke('record_play', { track: song(1) })
+  await store.close()
+  const reopened = createWebStorage({ indexedDB: factory, name })
+  t.after(() => reopened.close())
+  const playlist = await reopened.storageInvoke('playlist', { id: list.id })
+  const liked = await reopened.storageInvoke('liked_tracks')
+  const history = await reopened.storageInvoke('history', { limit: 10 })
+  for (const entry of [playlist.entries[0], liked[0], history[0]]) {
+    assert.equal(entry.track.isrc, identity.isrc)
+    assert.equal(entry.track.titleVersion, identity.titleVersion)
+  }
+  assert.equal(playlist.entries[1].track.isrc, null)
+  assert.equal(playlist.entries[1].track.titleVersion, null)
+  assert.doesNotMatch(JSON.stringify(await dump(factory, name)), /DO_NOT_PERSIST|private-source|playable/)
+})
+
 test('quitar favoritos conserva las canciones de playlists e historial y los metadatos del programa', async (t) => {
   const { store, invoke } = setup(t)
   const track = song(1)

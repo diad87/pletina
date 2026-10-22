@@ -35,7 +35,10 @@ export function downloadTrack(value: LibTrack): LibTrack {
     cover = url.href
   }
   return { id: downloadId(value.id), title: text(value.title, false), duration: value.duration, explicit: value.explicit,
-    artistId: integer(value.artistId), artistName: text(value.artistName), albumId: integer(value.albumId), albumTitle: text(value.albumTitle), albumArtistId: integer(value.albumArtistId), cover }
+    artistId: integer(value.artistId), artistName: text(value.artistName), albumId: integer(value.albumId), albumTitle: text(value.albumTitle), albumArtistId: integer(value.albumArtistId), cover,
+    ...(value.isrc !== undefined ? { isrc: value.isrc === null ? null : text(value.isrc) } : {}),
+    ...(value.titleVersion !== undefined ? { titleVersion: value.titleVersion === null ? null : text(value.titleVersion) } : {}),
+  }
 }
 export function downloadScope(): URL { return new URL('../', window.location.href) }
 export function audioCacheUrl(id: number, scope: URL = downloadScope()): string { return new URL('__audio__/' + downloadId(id), scope).href }

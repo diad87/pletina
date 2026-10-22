@@ -117,6 +117,23 @@ test('catálogo y episodios conservan su snapshot sin consultar el lector canón
   assert.ok(!(await h.factory.databases()).some(database => database.name === 'canonical-library'))
 })
 
+test('descargas conservan ISRC y versión tras reabrir con sólo bytes locales y metadatos permitidos', async t => {
+  const h = setup(t), store = h.download(), track = { ...ordinary(1), isrc: 'QM6N21424821', titleVersion: 'Original' }
+  const record = await h.seed(store, { ...track, source: { provider: 'audius', id: 'DO_NOT_PERSIST' },
+    url: 'https://audio.example/?signature=DO_NOT_PERSIST' })
+  const before = await h.cacheSnapshot()
+  await store.close()
+  const reopened = h.download()
+  const saved = await reopened.get(track.id)
+  assert.deepEqual(saved.track, track)
+  assert.doesNotMatch(JSON.stringify(saved), /DO_NOT_PERSIST|signature/)
+  assert.deepEqual((await reopened.listDownloads())[0].track, track)
+  assert.equal((await reopened.readDownloadedPlayable(track.id)).local, true)
+  assert.deepEqual(await h.cacheSnapshot(), before)
+  assert.deepEqual(h.requests, [])
+  assert.equal(saved.size, record.size)
+})
+
 test('el lector registrado por el adaptador se aplica también a una descarga creada antes del wiring', async t => {
   const h = setup(t)
   const store = createDownloadStore({ indexedDB: h.factory, name: 'adapter-downloads', scope, caches: h.caches })

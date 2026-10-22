@@ -49,7 +49,7 @@ function downloadedKey(id) {
   })
 }
 
-async function downloadedAudio(url) {
+async function downloadedAudio(url, range) {
   const id = url.pathname.slice(audioPath.length)
   if (!/^[1-9][0-9]{0,14}$/.test(id) || !Number.isSafeInteger(Number(id))) return new Response('', { status: 404 })
   let key
@@ -62,7 +62,31 @@ async function downloadedAudio(url) {
   const cache = await caches.open(AUDIO_CACHE)
   const response = await cache.match(key)
   // La respuesta opaca completa conserva sus bytes; HTMLAudio gestiona su lectura y búsqueda local.
-  return response || new Response('', { status: 404 })
+  if (!response) return new Response('', { status: 404 })
+  if (response.type === 'opaque' || response.status !== 200) return response
+  // CORS-readable external audio can answer real local byte ranges. Returning a
+  // full 200 to a tail-range request can leave mobile/native seeking pending.
+  const blob = await response.blob(), size = blob.size, headers = new Headers(response.headers)
+  headers.set('accept-ranges', 'bytes')
+  headers.set('content-length', String(size))
+  headers.delete('content-range')
+  if (!range) return new Response(blob, { status: 200, headers })
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim())
+  const unsatisfied = () => { headers.set('content-range', `bytes */${size}`); headers.set('content-length', '0'); return new Response(null, { status: 416, headers }) }
+  if (!match || !size || !match[1] && !match[2]) return unsatisfied()
+  let start, end
+  if (!match[1]) {
+    const suffix = Number(match[2])
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) return unsatisfied()
+    start = Math.max(0, size - suffix); end = size - 1
+  } else {
+    start = Number(match[1]); end = match[2] ? Number(match[2]) : size - 1
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || end < start) return unsatisfied()
+    end = Math.min(end, size - 1)
+  }
+  headers.set('content-range', `bytes ${start}-${end}/${size}`)
+  headers.set('content-length', String(end - start + 1))
+  return new Response(blob.slice(start, end + 1, blob.type), { status: 206, headers })
 }
 
 async function verifiedResponse(url, file) {
@@ -121,7 +145,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
   if (url.pathname.startsWith(audioPath)) {
-    event.respondWith(downloadedAudio(url).catch(() => new Response('', { status: 404 })))
+    event.respondWith(downloadedAudio(url, request.headers.get('range')).catch(() => new Response('', { status: 404 })))
     return
   }
   const isHome = request.mode === 'navigate' && (url.pathname === ROOT.pathname || url.pathname === new URL(indexURL).pathname)

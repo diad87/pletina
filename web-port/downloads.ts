@@ -9,31 +9,56 @@ interface Options {
   fetch?: typeof fetch
   resolve?: (track: TrackQuery, refresh?: boolean) => Promise<Playable>
   stream?: (videoId: string) => Promise<StreamInfo>
-  validate?: (url: string, signal: AbortSignal) => Promise<void>
+  validate?: (url: string, signal: AbortSignal, expectedDuration?: number) => Promise<void>
   emit?: (value: DownloadProgress) => void
   storage?: Pick<StorageManager, 'estimate' | 'persist'>
   timeout?: number
   retryDelay?: number
 }
 const cancelled = () => new DOMException('Descarga descartada.', 'AbortError')
-export function validateDownloadedAudio(url: string, signal: AbortSignal): Promise<void> {
+export function validateDownloadedAudio(url: string, signal: AbortSignal, expectedDuration?: number): Promise<void> {
   return new Promise((resolve, reject) => {
     const audio = new Audio()
     let finished = false
-    const cleanup = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); audio.pause(); audio.removeAttribute('src'); audio.load() }
+    let tail = -1
+    const cleanup = () => { clearTimeout(timer); signal.removeEventListener('abort', abort); audio.removeEventListener('loadedmetadata', loaded); audio.removeEventListener('error', failed); for (const type of ['seeked', 'loadeddata', 'canplay']) audio.removeEventListener(type, tailReady); audio.pause(); audio.removeAttribute('src'); audio.load() }
     const finish = (error?: Error) => { if (finished) return; finished = true; cleanup(); error ? reject(error) : resolve() }
-    const loaded = () => Number.isFinite(audio.duration) && audio.duration > 0 ? finish() : failed()
+    const tailReady = () => { if (tail >= 0 && !audio.seeking && audio.readyState >= 2 && audio.currentTime >= tail - 0.1) finish() }
+    const loaded = () => {
+      if (!Number.isFinite(audio.duration) || audio.duration <= 0) { failed(); return }
+      if (expectedDuration === undefined) { finish(); return }
+      if (!Number.isFinite(expectedDuration) || expectedDuration <= 0 || Math.abs(audio.duration - expectedDuration) > 3) {
+        finish(new Error('La copia descargada no tiene la duración de la canción completa. Vuelve a intentarlo.')); return
+      }
+      // A duration tag alone can describe a longer/truncated file. Require decodable
+      // media at its tail as well; this never plays or changes the active player.
+      tail = Math.max(0, audio.duration - 0.25)
+      try { audio.currentTime = tail; tailReady() } catch { failed() }
+    }
     const failed = () => finish(new Error('La copia descargada no contiene audio reproducible. Vuelve a intentarlo.'))
     const abort = () => finish(signal.reason instanceof Error ? signal.reason : cancelled())
     const timer = setTimeout(() => finish(new Error('No se pudo comprobar el audio descargado a tiempo.')), 20000)
     audio.addEventListener('loadedmetadata', loaded)
     audio.addEventListener('error', failed)
+    for (const type of ['seeked', 'loadeddata', 'canplay']) audio.addEventListener(type, tailReady)
     signal.addEventListener('abort', abort, { once: true })
     if (signal.aborted) { abort(); return }
-    audio.preload = 'metadata'
+    audio.preload = expectedDuration === undefined ? 'metadata' : 'auto'
     audio.src = url
     audio.load()
   })
+}
+
+function externalDownload(source: Playable, track: LibTrack): { url: string; size: number; duration: number; sha256?: string } {
+  const identity = source.source, permission = identity?.download
+  if (permission?.allowed !== true) throw new Error('Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión.')
+  if (identity?.provider !== 'audius' || !/^[A-Za-z0-9]{1,30}$/.test(identity.id) ||
+    source.url !== `https://api.audius.co/v1/tracks/${identity.id}/stream`) throw new Error('Esta fuente todavía no permite descargas verificadas en Pletina.')
+  const size = permission.contentLength ?? 0, duration = permission.duration ?? track.duration
+  if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
+  if (!Number.isFinite(duration) || duration <= 0 || Math.abs(duration - track.duration) > 3) throw new Error('La fuente no corresponde a la duración de esta canción.')
+  if (permission.sha256 !== undefined && !/^[a-f0-9]{64}$/i.test(permission.sha256)) throw new Error('La comprobación de esta descarga no es válida.')
+  return { url: source.url, size, duration, ...(permission.sha256 ? { sha256: permission.sha256.toLowerCase() } : {}) }
 }
 
 export function createDownloadManager(options: Options = {}) {
@@ -67,13 +92,15 @@ export function createDownloadManager(options: Options = {}) {
       if (existing) { send(id, 'done', 1); return }
       for (let attempt = 0; attempt < 2; attempt++) {
         const refresh = failed.has(id) || attempt > 0
-        const source = await wait(resolve({ id, title: track.title, artist: track.artistName, album: track.albumTitle, duration: track.duration }, refresh))
+        const source = await wait(resolve({ id, title: track.title, artist: track.artistName, album: track.albumTitle, duration: track.duration,
+          isrc: track.isrc, titleVersion: track.titleVersion }, refresh))
         check()
-        if (!source.videoId || source.local) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
+        if (source.local || !source.videoId && !source.source) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
         // resolve(refresh) ya renueva el stream; se consulta aquí esa misma selección y tamaño.
-        const details = await wait(info(source.videoId))
+        const external = Boolean(source.source)
+        const details = external ? externalDownload(source, track) : await wait(info(source.videoId))
         check()
-        const size = details.contentLength ?? 0
+        let size = 'size' in details ? details.size : details.contentLength ?? 0
         if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
         const estimate = typeof storage?.estimate === 'function' ? await wait(storage.estimate().catch(() => null)) : null
         if (estimate?.quota !== undefined && estimate.usage !== undefined && size > estimate.quota - estimate.usage) throw new Error('No hay espacio suficiente para esta descarga. Quita otras descargas y reintenta.')
@@ -83,16 +110,68 @@ export function createDownloadManager(options: Options = {}) {
         stage = audioCacheUrl(id, store.scope) + '?stage=' + Date.now() + '-' + crypto.randomUUID()
         const attemptStage = stage
         try {
-          const response = await wait(request(details.url, { mode: 'no-cors', credentials: 'omit', signal: controller.signal }))
+          const response = await wait(request(details.url, { mode: external ? 'cors' : 'no-cors', credentials: 'omit',
+            ...(external ? { referrerPolicy: 'no-referrer' as const } : {}), signal: controller.signal }))
           check()
           if (response.type !== 'opaque' && !response.ok) throw new Error('No se pudo descargar el audio. Vuelve a intentarlo.')
-          const cachePut = cache.put(attemptStage, response)
+          let cachedResponse = response, actualBytes = 0, bodyComplete = false
+          if (external) {
+            const rejectBody = (message: string): never => { void response.body?.cancel().catch(() => {}); throw new Error(message) }
+            const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '', body = response.body
+            if (response.type === 'opaque' || response.status !== 200 || response.headers.has('content-range') ||
+              !/^audio\/(?:mpeg|mp3|mp4|aac|ogg|flac|wav|wave|webm|x-(?:mpeg|m4a|flac|wav))$/.test(contentType) || !body) {
+              rejectBody('La fuente no entregó un archivo de audio completo que se pueda descargar.')
+            }
+            const declared = response.headers.get('content-length')
+            if (declared !== null) {
+              if (!/^\d+$/.test(declared) || !Number.isSafeInteger(Number(declared)) || Number(declared) <= 0 || Number(declared) > MAX_DOWNLOAD_BYTES) {
+                rejectBody('El tamaño del audio descargado no es válido o supera 256 MiB.')
+              }
+              if (size && Number(declared) !== size) rejectBody('El tamaño entregado no coincide con la canción completa.')
+              size = Number(declared)
+            }
+            const available = estimate?.quota !== undefined && estimate.usage !== undefined ? estimate.quota - estimate.usage : undefined
+            if (available !== undefined && size > available) rejectBody('No hay espacio suficiente para esta descarga. Quita otras descargas y reintenta.')
+            const expectedBytes = size
+            const counter = new TransformStream<Uint8Array, Uint8Array>({
+              transform(chunk, writer) {
+                check()
+                actualBytes += chunk.byteLength
+                if (actualBytes > MAX_DOWNLOAD_BYTES || expectedBytes && actualBytes > expectedBytes) throw new Error('El audio supera el tamaño completo esperado o el límite de 256 MiB.')
+                if (available !== undefined && actualBytes > available) throw new DOMException('No hay espacio suficiente para la descarga.', 'QuotaExceededError')
+                writer.enqueue(chunk)
+                if (expectedBytes) send(id, 'downloading', Math.min(0.99, actualBytes / expectedBytes))
+              },
+              flush() {
+                check()
+                if (!actualBytes || expectedBytes && actualBytes !== expectedBytes) throw new Error('La descarga quedó incompleta. Vuelve a intentarlo.')
+                bodyComplete = true
+              },
+            })
+            const headers = new Headers({ 'content-type': contentType })
+            if (expectedBytes) headers.set('content-length', String(expectedBytes))
+            cachedResponse = new Response(body!.pipeThrough(counter), { status: 200, headers })
+          }
+          const cachePut = cache.put(attemptStage, cachedResponse)
           // Si un proveedor tarda en cerrar el cuerpo, una finalización posterior al timeout
           // tampoco puede dejar un fichero parcial huérfano.
           void cachePut.then(() => { if (controller.signal.aborted && !committed) return cache!.delete(attemptStage) }).catch(() => {})
           await wait(cachePut)
           check()
-          await wait(validate(attemptStage, controller.signal))
+          if (external) {
+            if (!bodyComplete || !actualBytes) throw new Error('No se pudo comprobar la descarga completa.')
+            size = actualBytes
+            if ('sha256' in details && details.sha256) {
+              const copy = await wait(cache.match(attemptStage))
+              if (!copy) throw new Error('No se pudo comprobar el archivo descargado.')
+              const bytes = await wait(copy.arrayBuffer())
+              check()
+              const hash = await wait(crypto.subtle.digest('SHA-256', bytes))
+              const actualHash = [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('')
+              if (actualHash !== details.sha256) throw new Error('La copia descargada no coincide con el audio verificado.')
+            }
+          }
+          await wait(validate(attemptStage, controller.signal, external ? details.duration ?? undefined : undefined))
           check()
         } catch (error) {
           check()

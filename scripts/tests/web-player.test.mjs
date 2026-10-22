@@ -22,6 +22,7 @@ new Function('exports', commonJs(await readFile(new URL('../../src/lib/queue.ts'
 // El harness compartido no permite inyectar inPwa. Este adaptador local conserva su contrato
 // sin cambiarlo y modela el reinicio de error/metadatos al sustituir la fuente de un Audio real.
 function pwaHarness({ resolve = async (track) => playable(track.id), play, progress = new Map(), progressPosition,
+  duration = () => 180, storage, metadata = true,
   location = 'https://app.example/pletina/application/app.html',
   automaticYouTubeSource = () => null, openAutomaticYouTubePlayer = () => true,
   chooseSource = async (track, videoId) => ({ ...playable(track.id), videoId }) } = {}) {
@@ -29,6 +30,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
   const progressReads = [], progressWrites = [], officialOpens = []
   const events = new EventTarget()
   events.location = { href: location }
+  events.localStorage = storage
   const timers = new Map()
   const audioSession = { type: 'auto' }
   let now = 0, timerId = 0, wallOffset = 0
@@ -55,9 +57,11 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
       audioOperations.push({ type: 'play', value: this.src })
       this.plays++
       if (!Number.isFinite(this.duration)) {
-        this.duration = 180
-        this.dispatchEvent(new Event('loadedmetadata'))
-        this.dispatchEvent(new Event('durationchange'))
+        this.duration = duration(this)
+        if (metadata) {
+          this.dispatchEvent(new Event('loadedmetadata'))
+          this.dispatchEvent(new Event('durationchange'))
+        }
       }
       return play ? play(this) : this.begin()
     }
@@ -666,6 +670,190 @@ test('PWA never consumes an expired prepared URL and can resolve a replacement n
   assert.equal(h.player.current.track.id, 2)
   assert.equal(h.player.status, 'playing')
   assert.equal(nextLoads, 2)
+})
+
+const verified = (id = 1, extra = {}) => ({ ...playable(id), videoId: '',
+  source: { provider: 'verified', id: 'curated-recording', startAt: 8.94, ...extra } })
+
+test('PWA empieza en el silencio verificado y conserva tiempo y duración reales, sin repetir play ni metadata seeks', async () => {
+  const h = pwaHarness({ resolve: async () => verified(), duration: () => 187.1804 })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(h.audio.currentTime, 8.94)
+  assert.equal(h.player.time, 8.94)
+  assert.equal(h.player.duration, 187.1804, 'the real file duration is never shifted or trimmed')
+  assert.equal(h.audio.plays, 1)
+  h.audio.currentTime = 23
+  h.audio.dispatchEvent(new Event('timeupdate'))
+  h.audio.dispatchEvent(new Event('loadedmetadata'))
+  assert.equal(h.audio.currentTime, 23, 'repeated metadata cannot restart the source intro')
+  h.player.seek(0)
+  assert.equal(h.audio.currentTime, 0, 'an explicit seek may replay the original silence')
+  h.player.toggle(); h.player.toggle()
+  await flush()
+  assert.equal(h.audio.currentTime, 0, 'pause/resume preserves the explicit position')
+})
+
+test('PWA precarga e inicia la siguiente grabación en el punto verificado dentro del mismo ended', async () => {
+  const h = pwaHarness({ resolve: async track => track.id === 2 ? verified(2) : playable(track.id), duration: () => 187.1804 })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  const audio = h.audio, before = [...h.resolutions], plays = audio.plays
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  assert.equal(audio.plays, plays + 1)
+  assert.equal(audio.currentTime, 8.94)
+  assert.equal(h.player.current.track.id, 2)
+  assert.deepEqual(h.resolutions, before)
+  await flush()
+  assert.equal(h.player.duration, 187.1804)
+})
+
+test('PWA repetir una grabación verificada conserva el archivo y vuelve al inicio audible con un solo play', async () => {
+  const h = pwaHarness({ resolve: async () => verified(), duration: () => 187.1804 })
+  h.player.cycleRepeat(); h.player.cycleRepeat()
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  const audio = h.audio, resolutions = [...h.resolutions], plays = audio.plays
+  audio.currentTime = 187.1804
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  assert.equal(audio.currentTime, 8.94)
+  assert.equal(audio.plays, plays + 1)
+  assert.deepEqual(h.resolutions, resolutions)
+  await flush()
+  assert.equal(h.player.time, 8.94)
+  assert.equal(h.player.duration, 187.1804)
+})
+
+test('PWA reconstruir una fuente desde cero vuelve al punto verificado; un seek explícito pendiente conserva cero', async () => {
+  const h = pwaHarness({ resolve: async track => verified(track.id) })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  h.player.seek(0)
+  h.audio.fail(4)
+  await flush()
+  assert.equal(h.audio.currentTime, 8.94)
+  assert.equal(h.audio.plays, 2)
+  assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+
+  const pending = deferred(), chosen = pwaHarness({ resolve: () => pending.promise })
+  chosen.player.playQueue([item(1)], 0)
+  chosen.player.seek(0)
+  pending.resolve(verified())
+  await flush()
+  assert.equal(chosen.audio.currentTime, 0)
+  assert.equal(chosen.player.time, 0)
+  assert.equal(chosen.audio.plays, 1)
+})
+
+test('PWA los metadatos tardíos no sustituyen un seek explícito por el inicio verificado tras playing', async () => {
+  const play = deferred()
+  const h = pwaHarness({ resolve: async () => verified(), play: () => play.promise, metadata: false,
+    duration: () => 187.1804 })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  h.player.seek(0)
+  h.audio.begin()
+  h.audio.dispatchEvent(new Event('loadedmetadata'))
+  h.audio.dispatchEvent(new Event('durationchange'))
+  play.resolve()
+  await flush()
+  assert.equal(h.audio.currentTime, 0)
+  assert.equal(h.player.time, 0)
+  assert.equal(h.player.duration, 187.1804)
+  assert.equal(h.audio.plays, 1)
+})
+
+test('PWA rechaza offsets inválidos o fuera del audio y no aplica el salto a podcasts ni archivos locales', async () => {
+  for (const startAt of [-1, NaN, Infinity, Number.MAX_SAFE_INTEGER, 61, '8.94']) {
+    const h = pwaHarness({ resolve: async () => verified(1, { startAt }) })
+    h.player.playQueue([item(1)], 0)
+    await flush()
+    assert.equal(h.audio.currentTime, 0, `invalid source start ${String(startAt)}`)
+    assert.equal(h.player.time, 0)
+    assert.equal(h.audio.plays, 1)
+  }
+  const short = pwaHarness({ resolve: async () => verified(), duration: () => 5 })
+  short.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(short.audio.currentTime, 0)
+  assert.equal(short.player.time, 0, 'short media invalidates an otherwise bounded source offset')
+  for (const [id, source] of [
+    [1, { ...verified(), local: true, url: 'https://app.example/pletina/__audio__/1' }],
+    [750_000_000_000_001, verified()],
+  ]) {
+    const h = pwaHarness({ resolve: async () => source })
+    h.player.playQueue([item(id)], 0)
+    await flush()
+    assert.equal(h.audio.currentTime, 0)
+    assert.equal(h.audio.plays, 1)
+  }
+})
+
+test('PWA la caducidad declarada por la fuente limita la reserva aunque la URL tenga más vigencia', async () => {
+  let loads = 0
+  const initial = { ...verified(2, { expiresAt: Date.now() + 120_000 }),
+    url: 'https://audio.test/first?expire=' + (Math.floor(Date.now() / 1000) + 7200) }
+  const h = pwaHarness({ resolve: async track => track.id === 2 ? ++loads === 1 ? initial : verified('fresh') : playable(track.id) })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  h.jumpWall(70_000)
+  const audio = h.audio, plays = audio.plays
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  assert.equal(audio.plays, plays, 'the earlier metadata expiration prevents synchronous reuse')
+  await flush()
+  assert.equal(loads, 2)
+  assert.equal(audio.plays, plays + 1)
+  assert.equal(audio.src, 'https://audio.test/fresh')
+  assert.equal(audio.currentTime, 8.94)
+})
+
+test('PWA una URL anterior al vencimiento declarado tampoco se reutiliza y NaN o infinito no alargan el TTL', async () => {
+  for (const sourceExpiry of [Date.now() + 7200_000, NaN, Infinity]) {
+    let loads = 0
+    const initial = { ...verified(2, { expiresAt: sourceExpiry }),
+      url: 'https://audio.test/old' + (Number.isFinite(sourceExpiry) ? '?expire=' + (Math.floor(Date.now() / 1000) + 120) : '') }
+    const h = pwaHarness({ resolve: async track => track.id === 2 ? ++loads === 1 ? initial : verified('fresh') : playable(track.id) })
+    h.player.playQueue([item(1), item(2)], 0)
+    await flush()
+    h.jumpWall(6 * 60_000)
+    const plays = h.audio.plays
+    h.audio.paused = true
+    h.audio.dispatchEvent(new Event('ended'))
+    assert.equal(h.audio.plays, plays)
+    await flush()
+    assert.equal(loads, 2)
+    assert.equal(h.audio.src, 'https://audio.test/fresh')
+  }
+})
+
+test('PWA repetir y precargar una aparición duplicada renuevan una fuente que ya ha caducado', async () => {
+  for (const repeat of [false, true]) {
+    let loads = 0
+    const h = pwaHarness({ resolve: async () => verified(++loads, { expiresAt: Date.now() + (loads === 1 ? 120_000 : 3600_000) }) })
+    if (repeat) { h.player.cycleRepeat(); h.player.cycleRepeat() }
+    h.player.playQueue([item(1), item(1)], 0)
+    await flush()
+    h.jumpWall(130_000)
+    if (!repeat) {
+      h.audio.currentTime = 100
+      h.audio.dispatchEvent(new Event('timeupdate'))
+      await flush()
+      assert.deepEqual(h.resolutions, [[1, false], [1, true]])
+    }
+    const plays = h.audio.plays
+    h.audio.paused = true
+    h.audio.dispatchEvent(new Event('ended'))
+    if (repeat) assert.equal(h.audio.plays, plays, 'repeat waits for a fresh source rather than reopening an expired URL')
+    await flush()
+    assert.equal(h.audio.src, 'https://audio.test/2')
+    assert.equal(h.audio.currentTime, 8.94)
+    assert.equal(h.audio.plays, plays + 1)
+    assert.equal(loads, 2)
+  }
 })
 
 test('PWA sleep at end stops instead of starting the already prepared next source', async () => {

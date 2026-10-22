@@ -139,13 +139,33 @@ export interface ArtistPage {
   top: TopTrack[]
 }
 
-/** Lo que el backend necesita para buscar una canción en YouTube. */
+/** Metadatos de catálogo para encontrar la misma grabación en una fuente de audio. */
 export interface TrackQuery {
   id: number
   title: string
   artist: string
   album: string
   duration: number
+  /** Opcionales para aceptar también consultas y bibliotecas de versiones anteriores. */
+  isrc?: string | null
+  titleVersion?: string | null
+}
+
+/** Identidad de una fuente; las direcciones temporales sólo viven en Playable.url. */
+export interface PlayableSource {
+  provider: 'audius' | 'archive' | 'hearthis' | 'verified'
+  id: string
+  /** Caducidad del audio resuelto, en milisegundos Unix. */
+  expiresAt?: number
+  /** Posición inicial verificada en el archivo; la barra conserva los segundos reales. */
+  startAt?: number
+  download?: {
+    allowed: boolean
+    contentLength?: number
+    sha256?: string
+    /** Duración del archivo completo, en segundos. */
+    duration?: number
+  }
 }
 
 /** Audio listo para reproducir. */
@@ -157,6 +177,7 @@ export interface Playable {
   channel: string
   /** Canción descargada: se reproduce el archivo. */
   local: boolean
+  source?: PlayableSource
 }
 
 /** Un vídeo que podría ser la canción ("esta no es"). */
@@ -184,6 +205,8 @@ export interface LibTrack {
   albumTitle: string
   albumArtistId: number
   cover: string | null
+  isrc?: string | null
+  titleVersion?: string | null
 }
 
 export interface SavedAlbum {

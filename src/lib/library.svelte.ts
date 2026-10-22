@@ -18,6 +18,8 @@ export function toLib(item: QueueItem): LibTrack {
     albumTitle: item.albumTitle,
     albumArtistId: item.artistId,
     cover: item.cover,
+    isrc: item.track.isrc ?? null,
+    titleVersion: item.track.titleVersion ?? null,
   }
 }
 
@@ -27,12 +29,12 @@ export function fromLib(t: LibTrack): QueueItem {
     track: {
       id: t.id,
       title: t.title,
-      titleVersion: null,
+      titleVersion: t.titleVersion ?? null,
       duration: t.duration,
       trackPosition: 0,
       diskNumber: 0,
       explicitLyrics: t.explicit,
-      isrc: null,
+      isrc: t.isrc ?? null,
       artist: { id: t.artistId, name: t.artistName },
     },
     albumId: t.albumId,

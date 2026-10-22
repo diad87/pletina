@@ -27,7 +27,7 @@ function harness() {
   }
   runInNewContext(source, {
     self: { registration: { scope }, addEventListener(type, callback) { handlers.set(type, callback) }, clients: { async claim() {} } },
-    caches, indexedDB, URL, Request, Response, crypto: webcrypto, Uint8Array,
+    caches, indexedDB, URL, Request, Response, Headers, crypto: webcrypto, Uint8Array,
     fetch() { network++; throw new Error('El audio guardado no debe usar la red.') },
   })
   return {
@@ -35,7 +35,7 @@ function harness() {
     get network() { return network },
     async fetch(url, options = {}) {
       let reply
-      handlers.get('fetch')({ request: { url: new URL(url, scope).href, method: 'GET', mode: 'no-cors', ...options }, respondWith(value) { reply = value } })
+      handlers.get('fetch')({ request: { url: new URL(url, scope).href, method: 'GET', mode: 'no-cors', headers: new Headers(), ...options }, respondWith(value) { reply = value } })
       return reply ? await reply : undefined
     },
     async activate() { let work; handlers.get('activate')({ waitUntil(value) { work = value } }); await work },
@@ -61,7 +61,50 @@ test('a downloaded route resolves committed metadata and cached bytes without ne
   await (await h.caches.open(cacheName)).put(stage, new Response('audio-completo'))
   await save(h, { id: 123, cacheKey: stage })
   assert.equal(await (await h.fetch(stable)).text(), 'audio-completo')
-  assert.equal(await (await h.fetch(stable, { headers: new Headers({ Range: 'bytes=4-' }) })).text(), 'audio-completo')
+  const range = await h.fetch(stable, { headers: new Headers({ Range: 'bytes=4-' }) })
+  assert.equal(range.status, 206)
+  assert.equal(range.headers.get('content-range'), 'bytes 4-13/14')
+  assert.equal(await range.text(), 'o-completo')
+  assert.equal(h.network, 0)
+})
+
+test('readable downloaded audio serves bounded, open-ended and suffix byte ranges locally', async () => {
+  const h = harness()
+  await (await h.caches.open(cacheName)).put(stage, new Response('0123456789', { headers: { 'content-type': 'audio/mpeg' } }))
+  await save(h, { id: 123, cacheKey: stage })
+  const whole = await h.fetch(stable)
+  assert.equal(whole.status, 200); assert.equal(whole.headers.get('accept-ranges'), 'bytes')
+  assert.equal(whole.headers.get('content-length'), '10'); assert.equal(await whole.text(), '0123456789')
+  for (const [range, expected, start, end] of [['bytes=2-5', '2345', 2, 5], ['bytes=7-', '789', 7, 9],
+    ['bytes=-3', '789', 7, 9], ['bytes=-99', '0123456789', 0, 9], ['bytes=0-99', '0123456789', 0, 9], ['bytes=0-0', '0', 0, 0]]) {
+    const response = await h.fetch(stage, { headers: new Headers({ range }) })
+    assert.equal(response.status, 206, range)
+    assert.equal(response.headers.get('content-range'), `bytes ${start}-${end}/10`)
+    assert.equal(response.headers.get('content-length'), String(expected.length))
+    assert.equal(response.headers.get('content-type'), 'audio/mpeg')
+    assert.equal(await response.text(), expected)
+  }
+  assert.equal(h.network, 0)
+})
+
+test('invalid, multiple, reversed or unsatisfied readable ranges return 416 without remote traffic', async () => {
+  const h = harness()
+  await (await h.caches.open(cacheName)).put(stage, new Response('0123456789'))
+  for (const range of ['bytes=10-', 'bytes=5-2', 'bytes=-0', 'bytes=-', 'bytes=0-1,4-5', 'items=0-1', 'bytes=9007199254740992-', 'bytes=0-9007199254740992']) {
+    const response = await h.fetch(stage, { headers: new Headers({ range }) })
+    assert.equal(response.status, 416, range)
+    assert.equal(response.headers.get('content-range'), 'bytes */10')
+    assert.equal(response.headers.get('content-length'), '0')
+    assert.equal(await response.text(), '')
+  }
+  assert.equal(h.network, 0)
+})
+
+test('opaque legacy YouTube bodies pass through unchanged even when audio asks for a range', async () => {
+  const h = harness()
+  const opaque = { type: 'opaque', status: 0, clone() { return this }, blob() { assert.fail('cannot read opaque bytes') } }
+  await (await h.caches.open(cacheName)).put(stage, opaque)
+  assert.equal(await h.fetch(stage, { headers: new Headers({ range: 'bytes=5-' }) }), opaque)
   assert.equal(h.network, 0)
 })
 

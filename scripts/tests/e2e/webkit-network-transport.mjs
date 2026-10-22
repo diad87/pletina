@@ -9,7 +9,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 
 const exec = promisify(execFile)
-const hosts = new Set(['fixture.googlevideo.com', 'media.pletina.test', 'feeds.pletina.test', 'images.pletina.test', 'i.ytimg.com'])
+const hosts = new Set(['fixture.googlevideo.com', 'media.pletina.test', 'feeds.pletina.test', 'images.pletina.test', 'i.ytimg.com', 'api.audius.co'])
 
 export async function createWebKitNetworkTransport() {
   const directory = await mkdtemp(join(tmpdir(), 'pletina-wk-proxy-'))

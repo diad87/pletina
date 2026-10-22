@@ -103,6 +103,8 @@ function track(value: unknown): LibTrack {
     artistId: integer(row.artistId, 'El artista'), artistName: text(row.artistName, 'El artista', true),
     albumId: integer(row.albumId, 'El álbum'), albumTitle: text(row.albumTitle, 'El álbum', true),
     albumArtistId: integer(row.albumArtistId, 'El artista del álbum'), cover: image(row.cover),
+    ...(row.isrc !== undefined ? { isrc: nullableText(row.isrc, 'El ISRC') } : {}),
+    ...(row.titleVersion !== undefined ? { titleVersion: nullableText(row.titleVersion, 'La versión') } : {}),
   }
 }
 function tracks(value: unknown): LibTrack[] {
@@ -314,8 +316,14 @@ export function createWebStorage(options: WebStorageOptions = {}) {
   async function upsertTrack(tx: IDBTransaction, value: LibTrack): Promise<void> {
     // Like the APK's upsert_track: queue/library copies cannot undo a saved
     // YouTube edit. Only save_youtube_track explicitly replaces that metadata.
-    if (value.id >= YOUTUBE_BASE && value.id < PODCAST_BASE && await get<LibTrack>(tx, 'tracks', value.id)) return
-    await put(tx, 'tracks', value)
+    const previous = await get<LibTrack>(tx, 'tracks', value.id)
+    if (value.id >= YOUTUBE_BASE && value.id < PODCAST_BASE && previous) return
+    // A queue saved before these optional fields existed must not erase a
+    // recording identifier learned later from the catalog.
+    await put(tx, 'tracks', { ...value,
+      ...(value.isrc === undefined && previous?.isrc !== undefined ? { isrc: previous.isrc } : {}),
+      ...(value.titleVersion === undefined && previous?.titleVersion !== undefined ? { titleVersion: previous.titleVersion } : {}),
+    })
   }
   async function append(tx: IDBTransaction, playlistId: number, values: LibTrack[]) {
     const row = await requirePlaylist(tx, playlistId)

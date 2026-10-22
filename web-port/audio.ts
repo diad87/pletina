@@ -2,6 +2,8 @@ import type { Alternative, Playable, TrackQuery, YouTubeTrackPreview } from '../
 import { readSourceChoice, saveSourceChoice, readYouTubeVideo } from './storage'
 import { resolvePodcastTrack } from './podcast-audio'
 import { readDownloadedPlayable, removeDownloadedTrack } from './download-store'
+import { resolveCatalogSource } from './catalog-sources'
+import { disposeVerifiedAudio, resolveVerifiedAudio } from './verified-audio'
 import { abortReason, checkAbort, parseVideoId, searchMusic, searchVideos, stream, validVideoId, YouTubeError, type Candidate, type StreamInfo } from './youtube'
 
 // Mismos umbrales y comparación que src-tauri/src/youtube.rs y player.rs.
@@ -204,11 +206,22 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
           missing = saved.videoId
           const source = officialSource(track, { videoId: saved.videoId, title: saved.title, artists: saved.channel,
             album: null, duration: saved.duration, score: saved.score, origin: 'youtube', current: saved.verified })
+          if (saved.verified) {
+            if (source) throw new OfficialFallbackError(error, track, source)
+            throw error
+          }
           if (source) rejected.push({ source, error, manual: saved.verified })
         }
         else throw error
       }
     }
+    // Una asociación revisada no busca por texto: comprueba identidad y los bytes
+    // completos antes de entregar un Blob local al mismo reproductor de audio.
+    try {
+      const verified = await resolveVerifiedAudio(track, signal)
+      checkAbort(signal)
+      if (verified) return verified
+    } catch { checkAbort(signal) }
     const result = await search(track, false, signal)
     const attempted = new Set<string>(missing ? [missing] : [])
     let sourceRejected = missing !== null
@@ -253,6 +266,19 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       fallback.sort((a, b) => b.score - a.score)
       const recovered = await attempt(fallback)
       if (recovered) return recovered
+    }
+    // Un catálogo alternativo sólo puede rescatar una identidad verificada. No cambia
+    // la fuente escogida explícitamente por el usuario ni interpreta mala red como ausencia.
+    if (!transientFailure && !rejected.some((entry) => entry.manual)) {
+      try {
+        const external = await resolveCatalogSource(track, signal)
+        checkAbort(signal)
+        if (external) return external
+      } catch {
+        // Un proveedor adicional caído no elimina el recurso que ya ofrecía YouTube.
+        // La cancelación y el plazo global siguen siendo vinculantes.
+        checkAbort(signal)
+      }
     }
     if (sourceRejected && !transientFailure) {
       rejected.sort((a, b) => Number(b.manual) - Number(a.manual) || b.source.score - a.source.score)
@@ -306,4 +332,5 @@ export async function previewYouTube(url: string): Promise<YouTubeTrackPreview> 
 export function cancelAudioRequests(): void {
   for (const value of operations.values()) value.controller.abort(abortReason())
   operations.clear()
+  disposeVerifiedAudio()
 }

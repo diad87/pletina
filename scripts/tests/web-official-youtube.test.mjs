@@ -32,6 +32,8 @@ function harness() {
   new Function('exports', youtubeCode)(youtube)
   const storage = new Proxy({}, { get: (_target, key) => forbidden('storage.' + String(key)) })
   const requireAudio = path => path === './youtube' ? youtube : path === './storage' ? storage :
+    path === './catalog-sources' ? { resolveCatalogSource: forbidden('alternate catalog resolver') } :
+    path === './verified-audio' ? { resolveVerifiedAudio: forbidden('verified audio resolver'), disposeVerifiedAudio: forbidden('verified audio disposal') } :
     path === './podcast-audio' ? { resolvePodcastTrack: forbidden('podcast resolver') } :
       path === './download-store' ? { readDownloadedPlayable: forbidden('download read'), removeDownloadedTrack: forbidden('download removal') } :
         assert.fail('Unexpected audio import ' + path)

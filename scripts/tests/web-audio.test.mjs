@@ -44,6 +44,9 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
     searchMusic: async () => { calls.push('music'); return [candidate()] },
     searchVideos: async () => { calls.push('youtube'); return [] },
     stream: async (videoId) => { calls.push(videoId); return info(videoId) },
+    resolveCatalogSource: async () => null,
+    resolveVerifiedAudio: async () => null,
+    disposeVerifiedAudio() {},
     ...overrides,
   }
   const storage = {
@@ -60,7 +63,7 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
   const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
   new Function('exports', 'require', podcastCode)(podcasts, dependency)
   const exports = {}
-  new Function('exports', 'require', audioCode)(exports, (path) => path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
+  new Function('exports', 'require', audioCode)(exports, (path) => ['./catalog-sources', './verified-audio'].includes(path) ? mocks : path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
   return { ...exports, youtube, calls, writes, podcasts, removedDownloads }
 }
 
@@ -259,7 +262,7 @@ test('Music de confianza sin audio amplía a WEB y corta al encontrar la misma c
 test('una fuente guardada rechazada no se reintenta aunque aparezca sola en Music y duplicada en WEB', async () => {
   for (const code of ['unavailable', 'format']) {
     const events = []
-    const saved = { videoId: id, title: 'Elección anterior', channel: 'Radiohead', duration: 287, score: 100, verified: true }
+    const saved = { videoId: id, title: 'Elección anterior', channel: 'Radiohead', duration: 287, score: 100, verified: false }
     const audio = engine({
       searchMusic: async () => { events.push('music'); return [candidate(), candidate()] },
       searchVideos: async () => { events.push('web'); return [candidate(), candidate(second, { title: 'Radiohead - Airbag', album: null }), candidate()] },
@@ -392,7 +395,7 @@ test('la alternativa conserva la fuente manual exacta aunque otra coincidencia t
     assert.equal(source.score, 100)
     return true
   })
-  assert.deepEqual(events, [fourth, 'music', id, 'web'])
+  assert.deepEqual(events, [fourth], 'an explicit source is never silently replaced by another video or catalog')
   assert.deepEqual(audio.writes, [])
 })
 
@@ -515,7 +518,7 @@ test('cancelar antes del rechazo de Music impide que ese rechazo abra el fallbac
   assert.deepEqual(audio.writes, [])
 })
 
-test('fuente guardada no se sustituye por un error de red; un vídeo retirado sí permite otro', async () => {
+test('fuente guardada no se sustituye por red; una selección automática retirada permite otro vídeo', async () => {
   const saved = { videoId: id, title: 'Saved', channel: 'Artist', duration: 287, score: 100, verified: true }
   let searches = 0
   const failing = engine({ stream: async () => { throw new Error('Offline') }, searchMusic: async () => { searches++; return [] } }, saved)
@@ -524,7 +527,7 @@ test('fuente guardada no se sustituye por un error de red; un vídeo retirado s�
   const removed = engine({ searchMusic: async () => [candidate(), candidate(second)], stream: async (videoId) => {
     if (videoId === id) throw new removed.youtube.YouTubeError('Removed', 'unavailable')
     return info(videoId)
-  } }, saved)
+  } }, { ...saved, verified: false })
   assert.equal((await removed.resolveTrack(query)).videoId, second)
 })
 
@@ -650,4 +653,75 @@ test('copia descargada se reproduce sin red y cambiar fuente elimina la copia an
   await audio.chooseSource(query, second)
   assert.deepEqual(audio.removedDownloads, [query.id])
   assert.equal((await audio.resolveTrack(query)).videoId, second)
+})
+
+const catalogAudio = { videoId: '', url: 'https://api.audius.co/v1/tracks/Ab12/stream', title: query.title,
+  channel: query.artist, local: false, source: { provider: 'audius', id: 'Ab12', download: { allowed: false } } }
+
+test('a verified recording is resolved before text search and never persisted as a YouTube source', async () => {
+  const seen = [], target = { ...query, isrc: 'GBAYE9701376', titleVersion: null }
+  const audio = engine({ resolveVerifiedAudio: async (track, signal) => { seen.push({ track, signal }); return catalogAudio } })
+  assert.deepEqual(await audio.resolveTrack(target), catalogAudio)
+  assert.equal(seen[0].track, target)
+  assert.ok(seen[0].signal instanceof AbortSignal)
+  assert.deepEqual(audio.calls, [])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('catalog rescue follows definitive YouTube rejection and retains complete recording identity', async () => {
+  const seen = [], target = { ...query, isrc: 'GBAYE9701376', titleVersion: null }
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('No audio', 'format') },
+    resolveCatalogSource: async (track, signal) => { seen.push({ track, signal }); return catalogAudio } })
+  assert.deepEqual(await audio.resolveTrack(target), catalogAudio)
+  assert.equal(seen[0].track.isrc, target.isrc)
+  assert.ok(seen[0].signal instanceof AbortSignal)
+  assert.deepEqual(audio.calls, ['music', 'youtube'])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('an empty YouTube search may recover a strict catalog recording; provider failure preserves the existing fallback', async () => {
+  const empty = engine({ searchMusic: async () => [], searchVideos: async () => [], resolveCatalogSource: async () => catalogAudio })
+  assert.deepEqual(await empty.resolveTrack(query), catalogAudio)
+  const failed = engine({ stream: async () => { throw new failed.youtube.YouTubeError('No audio', 'unavailable') },
+    resolveCatalogSource: async () => { throw new Error('Catalog network failure') } })
+  await assert.rejects(failed.resolveTrack(query), error => failed.getOfficialFallback(query, error)?.videoId === id)
+})
+
+test('temporary network failures and manual sources do not trigger an alternate catalog', async () => {
+  for (const code of ['network', 'timeout', 'restricted']) {
+    const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('Retry later', code) },
+      resolveCatalogSource: async () => assert.fail('network is not an absent recording') })
+    await assert.rejects(audio.resolveTrack(query), error => error.code === code)
+  }
+  const saved = { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: true }
+  const manual = engine({ stream: async () => { throw new manual.youtube.YouTubeError('Unavailable', 'format') },
+    resolveVerifiedAudio: async () => assert.fail('manual choice has priority'),
+    resolveCatalogSource: async () => assert.fail('manual choice has priority') }, saved)
+  await assert.rejects(manual.resolveTrack(query), error => manual.getOfficialFallback(query, error)?.videoId === id)
+  assert.deepEqual(manual.writes, [])
+})
+
+test('downloaded songs, podcasts and directly added videos never enter catalog rescue', async () => {
+  const skip = { resolveVerifiedAudio: async () => assert.fail('not a catalog track'), resolveCatalogSource: async () => assert.fail('not a catalog track') }
+  const local = { ...catalogAudio, local: true, url: 'https://app.example/pletina/__audio__/1' }
+  assert.deepEqual(await engine(skip, null, id, null, local).resolveTrack(query), local)
+  assert.equal((await engine(skip).resolveTrack({ ...query, id: 250_000_000_000_001 })).videoId, id)
+  const episode = { id: 750_000_000_000_001, audioUrl: 'https://podcast.example/episode.mp3' }
+  assert.equal((await engine(skip, null, id, episode).resolveTrack({ ...query, id: episode.id })).url, episode.audioUrl)
+})
+
+test('cancelling a delayed external source prevents its completion and disposes checked blobs', async () => {
+  const gate = deferred(); let disposed = 0, signal
+  const audio = engine({ searchMusic: async () => [], searchVideos: async () => [],
+    resolveCatalogSource: async (_track, current) => { signal = current; return gate.promise },
+    disposeVerifiedAudio: () => disposed++ })
+  const pending = audio.resolveTrack(query)
+  const rejected = assert.rejects(pending, { name: 'AbortError' })
+  await flush()
+  audio.cancelAudioRequests()
+  assert.ok(signal.aborted)
+  gate.resolve(catalogAudio)
+  await rejected
+  assert.equal(disposed, 1)
+  assert.deepEqual(audio.writes, [])
 })

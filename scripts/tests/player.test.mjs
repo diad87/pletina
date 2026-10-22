@@ -4,6 +4,22 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { deferred, flush, harness, item, playable } from './helpers/player-harness.mjs'
 
+test('late native or sourceless web metadata preserves a seek and observed playback position', async () => {
+  for (const inPwa of [false, true]) for (const explicit of [false, true]) {
+    const h = harness({ inPwa, audioMetadata: false })
+    h.player.playQueue([item()], 0)
+    await flush()
+    assert.equal(h.player.status, 'playing')
+    if (explicit) h.player.seek(23)
+    else { h.audio.currentTime = 23; h.audio.dispatchEvent(new Event('timeupdate')) }
+    h.audio.dispatchEvent(new Event('loadedmetadata'))
+    h.audio.dispatchEvent(new Event('durationchange'))
+    assert.equal(h.audio.currentTime, 23)
+    assert.equal(h.player.time, 23)
+    assert.equal(h.audio.plays, 1)
+  }
+})
+
 test('local audio plays even when optional MediaSession APIs throw', async () => {
   const h = harness({
     resolve: async () => playable(1, true),

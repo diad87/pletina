@@ -137,3 +137,18 @@ test('cancelling the fallback removes its iframe and a late message cannot finis
   api.send(frame, { data: [track()] })
   assert.equal(api.frames.length, 0)
 })
+
+test('una importación identificada por ISRC conserva la grabación y versión en la ficha de biblioteca', async () => {
+  const expected = track({ isrc: 'QM6N21424821', title_version: 'Original' })
+  const api = engine(url => {
+    assert.equal(url.pathname, '/track/isrc:QM6N21424821')
+    return expected
+  })
+  const result = await api.matchImportTrack({ title: expected.title + ' - Original', artists: [expected.artist.name],
+    isrc: 'QM6N21424821', durationMs: expected.duration * 1000 })
+  assert.equal(result.id, expected.id)
+  assert.equal(result.isrc, 'QM6N21424821')
+  assert.equal(result.titleVersion, 'Original')
+  assert.equal(api.requests.length, 1)
+  assert.equal(api.frames.length, 0)
+})

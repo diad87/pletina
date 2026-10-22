@@ -18,7 +18,10 @@ const stage = (id = 1) => `${scope}__audio__/${id}?stage=1234567890-11111111-111
 function setup(t, options = {}) {
   const rows = new Map(), events = [], sources = [], validations = []
   const cache = {
-    async put(key, value) { rows.set(key, value); if (options.putError) throw options.putError },
+    async put(key, value) {
+      if (options.consumeBody) value = new Response(await value.arrayBuffer(), { status: value.status, headers: value.headers })
+      rows.set(key, value); if (options.putError) throw options.putError
+    },
     async match(key) { return rows.get(key) },
     async delete(key) { return rows.delete(key) },
   }
@@ -27,9 +30,9 @@ function setup(t, options = {}) {
   const store = createDownloadStore({ indexedDB: factory, name, scope, caches })
   t.after(() => store.close())
   const exports = {}
-  new Function('exports', 'require', code)(exports, (path) => path === './download-store' ? storeModule
+  new Function('exports', 'require', 'Audio', code)(exports, (path) => path === './download-store' ? storeModule
     : path === './audio' ? { resolveRemoteTrack() { assert.fail('uninjected resolver') } }
-    : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path))
+    : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path), options.Audio ?? globalThis.Audio)
   const manager = exports.createDownloadManager({
     store, caches, emit: (value) => events.push(value), timeout: options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
     resolve: options.resolve ?? (async (query) => { sources.push(query.id); return { videoId: '9RfVp-GhKfs', local: false, url: 'https://r1.googlevideo.com/audio?signature=SECRET' } }),
@@ -315,4 +318,151 @@ test('the original transfer deadline also bounds retry waiting and the next queu
   assert.deepEqual(h.events.filter((value) => value.state === 'error').map((value) => value.trackId), [1])
   assert.deepEqual(h.events.filter((value) => value.state === 'done').map((value) => value.trackId), [2])
   assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [2])
+})
+
+const externalPlayable = (download = {}, identity = {}, extra = {}) => ({ videoId: '', local: false,
+  url: 'https://api.audius.co/v1/tracks/daMWzaJ/stream', title: 'Canción 1', channel: 'Artista',
+  source: { provider: 'audius', id: 'daMWzaJ', download: { allowed: true, duration: 120, ...download }, ...identity }, ...extra })
+const audioResponse = (body = 'complete audio bytes', headers = {}) => new Response(body, { headers: { 'content-type': 'audio/mpeg', ...headers } })
+
+test('external permitted audio uses CORS, preserves ISRC/version and never asks YouTube for its stream', async t => {
+  let query, validatedDuration, requests = 0
+  const body = 'complete audio bytes'
+  const h = setup(t, { consumeBody: true,
+    resolve: async value => { query = value; return externalPlayable() }, stream: async () => assert.fail('external audio must not use YouTube'),
+    fetch: async (url, init) => {
+      requests++; assert.equal(url, 'https://api.audius.co/v1/tracks/daMWzaJ/stream')
+      assert.equal(init.mode, 'cors'); assert.equal(init.credentials, 'omit'); assert.equal(init.referrerPolicy, 'no-referrer')
+      return audioResponse(body)
+    }, validate: async (_url, _signal, expected) => { validatedDuration = expected },
+  })
+  await h.enqueueDownloads([song(1, { isrc: 'GXLEX2692321', titleVersion: '(Original)' })]); await h.idle()
+  assert.equal(requests, 1); assert.equal(query.isrc, 'GXLEX2692321'); assert.equal(query.titleVersion, '(Original)')
+  assert.equal(validatedDuration, 120)
+  const row = await h.store.get(1)
+  assert.equal(row.size, new TextEncoder().encode(body).length)
+  assert.doesNotMatch(JSON.stringify(row), /api\.audius|\/stream|signature/)
+  assert.equal((await h.store.readDownloadedPlayable(1)).local, true)
+})
+
+test('listening-only sources such as ALEA refuse downloads before media requests', async t => {
+  for (const provider of ['audius', 'verified']) {
+    const h = setup(t, { resolve: async () => externalPlayable({ allowed: false }, { provider }),
+      fetch: async () => assert.fail('not allowed to download'), stream: async () => assert.fail('must not switch to YouTube') })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.match(h.events.find(event => event.state === 'error').error, /permite escuchar.*pero no descargar/)
+    assert.deepEqual(await h.store.list(), []); assert.equal(h.rows.size, 0)
+  }
+})
+
+test('external downloads reject arbitrary URLs, unknown providers and unsafe IDs before fetching', async t => {
+  for (const source of [externalPlayable({}, {}, { url: 'https://example.org/audio.mp3' }),
+    externalPlayable({}, {}, { url: 'https://api.audius.co/v1/tracks/daMWzaJ/stream?preview=true' }),
+    externalPlayable({}, { id: '../x' }), externalPlayable({}, { provider: 'verified' }),
+    externalPlayable({}, { provider: 'archive' }), externalPlayable({ duration: 30 }), externalPlayable({ sha256: 'invalid' })]) {
+    const h = setup(t, { resolve: async () => source, fetch: async () => assert.fail('unsafe external source') })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.ok(h.events.some(event => event.state === 'error')); assert.deepEqual(await h.store.list(), [])
+  }
+})
+
+test('external HTTP errors, partial bodies and non-audio responses cannot become completed downloads', async t => {
+  for (const fetch of [async () => new Response('forbidden', { status: 403 }),
+    async () => new Response('part', { status: 206, headers: { 'content-type': 'audio/mpeg', 'content-range': 'bytes 0-3/100' } }),
+    async () => new Response('<html>Login</html>', { headers: { 'content-type': 'text/html' } }),
+    async () => audioResponse(null),
+    async () => audioResponse('too big', { 'content-length': String(MAX_DOWNLOAD_BYTES + 1) })]) {
+    const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable(), fetch })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.ok(h.events.some(event => event.state === 'error')); assert.deepEqual(await h.store.list(), []); assert.equal(h.rows.size, 0)
+  }
+})
+
+test('expected and declared lengths must match the whole streamed body, with one bounded renewed attempt', async t => {
+  for (const [expected, declared, body] of [[10, 10, 'short'], [4, 4, 'overrun'], [10, 5, '12345']]) {
+    let transfers = 0
+    const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable({ contentLength: expected }),
+      fetch: async () => { transfers++; return audioResponse(body, { 'content-length': String(declared) }) } })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(transfers, 2); assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), [])
+    assert.ok(!h.events.some(event => event.state === 'done'))
+  }
+})
+
+test('a response without Content-Length records counted bytes only after the stream closes', async t => {
+  let validated = 0
+  const body = new ReadableStream({ start(controller) {
+    controller.enqueue(new Uint8Array([1, 2, 3])); controller.enqueue(new Uint8Array([4, 5, 6, 7])); controller.close()
+  } })
+  const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable(), fetch: async () => audioResponse(body),
+    validate: async () => { validated++; assert.equal((await h.store.get(1)), null) } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(validated, 1); assert.equal((await h.store.get(1)).size, 7)
+})
+
+test('stream errors roll back a partial external cache and renew the same source once', async t => {
+  let transfers = 0
+  const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable(), fetch: async () => {
+    transfers++
+    if (transfers === 1) return audioResponse(new ReadableStream({ start(controller) {
+      controller.enqueue(new Uint8Array([1, 2, 3])); controller.error(new TypeError('connection lost'))
+    } }))
+    assert.equal(h.rows.size, 0)
+    return audioResponse('whole renewed body')
+  } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(transfers, 2); assert.equal(h.rows.size, 1); assert.equal((await h.store.get(1)).size, 18)
+})
+
+test('unknown-size external audio enforces available storage while consuming and never retries quota failures', async t => {
+  let transfers = 0
+  const h = setup(t, { consumeBody: true, quota: { quota: 105, usage: 100 }, resolve: async () => externalPlayable(),
+    fetch: async () => { transfers++; return audioResponse('ten bytes!') } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(transfers, 1); assert.equal(h.rows.size, 0)
+  assert.match(h.events.find(event => event.state === 'error').error, /espacio/)
+})
+
+test('a declared checksum is checked against the full cached body before metadata commit', async t => {
+  const bytes = new TextEncoder().encode('whole audio')
+  const expected = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('')
+  for (const [sha256, success] of [[expected, true], ['0'.repeat(64), false]]) {
+    const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable({ sha256 }), fetch: async () => audioResponse(bytes) })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(h.events.some(event => event.state === 'done'), success)
+    assert.equal((await h.store.list()).length, success ? 1 : 0)
+    assert.equal(h.rows.size, success ? 1 : 0)
+  }
+})
+
+test('a preview duration fails validation and cannot mark its external song as downloaded', async t => {
+  let validations = 0
+  const h = setup(t, { consumeBody: true, resolve: async () => externalPlayable(), fetch: async () => audioResponse('preview'),
+    validate: async (_url, _signal, expected) => { validations++; assert.equal(expected, 120); throw new Error('Only a 30-second preview') } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(validations, 2); assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), [])
+})
+
+function fakeAudio(duration, tailWorks = true) {
+  return class extends EventTarget {
+    duration = duration; readyState = 1; seeking = false; time = 0; src = ''; preload = ''; paused = true
+    get currentTime() { return this.time }
+    set currentTime(value) {
+      this.time = value
+      queueMicrotask(() => { this.readyState = tailWorks ? 2 : 1; this.dispatchEvent(new Event(tailWorks ? 'seeked' : 'error')) })
+    }
+    load() { if (this.src) queueMicrotask(() => this.dispatchEvent(new Event('loadedmetadata'))) }
+    pause() {}
+    removeAttribute(name) { if (name === 'src') this.src = '' }
+  }
+}
+test('default external audio validation requires expected duration plus decodable tail; legacy two-argument validation remains compatible', async t => {
+  const signal = new AbortController().signal
+  const valid = setup(t, { Audio: fakeAudio(120) })
+  await valid.exports.validateDownloadedAudio(stage(), signal, 120)
+  const preview = setup(t, { Audio: fakeAudio(30) })
+  await assert.rejects(preview.exports.validateDownloadedAudio(stage(), signal, 120), /duración/)
+  const truncated = setup(t, { Audio: fakeAudio(120, false) })
+  await assert.rejects(truncated.exports.validateDownloadedAudio(stage(), signal, 120), /audio reproducible/)
+  await truncated.exports.validateDownloadedAudio(stage(), signal)
 })

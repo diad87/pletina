@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { normalizeWebQueue, readWebQueue, writeWebQueue, WEB_QUEUE_KEY } from '../../web-port/queue-persistence.ts'
 import { deferred, flush, harness, item, playable } from './helpers/player-harness.mjs'
+import { toQuery } from '../../src/lib/queue.ts'
 
 function memory() {
   const data = new Map(), writes = []
@@ -33,6 +34,72 @@ test('snapshot solo guarda metadatos permitidos, orden y duplicados; nunca Playa
   assert.deepEqual(readWebQueue(stored), value)
   const copy = readWebQueue(stored); copy.queue[0].track.title = 'Mutado'
   assert.equal(readWebQueue(stored).queue[0].track.title, 'Canción 1')
+})
+
+test('restaurar la cola conserva la grabación y versión para resolver otra vez, sin persistir la fuente', async () => {
+  const storage = memory(), original = item(1), queries = []
+  original.track.isrc = 'QM6N21424821'
+  original.track.titleVersion = 'Original'
+  const provider = { provider: 'audius', id: 'stable-source', expiresAt: 1_800_000_000_000, startAt: 8.94,
+    download: { allowed: false } }
+  const first = web(storage, { resolve: async query => {
+    queries.push(query)
+    return { ...playable(1), url: 'https://audio.example/temporary?token=DO_NOT_PERSIST', source: provider }
+  } })
+  first.player.playQueue([original], 0)
+  await flush()
+  first.player.toggle()
+  await flush()
+  const raw = storage.data.get(WEB_QUEUE_KEY)
+  assert.doesNotMatch(raw, /DO_NOT_PERSIST|stable-source|expiresAt|startAt|download|temporary/)
+  const restored = web(storage, { resolve: async query => { queries.push(query); return playable(2) } })
+  assert.equal(restored.player.status, 'paused')
+  assert.equal(restored.player.current.track.isrc, original.track.isrc)
+  assert.equal(restored.player.current.track.titleVersion, original.track.titleVersion)
+  assert.deepEqual(restored.resolutions, [])
+  restored.player.toggle()
+  await flush()
+  assert.equal(queries.length, 2)
+  for (const query of queries) {
+    assert.equal(query.isrc, 'QM6N21424821')
+    assert.equal(query.titleVersion, 'Original')
+    assert.equal(query.artist, 'Artista')
+    assert.equal(query.album, 'Álbum')
+    assert.doesNotMatch(JSON.stringify(query), /temporary|source|expiresAt/)
+  }
+  assert.deepEqual(restored.sources, ['https://audio.test/2'])
+})
+
+test('colas antiguas sin identificación y metadatos nulos siguen siendo resolubles sin inventar una versión', () => {
+  for (const metadata of [{}, { isrc: null, titleVersion: null }]) {
+    const value = item(1)
+    Object.assign(value.track, metadata)
+    const stored = normalizeWebQueue(snapshot({ queue: [value], order: [0], pos: 0, userQueue: [] }))
+    const query = toQuery(stored.queue[0])
+    assert.equal(query.isrc, null)
+    assert.equal(query.titleVersion, null)
+    assert.equal(query.id, 1)
+    assert.equal(query.artist, 'Artista')
+  }
+})
+
+test('restaurar cero aplica el inicio verificado al pulsar play y una posición posterior conserva los segundos reales', async () => {
+  for (const position of [0, 32]) {
+    const storage = memory()
+    writeWebQueue(storage, snapshot({ queue: [item(1)], order: [0], pos: 0, userQueue: [], position, duration: 187.1804 }))
+    const h = web(storage, { duration: () => 187.1804, resolve: async () => ({ ...playable(), videoId: '',
+      source: { provider: 'verified', id: 'recording', startAt: 8.94, download: { allowed: true } } }) })
+    assert.equal(h.player.time, position)
+    assert.equal(h.player.status, 'paused')
+    assert.equal(h.audio.plays, 0)
+    h.player.toggle()
+    await flush()
+    assert.equal(h.audio.currentTime, Math.max(position, 8.94))
+    assert.equal(h.player.time, Math.max(position, 8.94))
+    assert.equal(h.player.duration, 187.1804)
+    assert.equal(h.audio.plays, 1)
+    assert.doesNotMatch(storage.data.get(WEB_QUEUE_KEY), /source|recording|startAt|download/)
+  }
 })
 
 test('corrupción de cursores, permutación, claves DJ, duración o versión rechaza la cola entera', () => {
