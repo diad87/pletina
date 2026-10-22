@@ -70,14 +70,23 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
   let rootId = protectedRoot ? previous!.rootId! : markerId()
   let rootDistance = protectedRoot ? previous!.rootDistance! : 0
   let rootTravel = false
-  let exitHeld: { rootId: string } | null = null
+  let exitHeld: { rootId: string; deadline: number } | null = null
   let exitTimer: number | undefined
+  let restoreAfterHide = false
+  let returnedBoundary: string | null = null
   let leaving = false
   let exitSteps = 0
   const stopExitHold = () => {
     browser.clearTimeout(exitTimer)
     exitTimer = undefined
     exitHeld = null
+    restoreAfterHide = false
+  }
+  const restoreExpiredHold = () => {
+    if (!exitHeld || !restoreAfterHide && Date.now() < exitHeld.deadline) return
+    stopExitHold()
+    rootTravel = true
+    history.forward()
   }
   if (standalone && !protectedRoot) {
     // La migración sustituye también cualquier overlay antiguo en una sola
@@ -145,6 +154,13 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
   }
   const onPop = (event: PopStateEvent) => {
     const value = navigationEntry(event.state) ? event.state : null
+    if (returnedBoundary !== null) {
+      const restored = value?.session === session && value.rootBoundary && value.rootId === returnedBoundary
+      returnedBoundary = null
+      // pageshow ya ha pedido Adelante. Algunos motores notifican además el pop
+      // del límite restaurado; no debe solicitar un segundo salto.
+      if (restored) return
+    }
     if (leaving) {
       // Las compactaciones dejan límites antiguos. Solo se recorren nuestros marcadores
       // validados; cada back reduce el historial, sin pushState ni volver hacia delante.
@@ -206,7 +222,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
           // El primer Atrás se queda en el límite: un segundo gesto nativo puede salir
           // incluso cuando no existe documento anterior para history.back(). No se cierra
           // la ventana por JavaScript; el navegador/SO decide el destino de ese gesto.
-          exitHeld = { rootId }
+          exitHeld = { rootId, deadline: Date.now() + ROOT_EXIT_WINDOW_MS }
           exitTimer = browser.setTimeout(() => {
             if (!exitHeld) return
             stopExitHold()
@@ -287,7 +303,34 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
     persist()
     drain()
   }
+  const onPageShow = (event: PageTransitionEvent) => {
+    if (!event.persisted) { restoreExpiredHold(); return }
+    // BFCache conserva las variables de la salida anterior. Adelante debe restaurar
+    // el ancla antes de admitir otro doble Atrás, sin consumir de nuevo la página ajena.
+    stopExitHold()
+    leaving = false
+    const value = navigationEntry(history.state) ? history.state : null
+    if (standalone && value?.session === session && (value.rootBoundary || value.rootId !== rootId)) {
+      rootTravel = true
+      returnedBoundary = value.rootBoundary ? value.rootId ?? null : null
+      history.forward()
+    }
+  }
+  const onPageHide = () => {
+    if (!exitHeld) return
+    restoreAfterHide = true
+    browser.clearTimeout(exitTimer)
+    exitTimer = undefined
+  }
+  const onVisibility = () => {
+    if (browser.document.hidden) { if (exitHeld) restoreAfterHide = true }
+    else restoreExpiredHold()
+  }
   browser.addEventListener('popstate', onPop)
+  browser.addEventListener('pageshow', onPageShow)
+  browser.addEventListener('pagehide', onPageHide)
+  browser.addEventListener('focus', restoreExpiredHold)
+  browser.document.addEventListener('visibilitychange', onVisibility)
   nav.installDriver({
     push(stack, index) {
       const next = JSON.parse(JSON.stringify({ stack, index })) as Snapshot
@@ -373,5 +416,12 @@ export function initWebNavigation(nav: Navigation, browser: Window = window, opt
     else history.back()
   }
   else protect()
-  return () => { stopExitHold(); browser.removeEventListener('popstate', onPop) }
+  return () => {
+    stopExitHold()
+    browser.removeEventListener('popstate', onPop)
+    browser.removeEventListener('pageshow', onPageShow)
+    browser.removeEventListener('pagehide', onPageHide)
+    browser.removeEventListener('focus', restoreExpiredHold)
+    browser.document.removeEventListener('visibilitychange', onVisibility)
+  }
 }

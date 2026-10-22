@@ -18,6 +18,8 @@ function navigation() {
 }
 function browser({ standalone = false, iosStandalone = false, historyLimit = Infinity } = {}) {
   const window = new EventTarget(), items = [null], storage = new Map(), events = []
+  const document = new EventTarget()
+  document.hidden = false
   const timers = new Map()
   let position = 0, departures = 0, now = 0, timerId = 0
   const history = {
@@ -30,7 +32,7 @@ function browser({ standalone = false, iosStandalone = false, historyLimit = Inf
     forward() { if (position < items.length - 1) { position++; events.push(items[position]) } },
     go(delta) { const target = position + delta; if (target >= 0 && target < items.length) { position = target; events.push(items[position]) } },
   }
-  Object.assign(window, { history, location: { href: 'https://example.test/pletina/application/index.hash.html' },
+  Object.assign(window, { history, document, location: { href: 'https://example.test/pletina/application/index.hash.html' },
     matchMedia: (query) => ({ matches: query === '(display-mode: standalone)' && standalone }),
     navigator: { standalone: iosStandalone },
     setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { at: now + delay, fn }); return id },
@@ -544,4 +546,62 @@ test('a multi-entry Back from an interior view cannot use an older compacted roo
   assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0); assert.equal(notices, 0)
   assert.equal(h.window.history.state.rootBoundary, undefined)
   h.window.history.back(); h.flush(); assert.equal(notices, 1); assert.equal(h.departures, 0)
+})
+
+test('returning from page cache by Forward resets exit traversal and protects the first Back again', () => {
+  const h = browser({ standalone: true }), nav = navigation()
+  const prior = { external: true }
+  h.window.history.replaceState(prior, '', h.window.location.href)
+  h.window.history.pushState(null, '', h.window.location.href)
+  initWebNavigation(nav, h.window)
+  const length = h.items.length
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.deepEqual(h.window.history.state, prior); assert.equal(h.departures, 0)
+  h.window.history.forward()
+  const show = new Event('pageshow')
+  Object.defineProperty(show, 'persisted', { value: true })
+  h.window.dispatchEvent(show); h.flush()
+  assert.equal(nav.route.name, 'home')
+  assert.equal(h.window.history.state.rootBoundary, undefined, 'Forward must restore the Home anchor, not bounce back out of the page cache')
+  assert.equal(h.position, length - 1); assert.equal(h.items.length, length)
+  h.window.history.back(); h.flush()
+  assert.equal(h.window.history.state.rootBoundary, true); assert.equal(h.departures, 0)
+  h.window.history.back(); h.flush()
+  assert.deepEqual(h.window.history.state, prior, 'The next double gesture can leave again without traversing the foreign entry')
+  assert.equal(h.departures, 0); assert.equal(h.items.length, length)
+})
+
+test('page-cache restoration anchors Home even when the engine omits the initial boundary pop', () => {
+  const { nav, h } = setup({ standalone: true })
+  h.window.history.back(); h.flush()
+  h.window.history.back(); h.flush()
+  const show = new Event('pageshow')
+  Object.defineProperty(show, 'persisted', { value: true })
+  h.window.dispatchEvent(show); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.back(); h.flush()
+  assert.equal(h.departures, 1, 'The restored first gesture must only arm exit; the old departure count cannot grow')
+  assert.equal(h.window.history.state.rootBoundary, true)
+})
+
+test('returning from hidden or pagehide clears an armed exit without waiting for a suspended timeout', (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 })
+  for (const mode of ['hidden', 'pagehide', 'focus']) {
+    const { h } = setup({ standalone: true })
+    h.window.history.back(); h.flush()
+    assert.equal(h.window.history.state.rootBoundary, true)
+    if (mode === 'hidden') {
+      h.window.document.hidden = true; h.window.document.dispatchEvent(new Event('visibilitychange'))
+    } else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pagehide'))
+    t.mock.timers.setTime(Date.now() + 5000)
+    if (mode === 'hidden') {
+      h.window.document.hidden = false; h.window.document.dispatchEvent(new Event('visibilitychange'))
+    } else if (mode === 'pagehide') h.window.dispatchEvent(new Event('pageshow'))
+    else h.window.dispatchEvent(new Event('focus'))
+    h.flush()
+    assert.equal(h.window.history.state.rootBoundary, undefined, mode)
+    h.window.history.back(); h.flush()
+    assert.equal(h.departures, 0, 'The first Back after resuming must not use an expired or hidden exit window')
+    assert.equal(h.window.history.state.rootBoundary, true)
+  }
 })
