@@ -6,7 +6,11 @@ import * as podcasts from './podcasts'
 import { readPlaylistCsv, readSpotifyPlaylist } from './imports'
 import { shareWebLog } from './diagnostics'
 import { listDownloads, enqueueDownloads, cancelDownloads, removeDownloads } from './downloads'
-import { handlesStorage, storageInvoke } from './storage'
+import { configureDownloadMetadata } from './download-store'
+import { handlesStorage, readStoredTrack, storageInvoke } from './storage'
+
+// Read the current editor metadata without coupling the download/audio modules to the library.
+configureDownloadMetadata(readStoredTrack)
 
 const unavailable = (feature: string): never => { throw new Error(`${feature} todavía no está disponible en la versión web.`) }
 let searchController: AbortController | undefined

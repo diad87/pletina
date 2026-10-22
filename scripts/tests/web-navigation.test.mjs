@@ -18,9 +18,11 @@ function navigation() {
 }
 function browser({ standalone = false, iosStandalone = false, historyLimit = Infinity } = {}) {
   const window = new EventTarget(), items = [null], storage = new Map(), events = []
-  let position = 0, departures = 0
+  const timers = new Map()
+  let position = 0, departures = 0, now = 0, timerId = 0
   const history = {
     get state() { return structuredClone(items[position]) },
+    get length() { return items.length },
     replaceState(value, _, url) { assert.equal(url, window.location.href); items[position] = structuredClone(value) },
     pushState(value, _, url) { assert.equal(url, window.location.href); items.splice(position + 1); items.push(structuredClone(value)); position++;
       while (items.length > historyLimit) { items.shift(); position-- } },
@@ -31,6 +33,8 @@ function browser({ standalone = false, iosStandalone = false, historyLimit = Inf
   Object.assign(window, { history, location: { href: 'https://example.test/pletina/application/index.hash.html' },
     matchMedia: (query) => ({ matches: query === '(display-mode: standalone)' && standalone }),
     navigator: { standalone: iosStandalone },
+    setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { at: now + delay, fn }); return id },
+    clearTimeout(id) { timers.delete(id) },
     sessionStorage: { getItem: (key) => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } })
   const flushOne = () => {
     if (!events.length) return
@@ -38,11 +42,21 @@ function browser({ standalone = false, iosStandalone = false, historyLimit = Inf
     Object.defineProperty(event, 'state', { value: structuredClone(events.shift()) })
     window.dispatchEvent(event)
   }
+  const flush = () => { let count = 0; while (events.length) { assert.ok(++count < 100, 'History traversal must settle'); flushOne() } }
   return { window, items, get position() { return position }, get departures() { return departures },
     setStandalone(value) { standalone = value }, flushOne, discardEvents() { events.length = 0 },
-    flush() { let count = 0; while (events.length) { assert.ok(++count < 100, 'History traversal must settle'); flushOne() } } }
+    flush,
+    advance(ms) {
+      const until = now + ms
+      for (;;) {
+        const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0]
+        if (!next || next[1].at > until) break
+        now = next[1].at; timers.delete(next[0]); next[1].fn(); flush()
+      }
+      now = until
+    } }
 }
-function setup(options) { const nav = navigation(), h = browser(options); const dispose = initWebNavigation(nav, h.window); return { nav, h, dispose } }
+function setup(options) { const nav = navigation(), h = browser(options); const dispose = initWebNavigation(nav, h.window, options); return { nav, h, dispose } }
 
 test('native navigation remains synchronous without installing browser history', () => {
   const nav = navigation()
@@ -145,12 +159,14 @@ test('rapid overlay reopen/close cancels obsolete queued guards', () => {
   nav.back(); h.flush(); assert.equal(nav.route.name, 'home')
 })
 
-test('installed Home consumes repeated system Back without leaving or growing history', () => {
+test('installed Home consumes isolated Back gestures without leaving or growing history', () => {
   const { nav, h } = setup({ standalone: true })
   const length = h.items.length
   for (let press = 0; press < 12; press++) {
     h.window.history.back(); h.flush()
     assert.equal(nav.route.name, 'home')
+    assert.equal(h.window.history.state.rootBoundary, true)
+    h.advance(801)
     assert.equal(h.window.history.state.rootBoundary, undefined)
   }
   assert.equal(h.departures, 0)
@@ -336,7 +352,7 @@ test('installed long sessions retain a root boundary when the browser prunes old
   for (let index = 0; index < 120; index++) { nav.go({ name: 'search', query: `Búsqueda ${index}` }); h.flush() }
   assert.equal(nav.route.query, 'Búsqueda 119')
   while (nav.canBack) { h.window.history.back(); h.flush() }
-  for (let index = 0; index < 4; index++) { h.window.history.back(); h.flush() }
+  for (let index = 0; index < 4; index++) { h.window.history.back(); h.flush(); h.advance(801) }
   assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
 })
 
@@ -411,4 +427,121 @@ test('jumping nested panels directly to the installed boundary closes every rema
   nav.overlay(remaining(), close, remaining); h.flush()
   assert.equal(layers, 0); assert.equal(nav.route.name, 'home')
   h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+})
+
+test('installed Home leaves its guard after the first Back so the second native Back needs no third gesture', () => {
+  let notices = 0
+  const { nav, h } = setup({ standalone: true, onExitArmed: () => notices++ })
+  const length = h.items.length
+  h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+  assert.equal(h.position, 0, 'The first gesture must remain on the boundary, not bounce forward')
+  assert.equal(h.window.history.state.rootBoundary, true); assert.equal(notices, 1)
+  h.advance(799)
+  h.window.history.back(); h.flush()
+  assert.equal(h.departures, 1, 'The second native gesture reaches the browser boundary without another JavaScript back')
+  assert.equal(h.items.length, length)
+})
+
+test('a second Back after the exit window is another isolated gesture and does not leave Home', () => {
+  let notices = 0
+  const { h } = setup({ standalone: true, onExitArmed: () => notices++ })
+  h.window.history.back(); h.flush(); h.advance(800)
+  assert.equal(h.position, 1); assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.back(); h.flush()
+  assert.equal(h.departures, 0); assert.equal(notices, 2)
+  h.advance(800); assert.equal(h.position, 1)
+})
+
+test('two rapid Back gestures on interior screens only reach Home and do not arm exit', () => {
+  let notices = 0
+  const { nav, h } = setup({ standalone: true, onExitArmed: () => notices++ })
+  nav.go({ name: 'search', query: 'Dos gestos' }); nav.go({ name: 'artist', id: 7 })
+  h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(notices, 0); assert.equal(h.departures, 0)
+  assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.back(); h.flush(); assert.equal(notices, 1); assert.equal(h.departures, 0)
+})
+
+test('navigation or opening an overlay during the exit window anchors Home and cancels the old timer', () => {
+  for (const action of ['route', 'overlay']) {
+    const { nav, h } = setup({ standalone: true })
+    h.window.history.back(); h.flush()
+    if (action === 'route') nav.go({ name: 'library' })
+    else nav.overlay(true, () => true)
+    h.flush()
+    assert.equal(h.window.history.state.rootBoundary, undefined)
+    assert.equal(action === 'route' ? nav.route.name : h.window.history.state.overlay, action === 'route' ? 'library' : true)
+    const position = h.position, length = h.items.length
+    h.advance(1000); assert.equal(h.position, position); assert.equal(h.items.length, length)
+    h.window.history.back(); h.flush()
+    assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0)
+    assert.equal(h.window.history.state.rootBoundary, undefined, 'Returning from the route or closing its overlay is not the first exit gesture')
+  }
+})
+
+test('native or application Forward during the exit window restores the existing next screen once', () => {
+  for (const native of [true, false]) {
+    const { nav, h } = setup({ standalone: true })
+    nav.go({ name: 'search', query: 'Adelante sin salir' }); nav.back(); h.flush()
+    const length = h.items.length
+    h.window.history.back(); h.flush()
+    if (native) h.window.history.forward()
+    else nav.forward()
+    h.flush(); h.advance(1000)
+    assert.equal(nav.route.query, 'Adelante sin salir')
+    assert.equal(h.departures, 0); assert.equal(h.items.length, length)
+    h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+    assert.equal(h.departures, 0, 'Forward must cancel the earlier exit window before returning Home')
+  }
+})
+
+test('double Back crosses only this session history left by compaction without adding exit entries', () => {
+  const { nav, h } = setup({ standalone: true, historyLimit: 50 })
+  for (let index = 0; index < 100; index++) { nav.go({ name: 'search', query: `Compactada ${index}` }); h.flush() }
+  while (nav.canBack) { h.window.history.back(); h.flush() }
+  const length = h.items.length
+  assert.ok(h.position > 1, 'Older owned entries must exist below the current root')
+  h.window.history.back(); h.flush()
+  h.window.history.pushState = () => assert.fail('Exiting may not create or repair history entries')
+  h.window.history.back(); h.flush()
+  assert.equal(h.departures, 1); assert.equal(h.position, 0)
+  assert.equal(nav.route.name, 'home', 'Owned historical routes are traversed without resurrecting old screens')
+  assert.equal(h.items.length, length)
+})
+
+test('double Back stops at an unknown or foreign-session entry instead of blindly skipping it', () => {
+  for (const prior of [{ external: true }, { pletinaNavigation: 1, session: 'another-session', index: 0, overlay: false,
+    snapshot: { stack: [{ name: 'home' }], index: 0 } }]) {
+    const h = browser({ standalone: true }), nav = navigation()
+    h.window.history.replaceState(prior, '', h.window.location.href)
+    h.window.history.pushState(null, '', h.window.location.href)
+    initWebNavigation(nav, h.window)
+    h.window.history.back(); h.flush(); h.window.history.back(); h.flush()
+    assert.equal(h.position, 0); assert.equal(h.departures, 0, 'The external history owner decides what happens next')
+    assert.deepEqual(h.window.history.state, prior)
+    h.advance(1000); assert.equal(h.position, 0)
+  }
+})
+
+test('reload while exit is armed clears its timer and safely restores Home with one root boundary', () => {
+  const { h, dispose } = setup({ standalone: true })
+  h.window.history.back(); h.flush()
+  const length = h.items.length
+  dispose()
+  const reloaded = navigation(); initWebNavigation(reloaded, h.window); h.flush(); h.advance(1000)
+  assert.equal(reloaded.route.name, 'home'); assert.equal(h.departures, 0)
+  assert.equal(h.window.history.state.rootBoundary, undefined); assert.equal(h.items.length, length)
+  h.window.history.back(); h.flush(); assert.equal(h.departures, 0)
+})
+
+test('a multi-entry Back from an interior view cannot use an older compacted root as exit permission', () => {
+  let notices = 0
+  const { nav, h } = setup({ standalone: true, historyLimit: 50, onExitArmed: () => notices++ })
+  for (let index = 0; index < 60; index++) { nav.go({ name: 'search', query: `Salto ${index}` }); h.flush() }
+  assert.ok(nav.canBack)
+  h.window.history.go(-h.position); h.flush()
+  assert.equal(nav.route.name, 'home'); assert.equal(h.departures, 0); assert.equal(notices, 0)
+  assert.equal(h.window.history.state.rootBoundary, undefined)
+  h.window.history.back(); h.flush(); assert.equal(notices, 1); assert.equal(h.departures, 0)
 })

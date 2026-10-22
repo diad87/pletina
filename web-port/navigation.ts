@@ -3,7 +3,10 @@ import type { NavigationDriver, Route } from '../src/lib/nav.svelte'
 type Snapshot = { stack: Route[]; index: number }
 type Navigation = Snapshot & { restore(stack: Route[], index: number, preserveView?: boolean): void; installDriver(driver: NavigationDriver): void }
 type Entry = { pletinaNavigation: 1; session: string; index: number; overlay: boolean; snapshot: Snapshot;
-  protectedRoot?: true; rootBoundary?: true; rootDistance?: number; preparedOverlay?: true }
+  protectedRoot?: true; rootBoundary?: true; rootDistance?: number; rootId?: string; preparedOverlay?: true }
+type Options = { onExitArmed?: () => void }
+export const ROOT_EXIT_WINDOW_MS = 800
+const markerId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 
 function route(value: unknown): value is Route {
   if (!value || typeof value !== 'object') return false
@@ -31,12 +34,13 @@ function navigationEntry(value: unknown): value is Entry {
     snapshot(item.snapshot) && Number.isInteger(item.index) && item.index >= 0 &&
     item.index === item.snapshot.index && item.index < item.snapshot.stack.length &&
     (item.protectedRoot === undefined || item.protectedRoot === true && Number.isInteger(item.rootDistance) && item.rootDistance! >= 0) &&
+    (item.rootId === undefined || item.protectedRoot === true && typeof item.rootId === 'string' && /^[a-z0-9-]{8,100}$/.test(item.rootId)) &&
     (item.preparedOverlay === undefined || item.preparedOverlay === true && item.overlay) &&
     (item.rootBoundary === undefined || item.rootBoundary === true && item.protectedRoot === true && !item.overlay && item.index === 0)
 }
 
 /** Mantiene la URL de instalación estable: las rutas de la app viven en history.state. */
-export function initWebNavigation(nav: Navigation, browser: Window = window): () => void {
+export function initWebNavigation(nav: Navigation, browser: Window = window, options: Options = {}): () => void {
   const history = browser.history
   const storageKey = `pletina:web:navigation:${new URL('../', browser.location.href).pathname}`
   const state: unknown = history.state
@@ -44,7 +48,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
   const standalone = browser.matchMedia?.('(display-mode: standalone)').matches === true ||
     (browser.navigator as Navigator & { standalone?: boolean } | undefined)?.standalone === true
   const session = previous?.pletinaNavigation === 1 && typeof previous.session === 'string'
-    ? previous.session : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+    ? previous.session : markerId()
   let current: Snapshot = { stack: [{ name: 'home' }], index: 0 }
   let saved: { session?: string; snapshot?: Snapshot } | null = null
   try { saved = JSON.parse(browser.sessionStorage.getItem(storageKey) ?? 'null') } catch { /* Sesión privada o dato antiguo. */ }
@@ -62,9 +66,19 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
   let overlaysRemain: () => boolean = () => false
   let reclaimOverlay = false
   let pending: (() => void)[] = []
-  let protectedRoot = standalone && previous?.protectedRoot === true
+  let protectedRoot = standalone && previous?.protectedRoot === true && previous.rootId !== undefined
+  let rootId = protectedRoot ? previous!.rootId! : markerId()
   let rootDistance = protectedRoot ? previous!.rootDistance! : 0
   let rootTravel = false
+  let exitHeld: { rootId: string } | null = null
+  let exitTimer: number | undefined
+  let leaving = false
+  let exitSteps = 0
+  const stopExitHold = () => {
+    browser.clearTimeout(exitTimer)
+    exitTimer = undefined
+    exitHeld = null
+  }
   if (standalone && !protectedRoot) {
     // La migración sustituye también cualquier overlay antiguo en una sola
     // reconstrucción acotada; no se repara antes otra vez la misma rama.
@@ -76,7 +90,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
     try { browser.sessionStorage.setItem(storageKey, JSON.stringify({ session, snapshot: current })) } catch { /* Historial sigue operativo sin storage. */ }
   }
   const entry = (overlay = false, index = current.index): Entry => ({ pletinaNavigation: 1, session, index, overlay,
-    ...(protectedRoot ? { protectedRoot: true as const, rootDistance } : {}),
+    ...(protectedRoot ? { protectedRoot: true as const, rootDistance, rootId } : {}),
     ...(overlay && standalone ? { preparedOverlay: true as const } : {}),
     snapshot: { stack: JSON.parse(JSON.stringify(current.stack)) as Route[], index } })
   const replace = () => { history.replaceState(entry(guarded), '', browser.location.href); persist() }
@@ -100,6 +114,7 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
       nav.restore(current.stack, current.index, true)
     }
     protectedRoot = true
+    rootId = markerId()
     rootDistance = 0
     history.replaceState({ ...entry(false, 0), rootBoundary: true }, '', browser.location.href)
     for (let index = 0; index < current.stack.length; index++) {
@@ -113,14 +128,58 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
   // dos rutas iguales que exigirían pulsar Atrás dos veces.
   if (!closingGuard && !previous?.rootBoundary) replace()
 
-  const run = (action: () => void) => { if (closingGuard || rootTravel || openingGuard) pending.push(action); else action() }
+  const run = (action: () => void) => {
+    if (leaving) {
+      // Una acción nueva reclama el historial sin seguir recorriendo una salida pendiente.
+      leaving = false
+      pending.push(action)
+      protect(true)
+      drain()
+    } else if (exitHeld) {
+      pending.push(action)
+      stopExitHold()
+      rootTravel = true
+      history.forward()
+    } else if (closingGuard || rootTravel || openingGuard) pending.push(action)
+    else action()
+  }
   const onPop = (event: PopStateEvent) => {
     const value = navigationEntry(event.state) ? event.state : null
+    if (leaving) {
+      // Las compactaciones dejan límites antiguos. Solo se recorren nuestros marcadores
+      // validados; cada back reduce el historial, sin pushState ni volver hacia delante.
+      if (value?.session === session && exitSteps-- > 0) history.back()
+      return
+    }
+    if (exitHeld) {
+      const held = exitHeld.rootId
+      stopExitHold()
+      if (value?.session === session && value.rootId === held && value.index === 0 && !value.overlay && !value.rootBoundary) {
+        // Adelante durante la ventana cancela la salida y conserva su sentido de navegación.
+        if (current.stack.length > 1) { history.forward(); return }
+      } else {
+        // El segundo Atrás ya ha atravesado el límite de forma nativa. Si aún queda
+        // historial interno de esta sesión, se consume hasta entregar el control al navegador.
+        leaving = true
+        exitSteps = Math.max(1, history.length)
+        if (value?.session === session) history.back()
+        return
+      }
+    }
+    if (standalone && protectedRoot && value?.session === session && value.rootId !== rootId) {
+      // Un salto iniciado fuera de Inicio puede alcanzar una raíz compactada anterior.
+      // Se vuelve hacia nuestra raíz vigente sin tratarlo como el segundo toque de salida.
+      rootTravel = true
+      history.forward()
+      return
+    }
     if (value?.session === session && value.protectedRoot) rootDistance = value.rootDistance!
     if (value?.pletinaNavigation === 1 && value.session === session && value.rootBoundary === true) {
       // En modo instalado, Atrás en la raíz conserva el documento y la rama
       // Adelante. En una pestaña normal se permite abandonar la página.
       if (standalone) {
+        const canExit = current.index === 0 && current.stack[0].name === 'home' && !guarded &&
+          !closingGuard && !openingGuard && !rootTravel && !overlayWanted && !overlaysRemain() && pending.length === 0
         const repair = repairForward
         const close = guarded
         guarded = false
@@ -143,8 +202,22 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
           drain()
           return
         }
-        rootTravel = true
-        history.forward()
+        if (canExit) {
+          // El primer Atrás se queda en el límite: un segundo gesto nativo puede salir
+          // incluso cuando no existe documento anterior para history.back(). No se cierra
+          // la ventana por JavaScript; el navegador/SO decide el destino de ese gesto.
+          exitHeld = { rootId }
+          exitTimer = browser.setTimeout(() => {
+            if (!exitHeld) return
+            stopExitHold()
+            rootTravel = true
+            history.forward()
+          }, ROOT_EXIT_WINDOW_MS)
+          try { options.onExitArmed?.() } catch { /* El aviso no controla la navegación. */ }
+        } else {
+          rootTravel = true
+          history.forward()
+        }
       }
       else history.back()
       return
@@ -300,5 +373,5 @@ export function initWebNavigation(nav: Navigation, browser: Window = window): ()
     else history.back()
   }
   else protect()
-  return () => browser.removeEventListener('popstate', onPop)
+  return () => { stopExitHold(); browser.removeEventListener('popstate', onPop) }
 }

@@ -13,6 +13,7 @@ interface Options {
   emit?: (value: DownloadProgress) => void
   storage?: Pick<StorageManager, 'estimate' | 'persist'>
   timeout?: number
+  retryDelay?: number
 }
 const cancelled = () => new DOMException('Descarga descartada.', 'AbortError')
 export function validateDownloadedAudio(url: string, signal: AbortSignal): Promise<void> {
@@ -64,38 +65,58 @@ export function createDownloadManager(options: Options = {}) {
       const existing = await wait(store.readDownloadedPlayable(id))
       check()
       if (existing) { send(id, 'done', 1); return }
-      const source = await wait(resolve({ id, title: track.title, artist: track.artistName, album: track.albumTitle, duration: track.duration }, failed.has(id)))
-      check()
-      if (!source.videoId || source.local) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
-      const details = await wait(info(source.videoId))
-      check()
-      const size = details.contentLength ?? 0
-      if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
-      const estimate = typeof storage?.estimate === 'function' ? await wait(storage.estimate().catch(() => null)) : null
-      if (estimate?.quota !== undefined && estimate.usage !== undefined && size > estimate.quota - estimate.usage) throw new Error('No hay espacio suficiente para esta descarga. Quita otras descargas y reintenta.')
-      check()
-      // El navegador decide si concede almacenamiento persistente; no bloquea la transferencia.
-      if (typeof storage?.persist === 'function') void storage.persist().catch(() => false)
-      stage = audioCacheUrl(id, store.scope) + '?stage=' + Date.now() + '-' + crypto.randomUUID()
-      const response = await wait(request(details.url, { mode: 'no-cors', credentials: 'omit', signal: controller.signal }))
-      check()
-      if (response.type !== 'opaque' && !response.ok) throw new Error('No se pudo descargar el audio. Vuelve a intentarlo.')
-      const cachePut = cache.put(stage, response)
-      // Si un proveedor tarda en cerrar el cuerpo, una finalización posterior al timeout
-      // tampoco puede dejar un fichero parcial huérfano.
-      void cachePut.then(() => { if (controller.signal.aborted && stage && !committed) return cache!.delete(stage) }).catch(() => {})
-      await wait(cachePut)
-      check()
-      await wait(validate(stage, controller.signal))
-      check()
-      const old = await wait(store.get(id))
-      check()
-      await wait(store.put({ id, track, size, at: Math.floor(Date.now() / 1000), cacheKey: stage }))
-      check()
-      committed = true
-      if (old && old.cacheKey !== stage) await cache.delete(old.cacheKey).catch(() => false)
-      failed.delete(id)
-      send(id, 'done', 1)
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const refresh = failed.has(id) || attempt > 0
+        const source = await wait(resolve({ id, title: track.title, artist: track.artistName, album: track.albumTitle, duration: track.duration }, refresh))
+        check()
+        if (!source.videoId || source.local) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
+        // resolve(refresh) ya renueva el stream; se consulta aquí esa misma selección y tamaño.
+        const details = await wait(info(source.videoId))
+        check()
+        const size = details.contentLength ?? 0
+        if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
+        const estimate = typeof storage?.estimate === 'function' ? await wait(storage.estimate().catch(() => null)) : null
+        if (estimate?.quota !== undefined && estimate.usage !== undefined && size > estimate.quota - estimate.usage) throw new Error('No hay espacio suficiente para esta descarga. Quita otras descargas y reintenta.')
+        check()
+        // El navegador decide si concede almacenamiento persistente; no bloquea la transferencia.
+        if (typeof storage?.persist === 'function') void storage.persist().catch(() => false)
+        stage = audioCacheUrl(id, store.scope) + '?stage=' + Date.now() + '-' + crypto.randomUUID()
+        const attemptStage = stage
+        try {
+          const response = await wait(request(details.url, { mode: 'no-cors', credentials: 'omit', signal: controller.signal }))
+          check()
+          if (response.type !== 'opaque' && !response.ok) throw new Error('No se pudo descargar el audio. Vuelve a intentarlo.')
+          const cachePut = cache.put(attemptStage, response)
+          // Si un proveedor tarda en cerrar el cuerpo, una finalización posterior al timeout
+          // tampoco puede dejar un fichero parcial huérfano.
+          void cachePut.then(() => { if (controller.signal.aborted && !committed) return cache!.delete(attemptStage) }).catch(() => {})
+          await wait(cachePut)
+          check()
+          await wait(validate(attemptStage, controller.signal))
+          check()
+        } catch (error) {
+          check()
+          if (attempt > 0 || error instanceof DOMException && error.name !== 'NetworkError') throw error
+          // Las respuestas opacas no permiten continuar por bytes ni leer un 403. Una única
+          // copia nueva con URL renovada recupera cortes o caducidad sin conservar audio parcial.
+          await wait(cache.delete(attemptStage))
+          stage = undefined
+          let retryTimer: ReturnType<typeof setTimeout> | undefined
+          try { await wait(new Promise<void>((done) => { retryTimer = setTimeout(done, options.retryDelay ?? 1000) })) }
+          finally { clearTimeout(retryTimer) }
+          check()
+          continue
+        }
+        const old = await wait(store.get(id))
+        check()
+        await wait(store.put({ id, track, size, at: Math.floor(Date.now() / 1000), cacheKey: attemptStage }))
+        check()
+        committed = true
+        if (old && old.cacheKey !== attemptStage) await cache.delete(old.cacheKey).catch(() => false)
+        failed.delete(id)
+        send(id, 'done', 1)
+        break
+      }
     } finally {
       clearTimeout(timer)
       if (stage && !committed && cache) {

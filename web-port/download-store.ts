@@ -4,7 +4,11 @@ export const DOWNLOAD_DATABASE = 'pletina-web-downloads'
 export const DOWNLOAD_CACHE = 'pletina-audio-downloads:v1'
 export const MAX_DOWNLOAD_BYTES = 256 * 1024 ** 2
 export interface DownloadRecord { id: number; track: LibTrack; size: number; at: number; cacheKey: string }
-interface Options { indexedDB?: IDBFactory; name?: string; scope?: string | URL; caches?: CacheStorage }
+export type DownloadMetadataReader = (trackId: number) => Promise<LibTrack | null>
+interface Options { indexedDB?: IDBFactory; name?: string; scope?: string | URL; caches?: CacheStorage; readTrack?: DownloadMetadataReader }
+let metadataReader: DownloadMetadataReader | undefined
+/** The web adapter supplies the library reader; this module stays independent of storage/audio imports. */
+export function configureDownloadMetadata(readTrack: DownloadMetadataReader | undefined): void { metadataReader = readTrack }
 const revisions = new Map<number, number>()
 export const downloadRevision = (id: number) => revisions.get(id) ?? 0
 export const invalidateDownload = (id: number) => revisions.set(id, downloadRevision(id) + 1)
@@ -85,6 +89,17 @@ export function createDownloadStore(options: Options = {}) {
   }
   const put = async (value: DownloadRecord): Promise<void> => { const normalized = row(value); await request('readwrite', (store) => store.put(normalized)) }
   const remove = async (id: number): Promise<void> => { await request('readwrite', (store) => store.delete(downloadId(id))) }
+  async function trackMetadata(saved: DownloadRecord): Promise<LibTrack> {
+    if (saved.id < 250_000_000_000_000 || saved.id >= 500_000_000_000_000) return saved.track
+    const readTrack = options.readTrack ?? metadataReader
+    if (readTrack) {
+      try {
+        const current = await readTrack(saved.id)
+        if (current?.id === saved.id) return downloadTrack(current)
+      } catch { /* A missing/unavailable library must not discard a playable local download. */ }
+    }
+    return saved.track
+  }
   async function removeDownloadedTrack(id: number): Promise<void> {
     invalidateDownload(downloadId(id))
     const saved = await get(id)
@@ -96,13 +111,14 @@ export function createDownloadStore(options: Options = {}) {
     if (!saved) return null
     const response = await (await cacheStorage.open(DOWNLOAD_CACHE)).match(saved.cacheKey)
     if (!response) { await remove(id); return null }
-    return { videoId: '', url: audioCacheUrl(id, scope), title: saved.track.title, channel: saved.track.artistName, local: true }
+    const track = await trackMetadata(saved)
+    return { videoId: '', url: audioCacheUrl(id, scope), title: track.title, channel: track.artistName, local: true }
   }
   async function listDownloads(): Promise<DownloadEntry[]> {
     const cache = await cacheStorage.open(DOWNLOAD_CACHE), values: DownloadEntry[] = []
     for (const saved of await list()) {
       if (!await cache.match(saved.cacheKey)) { await remove(saved.id); continue }
-      values.push({ track: saved.track, path: audioCacheUrl(saved.id, scope), size: saved.size, at: saved.at })
+      values.push({ track: await trackMetadata(saved), path: audioCacheUrl(saved.id, scope), size: saved.size, at: saved.at })
     }
     return values
   }

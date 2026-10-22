@@ -213,6 +213,50 @@ test('YouTube asigna IDs seguros estables, actualiza metadatos y no rompe refere
   assert.equal(await reopened.readYouTubeVideo(first.id), input.videoId)
 })
 
+for (const action of ['record_play', 'set_liked', 'create_playlist', 'add_to_playlist']) {
+  test(`copias antiguas de YouTube no revierten la edición con ${action}`, async (t) => {
+    const { store, factory, name, invoke } = setup(t)
+    const input = { videoId: 'abcdefghijk', title: 'Título original', artist: 'Canal original', duration: 90 }
+    const old = await invoke('save_youtube_track', input)
+    const list = await invoke('create_playlist', { name: 'Referencias', tracks: [old, old] })
+    const entryIds = (await invoke('playlist', { id: list.id })).entries.map(entry => entry.entryId)
+    await invoke('set_liked', { track: old, liked: true })
+    await invoke('record_play', { track: old })
+    const edited = await invoke('save_youtube_track', { ...input, title: 'Título corregido', artist: 'Canal corregido', duration: 321 })
+    assert.equal(edited.id, old.id)
+    if (action === 'add_to_playlist') await invoke('remove_youtube_track', { id: old.id })
+    let additional
+    if (action === 'record_play') await invoke(action, { track: old })
+    if (action === 'set_liked') await invoke(action, { track: old, liked: true })
+    if (action === 'create_playlist') additional = await invoke(action, { name: 'Copia de cola', tracks: [old, old] })
+    if (action === 'add_to_playlist') await invoke(action, { id: list.id, tracks: [old] })
+    assert.deepEqual(await rawGet(factory, name, 'tracks', old.id), edited)
+    assert.deepEqual((await invoke('liked_tracks'))[0].track, edited)
+    for (const entry of await invoke('history', { limit: 10 })) assert.deepEqual(entry.track, edited)
+    const current = await invoke('playlist', { id: list.id })
+    assert.deepEqual(current.entries.slice(0, 2).map(entry => entry.entryId), entryIds)
+    for (const entry of current.entries) assert.deepEqual(entry.track, edited)
+    if (additional) {
+      assert.equal(additional.duration, edited.duration * 2)
+      for (const entry of (await invoke('playlist', { id: additional.id })).entries) assert.deepEqual(entry.track, edited)
+    }
+    assert.equal(await store.readYouTubeVideo(old.id), input.videoId)
+    if (action === 'add_to_playlist') assert.deepEqual(await invoke('youtube_tracks'), [], 'Quitar del listado conserva la ficha usada por otras referencias')
+    const latest = await invoke('save_youtube_track', { ...input, title: 'Edición posterior', artist: 'Autor definitivo', duration: 444 })
+    assert.equal(latest.id, old.id)
+    await store.close()
+    const reopened = createWebStorage({ indexedDB: factory, name })
+    t.after(() => reopened.close())
+    assert.deepEqual((await reopened.storageInvoke('youtube_tracks'))[0].track, latest)
+    assert.deepEqual((await reopened.storageInvoke('liked_tracks'))[0].track, latest)
+    for (const entry of (await reopened.storageInvoke('history', { limit: 10 }))) assert.deepEqual(entry.track, latest)
+    const restored = await reopened.storageInvoke('playlist', { id: list.id })
+    assert.deepEqual(restored.entries.slice(0, 2).map(entry => entry.entryId), entryIds)
+    for (const entry of restored.entries) assert.deepEqual(entry.track, latest)
+    assert.equal(await reopened.readYouTubeVideo(old.id), input.videoId)
+  })
+}
+
 test('el progreso de cada episodio sobrevive al cierre, limita la posición y permite volver a cero', async (t) => {
   const { store, factory, name, invoke } = setup(t)
   await invoke('save_podcast_progress', { progress: { id: EPISODE + 1, position: 137.5, duration: 3600, completed: false } })

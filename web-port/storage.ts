@@ -311,12 +311,18 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     if (!row) throw new Error('Esta playlist ya no existe.')
     return row
   }
+  async function upsertTrack(tx: IDBTransaction, value: LibTrack): Promise<void> {
+    // Like the APK's upsert_track: queue/library copies cannot undo a saved
+    // YouTube edit. Only save_youtube_track explicitly replaces that metadata.
+    if (value.id >= YOUTUBE_BASE && value.id < PODCAST_BASE && await get<LibTrack>(tx, 'tracks', value.id)) return
+    await put(tx, 'tracks', value)
+  }
   async function append(tx: IDBTransaction, playlistId: number, values: LibTrack[]) {
     const row = await requirePlaylist(tx, playlistId)
     const existing = await request(tx.objectStore('entries').index('playlistId').getAll(playlistId)) as EntryRow[]
     let position = existing.reduce((max, entry) => Math.max(max, entry.position), -1) + 1
     for (const value of values) {
-      await put(tx, 'tracks', value)
+      await upsertTrack(tx, value)
       await request(tx.objectStore('entries').add({ playlistId, trackId: value.id, position: position++, at: timestamp() }))
     }
     await put(tx, 'playlists', { ...row, order: await sequence(tx) })
@@ -351,7 +357,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
           const trackId = id(object(args.track, 'La canción').id)
           if (!liked) { await remove(tx, 'likes', trackId); return }
           const value = track(args.track)
-          await put(tx, 'tracks', value)
+          await upsertTrack(tx, value)
           if (!await get<LikeRow>(tx, 'likes', trackId)) await put(tx, 'likes', { trackId, at: timestamp(), order: await sequence(tx) })
           return
         }
@@ -428,7 +434,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
         }
         case 'record_play': {
           const value = track(args.track)
-          await put(tx, 'tracks', value)
+          await upsertTrack(tx, value)
           await request(tx.objectStore('history').add({ trackId: value.id, at: timestamp() }))
           return
         }
@@ -559,6 +565,15 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     const key = id(trackId)
     return transaction('readonly', async (tx) => (await get<SourceRow>(tx, 'sources', key))?.choice ?? null)
   }
+  async function readStoredTrack(trackId: number): Promise<LibTrack | null> {
+    // Downloads need the editor's current YouTube metadata, including hidden
+    // entries. Other namespaces keep their own snapshot without opening this DB.
+    if (!Number.isSafeInteger(trackId) || trackId < YOUTUBE_BASE || trackId >= PODCAST_BASE) return null
+    return transaction('readonly', async (tx) => {
+      const value = await get<LibTrack>(tx, 'tracks', trackId)
+      return value ? track(value) : null
+    })
+  }
   async function saveSourceChoice(trackId: number, choice: SourceChoice): Promise<void> {
     const key = id(trackId)
     const normalized = sourceChoice(choice)
@@ -579,7 +594,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     connection = undefined
   }
   return { storageInvoke, handlesStorage, rememberPodcasts, savePodcastShows, savePodcastDetail,
-    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readSourceChoice, saveSourceChoice, readYouTubeVideo, close }
+    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readStoredTrack, readSourceChoice, saveSourceChoice, readYouTubeVideo, close }
 }
 
 export const handlesStorage = (command: string): boolean => COMMANDS.has(command)
@@ -594,6 +609,7 @@ export const savePodcastDetail = (detail: PodcastDetailInput): Promise<PodcastDe
 export const readPodcastFeedUrl = (showId: number): Promise<string | null> => storage().readPodcastFeedUrl(showId)
 export const readPodcastEpisode = (episodeId: number): Promise<StoredPodcastEpisode | null> => storage().readPodcastEpisode(episodeId)
 export const readPodcastDetail = (feedUrl: string): Promise<PodcastDetail | null> => storage().readPodcastDetail(feedUrl)
+export const readStoredTrack = (trackId: number): Promise<LibTrack | null> => storage().readStoredTrack(trackId)
 export const readSourceChoice = (trackId: number): Promise<SourceChoice | null> => storage().readSourceChoice(trackId)
 export const saveSourceChoice = (trackId: number, choice: SourceChoice): Promise<void> => storage().saveSourceChoice(trackId, choice)
 export const readYouTubeVideo = (trackId: number): Promise<string | null> => storage().readYouTubeVideo(trackId)

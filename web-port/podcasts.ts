@@ -354,6 +354,12 @@ async function rssSearch(query: string, requested: string | null, signal?: Abort
   }
   await Promise.all(Array.from({ length: Math.min(6, entries.length) }, worker))
   aborted(signal)
+  // Con un idioma concreto hacen falta declaraciones RSS: que todos fallen no
+  // significa que el catálogo esté vacío. search conserva YouTube si sí respondió.
+  // «Todos» mantiene el fallback del directorio con idioma sin confirmar.
+  if (requested && entries.length > 0 && failedFeeds === entries.length) {
+    throw new Error('Se encontró el catálogo, pero no se pudo leer ningún pódcast. Comprueba la conexión o vuelve a intentarlo.')
+  }
   const selected = found.flatMap((show, index) => show ? [{ show, image: entries[index].image }] : [])
   const stored = await savePodcastShows(selected.map(({ show }) => show))
   return { podcasts: stored.map((show, index) => ({ ...show, image: selected[index].image ?? show.image })), failedFeeds }

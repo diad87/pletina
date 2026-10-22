@@ -31,9 +31,9 @@ function setup(t, options = {}) {
     : path === './audio' ? { resolveRemoteTrack() { assert.fail('uninjected resolver') } }
     : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path))
   const manager = exports.createDownloadManager({
-    store, caches, emit: (value) => events.push(value), timeout: options.timeout ?? 2000,
+    store, caches, emit: (value) => events.push(value), timeout: options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
     resolve: options.resolve ?? (async (query) => { sources.push(query.id); return { videoId: '9RfVp-GhKfs', local: false, url: 'https://r1.googlevideo.com/audio?signature=SECRET' } }),
-    stream: async () => ({ videoId: '9RfVp-GhKfs', url: 'https://r1.googlevideo.com/audio?signature=SECRET', contentLength: options.size ?? 1234 }),
+    stream: options.stream ?? (async () => ({ videoId: '9RfVp-GhKfs', url: 'https://r1.googlevideo.com/audio?signature=SECRET', contentLength: options.size ?? 1234 })),
     fetch: options.fetch ?? (async (_url, init) => { assert.equal(init.mode, 'no-cors'); assert.equal(init.credentials, 'omit'); return new Response('opaque fixture bytes') }),
     validate: options.validate ?? (async (url) => { validations.push(url) }),
     storage: { estimate: async () => options.quota ?? { quota: 1024 ** 3, usage: 0 }, persist: async () => false },
@@ -166,4 +166,153 @@ test('a hung resolver times out without committing or blocking the next queued t
   never.resolve({ videoId: '9RfVp-GhKfs', local: false })
   await flush()
   assert.equal(await h.store.get(1), null)
+})
+
+test('an interrupted transfer renews its source once and completes without exposing a failed attempt', async (t) => {
+  const resolutions = [], fetched = []
+  let generation = 0
+  const h = setup(t, {
+    resolve: async (query, refresh) => {
+      resolutions.push([query.id, refresh])
+      if (refresh) generation++
+      return { videoId: '9RfVp-GhKfs', local: false }
+    },
+    stream: async () => ({ videoId: '9RfVp-GhKfs', url: `https://r1.googlevideo.com/audio?generation=${generation}`, contentLength: 1234 }),
+    fetch: async (url) => {
+      fetched.push(url)
+      if (fetched.length === 1) throw new TypeError('Network request failed')
+      return new Response('renewed audio')
+    },
+  })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [1, true]])
+  assert.deepEqual(fetched.map((url) => new URL(url).searchParams.get('generation')), ['0', '1'])
+  assert.deepEqual(h.events.map((value) => value.state), ['queued', 'downloading', 'done'])
+  assert.equal((await h.listDownloads()).length, 1)
+  assert.equal(h.rows.size, 1)
+})
+
+test('a rejected cached audio is removed before retrying a fresh complete copy', async (t) => {
+  const resolutions = [], stages = []
+  let transfers = 0
+  const h = setup(t, {
+    resolve: async (query, refresh) => { resolutions.push([query.id, refresh]); return { videoId: '9RfVp-GhKfs', local: false } },
+    fetch: async () => {
+      if (++transfers === 2) assert.equal(h.rows.size, 0, 'the rejected opaque body cannot survive into the new attempt')
+      return new Response('complete media attempt ' + transfers)
+    },
+    validate: async (url) => {
+      stages.push(url)
+      assert.equal(h.rows.size, 1)
+      assert.equal(await h.store.get(1), null, 'the rejected copy must never enter the library')
+      if (stages.length === 1) throw new Error('The media URL returned an expired or invalid body')
+    },
+  })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(transfers, 2)
+  assert.notEqual(stages[0], stages[1])
+  assert.deepEqual(resolutions, [[1, false], [1, true]])
+  assert.equal(h.rows.has(stages[0]), false)
+  assert.equal((await h.store.get(1)).cacheKey, stages[1])
+  assert.deepEqual(h.events.map((value) => value.state), ['queued', 'downloading', 'done'])
+})
+
+test('a persistent transfer failure is bounded to two attempts and does not hold the next queued song', async (t) => {
+  const resolutions = []
+  let current = 0, transfers = 0
+  const h = setup(t, {
+    resolve: async (query, refresh) => { current = query.id; resolutions.push([query.id, refresh]); return { videoId: '9RfVp-GhKfs', local: false } },
+    fetch: async () => {
+      transfers++
+      if (current === 1) throw new TypeError('Network request failed')
+      return new Response('second song')
+    },
+  })
+  await h.enqueueDownloads([song(1), song(2)]); await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [1, true], [2, false]])
+  assert.equal(transfers, 3)
+  assert.deepEqual(h.events.filter((value) => value.state === 'error').map((value) => value.trackId), [1])
+  assert.deepEqual(h.events.filter((value) => value.state === 'done').map((value) => value.trackId), [2])
+  assert.equal(await h.store.get(1), null)
+  assert.equal(h.rows.size, 1)
+})
+
+test('quota, abort, timeout and metadata write errors do not trigger another download attempt', async (t) => {
+  for (const name of ['QuotaExceededError', 'AbortError', 'TimeoutError', 'metadata']) {
+    let transfers = 0, metadataWrites = 0
+    const h = setup(t, { fetch: async () => {
+      transfers++
+      if (name !== 'metadata') throw new DOMException('Transfer stopped', name)
+      return new Response('audio')
+    } })
+    if (name === 'metadata') h.store.put = async () => { metadataWrites++; throw new Error('IndexedDB write failed') }
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(transfers, 1, name)
+    assert.equal(metadataWrites, name === 'metadata' ? 1 : 0)
+    assert.equal(h.rows.size, 0)
+    assert.deepEqual(await h.store.list(), [])
+    assert.ok(!h.events.some((value) => value.state === 'done'))
+  }
+})
+
+test('removing a song while its renewed source is pending prevents a late retry from fetching or committing', async (t) => {
+  const renewed = deferred(), refreshing = deferred()
+  const resolutions = []
+  let transfers = 0
+  const h = setup(t, {
+    resolve: async (query, refresh) => {
+      resolutions.push([query.id, refresh])
+      if (refresh) { refreshing.resolve(); return renewed.promise }
+      return { videoId: '9RfVp-GhKfs', local: false }
+    },
+    fetch: async () => { transfers++; throw new TypeError('Network request failed') },
+  })
+  await h.enqueueDownloads([song()])
+  await refreshing.promise
+  await h.removeDownloads([1])
+  renewed.resolve({ videoId: '9RfVp-GhKfs', local: false })
+  await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [1, true]])
+  assert.equal(transfers, 1)
+  assert.equal(h.rows.size, 0)
+  assert.deepEqual(await h.store.list(), [])
+  assert.deepEqual(h.events.map((value) => value.state), ['queued', 'downloading', 'cancelled'])
+})
+
+test('cancelling the queued songs during source renewal still lets the active retry finish alone', async (t) => {
+  const renewed = deferred(), refreshing = deferred()
+  const resolutions = []
+  let transfers = 0
+  const h = setup(t, {
+    resolve: async (query, refresh) => {
+      resolutions.push([query.id, refresh])
+      if (refresh) { refreshing.resolve(); return renewed.promise }
+      return { videoId: '9RfVp-GhKfs', local: false }
+    },
+    fetch: async () => { if (++transfers === 1) throw new TypeError('Network request failed'); return new Response('renewed media') },
+  })
+  await h.enqueueDownloads([song(1), song(2), song(3)])
+  await refreshing.promise
+  h.cancelDownloads()
+  renewed.resolve({ videoId: '9RfVp-GhKfs', local: false })
+  await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [1, true]])
+  assert.deepEqual(h.events.filter((value) => value.state === 'cancelled').map((value) => value.trackId), [2, 3])
+  assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [1])
+})
+
+test('the original transfer deadline also bounds retry waiting and the next queued download can still finish', async (t) => {
+  const resolutions = []
+  let current = 0, transfers = 0
+  const h = setup(t, {
+    timeout: 30, retryDelay: 80,
+    resolve: async (query, refresh) => { current = query.id; resolutions.push([query.id, refresh]); return { videoId: '9RfVp-GhKfs', local: false } },
+    fetch: async () => { transfers++; if (current === 1) throw new TypeError('Network request failed'); return new Response('next song') },
+  })
+  await h.enqueueDownloads([song(1), song(2)]); await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [2, false]], 'an expired global deadline cannot start a renewed request')
+  assert.equal(transfers, 2)
+  assert.deepEqual(h.events.filter((value) => value.state === 'error').map((value) => value.trackId), [1])
+  assert.deepEqual(h.events.filter((value) => value.state === 'done').map((value) => value.trackId), [2])
+  assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [2])
 })

@@ -5,13 +5,14 @@ import ts from 'typescript'
 
 const source = await readFile(new URL('../../web-port/podcasts.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS } }).outputText
-function engine() {
+function engine({ storage = {}, youtube = {}, fetch } = {}) {
   const exports = {}, window = new EventTarget(), frames = []
   const document = { body: { append(frame) { frames.push(frame) } }, createElement(name) {
     assert.equal(name, 'iframe')
     return { contentWindow: {}, setAttribute() {}, remove() { const index = frames.indexOf(this); if (index >= 0) frames.splice(index, 1) } }
   } }
-  new Function('exports', 'require', 'window', 'document', compiled)(exports, () => ({}), window, document)
+  new Function('exports', 'require', 'window', 'document', 'fetch', compiled)(exports,
+    (name) => name === './storage' ? storage : name === './youtube-podcasts' ? youtube : {}, window, document, fetch)
   const args = (frame = frames[0]) => JSON.parse(frame.srcdoc.slice(frame.srcdoc.lastIndexOf(')(') + 2, -')</script>'.length))
   const send = (value, { frame = frames[0], source = frame?.contentWindow, origin = 'null', requestId = args(frame).requestId } = {}) => {
     const event = new Event('message')
@@ -92,4 +93,83 @@ test('abort cancels a JSONP frame and prevents late completion', async () => {
   const pending=api.requestApple('search',{term:'podcast'},{signal:controller.signal})
   controller.abort();await assert.rejects(pending,{name:'AbortError'});assert.equal(api.frames.length,0)
   assert.throws(()=>api.requestApple('search',{term:'podcast'},{signal:controller.signal}),{name:'AbortError'})
+})
+
+const directoryResult = { results: [{ collectionId: 1, collectionName: 'Programa RSS', artistName: 'Autora', feedUrl: entry.feedUrl }] }
+const youtubeShow = { browseId: 'MPSPqaPodcast', title: 'Programa YouTube', author: 'Canal', image: null }
+function searchEngine() {
+  const state = { videos: [], videoFailure: null, feedRequests: 0, saved: [] }
+  const api = engine({
+    storage: { async savePodcastShows(values) {
+      state.saved.push(structuredClone(values))
+      return values.map((value, index) => ({ ...value, id: 500_000_000_000_001 + index }))
+    } },
+    youtube: { async search() { if (state.videoFailure) throw state.videoFailure; return state.videos } },
+    fetch: async () => { state.feedRequests++; return new Response('', { status: 503 }) },
+  })
+  return { api, state }
+}
+
+test('a language-filtered search reports unreadable RSS rather than a false empty catalog', async () => {
+  const { api, state } = searchEngine()
+  const pending = api.search('Programa RSS', 'es')
+  api.send(directoryResult)
+  await assert.rejects(pending, /Se encontró el catálogo, pero no se pudo leer ningún pódcast/)
+  assert.equal(state.feedRequests, 1)
+  assert.ok(state.saved.flat().length === 0, 'An unreadable directory entry must not become an identified-language result')
+  assert.equal(api.frames.length, 0)
+})
+
+test('the unreadable-RSS error is retained when YouTube fails as well', async () => {
+  const { api, state } = searchEngine()
+  state.videoFailure = new Error('YouTube no disponible')
+  const pending = api.search('Programa RSS', 'es')
+  api.send(directoryResult)
+  await assert.rejects(pending, /no se pudo leer ningún pódcast/)
+  assert.equal(state.feedRequests, 1)
+})
+
+test('a retry after unreadable RSS can return a newly available YouTube result', async () => {
+  const { api, state } = searchEngine()
+  const first = api.search('Programa RSS', 'es')
+  api.send(directoryResult)
+  await assert.rejects(first, /no se pudo leer ningún pódcast/)
+  state.videos = [youtubeShow]
+  const result = await api.search('Programa RSS', 'es')
+  assert.equal(state.feedRequests, 2, 'Failed feeds must be requested again, not cached as a successful empty result')
+  assert.deepEqual(result.podcasts, [])
+  assert.equal(result.youtube[0].title, youtubeShow.title)
+  assert.equal(api.frames.length, 0)
+})
+
+test('a genuinely empty directory and YouTube result remains a successful empty search', async () => {
+  const { api, state } = searchEngine()
+  const pending = api.search('Sin resultados', 'es')
+  api.send({ results: [] })
+  assert.deepEqual(await pending, { podcasts: [], youtube: [], failedFeeds: 0 })
+  assert.equal(state.feedRequests, 0)
+})
+
+test('YouTube results survive total RSS failure with a language filter', async () => {
+  const { api, state } = searchEngine()
+  state.videos = [youtubeShow]
+  const pending = api.search('Programa RSS', 'es')
+  api.send(directoryResult)
+  const result = await pending
+  assert.deepEqual(result.podcasts, [])
+  assert.equal(result.youtube.length, 1)
+  assert.equal(result.youtube[0].feedUrl, 'youtube:' + youtubeShow.browseId)
+})
+
+test('all languages preserves the permissive Apple-directory fallback alongside YouTube', async () => {
+  const { api, state } = searchEngine()
+  state.videos = [youtubeShow]
+  const pending = api.search('Programa RSS', 'all')
+  api.send(directoryResult)
+  const result = await pending
+  assert.equal(result.failedFeeds, 1)
+  assert.equal(result.podcasts.length, 1)
+  assert.equal(result.podcasts[0].feedUrl, entry.feedUrl)
+  assert.equal(result.podcasts[0].language, null, 'Storefront country must not supply a guessed language')
+  assert.equal(result.youtube.length, 1)
 })
