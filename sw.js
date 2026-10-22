@@ -1,7 +1,7 @@
 // El build sustituye estos valores. No publicar los fuentes directamente.
-const VERSION = "e7b0aa14685bb4fa"
-const FILES = [{"url":"app.2597bc741f3556b8.js","sha256":"2597bc741f3556b831181c885679e686f1751424d5345831e9c960fafa708151"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"cd99cbe9ef4d1b187e4e1a59139ca6e14ad835d436274f882d37dc81ffc4b392"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
-const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-BlceMGZb.js","sha256":"0b4024d743375751756795d3ab4e97ae640535545a6de8b9e5e4fee05ac43d81"},{"url":"application/assets/index-BzWVG3zr.css","sha256":"0a89e5ae40d6c3e7488e53dcc10a1ff949f267f9523981781bfee3e62ed2dd25"},{"url":"application/index.0a06dca2a6532075.html","sha256":"0a06dca2a65320759de14c359b60e191eb4fe297998f55660fdb2b6f2d977d7d"},{"url":"application/launcher.1dde2af41ffcd314.js","sha256":"1dde2af41ffcd314c791d33e1d20ebe4e87da22be917fc8d104ff8b342f9e6f1"}]
+const VERSION = "fc56a244ebcc9e6e"
+const FILES = [{"url":"app.2c8c90ed631505d3.js","sha256":"2c8c90ed631505d39e40db65f2b257d4599a0fe5d9c29c2503be4a0b5e5b9bb5"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"ba6ca74e30704a7828dda844ecffb9338e598b2a2ae4d212d80a239b753d0034"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
+const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-BzWVG3zr.css","sha256":"0a89e5ae40d6c3e7488e53dcc10a1ff949f267f9523981781bfee3e62ed2dd25"},{"url":"application/assets/index-gqrqEUkX.js","sha256":"4dbf69dd99b95a5c279ea47318bd49a75137a039704e0bec2bc69cdbcda61af8"},{"url":"application/index.637bc33b2e5406c3.html","sha256":"637bc33b2e5406c305701bf073389e343ab2cda32c72699c45cbb9666725ed24"},{"url":"application/launcher.328c20705ab548bb.js","sha256":"328c20705ab548bbc579857117d8a5122c858a2f949950eeefc2f8296747eac2"}]
 const ROOT = new URL(self.registration.scope)
 const PREFIX = `pletina-pwa:${encodeURIComponent(ROOT.href)}:`
 const CACHE = PREFIX + VERSION
@@ -49,7 +49,7 @@ function downloadedKey(id) {
   })
 }
 
-async function downloadedAudio(url) {
+async function downloadedAudio(url, range) {
   const id = url.pathname.slice(audioPath.length)
   if (!/^[1-9][0-9]{0,14}$/.test(id) || !Number.isSafeInteger(Number(id))) return new Response('', { status: 404 })
   let key
@@ -62,7 +62,31 @@ async function downloadedAudio(url) {
   const cache = await caches.open(AUDIO_CACHE)
   const response = await cache.match(key)
   // La respuesta opaca completa conserva sus bytes; HTMLAudio gestiona su lectura y búsqueda local.
-  return response || new Response('', { status: 404 })
+  if (!response) return new Response('', { status: 404 })
+  if (response.type === 'opaque' || response.status !== 200) return response
+  // CORS-readable external audio can answer real local byte ranges. Returning a
+  // full 200 to a tail-range request can leave mobile/native seeking pending.
+  const blob = await response.blob(), size = blob.size, headers = new Headers(response.headers)
+  headers.set('accept-ranges', 'bytes')
+  headers.set('content-length', String(size))
+  headers.delete('content-range')
+  if (!range) return new Response(blob, { status: 200, headers })
+  const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim())
+  const unsatisfied = () => { headers.set('content-range', `bytes */${size}`); headers.set('content-length', '0'); return new Response(null, { status: 416, headers }) }
+  if (!match || !size || !match[1] && !match[2]) return unsatisfied()
+  let start, end
+  if (!match[1]) {
+    const suffix = Number(match[2])
+    if (!Number.isSafeInteger(suffix) || suffix <= 0) return unsatisfied()
+    start = Math.max(0, size - suffix); end = size - 1
+  } else {
+    start = Number(match[1]); end = match[2] ? Number(match[2]) : size - 1
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= size || end < start) return unsatisfied()
+    end = Math.min(end, size - 1)
+  }
+  headers.set('content-range', `bytes ${start}-${end}/${size}`)
+  headers.set('content-length', String(end - start + 1))
+  return new Response(blob.slice(start, end + 1, blob.type), { status: 206, headers })
 }
 
 async function verifiedResponse(url, file) {
@@ -121,7 +145,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
   if (url.pathname.startsWith(audioPath)) {
-    event.respondWith(downloadedAudio(url).catch(() => new Response('', { status: 404 })))
+    event.respondWith(downloadedAudio(url, request.headers.get('range')).catch(() => new Response('', { status: 404 })))
     return
   }
   const isHome = request.mode === 'navigate' && (url.pathname === ROOT.pathname || url.pathname === new URL(indexURL).pathname)
