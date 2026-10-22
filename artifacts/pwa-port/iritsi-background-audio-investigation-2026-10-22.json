@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "referenceSourceCommit": "ac99106",
+  "publishedBuild": "e7b0aa14685bb4fa",
+  "request": "Continue the exact song with the screen off and in the background without an open video, as a pure PWA with no intermediary server",
+  "song": {
+    "catalogId": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "durationSeconds": 169
+  },
+  "requirementSatisfied": false,
+  "findings": [
+    {
+      "route": "Existing automatic official YouTube fallback, physical Xiaomi",
+      "result": "The user reports that audio cuts after Android Home and after locking the screen. Requested observation was 30 seconds per step; delay, software versions, launch mode and displayed build were not measured in this reply.",
+      "reports": ["android-automatic-youtube-background-user-report-2026-10-22.json"]
+    },
+    {
+      "route": "Desktop tab visibility control",
+      "result": "8/8 directed checks pass. The exact official content and a separate direct-audio positive control advance unmuted over 30 seconds while Pletina is actually hidden behind another foreground tab. All observation RPCs use userGesture:false; no SDK play calls or background-throttling disabling launch flags. This is desktop Chrome, not an installed phone or physical screen-off test, and does not override the Xiaomi failure.",
+      "reports": ["automatic-youtube-hidden-tab-e7b0aa14685bb4fa.json"]
+    },
+    {
+      "route": "Current embedded and Android direct-player configurations",
+      "result": "The exact current WEB_EMBEDDED_PLAYER configuration returns ERROR with no audio URL or manifest for both matching IDs. Current ANDROID 21.26.364 identifies the correct 170-second recording and declares AAC but provides only SABR streaming; no directly playable AAC URL, cipher, HLS or DASH.",
+      "reports": ["provider-current-embedded-android-direct-audio-2026-10-22.json", "provider-current-embedded-exact-config-direct-audio-2026-10-22.json"]
+    },
+    {
+      "route": "Actual Android and WEB SABR binary transport in the PWA browser",
+      "result": "Protobuf requests built with googlevideo 5.0.0 reach the media host from both the actual GitHub Pages origin and an opaque sandbox origin. Network diagnostics show HTTP 200 and application/vnd.yt-ump but no Access-Control-Allow-Origin, followed by MissingAllowOriginHeader. Browser fetch exposes only TypeError and no response bytes. Thus no UMP protection/DRM status, media bytes or audio playback could be inspected or verified. The initial TypeError-only attempt is retained separately. No Node transport or CORS bypass was used for these requests.",
+      "reports": ["provider-android-sabr-browser-2026-10-22.json", "provider-android-sabr-browser-network-2026-10-22.json", "provider-web-sabr-browser-network-2026-10-22.json"]
+    },
+    {
+      "route": "Official SoundCloud audio widget",
+      "result": "The official widget exposes matching title/artist and full duration about 169.69 seconds for track 730215892, but real playback never advances, including the visible Play control. auto_play, official SDK play on READY, and a manual visible-control attempt all remain paused at zero. Readable metadata is not counted as media playback. No stream URLs, encrypted media extraction, secrets or proxy were introduced.",
+      "reports": ["iritsi-soundcloud-official-widget-2026-10-22.json", "iritsi-soundcloud-official-widget-ready-play-2026-10-22.json", "iritsi-soundcloud-official-widget-manual-control-2026-10-22.json"]
+    },
+    {
+      "route": "Additional educational catalog for the exact song",
+      "result": "The public HTML at abestuzikasi.eus/abestiak/iritsi-da-eguna declares the same album, artist and 2:49 duration, but embeds Spotify and a YouTube karaoke video, with no audio/source or direct MP3. It was not added as another source.",
+      "url": "https://abestuzikasi.eus/abestiak/iritsi-da-eguna"
+    }
+  ],
+  "previousInvestigation": "iritsi-direct-playback-investigation-2026-10-22.json",
+  "conclusion": "No validated new audio-only source was found. The current official-video fallback still works in the foreground but is confirmed insufficient on the user's Xiaomi in the background and with the screen locked. No universal impossibility is inferred, and no failed experimental route was shipped as a fix.",
+  "productChanged": false,
+  "newBuildPublished": false,
+  "runtimeServerOrProxyAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "browserExtensionRequired": false,
+  "officialVideoHiddenOrCropped": false,
+  "signedMediaUrlsOrTokensPersisted": false,
+  "physicalIPhoneBackgroundVerified": false,
+  "scopeOfExistingTestCounts": "Existing 434 logic, 106 multimedia passes and 33 official fixture checks were not rerun, changed or promoted to phone background evidence. The eight new visibility checks are reported separately."
+}

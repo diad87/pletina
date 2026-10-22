@@ -1,0 +1,81 @@
+{
+  "checkedAt": "2026-10-22T20:06:47.522Z",
+  "scope": "Bounded primary-source review and real-browser diagnostics. No production change, proxy, native installation, hidden-video implementation, authentication bypass, or claim of physical screen-off playback.",
+  "youtube": {
+    "officialBackgroundApiFound": false,
+    "findingLimit": "No documented third-party embedded audio-only/background mode was found in the reviewed official API documentation. This is not a claim that every possible browser behavior was tested.",
+    "premium": "Current benefits documentation describes background playback in signed-in YouTube mobile applications. The former mobile-browser background-help article redirects to that benefits page. Neither establishes an embedded-player background entitlement for Pletina.",
+    "sources": [
+      "https://developers.google.com/youtube/terms/developer-policies#controlling-content-and-user-experience",
+      "https://developers.google.com/youtube/iframe_api_reference",
+      "https://developers.google.com/youtube/terms/required-minimum-functionality#autoplay-and-scripted-playbacks",
+      "https://support.google.com/youtube/answer/6308116?hl=en"
+    ]
+  },
+  "pwaApis": {
+    "mediaSession": "Metadata and media-control integration; does not provide a stream URL or convert a remote provider player into a background audio service.",
+    "serviceWorker": "Event-driven worker. Its lifetime is not tied to references held by a page; a browser may terminate it when idle or when tasks exceed limits.",
+    "backgroundFetch": "Visible browser-managed resource downloads, not playback. Cross-origin resources must permit CORS. It does not create access to unavailable media or guarantee iPhone implementation.",
+    "sources": [
+      "https://w3c.github.io/mediasession/",
+      "https://w3c.github.io/ServiceWorker/#service-worker-lifetime",
+      "https://developer.chrome.com/blog/background-fetch"
+    ]
+  },
+  "soundcloudCandidate": {
+    "page": "https://soundcloud.com/pirritxetaporrotx/iritsi-da-eguna",
+    "trackId": 730215892,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "durationMs": 169686,
+    "fullDurationMs": 169691,
+    "isrc": "QM6N21424821",
+    "label": "Katxiporreta",
+    "copyright": "2007 Katxiporreta",
+    "streamableMetadata": true,
+    "downloadableMetadata": false,
+    "embeddableByMetadata": "all",
+    "monetizationModel": "AD_SUPPORTED",
+    "license": "all-rights-reserved",
+    "uploaderVerifiedBadge": false,
+    "officialSiteBacklinkToUploaderFound": false,
+    "allListedTranscodingsFullDuration": true,
+    "listedTranscodingProtocols": [
+      "cbc-encrypted-hls",
+      "ctr-encrypted-hls"
+    ],
+    "oembedActualBrowserCorsReadable": true,
+    "oembedActualBrowserHttpStatus": 200,
+    "officialWidgetSdkReadExactIdentityAndDuration": true,
+    "actualAudioPlaybackVerified": false,
+    "autoPlayParameterAttempt": "No progress; paused; no media responses observed.",
+    "sdkPlayOnReadyAttempt": "No progress; paused; no media responses observed.",
+    "visibleManualPlayControlAttempt": "No progress; paused; no media responses observed. Button carried provider class disabled, but its native disabled property was false.",
+    "backgroundPlaybackTested": false,
+    "backgroundTestReason": "Foreground playback did not start, so no background success was inferred.",
+    "integrationDecision": "Do not integrate as a working fix based only on full-duration metadata.",
+    "apiConstraint": "The current official guide documents browser CORS but server-side authentication with a client secret, including the PKCE exchange. No secret was extracted or embedded. A custom-player production route has not been established for the pure static PWA.",
+    "reports": [
+      "iritsi-soundcloud-official-widget-2026-10-22.json",
+      "iritsi-soundcloud-official-widget-ready-play-2026-10-22.json",
+      "iritsi-soundcloud-official-widget-manual-control-2026-10-22.json"
+    ],
+    "sources": [
+      "https://developers.soundcloud.com/docs/api/guide",
+      "https://developers.soundcloud.com/docs/api/html5-widget",
+      "https://help.soundcloud.com/hc/en-us/articles/115003566828-The-Visual-embedded-player-"
+    ]
+  },
+  "officialArtistSite": {
+    "page": "https://www.katxiporreta.eus/es/portada",
+    "publicPageStatus": 200,
+    "directFullAudioFileFoundInInspectedPage": false,
+    "searchWasExhaustive": false
+  },
+  "secretsPersisted": false,
+  "signedMediaUrlsPersisted": false,
+  "mediaFilesDownloadedForRedistribution": false,
+  "physicalDeviceVerified": false,
+  "productChanged": false
+}
