@@ -1,6 +1,7 @@
 // UI scenarios against the compiled application. Provider fixtures enter through HTTP
 // responses; these tests never replace application modules or expose product globals.
 import assert from 'node:assert/strict'
+import { runPodcastRecoveryScenario } from './podcast-recovery-scenario.mjs'
 
 export const libraryScenarioInventory = [
   { id: 'library.navigation', actions: ['four mobile tabs', 'browser Back/Forward', 'query replacement', 'reload', 'viewport bounds'] },
@@ -10,9 +11,9 @@ export const libraryScenarioInventory = [
   { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
   { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'cancel pending catalog response', 'navigate away during pending match', 'ignore obsolete matches without saving', 'all omitted', 'empty name', 'review matches/omissions', 'transaction abort rollback and retry', 'save duplicate entries', 'reload'] },
   { id: 'library.spotify', actions: ['unsupported public URL has a visible explanation'] },
-  { id: 'library.youtube', actions: ['reject invalid link', 'preview/change link', 'edit/validate metadata', 'save/update without duplicate', 'remove saved link'] },
+  { id: 'library.youtube', actions: ['reject invalid link', 'preview/change link', 'edit/validate metadata', 'save/update without duplicate', 'remove saved link', 'edited metadata survives old player copies in favorites/queue/history/downloads without transferring audio again'] },
   { id: 'library.source-picker', actions: ['choose listed candidate', 'invalid link', 'manual choice', 'remember choice', 'native dialog close'] },
-  { id: 'library.podcasts', actions: ['RSS and YouTube search', 'language filters', 'episode detail', 'save/remove show', 'reload persistence'] },
+  { id: 'library.podcasts', actions: ['RSS and YouTube search', 'language filters', 'episode detail', 'save/remove show', 'reload persistence', 'total feed failure/error/retry/genuine empty'] },
   { id: 'library.history', actions: ['empty history', 'recorded history after media scenarios', 'cancel clear', 'clear and reload'] },
 ]
 
@@ -607,6 +608,201 @@ export async function runLibraryScenarios(ctx) {
       editedMetadata: true, sameVideoUpdatedWithoutDuplicate: true, removed: true }
   })
 
+  await check('library.youtube: edited metadata survives old playback copies and downloaded audio across reload', async () => {
+    if (process.platform === 'win32' && ctx.engine === 'webkit' && ctx.browser.version() === '26.5') return {
+      status: 'blocked', reason: 'Windows WebKit native audio bypasses the controlled fixture transport; this integration requires real fixture audio.',
+      evidence: 'artifacts/pwa-e2e/webkit-aac-probe.json',
+    }
+    const original = { title: 'E2E YouTube Cola Anterior', artist: 'E2E Canal Anterior' }
+    const edited = { title: 'E2E YouTube Ficha Corregida', artist: 'E2E Canal Corregido' }
+    const listName = 'E2E YouTube Cola Guardada'
+    let savedId, createdPlaylistId, initialHistoryCount = 0, initiallyLiked = false, failure, stage = 'setup'
+    const visible = selector => page.locator(selector).first().isVisible().catch(() => false)
+    const closeOverlays = async () => {
+      if (await visible('.queue-panel button.close')) await u.tap('.queue-panel button.close')
+      if (await visible('.np > header > button[title="Cerrar (Esc)"]')) await u.tap('.np > header > button[title="Cerrar (Esc)"]')
+    }
+    const pause = async () => {
+      await closeOverlays()
+      if (await visible('.mini button[aria-label="Pausa"]')) await u.tap('.mini button[aria-label="Pausa"]')
+      await u.wait(() => window.__qaAudio.instances.every(audio => audio.paused))
+    }
+    const inspect = () => page.evaluate(() => new Promise((resolve, reject) => {
+      const request = indexedDB.open('pletina-web-library')
+      request.onupgradeneeded = () => request.transaction.abort()
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const db = request.result, names = ['tracks', 'likes', 'playlists', 'entries', 'history', 'youtube'], result = {}
+        const tx = db.transaction(names, 'readonly')
+        tx.oncomplete = () => { db.close(); resolve(result) }
+        tx.onabort = () => { db.close(); reject(tx.error) }
+        for (const name of names) { const get = tx.objectStore(name).getAll(); get.onsuccess = () => { result[name] = get.result } }
+      }
+    }))
+    const cacheSnapshot = () => page.evaluate(async id => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-downloads')
+        request.onupgradeneeded = () => request.transaction.abort()
+        request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+      })
+      try {
+        const row = await new Promise((resolve, reject) => {
+          const request = db.transaction('files', 'readonly').objectStore('files').get(id)
+          request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+        if (!row) return null
+        const cache = await caches.open('pletina-audio-downloads:v1'), response = await cache.match(row.cacheKey)
+        if (!response) return { missingBody: true }
+        // Opaque bytes are deliberately unreadable. Preserve that distinction in evidence.
+        const bytes = response.type === 'opaque' ? null : await response.clone().arrayBuffer()
+        const digest = bytes ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('') : null
+        return { id: row.id, track: row.track, cacheKey: row.cacheKey, size: row.size, at: row.at,
+          type: response.type, bodyPresent: true, readableBytes: bytes?.byteLength ?? null, readableSha256: digest,
+          cacheKeys: (await cache.keys()).map(key => key.url).sort() }
+      } finally { db.close() }
+    }, savedId)
+    const save = async metadata => {
+      await u.library('Canciones de YouTube')
+      await u.fill('#youtube-url', `https://youtu.be/${third.videoId}`)
+      await u.text('.url-form button', 'Continuar'); await page.locator('#youtube-title').waitFor()
+      await u.fill('#youtube-title', metadata.title); await u.fill('#youtube-artist', metadata.artist)
+      await u.text('.review button', 'Guardar canción')
+      await u.wait(title => document.querySelector('ol.tracks .name')?.textContent.trim() === title, metadata.title)
+      assert.equal(await u.rows().count(), 1)
+    }
+    const assertEditedRow = async (allowOtherRows = false) => {
+      await u.rows().first().waitFor()
+      if (!allowOtherRows) assert.equal(await u.rows().count(), 1)
+      const titles = (await u.titles()).map(title => title.trim())
+      assert.equal(titles.filter(title => title === edited.title).length, 1)
+      assert.ok(!titles.includes(original.title))
+      const row = u.rows().filter({ has: page.getByText(edited.title, { exact: true }) })
+      assert.equal((await row.locator('.by').textContent()).trim(), edited.artist)
+    }
+    const mediaRequests = () => fixture.requests.filter(request => request.host.endsWith('.googlevideo.com') || request.host === 'media.pletina.test').length
+    const transferObserver = () => {
+      if (window.__e2eTransfers) return
+      window.__e2eTransfers = []
+      window.addEventListener('pletina:download', ({ detail }) => window.__e2eTransfers.push({ id: detail.trackId, state: detail.state }))
+    }
+    await page.addInitScript(transferObserver); await page.evaluate(transferObserver)
+    try {
+      await fixture.reset(); await save(original)
+      const before = await inspect(), row = before.tracks.find(track => track.title === original.title)
+      assert.ok(row?.id >= 250_000_000_000_000 && row.id < 500_000_000_000_000)
+      savedId = row.id
+      initialHistoryCount = before.history.length
+      initiallyLiked = before.likes.some(like => like.trackId === savedId)
+      assert.equal(initiallyLiked, false, 'This temporary YouTube fixture must start outside favorites')
+      stage = 'real playback before edit'
+      await u.tap('ol.tracks .name')
+      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15))
+      await pause()
+      const firstAudio = await page.evaluate(() => window.__qaAudio.instances.map(audio => ({ time: audio.currentTime, duration: audio.duration, paused: audio.paused })))
+      assert.ok(firstAudio.some(audio => audio.duration >= 11 && audio.duration < 14 && audio.time < audio.duration / 2 && audio.paused), 'Pause the real 12-second fixture before recording history')
+      const mark = await page.evaluate(() => window.__e2eTransfers.length)
+      await u.rowMenu(0); await u.menu('Descargar')
+      await u.wait(({ mark, id }) => window.__e2eTransfers.slice(mark).some(event => event.id === id && ['done', 'error', 'cancelled'].includes(event.state)), { mark, id: savedId }, 25000)
+      const terminal = await page.evaluate(({ mark, id }) => window.__e2eTransfers.slice(mark).findLast(event => event.id === id && ['done', 'error', 'cancelled'].includes(event.state)), { mark, id: savedId })
+      assert.equal(terminal.state, 'done')
+      const cachedBefore = await cacheSnapshot(), beforeMetadataMedia = mediaRequests()
+      assert.ok(cachedBefore?.bodyPresent && cachedBefore.size > 0)
+
+      stage = 'edit while the player keeps an old copy'
+      await save(edited)
+      assert.equal(await page.locator('.mini .title').textContent(), original.title, 'The player intentionally still holds the pre-edit queue copy')
+      assert.equal(await page.locator('.mini .artist').textContent(), original.artist)
+      stage = 'favorite and playlist from the old current item'
+      await u.tap('.mini button[aria-label="Me gusta"]')
+      await page.locator('.mini button[aria-label="Me gusta"].on').waitFor()
+      await u.tap('.mini button.open'); await u.tap('.np .extras button:has-text("Cola")')
+      await page.locator('.queue-panel button.save').waitFor()
+      assert.equal((await page.locator('.queue-panel .scroll > .row .title').first().textContent()).trim(), original.title)
+      await u.tap('.queue-panel button.save')
+      createdPlaylistId = (await inspect()).playlists.find(list => !before.playlists.some(previous => previous.id === list.id))?.id
+      assert.ok(createdPlaylistId, 'Saving the real queue must create exactly one new playlist')
+      await closeOverlays()
+      // Closing the overlays can blur the automatic name editor behind them.
+      if (!await visible('input[aria-label="Nombre de la playlist"]')) await u.tap('.hero button[title="Cambiar nombre"]')
+      await u.rename(listName); await assertEditedRow()
+      const stored = await inspect()
+      assert.deepEqual(stored.tracks.filter(track => track.id === savedId).map(track => [track.title, track.artistName]), [[edited.title, edited.artist]])
+      assert.ok(stored.likes.some(like => like.trackId === savedId))
+      const savedList = stored.playlists.find(list => list.name === listName)
+      assert.ok(savedList && stored.entries.some(entry => entry.playlistId === savedList.id && entry.trackId === savedId))
+      await u.library('Canciones que te gustan'); await assertEditedRow(true)
+      await u.library('Descargas'); await assertEditedRow()
+      assert.deepEqual(await cacheSnapshot(), cachedBefore, 'Metadata reads/edits must preserve the stored download and cached response')
+      assert.equal(mediaRequests(), beforeMetadataMedia, 'Editing and library reads must not transfer the audio again')
+
+      stage = 'record history from the old current item'
+      // Resume the old current item, then use the real seek control to exercise record_play(old).
+      await u.tap('.mini button[aria-label="Reproducir"]')
+      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.2))
+      await u.tap('.mini button.open')
+      const seek = page.locator('.np input[aria-label="Posición"]'); await seek.waitFor()
+      await u.wait(() => !document.querySelector('.np input[aria-label="Posición"]').disabled)
+      const box = await seek.boundingBox(); assert.ok(box?.width > 10)
+      await page.mouse.click(box.x + box.width * 0.68, box.y + box.height / 2)
+      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && audio.currentTime > audio.duration / 2))
+      await pause(); await closeOverlays(); await u.library('Historial'); await assertEditedRow(true)
+      const recorded = await inspect()
+      assert.ok(recorded.history.some(entry => entry.trackId === savedId))
+      assert.equal(recorded.tracks.filter(track => track.id === savedId).length, 1)
+      assert.equal(recorded.tracks.find(track => track.id === savedId).title, edited.title)
+      stage = 'reload and local downloaded playback'
+      await page.reload({ waitUntil: 'load' }); await page.locator('.app').waitFor(); await assertEditedRow(true)
+      for (const label of [listName, 'Canciones que te gustan', 'Descargas']) { await u.library(label); await assertEditedRow(label === 'Canciones que te gustan') }
+      const beforeLocalMedia = mediaRequests()
+      await u.tap('ol.tracks .name')
+      await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')))
+      assert.equal(await page.locator('.mini .title').textContent(), edited.title)
+      assert.equal(await page.locator('.mini .artist').textContent(), edited.artist)
+      await pause()
+      assert.equal(mediaRequests(), beforeLocalMedia, 'Playback from the existing download must stay local')
+      assert.deepEqual(await cacheSnapshot(), cachedBefore)
+      return { realAudio: '12-second controlled AAC fixture', oldQueueCopy: true, favoriteAndQueuePlaylistCanonical: true,
+        oldCurrentHistoryCanonical: true, playlistFavoriteHistoryDownloadsSurviveReload: true, sameId: savedId,
+        storedDownloadAndCacheUnchanged: true, cacheType: cachedBefore.type,
+        readableBodySha256Compared: cachedBefore.type !== 'opaque', opaqueBodyNotReadable: cachedBefore.type === 'opaque',
+        metadataAudioRequests: 0, localPlaybackAudioRequests: 0 }
+    } catch (error) {
+      failure = error
+      ctx.report.youtubeMetadataFailure = { stage, error: error.message, state: await ctx.snapshot() }
+      throw error
+    } finally {
+      try {
+        await closeOverlays(); await pause()
+        if (!initiallyLiked && await visible('.mini button[aria-label="Me gusta"].on')) await u.tap('.mini button[aria-label="Me gusta"]')
+        if (createdPlaylistId) {
+          const created = (await inspect()).playlists.find(list => list.id === createdPlaylistId)
+          if (created) {
+            await u.library(created.name); await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+            await u.text('.confirm button', 'Eliminar'); await page.locator('.greeting').waitFor()
+          }
+        }
+        if (savedId) {
+          await u.library('Canciones de YouTube')
+          if (await u.rows().count()) {
+            await u.rowMenu(0)
+            if (await visible('[role="menuitem"]:text-is("Quitar descarga")')) {
+              await u.menu('Quitar descarga'); await u.rowMenu(0)
+            }
+            await u.menu('Quitar de Canciones de YouTube')
+          }
+          await u.library('Historial')
+          if (initialHistoryCount === 0 && await visible('button.ghost:has-text("Borrar historial")')) {
+            await u.text('button.ghost', 'Borrar historial'); await u.text('.confirm button', 'Borrar')
+          }
+        }
+        await pause()
+      } catch (error) {
+        if (!failure) throw error
+        ctx.report.youtubeMetadataCleanupError = { stage, error: error.message }
+      }
+    }
+  })
+
   await check('library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload', async () => {
     const podcast = fixture.media.rss, youtube = fixture.media.youtubePodcast
     await u.tab('Podcasts'); await u.fill('input[aria-label="Buscar podcasts"]', podcast.query)
@@ -687,6 +883,7 @@ export async function runLibraryScenarios(ctx) {
     await u.text('.confirm button', 'Eliminar'); await page.locator('.greeting').waitFor()
     return { createdFromTrackMenu: true, firstTrackPreserved: true, temporaryListDeleted: true }
   })
+  await runPodcastRecoveryScenario(ctx)
 }
 
 /** Run after media scenarios have genuinely played a fixture long enough to record it. */

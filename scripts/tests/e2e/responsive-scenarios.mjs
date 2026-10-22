@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 export const responsiveScenarioInventory = [
   { id: 'responsive.resize', actions: ['portrait to desktop layout', 'short landscape viewport', 'restore portrait', 'query and navigation survive', 'no horizontal overflow'] },
   { id: 'responsive.resume', actions: ['resize and page visibility lifecycle', 'reload on search', 'four navigation destinations remain accessible'] },
+  { id: 'responsive.keyboard-occlusion', actions: ['focused text entry and unscaled visual occlusion hide the dock', 'height recovery preserves focus and four tabs', 'small changes and pinch zoom keep navigation', 'blur recovers navigation', 'restore QA metric descriptors'] },
   { id: 'responsive.keyboard-navigation', actions: ['named navigation landmark', 'Tab and Enter activate music/podcast search', 'search focus', 'Escape clears search', 'one current destination'] },
   { id: 'responsive.source-dialog-accessibility', actions: ['named source input', 'Enter submits invalid link', 'associated live error', 'editing clears invalid state', 'Escape closes native dialog'] },
 ]
@@ -68,6 +69,86 @@ export async function runResponsiveScenarios(ctx) {
         assert.ok(state.dock.bottom <= state.height + 1)
       }
       return { syntheticLifecycleSignals: true, realReload: true, physicalProcessRestoreClaimed: false }
+    })
+    await check('responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard', async () => {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await ctx.fillSearch('Buscar', query)
+      const input = page.getByRole('textbox', { name: 'Buscar música', exact: true })
+      await input.focus()
+      const supported = await page.evaluate(() => Boolean(window.visualViewport))
+      if (!supported) return { status: 'blocked', reason: 'This browser does not expose visualViewport metrics for this controlled occlusion case.' }
+      const evidence = { syntheticViewportMetrics: true, physicalKeyboardClaimed: false, samples: [], descriptorsRestored: false }
+      ctx.report.keyboardOcclusion = evidence
+      try {
+        await page.evaluate(() => {
+          const viewport = window.visualViewport
+          const keys = ['height', 'scale']
+          const before = keys.map(key => Object.getOwnPropertyDescriptor(viewport, key))
+          const metrics = { height: innerHeight, scale: 1 }
+          // QA owns these instance descriptors only; native prototypes and product code remain intact.
+          window.__qaKeyboardMetrics = { viewport, metrics, before, restore() {
+            keys.forEach((key, index) => {
+              if (before[index]) Object.defineProperty(viewport, key, before[index])
+              else delete viewport[key]
+            })
+            return keys.every((key, index) => {
+              const current = Object.getOwnPropertyDescriptor(viewport, key), previous = before[index]
+              return previous ? current?.get === previous.get && current?.set === previous.set &&
+                current?.value === previous.value && current?.configurable === previous.configurable &&
+                current?.enumerable === previous.enumerable && current?.writable === previous.writable : !current
+            })
+          } }
+          for (const key of keys) Object.defineProperty(viewport, key, { configurable: true, get: () => metrics[key] })
+        })
+        const setMetrics = async (height, scale = 1) => page.evaluate(({ height, scale }) => {
+          const qa = window.__qaKeyboardMetrics
+          Object.assign(qa.metrics, { height, scale })
+          qa.viewport.dispatchEvent(new Event('resize'))
+        }, { height, scale })
+        const expectDock = async (step, hidden) => {
+          try {
+            await page.waitForFunction(hidden => {
+              const dock = document.querySelector('.dock'), height = Math.floor(Math.min(innerHeight, visualViewport.height))
+              const applied = Number.parseFloat(document.documentElement.style.getPropertyValue('--pletina-viewport-height'))
+              return Boolean(dock) && dock.classList.contains('hidden') === hidden && applied === height
+            }, hidden, { timeout: 3000 })
+          } catch (error) { if (error.name !== 'TimeoutError') throw error }
+          const sample = await page.evaluate(step => {
+            const dock = document.querySelector('.dock')
+            return { step, innerHeight, visualHeight: visualViewport.height, scale: visualViewport.scale,
+              hidden: dock?.classList.contains('hidden'), display: dock && getComputedStyle(dock).display,
+              searchFocused: document.activeElement?.getAttribute('aria-label') === 'Buscar música',
+              tabs: [...document.querySelectorAll('.bottom-nav button')].map(node => node.textContent.trim()) }
+          }, step)
+          evidence.samples.push(sample)
+          assert.equal(sample.hidden, hidden, step + ': ' + JSON.stringify(sample))
+          assert.equal(sample.display === 'none', hidden, 'The CSS dock visibility must match the keyboard state')
+          if (!hidden) assert.deepEqual(sample.tabs, ['Inicio', 'Buscar', 'Podcasts', 'Tu biblioteca'])
+          return sample
+        }
+        const full = await page.evaluate(() => innerHeight), occluded = Math.floor(full * .6)
+        await setMetrics(full); assert.equal((await expectDock('focus-without-occlusion', false)).searchFocused, true)
+        await setMetrics(full - 90); await expectDock('small-height-change', false)
+        await setMetrics(occluded); assert.equal((await expectDock('focused-entry-with-occlusion', true)).searchFocused, true)
+        await setMetrics(full); assert.equal((await expectDock('height-recovery-with-focus-retained', false)).searchFocused, true)
+        await setMetrics(Math.floor(full / 2), 2); await expectDock('pinch-zoom-is-not-a-keyboard', false)
+        await setMetrics(occluded); await expectDock('occlusion-after-zoom-reset', true)
+        await input.press('Tab')
+        assert.equal((await expectDock('blur-with-occlusion-still-reported', false)).searchFocused, false)
+        return evidence
+      } finally {
+        evidence.descriptorsRestored = await page.evaluate(() => {
+          const qa = window.__qaKeyboardMetrics
+          if (!qa) return false
+          const restored = qa.restore()
+          delete window.__qaKeyboardMetrics
+          qa.viewport.dispatchEvent(new Event('resize'))
+          window.dispatchEvent(new Event('resize'))
+          return restored
+        })
+        await ctx.settle()
+        assert.equal(evidence.descriptorsRestored, true, 'Every overridden visualViewport descriptor must be restored')
+      }
     })
     await check('responsive.keyboard-navigation: Tab and Enter reach named searches with a current destination', async () => {
       await page.setViewportSize({ width: 390, height: 844 })

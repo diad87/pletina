@@ -17,6 +17,7 @@ export const mediaScenarioInventory = Object.freeze([
   'reload-restores-current-dj-position-and-paused-intent', 'downloads-serial-duplicate-suppression-and-cancel-pending',
   'download-remove-all-cancel-preserves-files-and-reload-ui',
   'download-offline-reload-play-seek-from-local-service-worker', 'download-removal-clears-pointer-body-and-ui',
+  'download-automatic-renewal-after-one-transfer-failure-and-offline-play',
   'download-quotaFailure-rollback-and-no-false-done', 'download-storageFailure-rollback-and-no-false-done',
   'download-failMedia-rollback-and-no-false-done', 'download-retry-after-provider-failure-succeeds',
   'rss-podcast-direct-audio-progress-reload-and-resume', 'rss-completion-next-episode-and-relisten-from-zero',
@@ -590,6 +591,53 @@ export async function runMediaScenarios(ctx) {
     const status = await page.evaluate(async id => (await fetch(new URL('../__audio__/' + id, location.href))).status, media.tracks[0].id)
     assert.equal(status, 404)
     return { database: value, missingStatus: status }
+  })
+  await run('download-automatic-renewal-after-one-transfer-failure-and-offline-play', async () => {
+    await fixture.reset(); await clearDownloads(); await music()
+    const track = media.tracks[2], path = '/audio/' + track.videoId
+    const requestMark = fixture.requests.length, mark = await transferMark()
+    fixture.failNext(path)
+    let originalFailure
+    try {
+      await menu(2, 'Descargar')
+      const event = await terminal(mark, track.id)
+      assert.equal(event.state, 'done', 'A single interrupted transfer must finish without a second download gesture')
+      const events = await page.evaluate(({ mark, id }) => window.__e2eTransfers.slice(mark).filter(event => event.id === id).map(event => event.state), { mark, id: track.id })
+      assert.deepEqual(events, ['queued', 'downloading', 'done'], 'A recovered attempt must not emit an intermediate terminal error')
+      const requests = fixture.requests.slice(requestMark)
+      const first = requests.findIndex(request => request.path === path)
+      const next = requests.findIndex((request, index) => index > first && request.path === path)
+      assert.ok(first >= 0 && next > first, 'Both the interrupted request and a new audio transfer must reach the controlled HTTP provider')
+      assert.ok(requests.slice(first + 1, next).some(request => request.path.endsWith('/player')),
+        'A fresh provider player request must renew the source between transfers; a browser transport retry alone cannot pass')
+      const database = await downloadState()
+      assert.equal(database.rows.length, 1); assert.equal(database.rows[0].id, track.id)
+      assert.ok(database.rows[0].present); assert.equal(database.cacheEntries, 1, 'No failed staging body may remain alongside the completed download')
+      await downloadsView(); await tap(row(0) + ' .name'); await playing(track.title); await pause()
+      const offline = await ctx.goOffline(true)
+      const navigatorOfflineExpected = offline?.navigatorOfflineExpected ?? true
+      await reload(); assert.equal(await page.evaluate(() => navigator.onLine), !navigatorOfflineExpected)
+      assert.ok((await state()).audios.every(audio => audio.paused), 'Reloading the recovered download must preserve paused intent')
+      await downloadsView(); await tap(row(0) + ' .name'); await playing(track.title)
+      await seek(0.5)
+      await wait(() => window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && audio.currentTime > audio.duration / 2 + 0.3))
+      const audio = await state(); assert.equal(active(audio).local, true)
+      await closeOverlays(); await pause()
+      return { downloadGestures: 1, events, renewedBetweenTransfers: true,
+        controlledAudioRequests: requests.filter(request => request.path === path).length,
+        database, audio, networkMode: offline?.mode ?? 'browser-offline', navigatorOfflineExpected,
+        physicalAirplaneModeClaimed: false }
+    } catch (error) { originalFailure = error; throw error }
+    finally {
+      await ctx.goOffline(false); await fixture.reset()
+      try {
+        if (!await visible('.app')) { await page.goto(ctx.getappURL(), { waitUntil: 'load' }); await page.locator('.bottom-nav').waitFor(); await frame() }
+        await closeOverlays(); await pause(); await clearDownloads()
+      } catch (error) {
+        if (!originalFailure) throw error
+        ctx.report.errors.push({ name: 'DownloadRetryRecoveryError', message: String(error.message).replace(/https?:\/\/[^\s]+/g, '[URL]') })
+      }
+    }
   })
   for (const failure of ['quotaFailure', 'storageFailure', 'failMedia']) await run('download-' + failure + '-rollback-and-no-false-done', async () => {
     await fixture.reset(); await clearDownloads(); await music()

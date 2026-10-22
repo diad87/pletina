@@ -38,6 +38,31 @@ const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '
 let temporary, browser, server, page, gate, live = 'A', phase = 'setup', origin
 const servers = new Map(), requests = [], blockedHosts = new Set()
 let failingPath = null
+async function workerDiagnostics() {
+  const session = await browser.newBrowserCDPSession()
+  const versions = [], registrations = [], errors = []
+  const path = value => { try { return new URL(value).pathname } catch { return scrub(value) } }
+  session.on('ServiceWorker.workerVersionUpdated', event => versions.push(...event.versions.map(version => ({
+    versionId: version.versionId, registrationId: version.registrationId, targetId: version.targetId ?? null,
+    scriptPath: path(version.scriptURL), status: version.status, runningStatus: version.runningStatus,
+    controlledClients: version.controlledClients,
+  }))))
+  session.on('ServiceWorker.workerRegistrationUpdated', event => registrations.push(...event.registrations.map(registration => ({
+    registrationId: registration.registrationId, scopePath: path(registration.scopeURL), isDeleted: registration.isDeleted,
+  }))))
+  session.on('ServiceWorker.workerErrorReported', event => errors.push({ ...event.errorMessage,
+    errorMessage: scrub(event.errorMessage.errorMessage), sourceURL: path(event.errorMessage.sourceURL) }))
+  try {
+    await session.send('ServiceWorker.enable')
+    const { targetInfos } = await session.send('Target.getTargets')
+    await new Promise(resolve => setTimeout(resolve, 100))
+    return { kind: 'Passive CDP snapshot; no worker method was invoked or replaced.', versions, registrations, errors,
+      errorScope: 'Only worker errors emitted during this snapshot; absence does not establish no earlier worker error.',
+      targets: targetInfos.filter(target => target.type === 'service_worker' && target.url.startsWith(origin)).map(target => ({
+        targetId: target.targetId, type: target.type, scriptPath: path(target.url), attached: target.attached,
+      })) }
+  } finally { await session.detach() }
+}
 async function check(name, action) {
   process.stdout.write(`${name} ... `)
   try {
@@ -51,6 +76,17 @@ async function check(name, action) {
       report.coldFailure.requests = requests.filter(request => request.phase.startsWith('cold-'))
       await page.screenshot({ path: join(artifactDirectory, reportName.replace(/\.json$/, '-cold-failure.png')), fullPage: true }).catch(() => {})
     }
+    if (phase === 'prototype-migration' && page) {
+      report.prototypeFailure = await coldState().catch(failure => ({ diagnosticError: scrub(failure.message) }))
+      report.prototypeFailure.requests = requests.filter(request => request.phase === phase)
+      await page.screenshot({ path: join(artifactDirectory, reportName.replace(/\.json$/, '-migration-failure.png')), fullPage: true }).catch(() => {})
+    }
+    if (!phase.startsWith('cold-') && phase !== 'prototype-migration' && page) {
+      report.updateFailure = { phase, ...await coldState().catch(failure => ({ diagnosticError: scrub(failure.message) })) }
+      report.updateFailure.requests = requests.filter(request => request.phase === phase)
+      await page.screenshot({ path: join(artifactDirectory, reportName.replace(/\.json$/, '-update-failure.png')), fullPage: true }).catch(() => {})
+    }
+    if (browser?.isConnected()) report.workerDiagnostic = await workerDiagnostics().catch(error => ({ error: scrub(error.message) }))
     process.stdout.write('FAILED\n')
     throw error
   }
@@ -122,6 +158,7 @@ async function waitForWorkerState(kind) {
 async function snapshot() {
   return page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration()
+    const workerState = worker => worker ? { state: worker.state, scriptPath: new URL(worker.scriptURL).pathname } : null
     const cacheInfo = []
     for (const name of await caches.keys()) {
       if (!name.startsWith('pletina-pwa:')) continue
@@ -131,6 +168,8 @@ async function snapshot() {
       scope: registration ? new URL(registration.scope).pathname : null,
       registrations: (await navigator.serviceWorker.getRegistrations()).length,
       active: registration?.active?.state ?? null, waiting: registration?.waiting?.state ?? null,
+      workers: { controller: workerState(navigator.serviceWorker.controller), active: workerState(registration?.active),
+        waiting: workerState(registration?.waiting), installing: workerState(registration?.installing) },
       cacheInfo,
     }
   })
@@ -593,8 +632,15 @@ try {
       await prepareWaiting()
       await page.locator('#apply-update').waitFor({ state: 'visible' })
       await page.locator('#apply-update').click()
-      await page.waitForFunction((version) => document.querySelector('#version')?.textContent.includes(version), builds.A.version, { timeout: 30000 })
-      await openApplication()
+      // Older shells reload to the new installer; the current public full shell
+      // records an explicit open intent and enters the prepared application.
+      await page.waitForFunction((version) => Boolean(document.querySelector('.app')) ||
+        document.querySelector('#version')?.textContent.includes(version) &&
+        document.querySelector('#open-player') && !document.querySelector('#open-player').disabled,
+      builds.A.version, { timeout: 30000 })
+      const newPrimaryOpenUsed = await page.locator('#open-player').isVisible()
+      if (newPrimaryOpenUsed) await openApplication()
+      else await page.locator('.app .sidebar').waitFor({ state: 'visible', timeout: 20000 })
       assert.equal(await page.title(), 'Pletina QA A')
       const after = await snapshot()
       assert.equal(after.scope, before.scope)
@@ -610,7 +656,9 @@ try {
       return { prototypeVersion: report.prototypeVersion, newVersion: builds.A.version, scope: after.scope,
         previousDistributionKind: previousFull ? 'cold-full-application' : 'opened-player-prototype',
         previousApplicationOpened: !previousFull, explicitLegacySecondaryUpdateButtonUsed: true,
-        newPrimaryOpenUsedAfterUpdate: true, legacyPrimaryAutoMigrationClaimed: false, retiredOptionalRequests: 0,
+        newPrimaryOpenUsedAfterUpdate: newPrimaryOpenUsed,
+        newApplicationAutoOpenedAfterExplicitUpdate: !newPrimaryOpenUsed,
+        legacyPrimaryAutoMigrationClaimed: false, retiredOptionalRequests: 0,
         registrationCount: after.registrations, manifestIdentityUnchanged: true, oldVersionCacheRemoved: true,
         ...(!previousFull ? { legacyPlayerCacheRemoved: true } : {}),
         localStoragePreserved: true, unrelatedCachePreserved: true, osShortcutMigrationVerified: false }

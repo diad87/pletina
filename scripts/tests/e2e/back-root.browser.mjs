@@ -162,13 +162,23 @@ async function runProfile(app, baseURL) {
         const s = event.state
         window.__qaBackEvents.push({ sequence: window.__qaBackPops, session: s?.session, index: s?.index,
           overlay: s?.overlay, boundary: s?.rootBoundary === true, protected: s?.protectedRoot === true,
-          route: s?.snapshot?.stack[s?.index]?.name })
+          route: s?.snapshot?.stack[s?.index]?.name, at: performance.now() })
         if (window.__qaBackEvents.length > 64) window.__qaBackEvents.shift()
       })
     })
     const { page, check, tap } = ctx
-    const priorURL = baseURL + '?back-root-prior=1'
+    // An earlier Pletina installer may auto-open its optional app in standalone mode.
+    // This real external control document measures leaving the app without that redirect.
+    const priorURL = app ? new URL('/__qa_back_control__/before', baseURL).href : baseURL + '?back-root-prior=1'
     const opened = await check('back.open: compiled application retains the native window mode', async () => {
+      if (app) {
+        // Starting outside the service-worker scope must not race the first shell install.
+        report.bootstrapStage = 'prepare-controller'
+        await page.goto(baseURL, { waitUntil: 'load' })
+        await page.evaluate(() => navigator.serviceWorker.ready)
+        if (!await page.evaluate(() => Boolean(navigator.serviceWorker.controller))) await page.reload({ waitUntil: 'load' })
+        await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller))
+      }
       report.bootstrapStage = 'prior-document'
       await page.goto(priorURL)
       report.bootstrapStage = 'open-application'
@@ -322,7 +332,7 @@ async function runProfile(app, baseURL) {
       })
       return
     }
-    await check('back.root: repeated native history Back keeps audio and document', async () => {
+    await check('back.root: isolated history Back rearms after the exit window and keeps audio and document', async () => {
       const observations = []
       for (let n = 0; n < 5; n++) { const events = await protectedBack(); observations.push({ events, ...await route(), ...await advancingSame() }) }
       return { observations }
@@ -383,6 +393,51 @@ async function runProfile(app, baseURL) {
       for (let n = 0; n < 3; n++) await protectedBack()
       await advancingSame(); await traverse('forward', 'search')
       return { documentReloaded: true, restoredPaused: true, forwardRestored: true, ...await advancingSame() }
+    })
+    await check('back.double-root: two quick history Back gestures leave the app and Forward can restore it', async () => {
+      // A long library session can prune the original external document from Chrome's
+      // history. Keep all earlier long-session checks, then create a recent real predecessor
+      // for the exit control; API back cannot simulate the OS action beyond an empty history.
+      await page.goto(priorURL, { waitUntil: 'load' })
+      await page.goto(ctx.getappURL(), { waitUntil: 'load' })
+      await page.locator('.app').waitFor()
+      await page.locator('.greeting').waitFor()
+      await page.locator('.mini button[aria-label="Reproducir"]').click()
+      await page.waitForFunction(() => window.__qaAudio.instances.length === 1 && !window.__qaAudio.instances[0].paused &&
+        window.__qaAudio.instances[0].currentTime > 0.2 && !window.__qaAudio.instances[0].error)
+      identity = await capture()
+      const time = await identity.audio.evaluate(audio => audio.currentTime)
+      await page.evaluate(() => history.back())
+      await page.waitForFunction(() => history.state?.rootBoundary === true)
+      const departed = page.waitForURL(priorURL, { timeout: 10000 })
+      const first = await page.evaluate(({ document: previous, audio, time }) => {
+        const s = history.state, last = window.__qaBackEvents.findLast(event => event.boundary)
+        const value = { sameDocument: document === previous, sameAudio: window.__qaAudio.instances[0] === audio,
+          audioPlaying: !audio.paused && !audio.error, time: audio.currentTime, previousTime: time,
+          route: s?.snapshot?.stack[s?.index]?.name, boundary: s?.rootBoundary === true,
+          elapsedSinceFirstBack: performance.now() - last.at, historyLength: history.length }
+        if (!value.sameDocument || !value.sameAudio || !value.audioPlaying || !value.boundary || value.route !== 'home') {
+          throw new Error('The first root Back must preserve the live application and its audio on the sentinel')
+        }
+        history.back()
+        return value
+      }, { ...identity, time })
+      await departed
+      assert.ok(first.elapsedSinceFirstBack < 800, 'The second gesture must reach the browser during the 800 ms exit window')
+      await page.locator('button').waitFor()
+      assert.equal(await page.locator('.app').count(), 0, 'The real previous control document must replace the application')
+      await Promise.all([page.waitForURL(ctx.getappURL()), page.evaluate(() => history.forward())])
+      await page.locator('.app').waitFor()
+      await page.waitForFunction(() => history.state?.index === 0 && history.state?.overlay === false &&
+        history.state?.protectedRoot === true && !history.state?.rootBoundary)
+      await page.locator('.greeting').waitFor()
+      const returnedDocument = await page.evaluate(() => window.__qaDocumentToken)
+      await protectedBack()
+      assert.equal(page.url(), ctx.getappURL())
+      assert.equal(await page.evaluate(() => window.__qaDocumentToken), returnedDocument, 'The first Back immediately after Forward must protect the returned app again')
+      return { first, historyBackCallsToExit: 2, freshExternalPredecessor: true, previousDocumentRestored: true, forwardRestoredHome: true, firstBackAfterForwardProtected: true,
+        actualBrowserHistoryTraversal: true, physicalAndroidBackClaimed: false,
+        audioContinuationAfterExitClaimed: false, systemHomeOrMinimizeClaimed: false }
     })
   } catch (error) { report.errors.push({ name: error.name, message: scrub(error.message), stack: scrub(error.stack) }) }
   finally {

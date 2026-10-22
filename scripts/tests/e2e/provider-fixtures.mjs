@@ -221,18 +221,25 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       const shows = [false, true].map((english, i) => ({ collectionId: 900 + i, kind: 'podcast',
         collectionName: english ? 'Podcast QA English' : media.rss.showTitle, artistName: 'Autor QA',
         artworkUrl600: cover, feedUrl: 'https://feeds.pletina.test/' + (english ? 'english' : 'rss') }))
-      if (url.pathname === '/search') return jsonp({ results: shows, resultCount: shows.length })
+      if (url.pathname === '/search') return jsonp({ results: flags.emptyPodcastDirectory ? [] : shows,
+        resultCount: flags.emptyPodcastDirectory ? 0 : shows.length })
       return jsonp({ results: episodes.map((episode, i) => ({ kind: 'podcast-episode', episodeContentType: 'audio',
         episodeUrl: episode.url, trackName: episode.title, episodeGuid: episode.guid, trackTimeMillis: 90000,
         releaseDate: '2026-10-01T12:00:00Z', artworkUrl600: cover, trackId: 9010 + i })) })
     }
-    if (url.hostname === 'feeds.pletina.test') return route.fulfill({ status: 200, headers, contentType: 'application/rss+xml', body: rss(url.pathname === '/english') })
+    if (url.hostname === 'feeds.pletina.test') {
+      if (flags.failPodcastFeeds) {
+        row.injectedFailure = 'rss-http-503'
+        return route.fulfill({ status: 503, headers, contentType: 'text/plain', body: 'Fixture RSS unavailable' })
+      }
+      return route.fulfill({ status: 200, headers, contentType: 'application/rss+xml', body: rss(url.pathname === '/english') })
+    }
     if (url.hostname === 'www.youtube.com' || url.hostname === 'music.youtube.com') {
       let body
       try { body = request.postDataJSON() || {} } catch { body = {} }
       if (url.pathname.endsWith('/browse')) return json(podcastDetail)
       if (url.pathname.endsWith('/search')) {
-        if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: [podcastShow] })
+        if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
         const selectedTracks = selected(body.query || '')
         if (url.hostname === 'music.youtube.com') return json({ contents: { tabbedSearchResultsRenderer: { tabs: [{ tabRenderer: {
           content: { sectionListRenderer: { contents: [{ musicShelfRenderer: { contents: selectedTracks.map(musicRow) } }] } },

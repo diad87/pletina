@@ -19,7 +19,7 @@ const statuses = ['pass', 'fail', 'blocked', 'unsupported']
 const expectedNames = ['setup.open: install shell and open compiled application', 'setup.fixture: opaque-frame catalog requests are controlled']
 // The three UI modules use literal labels; media also has generated failure cases,
 // whose exact IDs are declared by its executable inventory.
-for (const file of ['./installation-scenarios.mjs', './library-scenarios.mjs', './responsive-scenarios.mjs']) {
+for (const file of ['./installation-scenarios.mjs', './library-scenarios.mjs', './podcast-recovery-scenario.mjs', './responsive-scenarios.mjs']) {
   const source = await readFile(new URL(file, import.meta.url), 'utf8')
   const labels = [...source.matchAll(/check\('([^']+)'/g)].map(match => match[1])
   assert.ok(labels.length > 0, 'The coverage collector must recognize the UI module check labels')
