@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 2,
+  "verifiedAt": "2026-10-22T16:59:17.046Z",
+  "build": "c8c217806395bf6d",
+  "sourceCommit": "eda43f0d0c1f5ad6be30d3eedadbf2c6c2a91dba",
+  "guideCommit": "45850d968ecea74f1433b0f48eda66c71ca7d079",
+  "scope": "Installation-guide release. Existing installation scenarios, existing three-check smoke per engine and visual layout checks were executed. The full 210-case musical suite was not rerun or reattributed to this build.",
+  "changes": [
+    "Three numbered visual installation cards with local inline SVGs and short platform labels.",
+    "Safari page-menu/share alternative and current Android install/create-shortcut route remain visible.",
+    "Real Pletina icon identifies the installed app; sticky accessible close remains reachable on short/landscape screens.",
+    "Portable standalone HTML embeds both occurrences of the existing app icon; the musical application assets are unchanged."
+  ],
+  "assets": {
+    "initialBytes": 48320,
+    "previousInitialBytes": 41790,
+    "increaseBytes": 6530,
+    "onDemandBytes": 472779,
+    "compressed": false,
+    "additionalAssetFiles": 0
+  },
+  "unit": {
+    "pass": 393,
+    "fail": 0,
+    "skipped": 0,
+    "report": "artifacts/pwa-e2e/unit-c8c217806395bf6d.txt",
+    "firstAttempt": {
+      "pass": 392,
+      "fail": 1,
+      "report": "artifacts/pwa-e2e/unit-c8c217806395bf6d-first.json",
+      "cause": "The new guide reused the app icon a second time. The portable HTML builder only embedded its first occurrence. replaceAll fixed the builder without changing the unit assertion.",
+      "rawOutputSha256": "e4a18dd284fc13cee690a9c9d13e0f22b0bed1eb162b6acb76d79f6ab91ae057"
+    }
+  },
+  "installation": {
+    "counts": {
+      "pass": 12,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 3
+    },
+    "total": 15,
+    "reports": [
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-installation-win/summary.json",
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-installation-linux/summary.json"
+    ],
+    "scope": "Real service worker/minimal entry/manifest/icons/offline/guide using existing scenarios. Three unsupported checks require physical OS installation confirmation."
+  },
+  "smoke": {
+    "counts": {
+      "pass": 9,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "total": 9,
+    "reports": [
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-smoke-win/summary.json",
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-smoke-linux/summary.json"
+    ],
+    "scope": "Compiled application open, controlled catalog gate and selected fixture song with real decoder progress in Chrome, Firefox and WebKit Linux."
+  },
+  "visual": {
+    "counts": {
+      "pass": 7,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "total": 7,
+    "reports": [
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-visual-linux/summary.json",
+      "artifacts/pwa-e2e/install-guide-c8c217806395bf6d-visual-android/report.json"
+    ],
+    "scope": "Desktop Chrome Android layout and WebKit iPhone/iPad layout, including narrow and landscape screens. Inline SVGs, three steps, no horizontal overflow, footer and close reachable; screenshots manually inspected. No physical browser/system UI automation."
+  },
+  "update": {
+    "pass": 11,
+    "fail": 0,
+    "previousDistribution": "dd284152f0526576",
+    "report": "artifacts/pwa-port/update-e2e-c8c217806395bf6d.json",
+    "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site."
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "b1be43b6e844c28649e5bb11c49d5183885df81e",
+    "tree": "6e01e6342464d3c51f2d34dff0658b7ad050cc5e",
+    "source_hash": "4eebb9f1697be0d86fa29566215bd78efd6badb51e31011b79f2e809be35944b",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "c8c217806395bf6d",
+    "status": "published-and-http-verified",
+    "publicFilesPassed": 22,
+    "publicFilesFailed": 0,
+    "report": "artifacts/pwa-deploy/public-files-c8c217806395bf6d.json",
+    "liveSelectedSongPass": 3,
+    "liveSelectedSongFail": 0,
+    "liveReport": "artifacts/pwa-port/browser-public-c8c217806395bf6d.json",
+    "liveScope": "Real Chrome desktop network/audio. Mobile layouts use desktop Chrome emulation only."
+  },
+  "fullFunctionalBaseline": {
+    "build": "dd284152f0526576",
+    "report": "artifacts/pwa-e2e/validation-dd284152f0526576.json",
+    "counts": {
+      "pass": 205,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 5
+    },
+    "total": 210,
+    "rerunForCurrentBuild": false,
+    "applicationByteIdentical": true,
+    "filesCompared": 6,
+    "byteComparison": "artifacts/pwa-e2e/application-sha-c8c217806395bf6d.json"
+  },
+  "physicalFeedback": {
+    "iphone": {
+      "report": "artifacts/pwa-port/iphone-install-playback-user-report-2026-10-22.json",
+      "observedBuild": null,
+      "buildAssignmentConfirmed": false,
+      "installation": "user-reported-pass",
+      "musicPlayback": "user-reported-pass",
+      "screenOffPlaybackVerified": false,
+      "backgroundDownloadsVerified": false
+    },
+    "android": {
+      "report": "artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json",
+      "observedBuild": null,
+      "buildAssignmentConfirmed": false
+    },
+    "fullPhysicalProtocolsVerified": false
+  },
+  "officialGuideSources": [
+    "https://support.apple.com/es-es/guide/iphone/iphea86e5236/ios",
+    "https://support.google.com/chrome/answer/9658361?co=GENIE.Platform%3DAndroid&hl=es"
+  ],
+  "backendAdded": false,
+  "nativeWrapperAdded": false,
+  "backgroundDownloadChanges": false,
+  "allRequestedPlatformsVerified": false
+}

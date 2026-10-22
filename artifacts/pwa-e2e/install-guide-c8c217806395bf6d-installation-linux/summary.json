@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "build": "c8c217806395bf6d",
+  "mode": "installation",
+  "startedAt": "2026-10-22T16:51:02.481Z",
+  "scope": "Temporary QA importing existing installation scenarios, or compiled HTML visual probes. Desktop emulation; no physical Safari/iPhone/Android or OS installation claim.",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.0"
+  },
+  "profiles": [
+    {
+      "profile": "webkit-iphone-layout",
+      "engine": "webkit",
+      "build": "c8c217806395bf6d",
+      "checks": [
+        {
+          "name": "install.minimal: initial entry avoids all application assets",
+          "startedAt": "2026-10-22T16:51:04.147Z",
+          "status": "pass",
+          "applicationRequests": 0,
+          "cachedApplicationFiles": [],
+          "realServiceWorkerController": true,
+          "finishedAt": "2026-10-22T16:51:04.374Z"
+        },
+        {
+          "name": "install.manifest: stable scope, standalone identity and icon resources",
+          "startedAt": "2026-10-22T16:51:04.378Z",
+          "status": "pass",
+          "stableIdentity": true,
+          "iconSizes": [
+            "192x192",
+            "512x512"
+          ],
+          "finishedAt": "2026-10-22T16:51:04.388Z"
+        },
+        {
+          "name": "install.guide: platform instructions open and close",
+          "startedAt": "2026-10-22T16:51:04.394Z",
+          "status": "pass",
+          "guideVerifiedForUserAgent": true,
+          "OSConfirmationClaimed": false,
+          "finishedAt": "2026-10-22T16:51:04.731Z"
+        },
+        {
+          "name": "install.offline: cached entry reloads with the network disconnected",
+          "startedAt": "2026-10-22T16:51:04.734Z",
+          "status": "pass",
+          "cachedInstaller": true,
+          "applicationNotDownloaded": true,
+          "disconnectionMode": "origin-and-provider-unavailable",
+          "navigatorOfflineExpected": false,
+          "physicalAirplaneModeClaimed": false,
+          "finishedAt": "2026-10-22T16:51:04.780Z"
+        },
+        {
+          "name": "install.native-prompt: actual phone installation",
+          "startedAt": "2026-10-22T16:51:04.784Z",
+          "status": "unsupported",
+          "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone.",
+          "finishedAt": "2026-10-22T16:51:04.784Z"
+        }
+      ],
+      "errors": [],
+      "physical": false,
+      "browserVersion": "26.5",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "kind": "desktop-emulation",
+      "startedAt": "2026-10-22T16:51:03.304Z",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "origin-and-provider-unavailable",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "originGate": {
+            "available": false,
+            "blockedOriginRequests": 0
+          },
+          "at": "2026-10-22T16:51:04.739Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "origin-and-provider-unavailable",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "originGate": {
+            "available": true,
+            "blockedOriginRequests": 3
+          },
+          "at": "2026-10-22T16:51:04.780Z"
+        }
+      ],
+      "finalState": {
+        "path": "/pletina/",
+        "online": true,
+        "title": "Pletina",
+        "headings": [],
+        "navigation": {
+          "historyLength": 2
+        },
+        "tabs": [],
+        "notices": [],
+        "audio": {
+          "instances": [],
+          "events": [],
+          "handlers": []
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {},
+        "requests": []
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-22T16:51:04.800Z",
+      "browserClosed": true
+    }
+  ],
+  "errors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-22T16:51:04.892Z",
+  "counts": {
+    "pass": 4,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 1
+  }
+}

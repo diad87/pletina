@@ -1,0 +1,118 @@
+{
+  "profile": "firefox-narrow",
+  "engine": "firefox",
+  "build": "c8c217806395bf6d",
+  "checks": [
+    {
+      "name": "install.minimal: initial entry avoids all application assets",
+      "startedAt": "2026-10-22T16:51:13.274Z",
+      "status": "pass",
+      "applicationRequests": 0,
+      "cachedApplicationFiles": [],
+      "realServiceWorkerController": true,
+      "finishedAt": "2026-10-22T16:51:13.841Z"
+    },
+    {
+      "name": "install.manifest: stable scope, standalone identity and icon resources",
+      "startedAt": "2026-10-22T16:51:13.842Z",
+      "status": "pass",
+      "stableIdentity": true,
+      "iconSizes": [
+        "192x192",
+        "512x512"
+      ],
+      "finishedAt": "2026-10-22T16:51:14.180Z"
+    },
+    {
+      "name": "install.guide: platform instructions open and close",
+      "startedAt": "2026-10-22T16:51:14.181Z",
+      "status": "pass",
+      "guideVerifiedForUserAgent": true,
+      "OSConfirmationClaimed": false,
+      "finishedAt": "2026-10-22T16:51:14.536Z"
+    },
+    {
+      "name": "install.offline: cached entry reloads with the network disconnected",
+      "startedAt": "2026-10-22T16:51:14.537Z",
+      "status": "pass",
+      "cachedInstaller": true,
+      "applicationNotDownloaded": true,
+      "disconnectionMode": "browser-offline",
+      "navigatorOfflineExpected": true,
+      "physicalAirplaneModeClaimed": false,
+      "finishedAt": "2026-10-22T16:51:14.781Z"
+    },
+    {
+      "name": "install.native-prompt: actual phone installation",
+      "startedAt": "2026-10-22T16:51:14.782Z",
+      "status": "unsupported",
+      "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone.",
+      "finishedAt": "2026-10-22T16:51:14.782Z"
+    }
+  ],
+  "errors": [],
+  "physical": false,
+  "browserVersion": "153.0",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "kind": "desktop-browser-narrow",
+  "startedAt": "2026-10-22T16:51:11.933Z",
+  "counts": {
+    "pass": 4,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 1
+  },
+  "offlineTransitions": [
+    {
+      "requestedOffline": true,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": true,
+      "expectedNavigatorOnline": false,
+      "before": true,
+      "after": false,
+      "at": "2026-10-22T16:51:14.549Z"
+    },
+    {
+      "requestedOffline": false,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": false,
+      "expectedNavigatorOnline": true,
+      "before": false,
+      "after": true,
+      "at": "2026-10-22T16:51:14.781Z"
+    }
+  ],
+  "finalState": {
+    "path": "/pletina/",
+    "online": true,
+    "title": "Pletina",
+    "headings": [],
+    "navigation": {
+      "historyLength": 1
+    },
+    "tabs": [],
+    "notices": [],
+    "audio": {
+      "instances": [],
+      "events": [],
+      "handlers": []
+    },
+    "viewport": {
+      "width": 393,
+      "height": 852,
+      "documentWidth": 393
+    }
+  },
+  "fixture": {
+    "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+    "counts": {},
+    "requests": []
+  },
+  "contextClosed": true,
+  "finishedAt": "2026-10-22T16:51:14.799Z",
+  "browserClosed": true
+}

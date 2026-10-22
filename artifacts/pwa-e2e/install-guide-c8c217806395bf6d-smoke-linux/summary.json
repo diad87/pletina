@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-22T16:51:12.441Z",
+  "build": "c8c217806395bf6d",
+  "suite": "smoke",
+  "profiles": [
+    {
+      "profile": "webkit-iphone-layout",
+      "engine": "webkit",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-22T16:51:13.940Z",
+          "status": "pass",
+          "build": "c8c217806395bf6d",
+          "applicationPath": "/pletina/application/index.71304390716e8195.html",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-22T16:51:14.928Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-22T16:51:14.933Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-22T16:51:16.482Z"
+        },
+        {
+          "name": "smoke.search-play: real compiled search and media advance",
+          "startedAt": "2026-10-22T16:51:16.487Z",
+          "status": "pass",
+          "audio": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 0.117126,
+              "duration": 12,
+              "paused": false,
+              "ended": false,
+              "muted": false,
+              "volume": 0.7999907732009888,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "fixtureMedia": true,
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 2,
+          "finishedAt": "2026-10-22T16:51:17.976Z"
+        }
+      ],
+      "errors": [],
+      "build": "c8c217806395bf6d",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "browserVersion": "26.5",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-22T16:51:13.138Z",
+      "networkTransport": "Playwright HTTP interception plus loopback TLS proxy for five allowlisted fixture hosts (two media, one RSS feed and two image hosts); original URLs, response headers and production SW retained. No external upstream. Self-signed fixture certificate accepted only in this disposable QA context.",
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "finalState": {
+        "path": "/pletina/application/index.71304390716e8195.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Canciones",
+          "Resultado principal",
+          "Artistas",
+          "Discos"
+        ],
+        "navigation": {
+          "index": 3,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "historyLength": 5
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 0.124633,
+              "duration": 12,
+              "paused": false,
+              "ended": false,
+              "muted": false,
+              "volume": 0.7999907732009888,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 3627,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 3628,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 3851,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 3851,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 3851,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 3,
+          "api.deezer.com/search/artist": 2,
+          "api.deezer.com/search/album": 2,
+          "api.deezer.com/search/track": 2,
+          "music.youtube.com/youtubei/v1/search": 2,
+          "www.youtube.com/youtubei/v1/search": 1,
+          "www.youtube.com/youtubei/v1/player": 2,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-22T16:51:17.992Z",
+      "networkTransportClosed": true,
+      "browserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.0"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 3,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-22T16:51:18.096Z",
+  "browserFeatureChecksPassed": true
+}
