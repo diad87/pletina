@@ -60,6 +60,7 @@ export async function runMediaScenarios(ctx) {
   })
   const active = value => value.audios.find(audio => audio.playing)
   async function closeOverlays() {
+    if (await visible('dialog[data-official-youtube][open] #official-youtube-close')) await tap('dialog[data-official-youtube][open] #official-youtube-close')
     if (await visible('dialog[open] [aria-label="Cerrar temporizador"]')) await tap('dialog[open] [aria-label="Cerrar temporizador"]')
     if (await visible('.queue-sheet .queue-panel button.close')) await tap('.queue-sheet .queue-panel button.close')
     if (await visible('.np > header > button[title="Cerrar (Esc)"]')) await tap('.np > header > button[title="Cerrar (Esc)"]')
@@ -586,13 +587,24 @@ export async function runMediaScenarios(ctx) {
   })
   await run('provider-errors-stop-boundedly-and-explicit-retry-recovers', async () => {
     await fixture.reset(); await reload(); await fixture.set({ failPlayer: true })
-    const titles = await music(); await tap(row(0) + ' .name')
-    await wait(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('No se pudo reproducir')) &&
-      !document.querySelector('.mini .artist')?.textContent.includes('Cargando') && window.__qaAudio.instances.every(audio => audio.paused), null, 25000)
-    const failed = await state(); assert.ok(failed.audios.every(audio => audio.paused))
-    await fixture.reset(); const result = await start(0); await pause()
-    assert.equal(result.state.title, titles[0])
-    return { boundedFailure: failed, recovered: result.state }
+    try {
+      const titles = await music(), mark = fixture.requests.length
+      await tap(row(0) + ' .name')
+      await wait(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('No se pudo reproducir')) &&
+        !document.querySelector('.mini .artist')?.textContent.includes('Cargando') && window.__qaAudio.instances.every(audio => audio.paused), null, 25000)
+      const failed = await state(); assert.ok(failed.audios.every(audio => audio.paused))
+      assert.equal(await page.locator('dialog[data-official-youtube][open]').count(), 0, 'Provider restrictions cannot open an automatic video fallback')
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      const failures = () => fixture.requests.slice(mark).filter(request => request.playability === 'LOGIN_REQUIRED')
+      const count = failures().length
+      assert.ok(count > 0 && count <= 3, 'Restricted sources must stop within the existing three-song failure budget')
+      await page.waitForTimeout(150)
+      assert.equal(failures().length, count, 'The stopped player cannot keep issuing restricted player requests')
+      await fixture.reset(); const result = await start(0); await pause()
+      assert.equal(result.state.title, titles[0])
+      return { boundedFailure: failed, providerClassification: 'restricted', failedPlayerRequests: count,
+        officialVideoOpened: false, recovered: result.state }
+    } finally { await fixture.reset(); await closeOverlays(); await pause() }
   })
   await run('reload-restores-current-dj-position-and-paused-intent', async () => {
     const { titles } = await start(0); await seek(0.3); await closeOverlays(); await pause(); await menu(2, 'Añadir a la cola')

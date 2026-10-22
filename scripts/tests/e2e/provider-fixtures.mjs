@@ -268,8 +268,12 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         const rescue = flags.musicUnplayableWebRescue && [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId)
         if (rescue) Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'player', videoId })
         if (flags.failPlayer || rescue && videoId === webRescue.musicVideoId) {
-          if (rescue) row.playability = 'UNPLAYABLE'
-          return json({ playabilityStatus: { status: 'UNPLAYABLE' } })
+          // The generic bounded-error case exercises a restriction, which must
+          // not open the official-player fallback. The separate rescue case
+          // deliberately keeps its unavailable-audio classification.
+          const status = rescue && videoId === webRescue.musicVideoId ? 'UNPLAYABLE' : 'LOGIN_REQUIRED'
+          Object.assign(row, { playability: status, videoId })
+          return json({ playabilityStatus: { status } })
         }
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
