@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "song": {
+    "catalogId": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "duration": 169
+  },
+  "originalBuild": "c8c217806395bf6d",
+  "publishedSongReproductionBefore": "browser-unavailable-song-c8c217806395bf6d-before.json",
+  "resolverCandidateSongReproduction": "browser-unavailable-song-168f473d52613050-local.json",
+  "diagnostics": [
+    "provider-unavailable-song-c8c217806395bf6d.json",
+    "provider-unavailable-song-hTql4i133AU-c8c217806395bf6d.json",
+    "provider-unavailable-song-normal-watch-c8c217806395bf6d.json",
+    "provider-unavailable-song-public-clients-c8c217806395bf6d.json"
+  ],
+  "findings": [
+    "The exact catalog song failed in desktop Chrome too; this is not evidence of an iPhone-only defect.",
+    "The public normal YouTube watch pages declare both primary recordings playable. This does not establish successful audio playback in Pletina.",
+    "The current VISIONOS request is rejected for the matching Music and WEB sources before an audio URL is loaded.",
+    "An iOS request variant returns MP4 descriptors, but actual HTMLAudio fails with MediaError 4 and ERR_BLOCKED_BY_ORB, without progress. It was not adopted.",
+    "WEB_EMBEDDED and ANDROID_VR variants do not provide a working direct source in the tested transport and were not adopted.",
+    "A separate resolver bug prevented WEB expansion after high-confidence Music sources failed. Bounded recovery is fixed without lowering matching thresholds or changing provider-client production settings."
+  ],
+  "exactSongResolved": false,
+  "physicalIPhoneReproductionExecuted": false,
+  "runtimeBackendAdded": false,
+  "signedMediaUrlsOrVisitorTokensPersisted": false,
+  "finalPublishedBuild": "74604b084b6450d0",
+  "finalPublishedSongReproduction": "artifacts/pwa-port/browser-unavailable-song-74604b084b6450d0-public.json"
+}

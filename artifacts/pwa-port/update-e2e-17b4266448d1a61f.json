@@ -1,0 +1,547 @@
+{
+  "testedAt": "2026-10-22T17:53:48.420Z",
+  "browser": "153.0.8010.52",
+  "checks": [
+    {
+      "name": "cold installer A waits for B without ever requesting or caching the application",
+      "pass": true,
+      "oldVersion": "2ec4eea13f25a07a",
+      "waitingVersion": "6e0635437f46493d",
+      "initialOptionalDownloads": 0,
+      "applicationOpened": false
+    },
+    {
+      "name": "cold primary open prepares waiting B and a failed preparation preserves A with a visible retry",
+      "pass": true,
+      "waitingVersion": "6e0635437f46493d",
+      "activationMessages": 0,
+      "retryEnabled": true,
+      "activeACachePreserved": true
+    },
+    {
+      "name": "cold primary retry prepares all of B before activation, opens it automatically and reloads offline",
+      "pass": true,
+      "newApplicationPath": "/pletina/application/index.2c268bfc6c12e252.html",
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "allOptionalFilesCached": true,
+      "oldOptionalRequests": 0,
+      "offline": true
+    },
+    {
+      "name": "full A installs without application downloads; app opens on demand",
+      "pass": true,
+      "applicationPath": "/pletina/application/index.2fcaa0403a7fca54.html",
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": null,
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": null,
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "2ec4eea13f25a07a",
+            "paths": [
+              "/pletina/app.f19240ddfe0f7b5b.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-Dhe7ruI3.css",
+              "/pletina/application/assets/index-Dji-S4oU.js",
+              "/pletina/application/index.2fcaa0403a7fca54.html",
+              "/pletina/application/launcher.b4a6fdbf3849e102.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "UI-created playlist and duplicate entries persist in real IndexedDB before update",
+      "pass": true,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "duplicateTrackId": 101
+    },
+    {
+      "name": "v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update",
+      "pass": true,
+      "librarySchemaFrom": 1,
+      "librarySchemaTo": 2,
+      "podcastId": 500000000000101,
+      "episodeId": 750000000000101,
+      "progress": {
+        "id": 750000000000101,
+        "position": 57,
+        "duration": 600,
+        "completed": false
+      },
+      "download": {
+        "trackId": 101,
+        "bytes": 1644,
+        "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+        "stablePath": "/pletina/__audio__/101",
+        "playbackTested": false,
+        "providerDownloaded": false
+      }
+    },
+    {
+      "name": "B waits behind the real update banner without replacing A or eagerly caching its app",
+      "pass": true,
+      "waitingVersion": "6e0635437f46493d",
+      "currentApplication": "A",
+      "initialOptionalDownloads": 0,
+      "automaticReentryKeptA": true,
+      "automaticUpdateMessages": 0
+    },
+    {
+      "name": "a failed application preparation keeps A active and the playlist intact",
+      "pass": true,
+      "oldApplicationRemainedActive": true,
+      "activationMessages": 0,
+      "retryEnabled": true
+    },
+    {
+      "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+      "pass": true,
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "newApplicationPath": "/pletina/application/index.2c268bfc6c12e252.html",
+      "cachedOptionalFiles": 6,
+      "preservedDatabase": true
+    },
+    {
+      "name": "updated B reopens offline with playlist, podcast progress and identical downloaded/cache-route bytes",
+      "pass": true,
+      "online": false,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "podcastId": 500000000000101,
+      "episodeId": 750000000000101,
+      "podcastPosition": 57,
+      "downloadedTrackId": 101,
+      "cachedSha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "swRouteSha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "swRouteStatus": 200,
+      "downloadedBytes": 1644,
+      "fixturePlaybackClaimed": false,
+      "providerDownloadClaimed": false
+    },
+    {
+      "name": "existing cold full distribution migrates through explicit legacy update and the same scope",
+      "pass": true,
+      "prototypeVersion": "c8c217806395bf6d",
+      "newVersion": "2ec4eea13f25a07a",
+      "scope": "/pletina/",
+      "previousDistributionKind": "cold-full-application",
+      "previousApplicationOpened": false,
+      "explicitLegacySecondaryUpdateButtonUsed": true,
+      "newPrimaryOpenUsedAfterUpdate": false,
+      "newApplicationAutoOpenedAfterExplicitUpdate": true,
+      "legacyPrimaryAutoMigrationClaimed": false,
+      "retiredOptionalRequests": 0,
+      "registrationCount": 1,
+      "manifestIdentityUnchanged": true,
+      "oldVersionCacheRemoved": true,
+      "localStoragePreserved": true,
+      "unrelatedCachePreserved": true,
+      "osShortcutMigrationVerified": false
+    }
+  ],
+  "errors": [],
+  "messages": [
+    {
+      "phase": "cold-minimal-A-waiting-B",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "cold-primary-open-failed",
+      "path": "/pletina/",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "full-A",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "failed-preparation",
+      "path": "/pletina/application/index.2fcaa0403a7fca54.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.2fcaa0403a7fca54.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.2fcaa0403a7fca54.html",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.2fcaa0403a7fca54.html",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "prototype-migration",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    }
+  ],
+  "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+  "osShortcutInstallationVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "externalMusicNetworkUsed": false,
+  "productionDirectoriesMutated": false,
+  "updateTrigger": "registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.",
+  "playlistFixture": "Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.",
+  "audioFixture": "Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.",
+  "runKind": "cold-installer-and-opened-application-updates",
+  "sourceShellAppSha256": "c03db8d49b6697cf810c8adb15cfc9029fba65efd09a3648c22e1e30a316330c",
+  "baseDistributionVersion": "17b4266448d1a61f",
+  "sourceCompiledHtmlSha256": "bce4146723668311ee6afe6563ffc99fc075ff7ee57cb001e9dcb6ac46db222e",
+  "builds": {
+    "A": {
+      "version": "2ec4eea13f25a07a",
+      "applicationPage": "application/index.2fcaa0403a7fca54.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/assets/index-Dji-S4oU.js",
+        "application/index.2fcaa0403a7fca54.html",
+        "application/launcher.b4a6fdbf3849e102.js"
+      ]
+    },
+    "B": {
+      "version": "6e0635437f46493d",
+      "applicationPage": "application/index.2c268bfc6c12e252.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-Dhe7ruI3.css",
+        "application/assets/index-Dji-S4oU.js",
+        "application/index.2c268bfc6c12e252.html",
+        "application/launcher.5bf96cfd24940d3c.js"
+      ]
+    }
+  },
+  "sourceApplicationAssets": [
+    {
+      "url": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+    },
+    {
+      "url": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+    },
+    {
+      "url": "application/assets/index-Dhe7ruI3.css",
+      "sha256": "8aa749e9eff0f9bdd3db461c93e9dc98872bafee37a8e6bf1f415ba812d1e298"
+    },
+    {
+      "url": "application/assets/index-Dji-S4oU.js",
+      "sha256": "d4cc9f673d06e5e21f686b97cd84db3fa74c9932d21593141ca8ab322994d58b"
+    }
+  ],
+  "manifestIdentity": {
+    "id": "./",
+    "scope": "./",
+    "start_url": "./"
+  },
+  "coldInstaller": {
+    "applicationOpenedBeforeUpdate": false,
+    "retiredOptionalPaths": [
+      "/pletina/application/index.2fcaa0403a7fca54.html",
+      "/pletina/application/launcher.b4a6fdbf3849e102.js"
+    ],
+    "beforeOpen": {
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": "installed",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "2ec4eea13f25a07a",
+            "paths": [
+              "/pletina/app.f19240ddfe0f7b5b.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          },
+          {
+            "version": "6e0635437f46493d",
+            "paths": [
+              "/pletina/app.30137bd732aa736f.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      },
+      "path": "/pletina/",
+      "status": "Hay una nueva versión lista.",
+      "version": "2ec4eea13f25a07a",
+      "button": {
+        "text": "Actualizar y abrir",
+        "disabled": false
+      },
+      "appVisible": false,
+      "controller": true,
+      "openedBefore": null,
+      "online": true
+    },
+    "failedPreparation": {
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": "installed",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "2ec4eea13f25a07a",
+            "paths": [
+              "/pletina/app.f19240ddfe0f7b5b.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          },
+          {
+            "version": "6e0635437f46493d",
+            "paths": [
+              "/pletina/app.30137bd732aa736f.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-Dhe7ruI3.css",
+              "/pletina/application/assets/index-Dji-S4oU.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      },
+      "path": "/pletina/",
+      "status": "No se pudo completar la actualización. Conservas tu versión. Reintenta con conexión.",
+      "version": "2ec4eea13f25a07a",
+      "button": {
+        "text": "Actualizar y abrir",
+        "disabled": false
+      },
+      "appVisible": false,
+      "controller": true,
+      "openedBefore": null,
+      "online": true
+    },
+    "completed": {
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "oldOptionalRequests": 0,
+      "offline": true
+    }
+  },
+  "downloadFixture": {
+    "trackId": 101,
+    "bytes": 1644,
+    "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+    "stablePath": "/pletina/__audio__/101",
+    "playbackTested": false,
+    "providerDownloaded": false
+  },
+  "warmReentry": {
+    "title": "Pletina QA A",
+    "serviceWorker": {
+      "scope": "/pletina/",
+      "registrations": 1,
+      "active": "activated",
+      "waiting": "installed",
+      "workers": {
+        "controller": {
+          "state": "activated",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "active": {
+          "state": "activated",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "waiting": {
+          "state": "installed",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "installing": null
+      },
+      "cacheInfo": [
+        {
+          "version": "2ec4eea13f25a07a",
+          "paths": [
+            "/pletina/app.f19240ddfe0f7b5b.js",
+            "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+            "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+            "/pletina/application/assets/index-Dhe7ruI3.css",
+            "/pletina/application/assets/index-Dji-S4oU.js",
+            "/pletina/application/index.2fcaa0403a7fca54.html",
+            "/pletina/application/launcher.b4a6fdbf3849e102.js",
+            "/pletina/icons/apple-touch-icon.png",
+            "/pletina/icons/icon-192.png",
+            "/pletina/icons/icon-512.png",
+            "/pletina/index.html",
+            "/pletina/manifest.webmanifest"
+          ]
+        },
+        {
+          "version": "6e0635437f46493d",
+          "paths": [
+            "/pletina/app.30137bd732aa736f.js",
+            "/pletina/icons/apple-touch-icon.png",
+            "/pletina/icons/icon-192.png",
+            "/pletina/icons/icon-512.png",
+            "/pletina/index.html",
+            "/pletina/manifest.webmanifest"
+          ]
+        }
+      ]
+    },
+    "path": "/pletina/application/index.2fcaa0403a7fca54.html",
+    "button": {},
+    "appVisible": true,
+    "controller": true,
+    "openedBefore": "1",
+    "online": true,
+    "messages": []
+  },
+  "migrationBrowserIsolation": {
+    "previousBrowserClosed": true,
+    "mode": "Fresh disposable Chrome process with the same launch options; no previous test contexts or emulation.",
+    "previousBrowserVersion": "153.0.8010.52",
+    "migrationBrowserVersion": "153.0.8010.52"
+  },
+  "prototypeVersion": "c8c217806395bf6d",
+  "prototypeCDP": {
+    "enabled": false,
+    "scope": "ServiceWorker CDP domain is not enabled before the migration.",
+    "events": [],
+    "errors": []
+  },
+  "browserClosed": true,
+  "browserProfile": "Disposable Playwright launch profile; browser.close releases it.",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "blockedExternalHosts": [
+    "cdn-images.dzcdn.net"
+  ],
+  "finishedAt": "2026-10-22T17:54:02.570Z",
+  "passed": true
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-22T17:53:42.183Z",
+  "scope": "Node unit regressions using transpiled real resolver/YouTube modules with controlled dependencies; no live song or physical playback claim.",
+  "testPath": "scripts/tests/web-audio.test.mjs",
+  "testSha256": "ec087ddbc54b879ecf39ca1232a1bc43cec4ce4fd613e24305b85d996622f70c",
+  "beforeAudioSha256": "69c2a96c2cfc831ff8e5d6f4f143fbeb606a28ac31d87f6cfb73612b48d8f9af",
+  "afterAudioSha256": "fb3d526457fed2dc730eea7be609bc74822faeab72b424587988791b57f59a06",
+  "productionRevertedOrModifiedByThisAgent": false,
+  "runs": [
+    {
+      "label": "immutable original resolver",
+      "pass": 23,
+      "fail": 3,
+      "exitCode": 1,
+      "report": "web-audio-fallback-original-red.json",
+      "sourceRecord": "web-audio-fallback-red-source.json"
+    },
+    {
+      "label": "intermediate fix, saved format failure",
+      "pass": 25,
+      "fail": 1,
+      "exitCode": 1,
+      "report": "web-audio-fallback-first-run.json"
+    },
+    {
+      "label": "corrected resolver",
+      "pass": 26,
+      "fail": 0,
+      "exitCode": 0,
+      "report": "web-audio-fallback-final.json"
+    }
+  ]
+}
