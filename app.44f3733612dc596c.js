@@ -11,7 +11,7 @@ const guideSteps = document.querySelector('#guide-steps')
 const playerButton = document.querySelector('#open-player')
 const homeScreen = document.querySelector('#home-screen')
 const playerScreen = document.querySelector('#player-screen')
-const playerURL = new URL('./application/launcher.93f05ec41ee4eb7c.js', location.href)
+const playerURL = new URL('./application/launcher.77143187d32a3dc0.js', location.href)
 const portable = location.protocol === 'file:' || document.documentElement.hasAttribute('data-portable')
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 const say = (message) => { status.textContent = message }
