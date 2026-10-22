@@ -35,17 +35,35 @@
       summary { cursor: pointer; }
       details p { margin: 10px 0 0; }
       details button { margin-top: 12px; }
-      dialog { width: min(360px, calc(100% - 32px)); padding: 24px; border: 1px solid #504262; border-radius: 20px; background: #211a2c; color: inherit; }
+      dialog { width: min(440px, calc(100% - 24px)); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); padding: 0; overflow-y: auto; overscroll-behavior: contain; border: 1px solid #504262; border-radius: 20px; background: #211a2c; color: inherit; }
       dialog::backdrop { background: #000a; }
-      dialog h2 { margin: 0 0 16px; font-size: 1.4rem; }
-      dialog ol { padding-left: 24px; margin: 0 0 20px; }
-      dialog li { margin-bottom: 12px; }
-      dialog p { font-size: .875rem; }
-      dialog button { width: 100%; }
+      .guide-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 16px; background: #211a2c; border-bottom: 1px solid #504262; }
+      .guide-heading h2 { flex: 1; margin: 0; font-size: 1.3rem; line-height: 1.3; }
+      #close-guide { display: grid; place-items: center; flex: 0 0 44px; width: 44px; min-height: 44px; padding: 10px; }
+      #close-guide svg { width: 22px; height: 22px; }
+      #guide-context { margin: 16px 16px 0; color: #c1b7ce; font-size: .9rem; }
+      #guide-lead { display: flex; align-items: center; gap: 10px; margin: 16px 16px 0; padding: 12px; border-radius: 12px; background: #30253f; color: #f4efff; font-size: .9rem; }
+      #guide-steps { display: grid; gap: 12px; margin: 0; padding: 16px; list-style: none; }
+      #guide-steps li { display: grid; grid-template-columns: 26px 56px minmax(0, 1fr); gap: 10px; align-items: center; margin: 0; padding: 14px 12px; border: 1px solid #504262; border-radius: 16px; }
+      .guide-number { align-self: start; padding-top: 2px; color: #bba6fa; font-size: 1.2rem; font-weight: 750; }
+      .guide-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 14px; color: #d2c0ff; background: #30253f; }
+      .guide-icon svg { width: 38px; height: 38px; }
+      .guide-label { display: block; font-size: 1.05rem; line-height: 1.25; overflow-wrap: anywhere; }
+      .guide-help { display: flex; align-items: center; gap: 5px; margin: 8px 0 0; color: #c1b7ce; font-size: .8rem; line-height: 1.4; }
+      .guide-help-icon { display: inline-flex; flex: 0 0 24px; }
+      .guide-help-icon svg { width: 24px; height: 24px; }
+      .guide-setting { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: .8rem; line-height: 1.3; }
+      .guide-switch { flex: 0 0 32px; width: 32px; height: 20px; border-radius: 12px; background: #bba6fa; }
+      .guide-switch::after { content: ''; display: block; width: 14px; height: 14px; margin: 3px 3px 3px 15px; border-radius: 50%; background: #15121c; }
+      .guide-ready { display: flex; align-items: center; gap: 14px; margin: 0 16px 20px; padding: 16px; border-radius: 16px; background: #30253f; }
+      .guide-ready img { flex: 0 0 64px; width: 64px; height: 64px; border-radius: 16px; }
+      .guide-ready figcaption { font-size: .9rem; line-height: 1.4; }
+      .guide-ready strong { display: block; margin-top: 4px; color: #bba6fa; }
+      @media (max-width: 360px), (max-height: 400px) { .guide-heading, #guide-steps { padding: 12px; } #guide-steps li { grid-template-columns: 22px 48px minmax(0, 1fr); gap: 8px; padding: 12px 10px; } .guide-icon { width: 48px; height: 48px; } .guide-icon svg { width: 34px; height: 34px; } .guide-label { font-size: 1rem; } .guide-ready { margin: 0 12px 12px; } }
       footer { margin-top: 48px; font-size: .75rem; color: #81788f; }
       [hidden] { display: none !important; }
     </style>
-    <script src="./app.dcb7f4e10d6b2062.js" defer></script>
+    <script src="./app.f8fa530b10b45e88.js" defer></script>
   </head>
   <body>
     <main id="home-screen">
@@ -64,17 +82,26 @@
         <button id="check-update" type="button" hidden>Buscar actualizaciones</button>
       </details>
       <noscript><p>Activa JavaScript para guardar la app y recibir actualizaciones.</p></noscript>
-      <footer>Versión <span id="version">dd284152f0526576</span></footer>
+      <footer>Versión <span id="version">c8c217806395bf6d</span></footer>
     </main>
     <section id="player-screen" aria-label="Reproductor" hidden>
       <button id="back-home" type="button">Volver al inicio</button>
       <div id="player-host"></div>
     </section>
     <dialog id="install-guide" aria-labelledby="guide-title">
-      <h2 id="guide-title">Instalar Pletina</h2>
-      <ol id="guide-steps"></ol>
-      <p>Después, abre Pletina desde el nuevo icono.</p>
-      <button id="close-guide" type="button" autofocus>Entendido</button>
+      <header class="guide-heading">
+        <h2 id="guide-title">Instalar Pletina</h2>
+        <button id="close-guide" type="button" aria-label="Cerrar instrucciones" title="Cerrar" autofocus>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+      <p id="guide-context">En tu navegador, toca estos botones.</p>
+      <p id="guide-lead" hidden></p>
+      <ol id="guide-steps" role="list"></ol>
+      <figure class="guide-ready">
+        <img src="./icons/icon-192.png" width="64" height="64" alt="Icono de Pletina" />
+        <figcaption>Después, abre este icono<strong>Pletina</strong></figcaption>
+      </figure>
     </dialog>
   </body>
 </html>
