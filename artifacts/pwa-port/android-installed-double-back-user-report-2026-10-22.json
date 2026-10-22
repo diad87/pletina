@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "evidenceType": "user-reported-physical-test",
+  "device": "Xiaomi 15T Pro",
+  "androidVersion": null,
+  "browserVersion": null,
+  "observedBuild": null,
+  "requestedBuild": "92345453b622660a",
+  "publishedBuildWhenRecorded": "92345453b622660a",
+  "buildAssignmentConfirmed": false,
+  "url": "https://diad87.github.io/pletina/",
+  "originalQuestionId": "call_377e3a6064e040e2aab765d3622ac0f2",
+  "requestedContext": "Update the installed PWA, use one Back on Home, then two within 800 ms, and check four bottom tabs after reopening.",
+  "userReport": "funciona pero si lo hago muy rapido no me saca. ademas, al sacarme, se para la musica",
+  "requestedBehaviorClarification": "quiero que si das doble para atras, sea como el botn central de ir al inicio, que se mantiene en segundo plano",
+  "desiredAction": "Return to Android Home while keeping the app and audio alive in the background; not closing the audio document.",
+  "desiredActionImplemented": false,
+  "desktopTimingControl": "artifacts/pwa-e2e/back-fast-browser-control-2026-10-22.json",
+  "checks": [
+    {
+      "name": "requested-installed-Home-back-flow",
+      "status": "user-reported-partial",
+      "scope": "General confirmation of the requested flow, with an explicit very-rapid timing exception. Individual single-Back and four-tab results were not separately logged."
+    },
+    {
+      "name": "very-rapid-double-Back-exits",
+      "status": "user-reported-fail",
+      "exactIntervalMs": null,
+      "rawSystemBackEventsReceived": false
+    }
+  ],
+  "observations": {
+    "exitPossibleAtSomeDoubleBackTiming": true,
+    "veryRapidDoubleBackDoesNotExit": true,
+    "audioStopsAfterExit": true,
+    "homeButtonBackgroundContinuation": null,
+    "screenOffContinuation": null,
+    "fourTabsAfterReopenIndividuallyConfirmed": false,
+    "exactBrowserLifecycleOnExit": null,
+    "forceStopTested": false
+  },
+  "automaticallyVerified": false,
+  "rawDiagnosticReceived": false,
+  "fullPhysicalProtocolCompleted": false,
+  "iOSVerified": false,
+  "androidAutoVerified": false,
+  "carplayVerified": false,
+  "scope": "Partial physical feedback, not a complete pass. The actual build and gesture interval were not supplied. The user explicitly wants Android Home/backgrounding, which the published double-Back exit does not implement. The desktop control did not reproduce lost rapid navigation and does not establish why the Xiaomi gesture failed."
+}

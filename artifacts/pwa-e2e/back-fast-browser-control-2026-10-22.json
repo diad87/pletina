@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-22",
+  "scope": "Desktop Chrome History API control using plain HTML. No Pletina product code, physical Android input, installed PWA or operating-system Home/minimize action is tested.",
+  "host": { "platform": "win32", "arch": "x64", "node": "v24.18.1" },
+  "browser": { "name": "Chrome", "version": "153.0.8010.52", "headless": true, "temporaryProfile": true },
+  "setup": [
+    "Open a real /outside document on an ephemeral loopback HTTP origin.",
+    "Open /control on that origin and click its real button to give the document a user activation.",
+    "Replace the current history state with {step:'boundary'} and push {step:'home'} at the same control URL.",
+    "Observe History API calls, Navigation API navigate events and popstate; do not intercept or change traversal behavior.",
+    "Wait 300 ms after issuing the calls, inspect the resulting document/state, and close the page."
+  ],
+  "cases": [
+    {
+      "mode": "same-task",
+      "sequence": "record('call-1'); history.back(); record('call-2'); history.back();",
+      "finalPath": "/outside",
+      "state": null,
+      "events": [
+        { "type": "call-1", "step": "home", "at": 144.60000038146973 },
+        { "type": "call-2", "step": "home", "at": 144.80000019073486 },
+        { "type": "navigate", "step": "home", "at": 145.7000002861023, "navigationType": "traverse", "destinationIndex": 1, "userInitiated": false },
+        { "type": "popstate", "step": "boundary", "at": 145.90000009536743 },
+        { "type": "navigate", "step": "boundary", "at": 146.60000038146973, "navigationType": "traverse", "destinationIndex": 0, "userInitiated": false }
+      ]
+    },
+    {
+      "mode": "after-first-popstate",
+      "sequence": "Install a once-only popstate listener that records call-2 and calls history.back(); then record call-1 and call history.back().",
+      "finalPath": "/outside",
+      "state": null,
+      "events": [
+        { "type": "call-1", "step": "home", "at": 63.39999961853027 },
+        { "type": "navigate", "step": "home", "at": 64.39999961853027, "navigationType": "traverse", "destinationIndex": 1, "userInitiated": false },
+        { "type": "popstate", "step": "boundary", "at": 64.59999990463257 },
+        { "type": "call-2", "step": "boundary", "at": 64.59999990463257 },
+        { "type": "navigate", "step": "boundary", "at": 69.7999997138977, "navigationType": "traverse", "destinationIndex": 0, "userInitiated": false }
+      ]
+    }
+  ],
+  "result": "Both desktop programmatic sequences produced two accepted traversals and reached the preceding document. This control did not reproduce coalescence and cannot establish what happens to a very fast physical Xiaomi Back gesture.",
+  "cleanup": { "serverClosed": true, "browserClosed": true, "browserProcessClosed": true },
+  "productChanged": false,
+  "physicalAndroidVerified": false
+}
