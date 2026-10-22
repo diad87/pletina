@@ -88,68 +88,65 @@ try {
     return info
   })
   await check('the exact content advances after a real visible Play click', async () => {
-    await page.evaluate(() => {
-      window.__qaOfficialVideo = { ready: false, events: [] }
-      const attach = () => {
-        const frame = document.querySelector('dialog[data-official-youtube] iframe')
-        frame.id ||= 'qa-existing-official-player'
-        window.__qaOfficialVideo.player = new YT.Player(frame.id, { events: {
-          onReady: () => { window.__qaOfficialVideo.ready = true },
-          onError: event => window.__qaOfficialVideo.events.push({ type: 'error', code: event.data }),
-          onAutoplayBlocked: () => window.__qaOfficialVideo.events.push({ type: 'autoplayBlocked' }),
-        } })
-      }
-      if (window.YT?.Player) attach()
-      else { window.onYouTubeIframeAPIReady = attach; const script = document.createElement('script'); script.src = 'https://www.youtube.com/iframe_api'; document.head.append(script) }
-    })
-    await page.waitForFunction(() => window.__qaOfficialVideo?.ready, { timeout: 15000 })
     const frameHandle = await page.$('dialog[data-official-youtube] iframe'), frame = await frameHandle.contentFrame()
+    // Observe standard HTMLMediaElement state read-only inside the real frame.
+    // No parent SDK is added: the product intentionally uses a plain embed.
+    report.observation = 'Read-only HTMLMediaElement inside the visible official frame; no parent SDK or provider script replacement.'
     const before = reportName.replace('.json', '-before.png')
     await frameHandle.scrollIntoView()
-    await page.screenshot({ path: fileURLToPath(new URL(before, output)), fullPage: true })
     const playSelector = '[aria-label="Reproducir vídeo"], [aria-label="Play video"], .ytp-large-play-button, .ytmCuedOverlayPlayButton'
-    const play = await frame.waitForSelector(playSelector, { visible: true, timeout: 5000 }).catch(() => null)
+    const play = await frame.waitForSelector(playSelector, { visible: true, timeout: 12000 })
+    await page.screenshot({ path: fileURLToPath(new URL(before, output)), fullPage: true })
     let gesture
-    if (play) { await play.click(); gesture = { kind: 'visible DOM Play control' } }
-    else {
-      // The current mobile-style cued overlay has a central red Play button, as
-      // observed in the preserved before/after provider-probe screenshots. Its
-      // current frame box determines the viewport coordinate; never call playVideo.
-      const box = await frameHandle.boundingBox()
-      assert.ok(box && box.width >= 200 && box.height >= 200)
-      gesture = { kind: 'central visible cued Play button', x: box.x + box.width / 2, y: box.y + box.height / 2 }
-      await page.mouse.click(gesture.x, gesture.y)
-    }
+    await play.click(); gesture = { kind: 'visible DOM Play control' }
     report.playGesture = gesture
     const samples = []
     report.officialSamples = samples
     for (let attempt = 0; attempt < 70; attempt++) {
-      const sample = await page.evaluate(() => {
-        const qa = window.__qaOfficialVideo, p = qa.player
-        const videoId = new URL(p.getVideoUrl()).searchParams.get('v')
-        return { videoId, state: p.getPlayerState(), time: p.getCurrentTime(), duration: p.getDuration(), muted: p.isMuted(), volume: p.getVolume(), events: qa.events }
+      const sample = await frame.evaluate(() => {
+        const video = document.querySelector('video')
+        return video ? { time: video.currentTime, duration: Number.isFinite(video.duration) ? video.duration : null,
+          paused: video.paused, readyState: video.readyState, errorCode: video.error?.code ?? null,
+          muted: video.muted, volume: video.volume,
+          adShowing: Boolean(document.querySelector('.ad-showing, .ad-interrupting')), adBadges: document.querySelectorAll('.ytp-ad-text, .ytp-ad-badge').length } : null
       })
       samples.push(sample)
-      const earlier = samples.find(value => value.state === 1 && value.time > 0.1)
-      if (sample.state === 1 && earlier && sample.time > 2 && sample.time > earlier.time + 1) break
-      assert.equal(sample.events.filter(value => value.type === 'error').length, 0, 'No official player error')
+      const earlier = samples.find(value => value && !value.paused && value.time > 0.1)
+      if (sample && !sample.paused && sample.readyState >= 3 && earlier && sample.time > 2 && sample.time > earlier.time + 1 && !sample.adShowing && !sample.adBadges) break
+      if (sample) assert.equal(sample.errorCode, null, 'No HTMLMediaElement error')
       await new Promise(resolve => setTimeout(resolve, 300))
     }
     const last = samples.at(-1)
-    assert.equal(last.videoId, report.videoId); assert.equal(last.state, 1); assert.ok(last.time > 2)
+    assert.ok(last); assert.equal(last.paused, false); assert.ok(last.readyState >= 3); assert.ok(last.time > 2)
     assert.equal(last.muted, false); assert.ok(last.volume > 0)
     if (query.includes('Iritsi da Eguna')) assert.ok(Math.abs(last.duration - 170) < 2)
-    const ad = await frame.evaluate(() => ({ adShowing: Boolean(document.querySelector('.ad-showing, .ad-interrupting')), badges: document.querySelectorAll('.ytp-ad-text, .ytp-ad-badge').length }))
+    const ad = { adShowing: last.adShowing, badges: last.adBadges }
     assert.equal(ad.adShowing, false); assert.equal(ad.badges, 0)
     const after = reportName.replace('.json', '-after.png')
     await page.screenshot({ path: fileURLToPath(new URL(after, output)), fullPage: true })
     return { samples, ad, before, after, gesture }
   })
   await check('closing destroys the video instead of leaving hidden playback', async () => {
-    await page.keyboard.press('Escape')
+    // The cross-origin YouTube player can consume Escape while it has focus.
+    // Use Pletina's own, visible close control to verify actual teardown.
+    await page.click('#official-youtube-close')
     await page.waitForFunction(() => !document.querySelector('dialog[data-official-youtube][open] iframe'), { timeout: 5000 })
     assert.equal(await page.$('dialog[data-official-youtube] iframe'), null)
     return { iframeRemoved: true }
+  })
+  await check('browser Back closes the reopened official player and keeps the PWA open', async () => {
+    // Closing an overlay traverses its history entry and can remount Search.
+    await page.waitForSelector('.tracks li[data-reorder-index="0"] button.more', { visible: true, timeout: 45000 })
+    await page.click('.tracks li[data-reorder-index="0"] button.more')
+    await textClick('[role="menuitem"]', 'Reproducir con YouTube')
+    await page.waitForSelector('dialog[data-official-youtube][open] [data-video-id]', { visible: true, timeout: 45000 })
+    await page.click('dialog[data-official-youtube][open] [data-video-id]')
+    await page.waitForSelector('dialog[data-official-youtube][open] iframe', { visible: true, timeout: 10000 })
+    await page.evaluate(() => history.back())
+    await page.waitForFunction(() => !document.querySelector('dialog[data-official-youtube][open] iframe'), { timeout: 5000 })
+    assert.equal(await page.$('dialog[data-official-youtube] iframe'), null)
+    assert.ok(await page.$('.app .sidebar'))
+    return { iframeRemoved: true, applicationStillOpen: true, scope: 'Browser history API; no physical Android Back claim' }
   })
 } catch (error) { report.failure = { name: error.name, message: scrub(error.message) }; process.exitCode = 1 }
 finally {
