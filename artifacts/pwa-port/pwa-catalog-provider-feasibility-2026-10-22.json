@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "publishedPwaBuild": "e7b0aa14685bb4fa",
+  "userConstraints": {
+    "purePwa": true,
+    "noIntermediaryServer": true,
+    "noUserLogin": true,
+    "noSubscriptions": true,
+    "answerVerbatim": "Sin iniciar sesión ni suscripciones",
+    "requestedSourceKind": "Searchable music-platform catalogs rather than a one-off song URL",
+    "platformExamplesVerbatim": "Amazon music, YouTube music, SoundCloud, Spotify..."
+  },
+  "providers": [
+    {
+      "name": "YouTube Music / YouTube",
+      "finding": "Already part of the published PWA search and direct-audio engine. These are not independent fallback catalogs in the existing implementation. The known exact difficult-song recordings remain rejected by the direct extractor, and the visible official fallback cuts on the user's Xiaomi when backgrounded or locked.",
+      "newProviderIntegrated": false,
+      "difficultSongRecovered": false,
+      "reports": ["iritsi-background-audio-investigation-2026-10-22.json", "apk-engine-adaptation-investigation-2026-10-22.json"]
+    },
+    {
+      "name": "SoundCloud",
+      "finding": "The official custom-player API flow reviewed requires an application secret for token exchange, including PKCE; no approved secret-free static custom-player route has been established. The exact-song official widget experiments do not produce playback. No public app secrets or borrowed credentials were used.",
+      "anonymousStaticFullFallbackValidated": false,
+      "reports": ["iritsi-background-alternative-research-2026-10-22.json"],
+      "sources": ["https://developers.soundcloud.com/docs/api/guide", "https://developers.soundcloud.com/docs/api/html5-widget"]
+    },
+    {
+      "name": "Spotify",
+      "finding": "Client-side Authorization Code + PKCE and the official browser SDK are documented, so a backend is not inherently required. Full SDK playback requires a Spotify Premium account, user authorization and a registered application. Development mode permits up to five authorized users. This does not meet the user's no-login/no-subscription requirement.",
+      "actualAuthorizedPlaybackTested": false,
+      "excludedByUserConstraints": true,
+      "reports": ["music-catalog-spotify-static-pwa-review-2026-10-22.json"]
+    },
+    {
+      "name": "Amazon Music",
+      "finding": "An official playback API exists in closed beta and requires an Amazon-Music-enabled security profile and access approval. Browser PKCE without a client secret is documented, so do not claim a universal backend requirement. Catalog/playback requires user authorization and authorized DRM playback. No approved profile, browser CORS or actual music session was tested; no anonymous production route was established.",
+      "actualAuthorizedPlaybackTested": false,
+      "availableForImmediateAnonymousFallback": false,
+      "reports": ["mainstream-catalog-api-primary-review-2026-10-22.json"]
+    },
+    {
+      "name": "Audius",
+      "finding": "A real public, non-gated full track plays and seeks unmuted via HTMLAudio on the PWA origin with no login, API key, proxy or server. Browser CORS fetch reads the full file in RAM. Exact Iritsi title/artist searches and ISRC lookup find no source. Three other catalog-identity probes do not produce a valid canonical match. This establishes platform transport feasibility, not recovery of the requested songs or mobile background playback. The control track disallows downloading, so no offline permission is inferred.",
+      "actualPublicAudioPlaybackTested": true,
+      "actualCanonicalCatalogFallbackVerified": false,
+      "difficultSongRecovered": false,
+      "reports": ["iritsi-audius-jamendo-browser-catalog-2026-10-22.json", "audius-general-provider-audio-browser-2026-10-22.json"]
+    },
+    {
+      "name": "Jamendo / Bandcamp / Internet Archive",
+      "finding": "Additional bounded catalog investigation is preserved separately. Jamendo's documented testing application is suspended, not evidence of an empty catalog; Bandcamp public search hits a client challenge and its documented Subsonic route serves the user's purchased collection; two Internet Archive queries are valid and empty. No usable exact-song catalog source was established.",
+      "reports": ["iritsi-audius-jamendo-browser-catalog-2026-10-22.json", "iritsi-bandcamp-public-search-2026-10-22.json", "jamendo-bandcamp-catalog-browser-2026-10-22.json", "iritsi-internet-archive-browser-search-2026-10-22.json"]
+    }
+  ],
+  "aleaCandidateStatus": "The user confirms that the public MP3 contains singing ('Si cantan'), but explicitly asks for a broad searchable catalog. This is not an original-master identification or a confirmed general fallback source. It remains unintegrated.",
+  "conclusion": "No broad anonymous catalog fallback for the difficult songs has been validated under all current constraints. Audius is technically browser-compatible but did not supply a matching recording. Spotify and Amazon official access conditions do not meet the no-login/no-subscription immediate integration scope. No incomplete or paid-account integration was added to the product.",
+  "productChanged": false,
+  "newBuildPublished": false,
+  "runtimeServerAdded": false,
+  "loginOrSubscriptionAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "matchingThresholdsRelaxed": false,
+  "secretsSignedMediaUrlsOrMediaFilesPersisted": false,
+  "physicalDeviceOrCarPlatformVerificationPerformed": false,
+  "existingFullE2eSuiteRerun": false
+}

@@ -1,0 +1,61 @@
+{
+  "testedAt": "2026-10-22T20:40:07.055Z",
+  "scope": "Browser-only public catalog diagnostics from GitHub PWA origin; Jamendo official read-API test client only, never production; Bandcamp public protocol reachability without credentials; no account created, proxy, native layer, secret extraction, or product edits.",
+  "sources": [
+    "https://developer.jamendo.com/v3.0/authentication",
+    "https://developer.jamendo.com/v3.0/tracks",
+    "https://blog.bandcamp.com/2026/07/16/discover-improvements-and-subsonic-implementation/"
+  ],
+  "jamendo": {
+    "searches": [
+      {
+        "query": "jazz",
+        "httpStatus": 200,
+        "corsReadable": true,
+        "apiStatus": "failed",
+        "apiCode": 11,
+        "apiError": "Jamendo Api Suspended Application Error: Your application has been suspended, please contact Jamendo",
+        "returnedResults": 0,
+        "tracks": []
+      },
+      {
+        "query": "Pirritx eta Porrotx Iritsi da Eguna",
+        "httpStatus": 200,
+        "corsReadable": true,
+        "apiStatus": "failed",
+        "apiCode": 11,
+        "apiError": "Jamendo Api Suspended Application Error: Your application has been suspended, please contact Jamendo",
+        "returnedResults": 0,
+        "tracks": []
+      }
+    ],
+    "audio": null
+  },
+  "bandcamp": {
+    "requests": [
+      {
+        "path": "/api/subsonic/rest/ping.view",
+        "corsReadable": false,
+        "error": "TypeError",
+        "credentialsSupplied": false
+      },
+      {
+        "path": "/api/subsonic/ping.view",
+        "corsReadable": false,
+        "error": "TypeError",
+        "credentialsSupplied": false
+      }
+    ],
+    "libraryPlaybackVerified": false
+  },
+  "errors": [],
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "screenOffVerified": false,
+  "productChanged": false,
+  "browser": "Chrome/153.0.8010.52",
+  "build": "e7b0aa14685bb4fa",
+  "contextClosed": true,
+  "browserClosed": true,
+  "finishedAt": "2026-10-22T20:40:08.697Z"
+}

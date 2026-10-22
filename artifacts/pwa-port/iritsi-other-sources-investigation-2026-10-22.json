@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-22",
+  "publishedBuild": "e7b0aa14685bb4fa",
+  "request": "Try alternative sources for difficult songs while keeping pure PWA and no intermediary server",
+  "song": {
+    "catalogId": 3250715431,
+    "title": "Iritsi da Eguna",
+    "artist": "Pirritx eta Porrotx",
+    "album": "Eskerrik Asko!",
+    "catalogDurationSeconds": 169,
+    "isrc": "QM6N21424821"
+  },
+  "candidate": {
+    "provider": "ALEA / Kantari",
+    "article": "https://alea.eus/araba/1473099329086-iritsi-da-eguna-pirritx-eta-porrotx",
+    "discoveryIndex": "https://alea.eus/gasteiz/1737112458781-abestiak-kantari-2025",
+    "publicAudio": "https://alea.tok-md.com/iritsidaeguna.mp3",
+    "articleAttribution": "Iritsi da eguna - Pirritx eta Porrotx",
+    "mime": "audio/mpeg",
+    "bytes": 4633634,
+    "sha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+    "mediaElementDurationSeconds": 187.180408,
+    "decodedPcmDurationSeconds": 187.1684126984127,
+    "sampleRate": 44100,
+    "channels": 2,
+    "id3TitleArtistAlbumFound": false,
+    "corsRangeReadableFromPwaOrigin": true,
+    "corsRangeStatus": 206,
+    "wholeFileBrowserFetchAndDecode": true,
+    "browserMediaPlaybackAndSeekAdvance": true,
+    "firstOneSecondBinAboveRmsPoint003": 9,
+    "lastOneSecondBinAboveRmsPoint003": 180,
+    "versionAndVocalIdentityConfirmed": false,
+    "humanVersionQuestionStatus": "answered-vocals-only",
+    "physicalScreenOffVerified": false,
+    "pwaProductIntegrated": false,
+    "notes": "A real direct MP3, not a video iframe or preview URL. Leading/trailing silence explains much of its longer duration but does not identify the master, vocals or exact version. The first browser test's start-to-two-second advance occurs during known silence; its middle/end seek checks and decoded non-zero PCM provide separate evidence. No silent automatic substitution, trimming, threshold relaxation or claim of phone background playback.",
+    "hasVocalsConfirmedByHuman": true,
+    "humanAnswerVerbatim": "Si cantan",
+    "desktopNormalFlagsCorroboration": "Separate 4/4 directed checks use one trusted click from second 20, non-zero PCM evidence, real hidden tab for 30 seconds, no observer activation or launch flags disabling background throttling. Still not a phone or product test."
+  },
+  "otherProviders": [
+    {
+      "provider": "Audius",
+      "result": "Three browser-readable valid searches by title, artist and ISRC text returned no results. Positive trending control returned a track. Only those searches are considered empty."
+    },
+    {
+      "provider": "Internet Archive",
+      "result": "Two browser-readable advanced searches returned valid response.numFound=0 for the exact title and album/creator query. This is not a claim that all metadata spellings were exhausted."
+    },
+    {
+      "provider": "Jamendo",
+      "result": "Official testing-only public client returns suspended-application errors, including the positive-control request. No empty-catalog conclusion and no production use of that client."
+    },
+    {
+      "provider": "Bandcamp",
+      "result": "Three public top-level searches reached a client challenge. No bypass was attempted; no empty-catalog conclusion."
+    },
+    {
+      "provider": "SoundCloud",
+      "result": "Earlier separate investigation found matching full-duration metadata but no actual playback in three official-widget attempts. Not repeated or presented as a working source.",
+      "priorReport": "iritsi-background-alternative-research-2026-10-22.json"
+    }
+  ],
+  "reports": [
+    "iritsi-alea-direct-audio-browser-2026-10-22.json",
+    "iritsi-alea-direct-audio-browser-cors-retest-2026-10-22.json",
+    "iritsi-alea-browser-rms-metadata-detached-buffer-observer-initial-2026-10-22.json",
+    "iritsi-alea-browser-rms-metadata-2026-10-22.json",
+    "iritsi-alea-browser-rms-metadata-final-2026-10-22.json",
+    "iritsi-audius-jamendo-browser-catalog-2026-10-22.json",
+    "iritsi-bandcamp-public-search-2026-10-22.json",
+    "iritsi-internet-archive-browser-search-2026-10-22.json",
+    "iritsi-katxiporreta-exact-album-source-2026-10-22.json",
+    "iritsi-alea-hidden-tab-normal-flags-2026-10-22.json",
+    "audius-general-provider-audio-browser-2026-10-22.json"
+  ],
+  "observerCorrections": [
+    "The first CORS result was a test bug: Fetch Response.status is a property, not a function. A separate retest proves HTTP206 and readable 1024 bytes.",
+    "The first RMS probe read ArrayBuffer.byteLength after decodeAudioData detached it, yielding an invalid zero size. The original is preserved under an explicit observer-initial filename. A separate final fetch records the byte count and SHA256 before decoding."
+  ],
+  "integrationPlanIfVersionVerified": "A possible curated-source integration was assessed but is not being prioritized after the user clarified they want broad searchable platform catalogs. No active source registry or provider adapter has been shipped.",
+  "productChanged": false,
+  "newBuildPublished": false,
+  "runtimeBackendAdded": false,
+  "mediaFileStoredOrRedistributed": false,
+  "signedUrlsOrSecretsPersisted": false,
+  "wholeSongOriginalMasterVerified": false,
+  "backgroundRequirementSolvedInInstalledPwa": false,
+  "userSourcePreference": {
+    "clarificationVerbatim": "Pero esa fuente no es un repositorio de fuentes como YouTube o SoundCloud",
+    "platformExamplesVerbatim": "Amazon music, YouTube music, SoundCloud, Spotify...",
+    "interpretation": "Prioritize searchable broad music-platform catalogs rather than a one-off ALEA song entry. The vocals answer does not establish original-master identity or authorize treating the ad-hoc source as a catalog solution."
+  }
+}

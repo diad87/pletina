@@ -1,0 +1,68 @@
+{
+  "checkedAt": "2026-10-22T20:42:06.944Z",
+  "scope": "Primary official documentation review only; no account creation, credentials, API playback authentication, product edits, backend, proxy, or DRM workaround.",
+  "amazonMusic": {
+    "webApiExists": true,
+    "webApiVersionsReviewed": [
+      "V1 current",
+      "V2 preview"
+    ],
+    "developerAccess": "Closed beta. Security Profile must be enabled by Amazon Music; access is limited to approved developers and production integration must be validated.",
+    "login": "Login with Amazon OAuth 2.0. Catalog and playback scopes are separate; generic LWA registration does not grant Music access.",
+    "staticPwaLoginTechnicallyDocumented": true,
+    "staticLoginFlow": "LWA browser-based authorization code grant with PKCE; client_secret is omitted and token exchange occurs in browser. No refresh token; reauthentication required after access token expiry.",
+    "fullPlaybackModel": "Authorized queue/playback API returns expiring playbackInformation including protocol, format, URL, licenseURL/licenseHeaders and requires reporting playback events. This is not a public clear MP3 catalog.",
+    "consumerAccount": "Customer authentication and applicable account entitlement are required. Exact plan/market permissions must be checked for the approved integration; no general assumption that every account can play every track on demand.",
+    "browserCorsVerified": false,
+    "fullPlaybackVerified": false,
+    "physicalAndroidVerified": false,
+    "physicalIPhoneVerified": false,
+    "backgroundOrScreenOffVerified": false,
+    "pwaFeasibility": "Conditional on Amazon approval and supported licensed playback/browser stack; do not present backend as universally required for OAuth, or present current static PWA integration as verified.",
+    "sources": [
+      {
+        "url": "https://developer.amazon.com/docs/music/API_web_LWA.html",
+        "supports": "Closed beta, approval/enabled Security Profile, customer consent, Music scopes."
+      },
+      {
+        "url": "https://developer.amazon.com/docs/login-with-amazon/authorization-code-grant.html",
+        "supports": "Option 2 browser-based PKCE without client_secret; no refresh token."
+      },
+      {
+        "url": "https://developer.amazon.com/docs/music/API_playback_overview_v2.html",
+        "supports": "Playback scope, queue/event lifecycle, streaming and DRM playbackInformation."
+      },
+      {
+        "url": "https://developer.amazon.com/docs/music/get_started_program-overview.html",
+        "supports": "Program approval and no further onboarding on deprecated Device API."
+      }
+    ]
+  },
+  "additionalBoundedFindings": {
+    "jamendo": {
+      "actualBrowserCorsReadable": true,
+      "officialTestingClientSuspended": true,
+      "errorCode": 11,
+      "playbackVerified": false,
+      "emptyCatalogClaimed": false,
+      "productionCredential": "Must obtain own registered client_id; no borrowed keys or official test ID for production.",
+      "catalogLimit": "Alternative independent catalog; no claim to substitute the mainstream catalogs requested.",
+      "report": "jamendo-bandcamp-catalog-browser-2026-10-22.json"
+    },
+    "bandcamp": {
+      "officialSubsonicApiAnnounced": "2026-07-16",
+      "scope": "Authenticated fan collection already purchased, not global free catalog.",
+      "actualPreauthPingBrowserCorsReadable": false,
+      "authenticatedLibraryPlaybackVerified": false,
+      "source": "https://blog.bandcamp.com/2026/07/16/discover-improvements-and-subsonic-implementation/"
+    },
+    "audiomack": {
+      "officialDocs": "https://audiomack.com/data-api/docs",
+      "documentedAuth": "OAuth 1.0a. Official non-authenticated read example still signs using consumer key and consumer secret.",
+      "browserWithoutSecretValidated": false,
+      "streamingUrls": "Official play endpoint returns expiring MP3 source; not tested without own application credentials.",
+      "claimLimit": "Documented API exists, but no safe pure-static secretless integration has been validated."
+    }
+  },
+  "productChanged": false
+}
