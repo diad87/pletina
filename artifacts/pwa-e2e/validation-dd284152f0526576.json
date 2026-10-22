@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-22T13:53:11.679Z",
+  "build": "dd284152f0526576",
+  "sourceCommit": "82faa01710ee2f3b46df7ceed2274faa8040b304",
+  "runnerCommit": "9a845b1d2df9bf46047c30a5de9c35b0eb7b82ed",
+  "nativeReference": "4b5691ff50d659fbd048f5a9cff1ddfa91c22a79",
+  "changes": [
+    "Installed Home preserves the document and Audio after single and double Back, including same-task and first-popstate inputs. Routes and overlays retain priority; no Android Home/minimize command is claimed.",
+    "Two root guards and deferred restoration read current validated history state and target Home without entering the Forward branch. Old 923 sessions migrate; BFCache restoration has unit coverage.",
+    "Restored native artist/podcast byline links in mobile PWA. Song title playback and artist detail are tested independently while retaining the requested song-search section.",
+    "Shared style, TrackList, NowPlaying, MiniPlayer, Transport and QueuePanel match the native source exactly. BottomNav retains the same four tabs with accessibility annotations."
+  ],
+  "unit": {
+    "pass": 393,
+    "fail": 0,
+    "skipped": 0,
+    "navigationIncluded": 46,
+    "report": "artifacts/pwa-e2e/unit-dd284152f0526576.txt"
+  },
+  "staticAndBuildChecks": {
+    "svelteErrors": 0,
+    "svelteWarnings": 0,
+    "typescriptExitCode": 0,
+    "pwaBuildExitCode": 0,
+    "nativeFrontendBuildExitCode": 0,
+    "nativeFrontendScope": "Native frontend build passed with the shared TrackList restoration. Subsequent root repair is web-only; no APK or Rust binary build is claimed."
+  },
+  "browser": {
+    "counts": {
+      "pass": 205,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 5
+    },
+    "total": 210,
+    "missingChecks": 0,
+    "noBrowserFailuresOrBlocks": true,
+    "everyBrowserCasePassed": false,
+    "report": "artifacts/pwa-e2e/coverage-dd284152f0526576.json",
+    "scope": "Rows are actual executed checks, including grouped actions. A failed grouped check does not prove later actions ran. Browser layout emulation, synthetic providers, virtual clocks and DOM gestures do not verify physical operating systems or cars."
+  },
+  "standalone": {
+    "counts": {
+      "pass": 35,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "report": "artifacts/pwa-e2e/back-root-library-dd284152f0526576-final/summary.json",
+    "shortPass": 11,
+    "shortReport": "artifacts/pwa-e2e/back-root-short-dd284152f0526576/summary.json",
+    "browserUIBack": {
+      "status": "blocked",
+      "scope": "Desktop browser keyboard accelerator control remains separate from History API traversal and physical Android Back."
+    },
+    "forwardAppObservation": "The protected root does not exit the app. Back/Forward route restoration passed; BFCache recovery remains unit coverage, not a phone claim.",
+    "scope": "Desktop Chrome app mode and normal-browser control, real Audio/History API; no Android system Back/Home/minimize claim."
+  },
+  "update": {
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-dd284152f0526576.json",
+    "previousDistribution": "92345453b622660a",
+    "scope": "Real service worker, IndexedDB and CacheStorage. Independent legacy migration uses a fresh disposable Chrome process with the same version/options, without prior ServiceWorker CDP or receiver instrumentation. Seeded WAV validates persistence and route bytes, not provider audio playback.",
+    "cleanup": {
+      "previousBrowserClosed": true,
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    }
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "bee125e255472bd791ad5db3ddc48ea3a969c85d",
+    "tree": "c370d711a22f52acde234cef3ad17123a2c5a040",
+    "source_hash": "0ce089fb8dfed8c859a2990f646bc6c628bd0d2a2bdf1e2403826dffb66af1f8",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "dd284152f0526576",
+    "status": "published-and-http-verified",
+    "publicFilesPassed": 22,
+    "publicFilesFailed": 0,
+    "report": "artifacts/pwa-deploy/public-files-dd284152f0526576.json",
+    "liveSelectedSongPass": 3,
+    "liveSelectedSongFail": 0,
+    "liveReport": "artifacts/pwa-port/browser-public-dd284152f0526576.json",
+    "liveScope": "Desktop Chrome with live providers and decoder progress; no physical speaker or phone verification."
+  },
+  "assets": {
+    "initialBytes": 41790,
+    "onDemandBytes": 472779,
+    "compressed": false
+  },
+  "preservedControls": {
+    "manifest": "artifacts/pwa-e2e/preserved-controls-dd284152f0526576.json",
+    "manifestSha256": "46e5c69feb7addad7951cacfcebaf1ccf43b8050341408fa62c3b4349b45c48a",
+    "entries": 10,
+    "explanation": "The first candidate ebfa kept Audio alive but its same-task double Back could stall at a root boundary (10/11 short regression). Deferred/coalesced restoration fixes the tested Chrome race; the HTML control is desktop only and does not identify the physical Xiaomi cause. The first integrated dd run retained all Back passes but read the artist while local playback was still loading (34/35). The final runner waits for ready playback without changing metadata assertions or product code."
+  },
+  "platformStatus": {
+    "androidPhysical": "Pending for dd284152f0526576. Historical Xiaomi 15T Pro report concerns prior exit behavior without an observed build; it does not validate the new protected single/double Back.",
+    "iphonePhysical": "Pending: no physical iPhone available.",
+    "androidAuto": "Not implemented in this PWA distribution.",
+    "carPlay": "Not implemented in this PWA distribution.",
+    "allRequestedPlatformsVerified": false,
+    "androidSystemBackVerified": false,
+    "iphonePhysicalVerified": false
+  },
+  "backendAdded": false,
+  "browserSuiteRunnerCommit": "82faa01710ee2f3b46df7ceed2274faa8040b304",
+  "uiSourceComparison": {
+    "report": "artifacts/pwa-e2e/ui-parity-dd284152f0526576.json",
+    "byteIdenticalFiles": 6,
+    "files": 7,
+    "pixelParityVerified": false,
+    "physicalPhoneParityVerified": false
+  },
+  "nativeWrapperAdded": false
+}

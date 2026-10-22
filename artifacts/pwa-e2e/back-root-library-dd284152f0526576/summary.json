@@ -1,0 +1,5491 @@
+{
+  "schemaVersion": 1,
+  "build": "dd284152f0526576",
+  "startedAt": "2026-10-22T13:43:06.023Z",
+  "runKind": "compiled-application-back-regression",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "profiles": [
+    {
+      "build": "dd284152f0526576",
+      "checks": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "startedAt": "2026-10-22T13:43:10.493Z",
+          "status": "pass",
+          "signal": {
+            "standalone": true,
+            "browser": false,
+            "navigatorStandalone": false
+          },
+          "finishedAt": "2026-10-22T13:43:11.211Z"
+        },
+        {
+          "name": "library.navigation: four tabs, browser history, reload and viewport",
+          "startedAt": "2026-10-22T13:43:11.218Z",
+          "status": "pass",
+          "sameURL": true,
+          "restoredQuery": true,
+          "viewport": {
+            "width": 393,
+            "document": 393,
+            "height": 852,
+            "bottom": 852,
+            "navHeight": 63.9375
+          },
+          "finishedAt": "2026-10-22T13:43:12.546Z"
+        },
+        {
+          "name": "library.discovery: home cards and empty history",
+          "startedAt": "2026-10-22T13:43:12.547Z",
+          "status": "pass",
+          "discoveryCards": true,
+          "initiallyEmptyHistory": true,
+          "finishedAt": "2026-10-22T13:43:14.064Z"
+        },
+        {
+          "name": "library.search: tracks, artists, albums and expanded results",
+          "startedAt": "2026-10-22T13:43:14.065Z",
+          "status": "pass",
+          "tracks": 12,
+          "artists": 2,
+          "albums": 3,
+          "titleStartedTrackId": 101,
+          "artistOpenedWithoutPlayback": true,
+          "pausedBeforeHistoryThreshold": true,
+          "historyRemainedEmpty": true,
+          "audioAfterArtist": [
+            {
+              "paused": true,
+              "time": 0.269852,
+              "duration": 12,
+              "error": null
+            }
+          ],
+          "finishedAt": "2026-10-22T13:43:18.565Z"
+        },
+        {
+          "name": "library.search: natural song de artist retries the empty literal query",
+          "startedAt": "2026-10-22T13:43:18.566Z",
+          "status": "pass",
+          "naturalQuery": "Canción QA Uno de Artista QA Uno",
+          "selectedTrackId": 101,
+          "title": "Canción QA Uno",
+          "interceptedTrackRequests": 2,
+          "artistOpenedWithoutPlayback": true,
+          "finishedAt": "2026-10-22T13:43:20.543Z"
+        },
+        {
+          "name": "library.search: empty results and partial-provider retry remain explicit",
+          "startedAt": "2026-10-22T13:43:20.544Z",
+          "status": "pass",
+          "emptyState": true,
+          "partialResultsUsable": true,
+          "retriedFailedSection": true,
+          "finishedAt": "2026-10-22T13:43:21.915Z"
+        },
+        {
+          "name": "library.artist: detail, favorites and discography filters",
+          "startedAt": "2026-10-22T13:43:21.916Z",
+          "status": "pass",
+          "artist": "Artista QA Uno",
+          "favorite": true,
+          "filters": [
+            "Todo",
+            "Álbumes1",
+            "Sencillos y EP1"
+          ],
+          "finishedAt": "2026-10-22T13:43:23.584Z"
+        },
+        {
+          "name": "library.album: detail, save, pin and library persistence",
+          "startedAt": "2026-10-22T13:43:23.585Z",
+          "status": "pass",
+          "album": "Disco QA Uno",
+          "tracks": 4,
+          "savedAndPinnedAcrossReload": true,
+          "finishedAt": "2026-10-22T13:43:27.392Z"
+        },
+        {
+          "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+          "startedAt": "2026-10-22T13:43:27.392Z",
+          "status": "pass",
+          "menuBackClosedOnlyOverlay": true,
+          "songArtistAndAlbumNavigation": true,
+          "pinnedTileAndRecentArtistOpened": true,
+          "directHomeUnpin": true,
+          "surpriseEnabledOnlyWithSavedAlbum": true,
+          "finishedAt": "2026-10-22T13:43:35.024Z"
+        },
+        {
+          "name": "library.favorites: like, search, clear and remove one song",
+          "startedAt": "2026-10-22T13:43:35.025Z",
+          "status": "pass",
+          "accentInsensitiveSearch": true,
+          "removedOnlyOne": true,
+          "remaining": "Canción QA Uno",
+          "finishedAt": "2026-10-22T13:43:38.994Z"
+        },
+        {
+          "name": "library.playlists: create, rename/cancel and pin",
+          "startedAt": "2026-10-22T13:43:38.995Z",
+          "status": "pass",
+          "playlistName": "E2E Biblioteca Renombrada",
+          "renameCancel": true,
+          "pinned": true,
+          "finishedAt": "2026-10-22T13:43:41.297Z"
+        },
+        {
+          "name": "library.playlists: append album, duplicate entries, filter and reorder",
+          "startedAt": "2026-10-22T13:43:41.298Z",
+          "status": "pass",
+          "duplicateEntriesIndependent": true,
+          "filteredReorderDisabled": true,
+          "reorderedAndPersisted": true,
+          "remaining": 5,
+          "finishedAt": "2026-10-22T13:43:46.935Z"
+        },
+        {
+          "name": "library.csv: visible Spotify limit, invalid CSV, retry, review and save",
+          "startedAt": "2026-10-22T13:43:46.936Z",
+          "status": "pass",
+          "found": 3,
+          "omitted": 1,
+          "retriedProviderFailure": true,
+          "repeatedEntriesPreserved": true,
+          "spotifyUnsupportedVisible": true,
+          "expectedHandledNetworkErrors": 0,
+          "finishedAt": "2026-10-22T13:43:51.192Z"
+        },
+        {
+          "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+          "startedAt": "2026-10-22T13:43:51.193Z",
+          "status": "pass",
+          "oversizedFileRejected": true,
+          "allOmittedCannotSave": true,
+          "blankNameCannotSave": true,
+          "importAnotherReset": true,
+          "cancelledPausedImport": true,
+          "createdPlaylist": false,
+          "finishedAt": "2026-10-22T13:43:57.429Z"
+        },
+        {
+          "name": "library.csv-in-flight: cancel ignores the old response while a new import reaches review",
+          "startedAt": "2026-10-22T13:43:57.430Z",
+          "status": "pass",
+          "heldCatalogResponseConsumed": true,
+          "oldImportCancelled": true,
+          "newReviewPreserved": true,
+          "matchingRequests": 2,
+          "remainingOldTracksRequested": false,
+          "persistedLibraryUnchanged": true,
+          "reloadUnchanged": true,
+          "finishedAt": "2026-10-22T13:43:59.249Z"
+        },
+        {
+          "name": "library.csv-in-flight: leaving the view prevents late matching, saving or navigation",
+          "startedAt": "2026-10-22T13:43:59.249Z",
+          "status": "pass",
+          "heldCatalogResponseConsumed": true,
+          "navigationPreserved": true,
+          "destination": "home",
+          "matchingRequests": 1,
+          "remainingOldTracksRequested": false,
+          "reopenedImportEmpty": true,
+          "persistedLibraryUnchanged": true,
+          "reloadUnchanged": true,
+          "finishedAt": "2026-10-22T13:44:02.500Z"
+        },
+        {
+          "name": "library.csv-storage: a real transaction abort rolls back partial save and permits retry",
+          "startedAt": "2026-10-22T13:44:02.501Z",
+          "status": "pass",
+          "fault": {
+            "database": "pletina-web-library",
+            "store": "entries",
+            "attempts": 1,
+            "successfulNativeWrites": 1,
+            "transactionAborts": 1
+          },
+          "realTransactionRollback": true,
+          "noLateNavigationOnFailure": true,
+          "reviewPreserved": true,
+          "retrySavedReviewedTracks": true,
+          "retryPersistedAcrossReload": true,
+          "temporaryPlaylistDeleted": true,
+          "finishedAt": "2026-10-22T13:44:07.216Z"
+        },
+        {
+          "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+          "startedAt": "2026-10-22T13:44:07.217Z",
+          "status": "pass",
+          "listedCandidateChosen": true,
+          "invalidInputRejected": true,
+          "manualChoiceRemembered": true,
+          "selected": "Canción QA Tres",
+          "finishedAt": "2026-10-22T13:44:12.096Z"
+        },
+        {
+          "name": "library.youtube: preview, edit, save/update and remove personal link",
+          "startedAt": "2026-10-22T13:44:12.097Z",
+          "status": "pass",
+          "invalidLinkRejected": true,
+          "changeLinkResetReview": true,
+          "blankTitleCannotSave": true,
+          "editedMetadata": true,
+          "sameVideoUpdatedWithoutDuplicate": true,
+          "removed": true,
+          "finishedAt": "2026-10-22T13:44:15.457Z"
+        },
+        {
+          "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+          "startedAt": "2026-10-22T13:44:15.457Z",
+          "status": "fail",
+          "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Cargando audio…'\n- 'E2E Canal Anterior'\n",
+          "state": {
+            "path": "/pletina/application/index.71304390716e8195.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "Historial"
+            ],
+            "navigation": {
+              "index": 24,
+              "route": {
+                "name": "history"
+              },
+              "historyLength": 50
+            },
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ],
+            "notices": [
+              "Historial borrado"
+            ],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": true,
+                  "local": true,
+                  "time": 8.799354,
+                  "duration": 12,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 4,
+                  "error": null
+                }
+              ],
+              "events": [
+                {
+                  "type": "waiting",
+                  "index": 0,
+                  "at": 79710,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "loadstart",
+                  "index": 0,
+                  "at": 79710,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "durationchange",
+                  "index": 0,
+                  "at": 79713,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "loadedmetadata",
+                  "index": 0,
+                  "at": 79713,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "seeking",
+                  "index": 0,
+                  "at": 79713,
+                  "time": 8.672878,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 79721,
+                  "time": 8.672878,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "seeked",
+                  "index": 0,
+                  "at": 79721,
+                  "time": 8.672878,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "playing",
+                  "index": 0,
+                  "at": 79722,
+                  "time": 8.672878,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 79890,
+                  "time": 8.799354,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                },
+                {
+                  "type": "pause",
+                  "index": 0,
+                  "at": 79890,
+                  "time": 8.799354,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": true
+                }
+              ],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 393,
+              "height": 852,
+              "documentWidth": 393
+            }
+          },
+          "screenshot": "20-library-youtube-edited-metadata-survives-old-playback-copies-and-downl.png",
+          "finishedAt": "2026-10-22T13:44:35.857Z"
+        },
+        {
+          "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+          "startedAt": "2026-10-22T13:44:35.859Z",
+          "status": "pass",
+          "languageFilters": [
+            "es",
+            "all",
+            "en"
+          ],
+          "rssEpisodes": 2,
+          "savedAcrossReload": true,
+          "rssLeftSavedForMediaScenarios": true,
+          "finishedAt": "2026-10-22T13:44:43.152Z"
+        },
+        {
+          "name": "library.persistence: saved artist/album and pin removal survive reload",
+          "startedAt": "2026-10-22T13:44:43.153Z",
+          "status": "pass",
+          "artistRemoved": true,
+          "albumRemoved": true,
+          "albumUnpinned": true,
+          "finishedAt": "2026-10-22T13:44:46.416Z"
+        },
+        {
+          "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+          "startedAt": "2026-10-22T13:44:46.418Z",
+          "status": "pass",
+          "cancelKeptList": true,
+          "deletedPlaylistAndPin": true,
+          "importedPlaylistKeptForMediaScenarios": "E2E CSV Duplicados",
+          "finishedAt": "2026-10-22T13:44:50.272Z"
+        },
+        {
+          "name": "library.contextual-playlist: create from a song and delete the temporary list",
+          "startedAt": "2026-10-22T13:44:50.274Z",
+          "status": "pass",
+          "createdFromTrackMenu": true,
+          "firstTrackPreserved": true,
+          "temporaryListDeleted": true,
+          "finishedAt": "2026-10-22T13:44:53.547Z"
+        },
+        {
+          "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+          "startedAt": "2026-10-22T13:44:53.548Z",
+          "status": "pass",
+          "injectedHttpStatus": 503,
+          "failedFeedRequests": 2,
+          "retryFeedRequests": 2,
+          "recoveredRssEpisodes": 2,
+          "youtubeFallbackUsed": false,
+          "genuineEmptyIsNotAnError": true,
+          "realReloadClearedMemoryCache": true,
+          "finishedAt": "2026-10-22T13:44:58.479Z"
+        },
+        {
+          "name": "back.setup: native window mode, controlled RSS and real audio",
+          "startedAt": "2026-10-22T13:44:58.482Z",
+          "status": "pass",
+          "signal": {
+            "standalone": true,
+            "browser": false,
+            "navigatorStandalone": false
+          },
+          "root": {
+            "index": 0,
+            "name": "home",
+            "overlay": false,
+            "pops": 28
+          },
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 10.648336,
+          "physicalInstallationVerified": false,
+          "finishedAt": "2026-10-22T13:45:11.985Z"
+        },
+        {
+          "name": "back.root: isolated history Back stays protected and keeps audio and document",
+          "startedAt": "2026-10-22T13:45:11.987Z",
+          "status": "pass",
+          "observations": [
+            {
+              "events": [
+                {
+                  "sequence": 29,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121547
+                },
+                {
+                  "sequence": 30,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121552
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 30,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 10.817031
+            },
+            {
+              "events": [
+                {
+                  "sequence": 31,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121711
+                },
+                {
+                  "sequence": 32,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121719
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 32,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 10.969707
+            },
+            {
+              "events": [
+                {
+                  "sequence": 33,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121863
+                },
+                {
+                  "sequence": 34,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 121872
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 34,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 11.138172
+            },
+            {
+              "events": [
+                {
+                  "sequence": 35,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 122026
+                },
+                {
+                  "sequence": 36,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 122032
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 36,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 11.286216
+            },
+            {
+              "events": [
+                {
+                  "sequence": 37,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 122179
+                },
+                {
+                  "sequence": 38,
+                  "session": "mvjlcu6r-4rc1crlmug2",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 122189
+                }
+              ],
+              "index": 0,
+              "name": "home",
+              "overlay": false,
+              "pops": 38,
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 11.451403
+            }
+          ],
+          "finishedAt": "2026-10-22T13:45:12.787Z"
+        },
+        {
+          "name": "back.search-forward: Back reaches Home and Forward restores search",
+          "startedAt": "2026-10-22T13:45:12.789Z",
+          "status": "pass",
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 13.69965,
+          "finishedAt": "2026-10-22T13:45:15.034Z"
+        },
+        {
+          "name": "back.overlays: queue then now-playing close without losing Forward",
+          "startedAt": "2026-10-22T13:45:15.037Z",
+          "status": "pass",
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 15.322835,
+          "finishedAt": "2026-10-22T13:45:16.652Z"
+        },
+        {
+          "name": "back.overlay-traversal: go(-2) crosses the boundary and closes the overlay",
+          "startedAt": "2026-10-22T13:45:16.653Z",
+          "status": "pass",
+          "events": [
+            {
+              "sequence": 51,
+              "session": "mvjlcu6r-4rc1crlmug2",
+              "index": 0,
+              "overlay": false,
+              "boundary": true,
+              "protected": true,
+              "route": "home",
+              "at": 126359
+            },
+            {
+              "sequence": 52,
+              "session": "mvjlcu6r-4rc1crlmug2",
+              "index": 0,
+              "overlay": false,
+              "boundary": false,
+              "protected": true,
+              "route": "home",
+              "at": 126366
+            }
+          ],
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 16.462553,
+          "finishedAt": "2026-10-22T13:45:17.802Z"
+        },
+        {
+          "name": "back.reload: overlay reload restores paused state and one Back reaches Home",
+          "startedAt": "2026-10-22T13:45:17.804Z",
+          "status": "pass",
+          "documentReloaded": true,
+          "restoredPaused": true,
+          "forwardRestored": true,
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 18.16749,
+          "finishedAt": "2026-10-22T13:45:20.053Z"
+        },
+        {
+          "name": "back.double-root: same-task and first-popstate double Back keep the app and audio alive",
+          "startedAt": "2026-10-22T13:45:20.055Z",
+          "status": "pass",
+          "observations": [
+            {
+              "input": {
+                "calls": [
+                  {
+                    "at": 129811,
+                    "index": 0,
+                    "boundary": false,
+                    "pops": 0
+                  },
+                  {
+                    "at": 129811,
+                    "index": 0,
+                    "boundary": false,
+                    "pops": 0
+                  }
+                ],
+                "sequence": "same-task",
+                "sameTask": true
+              },
+              "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+              "historyLength": 28,
+              "events": [
+                {
+                  "sequence": 1,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 129815
+                },
+                {
+                  "sequence": 2,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 129815
+                },
+                {
+                  "sequence": 3,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 129829
+                }
+              ],
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 18.488379,
+              "root": {
+                "index": 0,
+                "name": "home",
+                "overlay": false,
+                "pops": 3
+              },
+              "installedAppRetained": true
+            },
+            {
+              "input": {
+                "calls": [
+                  {
+                    "at": 130148,
+                    "index": 0,
+                    "boundary": false,
+                    "pops": 3
+                  },
+                  {
+                    "at": 130152,
+                    "index": 0,
+                    "boundary": true,
+                    "pops": 4
+                  }
+                ],
+                "sequence": "first-popstate",
+                "sameTask": false,
+                "firstPopstate": {
+                  "at": 130152,
+                  "boundary": true,
+                  "index": 0,
+                  "pops": 4
+                },
+                "secondCallInFirstPopstate": true
+              },
+              "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+              "historyLength": 28,
+              "events": [
+                {
+                  "sequence": 4,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 130152
+                },
+                {
+                  "sequence": 5,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": true,
+                  "protected": true,
+                  "route": "home",
+                  "at": 130159
+                },
+                {
+                  "sequence": 6,
+                  "session": "mvjlflyl-tzdbu8rxqys",
+                  "index": 0,
+                  "overlay": false,
+                  "boundary": false,
+                  "protected": true,
+                  "route": "home",
+                  "at": 130166
+                }
+              ],
+              "sameDocument": true,
+              "sameAudio": true,
+              "advanced": true,
+              "time": 18.649051,
+              "root": {
+                "index": 0,
+                "name": "home",
+                "overlay": false,
+                "pops": 6
+              },
+              "installedAppRetained": true
+            }
+          ],
+          "freshExternalPredecessor": true,
+          "actualBrowserHistoryTraversal": true,
+          "physicalAndroidBackClaimed": false,
+          "applicationExited": false,
+          "systemHomeOrMinimizeClaimed": false,
+          "finishedAt": "2026-10-22T13:45:20.759Z"
+        }
+      ],
+      "errors": [],
+      "mode": "native-app-window",
+      "browserVersion": "153.0.8010.52",
+      "initialWindowSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "profile": "chromium-android-layout",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "engine": "chromium",
+      "kind": "native-desktop-app-window-mobile-layout",
+      "physical": false,
+      "startedAt": "2026-10-22T13:43:10.372Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and service worker retained.",
+      "lifecycle": [
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "c16c448a-dfc7-4c09-b16b-f6b9b09e4f2a",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 70,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/__qa_back_control__/before",
+          "documentToken": "41fd578a-6443-42aa-b0c8-a58496ed9711",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 117,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "e1298b05-b17a-49d5-8a4d-35c30eb2e0f2",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 140,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "eb6f6fd8-0a38-4560-8298-f728e80b34c5",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 428,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "eb6f6fd8-0a38-4560-8298-f728e80b34c5",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 1953,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "eb6f6fd8-0a38-4560-8298-f728e80b34c5",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 1956,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "eb6f6fd8-0a38-4560-8298-f728e80b34c5",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 1965,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "eb6f6fd8-0a38-4560-8298-f728e80b34c5",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 1969,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "914e1612-85db-4cf1-b37a-73626e6c7bdd",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 2027,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "914e1612-85db-4cf1-b37a-73626e6c7bdd",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 2053,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "914e1612-85db-4cf1-b37a-73626e6c7bdd",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 2056,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 13,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 15543,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 17,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 18807,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 18811,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 18811,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 18819,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 19320,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 17,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20073,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20076,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20077,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20084,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20541,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20564,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 20567,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 26062,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 26065,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 26644,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 26647,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 26,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 28510,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 26,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 28513,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 32944,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 32948,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 33627,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 33630,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 34345,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjlcu6r-gv9nc4f7kzc",
+          "at": 34348,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 36362,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "cf0d96d1-8a62-4fa7-a4bf-da7cbcae00d4",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 36366,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "4c2adbc9-1e95-449d-99ba-4c2262c58712",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 36457,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a8c01346-3483-4ff5-898a-ccb90b2e1f60",
+          "index": 19,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 40707,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "4ea87b6e-126a-4134-810f-c37db6c91199",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 48779,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "60d7f88d-c92e-4355-bb7b-6d836f86f73b",
+          "index": 28,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 52019,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 54822,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 55668,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 31,
+          "boundary": false,
+          "rootId": "mvjldloq-h1l1g34v76r",
+          "at": 55671,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 58259,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 58263,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 59004,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 59009,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 60217,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "081c9c45-0b07-4dec-bc2b-2d97eaacee8c",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 60225,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 60509,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 61442,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 61445,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 18,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 64956,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 18,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 64963,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 67709,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 67712,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 71193,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 71195,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 27,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 74627,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d1ab3679-6e4b-437b-b08d-834482ab2bcf",
+          "index": 27,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 74630,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "540923a6-ecf6-4eb0-b4da-5ffe38742d41",
+          "index": 29,
+          "boundary": false,
+          "rootId": "mvjle2ki-bst6cb08hng",
+          "at": 76004,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "540923a6-ecf6-4eb0-b4da-5ffe38742d41",
+          "index": 19,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 81678,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "540923a6-ecf6-4eb0-b4da-5ffe38742d41",
+          "index": 19,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 81681,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "540923a6-ecf6-4eb0-b4da-5ffe38742d41",
+          "index": 22,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 83896,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "540923a6-ecf6-4eb0-b4da-5ffe38742d41",
+          "index": 22,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 83900,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "00d2eae1-e630-446a-93f6-16d8a0c5e3e2",
+          "index": 28,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 91589,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 32,
+          "boundary": false,
+          "rootId": "mvjleiky-kupzu5f942",
+          "at": 95077,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 97534,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 97538,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 98216,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 98218,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 101519,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 101522,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 21,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 102568,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2c4c6440-e38d-47fc-8e11-0b1d6e7bde6d",
+          "index": 21,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 102572,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 104570,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 28,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111107,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 27,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111111,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 27,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111489,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 26,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111492,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 26,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111858,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 25,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 111862,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 25,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112221,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112225,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 24,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112588,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112592,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 23,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112956,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 22,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 112959,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 22,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 113321,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 21,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 113325,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 21,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 113688,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 113691,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 20,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114057,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 19,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114060,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 19,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114422,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 18,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114427,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 18,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114787,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 17,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 114790,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 17,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115156,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115159,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 16,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115522,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 15,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115525,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 15,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115889,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 14,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 115891,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 14,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116255,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 13,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116259,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 13,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116622,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 12,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116626,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 12,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116991,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 11,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 116994,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 11,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 117357,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 10,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 117360,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 10,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 117722,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 9,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 117726,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 9,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118092,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 8,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118096,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 8,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118459,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 7,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118463,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 7,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118825,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 6,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 118828,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 6,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119197,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 5,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119201,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 5,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119557,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 4,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119560,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 4,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119941,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 3,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 119944,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 3,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 120308,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 2,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 120312,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 2,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 120674,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 120678,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121042,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121047,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121547,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121552,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121711,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121719,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121863,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 121872,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 122026,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 122032,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 122179,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 122189,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 123259,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 123264,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 123741,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 123744,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 124116,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 124119,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 124725,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125287,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125291,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125292,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125301,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125314,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125318,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125328,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125330,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125330,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125339,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125714,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125717,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125717,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 125724,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126325,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126359,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126366,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126491,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126494,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126494,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126501,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126866,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126869,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126869,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 126875,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127361,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127364,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127364,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "e2bce4d5-c433-4176-bfb4-062a794ef9c3",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127369,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127921,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127931,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 127936,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128407,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128411,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128411,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128419,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128896,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128902,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128934,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128942,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128985,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 128991,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 129126,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 129129,
+          "stage": null
+        },
+        {
+          "type": "history.forward",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 129129,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "2482f796-9c2e-4743-8a7e-baba800fb180",
+          "index": 1,
+          "boundary": false,
+          "rootId": "mvjlewhi-eks9fokfisi",
+          "at": 129135,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/__qa_back_control__/before",
+          "documentToken": "912afed1-4fa7-4cbe-b60c-8d4a18bbb072",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 129630,
+          "stage": "fresh-predecessor"
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129678,
+          "stage": "fresh-predecessor"
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129811,
+          "stage": "double-same-task"
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129811,
+          "stage": "double-same-task"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129815,
+          "stage": "double-same-task"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129815,
+          "stage": "double-same-task"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 129829,
+          "stage": "double-same-task"
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 130148,
+          "stage": "double-first-popstate"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 130152,
+          "stage": "double-first-popstate"
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 130152,
+          "stage": "double-first-popstate"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": true,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 130159,
+          "stage": "double-first-popstate"
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "a2be9ba3-2ff4-420f-82d2-6bd597f98390",
+          "index": 0,
+          "boundary": false,
+          "rootId": "mvjlflyl-71q3fe4ckgl",
+          "at": 130166,
+          "stage": "double-first-popstate"
+        }
+      ],
+      "bootstrapStage": "application-open",
+      "modeSignal": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "counts": {
+        "pass": 31,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "libraryFirst": true,
+      "youtubeMetadataFailure": {
+        "stage": "reload and local downloaded playback",
+        "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Cargando audio…'\n- 'E2E Canal Anterior'\n",
+        "state": {
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "online": true,
+          "title": "Pletina",
+          "headings": [
+            "Descargas",
+            "En este navegador · 1 canción · 0 MB"
+          ],
+          "navigation": {
+            "index": 17,
+            "route": {
+              "name": "downloads"
+            },
+            "historyLength": 50
+          },
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ],
+          "notices": [],
+          "audio": {
+            "instances": [
+              {
+                "index": 0,
+                "srcPresent": true,
+                "local": true,
+                "time": 8.672878,
+                "duration": 12,
+                "paused": false,
+                "ended": false,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 1,
+                "error": null
+              }
+            ],
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "at": 79710,
+                "time": 0,
+                "paused": false,
+                "hidden": false,
+                "error": null,
+                "local": true
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "at": 79710,
+                "time": 0,
+                "paused": false,
+                "hidden": false,
+                "error": null,
+                "local": true
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "at": 79713,
+                "time": 0,
+                "paused": false,
+                "hidden": false,
+                "error": null,
+                "local": true
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "at": 79713,
+                "time": 0,
+                "paused": false,
+                "hidden": false,
+                "error": null,
+                "local": true
+              },
+              {
+                "type": "seeking",
+                "index": 0,
+                "at": 79713,
+                "time": 8.672878,
+                "paused": false,
+                "hidden": false,
+                "error": null,
+                "local": true
+              }
+            ],
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ]
+          },
+          "viewport": {
+            "width": 393,
+            "height": 852,
+            "documentWidth": 393
+          }
+        }
+      },
+      "backControlStage": "double-first-popstate",
+      "finalState": {
+        "path": "/pletina/application/index.71304390716e8195.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Buenas tardes",
+          "Sugeridos para ti",
+          "Artistas que te pueden gustar",
+          "Tus playlists",
+          "Visto recientemente"
+        ],
+        "navigation": {
+          "index": 0,
+          "route": {
+            "name": "home"
+          },
+          "historyLength": 28
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [
+          "Usa Inicio del móvil para seguir escuchando en segundo plano."
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 18.659161,
+              "duration": 90,
+              "paused": false,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 129801,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 129801,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 129805,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 129805,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 129805,
+              "time": 18.183628,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 129814,
+              "time": 18.183628,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 129814,
+              "time": 18.183628,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 129816,
+              "time": 18.183628,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 130074,
+              "time": 18.422495,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 3,
+          "api.deezer.com/chart/0/artists": 3,
+          "images.pletina.test/cover.svg": 48,
+          "api.deezer.com/search/artist": 28,
+          "api.deezer.com/search/album": 28,
+          "api.deezer.com/search/track": 41,
+          "music.youtube.com/youtubei/v1/search": 17,
+          "www.youtube.com/youtubei/v1/search": 6,
+          "www.youtube.com/youtubei/v1/player": 8,
+          "fixture.googlevideo.com/audio/qaAudio001a": 2,
+          "api.deezer.com/artist/7": 2,
+          "api.deezer.com/artist/7/albums": 11,
+          "api.deezer.com/artist/7/top": 2,
+          "api.deezer.com/album/11": 4,
+          "api.deezer.com/album/11/tracks": 4,
+          "api.deezer.com/artist/7/related": 9,
+          "api.deezer.com/artist/8/albums": 9,
+          "open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M": 1,
+          "i.ytimg.com/vi/qaAudio008h/mqdefault.jpg": 2,
+          "i.ytimg.com/vi/qaAudio003c/mqdefault.jpg": 2,
+          "i.ytimg.com/vi/qaAudio003c/hqdefault.jpg": 16,
+          "fixture.googlevideo.com/audio/qaAudio003c": 2,
+          "itunes.apple.com/search": 5,
+          "feeds.pletina.test/rss": 5,
+          "feeds.pletina.test/english": 5,
+          "music.youtube.com/youtubei/v1/browse": 3,
+          "media.pletina.test/episode-0.m4a": 3
+        },
+        "requests": [
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/top",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/top",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "open.spotify.com",
+            "path": "/embed/playlist/37i9dQZF1DXcBWIGoYBM5M",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script",
+            "catalogGate": "delivered"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script",
+            "catalogGate": "delivered"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio008h/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio008h/mqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "i.ytimg.com",
+            "path": "/vi/qaAudio003c/hqdefault.jpg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch",
+            "injectedFailure": "rss-http-503"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch",
+            "injectedFailure": "rss-http-503"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/album/11/tracks",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/browse",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/7/related",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/artist/8/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-22T13:45:20.999Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    },
+    {
+      "build": "dd284152f0526576",
+      "checks": [
+        {
+          "name": "back.open: compiled application retains the native window mode",
+          "startedAt": "2026-10-22T13:45:21.500Z",
+          "status": "pass",
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "finishedAt": "2026-10-22T13:45:22.340Z"
+        },
+        {
+          "name": "back.setup: native window mode, controlled RSS and real audio",
+          "startedAt": "2026-10-22T13:45:22.341Z",
+          "status": "pass",
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "root": {
+            "index": 0,
+            "name": "home",
+            "overlay": false,
+            "pops": 3
+          },
+          "sameDocument": true,
+          "sameAudio": true,
+          "advanced": true,
+          "time": 1.431913,
+          "physicalInstallationVerified": false,
+          "finishedAt": "2026-10-22T13:45:26.806Z"
+        },
+        {
+          "name": "back.browser: normal root Back can leave the application",
+          "startedAt": "2026-10-22T13:45:26.807Z",
+          "status": "pass",
+          "previousDocumentRestored": true,
+          "applicationExited": true,
+          "signal": {
+            "standalone": false,
+            "browser": true,
+            "navigatorStandalone": false
+          },
+          "physicalAndroidBackClaimed": false,
+          "finishedAt": "2026-10-22T13:45:26.875Z"
+        }
+      ],
+      "errors": [],
+      "mode": "normal-browser",
+      "browserVersion": "153.0.8010.52",
+      "profile": "chromium-android-layout",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "engine": "chromium",
+      "kind": "desktop-browser-mobile-layout",
+      "physical": false,
+      "startedAt": "2026-10-22T13:45:21.376Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and service worker retained.",
+      "lifecycle": [
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "94fab8a1-48ab-45f0-a861-8d1ecf66e63e",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 67,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "1fb598b6-9b03-4f41-954a-57519e55b23d",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 148,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 0,
+          "boundary": false,
+          "rootId": null,
+          "at": 521,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 3,
+          "boundary": false,
+          "rootId": null,
+          "at": 4117,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 2,
+          "boundary": false,
+          "rootId": null,
+          "at": 4118,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 2,
+          "boundary": false,
+          "rootId": null,
+          "at": 4484,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 1,
+          "boundary": false,
+          "rootId": null,
+          "at": 4486,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 1,
+          "boundary": false,
+          "rootId": null,
+          "at": 4852,
+          "stage": null
+        },
+        {
+          "type": "popstate",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 0,
+          "boundary": false,
+          "rootId": null,
+          "at": 4853,
+          "stage": null
+        },
+        {
+          "type": "history.back",
+          "persisted": null,
+          "path": "/pletina/application/index.71304390716e8195.html",
+          "documentToken": "d98b62d4-eb29-4f3f-925e-5ee506bcc9a4",
+          "index": 0,
+          "boundary": false,
+          "rootId": null,
+          "at": 5334,
+          "stage": null
+        },
+        {
+          "type": "pageshow",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "54bfd994-e798-4ca9-ab76-859ad8e94184",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 5366,
+          "stage": null
+        },
+        {
+          "type": "pagehide",
+          "persisted": false,
+          "path": "/pletina/",
+          "documentToken": "54bfd994-e798-4ca9-ab76-859ad8e94184",
+          "index": null,
+          "boundary": false,
+          "rootId": null,
+          "at": 5403,
+          "stage": null
+        }
+      ],
+      "bootstrapStage": "application-open",
+      "modeSignal": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "counts": {
+        "pass": 3,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "finalState": {
+        "path": "/pletina/",
+        "online": true,
+        "title": "Pletina",
+        "headings": [],
+        "navigation": {
+          "historyLength": 7
+        },
+        "tabs": [],
+        "notices": [],
+        "audio": {
+          "instances": [],
+          "events": [],
+          "handlers": []
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 6,
+          "api.deezer.com/search/artist": 2,
+          "api.deezer.com/search/album": 2,
+          "api.deezer.com/search/track": 2,
+          "itunes.apple.com/search": 1,
+          "music.youtube.com/youtubei/v1/search": 1,
+          "feeds.pletina.test/rss": 1,
+          "feeds.pletina.test/english": 1,
+          "media.pletina.test/episode-0.m4a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-22T13:45:27.073Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "errors": [],
+  "scope": "Real headless Chromium desktop app window (--app), native display-mode and Audio, compiled app/SW/IDB, controlled HTTP provider responses. No OS installation, phone or Android system Back is asserted.",
+  "physicalInstallationVerified": false,
+  "androidSystemBackVerified": false,
+  "signalMocked": false,
+  "keyboardEvidence": "AltLeft inside App is handled by App.onKeydown and calls nav.back. It is not a browser Back actuator. Only the two plain HTML control documents assess the headless browser accelerator.",
+  "protocolReference": "https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setEmulatedMedia",
+  "distributionSnapshot": "An isolated temporary copy is served throughout the run. The source distribution is not modified.",
+  "modeProbe": [
+    {
+      "appArgument": false,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": false,
+        "browser": true,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    },
+    {
+      "appArgument": true,
+      "browserVersion": "153.0.8010.52",
+      "before": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterCdpOverride": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "afterReset": {
+        "standalone": true,
+        "browser": false,
+        "navigatorStandalone": false
+      },
+      "keyboardBack": {
+        "status": "blocked",
+        "navigated": false,
+        "reason": "Headless Chrome delivered trusted DOM key events but did not execute the browser Back accelerator, including in a normal-window positive control.",
+        "observed": {
+          "path": "/__qa_back_control__/after",
+          "keys": [
+            {
+              "key": "Alt",
+              "alt": true,
+              "trusted": true
+            },
+            {
+              "key": "ArrowLeft",
+              "alt": true,
+              "trusted": true
+            }
+          ]
+        },
+        "physicalBackClaimed": false,
+        "apiControlTraversed": true
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true,
+      "browserProcessClosed": true,
+      "closeErrors": []
+    }
+  ],
+  "browserUIBack": {
+    "status": "blocked",
+    "scope": "Desktop browser keyboard accelerator control, separate from DOM History API traversal and physical Android Back."
+  },
+  "allRequestedBackInputsVerified": false,
+  "serverClosed": true,
+  "temporarySiteRemoved": true,
+  "finishedAt": "2026-10-22T13:45:27.077Z",
+  "counts": {
+    "pass": 34,
+    "fail": 1,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "passed": false,
+  "applicationChecksExecuted": true,
+  "applicationPassed": false
+}
