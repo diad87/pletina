@@ -220,3 +220,25 @@ preparación de 6747,1 ms, frente a 10911,5 ms en la réplica anterior; los lím
 no cambian. Es una medición por versión sin app, JNI, ExoPlayer, audio ni red,
 no rendimiento de un dispositivo ARM físico. Se repitieron los tres archivos
 completos, idénticos a sus referencias y decodificables sin errores.
+
+La [tercera ronda](informe-arranque-frio-2026-10-23.md#ronda-3-parser-acotado-controles-y-fallos-conservados),
+`bef47a7`, especializa dos operaciones del parser privado y exige versiones y
+opciones exactas al generar. El par serial QuickJS baja de 4026,4 a 3798,1 ms
+(5,7 %), con firmas y límites intactos. No acredita una mejora estable del total:
+control frío 6/6 Native frente a 4/6 del candidato, con dos respuestas sólo SABR.
+No se encontró un cambio lógico que explique esas respuestas, pero los fallos
+se conservan y la recuperación SABR pasa a ser la siguiente prioridad.
+El ensayo de dieciséis sondeos no dio una ventaja estable y se retiró; siguen
+los ocho habituales. Se corrige además el entorno del banco, que confundía
+variable ausente y vacía, y se conserva la primera comparación invalidada.
+
+Los 30 temas habituales dieron Native sin Legacy e IDs correctos, mediana
+630,85 ms y rango 474,1–1218,1 ms. El usuario acepta aproximadamente 600 ms como
+base provisional de ese camino; no se garantiza ese máximo por canción.
+300 ms queda como aspiración y 3,5 s fríos infantiles sigue pendiente.
+Pasan 430 pruebas JavaScript, 210 Rust y checks Android. El harness Android
+mantiene salida exacta, pero 7073,8 ms frente a 6747,1 ms en réplicas únicas
+no demuestra mejora móvil. La descarga completa inicial fue 2/3; la réplica
+diagnóstica obtuvo 3/3 idénticos y decodificables, sin borrar el primer fallo.
+No se usan Premium ni nuevos datos publicitarios para aprobar este cambio.
+El bundle nativo requiere una app nueva; no llega por OTA ni cambia la PWA.

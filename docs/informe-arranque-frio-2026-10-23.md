@@ -1,9 +1,10 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Mejora comprobada; 3,5 segundos totales y 300 ms siguen pendientes.** La segunda
-ronda mide 4,499–5,504 s desde antes del IPC hasta `playing`, sin búsqueda, con un
-vídeo por proceso frío. El usuario acepta cada mejora sustancial sobre la base;
-no se presenta 1,25 s como requisito logrado. Continúa el
+**Ronda 3: preparación algo menor, sin mejora estable acreditada del total.**
+El usuario acepta unos **600 ms como base provisional del camino habitual**;
+la nueva tanda tiene mediana 631 ms, no una cota de 600 ms por canción.
+El arranque infantil de 3,5 s y su recuperación SABR siguen pendientes.
+Se conserva el historial de cada ronda; no se presenta 1,25 s como requisito logrado. Continúa el
 [informe infantil](informe-contenido-infantil-2026-10-23.md), sin sustituir su historial.
 
 ## Ronda 1: cambios y límites
@@ -207,3 +208,130 @@ La ronda queda cerrada con mejora sustancial; siguen pendientes 3,5 s totales,
 300 ms, más corpus y escucha continua/dispositivos reales. No se accedió a
 Premium ni se midieron anuncios vistos/saltados. No cambia la aprobación de
 Oficial ni se publican una app, receta o scripts OTA.
+
+## Ronda 3: parser acotado, controles y fallos conservados
+
+`bef47a7` especializa dos operaciones del parser privado: acceso al token y
+asignación de los offsets de cada nodo. No cambia el lexer ni las validaciones
+de sintaxis. El generador exige youtubei.js 18.1.0, Meriyah 7.4.0 y la llamada
+exacta con sus opciones; una deriva detiene la generación para revisión.
+Se mantienen los presupuestos 192 MiB/12 s, 32 MiB/1 s y pila de 512 KiB.
+El bundle mide 296967 bytes, SHA-256
+`2a3f0b44c121d1e5663b04d59097cf132ce77991ff799fe64c5c27c32e2f53c6`.
+
+En el par QuickJS serial invertido, la preparación pasó de **4026,4 a 3798,1 ms**
+(−5,7 %, una réplica por versión). Los perfiles previos daban aproximadamente
+7 %. Otro par tuvo un control atípico y el primero coincidió con pruebas Rust:
+se conservan, pero no justifican anunciar 29 % ni una ganancia igual en la app.
+Cuatro fixtures y sus cuatro formatos conservan script, ST y firmas/`n` exactos.
+Pasan seis pruebas QuickJS de aislamiento y 28 casos de sintaxis/error adicionales.
+
+Se añade un reloj común sólo al diagnóstico del banco, sin URLs ni datos de
+cuenta. También se corrige la restauración del entorno: Windows/.NET dejaba
+presente una variable al asignarle `null`; ahora se elimina explícitamente si
+antes no existía, preservando valores vacíos y no vacíos que sí existían.
+Las tres situaciones y diez casos de perfiles/snapshots pasan.
+
+### App: comparación final válida
+
+Dos intentos por canción y binario, alternando el orden; cada uno abre un
+proceso nuevo, sin sesión y con `FreshDecoder`. Ambos usan los ocho turnos CDN
+habituales. Son builds **debug**, sin búsqueda. `playing` corresponde a Audio
+silenciado, avance, salto al 80 % y final tras saltar a la cola; no escucha
+continua completa ni medición acústica. Los rangos sólo incluyen éxitos.
+
+| Canción | Control: Native / intentos | Control: IPC → `playing` | Candidato: Native / intentos | Candidato: IPC → `playing` |
+|---|---:|---:|---:|---:|
+| Epoitaitaye | 2/2 | 4957–5775 ms | 2/2 | 4805–5826 ms |
+| Maite Zaitut! | 2/2 | 5714–9137 ms | 1/2 | 4834 ms |
+| Pupu Eta Lore | 2/2 | 4744–4838 ms | 1/2 | 4755 ms |
+
+No hay una mejora estable del tiempo total demostrada. Epo tiene mediana
+5366 → 5315,5 ms; Maite y Pupu sólo tienen un éxito de dos en el candidato.
+Los dos fallos son `NATIVE_EMBEDDED_SABR_ONLY`: las dos respuestas del servidor,
+incluida la renovación acotada, carecen de URL directa. La clasificación ocurre
+antes del descifrado; no se encontró una relación lógica con estos cambios,
+pero eso no borra los fallos ni demuestra su causa. El banco `native-direct`
+no ejecuta el respaldo Legacy. En total: diez inicios/saltos/colas correctos,
+22 sondas estrictas, doce respuestas 403 y ningún 429. Un 403 no identifica
+un anuncio. Ninguna fila medida cumple los 3,5 s.
+
+El control es el binario inmutable `4d6a29eab5a228a5303fe80fd94a0193c4b177133378934c78596af64ccbee5b`
+de `0aa9e1c`. El candidato final es `f5c849bba5c964e1879924252e2b5b9f48c79490e37436fca3fe3c039a260f18`,
+compilado sobre `bdf6a6c` con el código que pasó a `bef47a7`; el arreglo posterior
+de restauración pertenece al runner externo, no al ejecutable.
+
+Una comparación inicial de doce casos con el candidato experimental `0d6003ef…`
+queda invalidada para atribuir mejoras al parser: aunque su metadata decía
+ocho turnos, la variable vacía activaba dieciséis. Se conserva separada y no
+se usa en la tabla. Los otros ensayos fríos tampoco se borran: el primer
+Epo dio 4343 ms, la tanda siguiente 6227/8646/4222 ms; la comprobación final
+dio Epo 4918 ms, un fallo SABR de Maite, Pupu 4658 ms y Maite 5474 ms al repetir.
+Su variación impide escoger sólo el mejor tiempo como resultado general.
+
+### Regresión, archivos y Android
+
+Los 30 temas de `real_albums` arrancaron por Native, sin Legacy, con **30/30 IDs
+esperados**: mínimo 474,1, mediana 630,85 y máximo 1218,1 ms, incluida búsqueda.
+El usuario acepta aproximadamente 600 ms provisionalmente para este camino;
+no significa que todos los casos estén por debajo de 600 ms. El informe bruto
+mantiene sus treinta incumplimientos del antiguo umbral de 300 ms, que queda
+como aspiración; no se reescriben resultados históricos. No mide EOF/publicidad.
+
+La descarga completa inicial verificó dos archivos y falló al resolver Maite
+en 11,4 s; su código genérico no permite asignar una causa más precisa. Una única
+réplica diagnóstica obtuvo los tres archivos, idénticos a las referencias
+independientes, y FFmpeg `-xerror` decodificó los tres sin error. En esa réplica
+Maite necesitó seis sondas, con primer 206 a los 4,003 s. Este éxito no corrige
+retroactivamente el primer fallo. Se conservan los hashes de audio de la ronda 2.
+
+Pasan **430 pruebas JavaScript, 210 Rust (27 ignoradas)**, tipos sin errores
+ni avisos, generación reproducible y checks Android arm64/x86_64 sin avisos
+nuevos. El harness Android 15 x86_64 pasa seis pruebas y cuatro formatos exactos.
+Preparó en **7073,8 ms**, frente a 6747,1 ms anteriores: réplicas únicas, sin
+ganancia Android acreditada. No ejecuta APK, JNI, ExoPlayer, audio ni red.
+El AVD pide 2 GiB y el emulador lo eleva a 2560 MiB; quedó cerrado al acabar.
+
+| Perfil / campaña nueva | Resultado | Anuncios vistos / saltados / espera |
+|---|---|---|
+| Sin sesión: comparación infantil final | Control 6/6 Native; candidato 4/6 | No medidos; 403 no se cuenta como anuncio |
+| Sin sesión: 30 temas habituales | 30/30 Native, 30 IDs correctos, mediana 631 ms | No medidos |
+| Sin sesión: archivos completos | Primera tanda 2/3; réplica diagnóstica 3/3 idénticos | Sin campaña publicitaria |
+| Premium | No se usó en esta ronda | No medidos |
+
+### Ensayos descartados y siguiente paso
+
+Dieciséis sondeos sólo en BENCH hicieron 35 peticiones y recibieron 31 respuestas
+403, frente a 14 y diez con ocho sondeos; ocho casos correctos, ningún 429.
+Sólo uno aprovechó un intervalo nuevo. No se demuestra una ganancia estable
+y se retira el experimento del código, conservando evidencias locales.
+Tampoco se acorta la lectura de la página: admitir antes perdería comprobaciones
+de duplicados, límite y final del cuerpo, sin ahorro temporal medido.
+
+Un prototipo separado importa sólo las raíces AST necesarias: 822 ms dentro de
+QuickJS y 62,9 MB asignados, con salida exacta. **No incluye el parser WASM** ni
+prueba un presupuesto combinado: retiene 44 MB de JSON fuera de la VM. No entra
+en producción. Harían falta exportación selectiva acotada, límites conjuntos,
+cancelación, fuel y pruebas adversariales antes de medir una mejora completa.
+
+Prioridad siguiente: diagnosticar y recuperar respuestas sólo SABR sin perder
+las comprobaciones; después reducir más el parser y medir 3,5 s en un corpus
+mayor. Los 600 ms habituales son una base provisional aceptada, no una nueva
+aprobación de la captura progresiva. No cambian yt-dlp predeterminado, Propio,
+Legacy, la receta ni los scripts OTA. Este código requiere una app nueva;
+no actualiza la PWA. `origin/main` avanzó a `1868d4f` (youtubei.js 18.3.0):
+queda por integrar y revisar esa dependencia antes de publicar.
+
+Las evidencias permanecen ignoradas en `capture-bench.local`, sin medios,
+perfiles, tokens ni respuestas completas en Git. Referencias de procedencia:
+
+| Artefacto local | SHA-256 |
+|---|---|
+| `round3-cold-final-pair-analysis.json.local` | `9e2b9ddf14ec13c8f4056eb1630c7ffec618a9a2d2411b732ed80ab66cb5f631` |
+| `round3-cold-final-pair-index.json.local` | `de9fa79f614e50516a7d9b6899cef02885baaf2a42632c172065ce7c42432b8b` |
+| `round3-cold-pair-confounded-analysis.json.local` | `027484d8d2174c3524ce63880100de4724bccdb15bae8580ade7a6db5a010bbd` |
+| `round3-poll-analysis.json.local` | `4cc9f1eb7bfdbc8ce9c3042483b58308c011362730ec18d7fa5ff6886ec6483d` |
+| `result-20261023-124433-1474c077.json` | `b99d74c34f615fd187b174f2787392eefdf465d66961cd3a7647c6b2f19349ae` |
+| `round3-complete-files-diagnostic.log.local` | `1a1d052d1f4468ffd85a40537e4f24de4b670a3b1c389433c4dba921273c3a26` |
+| `round3-complete-audio-verified.json.local` | `70c579f356daf637b5e1d6d334fe5957a6971096c1dea217237ecb1760a851b2` |
+| `android-decoder-harness.local/result-20261023-124743-f92e52d7.json.local` | `03a26b274a0ab82e4ea7f3c4d6acd64b9c2469eb551251bc32b2a29a8513ffd2` |

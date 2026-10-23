@@ -73,6 +73,30 @@ harness Android x86_64 exacto: preparación 6747,1 ms frente a 10911,5 ms en una
 réplica por versión, sin cambiar límites. No fue reproducción de la app Android
 ni prueba en ARM físico.
 
+La tercera ronda, `bef47a7`, reduce aproximadamente un 5,7 % la preparación
+QuickJS en un par serial, conservando firmas y límites. Añade guardas exactas
+al generador, un reloj de diagnóstico común y restauración correcta de las
+variables del banco. La comparación fría final no acredita mejora estable del
+total: control 6/6 Native frente a candidato 4/6, con dos `SABR_ONLY` tras renovar
+la configuración. El primer ensayo de comparación quedó invalidado por una
+variable vacía que activaba otro calendario; se conserva separado. El ensayo
+de dieciséis sondeos duplicó peticiones sin ganancia estable y se retiró.
+La prioridad pasa a diagnosticar/recuperar SABR y después reducir más el parser.
+
+El usuario acepta **unos 600 ms como base provisional del camino habitual**.
+La nueva regresión dio 30/30 Native e IDs esperados, mediana 630,85 ms y rango
+474,1–1218,1 ms: no es una cota de 600 ms para cada canción. El umbral histórico
+de 300 ms queda como aspiración y sus incumplimientos no se borran de los raws.
+Los 3,5 s de arranque infantil siguen pendientes. Pasan 430 pruebas JavaScript,
+210 Rust y checks Android; el harness móvil es exacto, pero su única réplica de
+7073,8 ms no acredita mejora frente a 6747,1 ms. La descarga completa inicial
+falló en Maite; una réplica diagnóstica consiguió los tres archivos idénticos,
+decodificados sin errores. No hubo nuevas pruebas Premium ni campaña de anuncios.
+El [informe de la ronda 3](informe-arranque-frio-2026-10-23.md#ronda-3-parser-acotado-controles-y-fallos-conservados)
+conserva tablas, fallos y procedencia. No se publica ni se promueve Oficial.
+Antes de publicar queda integrar `origin/main` `1868d4f` y revisar youtubei.js
+18.3.0 frente al analizador privado fijado a 18.1.0.
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
