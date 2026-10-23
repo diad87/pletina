@@ -333,7 +333,6 @@ struct RequestChanges {
     visitor: bool,
     flags: bool,
     client_context: bool,
-    embedded_context: bool,
     player: bool,
     signature_timestamp: bool,
     effective_request: bool,
@@ -345,7 +344,6 @@ fn request_changes(previous: &Ready, next: &Ready, id: &str) -> RequestChanges {
         visitor: previous.config.visitor != next.config.visitor,
         flags: previous.config.flags != next.config.flags,
         client_context: previous.config.client_extra != next.config.client_extra,
-        embedded_context: previous.config.embedded_context != next.config.embedded_context,
         player: previous.config.player != next.config.player,
         signature_timestamp: previous.decoder.signature_timestamp
             != next.decoder.signature_timestamp,
@@ -683,14 +681,6 @@ fn eligible(value: &Value, id: &str) -> Result<(), Error> {
     Ok(())
 }
 
-#[derive(Clone, PartialEq, serde::Deserialize)]
-struct EmbeddedPlayerContext {
-    #[serde(rename = "embeddedPlayerEncryptedContext")]
-    encrypted: String,
-    #[serde(rename = "ancestorOriginsSupported")]
-    ancestor_origins_supported: bool,
-}
-
 #[derive(Clone, PartialEq)]
 struct Config {
     version: String,
@@ -698,7 +688,6 @@ struct Config {
     flags: String,
     player: reqwest::Url,
     client_extra: Map<String, Value>,
-    embedded_context: Option<EmbeddedPlayerContext>,
 }
 
 fn bounded_string(value: &Value, max: usize) -> Result<String, Error> {
@@ -725,15 +714,14 @@ enum ConfigField {
     DeviceExperiment,
     Rollout,
     InstallData,
-    EmbeddedContext,
 }
 
 impl ConfigField {
-    const ALL: [Self; 15] = [
+    const ALL: [Self; 14] = [
         Self::Version, Self::Visitor, Self::HostFlags, Self::PlayerUrl,
         Self::Platform, Self::FormFactor, Self::OsName, Self::OsVersion,
         Self::BrowserName, Self::BrowserVersion, Self::Region,
-        Self::DeviceExperiment, Self::Rollout, Self::InstallData, Self::EmbeddedContext,
+        Self::DeviceExperiment, Self::Rollout, Self::InstallData,
     ];
 
     fn code(self) -> &'static str {
@@ -752,7 +740,6 @@ impl ConfigField {
             Self::DeviceExperiment => "DEVICE_EXPERIMENT",
             Self::Rollout => "ROLLOUT",
             Self::InstallData => "INSTALL_DATA",
-            Self::EmbeddedContext => "EMBEDDED_CONTEXT",
         }
     }
 }
@@ -788,8 +775,6 @@ fn config_error_code(error: &Error) -> String {
     if matches!(suffix,
         "CONFIG_OBJECT_TYPE" | "CONFIG_IDENTITY" | "CONFIG_AMBIGUOUS"
         | "CONFIG_VERSION_FORMAT" | "PLAYER_URL" | "JSON" | "JSON_COUNT" | "SIZE"
-        | "CONFIG_EMBEDDED_ANCESTOR_TYPE" | "CONFIG_EMBEDDED_ANCESTOR_MISSING"
-        | "CONFIG_EMBEDDED_CONTEXT_JSON"
     ) {
         return suffix.to_owned();
     }
@@ -843,54 +828,7 @@ fn published_client(client: Option<&Value>) -> Result<Map<String, Value>, Error>
     Ok(extra)
 }
 
-// Only the two fields published together by this anonymous embed document are
-// retained. This opaque context is not identity/MFK/AST proof and is never logged.
-fn published_embedded_context(third_party: Option<&Value>) -> Result<Option<EmbeddedPlayerContext>, Error> {
-    let Some(third_party) = third_party else { return Ok(None) };
-    let third_party = third_party.as_object().ok_or_else(|| fail("CONFIG_EMBEDDED_CONTEXT_TYPE"))?;
-    let Some(context) = third_party.get("embeddedPlayerContext") else { return Ok(None) };
-    let context = context.as_object().ok_or_else(|| fail("CONFIG_EMBEDDED_CONTEXT_TYPE"))?;
-    let encrypted = config_string(
-        context.get("embeddedPlayerEncryptedContext"), ConfigField::EmbeddedContext, 4096, true,
-    )?;
-    let ancestor_origins_supported = context.get("ancestorOriginsSupported")
-        .ok_or_else(|| fail("CONFIG_EMBEDDED_ANCESTOR_MISSING"))?
-        .as_bool().ok_or_else(|| fail("CONFIG_EMBEDDED_ANCESTOR_TYPE"))?;
-    // No user/request/tracking/visibility/autoplay fields are copied or invented.
-    Ok(Some(EmbeddedPlayerContext { encrypted, ancestor_origins_supported }))
-}
-
-// Validate duplicate keys on the new subtree before Value can collapse them.
-// Unknown top-level/client fields are skipped by serde, never copied or logged.
-fn validate_embedded_context_keys(html: &str) -> Result<(), Error> {
-    #[derive(serde::Deserialize)]
-    struct Envelope {
-        #[serde(rename = "INNERTUBE_CONTEXT")]
-        _context: Option<Context>,
-    }
-    #[derive(serde::Deserialize)]
-    struct Context {
-        #[serde(rename = "thirdParty")]
-        _third_party: Option<ThirdParty>,
-    }
-    #[derive(serde::Deserialize)]
-    struct ThirdParty {
-        #[serde(rename = "embeddedPlayerContext")]
-        _embedded: Option<EmbeddedPlayerContext>,
-    }
-    if html.len() > LIMIT { return Err(fail("SIZE")); }
-    for (count, (offset, _)) in html.match_indices("ytcfg.set(").take(65).enumerate() {
-        if count >= 64 { return Err(fail("JSON_COUNT")); }
-        let tail = html[offset + "ytcfg.set(".len()..].trim_start();
-        let mut parsed = serde_json::Deserializer::from_str(tail).into_iter::<Envelope>();
-        parsed.next().ok_or_else(|| fail("CONFIG_EMBEDDED_CONTEXT_JSON"))?
-            .map_err(|_| fail("CONFIG_EMBEDDED_CONTEXT_JSON"))?;
-    }
-    Ok(())
-}
-
 fn config(html: &str) -> Result<Config, Error> {
-    validate_embedded_context_keys(html)?;
     let mut selected = Map::new();
     // Whitelist configuration only; do not propagate request/user/tracking contexts.
     for value in json_after(html, "ytcfg.set(")? {
@@ -954,7 +892,6 @@ fn config(html: &str) -> Result<Config, Error> {
         flags: config_string(context.get("encryptedHostFlags"), ConfigField::HostFlags, 32 * 1024, false)?,
         player: player_url(&config_string(context.get("jsUrl"), ConfigField::PlayerUrl, 2048, false)?)?,
         client_extra: published_client(client)?,
-        embedded_context: published_embedded_context(value.pointer("/INNERTUBE_CONTEXT/thirdParty"))?,
     })
 }
 
@@ -1496,12 +1433,6 @@ fn body(config: &Config, id: &str, sts: u32) -> Value {
         .as_object_mut()
         .unwrap()
         .extend(config.client_extra.clone());
-    if let Some(context) = &config.embedded_context {
-        request["context"]["thirdParty"]["embeddedPlayerContext"] = json!({
-            "embeddedPlayerEncryptedContext":context.encrypted,
-            "ancestorOriginsSupported":context.ancestor_origins_supported,
-        });
-    }
     request
 }
 
@@ -3570,132 +3501,6 @@ mod tests {
             )
             .is_err()
         );
-    }
-
-
-    fn config_with_embedded_context(token: &str, supported: bool) -> Config {
-        let mut value = config_value();
-        value["INNERTUBE_CONTEXT"]["thirdParty"] = json!({"embeddedPlayerContext":{
-            "embeddedPlayerEncryptedContext":token,"ancestorOriginsSupported":supported
-        }});
-        super::config(&format!("ytcfg.set({value});")).unwrap()
-    }
-
-    #[test]
-    fn embedded_context_is_atomic_bounded_and_has_only_closed_diagnostics() {
-        let parsed = config_with_embedded_context("SYNTHETIC_OPAQUE_CONTEXT", false);
-        let request = body(&parsed, ID, 20700);
-        assert_eq!(request["context"]["thirdParty"]["embeddedPlayerContext"], json!({
-            "embeddedPlayerEncryptedContext":"SYNTHETIC_OPAQUE_CONTEXT", "ancestorOriginsSupported":false
-        }));
-        assert_eq!(request["context"]["thirdParty"]["embedUrl"], "https://www.reddit.com/");
-        assert!(cfg().embedded_context.is_none());
-        let mut value = config_value();
-        value["INNERTUBE_CONTEXT"]["thirdParty"] = json!({
-            "embedUrl":"PRIVATE_REMOTE_URL", "unknownAccount":"PRIVATE_ACCOUNT",
-            "embeddedPlayerContext":{"embeddedPlayerEncryptedContext":"SYNTHETIC_OPAQUE_CONTEXT",
-                "ancestorOriginsSupported":true,"visibilityFraction":1,"autoplayIntended":true,"private":"PRIVATE"}
-        });
-        value["INNERTUBE_CONTEXT"]["client"] = json!({"originalUrl":"PRIVATE_ORIGINAL_URL"});
-        let parsed_extra = super::config(&format!("ytcfg.set({value});")).unwrap();
-        let request = body(&parsed_extra, ID, 20700);
-        assert_eq!(request["context"]["thirdParty"]["embeddedPlayerContext"].as_object().unwrap().len(), 2);
-        assert!(!request.to_string().contains("PRIVATE"));
-        for bad in [json!(null),json!(false),json!({}),json!({"ancestorOriginsSupported":true}),
-            json!({"embeddedPlayerEncryptedContext":"token"}),
-            json!({"embeddedPlayerEncryptedContext":"token","ancestorOriginsSupported":"true"}),
-            json!({"embeddedPlayerEncryptedContext":"","ancestorOriginsSupported":true}),
-            json!({"embeddedPlayerEncryptedContext":"token\nprivate","ancestorOriginsSupported":true}),
-            json!({"embeddedPlayerEncryptedContext":"\u{e9}","ancestorOriginsSupported":true}),
-            json!({"embeddedPlayerEncryptedContext":"x".repeat(4097),"ancestorOriginsSupported":true})] {
-            let mut malformed = config_value();
-            malformed["INNERTUBE_CONTEXT"]["thirdParty"] = json!({"embeddedPlayerContext":bad});
-            let error = super::config(&format!("ytcfg.set({malformed});")).err().unwrap();
-            let code = config_error_code(&error);
-            assert!(code.starts_with("CONFIG_EMBEDDED_"));
-            assert!(!code.contains("private") && code.len()<80);
-        }
-        // Never combine the opaque field from one context with the boolean from another.
-        let mut split = config_value();
-        split["INNERTUBE_CONTEXT"]["thirdParty"] = json!({"embeddedPlayerContext":{
-            "embeddedPlayerEncryptedContext":"FIRST_CONTEXT"
-        }});
-        let later = json!({"INNERTUBE_CONTEXT":{"thirdParty":{"embeddedPlayerContext":{
-            "ancestorOriginsSupported":true
-        }}}});
-        assert!(super::config(&format!("ytcfg.set({split});ytcfg.set({later});")).is_err());
-        let duplicate = r#"ytcfg.set({"INNERTUBE_CONTEXT":{"thirdParty":{"embeddedPlayerContext":{"embeddedPlayerEncryptedContext":"FIRST","embeddedPlayerEncryptedContext":"SECOND","ancestorOriginsSupported":true}}}});"#;
-        assert!(super::config(duplicate).is_err());
-        let duplicate_bool = r#"ytcfg.set({"INNERTUBE_CONTEXT":{"thirdParty":{"embeddedPlayerContext":{"embeddedPlayerEncryptedContext":"FIRST","ancestorOriginsSupported":false,"ancestorOriginsSupported":true}}}});"#;
-        assert!(super::config(duplicate_bool).is_err());
-        let diff = request_changes(&ready(Arc::new(cfg()),20700),&ready(Arc::new(parsed),20700),ID);
-        assert!(diff.embedded_context && diff.effective_request && !diff.signature_timestamp);
-        let diagnostic = serde_json::to_value(diff).unwrap();
-        assert!(diagnostic.as_object().unwrap().values().all(Value::is_boolean));
-        assert!(!diagnostic.to_string().contains("SYNTHETIC"));
-    }
-
-    #[tokio::test]
-    async fn context_only_refresh_changes_actual_second_post_without_new_st_or_player() {
-        for changed in [false,true] {
-            let first = Arc::new(config_with_embedded_context("SYNTHETIC_FIRST",true));
-            let next = Arc::new(config_with_embedded_context(if changed{"SYNTHETIC_SECOND"}else{"SYNTHETIC_FIRST"},true));
-            assert_eq!(first.player,next.player);
-            let cache = cache_with(first.clone());
-            let mut playable = sabr_response();
-            playable["streamingData"]["adaptiveFormats"][0]["signatureCipher"] = cipher_value(AUDIO)["signatureCipher"].clone();
-            let mut responses = vec![response(200,"",sabr_response().to_string().as_bytes())];
-            if changed {responses.push(response(200,"",playable.to_string().as_bytes()));}
-            let (url,server) = local_sequence(responses);
-            let http = local_http();
-            let outcome = resolve_ready(&cache,ID,ready(first.clone(),20700),
-                |selected| {
-                    let http=http.clone();let url=url.clone();
-                    async move {player_response(&http,&url,&selected.config,ID,selected.decoder.signature_timestamp).await}
-                },
-                |_| async {Ok(ready(next.clone(),20700))},
-            ).await;
-            assert_eq!(outcome.is_ok(),changed);
-            let requests = server.join().unwrap();
-            assert_eq!(requests.len(),if changed{2}else{1});
-            for (index,raw) in requests.iter().enumerate() {
-                let actual:Value=serde_json::from_str(raw.split_once("\r\n\r\n").unwrap().1).unwrap();
-                let expected=if index==0{&first}else{&next};
-                assert_eq!(actual,body(expected,ID,20700));
-            }
-            let cached=cache.lock().await.entries[ID].0.clone();
-            assert!(Arc::ptr_eq(&cached,if changed{&next}else{&first}));
-        }
-    }
-
-    #[tokio::test]
-    async fn embedded_context_cache_is_per_video_even_with_identical_decoder_source() {
-        let cache=tokio::sync::Mutex::new(ConfigCache::default());
-        let other="WtTRMAoN2Fw";
-        let mut configs=Vec::new();
-        for (id,token) in [(ID,"SYNTHETIC_FIRST"),(other,"SYNTHETIC_OTHER")] {
-            let mut value=config_value();
-            value["INNERTUBE_CONTEXT"]["thirdParty"]=json!({"embeddedPlayerContext":{
-                "embeddedPlayerEncryptedContext":token,"ancestorOriginsSupported":true
-            }});
-            let html=format!("ytcfg.set({value});");
-            let discovered=configuration_bounded(&cache,id,Instant::now()+Duration::from_secs(1),
-                |_| std::future::ready(Ok(html.clone()))).await.unwrap();
-            configs.push(discovered.config);
-        }
-        assert_eq!(configs[0].player,configs[1].player);
-        assert!(configs[0].embedded_context!=configs[1].embedded_context);
-        for (index,id) in [ID,other].into_iter().enumerate() {
-            let hit=configuration_bounded(&cache,id,Instant::now()+Duration::from_secs(1),
-                |_| std::future::ready(Err(fail("TEST_MUST_NOT_FETCH")))).await.unwrap();
-            assert!(Arc::ptr_eq(&hit.config,&configs[index]));
-            let request=body(&hit.config,id,20700);
-            assert_eq!(request["videoId"],id);
-            assert_eq!(request["context"]["thirdParty"]["embeddedPlayerContext"]["embeddedPlayerEncryptedContext"],
-                if index==0{"SYNTHETIC_FIRST"}else{"SYNTHETIC_OTHER"});
-        }
-        assert!(!invalidate_config(&mut *cache.lock().await,ID,&configs[1]));
-        assert!(Arc::ptr_eq(&cache.lock().await.entries[ID].0,&configs[0]));
     }
 
     #[test]
