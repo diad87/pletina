@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T11:48:00.294Z",
+  "scope": "Independent read-only P1 multi-AAC review; no provider requests, build or product edits.",
+  "sourceCommit": "9e284bdb56934a86d2c2c5f0e86c7cd5d9d6820d",
+  "files": [
+    {
+      "path": "web-port/youtube.ts",
+      "sha256": "ff93282cc3fa0ae8fcfbbddd3f179d7ffcb9c9a7288d7c3cb061325549e9460e"
+    },
+    {
+      "path": "web-port/youtube-p1.ts",
+      "sha256": "8c1b54efa10096f8f434de3fdb86504be75170042a140fb31dfdde964522e31d"
+    },
+    {
+      "path": "scripts/tests/web-p1-engine.test.mjs",
+      "sha256": "fa4de8543492824370db9404671cdd52d946706a15801f856bc88b8dfed31a67"
+    },
+    {
+      "path": "scripts/tests/web-p1-integration.test.mjs",
+      "sha256": "2f9e2d9e115b18c6577237fa35436dd13337a2849da893a76611e3e00e16b8b7"
+    }
+  ],
+  "testRun": {
+    "command": "node --test scripts/tests/web-p1-engine.test.mjs scripts/tests/web-p1-integration.test.mjs scripts/tests/web-p1-parser.test.mjs scripts/tests/web-p1-probe.test.mjs",
+    "passed": 96,
+    "failed": 0
+  },
+  "reviewed": {
+    "allMetadataOriginalPolicy": true,
+    "eligibleBeforeCap4": true,
+    "candidateDecoderIsolation": true,
+    "parallelMetadataProbesAtMost4": true,
+    "typedOutcomesAvoidUnhandledRejections": true,
+    "abortAllAndAwaitCleanupBeforeUrlReturn": true,
+    "checkAfterAsyncCleanup": true
+  },
+  "finding": {
+    "severity": "P2",
+    "location": "web-port/youtube.ts stream(), after result = await p1Stream(...) and before streams.set",
+    "description": "An external abort between p1Stream resolving and the stream continuation can still return and cache a locator for the aborted operation.",
+    "reproducibility": "Loaded the unchanged real integration harness and orchestration. Overrode only the metadata-probe dependency with an async success and a chain of four Promise microtasks before controller.abort(). Added a read-only observation hook directly before streams.set to distinguish abort before cache from cancellation after completion.",
+    "trace": [
+      "probe-return",
+      "abort",
+      "cache-while-aborted",
+      "stream-return"
+    ],
+    "controls": [
+      {
+        "microtaskDepth": 3,
+        "trace": [
+          "probe-return",
+          "abort",
+          "AbortError"
+        ]
+      },
+      {
+        "microtaskDepth": 5,
+        "trace": [
+          "probe-return",
+          "cache-before-abort",
+          "abort",
+          "stream-return"
+        ]
+      }
+    ],
+    "proposedFix": "checkAbort(signal) in stream immediately before cache cleanup/write. Keep the existing check after the asynchronous probe cleanup.",
+    "caveat": "Synthetic deterministic scheduling evidence, not a claim that this caused the reported Ni, Ni, Ni! fallback.",
+    "status": "Fixed by parent in 6a52da89c392e73df969d40250b762601d5334f1; targeted regression rejects before caching."
+  },
+  "limits": {
+    "noProviderNetwork": true,
+    "noPhysicalMobile": true,
+    "noSignedUrlsOrPublicContextValuesPersisted": true,
+    "noAudioPersisted": true
+  },
+  "regression": {
+    "title": "abort between completed P1 cleanup and the public stream continuation cannot cache the locator",
+    "results": [
+      {
+        "source": "9e284bdb56934a86d2c2c5f0e86c7cd5d9d6820d",
+        "pass": false,
+        "message": "Missing expected rejection (AbortError)."
+      },
+      {
+        "source": "6a52da89c392e73df969d40250b762601d5334f1",
+        "pass": true,
+        "message": null
+      }
+    ],
+    "negativeControl": "Explicit Git pin; an earlier HEAD-based comparison was discarded because HEAD had advanced to the fix during the audit.",
+    "productEditsByAuditor": false,
+    "testFile": "scripts/tests/web-p1-integration.test.mjs",
+    "focusedSuite": {
+      "passed": 97,
+      "failed": 0
+    },
+    "fileFrozen": true
+  },
+  "outstandingMaterialFindings": 0
+}

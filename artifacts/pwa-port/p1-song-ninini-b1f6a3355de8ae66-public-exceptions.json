@@ -1,0 +1,491 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T11:42:35.899Z",
+  "expectedBuild": "b1f6a3355de8ae66",
+  "build": "b1f6a3355de8ae66",
+  "query": "Pirritx Porrotx Ni, Ni, Ni!",
+  "expectedTitle": "Ni, Ni, Ni!",
+  "expectedArtist": "Pirritx Porrotx",
+  "runnerSha256": "d4d6f95444dfeb1fb625b987394bcc4e4397a63fc4dfc511ec08eddff4d6d6c1",
+  "sourceSnapshot": "artifacts/pwa-port/p1-song-ui-diagnostic-source-d4d6f95444dfeb1f.mjs",
+  "scope": "Public compiled PWA, real catalog search and trusted play click. Desktop foreground only. Optional debugger timing is not comparable to ordinary runs.",
+  "policy": {
+    "providerMocks": false,
+    "nodeBootstrap": false,
+    "productMethodsReplaced": false,
+    "audioConstructorReplaced": false,
+    "sdkInjected": false,
+    "securityOverrides": false,
+    "autoplayOverrides": false,
+    "rawRecipeSaved": false,
+    "rawMediaUrlsSaved": false,
+    "mediaBytesSaved": false,
+    "exceptionLocalsRead": false,
+    "exceptionPropertiesRead": false,
+    "debuggerPauses": true,
+    "instrumentedTimings": true,
+    "physicalPhone": false,
+    "backgroundVerified": false
+  },
+  "observationRpcCalls": 66,
+  "observationRpcWithGesture": 0,
+  "inputActions": [
+    {
+      "at": "2026-10-23T11:42:36.804Z",
+      "elapsedMs": 905,
+      "kind": "trusted mouse click",
+      "purpose": "open compiled Pletina"
+    },
+    {
+      "at": "2026-10-23T11:42:38.064Z",
+      "elapsedMs": 2165,
+      "kind": "trusted mouse click",
+      "purpose": "focus normal search"
+    },
+    {
+      "at": "2026-10-23T11:42:38.067Z",
+      "elapsedMs": 2168,
+      "kind": "trusted keyboard typing",
+      "characters": 27
+    },
+    {
+      "at": "2026-10-23T11:42:39.143Z",
+      "elapsedMs": 3244,
+      "kind": "trusted mouse click",
+      "purpose": "single normal song play click"
+    },
+    {
+      "at": "2026-10-23T11:42:49.521Z",
+      "elapsedMs": 13622,
+      "kind": "trusted mouse click",
+      "purpose": "pause after native audio observation"
+    }
+  ],
+  "checks": [
+    {
+      "name": "normal song click plays native audio without a video modal",
+      "pass": true,
+      "outcome": "native-audio"
+    }
+  ],
+  "errors": [],
+  "exceptions": [
+    {
+      "at": "2026-10-23T11:42:40.082Z",
+      "elapsedMs": 4183,
+      "category": "YouTubeError",
+      "message": "YouTube no permite reproducir esta fuente de audio en Pletina.",
+      "functions": [
+        {
+          "name": "I",
+          "asset": "youtube-C0AU-eJn.js",
+          "line": 2,
+          "column": 11794
+        },
+        {
+          "name": "R",
+          "asset": "youtube-C0AU-eJn.js",
+          "line": 2,
+          "column": 14333
+        }
+      ]
+    },
+    {
+      "at": "2026-10-23T11:42:47.027Z",
+      "elapsedMs": 11128,
+      "category": "YouTubeError",
+      "message": "YouTube no permite reproducir esta fuente de audio en Pletina.",
+      "functions": [
+        {
+          "name": "I",
+          "asset": "youtube-C0AU-eJn.js",
+          "line": 2,
+          "column": 11794
+        },
+        {
+          "name": "R",
+          "asset": "youtube-C0AU-eJn.js",
+          "line": 2,
+          "column": 14333
+        }
+      ]
+    }
+  ],
+  "providerResponses": [
+    {
+      "at": "2026-10-23T11:42:40.083Z",
+      "elapsedMs": 4184,
+      "client": "VISIONOS",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "playableInEmbed": null,
+      "audioFormatCount": 0,
+      "aac": []
+    },
+    {
+      "at": "2026-10-23T11:42:40.375Z",
+      "elapsedMs": 4476,
+      "client": "WEB_EMBEDDED_PLAYER",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "playableInEmbed": true,
+      "audioFormatCount": 4,
+      "aac": [
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "contentLength": 2034474,
+          "cipherPresent": true,
+          "cipherLength": 1504,
+          "signatureInputLength": 110,
+          "signatureInputHasAsciiControl": false,
+          "directUrlPresent": false,
+          "drc": false,
+          "drmPresent": false,
+          "hasOriginalityMetadata": false
+        }
+      ]
+    },
+    {
+      "at": "2026-10-23T11:42:47.027Z",
+      "elapsedMs": 11128,
+      "client": "VISIONOS",
+      "requestedVideoId": "jQaOoYTyb24",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "playableInEmbed": null,
+      "audioFormatCount": 0,
+      "aac": []
+    },
+    {
+      "at": "2026-10-23T11:42:47.318Z",
+      "elapsedMs": 11419,
+      "client": "WEB_EMBEDDED_PLAYER",
+      "requestedVideoId": "jQaOoYTyb24",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "playableInEmbed": true,
+      "audioFormatCount": 4,
+      "aac": [
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "contentLength": 673067,
+          "cipherPresent": true,
+          "cipherLength": 1505,
+          "signatureInputLength": 110,
+          "signatureInputHasAsciiControl": false,
+          "directUrlPresent": false,
+          "drc": false,
+          "drmPresent": false,
+          "hasOriginalityMetadata": false
+        }
+      ]
+    }
+  ],
+  "cdnHttp": [
+    {
+      "at": "2026-10-23T11:42:40.427Z",
+      "elapsedMs": 4528,
+      "request": {
+        "at": "2026-10-23T11:42:40.403Z",
+        "elapsedMs": 4504,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:40.935Z",
+      "elapsedMs": 5036,
+      "request": {
+        "at": "2026-10-23T11:42:40.910Z",
+        "elapsedMs": 5011,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:41.934Z",
+      "elapsedMs": 6035,
+      "request": {
+        "at": "2026-10-23T11:42:41.910Z",
+        "elapsedMs": 6011,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:43.925Z",
+      "elapsedMs": 8026,
+      "request": {
+        "at": "2026-10-23T11:42:43.905Z",
+        "elapsedMs": 8006,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:46.453Z",
+      "elapsedMs": 10554,
+      "request": {
+        "at": "2026-10-23T11:42:46.402Z",
+        "elapsedMs": 10503,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 206
+    },
+    {
+      "at": "2026-10-23T11:42:46.485Z",
+      "elapsedMs": 10586,
+      "request": {
+        "at": "2026-10-23T11:42:46.464Z",
+        "elapsedMs": 10565,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "httpStatus": 206
+    },
+    {
+      "at": "2026-10-23T11:42:47.364Z",
+      "elapsedMs": 11465,
+      "request": {
+        "at": "2026-10-23T11:42:47.348Z",
+        "elapsedMs": 11449,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:47.865Z",
+      "elapsedMs": 11966,
+      "request": {
+        "at": "2026-10-23T11:42:47.861Z",
+        "elapsedMs": 11962,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    },
+    {
+      "at": "2026-10-23T11:42:48.855Z",
+      "elapsedMs": 12956,
+      "request": {
+        "at": "2026-10-23T11:42:48.851Z",
+        "elapsedMs": 12952,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "httpStatus": 403
+    }
+  ],
+  "networkFailures": [
+    {
+      "at": "2026-10-23T11:42:40.428Z",
+      "elapsedMs": 4529,
+      "request": {
+        "at": "2026-10-23T11:42:40.403Z",
+        "elapsedMs": 4504,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:40.936Z",
+      "elapsedMs": 5037,
+      "request": {
+        "at": "2026-10-23T11:42:40.910Z",
+        "elapsedMs": 5011,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:41.934Z",
+      "elapsedMs": 6035,
+      "request": {
+        "at": "2026-10-23T11:42:41.910Z",
+        "elapsedMs": 6011,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:43.926Z",
+      "elapsedMs": 8027,
+      "request": {
+        "at": "2026-10-23T11:42:43.905Z",
+        "elapsedMs": 8006,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:46.461Z",
+      "elapsedMs": 10562,
+      "request": {
+        "at": "2026-10-23T11:42:46.402Z",
+        "elapsedMs": 10503,
+        "urlSha256": "7fbd89e8e943465a90e53709d3c3a97de5c287b950046ff7795191ec7f2cd835",
+        "itag": "140"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:47.364Z",
+      "elapsedMs": 11465,
+      "request": {
+        "at": "2026-10-23T11:42:47.348Z",
+        "elapsedMs": 11449,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:47.865Z",
+      "elapsedMs": 11966,
+      "request": {
+        "at": "2026-10-23T11:42:47.861Z",
+        "elapsedMs": 11962,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T11:42:48.856Z",
+      "elapsedMs": 12957,
+      "request": {
+        "at": "2026-10-23T11:42:48.851Z",
+        "elapsedMs": 12952,
+        "urlSha256": "3aa968bf890f9031ad328282e06f0d54ee6bfa4ea47281967e0f56c5e3bfc0aa",
+        "itag": "140"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    }
+  ],
+  "browser": "Chrome/148.0.7778.97",
+  "initialActivation": false,
+  "searchResults": [
+    {
+      "index": "0",
+      "title": "Txoria Nintzela",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Kuikui"
+    },
+    {
+      "index": "1",
+      "title": "poonte perritaa",
+      "artist": "Bb Trickz",
+      "album": "poonte perritaa"
+    },
+    {
+      "index": "2",
+      "title": "Popurri Rumbas Flamenco (Porrito en la Mano, Niña y el Hachis)",
+      "artist": "AIRE Flamenco",
+      "album": "Popurri Rumbas Flamenco (Porrito en la Mano, Niña y el Hachis)"
+    },
+    {
+      "index": "3",
+      "title": "Ni, Ni, Ni!",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Zazpikoloroa"
+    },
+    {
+      "index": "4",
+      "title": "Ipuintxoa - Ni, Ni, Ni!",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Zazpikoloroa"
+    },
+    {
+      "index": "5",
+      "title": "Bi Izar",
+      "artist": "Pirritx eta Porrotx",
+      "album": "Eskerrik Asko!"
+    },
+    {
+      "index": "6",
+      "title": "Bi Herri",
+      "artist": "Pirritx eta Porrotx",
+      "album": "Patata, Patata!"
+    },
+    {
+      "index": "7",
+      "title": "Ipuintxoa - ni naiz Kapitaina",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Txo, mikmak Txikia"
+    }
+  ],
+  "clickedRow": {
+    "index": "3",
+    "title": "Ni, Ni, Ni!",
+    "artist": "PIrritx Porrotx eta MariMotots",
+    "album": "Zazpikoloroa"
+  },
+  "started": {
+    "at": "2026-10-23T11:42:38.865Z",
+    "elapsedMs": 2966
+  },
+  "finalState": {
+    "selected": {
+      "catalogId": 3266784871,
+      "title": "Ni, Ni, Ni!",
+      "titleVersion": "",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Zazpikoloroa",
+      "duration": 125,
+      "isrc": "QM6N21490049"
+    },
+    "mediaSession": {
+      "title": "Ni, Ni, Ni!",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "playbackState": "playing"
+    },
+    "progress": {
+      "time": 3,
+      "duration": 125.559592,
+      "disabled": false
+    },
+    "playerTitle": "Ni, Ni, Ni!",
+    "playerHint": null,
+    "fallback": {
+      "opened": false,
+      "track": null,
+      "videoId": null,
+      "visible": false
+    },
+    "frameCount": 1,
+    "notices": [],
+    "activation": {
+      "active": false,
+      "ever": true
+    }
+  },
+  "outcome": "native-audio",
+  "screenshot": "p1-song-ninini-b1f6a3355de8ae66-public-exceptions.png",
+  "resourcesClosed": true
+}

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T11:39:58.343Z",
+  "scope": "Read-only synthetic execution of fixed pre-change PWA validator and pinned native source comparison; no provider request or proof of the Ni failure.",
+  "pwa": {
+    "commit": "f06c26dc9abc51dc8118f69cd9297cc2bf7f1de9",
+    "file": "web-port/youtube-p1.ts",
+    "sha256": "f3fe065d8d361c9a4953d64986bb0c2174c6baf7362f38611bcbe36c9731e2b5"
+  },
+  "native": {
+    "commit": "b34305ba379acf88bf562c8000800af9309774be",
+    "files": [
+      {
+        "path": "src-tauri/src/native_embedded.rs",
+        "sha256": "9e1c4fd6664ba908403ddcd28034349b7ba0c6c2b9e203ee42db5042a0c6c10d"
+      },
+      {
+        "path": "src-tauri/src/native.rs",
+        "sha256": "d7976f957c7a81d05a10ff2b94934501490d611cb8a6a18215b17b9ea41970bf"
+      },
+      {
+        "path": "src-tauri/recipe/youtube.json",
+        "sha256": "33900ac011fd0aa05c59738a4cf37a0ab197ddd5151c0ee573ed770719078c3f"
+      }
+    ],
+    "changesSince0aa": "Committed native_embedded changes are timing diagnostics; bef47 additionally specializes the build-time decoder parser. No new audio provider or format is introduced by those committed changes.",
+    "dirtyTree": "Observed dirty indexed-AST/preparation and tracing experiments are not a pinned release and were not executed or adopted."
+  },
+  "syntheticResults": [
+    {
+      "label": "valid original alone",
+      "result": "accepted",
+      "formats": 1
+    },
+    {
+      "label": "same original plus DRM dubbed sibling",
+      "result": "rejected",
+      "code": "format"
+    },
+    {
+      "label": "same original plus DRC sibling with unusable locator",
+      "result": "rejected",
+      "code": "format"
+    },
+    {
+      "label": "same original plus incompatible MP4 codec sibling",
+      "result": "rejected",
+      "code": "format"
+    }
+  ],
+  "firmDifferences": [
+    "PWA maps inspectP1Format over every AAC before its original-audio policy; an ineligible or malformed sibling aborts the whole batch.",
+    "Pinned native filters original/non-DRM candidates first and skips cipher/decoder failures per candidate, bounded to three selected formats.",
+    "PWA currently probes only the highest-bitrate parsed AAC; pinned native can continue after permanent candidate failures within a shared deadline, but exhausted transient CDN retries return immediately rather than multiplying retry budgets.",
+    "Pinned bundled native prefers audio/webm then audio/mp4. PWA AAC-only policy is intentional compatibility scope and cannot be removed on an assumption about mobile Opus support."
+  ],
+  "safeGeneralFixConstraints": [
+    "Keep exact video ID, OK/public visibility, response-level DRM and response-size/format-count bounds.",
+    "Compute explicit-original policy from all audio metadata, including discarded formats.",
+    "Keep metadata of discarded siblings; remove their playable locators, not their originality evidence.",
+    "Apply the four-candidate processing budget to eligible original AAC formats; skip individual bad candidates.",
+    "Probe multiple encodings only for the same verified ID under one shared deadline; do not multiply eight-second budgets or modify signed URLs."
+  ],
+  "niCauseConfirmed": false,
+  "productChanged": false,
+  "networkRequested": false,
+  "built": false,
+  "published": false
+}

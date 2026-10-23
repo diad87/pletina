@@ -25,10 +25,13 @@ const audiusRejectedTrack = { ...tracks[0], id: 192, title: 'Canción QA Homóni
   isrc: 'QAABC2600192', videoId: 'qaAudBad02b' }
 const audiusRescue = { query: 'QA Rescate Audius', track: audiusRescueTrack, sourceId: 'Qa191', nextTrackId: tracks[3].id,
   rejected: { query: 'QA Homónima Audius', track: audiusRejectedTrack } }
+const p1MultiTrack = { ...tracks[0], id: 193, title: 'Canción QA AAC múltiple', title_short: 'Canción QA AAC múltiple',
+  isrc: 'QAABC2600193', videoId: 'qaP1Multi1a' }
+const p1Multi = { query: 'QA P1 AAC', track: p1MultiTrack, videoId: p1MultiTrack.videoId, nextTrackId: tracks[3].id }
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
 const runs = (...texts) => ({ runs: texts.map(text => ({ text })) })
 const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0')
@@ -42,6 +45,8 @@ function selected(query) {
   if (q === normalize(audiusRescue.query)) return [audiusRescueTrack, tracks[3]]
   if (q.includes(normalize(audiusRescueTrack.title))) return [audiusRescueTrack]
   if (q === normalize(audiusRescue.rejected.query) || q.includes(normalize(audiusRejectedTrack.title))) return [audiusRejectedTrack]
+  if (q === normalize(p1Multi.query)) return [p1MultiTrack, tracks[3]]
+  if (q.includes(normalize(p1MultiTrack.title))) return [p1MultiTrack]
   // Regression: the catalog returns no literal result for "title de artist";
   // the real adapter must issue its second query without the linking word.
   if (q === 'cancion qa uno de artista qa uno') return []
@@ -230,7 +235,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, ...tracks].find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -277,6 +282,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
         let selectedTracks = selected(body.query || '')
+        if (flags.p1MultiAacRescue && selectedTracks.length === 1 && selectedTracks[0].id === p1MultiTrack.id) {
+          Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
+            candidateIds: [p1Multi.videoId] })
+        }
         if (flags.audiusCatalogRescue && selectedTracks.length === 1 && [audiusRescueTrack.id, audiusRejectedTrack.id].includes(selectedTracks[0].id)) {
           Object.assign(row, { fixtureCase: 'audius-catalog-rescue', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
             requestedTrackId: selectedTracks[0].id, candidateIds: selectedTracks.map(track => track.videoId) })
@@ -298,6 +307,27 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
+        if (flags.p1MultiAacRescue && videoId === p1Multi.videoId) {
+          Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: 'player', videoId, clientName })
+          if (clientName === 'VISIONOS') {
+            row.playability = 'UNPLAYABLE'
+            return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
+          }
+          if (clientName !== 'WEB_EMBEDDED_PLAYER') return route.abort('blockedbyclient')
+          row.playability = 'OK'
+          const locator = (candidate, itag, path = '/videoplayback') => 'https://fixture.googlevideo.com' + path +
+            '?expire=' + (Math.floor(Date.now() / 1000) + 7200) + '&itag=' + itag + '&mime=audio%2Fmp4&clen=' + audio.length +
+            '&qa=' + candidate + '&qa_video=' + videoId
+          const aac = (candidate, itag, bitrate, path) => ({ itag, bitrate, mimeType: 'audio/mp4; codecs="mp4a.40.2"',
+            contentLength: String(audio.length), audioTrack: { audioIsDefault: true, displayName: 'Original' },
+            url: locator(candidate, itag, path) })
+          // No real-song claim and no decoder fixture. The first AAC has an
+          // invalid path, the second returns HTTP403, the third is real AAC.
+          return json({ playabilityStatus: { status: 'OK', playableInEmbed: true },
+            videoDetails: { videoId, title: p1MultiTrack.title, author: p1MultiTrack.artist.name, lengthSeconds: '12' },
+            streamingData: { adaptiveFormats: [aac('p1-invalid-locator', 141, 256000, '/not-a-permitted-audio-path'),
+              aac('p1-denied', 140, 192000), aac('p1-good', 139, 128000)] } })
+        }
         if (flags.audiusCatalogRescue && [audiusRescueTrack.videoId, audiusRejectedTrack.videoId].includes(videoId)) {
           Object.assign(row, { fixtureCase: 'audius-catalog-rescue', operation: 'player', videoId, clientName, playability: 'UNPLAYABLE' })
           // Every transport receives a controlled rejection for this exact ID;
@@ -327,6 +357,14 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test' || audiusStream) {
       const videoId = /^\/audio\/([\w-]{11})$/.exec(url.pathname)?.[1]
+      if (flags.p1MultiAacRescue && url.searchParams.get('qa_video') === p1Multi.videoId) {
+        const candidate = url.searchParams.get('qa')
+        Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: 'media', videoId: p1Multi.videoId, candidate })
+        if (candidate !== 'p1-good') {
+          Object.assign(row, { responseStatus: 403, injectedFailure: 'p1-candidate-http-403' })
+          return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'Controlled AAC candidate denied' })
+        }
+      }
       if (flags.musicUnplayableWebRescue && [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId)) {
         Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'media', videoId })
       }

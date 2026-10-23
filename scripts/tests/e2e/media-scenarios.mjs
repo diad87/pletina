@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
+  'p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download',
   'youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio',
   'audius-homonym-with-wrong-isrc-or-artist-never-starts-audio',
   'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
@@ -292,6 +293,109 @@ export async function runMediaScenarios(ctx) {
         scope: 'Controlled HTTP Music VISIONOS+P1 UNPLAYABLE / distinct WEB VISIONOS OK; P1 rejected before decoder/probe; real silent AAC, no live-provider or physical-phone claim.' }
     } finally {
       ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
+      await closeOverlays(); await pause(); await fixture.reset()
+    }
+  })
+
+  await run('p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download', async () => {
+    const rescue = media.p1Multi
+    assert.ok(rescue?.track && rescue.videoId === rescue.track.videoId)
+    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
+    const mark = fixture.requests.length
+    const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'p1-multi-aac-rescue')
+      .map(({ operation, candidateIds, videoId, clientName, playability, candidate, responseStatus, type }) => ({ operation,
+        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}),
+        ...(playability ? { playability } : {}), ...(candidate ? { candidate } : {}), ...(responseStatus ? { responseStatus } : {}), type }))
+    let observationInstalled = false, completed = false
+    try {
+      await fixture.set({ p1MultiAacRescue: true })
+      await ctx.fillSearch('Buscar', rescue.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, rescue.track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 2, 'A healthy successor makes an unintended song skip observable')
+      const before = await state()
+      assert.equal(before.audios.length, 1)
+      await page.evaluate(() => {
+        const observation = window.__p1MultiQA = { clicks: [], officialObserved: false }
+        const inspect = () => { if (document.querySelector('iframe[data-official-video],dialog[data-official-youtube][open]')) observation.officialObserved = true }
+        const click = event => {
+          const button = event.target instanceof Element ? event.target.closest('.tracks .name,.mini button[aria-label="Reproducir"]') : null
+          if (button) observation.clicks.push({ kind: button.matches('.tracks .name') ? 'track' : 'extra-play', trusted: event.isTrusted })
+        }
+        observation.observer = new MutationObserver(inspect)
+        observation.observer.observe(document.body, { childList: true, subtree: true, attributes: true })
+        observation.click = click; document.addEventListener('click', click, true); inspect()
+      })
+      observationInstalled = true
+      await tap(row(0) + ' .name')
+      // Do not use playing(): its second-Play recovery would hide an autoplay
+      // regression. This case permits exactly the normal title click.
+      await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > 0.2), rescue.track.title)
+      const value = await state(), first = active(value)
+      assert.equal(value.audios.length, 1); assert.equal(first.index, before.audios[0].index)
+      assert.equal(first.muted, false); assert.ok(first.volume > 0)
+      assert.ok(first.duration >= 11 && first.duration < 14, 'The existing real twelve-second AAC fixture must decode')
+      const selected = await page.evaluate(index => {
+        const audio = window.__qaAudio.instances[index], url = new URL(audio.currentSrc || audio.src)
+        return { candidate: url.searchParams.get('qa'), videoId: url.searchParams.get('qa_video'), path: url.pathname }
+      }, first.index)
+      assert.deepEqual(selected, { candidate: 'p1-good', videoId: rescue.videoId, path: '/videoplayback' })
+      await wait(({ index, time }) => {
+        const audio = window.__qaAudio.instances[index]
+        return audio && !audio.paused && !audio.error && audio.currentTime > time + 0.15
+      }, { index: first.index, time: first.time })
+      const trace = attempts()
+      assert.deepEqual(trace.filter(row => row.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: rescue.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rescue.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'OK' },
+      ])
+      assert.equal(trace.filter(row => row.operation === 'music-search').length, 1)
+      assert.equal(trace.filter(row => row.operation === 'web-search').length, 0, 'P1 recovery must not search for another recording')
+      assert.equal(trace.filter(row => row.operation === 'media' && row.candidate === 'p1-invalid-locator').length, 0,
+        'A rejected locator must never reach the browser media transport')
+      assert.ok(trace.some(row => row.operation === 'media' && row.candidate === 'p1-denied' && row.responseStatus === 403))
+      assert.ok(trace.some(row => row.operation === 'media' && row.candidate === 'p1-good'))
+      const navigation = await page.evaluate(() => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1'))
+        return { currentId: queue.queue[queue.order[queue.pos]].track.id, ids: queue.queue.map(item => item.track.id),
+          officialObserved: window.__p1MultiQA.officialObserved, clicks: window.__p1MultiQA.clicks }
+      })
+      assert.equal(navigation.currentId, rescue.track.id)
+      assert.deepEqual(navigation.ids, [rescue.track.id, rescue.nextTrackId])
+      assert.equal(navigation.officialObserved, false)
+      assert.deepEqual(navigation.clicks, [{ kind: 'track', trusted: true }])
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      if (await page.evaluate(() => 'mediaSession' in navigator)) {
+        assert.equal(value.metadata?.title, rescue.track.title); assert.equal(value.metadata?.artist, rescue.track.artistName)
+      }
+
+      // #playable is private. Exercise the public download contract rather than
+      // pretending to inspect its provider field or importing another resolver.
+      const downloadsBefore = await downloadState(), transfer = await transferMark(), requestMark = fixture.requests.length
+      await menu(0, 'Descargar')
+      const denied = await terminal(transfer, rescue.track.id)
+      assert.equal(denied.state, 'error')
+      assert.match(denied.error, /permite escuchar.*no descargarla.*sin conexión/)
+      assert.deepEqual(await downloadState(), downloadsBefore, 'P1 cannot leave a download row, body or partial cache entry')
+      assert.equal(fixture.requests.slice(requestMark).filter(row => row.fixtureCase === 'p1-multi-aac-rescue' &&
+        (row.operation === 'player' || row.operation === 'media')).length, 0,
+      'The cached P1 source must reject download permission before any transfer or renewed player request')
+      const after = await state()
+      assert.equal(after.title, rescue.track.title); assert.equal(after.audios.length, 1); assert.equal(active(after)?.index, first.index)
+      assert.equal(await page.locator('dialog[data-official-youtube][open]').count(), 0)
+      completed = true
+      return { requestedTrackId: rescue.track.id, videoId: rescue.videoId, selected, attempts: trace, sameAudio: true,
+        sameSongAndQueue: true, extraPlayInteractions: 0, officialVideoOpened: false,
+        sourceContract: { expectedProvider: 'youtube-p1', privateProviderDirectlyInspected: false,
+          p1TransportObserved: true, downloadAllowed: false, downloadDenialObservedThroughUI: true },
+        download: denied, scope: 'Synthetic same-ID multi-AAC HTTP fixture: invalid locator, denied metadata source, valid real silent AAC. No user-song, live-provider or physical-phone claim.' }
+    } finally {
+      ctx.report.p1MultiAac = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
+      if (observationInstalled) await page.evaluate(() => {
+        const observation = window.__p1MultiQA
+        observation?.observer?.disconnect(); if (observation?.click) document.removeEventListener('click', observation.click, true)
+        delete window.__p1MultiQA
+      })
       await closeOverlays(); await pause(); await fixture.reset()
     }
   })
