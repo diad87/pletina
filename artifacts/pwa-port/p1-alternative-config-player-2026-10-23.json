@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:47:20.807Z",
+  "scope": "Library-defined Session configInfo and own anonymous visitor reused in RAM; no audio request or playback proof.",
+  "execution": {
+    "scriptSha256": "c5d4c973a2dbf0bf9900a34a0d6f9dd45df80d9ff2c84d9abdc3c33b648e5e5b",
+    "sourceSnapshot": "artifacts/pwa-port/p1-alternative-config-player-source-c5d4c973a2dbf0bf.mjs",
+    "recipePath": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "recipeFieldsUsed": [
+      "client.version",
+      "player.signatureTimestamp"
+    ],
+    "videos": [
+      "DJzjkMBMook",
+      "gpfVjKXVnDc",
+      "WtTRMAoN2Fw"
+    ],
+    "webVersion": "2.20260623.01.00",
+    "embeddedVersion": "2.20261022.01.00",
+    "signatureTimestamp": 20746,
+    "sessionSha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1",
+    "httpClientSha256": "4b066f2005c38e04cde8441b52b09f75c78b8dd130e58a4462b5d1e237f6b1ae"
+  },
+  "mapping": "Session18.2 maps /config response globalConfigGroup into WEB configInfo. HTTPClient18.2 removes configInfo when switching away from WEB; embedded uses only its own fresh response visitor, not WEB configInfo.",
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/utils/HTTPClient.ts"
+  ],
+  "policy": {
+    "productChanged": false,
+    "nodeProviderRequests": false,
+    "borrowedVisitor": false,
+    "accountOrKey": false,
+    "cookieJar": false,
+    "securityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "observerUserGesture": false,
+    "mediaRequested": false,
+    "signedUrlsOrRawConfigurationPersisted": false,
+    "phoneOrBackgroundPlaybackClaimed": false
+  },
+  "results": {
+    "config": [
+      {
+        "kind": "WEB",
+        "status": 200,
+        "readable": true,
+        "bytes": 13213,
+        "visitorPresent": true,
+        "configInfoFields": [
+          "coldConfigData",
+          "coldHashData",
+          "hotHashData"
+        ],
+        "configDataPresent": true,
+        "configDataLength": 1008,
+        "onesieHotConfigMarkerPresent": false,
+        "encryptedHostFlagsMarkerPresent": false,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "globalConfigGroup",
+          "mainAppWebResponseContext",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "topLevelKeys": [
+          "responseContext",
+          "configData",
+          "globalConfig"
+        ]
+      },
+      {
+        "kind": "WEB_EMBEDDED_PLAYER",
+        "status": 200,
+        "readable": true,
+        "bytes": 1740,
+        "visitorPresent": true,
+        "configInfoFields": [],
+        "configDataPresent": true,
+        "configDataLength": 940,
+        "onesieHotConfigMarkerPresent": false,
+        "encryptedHostFlagsMarkerPresent": false,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "globalConfigGroup",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "topLevelKeys": [
+          "responseContext",
+          "configData",
+          "globalConfig"
+        ]
+      }
+    ],
+    "players": [
+      {
+        "videoId": "DJzjkMBMook",
+        "variant": "WEB-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 173974,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 209,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131202
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 58196
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 75900
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 147279
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "DJzjkMBMook",
+        "variant": "WEB-no-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 174134,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 209,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131202
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 58196
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 75900
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 147279
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "DJzjkMBMook",
+        "variant": "EMBEDDED-own-config-visitor",
+        "status": 200,
+        "readable": true,
+        "bytes": 1362,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "exactVideoId": false,
+        "duration": null,
+        "sabrPresent": false,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "gpfVjKXVnDc",
+        "variant": "WEB-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 172893,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 117,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131232
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 51983
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 68243
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 131056
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "gpfVjKXVnDc",
+        "variant": "WEB-no-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 172727,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 117,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131232
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 51983
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 68243
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 131056
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "gpfVjKXVnDc",
+        "variant": "EMBEDDED-own-config-visitor",
+        "status": 200,
+        "readable": true,
+        "bytes": 1362,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "exactVideoId": false,
+        "duration": null,
+        "sabrPresent": false,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "WtTRMAoN2Fw",
+        "variant": "WEB-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 171882,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 142,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131073
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 58865
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 76848
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 144459
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "WtTRMAoN2Fw",
+        "variant": "WEB-no-configInfo",
+        "status": 200,
+        "readable": true,
+        "bytes": 173475,
+        "playability": "OK",
+        "reason": "",
+        "exactVideoId": true,
+        "duration": 142,
+        "sabrPresent": true,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "bitrate": 131073
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 58865
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 76848
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "bitrate": 144459
+          }
+        ],
+        "apiErrorCode": null
+      },
+      {
+        "videoId": "WtTRMAoN2Fw",
+        "variant": "EMBEDDED-own-config-visitor",
+        "status": 200,
+        "readable": true,
+        "bytes": 1362,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "exactVideoId": false,
+        "duration": null,
+        "sabrPresent": false,
+        "hlsPresent": false,
+        "dashPresent": false,
+        "directAudioCount": 0,
+        "cipherAudioCount": 0,
+        "audioFormats": [],
+        "apiErrorCode": null
+      }
+    ]
+  },
+  "transport": [],
+  "errors": [],
+  "browser": "Chrome/153.0.8010.52",
+  "conclusion": "A response supplies some streaming structure; it has not been fetched, decoded, played, or shown to continue in background."
+}

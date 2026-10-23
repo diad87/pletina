@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "assembledAt": "2026-10-23T10:50:20.294Z",
+  "evidence": [
+    {
+      "path": "artifacts/pwa-port/p1-alternative-session-2026-10-23.json",
+      "sha256": "11522422a005c2c0b97854422d435905e808c430e6b32914d9cbd80a1cb783d0",
+      "testedAt": "2026-10-23T10:44:52.788Z"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-alternative-config-player-2026-10-23.json",
+      "sha256": "c5785de9d8f9e46e6369943b32be1228c2a8351680656728cf1daed5d6041dcc",
+      "testedAt": "2026-10-23T10:47:20.807Z"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-alternative-config-shape-final-2026-10-23.json",
+      "sha256": "d9d3e843c5835aba886fe70940806e8f4b985372840c44ed4adba8f5b805e2a1",
+      "testedAt": "2026-10-23T10:49:05.752Z"
+    }
+  ],
+  "fixedP1": {
+    "commit": "0aa9e1c1ad21a6b66924c18af41aab2d78533cf7",
+    "sourceFiles": [
+      {
+        "path": "src-tauri/src/native_embedded.rs",
+        "sha256": "bb7b859825cef85b8e252127dcb93b054da78c51465e195c4ac1e7754e4b5a07"
+      },
+      {
+        "path": "src-tauri/src/youtube-decoder.js",
+        "sha256": "7e0aa7c3e5dc6f6e7621cec5a72f2a3799cb406cfd613893f83560e3a97d563b"
+      }
+    ],
+    "changes": [
+      "Gzip on public text with decoded-byte ceiling",
+      "Delay speculative player POST until exact watch identity and explicit child-notice admission",
+      "Lazy dependency analysis pinned to youtubei.js18.1 private analyzer state",
+      "Skip expired CDN retry slots and stop immediately on HTTP429",
+      "Additional bounded-stage timings"
+    ],
+    "portableScope": "Lazy JS dependency analysis and bounded cancellation/retry design may transfer with pinned-version equivalence tests. Browser fetch already handles compression. This commit adds no browser-readable bootstrap, format, CORS permission or SABR transport."
+  },
+  "browserFindings": {
+    "swJsData": "HTTP200 but MissingAllowOriginHeader from ordinary Pages and opaque frame; not readable.",
+    "config": "Ordinary Pages POST gets403 and no ACAO. Opaque same endpoint succeeds200 without keys, visitor seed, credentials or custom headers. WEB provides own visitor and configInfo; embedded provides own visitor/configData but no configInfo fields.",
+    "playbackMetadata": "Epoitaitaye DJzjkMBMook, Maite WtTRMAoN2Fw and control gpfVjKXVnDc: WEB with/without configInfo all OK with exact IDs and SABR-only metadata. Embedded using its own config visitor errors with zero audio for all three.",
+    "opaqueDataLimit": "globalConfig was empty. Encoded config blobs were inspected for size/markers only, not assigned undocumented protobuf semantics. Absence of a plaintext marker is not proof that arbitrary binary fields lack related information.",
+    "noPlaybackClaim": "No provider media was requested, no decoding or playback was attempted, and no mobile or physical lock-screen claim is made."
+  },
+  "primaryImplementations": [
+    {
+      "url": "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/core/Session.ts",
+      "finding": "Documents sw.js_data session bootstrap and /config mapping used in this browser experiment."
+    },
+    {
+      "url": "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/utils/HTTPClient.ts",
+      "finding": "Removes configInfo when changing from WEB to another client; WEB config fields were not transplanted into embedded."
+    },
+    {
+      "url": "https://github.com/LuanRT/googlevideo/blob/35b2b4e511030da265da2976a6d3009121fc094a/examples/sabr-shaka-example/src/main.ts",
+      "finding": "The primary browser SABR example requires its ytc-bridge extension. It is not a pure-PWA recipe under this task constraints."
+    },
+    {
+      "url": "https://github.com/LuanRT/googlevideo/blob/35b2b4e511030da265da2976a6d3009121fc094a/examples/onesie-request/main.ts",
+      "finding": "Onesie example requires separate TV player configuration and embedded encryption material; readable /config fields do not establish that mapping. No key or Onesie request was attempted."
+    }
+  ],
+  "previousSabrControlNotRepeated": [
+    "artifacts/pwa-port/provider-web-sabr-browser-network-2026-10-22.json",
+    "artifacts/pwa-port/provider-android-sabr-browser-network-2026-10-22.json"
+  ],
+  "conclusion": "A new anonymous browser-readable config bootstrap is demonstrated. It does not resolve embedded playback or supply direct audio. No further high-probability pure-PWA SABR/Onesie route was supported by the inspected primary implementations; stop instead of repeating blocked transport or importing tokens/extensions.",
+  "audit": {
+    "checkedFiles": 8,
+    "credentialPatternFindings": 0,
+    "rawContextValueFindings": 0,
+    "signedMediaUrlFindings": 0,
+    "nonTextFiles": 0
+  },
+  "productChanged": false,
+  "built": false,
+  "deployed": false
+}

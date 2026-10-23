@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T11:10:11.532Z",
+  "song": {
+    "videoId": "WtTRMAoN2Fw",
+    "title": "Maite Zaitut!"
+  },
+  "scriptSha256": "854492daded2646afe5f898f12657f3d94673b9f80c95dbf69b8a1587f730f31",
+  "sourceSnapshot": "artifacts/pwa-port/p1-live-decoder-source-854492daded2646a.mjs",
+  "checks": [
+    {
+      "name": "exact requested audio metadata deciphered in browser worker",
+      "pass": true
+    },
+    {
+      "name": "CDN selected audio loads in ordinary HTMLAudio",
+      "pass": true,
+      "metadata": {
+        "duration": 141.612925
+      }
+    },
+    {
+      "name": "native audio advances from beginning",
+      "pass": true
+    },
+    {
+      "name": "audio advances after 80 percent seek",
+      "pass": true
+    },
+    {
+      "name": "tail reaches natural ended",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "scope": "Real cipher, isolated browser worker and CDN/audio control. Embed configuration obtained anonymously by QA Node in RAM; not autonomous PWA bootstrap.",
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "borrowedCredentials": false,
+    "accountsOrCookies": false,
+    "runtimeProxy": false,
+    "fullPlayerExecuted": false,
+    "signedUrlsOrSessionValuesPersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "physicalPhone": false,
+    "screenOffVerified": false,
+    "audibleAutoplayVerified": false
+  },
+  "control": {
+    "bootstrapSha256": "7cde0590e3c587f2b7696be1de45bc5d39161ed696e361f08ae255a867f46dae",
+    "bootstrapBytes": 151936,
+    "playerPath": "/s/player/dce23b30/player_embed_es6.vflset/en_US/base.js",
+    "playerSha256": "3f05352e4228ce97a67f9ffed775be82a29456151f6e49fa8c629f091162ebbb",
+    "playerBytes": 1631478,
+    "scriptSha256": "9fb7c8a36d09692dce0968a1c9bce874dd1c99a9ee3fac03b2c59a2767fe5b33",
+    "scriptBytes": 173996,
+    "signatureTimestamp": 20746,
+    "bodySha256": "285d295129e2fa466db14875e5666ea9c9410a28066cd3e1fe4593a99e9136ad"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "cdnResponses": [
+    {
+      "status": 206,
+      "itag": "140",
+      "type": "media",
+      "contentType": "audio/mp4",
+      "allowOrigin": null
+    }
+  ],
+  "networkFailures": [
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    }
+  ],
+  "cdnHeaders": [
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 206,
+      "allowOrigin": null
+    },
+    {
+      "status": 200,
+      "allowOrigin": null
+    }
+  ],
+  "result": {
+    "status": "OK",
+    "exactId": true,
+    "itag": 140,
+    "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+    "declaredBytes": 2293894,
+    "bitrate": 131073,
+    "signatureCharsetValid": true,
+    "nCharsetValid": true,
+    "inputLengths": {
+      "sig": 110,
+      "n": 19
+    },
+    "outputLengths": {
+      "sig": 104,
+      "n": 14
+    },
+    "range": {
+      "readable": false
+    },
+    "metadata": {
+      "duration": 141.612925
+    },
+    "attempts": [
+      {
+        "elapsedMs": 30,
+        "error": 4
+      },
+      {
+        "elapsedMs": 334,
+        "error": 4
+      },
+      {
+        "elapsedMs": 936,
+        "error": 4
+      },
+      {
+        "elapsedMs": 1825,
+        "error": 4
+      },
+      {
+        "elapsedMs": 3659,
+        "duration": 141.612925
+      }
+    ]
+  },
+  "nodeRangeControl": {
+    "status": 206,
+    "bytes": 1024,
+    "contentRange": "bytes 1024-2047/2293894"
+  },
+  "fullFile": {
+    "readable": false,
+    "error": "opaque-cdn-blocked"
+  },
+  "browsersClosed": true
+}

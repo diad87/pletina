@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T11:12:05.409Z",
+  "build": "6efab0dcf403eed2",
+  "runner": {
+    "path": "scripts/tests/pwa-update.browser.mjs",
+    "sha256": "9d2d634f9a4d4f75a7d3b009b06e397017d7f1ebb7e018b7572436e6c5d10a5f",
+    "changedForInvestigation": false
+  },
+  "productModified": false,
+  "timeLimitsChanged": false,
+  "reports": [
+    {
+      "path": "artifacts/pwa-port/update-e2e-6efab0dcf403eed2.json",
+      "sha256": "44ce79643d35277a51d291cada47c06527ac30693070c4a7fb250b69dd6acdec",
+      "browser": "153.0.8010.52",
+      "baseDistributionVersion": "6efab0dcf403eed2",
+      "passed": false,
+      "checks": 9,
+      "passedChecks": 8,
+      "failedCheck": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+      "fatal": "page.waitForURL: Timeout 30000ms exceeded.\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n============================================================",
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-6efab0dcf403eed2-diagnostic.json",
+      "sha256": "e629c2b3ddcea6b8f40cd485d7d5a52bf9459ac7d57a1357f74d5e3d12c06f97",
+      "browser": null,
+      "baseDistributionVersion": "6efab0dcf403eed2",
+      "passed": false,
+      "checks": 0,
+      "passedChecks": 0,
+      "failedCheck": null,
+      "fatal": "browserType.launch: Executable doesn't exist at [path]\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     npx playwright install                                 ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝",
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-6efab0dcf403eed2-diagnostic-runtime.json",
+      "sha256": "10574eee76b3424f4cbcfe21c19849b34ac69232df3730248f65c3b09cf20a48",
+      "browser": "151.0.7922.34",
+      "baseDistributionVersion": "6efab0dcf403eed2",
+      "passed": false,
+      "checks": 3,
+      "passedChecks": 2,
+      "failedCheck": "cold primary retry prepares all of B before activation, opens it automatically and reloads offline",
+      "fatal": "Expected values to be strictly equal:\n\ntrue !== false\n",
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-6efab0dcf403eed2-diagnostic-chrome.json",
+      "sha256": "e98247db636326659a4c439d549c8a5acd5c445234f23510e1fa329967cdb82e",
+      "browser": "153.0.8010.52",
+      "baseDistributionVersion": "6efab0dcf403eed2",
+      "passed": true,
+      "checks": 11,
+      "passedChecks": 11,
+      "failedCheck": null,
+      "fatal": null,
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-6efab0dcf403eed2-diagnostic-repeat.json",
+      "sha256": "1e5d9df7b30d7e36060382cf4377c4eeca10647301478cd4076e7d666a4121cb",
+      "browser": "153.0.8010.52",
+      "baseDistributionVersion": "6efab0dcf403eed2",
+      "passed": true,
+      "checks": 11,
+      "passedChecks": 11,
+      "failedCheck": null,
+      "fatal": null,
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    }
+  ],
+  "findings": {
+    "original": {
+      "preparation": "All B optional resources present in B cache and ACTIVATE_UPDATE emitted after PREPARE_APPLICATION.",
+      "activation": "No controllerchange. Passive failure snapshot shows B installed/running/waiting, A activated/running.",
+      "limit": "Original run did not observe reception of ACTIVATE_UPDATE or the native skipWaiting promise; exact cause not established."
+    },
+    "exactChromeControls": {
+      "browser": "153.0.8010.52",
+      "runs": 2,
+      "checksPassed": 22,
+      "checksTotal": 22,
+      "normalTimeouts": true,
+      "unchangedRunner": true,
+      "splitModulesSameAsFailed": true,
+      "secondRunUninstrumented": true
+    },
+    "migrationTrace": {
+      "newWorkerReceived": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE"
+      ],
+      "nativeSkipWaiting": "called and resolved in diagnostic migration; transition installed -> activating -> activated observed by passive CDP.",
+      "retiredWorkerTrace": "Old worker closed after retirement; its trace unavailable, preserved as observation error."
+    },
+    "otherAttempts": {
+      "launchSetup": "Default Playwright browser path missing, before checks; preserved report.",
+      "bundled151": "Unrelated offline signal assertion failed after cold activation succeeded; does not reproduce the original activation failure."
+    },
+    "conclusion": "Intermittent activation stall in original run, not reproduced in two exact-Chrome unchanged-runner controls. No evidence that missing split modules caused it. Do not claim a diagnosed browser defect or a production fix."
+  }
+}

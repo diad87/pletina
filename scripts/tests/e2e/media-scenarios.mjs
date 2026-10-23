@@ -229,8 +229,8 @@ export async function runMediaScenarios(ctx) {
     assert.equal(await readChoice(), null, 'The dedicated song must not reuse a previously saved source')
     const mark = fixture.requests.length
     const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'music-unplayable-web-rescue')
-      .map(({ operation, candidateIds, videoId, playability }) => ({ operation,
-        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(playability ? { playability } : {}) }))
+      .map(({ operation, candidateIds, videoId, clientName, playability }) => ({ operation,
+        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}) }))
     let completed = false
     try {
       await fixture.set({ musicUnplayableWebRescue: true })
@@ -269,15 +269,18 @@ export async function runMediaScenarios(ctx) {
       assert.equal(queue.currentId, rescue.track.id)
       assert.deepEqual(queue.ids, [rescue.track.id, rescue.nextTrackId])
       const trace = attempts(), players = trace.filter(attempt => attempt.operation === 'player')
-      assert.deepEqual(players.map(({ videoId, playability }) => ({ videoId, playability })), [
-        { videoId: rescue.musicVideoId, playability: 'UNPLAYABLE' }, { videoId: rescue.webVideoId, playability: 'OK' },
-      ])
+      assert.deepEqual(players.map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: rescue.musicVideoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rescue.musicVideoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
+        { videoId: rescue.webVideoId, clientName: 'VISIONOS', playability: 'OK' },
+      ], 'Only the unavailable Music ID gets one P1 rescue; the healthy distinct WEB ID needs VISIONOS once')
       const music = trace.findIndex(attempt => attempt.operation === 'music-search')
-      const denied = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.musicVideoId)
+      const denied = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.musicVideoId && attempt.clientName === 'VISIONOS')
+      const deniedP1 = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.musicVideoId && attempt.clientName === 'WEB_EMBEDDED_PLAYER')
       const web = trace.findIndex(attempt => attempt.operation === 'web-search')
       const accepted = trace.findIndex(attempt => attempt.operation === 'player' && attempt.videoId === rescue.webVideoId)
-      assert.ok(music >= 0 && denied > music && web > denied && accepted > web,
-        'A high-confidence Music result must fail playback before the distinct WEB rescue is searched and tried')
+      assert.ok(music >= 0 && denied > music && deniedP1 > denied && web > deniedP1 && accepted > web,
+        'A high-confidence Music result must fail VISIONOS then P1 before the distinct WEB rescue is searched and tried')
       assert.deepEqual(trace[music].candidateIds, [rescue.musicVideoId])
       assert.deepEqual(trace[web].candidateIds, [rescue.webVideoId])
       assert.ok(trace.some(attempt => attempt.operation === 'media' && attempt.videoId === rescue.webVideoId))
@@ -286,7 +289,7 @@ export async function runMediaScenarios(ctx) {
       return { requestedTrackId: rescue.track.id, currentTrackId: queue.currentId, savedVideoId: saved.videoId,
         attempts: trace, sameSong: true, realDecoderProgress: true, audioInstances: value.audios.length,
         mediaSession: mediaSessionAvailable ? { status: 'pass', metadata: value.metadata } : { status: 'unsupported', reason: 'MediaSession is not exposed by this engine.' },
-        scope: 'Controlled HTTP Music UNPLAYABLE / distinct WEB OK; real silent AAC, no live-provider or physical-phone claim.' }
+        scope: 'Controlled HTTP Music VISIONOS+P1 UNPLAYABLE / distinct WEB VISIONOS OK; P1 rejected before decoder/probe; real silent AAC, no live-provider or physical-phone claim.' }
     } finally {
       ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
       await closeOverlays(); await pause(); await fixture.reset()
@@ -299,8 +302,8 @@ export async function runMediaScenarios(ctx) {
     await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
     const mark = fixture.requests.length
     const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'audius-catalog-rescue')
-      .map(({ operation, candidateIds, videoId, playability, sourceId, isrc, requestedTrackId }) => ({ operation,
-        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(playability ? { playability } : {}),
+      .map(({ operation, candidateIds, videoId, clientName, playability, sourceId, isrc, requestedTrackId }) => ({ operation,
+        ...(candidateIds ? { candidateIds } : {}), ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}),
         ...(sourceId ? { sourceId } : {}), ...(isrc ? { isrc } : {}), ...(requestedTrackId ? { requestedTrackId } : {}) }))
     try {
       await fixture.set({ audiusCatalogRescue: true })
@@ -314,8 +317,13 @@ export async function runMediaScenarios(ctx) {
       assert.ok(audio.duration >= 11 && audio.duration < 14, 'Decode the real AAC fixture, not metadata alone')
       assert.equal(await visible('dialog[data-official-youtube][open]'), false)
       const trace = attempts(), denied = trace.findIndex(attempt => attempt.operation === 'player' && attempt.playability === 'UNPLAYABLE')
+      assert.deepEqual(trace.filter(attempt => attempt.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: rescue.track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rescue.track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
+      ], 'The same unavailable recording gets exactly two ordered transports before external catalog rescue')
+      const deniedP1 = trace.findIndex(attempt => attempt.operation === 'player' && attempt.clientName === 'WEB_EMBEDDED_PLAYER')
       const catalog = trace.findIndex(attempt => attempt.operation === 'catalog-search')
-      assert.ok(denied >= 0 && catalog > denied, 'Definitive YouTube rejection must precede catalog rescue')
+      assert.ok(denied >= 0 && deniedP1 > denied && catalog > deniedP1, 'Both bounded YouTube transports must reject the same ID before catalog rescue')
       assert.equal(trace[catalog].isrc, rescue.track.isrc)
       assert.deepEqual(trace[catalog].candidateIds, ['WrongIsrc', 'WrongArtist', rescue.sourceId])
       assert.ok(trace.some(attempt => attempt.operation === 'media' && attempt.sourceId === rescue.sourceId))
@@ -360,7 +368,10 @@ export async function runMediaScenarios(ctx) {
       await tap(row(0) + ' .name')
       await page.locator('dialog[data-official-youtube][open]').waitFor({ timeout: 15000 })
       const trace = fixture.requests.slice(mark).filter(request => request.fixtureCase === 'audius-catalog-rescue')
-      assert.ok(trace.some(request => request.operation === 'player' && request.playability === 'UNPLAYABLE'))
+      assert.deepEqual(trace.filter(attempt => attempt.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: rejected.track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rejected.track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
+      ], 'Rejected homonyms do not permit retries beyond one VISIONOS and one P1 attempt for the original ID')
       const catalog = trace.filter(request => request.operation === 'catalog-search')
       assert.ok(catalog.length >= 1)
       assert.equal(catalog[0].isrc, rejected.track.isrc)

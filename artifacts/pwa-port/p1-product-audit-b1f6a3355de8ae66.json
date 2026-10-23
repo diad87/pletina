@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-23T11:22:20.909Z",
+  "build": "b1f6a3355de8ae66",
+  "sourceCommit": "4e140bcf180fd34fbf3f3e1cb8d25243ce1a285f",
+  "baselineCommit": "5cf7c6a9112f1e32f976bf8103caec6a64b73841",
+  "changedSinceBaseline": [
+    "scripts/tests/web-p1-engine.test.mjs",
+    "web-port/youtube-p1.ts"
+  ],
+  "reviewer": "independent QA agent",
+  "productEdited": false,
+  "distributionRebuilt": false,
+  "published": false,
+  "verdict": "No blocking regression found in reviewed code or isolated tests; physical network/background portability remains unverified.",
+  "files": [
+    {
+      "path": "web-port/youtube.ts",
+      "sha256": "a5617c7c2316800bf6e3584df6113879b10ffb66aca123d1d0fef4ac77fe1c27",
+      "bytes": 23303
+    },
+    {
+      "path": "web-port/youtube-p1.ts",
+      "sha256": "f3fe065d8d361c9a4953d64986bb0c2174c6baf7362f38611bcbe36c9731e2b5",
+      "bytes": 19828
+    },
+    {
+      "path": "web-port/youtube-p1-probe.ts",
+      "sha256": "fcd6ebca55aba27eea048b74d086db65e067d0726a47a09269e129e54f9af9aa",
+      "bytes": 11226
+    },
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "ade2ecb1253f87414abe9b06b80cdc80cfc457ec9c3ffa9d0ef5d1802aa678e7",
+      "bytes": 21277
+    },
+    {
+      "path": "web-port/downloads.ts",
+      "sha256": "c835dbf4afefc29a18f6c601dcc433dfc335b99e1291268e382d404b098dd283",
+      "bytes": 16789
+    },
+    {
+      "path": "src/lib/types.ts",
+      "sha256": "bffa0ad4f88a478a8bc1f2992cbef6dd901a8628ab36c72f61c0d29496e2084c",
+      "bytes": 6153
+    },
+    {
+      "path": "web-port/p1-recipe.generated.ts",
+      "sha256": "4fe25bbb8cabebd1a31761f0e7e861869ea9b359a9c7248dc461de71354fe21d",
+      "bytes": 179641
+    },
+    {
+      "path": "scripts/prepare-pwa-p1.mjs",
+      "sha256": "8ddc0d05611d98d89c214f63dfbdf9e4da10cc8d849fd58b6fd3daabf3de02d9",
+      "bytes": 8474
+    },
+    {
+      "path": "scripts/tests/web-p1-engine.test.mjs",
+      "sha256": "269a1ac0bc93f0d432b12b8ec85e0fb4a13d3fb41bd143cafa6f90d4ae87592f",
+      "bytes": 21211
+    },
+    {
+      "path": "scripts/tests/web-p1-parser.test.mjs",
+      "sha256": "97e6cb2bd73280913ac40519ecc326fe96b3ecb12dc13b6b8064eca12c9040a7",
+      "bytes": 9278
+    },
+    {
+      "path": "scripts/tests/web-p1-probe.test.mjs",
+      "sha256": "12b7ce6f19b2aa717dec1a35e3ce3124f04bf684c89ae2f672d66d01d2880772",
+      "bytes": 16220
+    },
+    {
+      "path": "scripts/tests/web-p1-integration.test.mjs",
+      "sha256": "49b447aeb9d9995cd8917ca98cf802daddbb305acadecd337085d315a47dc9fe",
+      "bytes": 16662
+    },
+    {
+      "path": "scripts/tests/web-audio.test.mjs",
+      "sha256": "447f0a2e91923f69caef6934ae49627cb07ac4bca3cb566b0b1bf03fa84708af",
+      "bytes": 49048
+    },
+    {
+      "path": "scripts/tests/web-downloads.test.mjs",
+      "sha256": "483ea6b1b9775b5819d284d2b181491e2afc38b1aae101775541dab526198116",
+      "bytes": 26433
+    },
+    {
+      "path": "scripts/tests/pwa-update.browser.mjs",
+      "sha256": "9d2d634f9a4d4f75a7d3b009b06e397017d7f1ebb7e018b7572436e6c5d10a5f",
+      "bytes": 49138
+    }
+  ],
+  "checks": [
+    {
+      "name": "Opaque encrypted s/n are bounded data arguments",
+      "pass": true,
+      "evidence": "Only nonempty <=4096 UTF-16-character inputs without ASCII controls enter the existing argument-only decoder. They are not interpolated into executable source."
+    },
+    {
+      "name": "Decoded output and URL trust stay strict",
+      "pass": true,
+      "evidence": "applyP1Decoded still rejects unchanged n, exception markers, unexpected fields, invalid output alphabets/lengths. mediaUrl enforces HTTPS googlevideo /videoplayback without credentials/port/fragment/duplicates."
+    },
+    {
+      "name": "P1 fallback eligibility/order unchanged",
+      "pass": true,
+      "evidence": "VISIONOS first; only typed format/unavailable invoke P1; response/restricted/network/timeout preserve existing paths. A P1 failure preserves original category."
+    },
+    {
+      "name": "Identity/originality/DRM checks retained",
+      "pass": true,
+      "evidence": "Exact requested video ID, public OK response and AAC only; parsePlayer enforces original audio, DRC/secondary rejection. Non-AAC metadata preserved to prevent implicit originality bypass."
+    },
+    {
+      "name": "Abort and resource bounds retained",
+      "pass": true,
+      "evidence": "Checked before/after lazy load, request, metadata probe. Request/worker/probe deadlines remain bounded; cancellation removes frame/worker/blob/listeners and ignores late results."
+    },
+    {
+      "name": "Media URLs stay RAM only and refresh invalidates old URL",
+      "pass": true,
+      "evidence": "stream map only; failed refresh cannot reuse old URL; module reload cannot retrieve previous media locator."
+    },
+    {
+      "name": "Public anonymous recipe build-only provenance",
+      "pass": true,
+      "evidence": "Explicit Node preparation gets one neutral public embed and public base.js without account/cookie jar/API key/media; runtime consumes a static module and phones contact provider directly.",
+      "recipe": {
+        "sha256": "4fe25bbb8cabebd1a31761f0e7e861869ea9b359a9c7248dc461de71354fe21d",
+        "contextKeys": [
+          "client",
+          "thirdParty"
+        ],
+        "clientKeys": [
+          "clientName",
+          "clientVersion",
+          "hl",
+          "userAgent",
+          "visitorData",
+          "platform",
+          "clientFormFactor",
+          "osName",
+          "osVersion",
+          "browserName",
+          "browserVersion",
+          "gl",
+          "deviceExperimentId",
+          "rolloutToken",
+          "configInfo"
+        ],
+        "signatureTimestamp": 20746,
+        "playerSHA": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "decoderBytes": 173175,
+        "decoderSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+        "createdAt": "2026-10-23T10:56:56.637Z",
+        "explicitExpiryPresent": false,
+        "forbiddenFieldCount": 0,
+        "mediaLocatorCount": 0,
+        "musicalMappingCount": 0,
+        "rawAnonymousStatePersistedInAudit": false
+      }
+    },
+    {
+      "name": "P1 download stays disabled",
+      "pass": true,
+      "evidence": "Playable source youtube-p1 marks download.allowed:false; download source permission gate rejects before transfer. Music and podcast identities remain unchanged."
+    }
+  ],
+  "validation": {
+    "unit": {
+      "command": "node --test scripts/tests/web-p1-engine.test.mjs scripts/tests/web-p1-parser.test.mjs scripts/tests/web-p1-probe.test.mjs scripts/tests/web-p1-integration.test.mjs scripts/tests/web-audio.test.mjs scripts/tests/web-downloads.test.mjs",
+      "exitCode": 0,
+      "passed": 145,
+      "total": 145
+    },
+    "update": {
+      "path": "artifacts/pwa-port/update-e2e-b1f6a3355de8ae66.json",
+      "sha256": "8576c0662878595a814c9bfec4a2ea45d399d61aeb23a1779a1f30ba85976d31",
+      "browser": "153.0.8010.52",
+      "passed": 11,
+      "total": 11,
+      "prototypeVersion": "2cbb1fcf0376491f",
+      "runnerChanged": false,
+      "timeoutChanged": false,
+      "browserClosed": true,
+      "localServerClosed": true,
+      "temporarySiteRemoved": true
+    }
+  },
+  "limits": [
+    "Static anonymous provider state can expire or vary by IP/cohort. No guaranteed validity follows from native local cache TTL.",
+    "Public opaque client values are not interpreted as account credentials; their complete semantics are not known. Only public unauthenticated acquisition and absence of account fields are established.",
+    "Metadata availability does not establish complete audio playback, background playback, every song, or physical Android/iOS compatibility.",
+    "P1 reuses the resolver-selected video ID; identity checks do not constitute a new acoustic proof that the selected video matches a catalog master.",
+    "The earlier6efab activation failure remains preserved; two unchanged-Chrome controls passed then, and this new build passes one normal control. No production fix for an exact activation cause is claimed."
+  ]
+}

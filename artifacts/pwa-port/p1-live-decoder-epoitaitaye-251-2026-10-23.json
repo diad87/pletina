@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:42:55.960Z",
+  "song": {
+    "videoId": "DJzjkMBMook",
+    "title": "Epoitaitaye"
+  },
+  "scriptSha256": "1811096ef76307ae911870e789b199d70745ea2d858ada8643a9347d66d64ec1",
+  "sourceSnapshot": "artifacts/pwa-port/p1-live-decoder-source-1811096ef76307ae.mjs",
+  "checks": [
+    {
+      "name": "exact requested audio metadata deciphered in browser worker",
+      "pass": true
+    },
+    {
+      "name": "CDN selected audio loads in ordinary HTMLAudio",
+      "pass": false,
+      "metadata": {
+        "error": 4
+      }
+    }
+  ],
+  "errors": [
+    "QA_ASSERTION_OR_BROWSER_STEP_FAILED"
+  ],
+  "scope": "Real cipher, isolated browser worker and CDN/audio control. Embed configuration obtained anonymously by QA Node in RAM; not autonomous PWA bootstrap.",
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "borrowedCredentials": false,
+    "accountsOrCookies": false,
+    "runtimeProxy": false,
+    "fullPlayerExecuted": false,
+    "signedUrlsOrSessionValuesPersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "physicalPhone": false,
+    "screenOffVerified": false,
+    "audibleAutoplayVerified": false
+  },
+  "control": {
+    "bootstrapSha256": "f49b4d65d25aaf0f2328acc192112f42f9792e13bde3925974524fe1bea717ca",
+    "bootstrapBytes": 152463,
+    "playerPath": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+    "playerSha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "playerBytes": 1629008,
+    "scriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "scriptBytes": 173175,
+    "signatureTimestamp": 20746,
+    "bodySha256": "71d9a0ef851b7dcb0e312bf5fe6085a31eec0055f730431be11ad81e1b2a704b"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "cdnResponses": [],
+  "result": {
+    "status": "OK",
+    "exactId": true,
+    "itag": 251,
+    "mime": "audio/webm; codecs=\"opus\"",
+    "declaredBytes": 3592710,
+    "bitrate": 147279,
+    "inputLengths": {
+      "sig": 110,
+      "n": 19
+    },
+    "outputLengths": {
+      "sig": 104,
+      "n": 14
+    },
+    "range": {
+      "readable": false
+    },
+    "metadata": {
+      "error": 4
+    }
+  },
+  "browsersClosed": true
+}

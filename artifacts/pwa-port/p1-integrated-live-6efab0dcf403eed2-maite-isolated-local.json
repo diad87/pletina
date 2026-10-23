@@ -1,0 +1,689 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T11:10:20.572Z",
+  "expectedBuild": "6efab0dcf403eed2",
+  "build": "6efab0dcf403eed2",
+  "runnerSha256": "bd1d77a33054e1ea6f9ed642cb2a33828d02ba415ce30be04a8d6164d6971106",
+  "sourceSnapshot": "artifacts/pwa-port/p1-integrated-source-bd1d77a33054e1ea.mjs",
+  "scope": "Compiled P1 check page; real anonymous browser provider requests, desktop Chrome foreground audio. No physical Android/iPhone, installed PWA, background, screen-off or audible human verification.",
+  "policy": {
+    "providerMocks": false,
+    "productMethodsReplaced": false,
+    "sdkInjected": false,
+    "nodeProviderBootstrap": false,
+    "runtimeBackend": false,
+    "signedUrlsPersisted": false,
+    "rawRecipePersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "autoplayOverrides": false,
+    "outputSilencedByLaunchArgument": false,
+    "physicalAndroid": false,
+    "physicalIPhone": false,
+    "background": false,
+    "screenOff": false,
+    "programmedSeekIsUserPlaybackProof": false,
+    "audibleHumanVerification": false
+  },
+  "observationRpcCalls": 179,
+  "observationRpcWithGesture": 0,
+  "inputActions": [
+    {
+      "kind": "real mouse click",
+      "purpose": "start a real pending P1 resolution for cancellation",
+      "at": "2026-10-23T11:10:21.720Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "cancel while the public provider request is pending",
+      "at": "2026-10-23T11:10:21.738Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "single normal play click: maite",
+      "at": "2026-10-23T11:10:47.816Z"
+    },
+    {
+      "kind": "declared programmatic seek",
+      "userGesture": false,
+      "target": "80 percent"
+    },
+    {
+      "kind": "declared programmatic seek",
+      "userGesture": false,
+      "target": "duration minus 1.5 seconds"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "unload audio after natural end: maite",
+      "at": "2026-10-23T11:10:56.955Z"
+    }
+  ],
+  "checks": [
+    {
+      "name": "compiled build and anonymous context are visible before any activation",
+      "pass": true,
+      "build": "6efab0dcf403eed2",
+      "initialActivation": {
+        "active": false,
+        "ever": false
+      },
+      "audioCount": 1,
+      "unmutedAudio": true
+    },
+    {
+      "name": "Stop cancels a real pending resolution and it cannot revive after the full deadline",
+      "pass": true,
+      "observedMs": 26071,
+      "samples": 50,
+      "noRevival": true,
+      "sameAudio": true
+    },
+    {
+      "name": "all observations used userGesture:false and no page runtime errors occurred",
+      "pass": true,
+      "observationRpcCalls": 179,
+      "observationRpcWithGesture": 0,
+      "compiledStaticRecipeUsed": true
+    }
+  ],
+  "cases": [
+    {
+      "name": "maite",
+      "videoId": "WtTRMAoN2Fw",
+      "title": "Maite Zaitut!",
+      "checks": [
+        {
+          "name": "maite: one real button click starts unmuted AAC through P1",
+          "pass": true,
+          "elapsedMs": 6665,
+          "duration": 141.612925,
+          "transport": "p1",
+          "exactVideoId": true,
+          "time": 2.065614,
+          "paused": false,
+          "unmutedAudio": true,
+          "frameCount": 0,
+          "sameAudio": true,
+          "extraPlayInteraction": false
+        },
+        {
+          "name": "maite: audio advances after a declared programmatic 80 percent seek",
+          "pass": true,
+          "target": 113.29034,
+          "time": 114.016714,
+          "userGesture": false
+        },
+        {
+          "name": "maite: natural ended follows a declared programmatic tail seek",
+          "pass": true,
+          "target": 140.112925,
+          "ended": true,
+          "time": 141.612925,
+          "duration": 141.612925
+        },
+        {
+          "name": "maite: Stop unloads the source and leaves one silent empty audio element",
+          "pass": true,
+          "paused": true,
+          "srcRemoved": true,
+          "frameCount": 0,
+          "audioCount": 1,
+          "sameAudio": true
+        }
+      ],
+      "samples": [
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": true,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.371015,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.528159,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.684486,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.838363,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.983349,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.13859,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.295117,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.451103,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.606542,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.764147,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.911212,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "6efab0dcf403eed2",
+          "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+          "videoId": "WtTRMAoN2Fw",
+          "transport": "p1",
+          "status": "Suena «Maite Zaitut!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 2.065614,
+            "duration": 141.612925,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        }
+      ],
+      "startedAt": "2026-10-23T11:10:47.814Z",
+      "elapsedToAdvancingAudioMs": 6665,
+      "duration": 141.612925
+    }
+  ],
+  "errors": [],
+  "providerResponses": [
+    {
+      "at": "2026-10-23T11:10:48.401Z",
+      "elapsedMs": 27829,
+      "client": "VISIONOS",
+      "requestedVideoId": "WtTRMAoN2Fw",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0,
+      "aac": []
+    },
+    {
+      "at": "2026-10-23T11:10:48.671Z",
+      "elapsedMs": 28099,
+      "client": "WEB_EMBEDDED_PLAYER",
+      "requestedVideoId": "WtTRMAoN2Fw",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4,
+      "aac": [
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "contentLength": 2293894,
+          "signatureCipher": true,
+          "drc": false
+        }
+      ]
+    }
+  ],
+  "cdnResponses": [
+    {
+      "at": "2026-10-23T11:10:52.228Z",
+      "elapsedMs": 31657,
+      "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+      "status": 206,
+      "itag": "140",
+      "type": "media",
+      "contentType": "audio/mp4"
+    },
+    {
+      "at": "2026-10-23T11:10:52.261Z",
+      "elapsedMs": 31689,
+      "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+      "status": 206,
+      "itag": "140",
+      "type": "media",
+      "contentType": "audio/mp4"
+    }
+  ],
+  "cdnHttp": [
+    {
+      "at": "2026-10-23T11:10:48.725Z",
+      "elapsedMs": 28153,
+      "request": {
+        "at": "2026-10-23T11:10:48.697Z",
+        "elapsedMs": 28125,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-23T11:10:49.231Z",
+      "elapsedMs": 28659,
+      "request": {
+        "at": "2026-10-23T11:10:49.205Z",
+        "elapsedMs": 28633,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-23T11:10:50.233Z",
+      "elapsedMs": 29661,
+      "request": {
+        "at": "2026-10-23T11:10:50.210Z",
+        "elapsedMs": 29638,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-23T11:10:52.228Z",
+      "elapsedMs": 31656,
+      "request": {
+        "at": "2026-10-23T11:10:52.207Z",
+        "elapsedMs": 31635,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "httpStatus": 206,
+      "contentType": "audio/mp4",
+      "contentLength": 2293894
+    },
+    {
+      "at": "2026-10-23T11:10:52.260Z",
+      "elapsedMs": 31688,
+      "request": {
+        "at": "2026-10-23T11:10:52.238Z",
+        "elapsedMs": 31666,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "httpStatus": 206,
+      "contentType": "audio/mp4",
+      "contentLength": 2293894
+    }
+  ],
+  "networkFailures": [
+    {
+      "at": "2026-10-23T11:10:21.742Z",
+      "elapsedMs": 1170,
+      "provider": "youtube",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "at": "2026-10-23T11:10:48.725Z",
+      "elapsedMs": 28153,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-23T11:10:48.725Z",
+      "elapsedMs": 28153,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-23T11:10:48.697Z",
+        "elapsedMs": 28125,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-23T11:10:49.231Z",
+      "elapsedMs": 28659,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-23T11:10:49.231Z",
+      "elapsedMs": 28659,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-23T11:10:49.205Z",
+        "elapsedMs": 28633,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-23T11:10:50.233Z",
+      "elapsedMs": 29661,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-23T11:10:50.233Z",
+      "elapsedMs": 29661,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-23T11:10:50.210Z",
+        "elapsedMs": 29638,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-23T11:10:52.236Z",
+      "elapsedMs": 31664,
+      "provider": "googlevideo",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "at": "2026-10-23T11:10:52.236Z",
+      "elapsedMs": 31664,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-23T11:10:52.207Z",
+        "elapsedMs": 31635,
+        "urlSha256": "89de3ccfb59faa926122d54fd77bd419f4445c0d7d6cd7c2a6889da43cdeef58",
+        "itag": "140",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null,
+      "corsError": null
+    }
+  ],
+  "originKind": "ephemeral static loopback serving unmodified dist-pwa",
+  "browser": "Chrome/148.0.7778.97",
+  "initialCookieCount": 0,
+  "publicContextSha256": "545742107d0a2278446f196a686763f6436a9142b822132531973cc76d20e89e",
+  "recipePreparedDisplay": "Configuración: 545742107d0a · Preparada: 23/10/2026, 12:56:56",
+  "resourcesClosed": true
+}

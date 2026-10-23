@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:51:29.266Z",
+  "mode": "library-context",
+  "bootstrap": {
+    "videoId": "DJzjkMBMook",
+    "purpose": "Diagnostic public reference only."
+  },
+  "execution": {
+    "scriptSha256": "b3a6559e1f8e01d340d3b7462066b9e49eac3ed3cf84c5876195a1288d155c9b",
+    "sourceSnapshot": "artifacts/pwa-port/p1-bootstrap-source-b3a6559e1f8e01d3.mjs",
+    "recipeFile": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "frozenP1Helper": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+    "frozenP1HelperSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+    "codeSources": [
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.js",
+        "sha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.d.ts",
+        "sha256": "215a9947281b6c0fe84335700b188b6b83ddd089881c79c461f29d963e7f108f"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/ProtoUtils.js",
+        "sha256": "748418b78dfabd9040497398b5f44729ddc8a2b2408becc59ce0d7e065e64278"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/HTTPClient.js",
+        "sha256": "4b066f2005c38e04cde8441b52b09f75c78b8dd130e58a4462b5d1e237f6b1ae"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/Constants.js",
+        "sha256": "b65313b8364160254af81413f23b2faab9cbfc80c083f11e686ccb96b57fb6e7"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/protos/generated/misc/params.js",
+        "sha256": "8b2950f8622a09b0b879435557d68d78caabe7ba5984be19e42d17a04613f167"
+      }
+    ]
+  },
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/utils/ProtoUtils.ts"
+  ],
+  "basis": {
+    "localGeneration": "Session.js getSessionData uses encodeVisitorData(random 11-character identifier, current timestamp) when generating an anonymous session locally.",
+    "visitorEndpoint": "Session.d.ts documents the public InnerTube /visitor_id endpoint as a source of anonymous visitor data.",
+    "protobuf": "VisitorData schema fields 1 (string id) and 5 (int32 timestamp). This is an identifier, not a Proof-of-Origin/attestation token."
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "accountUsed": false,
+    "cookiesUsed": false,
+    "userKeysUsed": false,
+    "apiKeyUsed": false,
+    "poTokenUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "proxyUsed": false,
+    "browserSecurityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "rawVisitorValuesPersisted": false,
+    "signedUrlsPersisted": false,
+    "observerUserGesture": false,
+    "browserGeneratedValueReturnedToNode": false
+  },
+  "phases": [
+    {
+      "phase": "anonymous-identifier-schema-controls",
+      "action": "init",
+      "result": {
+        "nodeReference": {
+          "present": true,
+          "textBytes": 548,
+          "binaryBytes": 406,
+          "sha256": "c054575baf472b961b37198a0f602d0a16337cea3e1d9a46b1b6f039ad9f9b3b",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            },
+            {
+              "field": 12,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 342,
+              "ascii": false
+            }
+          ]
+        },
+        "locallyGenerated": {
+          "present": true,
+          "textBytes": 32,
+          "binaryBytes": 19,
+          "sha256": "d742a08311113e74c57b5d676e381ac9f7db1a285e67b132eaf3b6959f4ccbba",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            }
+          ]
+        },
+        "encoderMatchesLibrarySyntheticVector": true
+      }
+    },
+    {
+      "phase": "locally-generated-visitor-with-complete-SDK-local-context",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "local-generated",
+      "includesBuildPublicContextExtras": false,
+      "localSDKContext": true,
+      "clientVersion": "1.20260206.01.00",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1377,
+        "responseSha256": "848a052050f0825432d1140fc563a5a366a4971421f6a9866f4d02e6932abd9e",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "6dd760b351a376851400abaa0fbb669e8b0be065f7a208aea7702541336207ff",
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    },
+    {
+      "phase": "complete-SDK-local-context-with-current-static-public-version",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "local-generated",
+      "includesBuildPublicContextExtras": false,
+      "localSDKContext": true,
+      "clientVersion": "2.20261022.01.00",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1435,
+        "responseSha256": "47ecbcbf6db43696692afc7d3e9166b780d6a9733c07c844cae322e51c9a4eb8",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "1d961f46bb82893a9c1c8be03c93ebd3e1a0d8049553b98c09b0cf4e36f7f1d1",
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    }
+  ],
+  "transport": [],
+  "errors": [],
+  "referenceBootstrap": [
+    {
+      "title": "Public reference",
+      "videoId": "DJzjkMBMook",
+      "kind": "public-reference-schema-only",
+      "embed": {
+        "status": 200,
+        "bytes": 152592,
+        "sha256": "31942833c6967e802e2072b10e04111ed393bc6d5894004f446570cc9e96d35a"
+      },
+      "clientName": "WEB_EMBEDDED_PLAYER",
+      "clientVersion": "2.20261022.01.00",
+      "clientId": 56,
+      "visitorPresent": true,
+      "flagsPresent": true,
+      "contextFields": [
+        "platform",
+        "clientFormFactor",
+        "osName",
+        "osVersion",
+        "browserName",
+        "browserVersion",
+        "gl",
+        "deviceExperimentId",
+        "rolloutToken",
+        "configInfo"
+      ],
+      "player": {
+        "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+        "status": 200,
+        "bytes": 1629008,
+        "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "signatureTimestamp": 20746
+      },
+      "bodySha256": "2cf2597f3d99b46f5480c56ff41cda73eafb462a3633bf7f6ba29ba0bf7b174d",
+      "copiedRequestAccountOrTracking": false
+    }
+  ],
+  "browser": "Chrome/148.0.7778.97",
+  "summary": {
+    "autonomousMinimalCipher": [],
+    "sharedBuildContextMetadata": [],
+    "completeAudioOrPlaybackClaimed": false,
+    "rawValuesWritten": false,
+    "browsersClosed": true
+  }
+}

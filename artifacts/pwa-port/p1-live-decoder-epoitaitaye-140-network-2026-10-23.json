@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:43:55.183Z",
+  "song": {
+    "videoId": "DJzjkMBMook",
+    "title": "Epoitaitaye"
+  },
+  "scriptSha256": "dc6b3bac3898a7150d25274e020d648053a2720e0c0efa27b33ddd9057d5469a",
+  "sourceSnapshot": "artifacts/pwa-port/p1-live-decoder-source-dc6b3bac3898a715.mjs",
+  "checks": [
+    {
+      "name": "exact requested audio metadata deciphered in browser worker",
+      "pass": true
+    },
+    {
+      "name": "CDN selected audio loads in ordinary HTMLAudio",
+      "pass": true,
+      "metadata": {
+        "duration": 209.159592
+      }
+    },
+    {
+      "name": "native audio advances from beginning",
+      "pass": true
+    },
+    {
+      "name": "audio advances after 80 percent seek",
+      "pass": true
+    },
+    {
+      "name": "tail reaches natural ended",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "scope": "Real cipher, isolated browser worker and CDN/audio control. Embed configuration obtained anonymously by QA Node in RAM; not autonomous PWA bootstrap.",
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "borrowedCredentials": false,
+    "accountsOrCookies": false,
+    "runtimeProxy": false,
+    "fullPlayerExecuted": false,
+    "signedUrlsOrSessionValuesPersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "physicalPhone": false,
+    "screenOffVerified": false,
+    "audibleAutoplayVerified": false
+  },
+  "control": {
+    "bootstrapSha256": "0dd2e94a57596c3cc9a1433893d0d8f00d8502e57429827d4511762d365c76ef",
+    "bootstrapBytes": 151765,
+    "playerPath": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+    "playerSha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "playerBytes": 1629008,
+    "scriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "scriptBytes": 173175,
+    "signatureTimestamp": 20746,
+    "bodySha256": "db9fde550f6dca144a84d6c38ebf67ff1b33e6b4a1de1fd7667316eaf389eda1"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "cdnResponses": [
+    {
+      "status": 206,
+      "itag": "140",
+      "type": "media",
+      "contentType": "audio/mp4",
+      "allowOrigin": null
+    }
+  ],
+  "networkFailures": [
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    }
+  ],
+  "cdnHeaders": [
+    {
+      "status": 206,
+      "allowOrigin": null
+    },
+    {
+      "status": 206,
+      "allowOrigin": null
+    },
+    {
+      "status": 200,
+      "allowOrigin": null
+    }
+  ],
+  "result": {
+    "status": "OK",
+    "exactId": true,
+    "itag": 140,
+    "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+    "declaredBytes": 3388291,
+    "bitrate": 131202,
+    "signatureCharsetValid": true,
+    "nCharsetValid": true,
+    "inputLengths": {
+      "sig": 110,
+      "n": 19
+    },
+    "outputLengths": {
+      "sig": 104,
+      "n": 14
+    },
+    "range": {
+      "readable": false
+    },
+    "metadata": {
+      "duration": 209.159592
+    }
+  },
+  "fullFile": {
+    "readable": false,
+    "error": "opaque-cdn-blocked"
+  },
+  "browsersClosed": true
+}

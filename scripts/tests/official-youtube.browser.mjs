@@ -125,13 +125,16 @@ function directedTransport(underlying, requests, control) {
           let body
           try { body = request.postDataJSON() ?? {} } catch { body = {} }
           if (control.rejectIds?.has(body.videoId)) {
-            const row = { operation: 'direct-player-rejection', videoId: body.videoId, playability: 'UNPLAYABLE' }
+            const row = { operation: 'direct-player-rejection', videoId: body.videoId,
+              clientName: body.context?.client?.clientName ?? null, playability: 'UNPLAYABLE' }
             requests.push(row)
             const gate = control.playerGate && !control.playerGate.claimed ? control.playerGate : null
             if (gate) { row.delivery = 'held'; gate.claim(); await gate.released }
             try {
               await route.fulfill({ status: 200, headers: cors, contentType: 'application/json',
-                body: JSON.stringify({ playabilityStatus: { status: 'UNPLAYABLE' } }) })
+                // P1 is rejected by its own exact-ID player response, before
+                // any decoder or metadata probe; it does not inherit an audio fixture.
+                body: JSON.stringify({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId: body.videoId } }) })
               row.delivery = gate ? 'released-after-pause' : 'delivered'
             } catch (error) {
               if (!gate?.closed || !/interception|intercept|cancel|abort|invalid.*id|request.*not.*found|already.*handled|disposed|target.*closed/i.test(error.message)) throw error
@@ -411,8 +414,14 @@ async function scenarios(ctx, requests, directory, control) {
       assert.deepEqual(clicks.map(row => row.kind), ['track'], 'Only the original trusted song click may precede the automatic embed')
       assert.equal(clicks[0].trusted, true)
       assert.equal(searchCount() - searchMark, 2, 'One Music and one WEB resolver search, with no repeated modal search')
-      assert.deepEqual(requests.slice(requestMark).filter(row => row.operation === 'direct-player-rejection').map(row => row.videoId),
-        [fixtureIds.first, fixtureIds.second], 'The resolver rejects the saved source and the distinct matching alternative once each')
+      const rejectedAudioAttempts = requests.slice(requestMark).filter(row => row.operation === 'direct-player-rejection')
+        .map(({ videoId, clientName }) => ({ videoId, clientName }))
+      assert.deepEqual(rejectedAudioAttempts, [
+        { videoId: fixtureIds.first, clientName: 'VISIONOS' },
+        { videoId: fixtureIds.first, clientName: 'WEB_EMBEDDED_PLAYER' },
+        { videoId: fixtureIds.second, clientName: 'VISIONOS' },
+        { videoId: fixtureIds.second, clientName: 'WEB_EMBEDDED_PLAYER' },
+      ], 'Each distinct matching recording has one VISIONOS attempt and one bounded P1 rescue, in that order')
       assert.equal(embedCount() - embedMark, 1)
       assert.ok(await page.evaluate(() => window.__qaAudio.instances.every(audio => audio.paused && !audio.src)))
       assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)
@@ -424,7 +433,7 @@ async function scenarios(ctx, requests, directory, control) {
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
       assert.deepEqual(await storedState(page), before)
       return { trigger: 'trusted normal song-title click', videoId: fixtureIds.first, autoplayRequested: true,
-        extraSourceSelections: 0, resolverSearches: 2, additionalModalSearches: 0, savedSourceWrites: 0,
+        extraSourceSelections: 0, resolverSearches: 2, additionalModalSearches: 0, savedSourceWrites: 0, rejectedAudioAttempts,
         queueAndCurrentPreserved: true, nativeAudioStopped: true, closeDestroysFrame: true, bounds,
         embedContent: 'benign static fixture', youtubePlaybackVerified: false, browserAutoplayPolicyVerified: false }
     } finally { control.rejectIds = null }

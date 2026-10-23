@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:47:25.773Z",
+  "mode": "sdk-visitor",
+  "execution": {
+    "scriptSha256": "29d52cccf8eaf6c7a9d16045f68a56dc305fe0cf9644d1e01f0db6e0d6fdc122",
+    "sourceSnapshot": "artifacts/pwa-port/p1-bootstrap-source-29d52cccf8eaf6c7.mjs",
+    "recipeFile": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "frozenP1Helper": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+    "frozenP1HelperSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+    "codeSources": [
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.js",
+        "sha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.d.ts",
+        "sha256": "215a9947281b6c0fe84335700b188b6b83ddd089881c79c461f29d963e7f108f"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/ProtoUtils.js",
+        "sha256": "748418b78dfabd9040497398b5f44729ddc8a2b2408becc59ce0d7e065e64278"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/protos/generated/misc/params.js",
+        "sha256": "8b2950f8622a09b0b879435557d68d78caabe7ba5984be19e42d17a04613f167"
+      }
+    ]
+  },
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/utils/ProtoUtils.ts"
+  ],
+  "basis": {
+    "localGeneration": "Session.js getSessionData uses encodeVisitorData(random 11-character identifier, current timestamp) when generating an anonymous session locally.",
+    "visitorEndpoint": "Session.d.ts documents the public InnerTube /visitor_id endpoint as a source of anonymous visitor data.",
+    "protobuf": "VisitorData schema fields 1 (string id) and 5 (int32 timestamp). This is an identifier, not a Proof-of-Origin/attestation token."
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "accountUsed": false,
+    "cookiesUsed": false,
+    "userKeysUsed": false,
+    "apiKeyUsed": false,
+    "poTokenUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "proxyUsed": false,
+    "browserSecurityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "rawVisitorValuesPersisted": false,
+    "signedUrlsPersisted": false,
+    "observerUserGesture": false,
+    "browserGeneratedValueReturnedToNode": false
+  },
+  "phases": [
+    {
+      "phase": "anonymous-identifier-schema-controls",
+      "action": "init",
+      "result": {
+        "nodeReference": {
+          "present": true,
+          "textBytes": 548,
+          "binaryBytes": 406,
+          "sha256": "80568e5cadc58ca956c4c22355b4020cea5d160f4993fd318b082202ae7732fa",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            },
+            {
+              "field": 12,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 342,
+              "ascii": false
+            }
+          ]
+        },
+        "locallyGenerated": {
+          "present": true,
+          "textBytes": 32,
+          "binaryBytes": 19,
+          "sha256": "0280def96f483426787307f6a0c4acca8ec8a58f1ed97ade2751473a354a07c3",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            }
+          ]
+        },
+        "encoderMatchesLibrarySyntheticVector": true
+      }
+    },
+    {
+      "phase": "visitor-endpoint-SDK-embedded-context",
+      "action": "visitor",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 717,
+        "responseSha256": "4eeba4a4acca1e0580537d436a992261deffcfcba6fe28cb52318a7f6804d8c4",
+        "apiErrorCode": null,
+        "topLevelKeys": [
+          "responseContext"
+        ],
+        "contextPresent": true,
+        "visitor": {
+          "present": true,
+          "textBytes": 88,
+          "binaryBytes": 61,
+          "sha256": "234e663d69b6978ee7f46c339a34945de3c6a2a98978766e54d986bc5f8abf10",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phase": "SDK-endpoint-visitor-with-SDK-player-context",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "visitor-endpoint-sdk",
+      "includesBuildPublicContextExtras": false,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1362,
+        "responseSha256": "24f8a5a48833f1488aeba19f95383a7bd57d5171744c63e9e7ddb7c09f19898a",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "648706c59540d647dd7c3a83e88e924045922370d0f55d65183910a3e9951f20",
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    }
+  ],
+  "transport": [],
+  "errors": [],
+  "referenceBootstrap": [
+    {
+      "title": "Epoitaitaye",
+      "videoId": "DJzjkMBMook",
+      "kind": "public-reference-schema-only",
+      "embed": {
+        "status": 200,
+        "bytes": 152239,
+        "sha256": "d6e6204be806b64f0e38ac6558352e043b0333cd79f7b0cb0d53864f7a6fbbf1"
+      },
+      "clientName": "WEB_EMBEDDED_PLAYER",
+      "clientVersion": "2.20261022.01.00",
+      "clientId": 56,
+      "visitorPresent": true,
+      "flagsPresent": true,
+      "contextFields": [
+        "platform",
+        "clientFormFactor",
+        "osName",
+        "osVersion",
+        "browserName",
+        "browserVersion",
+        "gl",
+        "deviceExperimentId",
+        "rolloutToken",
+        "configInfo"
+      ],
+      "player": {
+        "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+        "status": 200,
+        "bytes": 1629008,
+        "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "signatureTimestamp": 20746
+      },
+      "bodySha256": "696272175c45d5eda39e3a01c284badd7b9f6b0df9833369ca42c95428bda734",
+      "copiedRequestAccountOrTracking": false
+    }
+  ],
+  "browser": "Chrome/148.0.7778.97",
+  "summary": {
+    "autonomousMinimalCipher": [],
+    "sharedBuildContextMetadata": [],
+    "completeAudioOrPlaybackClaimed": false,
+    "rawValuesWritten": false,
+    "browsersClosed": true
+  }
+}

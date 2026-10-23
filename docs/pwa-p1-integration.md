@@ -1,5 +1,35 @@
 # Integración de P1 en la PWA
 
+## Audio directo publicado: b1f6a3355de8ae66
+
+23 de octubre de 2026. Fuente `4e140bcf180fd34fbf3f3e1cb8d25243ce1a285f`, **publicada y verificada** en [Pletina](https://diad87.github.io/pletina/), distribución `f29fd55904091d6f6e4d59e3c17dc6689c63a2b2`, con [31/31 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-b1f6a3355de8ae66.json). La [validación central](../artifacts/pwa-e2e/validation-b1f6a3355de8ae66.json) separa pruebas controladas, proveedores reales y comprobaciones físicas pendientes. Se conserva la interfaz de la APK 0.11.2; CSS y fuentes no cambian frente a 2cbb.
+
+### Método y validación
+
+VISIONOS sigue siendo la primera ruta. Sólo sus errores tipados de formato o fuente no disponible permiten intentar P1 para **el mismo ID**; restricciones, red y timeout no activan esta ruta. Si P1 falla, se conserva el error original para los rescates ya existentes. No se introduce otra búsqueda ni una tabla de URLs musicales por canción.
+
+[prepare-pwa-p1.mjs](../scripts/prepare-pwa-p1.mjs) obtiene durante la preparación del build una configuración de un embed público neutral y extrae las funciones necesarias de su JavaScript público. La receta estática contiene estado de cliente público anónimo, incluido su visitante; no contiene cuenta, cookies, clave API, ID musical ni URL de audio. No es un servidor de reproducción: cada móvil hace sus propias peticiones directas y ejecuta el fragmento extraído en un worker aislado sin acceso a la red ni al almacenamiento de la app. Los intentos anteriores de obtener un visitante embedded autónomo en el navegador siguen documentados como negativos; esta receta estática resuelve esa dependencia en la preparación, sin afirmar una vida útil garantizada.
+
+La respuesta debe confirmar exactamente el vídeo solicitado, estado público OK y AAC/MP4 sin DRM. El parser conserva las guardas de audio original frente a doblaje, descripción, DRC y etiquetas contradictorias. Las entradas cifradas `s`/`n` se tratan como **argumentos opacos**, no como código: longitud máxima 4.096 y rechazo de controles ASCII. Tras transformar, las salidas conservan su alfabeto estricto, límites y rechazo de errores; la URL final exige HTTPS, dominio googlevideo y ruta permitida. Esto no demuestra por sí solo que el vídeo seleccionado sea el máster exacto de un catálogo externo.
+
+Antes de guardar la URL en RAM se carga sólo su metadata en un contexto aislado, sin llamar a Play; se cruza duración y se retira el elemento. La sonda usa un máximo de cinco intentos en posiciones temporales absolutas y un límite total de ocho segundos, saltando reintentos vencidos si el renderer estuvo suspendido. Los fallos observados del CDN, incluidos 403 en algunos intentos, no se interpretan como ausencia de la canción. Esta sonda **no verifica el archivo entero ni garantiza la reproducción posterior**. Cancelar limpia petición, worker, frame y listeners; refresh no reutiliza una URL anterior si fracasa.
+
+El [ensayo integrado con proveedores reales](../artifacts/pwa-port/p1-integrated-live-b1f6a3355de8ae66-local-manifest.json) pasa **15/15** con Epoitaitaye, Maite Zaitut e Iritsi da Eguna: audio AAC real en Chrome de escritorio, avance y seek programado, además de controles de cancelación. No usa bootstrap Node durante la ejecución, mocks de proveedor ni RPC de observación con gesto de usuario. El [recorrido por la interfaz normal](../artifacts/pwa-port/p1-app-b1f6a3355de8ae66-epoitaitaye-local.json) pasa **3/3**: entrada mínima, búsqueda real y selección de Epoitaitaye que produce avance de Audio sin un segundo botón de YouTube. No hay verificación auditiva humana, física de teléfono ni de todo el catálogo.
+
+Pasan **626/626 pruebas de lógica**, tipos **0/0**, regresión del recurso visible **33/33** y actualización desde 2cbb **11/11**. La matriz multimedia pasa **112 correctas, 0 fallidas y dos no compatibles de 114** en tres motores de escritorio. WebKit Linux añade [3/3 con Epoitaitaye real](../artifacts/pwa-port/p1-integrated-webkit-b1f6a3355de8ae66-epoitaitaye-final.json), sin convertirlo en una prueba física de iPhone. La [auditoría independiente](../artifacts/pwa-port/p1-product-audit-b1f6a3355de8ae66.json) conserva hashes y límites. El inventario publicado suma **31 archivos y 833.219 bytes**, entrada **50.993** y aplicación bajo demanda **736.653**, sin comprimir.
+
+El [manifiesto público final](../artifacts/pwa-port/p1-integrated-live-b1f6a3355de8ae66-public-manifest.json) vincula el mismo runner, receta y build con **15/15 desde Pages**, además de conservar las primeras respuestas fallidas. La [interfaz pública normal](../artifacts/pwa-port/p1-app-b1f6a3355de8ae66-epoitaitaye-public.json) pasa **3/3** con búsqueda y un toque en Epoitaitaye. Estos resultados no amplían el alcance físico ni acreditan por sí solos cada segundo del audio.
+
+### Límites pendientes
+
+El estado anónimo público puede caducar o variar entre IP/cohortes; el TTL de una caché nativa no establece su validez. Faltan controles físicos Android/iPhone desde el icono, otras redes, pantalla apagada, segundo plano y cambios de canción. No se atribuyen a esta build las confirmaciones de móviles anteriores. La fuente `youtube-p1` declara **download.allowed:false**: el streaming AAC puede ser reproducible por HTMLAudio y seguir sin permitir leer sus bytes por CORS. No se ofrece descarga offline de P1.
+
+Los primeros informes de `6efab0dcf403eed2` se conservan con sus fallos; los manifiestos distinguen correcciones del observador, fixtures y producto. El [diagnóstico de actualización](../artifacts/pwa-port/p1-update-6efab-diagnostic-manifest.json) conserva el atasco intermitente inicial y dos controles posteriores correctos sin aumentar tiempos; no declara una causa de navegador ni un arreglo de producción. Android Auto y CarPlay permanecen fuera de las integraciones de esta PWA.
+
+## Historial: integración portable publicada 2cbb
+
+La sección siguiente describe exclusivamente `2cbb1fcf0376491f` y su investigación previa. Sus límites de activación corresponden a esa compilación, no a la publicación actual.
+
 23 de octubre de 2026. Integración parcial, build `2cbb1fcf0376491f`, fuente `91a7097a5bff4998dfa0a433039ff8ce86bce247`. La interfaz procede de la APK 0.11.2; no se fusiona la base 0.9.1 de la rama P1.
 
 ## Cambios incorporados

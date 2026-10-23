@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-10-23T11:24:50.118Z",
+  "build": "b1f6a3355de8ae66",
+  "sourceCommit": "4e140bcf180fd34fbf3f3e1cb8d25243ce1a285f",
+  "scope": "Independent read-only review of fixed generator, decoder integration, cache and download capabilities. No runtime playback assertion.",
+  "files": [
+    {
+      "path": "scripts/prepare-pwa-p1.mjs",
+      "sha256": "8ddc0d05611d98d89c214f63dfbdf9e4da10cc8d849fd58b6fd3daabf3de02d9",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/youtube-p1.ts",
+      "sha256": "f3fe065d8d361c9a4953d64986bb0c2174c6baf7362f38611bcbe36c9731e2b5",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/youtube-p1-probe.ts",
+      "sha256": "fcd6ebca55aba27eea048b74d086db65e067d0726a47a09269e129e54f9af9aa",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/youtube.ts",
+      "sha256": "a5617c7c2316800bf6e3584df6113879b10ffb66aca123d1d0fef4ac77fe1c27",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "ade2ecb1253f87414abe9b06b80cdc80cfc457ec9c3ffa9d0ef5d1802aa678e7",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/podcast-audio.ts",
+      "sha256": "9f684d7c51244b9e7b9d3dd18a4e0bf2e6d73f6728e72cd1d846959a48731086",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/p1-recipe.generated.ts",
+      "sha256": "4fe25bbb8cabebd1a31761f0e7e861869ea9b359a9c7248dc461de71354fe21d",
+      "matchesFixedCommit": true
+    },
+    {
+      "path": "web-port/downloads.ts",
+      "sha256": "c835dbf4afefc29a18f6c601dcc433dfc335b99e1291268e382d404b098dd283",
+      "matchesFixedCommit": true
+    }
+  ],
+  "recipeShape": {
+    "topLevelKeys": [
+      "context",
+      "playbackContext",
+      "signatureTimestamp",
+      "script",
+      "createdAt",
+      "playerSHA"
+    ],
+    "clientKeys": [
+      "clientName",
+      "clientVersion",
+      "hl",
+      "userAgent",
+      "visitorData",
+      "platform",
+      "clientFormFactor",
+      "osName",
+      "osVersion",
+      "browserName",
+      "browserVersion",
+      "gl",
+      "deviceExperimentId",
+      "rolloutToken",
+      "configInfo"
+    ],
+    "scriptBytes": 173175,
+    "scriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "apiKeyPatternCount": 0,
+    "signedMediaLiteralCount": 0,
+    "neutralBootstrapId": "M7lc1UVf-VE",
+    "perRecordingRuntimeMappings": false,
+    "rawAnonymousStateLoggedInThisReport": false
+  },
+  "checks": [
+    {
+      "name": "Neutral anonymous generator allowlist excludes account fields, cookies, API keys and per-song media mappings",
+      "status": "pass"
+    },
+    {
+      "name": "Request and parser both bind the exact video ID; original audio policy remains global across audio metadata",
+      "status": "pass"
+    },
+    {
+      "name": "Only AAC/MP4 is processed and decoder runs in a bounded opaque worker with network disabled",
+      "status": "pass"
+    },
+    {
+      "name": "P1 is attempted only after original unavailable/format, preserves the original category on failure, and enters URL cache only after metadata probe",
+      "status": "pass"
+    },
+    {
+      "name": "Music and YouTube-podcast P1 Playable values carry source.provider youtube-p1 and download.allowed false; download manager rejects before transfer",
+      "status": "pass"
+    },
+    {
+      "name": "Opaque encrypted s/n remain bounded arguments encoded as JSON; ASCII controls are rejected and transformed output retains strict alphabet, URL and parameter validation",
+      "status": "pass"
+    }
+  ],
+  "materialBlockers": [],
+  "limitations": [
+    "Metadata availability proves neither a complete transfer nor complete decoding or acoustic identity.",
+    "Diagnostic page and synthetic browser suites are separate from physical installed PWA, background and screen-off validation."
+  ],
+  "productModified": false,
+  "built": false,
+  "published": false,
+  "priorReview": {
+    "path": "artifacts/pwa-port/p1-generator-core-audit-6efab0dcf403eed2.json",
+    "sha256": "5345c6602131ac9a0bc6947c360ff52eb2d01e6d06354eaf60083e66bdeded0b"
+  }
+}

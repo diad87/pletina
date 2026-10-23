@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T10:48:37.237Z",
+  "scope": "Bounded browser-native P1 context research. No runtime backend, product change, Node visitor, cross-origin DOM access, playback or deployment.",
+  "reports": [
+    {
+      "path": "artifacts/pwa-port/p1-context-bootstrap-2026-10-23.json",
+      "sha256": "ea8149910ffd01e8a741d76076093ff48697c7aa4dc168a2aed5f29c32418c76",
+      "scriptSha256": "a6c088e0d093fec8afb0f2b1af04c7b227bf7c090a4a6f7280f8ce55e3b2d261",
+      "sourceSnapshot": "artifacts/pwa-port/p1-context-source-a6c088e0d093fec8.mjs",
+      "phase": "responseContext-and-official-IFrame-API",
+      "postMetadataRequests": 6,
+      "errors": 0,
+      "browsersClosed": true,
+      "bootstrapPositive": false,
+      "iframe": {
+        "ready": true,
+        "messages": 3,
+        "contextFields": 0,
+        "debugTextKeys": [],
+        "playerState": 5,
+        "duration": 210,
+        "mediaRequests": 0,
+        "framesRemoved": true
+      }
+    },
+    {
+      "path": "artifacts/pwa-port/p1-context-bootstrap-final-2026-10-23.json",
+      "sha256": "6191eb175dd4cfc59ba48659cb2457af75ea850509d8ccf6abf91732c1a1270a",
+      "scriptSha256": "71952a2f154ff47a668b8435ea7ca0e042e2d780431589b997a777f90335a884",
+      "sourceSnapshot": "artifacts/pwa-port/p1-context-source-71952a2f154ff47a.mjs",
+      "phase": "responseContext-and-official-IFrame-API",
+      "postMetadataRequests": 6,
+      "errors": 0,
+      "browsersClosed": true,
+      "bootstrapPositive": false,
+      "iframe": {
+        "ready": true,
+        "messages": 4,
+        "contextFields": 0,
+        "debugTextKeys": [
+          "debug_videoId",
+          "debug_playbackQuality",
+          "debug_date",
+          "origin",
+          "timestamp"
+        ],
+        "playerState": 5,
+        "duration": 210,
+        "mediaRequests": 0,
+        "framesRemoved": true
+      }
+    },
+    {
+      "path": "artifacts/pwa-port/p1-context-fields-2026-10-23.json",
+      "sha256": "d9591a33a03f7996ae59755bae281972be3b35b47ad802e304aa7adcea3a2c85",
+      "scriptSha256": "aa51243ca64c739d3d76b1f25ae1edf75e94b5528423a5f87938c30c246cb087",
+      "sourceSnapshot": "artifacts/pwa-port/p1-context-source-aa51243ca64c739d.mjs",
+      "phase": "responseContext-field-shapes-only",
+      "postMetadataRequests": 6,
+      "errors": 0,
+      "browsersClosed": true,
+      "bootstrapPositive": false,
+      "iframe": null
+    }
+  ],
+  "currentRunner": {
+    "path": "scripts/tests/p1-context-bootstrap.browser.mjs",
+    "sha256": "aa51243ca64c739d3d76b1f25ae1edf75e94b5528423a5f87938c30c246cb087"
+  },
+  "summary": {
+    "distinctCanonicalTargets": 1,
+    "hardcodedMusicalIdsInMethod": false,
+    "successfulWEBSearchControl": true,
+    "embeddedPlayerMetadataReadable": true,
+    "embeddedMintedVisitor": {
+      "encodedCharacters": 88,
+      "decodedBytes": 61,
+      "protobufFields": [
+        1,
+        5,
+        6
+      ]
+    },
+    "embeddedOwnVisitorRetry": {
+      "status": "ERROR",
+      "audioFormats": 0
+    },
+    "WEBIssuedContextRetry": {
+      "status": "ERROR",
+      "audioFormats": 0
+    },
+    "library18_2ClientScreenEMBEDAndGoogleEmbedUrl": {
+      "status": "ERROR",
+      "audioFormats": 0
+    },
+    "responseContextGlobalConfigOrFlagsFound": false,
+    "trackingVisitorIdenticalToDirectOrRequest": true,
+    "trackingValuesReusedInRequests": false,
+    "officialIFrameAPIReady": true,
+    "officialIFrameBootstrapFieldsFound": false,
+    "playbackCommandsSent": 0,
+    "providerMediaRequestsObserved": 0,
+    "rawVisitorFlagsOrSignedUrlsPersisted": false
+  },
+  "findings": [
+    {
+      "path": "responseContext.visitorData",
+      "result": "The embedded player can issue a normal anonymous visitor directly to this opaque browser context. Reusing that exact returned visitor still gives ERROR and zero formats."
+    },
+    {
+      "path": "serviceTrackingParams visitor_data",
+      "result": "Only structure/equality was inspected in RAM. It is the same 61-byte visitor or the visitor supplied with the request, not the richer embedded bootstrap described by the independent control. Tracking values were never copied into request context."
+    },
+    {
+      "path": "globalConfigGroup/configInfo",
+      "result": "None was delivered by the tested search/player responses. The separate /config investigation belongs to another diagnostic and is not counted here."
+    },
+    {
+      "path": "Official IFrame API postMessage",
+      "result": "Normal enablejsapi player emits initialDelivery/onReady/alreadyInitialized with metadata, playback capabilities, and a five-key debugText JSON; no visitor, encryptedHostFlags, experiment or bootstrap field was observed. Only documented options/state/duration methods were called, and the child DOM was never read."
+    },
+    {
+      "path": "Bounded limits",
+      "result": "One caller-selected public video, normal Chrome desktop, finite response/message sizes and timeouts. The negative result does not establish universal impossibility or mobile behavior."
+    }
+  ],
+  "primarySources": [
+    {
+      "url": "https://developers.google.com/youtube/iframe_api_reference",
+      "consulted": "2026-10-23",
+      "relevance": "Documented player construction, metadata/options/events and postMessage support; no account/bootstrap getter is documented."
+    },
+    {
+      "url": "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+      "consulted": "2026-10-23",
+      "relevance": "Primary implementation; exact installed 18.2.0 files are hashed above rather than assuming mutable main matches."
+    }
+  ],
+  "productEdited": false,
+  "additionalRequestsAfterClosure": false
+}

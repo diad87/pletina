@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:43:53.120Z",
+  "song": {
+    "videoId": "DJzjkMBMook",
+    "title": "Epoitaitaye"
+  },
+  "scriptSha256": "dc6b3bac3898a7150d25274e020d648053a2720e0c0efa27b33ddd9057d5469a",
+  "sourceSnapshot": "artifacts/pwa-port/p1-live-decoder-source-dc6b3bac3898a715.mjs",
+  "checks": [
+    {
+      "name": "exact requested audio metadata deciphered in browser worker",
+      "pass": true
+    },
+    {
+      "name": "CDN selected audio loads in ordinary HTMLAudio",
+      "pass": false,
+      "metadata": {
+        "error": 4
+      }
+    }
+  ],
+  "errors": [
+    "QA_ASSERTION_OR_BROWSER_STEP_FAILED"
+  ],
+  "scope": "Real cipher, isolated browser worker and CDN/audio control. Embed configuration obtained anonymously by QA Node in RAM; not autonomous PWA bootstrap.",
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "borrowedCredentials": false,
+    "accountsOrCookies": false,
+    "runtimeProxy": false,
+    "fullPlayerExecuted": false,
+    "signedUrlsOrSessionValuesPersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "physicalPhone": false,
+    "screenOffVerified": false,
+    "audibleAutoplayVerified": false
+  },
+  "control": {
+    "bootstrapSha256": "6f49052e5203bb659367daa8a5badff008a4601fc6c35cf162c45c0df446f720",
+    "bootstrapBytes": 152605,
+    "playerPath": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+    "playerSha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "playerBytes": 1629008,
+    "scriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "scriptBytes": 173175,
+    "signatureTimestamp": 20746,
+    "bodySha256": "83959b3f1c8829dd4eb9637605804b16846d8e9b5e016e465d4e92f2727a6a47"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "cdnResponses": [],
+  "networkFailures": [
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    }
+  ],
+  "cdnHeaders": [
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    }
+  ],
+  "result": {
+    "status": "OK",
+    "exactId": true,
+    "itag": 251,
+    "mime": "audio/webm; codecs=\"opus\"",
+    "declaredBytes": 3592710,
+    "bitrate": 147279,
+    "signatureCharsetValid": true,
+    "nCharsetValid": true,
+    "inputLengths": {
+      "sig": 110,
+      "n": 19
+    },
+    "outputLengths": {
+      "sig": 104,
+      "n": 14
+    },
+    "range": {
+      "readable": false
+    },
+    "metadata": {
+      "error": 4
+    }
+  },
+  "browsersClosed": true
+}

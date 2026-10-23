@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:49:05.752Z",
+  "scope": "Library-defined Session configInfo and own anonymous visitor reused in RAM; no audio request or playback proof.",
+  "execution": {
+    "scriptSha256": "ee85c0c52c42f8efb07015a496bb72e7d09d23b4ca1adf07cb47e3d4663135f0",
+    "sourceSnapshot": "artifacts/pwa-port/p1-alternative-config-player-source-ee85c0c52c42f8ef.mjs",
+    "recipePath": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "recipeFieldsUsed": [
+      "client.version",
+      "player.signatureTimestamp"
+    ],
+    "videos": [],
+    "webVersion": "2.20260623.01.00",
+    "embeddedVersion": "2.20261022.01.00",
+    "signatureTimestamp": 20746,
+    "shapeOnly": true,
+    "sessionSha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1",
+    "httpClientSha256": "4b066f2005c38e04cde8441b52b09f75c78b8dd130e58a4462b5d1e237f6b1ae"
+  },
+  "mapping": "Session18.2 maps /config response globalConfigGroup into WEB configInfo. HTTPClient18.2 removes configInfo when switching away from WEB; embedded uses only its own fresh response visitor, not WEB configInfo.",
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/utils/HTTPClient.ts"
+  ],
+  "policy": {
+    "productChanged": false,
+    "nodeProviderRequests": false,
+    "borrowedVisitor": false,
+    "accountOrKey": false,
+    "cookieJar": false,
+    "securityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "observerUserGesture": false,
+    "mediaRequested": false,
+    "signedUrlsOrRawConfigurationPersisted": false,
+    "phoneOrBackgroundPlaybackClaimed": false
+  },
+  "results": {
+    "config": [
+      {
+        "kind": "WEB",
+        "status": 200,
+        "readable": true,
+        "bytes": 12997,
+        "visitorPresent": true,
+        "configInfoFields": [
+          "coldConfigData",
+          "coldHashData",
+          "hotHashData"
+        ],
+        "configDataPresent": true,
+        "configDataLength": 932,
+        "onesieHotConfigMarkerPresent": false,
+        "encryptedHostFlagsMarkerPresent": false,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "globalConfigGroup",
+          "mainAppWebResponseContext",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "topLevelKeys": [
+          "responseContext",
+          "configData",
+          "globalConfig"
+        ],
+        "globalConfigType": "object",
+        "globalConfigLength": null,
+        "globalConfigShape": [],
+        "encodedGlobalConfig": null,
+        "encodedConfigData": {
+          "decodedBytes": 694,
+          "onesieMarker": false,
+          "hostFlagsMarker": false,
+          "signatureTimestampMarker": false,
+          "playerMarker": false,
+          "jsonPrefix": false
+        },
+        "encodedColdConfigData": {
+          "decodedBytes": 537,
+          "onesieMarker": false,
+          "hostFlagsMarker": false,
+          "signatureTimestampMarker": false,
+          "playerMarker": false,
+          "jsonPrefix": false
+        }
+      },
+      {
+        "kind": "WEB_EMBEDDED_PLAYER",
+        "status": 200,
+        "readable": true,
+        "bytes": 1706,
+        "visitorPresent": true,
+        "configInfoFields": [],
+        "configDataPresent": true,
+        "configDataLength": 906,
+        "onesieHotConfigMarkerPresent": false,
+        "encryptedHostFlagsMarkerPresent": false,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "globalConfigGroup",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "topLevelKeys": [
+          "responseContext",
+          "configData",
+          "globalConfig"
+        ],
+        "globalConfigType": "object",
+        "globalConfigLength": null,
+        "globalConfigShape": [],
+        "encodedGlobalConfig": null,
+        "encodedConfigData": {
+          "decodedBytes": 677,
+          "onesieMarker": false,
+          "hostFlagsMarker": false,
+          "signatureTimestampMarker": false,
+          "playerMarker": false,
+          "jsonPrefix": false
+        },
+        "encodedColdConfigData": null
+      }
+    ],
+    "players": []
+  },
+  "transport": [],
+  "errors": [],
+  "browser": "Chrome/153.0.8010.52",
+  "conclusion": "Configuration values were inspected only for structure and marker presence. No provider keys or decoded payload values persisted; no player or media request."
+}

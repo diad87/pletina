@@ -1,0 +1,387 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:48:06.905Z",
+  "mode": "shared-build",
+  "bootstrap": {
+    "videoId": "M7lc1UVf-VE",
+    "purpose": "Neutral public IFrame API example supplies one generic anonymous context, separate from the music test IDs."
+  },
+  "execution": {
+    "scriptSha256": "b2865e7dfd915435bc203fe9ede334e99de018dc7abc45448a606920f7f5d66a",
+    "sourceSnapshot": "artifacts/pwa-port/p1-bootstrap-source-b2865e7dfd915435.mjs",
+    "recipeFile": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "frozenP1Helper": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+    "frozenP1HelperSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+    "codeSources": [
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.js",
+        "sha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.d.ts",
+        "sha256": "215a9947281b6c0fe84335700b188b6b83ddd089881c79c461f29d963e7f108f"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/ProtoUtils.js",
+        "sha256": "748418b78dfabd9040497398b5f44729ddc8a2b2408becc59ce0d7e065e64278"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/protos/generated/misc/params.js",
+        "sha256": "8b2950f8622a09b0b879435557d68d78caabe7ba5984be19e42d17a04613f167"
+      }
+    ]
+  },
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/utils/ProtoUtils.ts"
+  ],
+  "basis": {
+    "localGeneration": "Session.js getSessionData uses encodeVisitorData(random 11-character identifier, current timestamp) when generating an anonymous session locally.",
+    "visitorEndpoint": "Session.d.ts documents the public InnerTube /visitor_id endpoint as a source of anonymous visitor data.",
+    "protobuf": "VisitorData schema fields 1 (string id) and 5 (int32 timestamp). This is an identifier, not a Proof-of-Origin/attestation token."
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "accountUsed": false,
+    "cookiesUsed": false,
+    "userKeysUsed": false,
+    "apiKeyUsed": false,
+    "poTokenUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "proxyUsed": false,
+    "browserSecurityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "rawVisitorValuesPersisted": false,
+    "signedUrlsPersisted": false,
+    "observerUserGesture": false,
+    "browserGeneratedValueReturnedToNode": false
+  },
+  "phases": [
+    {
+      "phase": "anonymous-identifier-schema-controls",
+      "action": "init",
+      "result": {
+        "nodeReference": {
+          "present": true,
+          "textBytes": 548,
+          "binaryBytes": 406,
+          "sha256": "cf44a797dc0fa8a09cc620bac768ea072d862c87a609a4c218b46f4aa703bf0e",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            },
+            {
+              "field": 12,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 342,
+              "ascii": false
+            }
+          ]
+        },
+        "locallyGenerated": {
+          "present": true,
+          "textBytes": 32,
+          "binaryBytes": 19,
+          "sha256": "7caef606f74a514d47ff50d634c2d8fb7edc91eb4f6c8727748dcfc590f37493",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            }
+          ]
+        },
+        "encoderMatchesLibrarySyntheticVector": true
+      }
+    },
+    {
+      "phase": "one-public-anonymous-build-context-reused-across-IDs",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "node-reference",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 248356,
+        "responseSha256": "2abb07cc6ec3f2357dba0263b40c006eca1b18b3e3ef9a285b6231af899cf649",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372",
+        "exactVideoId": true,
+        "playability": "OK",
+        "reason": "",
+        "playableInEmbed": true,
+        "sabrPresent": true,
+        "formats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          }
+        ]
+      }
+    },
+    {
+      "phase": "one-public-anonymous-build-context-reused-across-IDs",
+      "action": "player",
+      "videoId": "fV-IUsecSsU",
+      "visitorSource": "node-reference",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 248440,
+        "responseSha256": "84b7e2b6437cc30335d1367aed1b75b747be341f19893ad7ad0ec8fce7dfeaf3",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372",
+        "exactVideoId": true,
+        "playability": "OK",
+        "reason": "",
+        "playableInEmbed": true,
+        "sabrPresent": true,
+        "formats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          }
+        ]
+      }
+    },
+    {
+      "phase": "one-public-anonymous-build-context-reused-across-IDs",
+      "action": "player",
+      "videoId": "WtTRMAoN2Fw",
+      "visitorSource": "node-reference",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 248424,
+        "responseSha256": "a875e72f52068d71c64ea50af4587d3b126c84c39e360088ffd70ff3330f3d41",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372",
+        "exactVideoId": true,
+        "playability": "OK",
+        "reason": "",
+        "playableInEmbed": true,
+        "sabrPresent": true,
+        "formats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          }
+        ]
+      }
+    },
+    {
+      "phase": "one-public-anonymous-build-context-reused-across-IDs",
+      "action": "player",
+      "videoId": "___________",
+      "visitorSource": "node-reference",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1233,
+        "responseSha256": "17a04aebe7cc3c78327f488f15186a50474cbec2161d5767d2d740799d030dfe",
+        "apiErrorCode": null,
+        "contextRecipeSha256ExcludingVideoId": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372",
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "Video unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    }
+  ],
+  "transport": [],
+  "errors": [],
+  "referenceBootstrap": [
+    {
+      "title": "Neutral public IFrame API example",
+      "videoId": "M7lc1UVf-VE",
+      "kind": "public-reference-schema-only",
+      "embed": {
+        "status": 200,
+        "bytes": 154795,
+        "sha256": "e6e4f5838884fbe49f6c5225c351b1d6c19017a77f543253e5d9b338dd5452a0"
+      },
+      "clientName": "WEB_EMBEDDED_PLAYER",
+      "clientVersion": "2.20261022.01.00",
+      "clientId": 56,
+      "visitorPresent": true,
+      "flagsPresent": true,
+      "contextFields": [
+        "platform",
+        "clientFormFactor",
+        "osName",
+        "osVersion",
+        "browserName",
+        "browserVersion",
+        "gl",
+        "deviceExperimentId",
+        "rolloutToken",
+        "configInfo"
+      ],
+      "player": {
+        "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+        "status": 200,
+        "bytes": 1629008,
+        "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "signatureTimestamp": 20746
+      },
+      "bodySha256": "afc39f2738bed74eb4daab7f300291191d963215f86b588c9bae190b9931c15c",
+      "copiedRequestAccountOrTracking": false
+    }
+  ],
+  "browser": "Chrome/148.0.7778.97",
+  "summary": {
+    "autonomousMinimalCipher": [],
+    "sharedBuildContextMetadata": [
+      {
+        "videoId": "DJzjkMBMook",
+        "exactVideoId": true,
+        "playability": "OK",
+        "cipherFormats": 4,
+        "commonContextSha256": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372"
+      },
+      {
+        "videoId": "fV-IUsecSsU",
+        "exactVideoId": true,
+        "playability": "OK",
+        "cipherFormats": 4,
+        "commonContextSha256": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372"
+      },
+      {
+        "videoId": "WtTRMAoN2Fw",
+        "exactVideoId": true,
+        "playability": "OK",
+        "cipherFormats": 4,
+        "commonContextSha256": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372"
+      },
+      {
+        "videoId": "___________",
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "cipherFormats": 0,
+        "commonContextSha256": "67a2306420a3c5d336911e1b402c126e6c2b481aa92b76f9b6d9ee7647c01372"
+      }
+    ],
+    "completeAudioOrPlaybackClaimed": false,
+    "rawValuesWritten": false,
+    "browsersClosed": true
+  }
+}

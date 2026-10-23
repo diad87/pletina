@@ -1,0 +1,476 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T10:43:57.540Z",
+  "execution": {
+    "scriptSha256": "bba7f4d3fba13dba932c2c2d46d3ff62a01a800e0e22dbeac3bb56a102bed6dc",
+    "sourceSnapshot": "artifacts/pwa-port/p1-bootstrap-source-bba7f4d3fba13dba.mjs",
+    "recipeFile": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "frozenP1Helper": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+    "frozenP1HelperSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+    "codeSources": [
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.js",
+        "sha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/core/Session.d.ts",
+        "sha256": "215a9947281b6c0fe84335700b188b6b83ddd089881c79c461f29d963e7f108f"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/src/utils/ProtoUtils.js",
+        "sha256": "748418b78dfabd9040497398b5f44729ddc8a2b2408becc59ce0d7e065e64278"
+      },
+      {
+        "path": "node_modules/youtubei.js/dist/protos/generated/misc/params.js",
+        "sha256": "8b2950f8622a09b0b879435557d68d78caabe7ba5984be19e42d17a04613f167"
+      }
+    ]
+  },
+  "sources": [
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+    "https://github.com/LuanRT/YouTube.js/blob/main/src/utils/ProtoUtils.ts"
+  ],
+  "basis": {
+    "localGeneration": "Session.js getSessionData uses encodeVisitorData(random 11-character identifier, current timestamp) when generating an anonymous session locally.",
+    "visitorEndpoint": "Session.d.ts documents the public InnerTube /visitor_id endpoint as a source of anonymous visitor data.",
+    "protobuf": "VisitorData schema fields 1 (string id) and 5 (int32 timestamp). This is an identifier, not a Proof-of-Origin/attestation token."
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "accountUsed": false,
+    "cookiesUsed": false,
+    "userKeysUsed": false,
+    "apiKeyUsed": false,
+    "poTokenUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "proxyUsed": false,
+    "browserSecurityOverrides": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "rawVisitorValuesPersisted": false,
+    "signedUrlsPersisted": false,
+    "observerUserGesture": false,
+    "browserGeneratedValueReturnedToNode": false
+  },
+  "phases": [
+    {
+      "phase": "anonymous-identifier-schema-controls",
+      "action": "init",
+      "result": {
+        "nodeReference": {
+          "present": true,
+          "textBytes": 544,
+          "binaryBytes": 408,
+          "sha256": "925ab8de75d588669c2611310d46834c3bbe144295c78b553fb3774127d2a7a3",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            },
+            {
+              "field": 9,
+              "name": "unknown",
+              "wire": "varint",
+              "encodedBytes": 1
+            },
+            {
+              "field": 12,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 342,
+              "ascii": false
+            }
+          ]
+        },
+        "locallyGenerated": {
+          "present": true,
+          "textBytes": 32,
+          "binaryBytes": 19,
+          "sha256": "f5c8dea3f22a3e197622d033e299dd52ac32c3429803b365a9e53b8596d44202",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            }
+          ]
+        },
+        "encoderMatchesLibrarySyntheticVector": true
+      }
+    },
+    {
+      "phase": "browser-generated-visitor-minimal-player",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "local-generated",
+      "includesBuildPublicContextExtras": false,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1435,
+        "responseSha256": "0d5f528ef583e71b79151c022cc5e5cec7ae64d0e6f421563ee11a7ad5da9364",
+        "apiErrorCode": null,
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    },
+    {
+      "phase": "browser-generated-visitor-full-public-context-diagnostic",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "local-generated",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 2060,
+        "responseSha256": "d9401ae834c8c530f6df39a62ea8158e0718f04cf02bc87d5ac269de057451c9",
+        "apiErrorCode": null,
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    },
+    {
+      "phase": "visitor-endpoint-WEB_EMBEDDED_PLAYER",
+      "action": "visitor",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 717,
+        "responseSha256": "8f45572474630e8e506a7d0ae20a7f0553d5ffb9ad7bbf11fcd6f0ff94d0349d",
+        "apiErrorCode": null,
+        "topLevelKeys": [
+          "responseContext"
+        ],
+        "contextPresent": true,
+        "visitor": {
+          "present": true,
+          "textBytes": 88,
+          "binaryBytes": 61,
+          "sha256": "783e8fc579dcf79e534e76b589c2e875174b37c2c047a3ba9e36c8969784d923",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phase": "visitor-endpoint-WEB_EMBEDDED_PLAYER-minimal-player",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "visitor-endpoint-WEB_EMBEDDED_PLAYER",
+      "includesBuildPublicContextExtras": false,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1362,
+        "responseSha256": "d46b9bc5938a9a5d015501c63e3197210d669ab7016001a270ec91771f9353f9",
+        "apiErrorCode": null,
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    },
+    {
+      "phase": "visitor-endpoint-WEB",
+      "action": "visitor",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 854,
+        "responseSha256": "ab32264763fdf15d02db014ffaad721defcd72bb06868398edae70167acafe90",
+        "apiErrorCode": null,
+        "topLevelKeys": [
+          "responseContext"
+        ],
+        "contextPresent": true,
+        "visitor": {
+          "present": true,
+          "textBytes": 88,
+          "binaryBytes": 61,
+          "sha256": "fff9e7d8cfc4c67be207a81ceff106e72c27ac4272650f077d4dcf368c6f9944",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "phase": "visitor-endpoint-WEB-minimal-player",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "visitor-endpoint-WEB",
+      "includesBuildPublicContextExtras": false,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 1362,
+        "responseSha256": "07def635f7a2d7940bc90a86a08574ba4e3d10aa6797848cfc461c0bf808985a",
+        "apiErrorCode": null,
+        "exactVideoId": false,
+        "playability": "ERROR",
+        "reason": "This video is unavailable",
+        "playableInEmbed": null,
+        "sabrPresent": false,
+        "formats": []
+      }
+    },
+    {
+      "phase": "schema-music-reference-only",
+      "action": "search",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 244429,
+        "responseSha256": "3f8c1b192cd7176011eab6ac5e419cd15a739a780d77d636b5b47d581eb18a22",
+        "apiErrorCode": null,
+        "contextPresent": true,
+        "visitor": {
+          "present": true,
+          "textBytes": 88,
+          "binaryBytes": 61,
+          "sha256": "e2493b67a5781246e8c4e60bf03232f41e6be206763e7e2d41de1f7762d8abb2",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            }
+          ]
+        },
+        "contentsPresent": true
+      }
+    },
+    {
+      "phase": "schema-web-reference-only",
+      "action": "search",
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 743857,
+        "responseSha256": "a35c97fb5080440038a87e8e7e0b42c342753a426e66f66cdd07e3fde3432c06",
+        "apiErrorCode": null,
+        "contextPresent": true,
+        "visitor": {
+          "present": true,
+          "textBytes": 88,
+          "binaryBytes": 61,
+          "sha256": "7f27feeadb104bfc9e65fb8a8f288c2792a724871ccd13c705e5964b7fcf62dc",
+          "fields": [
+            {
+              "field": 1,
+              "name": "id",
+              "wire": "length-delimited",
+              "bytes": 11,
+              "ascii": true
+            },
+            {
+              "field": 5,
+              "name": "timestamp",
+              "wire": "varint",
+              "encodedBytes": 5
+            },
+            {
+              "field": 6,
+              "name": "unknown",
+              "wire": "length-delimited",
+              "bytes": 40,
+              "ascii": false
+            }
+          ]
+        },
+        "contentsPresent": true
+      }
+    },
+    {
+      "phase": "contemporary-node-visitor-reference-positive-not-a-product-path",
+      "action": "player",
+      "videoId": "DJzjkMBMook",
+      "visitorSource": "node-reference",
+      "includesBuildPublicContextExtras": true,
+      "result": {
+        "status": 200,
+        "readable": true,
+        "responseBytes": 248533,
+        "responseSha256": "29733ebed2b77d451d4bc0988d61bb507681a004fea5b1ed36b0753656b93ceb",
+        "apiErrorCode": null,
+        "exactVideoId": true,
+        "playability": "OK",
+        "reason": "",
+        "playableInEmbed": true,
+        "sabrPresent": true,
+        "formats": [
+          {
+            "itag": 140,
+            "mime": "audio/mp4; codecs=\"mp4a.40.2\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 249,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 250,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          },
+          {
+            "itag": 251,
+            "mime": "audio/webm; codecs=\"opus\"",
+            "cipher": true,
+            "direct": false,
+            "drc": false,
+            "drm": false
+          }
+        ]
+      }
+    }
+  ],
+  "transport": [],
+  "errors": [],
+  "referenceBootstrap": [
+    {
+      "title": "Epoitaitaye",
+      "videoId": "DJzjkMBMook",
+      "kind": "public-reference-schema-only",
+      "embed": {
+        "status": 200,
+        "bytes": 152226,
+        "sha256": "195dba0f97fd7045eb549ac87f32e28aa124bba0ae243599670dfdb11f1db780"
+      },
+      "clientName": "WEB_EMBEDDED_PLAYER",
+      "clientVersion": "2.20261022.01.00",
+      "clientId": 56,
+      "visitorPresent": true,
+      "flagsPresent": true,
+      "contextFields": [
+        "platform",
+        "clientFormFactor",
+        "osName",
+        "osVersion",
+        "browserName",
+        "browserVersion",
+        "gl",
+        "deviceExperimentId",
+        "rolloutToken",
+        "configInfo"
+      ],
+      "player": {
+        "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+        "status": 200,
+        "bytes": 1629008,
+        "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "signatureTimestamp": 20746
+      },
+      "bodySha256": "5338c2e47deeab2cba46416edfa53df4a6de1d3c9859d2ae0f128c6695b27590",
+      "copiedRequestAccountOrTracking": false
+    }
+  ],
+  "browser": "Chrome/148.0.7778.97",
+  "summary": {
+    "autonomousMinimalCipher": [],
+    "completeAudioOrPlaybackClaimed": false,
+    "rawValuesWritten": false,
+    "browsersClosed": true
+  }
+}

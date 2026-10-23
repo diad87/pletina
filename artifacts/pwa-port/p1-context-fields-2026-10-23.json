@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-23T10:47:07.868Z",
+  "videoId": "DJzjkMBMook",
+  "scope": "Read-only native-browser responseContext reuse and documented IFrame API message observation; no playback or full extractor claim.",
+  "execution": {
+    "scriptSha256": "aa51243ca64c739d3d76b1f25ae1edf75e94b5528423a5f87938c30c246cb087",
+    "snapshot": "artifacts/pwa-port/p1-context-source-aa51243ca64c739d.mjs",
+    "recipePath": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+    "recipeSha256": "01f5395ab879ca40ef9a340333d9ff990884dbb5b2f2c46f480ec14caacc1a60",
+    "recipeFieldsUsed": [
+      "client.version",
+      "player.signatureTimestamp"
+    ],
+    "clientVersion": "2.20261022.01.00",
+    "signatureTimestamp": 20746,
+    "sourceModules": [
+      {
+        "path": "core/Session.js",
+        "sha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1"
+      },
+      {
+        "path": "utils/HTTPClient.js",
+        "sha256": "4b066f2005c38e04cde8441b52b09f75c78b8dd130e58a4462b5d1e237f6b1ae"
+      },
+      {
+        "path": "parser/types/RawResponse.d.ts",
+        "sha256": "72fdc2d85d8367e1b639a40ab5cc2874b422897b594943b0b3f1da467571770e"
+      }
+    ]
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "nodeProviderRequests": false,
+    "accountKeyOrProxy": false,
+    "manuallySuppliedCookies": false,
+    "browserSecurityOverrides": false,
+    "borrowedVisitorUsed": false,
+    "crossOriginDomRead": false,
+    "rawContextPersisted": false,
+    "signedUrlsOrAudioPersisted": false,
+    "iframeAutoplay": false,
+    "playbackCommandSent": false,
+    "officialIframeCodeRunsNormally": true,
+    "providerMediaRequestsBlockedForMetadataProbe": true
+  },
+  "primarySources": [
+    {
+      "url": "https://developers.google.com/youtube/iframe_api_reference",
+      "consulted": "2026-10-23",
+      "relevance": "Documented player construction, metadata/options/events and postMessage support; no account/bootstrap getter is documented."
+    },
+    {
+      "url": "https://github.com/LuanRT/YouTube.js/blob/main/src/core/Session.ts",
+      "consulted": "2026-10-23",
+      "relevance": "Primary implementation; exact installed 18.2.0 files are hashed above rather than assuming mutable main matches."
+    }
+  ],
+  "browserContext": {
+    "origin": "null",
+    "summaries": [
+      {
+        "label": "WEB-search-context-control",
+        "readable": true,
+        "status": 200,
+        "bytes": 122419,
+        "elapsedMs": 435,
+        "apiError": null,
+        "playability": null,
+        "exactVideoId": false,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "mainAppWebResponseContext",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [
+          {
+            "path": "responseContext.visitorData",
+            "type": "string",
+            "length": 88,
+            "sha256": "d7c2f7c0bfdcaab88b403a19a6266ab91c9bd5aa7048b839d132c48230200e7f"
+          }
+        ],
+        "serviceTrackingKeyNames": [
+          "context",
+          "logged_in",
+          "has_unlimited_entitlement",
+          "has_premium_lite_entitlement",
+          "logged_in",
+          "visitor_data",
+          "yt_ad",
+          "c",
+          "cver",
+          "yt_li",
+          "GetSearch_rid",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": {
+          "encodedLength": 88,
+          "decodedBytes": 61,
+          "fields": [
+            {
+              "number": 1,
+              "wire": 2,
+              "bytes": 11
+            },
+            {
+              "number": 5,
+              "wire": 0,
+              "bytes": 5
+            },
+            {
+              "number": 6,
+              "wire": 2,
+              "bytes": 40
+            }
+          ]
+        },
+        "trackingVisitorComparisons": [
+          {
+            "shape": {
+              "encodedLength": 88,
+              "decodedBytes": 61,
+              "fields": [
+                {
+                  "number": 1,
+                  "wire": 2,
+                  "bytes": 11
+                },
+                {
+                  "number": 5,
+                  "wire": 0,
+                  "bytes": 5
+                },
+                {
+                  "number": 6,
+                  "wire": 2,
+                  "bytes": 40
+                }
+              ]
+            },
+            "identicalToDirectVisitor": true,
+            "identicalToRequestVisitor": false,
+            "reusedInRequests": false
+          }
+        ],
+        "extractedClientFields": [
+          "visitorData"
+        ],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": null
+      },
+      {
+        "label": "WEB-player-browser-context",
+        "readable": true,
+        "status": 200,
+        "bytes": 5538,
+        "elapsedMs": 99,
+        "apiError": null,
+        "playability": "UNPLAYABLE",
+        "exactVideoId": true,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "serviceTrackingParams",
+          "maxAgeSeconds",
+          "mainAppWebResponseContext",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [],
+        "serviceTrackingKeyNames": [
+          "is_viewed_live",
+          "is_alc_surface",
+          "ipcc",
+          "wh_paused",
+          "logged_in",
+          "visitor_data",
+          "c",
+          "cver",
+          "yt_li",
+          "GetPlayer_rid",
+          "logged_in",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": null,
+        "trackingVisitorComparisons": [
+          {
+            "shape": {
+              "encodedLength": 88,
+              "decodedBytes": 61,
+              "fields": [
+                {
+                  "number": 1,
+                  "wire": 2,
+                  "bytes": 11
+                },
+                {
+                  "number": 5,
+                  "wire": 0,
+                  "bytes": 5
+                },
+                {
+                  "number": 6,
+                  "wire": 2,
+                  "bytes": 40
+                }
+              ]
+            },
+            "identicalToDirectVisitor": false,
+            "identicalToRequestVisitor": true,
+            "reusedInRequests": false
+          }
+        ],
+        "extractedClientFields": [],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": true
+      },
+      {
+        "label": "embedded-no-visitor-response-context",
+        "readable": true,
+        "status": 200,
+        "bytes": 1435,
+        "elapsedMs": 90,
+        "apiError": null,
+        "playability": "ERROR",
+        "exactVideoId": false,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "visitorData",
+          "serviceTrackingParams",
+          "maxAgeSeconds",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [
+          {
+            "path": "responseContext.visitorData",
+            "type": "string",
+            "length": 88,
+            "sha256": "f2bf3a91ef92675ee56d06df8c70466a4f34ee4d1fdad36f2936b633829d6a33"
+          }
+        ],
+        "serviceTrackingKeyNames": [
+          "ipcc",
+          "is_alc_surface",
+          "is_viewed_live",
+          "logged_in",
+          "c",
+          "cver",
+          "yt_li",
+          "GetPlayer_rid",
+          "logged_in",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": {
+          "encodedLength": 88,
+          "decodedBytes": 61,
+          "fields": [
+            {
+              "number": 1,
+              "wire": 2,
+              "bytes": 11
+            },
+            {
+              "number": 5,
+              "wire": 0,
+              "bytes": 5
+            },
+            {
+              "number": 6,
+              "wire": 2,
+              "bytes": 40
+            }
+          ]
+        },
+        "trackingVisitorComparisons": [],
+        "extractedClientFields": [
+          "visitorData"
+        ],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": null
+      },
+      {
+        "label": "embedded-own-response-context-retry",
+        "readable": true,
+        "status": 200,
+        "bytes": 1362,
+        "elapsedMs": 79,
+        "apiError": null,
+        "playability": "ERROR",
+        "exactVideoId": false,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "serviceTrackingParams",
+          "maxAgeSeconds",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [],
+        "serviceTrackingKeyNames": [
+          "ipcc",
+          "is_viewed_live",
+          "is_alc_surface",
+          "wh_paused",
+          "logged_in",
+          "c",
+          "cver",
+          "yt_li",
+          "GetPlayer_rid",
+          "logged_in",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": null,
+        "trackingVisitorComparisons": [],
+        "extractedClientFields": [],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": null
+      },
+      {
+        "label": "embedded-WEB-player-issued-context",
+        "readable": true,
+        "status": 200,
+        "bytes": 1362,
+        "elapsedMs": 92,
+        "apiError": null,
+        "playability": "ERROR",
+        "exactVideoId": false,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "serviceTrackingParams",
+          "maxAgeSeconds",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [],
+        "serviceTrackingKeyNames": [
+          "ipcc",
+          "is_alc_surface",
+          "is_viewed_live",
+          "wh_paused",
+          "logged_in",
+          "c",
+          "cver",
+          "yt_li",
+          "GetPlayer_rid",
+          "logged_in",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": null,
+        "trackingVisitorComparisons": [],
+        "extractedClientFields": [],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": null
+      },
+      {
+        "label": "embedded-library18_2-shape-with-browser-context",
+        "readable": true,
+        "status": 200,
+        "bytes": 1362,
+        "elapsedMs": 80,
+        "apiError": null,
+        "playability": "ERROR",
+        "exactVideoId": false,
+        "audioFormats": 0,
+        "audioCipherFormats": 0,
+        "directAudioFormats": 0,
+        "responseContextKeys": [
+          "serviceTrackingParams",
+          "maxAgeSeconds",
+          "responseId",
+          "webResponseContextExtensionData"
+        ],
+        "publicContextFields": [],
+        "serviceTrackingKeyNames": [
+          "ipcc",
+          "is_viewed_live",
+          "is_alc_surface",
+          "wh_paused",
+          "logged_in",
+          "c",
+          "cver",
+          "yt_li",
+          "GetPlayer_rid",
+          "logged_in",
+          "client.version",
+          "client.name"
+        ],
+        "directVisitorShape": null,
+        "trackingVisitorComparisons": [],
+        "extractedClientFields": [],
+        "noticeExact": false,
+        "playableInEmbed": null,
+        "familySafe": null
+      }
+    ],
+    "rawValuesReturnedToNode": false,
+    "standaloneBootstrapPositive": false
+  },
+  "iframe": null,
+  "network": {
+    "blockedMediaRequests": 0
+  },
+  "errors": [],
+  "browser": "Chrome/148.0.7778.97",
+  "browsersClosed": true,
+  "summary": {
+    "responseContextBootstrapPositive": false,
+    "iframeReady": false,
+    "iframeContextFieldCount": 0,
+    "noRuntimeBackendOrBorrowedVisitor": true,
+    "mediaPlayed": false,
+    "contextValuesPersisted": false
+  }
+}

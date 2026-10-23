@@ -297,19 +297,22 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/player')) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
+        const clientName = body.context?.client?.clientName ?? null
         if (flags.audiusCatalogRescue && [audiusRescueTrack.videoId, audiusRejectedTrack.videoId].includes(videoId)) {
-          Object.assign(row, { fixtureCase: 'audius-catalog-rescue', operation: 'player', videoId, playability: 'UNPLAYABLE' })
-          return json({ playabilityStatus: { status: 'UNPLAYABLE' } })
+          Object.assign(row, { fixtureCase: 'audius-catalog-rescue', operation: 'player', videoId, clientName, playability: 'UNPLAYABLE' })
+          // Every transport receives a controlled rejection for this exact ID;
+          // in particular P1 must stop before a decoder or metadata media probe.
+          return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
         }
         const rescue = flags.musicUnplayableWebRescue && [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId)
-        if (rescue) Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'player', videoId })
+        if (rescue) Object.assign(row, { fixtureCase: 'music-unplayable-web-rescue', operation: 'player', videoId, clientName })
         if (flags.failPlayer || rescue && videoId === webRescue.musicVideoId) {
           // The generic bounded-error case exercises a restriction, which must
           // not open the official-player fallback. The separate rescue case
           // deliberately keeps its unavailable-audio classification.
           const status = rescue && videoId === webRescue.musicVideoId ? 'UNPLAYABLE' : 'LOGIN_REQUIRED'
           Object.assign(row, { playability: status, videoId })
-          return json({ playabilityStatus: { status } })
+          return json({ playabilityStatus: { status }, videoDetails: { videoId } })
         }
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack

@@ -1,0 +1,179 @@
+{
+  "testedAt": "2026-10-23T10:44:52.788Z",
+  "scope": "Public Session18.2 sw.js_data and config endpoint bootstrap; browser-readable access only.",
+  "provenance": {
+    "library": "youtubei.js@18.2.0",
+    "sessionSha256": "3cca4244b213b88229878c610a996933f70a93fe53ebd3afc800568f043a0ff1",
+    "upstreamCommit": "204715b6acfb063dc306d8677e36fdbf09f293c5",
+    "upstreamSession": "https://github.com/LuanRT/YouTube.js/blob/204715b6acfb063dc306d8677e36fdbf09f293c5/src/core/Session.ts",
+    "p1Commit": "0aa9e1c1ad21a6b66924c18af41aab2d78533cf7",
+    "publicClientVersions": {
+      "WEB": "2.20260623.01.00",
+      "WEB_EMBEDDED": "1.20260206.01.00"
+    }
+  },
+  "constraints": {
+    "credentials": "omit",
+    "keysUsed": false,
+    "borrowedVisitorUsed": false,
+    "nodeSeedContextUsed": false,
+    "customHeadersUsed": false,
+    "remoteJavascriptExecuted": false,
+    "browserSecurityOverrides": false,
+    "observerUserGesture": false,
+    "rawConfigurationPersisted": false,
+    "mediaRequested": false,
+    "playbackOrPhysicalPhoneClaimed": false,
+    "maximumDecodedResponseBytes": 2097152
+  },
+  "results": [
+    {
+      "origin": "https://diad87.github.io",
+      "label": "sw-js-data",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "origin": "https://diad87.github.io",
+      "label": "config-web",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "origin": "https://diad87.github.io",
+      "label": "config-embedded",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "origin": "opaque-null",
+      "label": "sw-js-data",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "origin": "opaque-null",
+      "label": "config-web",
+      "readable": true,
+      "status": 200,
+      "type": "cors",
+      "textBytes": 13133,
+      "responseContextPresent": true,
+      "configDataPresent": true,
+      "coldConfigDataPresent": true,
+      "coldHashDataPresent": true,
+      "hotHashDataPresent": true,
+      "error": null
+    },
+    {
+      "origin": "opaque-null",
+      "label": "config-embedded",
+      "readable": true,
+      "status": 200,
+      "type": "cors",
+      "textBytes": 1498,
+      "responseContextPresent": true,
+      "configDataPresent": true,
+      "coldConfigDataPresent": false,
+      "coldHashDataPresent": false,
+      "hotHashDataPresent": false,
+      "error": null
+    }
+  ],
+  "transport": [
+    {
+      "path": "/sw.js_data",
+      "method": "GET",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 200
+    },
+    {
+      "path": "/sw.js_data",
+      "method": "GET",
+      "origin": "browser-managed",
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 403
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 403
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "path": "/sw.js_data",
+      "method": "GET",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 200
+    },
+    {
+      "path": "/sw.js_data",
+      "method": "GET",
+      "origin": "browser-managed",
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 200
+    },
+    {
+      "path": "/youtubei/v1/config",
+      "method": "POST",
+      "origin": "browser-managed",
+      "kind": "http-status",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "productChanged": false,
+  "conclusion": "A bootstrap contains readable session/configuration structure. No embedded player request, full audio or background playback was demonstrated by this probe.",
+  "scriptSha256": "6fa5908b0726fb77f281e294cf0a948ff0bc861a6e85e2613862082980aae729"
+}
