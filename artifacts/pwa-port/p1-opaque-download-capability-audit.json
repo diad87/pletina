@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-23",
+  "status": "implemented-conditional-on-real-opaque-pilot-no-build",
+  "baseSource": "c349e9bfbd77f830b1d011015f4e1e9b220a61d7",
+  "files": [
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-web-port-audio.ts",
+      "snapshotSha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8"
+    },
+    {
+      "path": "web-port/downloads.ts",
+      "sha256": "bd3a29ee9284311a6174bd2083bca87da00ee84ec9b68e3fdb1edbc1a590a24c",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-web-port-downloads.ts",
+      "snapshotSha256": "bd3a29ee9284311a6174bd2083bca87da00ee84ec9b68e3fdb1edbc1a590a24c"
+    },
+    {
+      "path": "scripts/tests/web-audio.test.mjs",
+      "sha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-scripts-tests-web-audio.test.mjs",
+      "snapshotSha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a"
+    },
+    {
+      "path": "scripts/tests/web-downloads.test.mjs",
+      "sha256": "82a40712babc3c530f672d00b3cf6d11247b3391c6c95efd889a3ed26e108978",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-scripts-tests-web-downloads.test.mjs",
+      "snapshotSha256": "82a40712babc3c530f672d00b3cf6d11247b3391c6c95efd889a3ed26e108978"
+    }
+  ],
+  "proof": {
+    "before": {
+      "tests": 132,
+      "passed": 127,
+      "failed": 5
+    },
+    "after": {
+      "tests": 165,
+      "passed": 165,
+      "failed": 0
+    },
+    "types": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "evidence": [
+      {
+        "path": "artifacts/pwa-port/p1-opaque-download-capability-before.log",
+        "sha256": "6c8f104a81a33901560bb73867f3bb04923895e065fd65184659ea3e4d3a015f"
+      },
+      {
+        "path": "artifacts/pwa-port/p1-opaque-download-capability-after.log",
+        "sha256": "e284fb79e1c192f572d4a9de100591e1196615386134529e1e0da9a7b2119acc"
+      },
+      {
+        "path": "artifacts/pwa-port/p1-opaque-download-capability-types.log",
+        "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+      },
+      {
+        "path": "artifacts/pwa-port/p1-opaque-download-capability-from-c349e9b.patch",
+        "sha256": "4d321c53f1e468403863fdff5bcc7e487e6b877abe263b5bcebdbc9141ff46f9"
+      }
+    ]
+  },
+  "contract": [
+    "P1 capability requires valid video ID, declared integer contentLength from 1 through 256 MiB and finite duration from greater than zero through 86400 seconds.",
+    "Manager validates same provider ID/videoId, HTTPS Googlevideo, no userinfo, nondefault port or hash and consistent optional single clen query parameter.",
+    "Transfer uses the resolved P1 locator without a second stream lookup, no-cors with credentials omitted.",
+    "cache.put must complete before local stage validation of expected duration within 3 seconds and decodable media at the tail; IDB commit follows validation.",
+    "Opaque declared size is a quota estimate, not a measured body size or a hard actual-byte cap. No opaque hash or verified MIME is claimed.",
+    "P1 source identity, media URL and hashes do not persist; existing YouTube metadata/store/SW schema is retained.",
+    "Missing/denied metadata preserves exact-provider rescue. Existing non-P1 opaque validation remains unchanged."
+  ],
+  "scope": {
+    "networkOrMediaRequestsByThisTask": 0,
+    "realBrowserPilot": "Other agent, not credited in this report",
+    "physicalDeviceVerified": false,
+    "buildExecuted": false,
+    "published": false
+  }
+}

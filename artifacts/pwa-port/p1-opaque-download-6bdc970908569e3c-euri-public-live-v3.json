@@ -1,0 +1,855 @@
+{
+  "schemaVersion": 1,
+  "expectedBuild": "6bdc970908569e3c",
+  "build": "6bdc970908569e3c",
+  "testedAt": "2026-10-23T21:07:00.082Z",
+  "wanted": {
+    "query": "Pirritx Porrotx Euri Tanta",
+    "title": "Euri Tanta",
+    "artist": "Pirritx Porrotx",
+    "album": "Euri Tanta Banintz (Joxan Ormazabal)",
+    "catalogId": 3266421971,
+    "videoId": "CJ1A6FJnWTU",
+    "duration": 109
+  },
+  "runnerSha256": "89be5d408e9d10c96192c2298478ec7c313707b5d0c9355b41e31957bd739fc8",
+  "sourceSnapshot": "artifacts/pwa-port/p1-download-ui-live-source-89be5d408e9d10c9.mjs",
+  "checks": [
+    {
+      "name": "one normal UI click plays the exact P1 video natively and retains its catalog/source identity",
+      "pass": true
+    },
+    {
+      "name": "real Download menu commits an opaque local copy with exact metadata and no persisted signed URL",
+      "pass": true
+    },
+    {
+      "name": "offline reload retains the product download and normal UI playback plus native tail seek works without network",
+      "pass": true
+    },
+    {
+      "name": "real Quitar descarga removes the IDB pointer and cache entry and the local route returns 404 offline",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "inputActions": [
+    {
+      "at": "2026-10-23T21:07:01.816Z",
+      "elapsedMs": 1734,
+      "kind": "trusted mouse click",
+      "purpose": "open compiled Pletina"
+    },
+    {
+      "at": "2026-10-23T21:07:02.452Z",
+      "elapsedMs": 2370,
+      "kind": "trusted mouse click",
+      "purpose": "focus music search"
+    },
+    {
+      "at": "2026-10-23T21:07:02.558Z",
+      "elapsedMs": 2476,
+      "kind": "trusted keyboard typing",
+      "characters": 26
+    },
+    {
+      "at": "2026-10-23T21:07:03.183Z",
+      "elapsedMs": 3101,
+      "kind": "trusted mouse click",
+      "purpose": "one normal title click on exact Euri row"
+    },
+    {
+      "at": "2026-10-23T21:07:15.048Z",
+      "elapsedMs": 14966,
+      "kind": "trusted mouse click",
+      "purpose": "pause the real song before downloading"
+    },
+    {
+      "at": "2026-10-23T21:07:15.054Z",
+      "elapsedMs": 14972,
+      "kind": "trusted mouse click",
+      "purpose": "open exact song menu"
+    },
+    {
+      "at": "2026-10-23T21:07:15.062Z",
+      "elapsedMs": 14980,
+      "kind": "trusted mouse click",
+      "purpose": "download the exact song through product UI"
+    },
+    {
+      "at": "2026-10-23T21:07:15.074Z",
+      "elapsedMs": 14992,
+      "kind": "trusted mouse click",
+      "purpose": "open real Downloads view"
+    },
+    {
+      "at": "2026-10-23T21:07:15.092Z",
+      "elapsedMs": 15010,
+      "kind": "declared viewport change without activation",
+      "width": 393,
+      "height": 852,
+      "purpose": "download-in-progress screenshot on desktop Chrome; no mobile-platform claim"
+    },
+    {
+      "at": "2026-10-23T21:07:15.791Z",
+      "elapsedMs": 15709,
+      "kind": "declared viewport change without activation",
+      "width": 393,
+      "height": 852,
+      "purpose": "download-done screenshot on desktop Chrome; no mobile-platform claim"
+    },
+    {
+      "at": "2026-10-23T21:07:16.541Z",
+      "elapsedMs": 16459,
+      "kind": "trusted mouse click",
+      "purpose": "open real Downloads view"
+    },
+    {
+      "at": "2026-10-23T21:07:16.556Z",
+      "elapsedMs": 16474,
+      "kind": "trusted mouse click",
+      "purpose": "one real downloaded title click while network is blocked"
+    },
+    {
+      "at": "2026-10-23T21:07:16.851Z",
+      "elapsedMs": 16769,
+      "kind": "trusted mouse click",
+      "purpose": "trusted UI seek to final ten percent of local audio",
+      "fraction": 0.9
+    },
+    {
+      "at": "2026-10-23T21:07:17.740Z",
+      "elapsedMs": 17658,
+      "kind": "trusted mouse click",
+      "purpose": "pause before removing the downloaded file"
+    },
+    {
+      "at": "2026-10-23T21:07:17.753Z",
+      "elapsedMs": 17671,
+      "kind": "trusted mouse click",
+      "purpose": "open downloaded song menu"
+    },
+    {
+      "at": "2026-10-23T21:07:17.762Z",
+      "elapsedMs": 17680,
+      "kind": "trusted mouse click",
+      "purpose": "remove the download through product UI"
+    }
+  ],
+  "providerResponses": [
+    {
+      "at": "2026-10-23T21:07:04.247Z",
+      "elapsedMs": 4165,
+      "phase": "online-play",
+      "requestedVideoId": "CJ1A6FJnWTU",
+      "client": "VISIONOS",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0
+    },
+    {
+      "at": "2026-10-23T21:07:04.516Z",
+      "elapsedMs": 4434,
+      "phase": "online-play",
+      "requestedVideoId": "CJ1A6FJnWTU",
+      "client": "WEB_EMBEDDED_PLAYER",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4
+    },
+    {
+      "at": "2026-10-23T21:07:11.663Z",
+      "elapsedMs": 11581,
+      "phase": "online-play",
+      "requestedVideoId": "CJ1A6FJnWTU",
+      "client": "VISIONOS",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0
+    },
+    {
+      "at": "2026-10-23T21:07:11.869Z",
+      "elapsedMs": 11787,
+      "phase": "online-play",
+      "requestedVideoId": "CJ1A6FJnWTU",
+      "client": "WEB_EMBEDDED_PLAYER",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4
+    },
+    {
+      "at": "2026-10-23T21:07:12.549Z",
+      "elapsedMs": 12467,
+      "phase": "online-play",
+      "requestedVideoId": "kyP4tg18pMg",
+      "client": "VISIONOS",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0
+    },
+    {
+      "at": "2026-10-23T21:07:12.768Z",
+      "elapsedMs": 12686,
+      "phase": "online-play",
+      "requestedVideoId": "kyP4tg18pMg",
+      "client": "WEB_EMBEDDED_PLAYER",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4
+    }
+  ],
+  "cdnHttp": [
+    {
+      "at": "2026-10-23T21:07:04.577Z",
+      "elapsedMs": 4495,
+      "request": {
+        "at": "2026-10-23T21:07:04.550Z",
+        "elapsedMs": 4468,
+        "phase": "online-play",
+        "urlSha256": "48a46d228f8e5f29fa0d5a7504d55edd0d6252c399d68156bf1cca2e28227e4a",
+        "itag": "140",
+        "type": "Media"
+      },
+      "status": 403,
+      "contentType": "text/plain",
+      "declaredContentLength": 0,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:04.578Z",
+      "elapsedMs": 4496,
+      "request": {
+        "at": "2026-10-23T21:07:04.550Z",
+        "elapsedMs": 4468,
+        "phase": "online-play",
+        "urlSha256": "95e09d56a9930dc4a96ab74ad6927e7562b5c80f14808594391ccd82e27e4e3e",
+        "itag": "251",
+        "type": "Media"
+      },
+      "status": 403,
+      "contentType": "text/plain",
+      "declaredContentLength": 0,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:04.578Z",
+      "elapsedMs": 4496,
+      "request": {
+        "at": "2026-10-23T21:07:04.551Z",
+        "elapsedMs": 4469,
+        "phase": "online-play",
+        "urlSha256": "4e1d2278ae805d10110e01caaef1d2e4e4a2941309d89706e118167c2c3e3bed",
+        "itag": "250",
+        "type": "Media"
+      },
+      "status": 403,
+      "contentType": "text/plain",
+      "declaredContentLength": 0,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:04.579Z",
+      "elapsedMs": 4497,
+      "request": {
+        "at": "2026-10-23T21:07:04.551Z",
+        "elapsedMs": 4469,
+        "phase": "online-play",
+        "urlSha256": "7f7db95f111a08fad5ee6d3619936c8d1c33223e157cb9adc6fd4adb251aabf1",
+        "itag": "249",
+        "type": "Media"
+      },
+      "status": 403,
+      "contentType": "text/plain",
+      "declaredContentLength": 0,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:11.937Z",
+      "elapsedMs": 11855,
+      "request": {
+        "at": "2026-10-23T21:07:11.911Z",
+        "elapsedMs": 11829,
+        "phase": "online-play",
+        "urlSha256": "e666f6666a4a3b3dd539fb7433116fc7b098f0897d4fcddd44e76e13188c9497",
+        "itag": "140",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/mp4",
+      "declaredContentLength": 1767085,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:11.942Z",
+      "elapsedMs": 11860,
+      "request": {
+        "at": "2026-10-23T21:07:11.912Z",
+        "elapsedMs": 11830,
+        "phase": "online-play",
+        "urlSha256": "1235b4ed17b402428387275d899b2b7f01e65aed40bfa5bc544c2f4036f5b71a",
+        "itag": "251",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/webm",
+      "declaredContentLength": 1924702,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:11.980Z",
+      "elapsedMs": 11898,
+      "request": {
+        "at": "2026-10-23T21:07:11.956Z",
+        "elapsedMs": 11874,
+        "phase": "online-play",
+        "urlSha256": "e666f6666a4a3b3dd539fb7433116fc7b098f0897d4fcddd44e76e13188c9497",
+        "itag": "140",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/mp4",
+      "declaredContentLength": 1767085,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:12.842Z",
+      "elapsedMs": 12760,
+      "request": {
+        "at": "2026-10-23T21:07:12.805Z",
+        "elapsedMs": 12723,
+        "phase": "online-play",
+        "urlSha256": "6030fc25e9505526895ca469e923afd0d018aa8e3dadce91fc7efdf266f73dac",
+        "itag": "250",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/webm",
+      "declaredContentLength": 399012,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:12.850Z",
+      "elapsedMs": 12768,
+      "request": {
+        "at": "2026-10-23T21:07:12.806Z",
+        "elapsedMs": 12724,
+        "phase": "online-play",
+        "urlSha256": "858ad5c03814ac1f1ba838b4887f82a2a05fa66734541cefd3e4648ad046a2c8",
+        "itag": "249",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/webm",
+      "declaredContentLength": 299492,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:12.917Z",
+      "elapsedMs": 12835,
+      "request": {
+        "at": "2026-10-23T21:07:12.805Z",
+        "elapsedMs": 12723,
+        "phase": "online-play",
+        "urlSha256": "086b85270dbc2452d2ac795230258fedb412e71827f6f7e57c352fa73058041d",
+        "itag": "251",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/webm",
+      "declaredContentLength": 785010,
+      "allowOriginPresent": false
+    },
+    {
+      "at": "2026-10-23T21:07:12.944Z",
+      "elapsedMs": 12862,
+      "request": {
+        "at": "2026-10-23T21:07:12.804Z",
+        "elapsedMs": 12722,
+        "phase": "online-play",
+        "urlSha256": "04382292c9c0fc7fc152e36cc1c68333ad54dd97ae27bb8bae18e2baa3e9312a",
+        "itag": "140",
+        "type": "Media"
+      },
+      "status": 206,
+      "contentType": "audio/mp4",
+      "declaredContentLength": 806278,
+      "allowOriginPresent": false
+    }
+  ],
+  "networkFailures": [
+    {
+      "at": "2026-10-23T21:07:04.577Z",
+      "elapsedMs": 4495,
+      "request": {
+        "at": "2026-10-23T21:07:04.550Z",
+        "elapsedMs": 4468,
+        "phase": "online-play",
+        "urlSha256": "48a46d228f8e5f29fa0d5a7504d55edd0d6252c399d68156bf1cca2e28227e4a",
+        "itag": "140",
+        "type": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:04.578Z",
+      "elapsedMs": 4496,
+      "request": {
+        "at": "2026-10-23T21:07:04.550Z",
+        "elapsedMs": 4468,
+        "phase": "online-play",
+        "urlSha256": "95e09d56a9930dc4a96ab74ad6927e7562b5c80f14808594391ccd82e27e4e3e",
+        "itag": "251",
+        "type": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:04.579Z",
+      "elapsedMs": 4497,
+      "request": {
+        "at": "2026-10-23T21:07:04.551Z",
+        "elapsedMs": 4469,
+        "phase": "online-play",
+        "urlSha256": "4e1d2278ae805d10110e01caaef1d2e4e4a2941309d89706e118167c2c3e3bed",
+        "itag": "250",
+        "type": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:04.580Z",
+      "elapsedMs": 4498,
+      "request": {
+        "at": "2026-10-23T21:07:04.551Z",
+        "elapsedMs": 4469,
+        "phase": "online-play",
+        "urlSha256": "7f7db95f111a08fad5ee6d3619936c8d1c33223e157cb9adc6fd4adb251aabf1",
+        "itag": "249",
+        "type": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:11.948Z",
+      "elapsedMs": 11866,
+      "request": {
+        "at": "2026-10-23T21:07:11.911Z",
+        "elapsedMs": 11829,
+        "phase": "online-play",
+        "urlSha256": "e666f6666a4a3b3dd539fb7433116fc7b098f0897d4fcddd44e76e13188c9497",
+        "itag": "140",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:11.952Z",
+      "elapsedMs": 11870,
+      "request": {
+        "at": "2026-10-23T21:07:11.912Z",
+        "elapsedMs": 11830,
+        "phase": "online-play",
+        "urlSha256": "1235b4ed17b402428387275d899b2b7f01e65aed40bfa5bc544c2f4036f5b71a",
+        "itag": "251",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:11.953Z",
+      "elapsedMs": 11871,
+      "request": {
+        "at": "2026-10-23T21:07:11.913Z",
+        "elapsedMs": 11831,
+        "phase": "online-play",
+        "urlSha256": "31f7c46f50ac2ded4a42798f952048b816fa644cf2cd7ef6beb65d63c47e1f83",
+        "itag": "250",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:11.954Z",
+      "elapsedMs": 11872,
+      "request": {
+        "at": "2026-10-23T21:07:11.913Z",
+        "elapsedMs": 11831,
+        "phase": "online-play",
+        "urlSha256": "d2413c02bb7c558e2c5c3c5883d9a5782cfb2a91cb36bd6b9b6e5998d27ef443",
+        "itag": "249",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:12.847Z",
+      "elapsedMs": 12765,
+      "request": {
+        "at": "2026-10-23T21:07:12.805Z",
+        "elapsedMs": 12723,
+        "phase": "online-play",
+        "urlSha256": "6030fc25e9505526895ca469e923afd0d018aa8e3dadce91fc7efdf266f73dac",
+        "itag": "250",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:12.854Z",
+      "elapsedMs": 12772,
+      "request": {
+        "at": "2026-10-23T21:07:12.806Z",
+        "elapsedMs": 12724,
+        "phase": "online-play",
+        "urlSha256": "858ad5c03814ac1f1ba838b4887f82a2a05fa66734541cefd3e4648ad046a2c8",
+        "itag": "249",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:12.919Z",
+      "elapsedMs": 12837,
+      "request": {
+        "at": "2026-10-23T21:07:12.805Z",
+        "elapsedMs": 12723,
+        "phase": "online-play",
+        "urlSha256": "086b85270dbc2452d2ac795230258fedb412e71827f6f7e57c352fa73058041d",
+        "itag": "251",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    },
+    {
+      "at": "2026-10-23T21:07:12.948Z",
+      "elapsedMs": 12866,
+      "request": {
+        "at": "2026-10-23T21:07:12.804Z",
+        "elapsedMs": 12722,
+        "phase": "online-play",
+        "urlSha256": "04382292c9c0fc7fc152e36cc1c68333ad54dd97ae27bb8bae18e2baa3e9312a",
+        "itag": "140",
+        "type": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null
+    }
+  ],
+  "localRequests": [
+    {
+      "at": "2026-10-23T21:07:15.094Z",
+      "elapsedMs": 15012,
+      "phase": "download",
+      "path": "/__audio__/3266421971",
+      "type": "Media",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-23T21:07:16.572Z",
+      "elapsedMs": 16490,
+      "phase": "offline-play",
+      "path": "/__audio__/3266421971",
+      "type": "Media",
+      "method": "GET"
+    },
+    {
+      "at": "2026-10-23T21:07:17.774Z",
+      "elapsedMs": 17692,
+      "phase": "ui-remove",
+      "path": "/__audio__/3266421971",
+      "type": "Fetch",
+      "method": "GET"
+    }
+  ],
+  "progressObservations": [
+    {
+      "at": "2026-10-23T21:07:15.091Z",
+      "elapsedMs": 15009,
+      "terminal": null,
+      "lastEvent": {
+        "trackId": 3266421971,
+        "state": "downloading",
+        "progress": 0,
+        "error": null
+      },
+      "visible": [
+        {
+          "title": "Euri Tanta",
+          "label": "En curso"
+        }
+      ]
+    }
+  ],
+  "phase": "ui-remove",
+  "scope": "One Euri Tanta real-provider compiled-product UI download, read-only opaque-cache metadata, offline reload/native playback/tail seek, and UI removal. Desktop Chrome foreground only.",
+  "policy": {
+    "providerMocks": false,
+    "nodeBootstrap": false,
+    "productMethodsCalled": false,
+    "audioConstructorReplaced": false,
+    "domPrototypeAdded": false,
+    "qaCacheWrites": false,
+    "qaIdbWrites": false,
+    "securityOverrides": false,
+    "autoplayOverrides": false,
+    "rawMediaUrlsSaved": false,
+    "audioBytesSavedInArtifacts": false,
+    "opaqueBodyRead": false,
+    "bodyHashClaimed": false,
+    "actualBodyByteCountClaimed": false,
+    "physicalPhone": false,
+    "backgroundVerified": false
+  },
+  "observationRpcCalls": 127,
+  "observationRpcWithGesture": 0,
+  "navigationObservationRetries": [],
+  "originKind": "supplied HTTPS",
+  "browser": "Chrome/153.0.8010.52",
+  "selectedRow": {
+    "index": "0",
+    "title": "Euri Tanta",
+    "artist": "PIrritx Porrotx eta MariMotots"
+  },
+  "onlinePlayback": {
+    "online": true,
+    "selected": {
+      "catalogId": 3266421971,
+      "title": "Euri Tanta",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "duration": 109
+    },
+    "title": "Euri Tanta",
+    "state": "playing",
+    "time": 3,
+    "duration": 108.999592,
+    "videoModal": false,
+    "iframeCount": 0,
+    "frames": [],
+    "youtubeFrameCount": 0,
+    "visibleFrameCount": 0,
+    "unrecognizedFrameCount": 0
+  },
+  "onlineNative": [
+    {
+      "localPath": null,
+      "external": true,
+      "paused": false,
+      "time": 2.938965,
+      "duration": 108.999592,
+      "error": null,
+      "seeking": false,
+      "readyState": 4,
+      "muted": false,
+      "volume": 0.8
+    }
+  ],
+  "selectedSource": {
+    "trackId": 3266421971,
+    "videoId": "CJ1A6FJnWTU",
+    "title": "Euri Tanta",
+    "verified": false
+  },
+  "downloadStarted": {
+    "at": "2026-10-23T21:07:15.053Z",
+    "elapsedMs": 14971
+  },
+  "loadingScreenshot": "p1-opaque-download-6bdc970908569e3c-euri-public-live-v3-download-in-progress-mobile.png",
+  "downloadFinished": {
+    "at": "2026-10-23T21:07:15.787Z",
+    "elapsedMs": 15705
+  },
+  "downloadEvents": [
+    {
+      "trackId": 3266421971,
+      "state": "queued",
+      "progress": 0,
+      "error": null
+    },
+    {
+      "trackId": 3266421971,
+      "state": "downloading",
+      "progress": 0,
+      "error": null
+    },
+    {
+      "trackId": 3266421971,
+      "state": "done",
+      "progress": 1,
+      "error": null
+    }
+  ],
+  "committedFile": {
+    "id": 3266421971,
+    "title": "Euri Tanta",
+    "declaredSize": 1767085,
+    "at": 1792789635,
+    "cacheKeyPath": "/pletina/__audio__/3266421971?stage=1792789635075-5eba55e6-a37d-4078-90f0-2c342a165e05",
+    "internalPointer": true,
+    "sourcePresent": false,
+    "cached": true,
+    "responseType": "opaque",
+    "status": 0,
+    "storedTemporaryUrl": false,
+    "actualBodyBytes": null,
+    "sha256": null
+  },
+  "downloadSource": {
+    "trackId": 3266421971,
+    "videoId": "CJ1A6FJnWTU",
+    "title": "Euri Tanta",
+    "verified": false
+  },
+  "doneScreenshot": "p1-opaque-download-6bdc970908569e3c-euri-public-live-v3-download-done-mobile.png",
+  "onlineNetworkProbe": {
+    "blocked": false,
+    "status": 404
+  },
+  "beforeReloadNetworkProbe": {
+    "blocked": true
+  },
+  "afterReloadNetworkProbe": {
+    "blocked": true
+  },
+  "offlineFile": {
+    "id": 3266421971,
+    "title": "Euri Tanta",
+    "declaredSize": 1767085,
+    "at": 1792789635,
+    "cacheKeyPath": "/pletina/__audio__/3266421971?stage=1792789635075-5eba55e6-a37d-4078-90f0-2c342a165e05",
+    "internalPointer": true,
+    "sourcePresent": false,
+    "cached": true,
+    "responseType": "opaque",
+    "status": 0,
+    "storedTemporaryUrl": false,
+    "actualBodyBytes": null,
+    "sha256": null
+  },
+  "offlinePlayback": {
+    "initial": {
+      "online": false,
+      "selected": {
+        "catalogId": 3266421971,
+        "title": "Euri Tanta",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "duration": 109
+      },
+      "title": "Euri Tanta",
+      "state": "playing",
+      "time": 3,
+      "duration": 108.999592,
+      "videoModal": false,
+      "iframeCount": 0,
+      "frames": [],
+      "youtubeFrameCount": 0,
+      "visibleFrameCount": 0,
+      "unrecognizedFrameCount": 0
+    },
+    "nativeInitial": [
+      {
+        "localPath": "/pletina/__audio__/3266421971",
+        "external": false,
+        "paused": false,
+        "time": 3.167684,
+        "duration": 108.999592,
+        "error": null,
+        "seeking": false,
+        "readyState": 4,
+        "muted": false,
+        "volume": 0.8
+      }
+    ],
+    "tail": {
+      "ui": {
+        "online": false,
+        "selected": {
+          "catalogId": 3266421971,
+          "title": "Euri Tanta",
+          "artist": "PIrritx Porrotx eta MariMotots",
+          "duration": 109
+        },
+        "title": "Euri Tanta",
+        "state": "playing",
+        "time": 99,
+        "duration": 108.999592,
+        "videoModal": false,
+        "iframeCount": 0,
+        "frames": [],
+        "youtubeFrameCount": 0,
+        "visibleFrameCount": 0,
+        "unrecognizedFrameCount": 0
+      },
+      "native": [
+        {
+          "localPath": "/pletina/__audio__/3266421971",
+          "external": false,
+          "paused": false,
+          "time": 99.013167,
+          "duration": 108.999592,
+          "error": null,
+          "seeking": false,
+          "readyState": 4,
+          "muted": false,
+          "volume": 0.8
+        }
+      ]
+    },
+    "afterTail": {
+      "online": false,
+      "selected": {
+        "catalogId": 3266421971,
+        "title": "Euri Tanta",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "duration": 109
+      },
+      "title": "Euri Tanta",
+      "state": "playing",
+      "time": 100,
+      "duration": 108.999592,
+      "videoModal": false,
+      "iframeCount": 0,
+      "frames": [],
+      "youtubeFrameCount": 0,
+      "visibleFrameCount": 0,
+      "unrecognizedFrameCount": 0
+    },
+    "nativeAfterTail": [
+      {
+        "localPath": "/pletina/__audio__/3266421971",
+        "external": false,
+        "paused": false,
+        "time": 99.699891,
+        "duration": 108.999592,
+        "error": null,
+        "seeking": false,
+        "readyState": 4,
+        "muted": false,
+        "volume": 0.8
+      }
+    ]
+  },
+  "screenshot": "p1-opaque-download-6bdc970908569e3c-euri-public-live-v3.png",
+  "removed": {
+    "cachedStageRetained": false,
+    "localRouteStatus": 404,
+    "downloadedTitleStillVisible": false
+  },
+  "resourcesClosed": true
+}

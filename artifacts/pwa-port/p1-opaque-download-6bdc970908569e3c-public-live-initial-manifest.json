@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T21:05:27.704Z",
+  "state": "frozen-observer-failure-before-product-download",
+  "build": "6bdc970908569e3c",
+  "bindings": [
+    {
+      "path": "scripts/tests/p1-download-ui-live.browser.mjs",
+      "sha256": "0208dc233c3aa7e93a2d3d7c357dffd0644ce2d0abba88e7f6503f7e8ca1ea0e",
+      "bytes": 27549
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-ui-live-source-0208dc233c3aa7e9.mjs",
+      "sha256": "0208dc233c3aa7e93a2d3d7c357dffd0644ce2d0abba88e7f6503f7e8ca1ea0e",
+      "bytes": 27549
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live.json",
+      "sha256": "2f1d63f1ffb0cac004b54beed2d140b9f8cfeb73333e0ebdcb7a379cb4137c2b",
+      "bytes": 18899
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-failure.png",
+      "sha256": "643340e30f42a549462e3d1ec7718d461c56eeb3253ef8c3840438955057a5c7",
+      "bytes": 273752
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-6bdc970908569e3c.json",
+      "sha256": "cbf3203447652f2b505361046ddd7a96e54b31eab2e8722da4aa11d32331a15f",
+      "bytes": 10937
+    },
+    {
+      "path": "artifacts/pwa-deploy/workflow-6bdc970908569e3c.json",
+      "sha256": "5b3eb895abd120705d1c39490788ea01d4248546d3cb940096a3f3566d20453f",
+      "bytes": 166
+    }
+  ],
+  "result": {
+    "plannedChecks": 4,
+    "completedChecks": 0,
+    "runnerErrors": 1,
+    "phase": "online-play",
+    "actualSelected": {
+      "catalogId": 3266421971,
+      "title": "Euri Tanta",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "duration": 109
+    },
+    "nativePlayingObserved": true,
+    "nativeDuration": 108.999592,
+    "totalIframesObserved": 4,
+    "officialVideoModal": false,
+    "downloadActionInvoked": false,
+    "resourcesClosed": true
+  },
+  "observerDefect": "The v1 assertion required zero total iframes and rejected four frames while the exact native audio played. It did not distinguish app-owned hidden metadata probes from a YouTube video frame. No frame attributes were collected in v1, so exact classification is reserved for v2.",
+  "correction": "A separate v2 runner permits only hidden aria-hidden allow-scripts srcdoc frames carrying the known metadata-bridge marker, while requiring zero visible/YouTube/unrecognized frames and keeping every identity/download/offline guard.",
+  "scope": "This failed before Download and is not evidence of a download-manager failure or an end-to-end download success."
+}

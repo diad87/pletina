@@ -1,0 +1,242 @@
+✔ playback repair enables early P1 recovery for a previously resolved primary (5.4369ms)
+✔ download renewal excludes early P1 recovery for a previously resolved primary (3.3369ms)
+✔ a transient final source gets two fresh same-ID playback attempts without repeating searches (17.9686ms)
+✔ an automatic listening-only download tries an exact allowed recording before returning and writes no YouTube association (1.1228ms)
+✔ a cached automatic network failure refreshes its same video before doing any new search (13.9123ms)
+✔ a cached automatic timeout failure refreshes its same video before doing any new search (31.341ms)
+✔ a transient initial manual or added source offers video only after the final definitive same-ID refusal (46.2894ms)
+✔ downloads do not gain automatic retries when their selected stream fails transiently (1.2136ms)
+✔ download rescue tries each exact provider once and skips every listening-only alternative (0.6843ms)
+✔ a prohibited original remains prohibited when every exact download source is absent, denied or fails (1.0667ms)
+✔ cached automatic listening-only downloads may use exact allowed audio without replacing manual or added sources (1.1149ms)
+✔ cancelling exact download discovery rejects late allowed audio without writing a YouTube choice (0.7955ms)
+✔ final audio fallback retries the same selected video twice with fresh streams before recovering (9.2718ms)
+✔ a final manual or added source retries only its exact video without changing the stored selection (61.1697ms)
+✔ downloads and explicit source changes do not inherit the automatic playback retry policy (1.4269ms)
+✔ a first fresh retry success avoids the second retry and preserves listening-only capabilities (1.2333ms)
+✔ two definitive fresh failures expose the last matched refusal and persist nothing (28.5976ms)
+✔ a final network error stays transient after both fresh retries and cannot offer a video (30.075ms)
+✔ a final timeout error stays transient after both fresh retries and cannot offer a video (31.2606ms)
+✔ a fresh restricted failure stops retries immediately without offering the old fallback (15.4041ms)
+✔ a fresh response failure stops retries immediately without offering the old fallback (15.3302ms)
+✔ cancelling the final backoff prevents fresh requests, retry events, and later source writes (1.5126ms)
+✔ cancellation from the retry notification cannot start a request after the selection changes (0.9622ms)
+✔ an aborted in-progress fresh stream cannot return late audio or write its automatic source (0.7696ms)
+✔ the original operation deadline bounds a pending retry and never becomes another fallback (1.1029ms)
+✔ a manual choice supersedes a pending final retry without a late automatic association (0.7922ms)
+✔ P1 keeps the same music and episode identity without offering unverified offline downloads (3.0504ms)
+✖ P1 exposes only same-format declared size and duration for locally validated opaque downloads (1.8684ms)
+✔ missing or invalid P1 download metadata retains the exact-download rescue policy (5.8071ms)
+✔ el matching conserva puntuaciones y penalizaciones de Rust 0.11.2 (0.5515ms)
+✔ parsers mantienen metadatos y excluyen anuncios, recomendaciones, lives y shorts (1.1131ms)
+✔ IDs y enlaces se validan sin visitar dominios arbitrarios (0.6805ms)
+✔ player solo selecciona audio MP4 del origen permitido y calcula caducidad conservadora (0.8485ms)
+✔ contentLength corresponde al formato seleccionado y solo admite enteros positivos hasta 2 GiB (0.6467ms)
+✔ sandbox valida emisor/ID, escapa cierre de script y se limpia al cancelar (0.8489ms)
+✔ stream conserva URL solo en RAM y refresh fuerza otro player conservando sesión anónima (0.7246ms)
+✔ un refresh rechazado invalida la URL anterior y el siguiente intento pide otro player (0.8956ms)
+✔ resolve usa matching, deduplica cargas y guarda elección sin URL firmada (0.505ms)
+✔ fallback WEB y máximo tres candidatos, sin guardar un fallo como una elección (0.6123ms)
+✔ Music de confianza sin audio amplía a WEB y corta al encontrar la misma canción reproducible (1.0059ms)
+✔ una fuente guardada rechazada no se reintenta aunque aparezca sola en Music y duplicada en WEB (0.9915ms)
+✔ el presupuesto permite tres candidatos Music y tres WEB más dos reintentos de la única alternativa final (21.1822ms)
+✔ un éxito dentro de Music evita ampliar WEB incluso tras rechazos previos (1.1328ms)
+✔ network, timeout y restricted no amplían WEB ni sustituyen una elección explícita (106.9097ms)
+✔ el rechazo final de audio reintenta la mejor coincidencia sin repetir búsquedas, exponer URLs ni escribir asociaciones (61.0572ms)
+✔ la alternativa conserva la fuente manual exacta aunque otra coincidencia tenga mayor puntuación (15.9809ms)
+✔ la mejor alternativa conserva el último mensaje y clasificación de sus propios reintentos (15.4785ms)
+✔ fallos mixtos reintentan una única alternativa y las restricciones o respuestas impiden vídeo (62.8017ms)
+✔ la alternativa rechaza karaoke no solicitado y coincidencias por debajo del umbral (0.999ms)
+✔ la lectura de alternativa valida tipo y canción sin reinterpretar errores ni namespace de pódcast (28.827ms)
+✔ resolver una descarga devuelve solo el mismo rechazo tipado y nunca abre un reproductor ni guarda la selección (1.1326ms)
+✔ un vídeo añadido ofrece solo su ID original y los pódcast no ofrecen alternativa al fallar YouTube (14.2231ms)
+✔ cancelar antes del rechazo de Music impide que ese rechazo abra el fallback WEB (0.7844ms)
+✔ fuente guardada no se sustituye por red; una selección automática retirada permite otro vídeo (0.9021ms)
+✔ YouTube añadido usa mapeo inmutable, y alternativas incluyen la elección actual (1.0497ms)
+✔ un YouTube añadido no busca sustitutos ni cambia su ID tras rechazo y refresh (43.0331ms)
+✔ elegir fuente cancela resolución vieja y ningún resultado tardío sobrescribe la elección (1.0926ms)
+✔ resolve concurrente espera elección manual pendiente y cancelar limpia operaciones (0.848ms)
+✔ episodios RSS usan su fuente persistida sin buscar ni resolver en YouTube (0.6925ms)
+✔ episodios YouTube conservan namespace y renuevan solo el stream temporal en RAM (0.4546ms)
+✔ programas y episodios desconocidos o corruptos no caen en el matching musical (1.1972ms)
+✔ cancelar mientras se lee un episodio impide iniciar después su extractor (0.4248ms)
+✔ copia descargada se reproduce sin red y cambiar fuente elimina la copia anterior (0.477ms)
+✔ a verified recording is resolved before text search and never persisted as a YouTube source (0.3864ms)
+✔ catalog rescue follows definitive YouTube rejection and retains complete recording identity (0.5033ms)
+✔ an empty YouTube search may recover a strict catalog recording; provider failure preserves the existing fallback (8.7295ms)
+✔ restrictions, malformed responses and manual sources do not trigger an alternate catalog (32.1314ms)
+✔ exact catalog rescue survives an automatic YouTube search transport failure without changing identity (1.4062ms)
+✔ exact catalog rescue survives an automatic YouTube stream transport failure without changing identity (0.7271ms)
+✔ exact catalog rescue survives an automatic YouTube saved transport failure without changing identity (0.6179ms)
+✔ an absent or failed transient catalog rescue retains the exact YouTube error without a video or association (104.3288ms)
+✔ cancellation or the existing deadline prevents a late transient catalog rescue from returning or writing (1.8382ms)
+✔ transient catalog rescue never replaces manual, added-video, podcast or download requests (62.0848ms)
+✔ downloaded songs, podcasts and directly added videos never enter catalog rescue (0.9891ms)
+✔ Funkwhale follows exhausted YouTube sources before Audius or a visible video and keeps catalog identity (0.4966ms)
+✔ verified Funkwhale rescue can survive YouTube search or stream network failure without persisting absence (1.1163ms)
+✔ Funkwhale does not replace working YouTube or an explicitly selected source (57.0271ms)
+✔ a failed Funkwhale attempt preserves the original YouTube error or existing Audius rescue (1.4882ms)
+✔ cancellation during Funkwhale cannot return late audio and disposes its cache (0.5628ms)
+✔ changing tracks aborts obsolete acquisitions while retaining the current and prepared track (0.6768ms)
+✔ player changes do not cancel downloads or share their resolution with downloaded playback of the same ID (0.4911ms)
+✔ a manual source cancels an older download and a new download waits for the pending manual choice (0.8147ms)
+✔ cancelling a delayed external source prevents its completion and disposes checked blobs (0.4871ms)
+✔ download metadata survives reopening and contains only library fields and an internal cache key (31.8848ms)
+✔ download store rejects unsafe IDs, signed metadata, and nonlocal or malformed staging routes (1.7637ms)
+✔ downloads are serial, skip duplicates, and report done only after media validation and metadata commit (4.9183ms)
+✔ cancel discards only pending jobs while the active transfer finishes (2.0792ms)
+✔ metadata failure or cache.put failure rolls back staging and cannot report a completed download (17.5488ms)
+✔ known size and available browser quota are checked before requesting media bytes (2.6269ms)
+✔ removing an active source prevents its late validation from committing stale media (2.7484ms)
+✔ removal during the initial cached lookup cannot announce the removed copy as completed (1.6096ms)
+✔ cache eviction removes stale metadata and download removal deletes both metadata and cached response (2.6821ms)
+✔ cold owner startup removes only unreferenced valid stages in its scope and never invents a completed download (2.6555ms)
+✔ startup reconciliation preserves a valid file pointer even when unrelated row metadata is corrupt (1.3369ms)
+✔ resume and read during an active transfer never sweep its not-yet-committed stage (2.0783ms)
+✔ reconciliation failure keeps the durable FIFO untouched and does not start or announce a partial queue (5.0812ms)
+✔ lost ownership after enumerating cache keys stops reconciliation before any deletion or FIFO mutation (1.0002ms)
+✔ a hung resolver times out, preserves its FIFO job and waits for explicit resume before the next song (37.3067ms)
+✔ an interrupted transfer renews its source once and completes without exposing a failed attempt (14.6482ms)
+✔ a rejected cached audio is removed before retrying a fresh complete copy (15.4765ms)
+✔ two failed transfers pause the persisted FIFO without spinning and resume refreshes the interrupted source (30.5101ms)
+✔ quota, abort, timeout and metadata write errors do not trigger another download attempt (3.4259ms)
+✔ removing a song while its renewed source is pending prevents a late retry from fetching or committing (11.5146ms)
+✔ cancelling the queued songs during source renewal still lets the active retry finish alone (15.4999ms)
+✔ the original transfer deadline bounds renewal waiting and preserves the pending FIFO without an automatic retry loop (46.088ms)
+✖ P1 uses its selected locator, waits for complete cache.put, then validates duration and tail before a metadata-only commit (1.9054ms)
+✔ P1 requires a consistent permitted same-ID Googlevideo locator with bounded duration and declared size before fetching (12.1142ms)
+✖ P1 validation rejection rolls back every body and renews only the same selected identity once (1.6841ms)
+✖ P1 transfer retry uses the renewed same-format URL and preserves legacy two-argument YouTube validation (1.7888ms)
+✖ removing a P1 job during a pending cache body cannot commit late audio or leave a stage (1.3689ms)
+✔ a readable partial P1 response cannot become an opaque full-file success (2.2082ms)
+✔ external permitted audio uses CORS, preserves ISRC/version and never asks YouTube for its stream (5.4023ms)
+✔ sources without a full-file download capability refuse before media requests (1.4823ms)
+✔ complete verified Blob copies retain bytes, integrity, file duration and start offset across reopening without provider requests (7.6756ms)
+✔ durable enqueue commits before queued events or transport and a journal write failure cannot announce work (1.8583ms)
+✔ offline persisted jobs restore in order, deduplicate and start only on resume while online (2.0314ms)
+✔ typed provider network failures retain the interrupted job while permanent capability errors retire it (1.8612ms)
+✔ a failed post-file journal checkpoint is reconciled from the complete local file without a second media acquisition (1.5321ms)
+✔ queued cancellation and removal persist before reopen and cannot resurrect a removed active job (2.162ms)
+✔ two managers cannot overwrite, cancel or drain the same journal; closing its owner permits safe recovery (20.6118ms)
+✔ an invalidated owner cannot commit its late active file after the successor resumes the saved FIFO (12.3288ms)
+✔ verified Blob capability cannot admit another origin, network URL, missing proof or invalid offsets (5.0128ms)
+✔ changed, truncated, wrong-MIME and partial verified Blob bodies roll back before completion (55.7786ms)
+✔ external downloads reject arbitrary URLs, unknown providers and unsafe IDs before fetching (5.1058ms)
+✔ external HTTP errors, partial bodies and non-audio responses cannot become completed downloads (71.8406ms)
+✔ expected and declared lengths must match the whole streamed body, with one bounded renewed attempt (46.5653ms)
+✔ a response without Content-Length records counted bytes only after the stream closes (2.5129ms)
+✔ stream errors roll back a partial external cache and renew the same source once (13.3874ms)
+✔ unknown-size external audio enforces available storage while consuming and never retries quota failures (1.3436ms)
+✔ a declared checksum is checked against the full cached body before metadata commit (13.5124ms)
+✔ a preview duration fails validation and cannot mark its external song as downloaded (15.8435ms)
+✔ default external audio validation requires expected duration plus decodable tail; legacy two-argument validation remains compatible (1.7809ms)
+ℹ tests 132
+ℹ suites 0
+ℹ pass 127
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1465.5493
+
+✖ failing tests:
+
+test at scripts\tests\web-audio.test.mjs:493:1
+✖ P1 exposes only same-format declared size and duration for locally validated opaque downloads (1.8684ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      download: {
+  +     allowed: false
+  -     allowed: true,
+  -     contentLength: 123456,
+  -     duration: 287
+      },
+      expiresAt: 1792788677369,
+      id: 'aqz-KE-bpKQ',
+      provider: 'youtube-p1'
+    }
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:500:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { provider: 'youtube-p1', id: 'aqz-KE-bpKQ', expiresAt: 1792788677369, download: { allowed: false } },
+    expected: { provider: 'youtube-p1', id: 'aqz-KE-bpKQ', expiresAt: 1792788677369, download: { allowed: true, contentLength: 123456, duration: 287 } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-downloads.test.mjs:420:1
+✖ P1 uses its selected locator, waits for complete cache.put, then validates duration and tail before a metadata-only commit (1.9054ms)
+  AssertionError [ERR_ASSERTION]: P1 must reach the opaque body transfer
+      at file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:428:67
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:428:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-downloads.test.mjs:464:1
+✖ P1 validation rejection rolls back every body and renews only the same selected identity once (1.6841ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      false,
+  -   true
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:470:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ false ],
+    expected: [ false, true ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-downloads.test.mjs:474:1
+✖ P1 transfer retry uses the renewed same-format URL and preserves legacy two-argument YouTube validation (1.7888ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      false,
+  -   true
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:481:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ false ],
+    expected: [ false, true ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-downloads.test.mjs:489:1
+✖ removing a P1 job during a pending cache body cannot commit late audio or leave a stage (1.3689ms)
+  AssertionError [ERR_ASSERTION]: P1 must start the selected transfer
+      at file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:494:67
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-downloads.test.mjs:494:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T20:35:12.899Z",
+  "sourceCommit": "916314e3e76c0279c99411e4b9944e2b9e8cb04e",
+  "scope": "Read-only audit and real-module transpilation in RAM with synthetic transport/storage fixtures. No network, media, product edits or publication.",
+  "moduleHashes": [
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "23d5e034649411c48bd00c00d23fd915bf04c7ee76252708f9bfda66b1cba9b7"
+    },
+    {
+      "path": "web-port/youtube.ts",
+      "sha256": "66a4661b4886e3e69827fafb92bd4faaddaa54ffb4a401bba72508ebaf3eba7b"
+    },
+    {
+      "path": "web-port/funkwhale-audio.ts",
+      "sha256": "f774dc6dc0d74f110259700040911978f21065056c9c85247b8f38d9354becdb"
+    },
+    {
+      "path": "web-port/verified-audio.ts",
+      "sha256": "f31cb4984f9646f4f10a8ce429a308ab2175b2f00d83bb7dc3cc52ffd81db96f"
+    },
+    {
+      "path": "web-port/funkwhale.ts",
+      "sha256": "07c17dc11c02e402d4385ddae19e8b7a28a6287f32f5a7027807e2ba53d1d841"
+    }
+  ],
+  "evidence": {
+    "expiredTop": {
+      "freshSiblingSelected": false,
+      "code": "response",
+      "message": "La dirección de audio ha caducado. Vuelve a intentarlo.",
+      "controlFreshAlone": true
+    },
+    "explicitVersionScoring": {
+      "requestedVersion": "Live",
+      "studio": 112,
+      "live": 73
+    },
+    "catalogExactNetwork": [
+      {
+        "phase": "search",
+        "catalogCalls": 0,
+        "finalCode": "network"
+      },
+      {
+        "phase": "stream",
+        "catalogCalls": 0,
+        "finalCode": "network"
+      },
+      {
+        "phase": "saved",
+        "catalogCalls": 0,
+        "finalCode": "network"
+      }
+    ]
+  }
+}

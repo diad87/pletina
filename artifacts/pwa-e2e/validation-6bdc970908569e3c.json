@@ -1,0 +1,1245 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T21:11:10.241Z",
+  "build": "6bdc970908569e3c",
+  "sourceCommit": "9c437f92c385a418f95f5f014cf07d7ba756c5c6",
+  "engineFixCommit": "c349e9b",
+  "runtime": {
+    "purePwa": true,
+    "addedBackend": false,
+    "proxyAtRuntime": false,
+    "userAccountsRequired": false,
+    "subscriptionRequired": false
+  },
+  "changes": {
+    "sameVideoPrimaryCDNRepair": true,
+    "downloadRepairExplicitlyExcluded": true,
+    "expiredFormatDoesNotDiscardFreshSibling": true,
+    "transientYoutubeFailureCanTryExactAudius": true,
+    "p1MusicDownloadEnabled": true,
+    "p1PodcastDownloadEnabled": false,
+    "p1DownloadGate": "Positive declared size up to256MiB and duration up to24h; same selected original format.",
+    "opaqueCopyValidation": "Completed Cache.put, local cache-only decoder duration and decodable tail before metadata commit.",
+    "opaqueSizeIsDeclared": true,
+    "opaqueBodySHA256Verified": false,
+    "downloadJobBudget": "P1: max(90s,min(10min,duration+30s)) from job start, retries share deadline; explicit timeout wins.",
+    "resolverMilliseconds": 45000,
+    "unknownByteProgressLabel": "En curso",
+    "signedLocatorsPersisted": false
+  },
+  "logic": {
+    "passed": 847,
+    "failed": 0,
+    "skipped": 0,
+    "report": {
+      "path": "artifacts/pwa-port/p1-opaque-download-logic-final-2026-10-23.log",
+      "sha256": "f1dffd05d0944c532386936c9e218cc7eedd501a066394cd5ce6a5b13847505e",
+      "bytes": 86651
+    }
+  },
+  "typecheck": {
+    "errors": 0,
+    "warnings": 0,
+    "report": {
+      "path": "artifacts/pwa-port/p1-opaque-download-types-final-2026-10-23.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    }
+  },
+  "controlledBrowsers": {
+    "passed": 45,
+    "failed": 0,
+    "countsIncludeThreePreparationsPerEngine": true,
+    "scope": "Compiled Svelte UI, genuine silent AAC/Opus, provider HTTP fixtures, real IndexedDB/CacheStorage and worker. Desktop engines with emulated layouts, not physical phones.",
+    "windows": {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-manifest.json",
+      "sha256": "951dd5e4aa9e0efdb063cdf4cbb4102b394f05b6dd2f400360be6152b8ef7868",
+      "bytes": 17971
+    },
+    "webkit": {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-webkit-frozen-copy.json",
+      "sha256": "72080039e8c13a5a2588a10af5678ed3d604e0f48124981ecd7eb20574fc7d47",
+      "bytes": 11715
+    },
+    "windowsConsolidation": "Chrome13v1+2affectedv2 by unique ID, Firefox15v1 unchanged; repeated preparations are not added.",
+    "webkitOutage": "HTTP origin/provider outage, not navigator.onLine false.",
+    "headers": "Chrome Sec-Fetch-Mode is unobserved when absent; opaque CacheStorage response remains mandatory."
+  },
+  "negativeControls": {
+    "frozenPreviousYoutubeModule": {
+      "baseline": "916314e",
+      "tests": 84,
+      "passed": 77,
+      "failed": 7,
+      "report": {
+        "path": "artifacts/pwa-port/primary-cdn-recovery-negative-frozen-2026-10-23.log",
+        "sha256": "795f9e676a42a1765a60cc56ec6b9b08341095372eb1fd752b2917bfc53c616b",
+        "bytes": 15045
+      }
+    },
+    "compiledPreviousBuild": {
+      "baseline": "1ea46db9dc0b5af3",
+      "passed": 4,
+      "failed": 1,
+      "reason": "Two VISIONOS JSON OK replies followed by two media403, no P1; healthy control works.",
+      "report": {
+        "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/summary.json",
+        "sha256": "ed65c0dd1b9017e4b1ea96bd79a4309285a8dcc095dfad19a81b2d0add8b29c2",
+        "bytes": 29834
+      }
+    }
+  },
+  "update": {
+    "fromBuild": "1ea46db9dc0b5af3",
+    "passed": 11,
+    "failed": 0,
+    "report": {
+      "path": "artifacts/pwa-port/update-e2e-6bdc970908569e3c.json",
+      "sha256": "a4799bd6d5de663f8d8b3834ea081d49b85fd6821e6e19d8adaeef59c5438b62",
+      "bytes": 22880
+    },
+    "scope": "Final compiled app graph, real worker and IndexedDB/CacheStorage test data. Does not test extraction or physical icon migration."
+  },
+  "realProvider": {
+    "previousBuildPrototype": {
+      "build": "1ea46db9dc0b5af3",
+      "passed": 3,
+      "failed": 0,
+      "productDownloadUI": false,
+      "report": {
+        "path": "artifacts/pwa-port/p1-song-opaque-prototype-1ea46db9dc0b5af3-euri-public-90s.json",
+        "sha256": "962da9680f07b081ece619b7eec313d813bfed4784cb4ee69639dbfc43d88693",
+        "bytes": 42440
+      },
+      "scope": "Real exact Euri P1 bytes in temporary QA-only opaque cache; offline reload/native playback. A30s attempt timed out; fresh90s attempt completed in about55s, not an identical-URL performance comparison."
+    },
+    "currentLocal": {
+      "result": {
+        "processExitCode": 1,
+        "plannedChecks": 4,
+        "completedChecks": 0,
+        "passedChecks": 0,
+        "runnerErrors": 1,
+        "failedPhase": "online-play",
+        "requestedCatalogId": 3266421971,
+        "requestedVideoId": "CJ1A6FJnWTU",
+        "primarySameIdResponses": [
+          "UNPLAYABLE",
+          "UNPLAYABLE",
+          "UNPLAYABLE"
+        ],
+        "p1SameIdResponses": [
+          {
+            "status": "OK",
+            "exactResponseId": true
+          },
+          {
+            "status": "OK",
+            "exactResponseId": true
+          },
+          {
+            "status": "OK",
+            "exactResponseId": true
+          }
+        ],
+        "targetProbeWindowsBeforeAnyOtherPlayerResponse": {
+          "distinctLocatorHashes": 12,
+          "itags": [
+            "251",
+            "140",
+            "250",
+            "249"
+          ],
+          "statuses": [
+            403
+          ],
+          "contentTypes": [
+            "text/plain"
+          ],
+          "declaredBodyLengths": [
+            0
+          ]
+        },
+        "exactIdentityGuardRejectedLaterSong": {
+          "catalogId": 3266422001,
+          "title": "Askatasuna (ipuintxoa)",
+          "artist": "PIrritx Porrotx eta MariMotots",
+          "duration": 49
+        },
+        "downloadedActionInvoked": false,
+        "downloadManagerTransferExercised": false,
+        "offlineReloadExercised": false,
+        "productDownloadIntegrityClaimed": false,
+        "downloadDeletionExercised": false,
+        "resourcesClosed": true
+      },
+      "manifest": {
+        "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-local-live-manifest.json",
+        "sha256": "664cc4797453e5484778ce56a75a5e7e414076ca05e4b3e20b9885535eaacb59",
+        "bytes": 4230
+      },
+      "scope": "Provider403 before the download action; no product-download result inferred."
+    },
+    "currentPublic": {
+      "manifest": {
+        "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-public-live-manifest.json",
+        "sha256": "0905d5473cf875d166e98229217b6ef0e311dab2bf78261e02ace16d6693750a",
+        "bytes": 13328
+      },
+      "state": "frozen-public-product-download-positive-with-preserved-diagnostics",
+      "result": {
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "browser": "Chrome/153.0.8010.52",
+        "selectedCatalogId": 3266421971,
+        "selectedVideoId": "CJ1A6FJnWTU",
+        "selectedSource": {
+          "trackId": 3266421971,
+          "videoId": "CJ1A6FJnWTU",
+          "title": "Euri Tanta",
+          "verified": false
+        },
+        "downloadSource": {
+          "trackId": 3266421971,
+          "videoId": "CJ1A6FJnWTU",
+          "title": "Euri Tanta",
+          "verified": false
+        },
+        "p1TargetResponses": [
+          {
+            "at": "2026-10-23T21:07:04.516Z",
+            "elapsedMs": 4434,
+            "phase": "online-play",
+            "requestedVideoId": "CJ1A6FJnWTU",
+            "client": "WEB_EMBEDDED_PLAYER",
+            "httpStatus": 200,
+            "status": "OK",
+            "exactResponseId": true,
+            "audioFormats": 4
+          },
+          {
+            "at": "2026-10-23T21:07:11.869Z",
+            "elapsedMs": 11787,
+            "phase": "online-play",
+            "requestedVideoId": "CJ1A6FJnWTU",
+            "client": "WEB_EMBEDDED_PLAYER",
+            "httpStatus": 200,
+            "status": "OK",
+            "exactResponseId": true,
+            "audioFormats": 4
+          }
+        ],
+        "committedOpaqueFile": {
+          "id": 3266421971,
+          "title": "Euri Tanta",
+          "declaredSize": 1767085,
+          "at": 1792789635,
+          "cacheKeyPath": "/pletina/__audio__/3266421971?stage=1792789635075-5eba55e6-a37d-4078-90f0-2c342a165e05",
+          "internalPointer": true,
+          "sourcePresent": false,
+          "cached": true,
+          "responseType": "opaque",
+          "status": 0,
+          "storedTemporaryUrl": false,
+          "actualBodyBytes": null,
+          "sha256": null
+        },
+        "offlineFile": {
+          "id": 3266421971,
+          "title": "Euri Tanta",
+          "declaredSize": 1767085,
+          "at": 1792789635,
+          "cacheKeyPath": "/pletina/__audio__/3266421971?stage=1792789635075-5eba55e6-a37d-4078-90f0-2c342a165e05",
+          "internalPointer": true,
+          "sourcePresent": false,
+          "cached": true,
+          "responseType": "opaque",
+          "status": 0,
+          "storedTemporaryUrl": false,
+          "actualBodyBytes": null,
+          "sha256": null
+        },
+        "downloadedActionAndRemovalThroughUiOnly": true,
+        "qaCacheWrites": false,
+        "qaIdbWrites": false,
+        "addedDom": false,
+        "bodySha256": null,
+        "actualBodyBytes": null,
+        "sizeIsDeclaredMetadataOnly": true,
+        "downloadStartToObservedDoneMs": 734,
+        "longAdaptiveDeadlineExercised": false,
+        "networkControls": {
+          "online": {
+            "blocked": false,
+            "status": 404
+          },
+          "offlineBeforeReload": {
+            "blocked": true
+          },
+          "offlineAfterReload": {
+            "blocked": true
+          }
+        },
+        "offlinePlayback": {
+          "initial": {
+            "online": false,
+            "selected": {
+              "catalogId": 3266421971,
+              "title": "Euri Tanta",
+              "artist": "PIrritx Porrotx eta MariMotots",
+              "duration": 109
+            },
+            "title": "Euri Tanta",
+            "state": "playing",
+            "time": 3,
+            "duration": 108.999592,
+            "videoModal": false,
+            "iframeCount": 0,
+            "frames": [],
+            "youtubeFrameCount": 0,
+            "visibleFrameCount": 0,
+            "unrecognizedFrameCount": 0
+          },
+          "nativeInitial": [
+            {
+              "localPath": "/pletina/__audio__/3266421971",
+              "external": false,
+              "paused": false,
+              "time": 3.167684,
+              "duration": 108.999592,
+              "error": null,
+              "seeking": false,
+              "readyState": 4,
+              "muted": false,
+              "volume": 0.8
+            }
+          ],
+          "tail": {
+            "ui": {
+              "online": false,
+              "selected": {
+                "catalogId": 3266421971,
+                "title": "Euri Tanta",
+                "artist": "PIrritx Porrotx eta MariMotots",
+                "duration": 109
+              },
+              "title": "Euri Tanta",
+              "state": "playing",
+              "time": 99,
+              "duration": 108.999592,
+              "videoModal": false,
+              "iframeCount": 0,
+              "frames": [],
+              "youtubeFrameCount": 0,
+              "visibleFrameCount": 0,
+              "unrecognizedFrameCount": 0
+            },
+            "native": [
+              {
+                "localPath": "/pletina/__audio__/3266421971",
+                "external": false,
+                "paused": false,
+                "time": 99.013167,
+                "duration": 108.999592,
+                "error": null,
+                "seeking": false,
+                "readyState": 4,
+                "muted": false,
+                "volume": 0.8
+              }
+            ]
+          },
+          "afterTail": {
+            "online": false,
+            "selected": {
+              "catalogId": 3266421971,
+              "title": "Euri Tanta",
+              "artist": "PIrritx Porrotx eta MariMotots",
+              "duration": 109
+            },
+            "title": "Euri Tanta",
+            "state": "playing",
+            "time": 100,
+            "duration": 108.999592,
+            "videoModal": false,
+            "iframeCount": 0,
+            "frames": [],
+            "youtubeFrameCount": 0,
+            "visibleFrameCount": 0,
+            "unrecognizedFrameCount": 0
+          },
+          "nativeAfterTail": [
+            {
+              "localPath": "/pletina/__audio__/3266421971",
+              "external": false,
+              "paused": false,
+              "time": 99.699891,
+              "duration": 108.999592,
+              "error": null,
+              "seeking": false,
+              "readyState": 4,
+              "muted": false,
+              "volume": 0.8
+            }
+          ]
+        },
+        "removed": {
+          "cachedStageRetained": false,
+          "localRouteStatus": 404,
+          "downloadedTitleStillVisible": false
+        },
+        "navigationObservationRetries": [],
+        "resourcesClosed": true
+      },
+      "scope": "Frozen UI canary and actual public distribution; reports its own pass/fail phase."
+    }
+  },
+  "distribution": {
+    "files": 33,
+    "bytes": 883783,
+    "initialBytes": 51243,
+    "onDemandBytes": 786967,
+    "sourceHash": "d1c3d0c423522658526ca753c9f9007475800b1f513a3ef0490a1bf6c749568e",
+    "cssFontsAndRecipeUnchanged": [
+      "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "application/assets/index-W2XYcCbw.css",
+      "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+      "application/assets/p1-recipe.generated-BGYpK-b1.js"
+    ],
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "app.24c0112e8ed1b709.js",
+        "sha256": "24c0112e8ed1b709b67936763f1e4a42eb610c9aa8b336241ddee98b27c6c87e",
+        "bytes": 16483
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+        "bytes": 10280
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+        "bytes": 20156
+      },
+      {
+        "path": "application/assets/index-B-mg2Ww1.js",
+        "sha256": "0aa64953a3a42fe288a350a441e47f9b2bd0d1e2b16af080d5b35d31aedcb75c",
+        "bytes": 371159
+      },
+      {
+        "path": "application/assets/index-W2XYcCbw.css",
+        "sha256": "14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47",
+        "bytes": 90362
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+        "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13",
+        "bytes": 76
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+        "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812",
+        "bytes": 175818
+      },
+      {
+        "path": "application/assets/p1check-BK26lOUg.js",
+        "sha256": "caab2a070840b91634387048d072f583e4d18dede5d57517d90894f8fe1312d3",
+        "bytes": 3465
+      },
+      {
+        "path": "application/assets/storage-BJF4eTjj.js",
+        "sha256": "25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b",
+        "bytes": 32111
+      },
+      {
+        "path": "application/assets/storage-PSZZs3R7.js",
+        "sha256": "95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba",
+        "bytes": 138
+      },
+      {
+        "path": "application/assets/updates.svelte-CaKsDr0l.js",
+        "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a",
+        "bytes": 77
+      },
+      {
+        "path": "application/assets/updates.svelte-d2-IJVos.js",
+        "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4",
+        "bytes": 46008
+      },
+      {
+        "path": "application/assets/youtube-Bk2h8QR1.js",
+        "sha256": "1f205ff666ed70405aa6122d75fbfbe4e4d0a1a44c2535547c45924bd74d8b3a",
+        "bytes": 16728
+      },
+      {
+        "path": "application/assets/youtube-p1-D6JsRkrB.js",
+        "sha256": "705ac7f9c675e978c0d943ff1d3b564a4f7f0d5f102afd1e778e063a3898fe8a",
+        "bytes": 11395
+      },
+      {
+        "path": "application/assets/youtube-p1-probe-D3C8r15R.js",
+        "sha256": "fa0f6050c1d7695072926ad4b3faf0a577a9f1c97eec3988d7b783fdbdf09470",
+        "bytes": 5302
+      },
+      {
+        "path": "application/index.f20854d4916a705f.html",
+        "sha256": "f20854d4916a705f8da8d0b70bd3e3fcc63f3eae37988af892bf280268080fe6",
+        "bytes": 1018
+      },
+      {
+        "path": "application/launcher.e458fcb919a7856d.js",
+        "sha256": "e458fcb919a7856d7acebf868c113c13f57c2f168e214b686c424b8ebc4446de",
+        "bytes": 897
+      },
+      {
+        "path": "application/p1-check.html",
+        "sha256": "51eb814618a952e51a3176d0d2bf1c7bdb7030c0382330962aa53d30d068c2ab",
+        "bytes": 1977
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740",
+        "bytes": 3411
+      },
+      {
+        "path": "icons/icon-192.png",
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+        "bytes": 3564
+      },
+      {
+        "path": "icons/icon-512.png",
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf",
+        "bytes": 8870
+      },
+      {
+        "path": "index.html",
+        "sha256": "cf40ba586c326684a92bed9303599e77d7ed545fb9d652ab7ccff222400a077d",
+        "bytes": 7798
+      },
+      {
+        "path": "manifest.webmanifest",
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f",
+        "bytes": 499
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741",
+        "bytes": 15259
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740",
+        "bytes": 3411
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+        "bytes": 3564
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf",
+        "bytes": 8870
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9",
+        "bytes": 5810
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba",
+        "bytes": 581
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6",
+        "bytes": 4843
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e",
+        "bytes": 3235
+      },
+      {
+        "path": "sw.js",
+        "sha256": "0bc2bcb88fbbc74731d0bd087f3e0bd88b904ca49e541bbf485c48f20acf26c6",
+        "bytes": 10618
+      }
+    ]
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "4b7c6711af6ed59797a2c1c293b153f08b64b1f1",
+    "tree": "267cb8b77e61a59d401bc3fc3bd885d64300f994",
+    "source_hash": "d1c3d0c423522658526ca753c9f9007475800b1f513a3ef0490a1bf6c749568e",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "6bdc970908569e3c",
+    "workflow": "https://github.com/diad87/pletina/actions/runs/40023845199",
+    "workflowConclusion": "success",
+    "publicFilesPassed": 33,
+    "report": {
+      "path": "artifacts/pwa-deploy/public-files-6bdc970908569e3c.json",
+      "sha256": "cbf3203447652f2b505361046ddd7a96e54b31eab2e8722da4aa11d32331a15f",
+      "bytes": 10937
+    }
+  },
+  "limits": {
+    "universalAvailabilityClaimed": false,
+    "niNiNi403Resolved": false,
+    "newPhysicalAndroidTest": false,
+    "newPhysicalIOSTest": false,
+    "screenOffVerifiedForThisBuild": false,
+    "backgroundDownloadsGuaranteed": false,
+    "APKMigration": false,
+    "androidAuto": false,
+    "carPlay": false
+  },
+  "sourceBindingPolicy": "Historical report source paths identify their bytes at execution time. Replay uses each immutable source snapshot; older live source paths need not match the latest QA revision.",
+  "evidence": [
+    {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-after.log",
+      "sha256": "6c364fc9060152dddae50a80f08d5d8f3574ccb3b3abf0dd4f9259fa8d6e8bdc",
+      "bytes": 9560
+    },
+    {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-audit.json",
+      "sha256": "d8d39bc12cd7b236a31f9fe9c81a71896d611b7eb3038ff8299391a7918b2ef1",
+      "bytes": 2525
+    },
+    {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-before.log",
+      "sha256": "f1a9becc83bca49d73dab5a8065ec5b291becaf62d78e94dbc43c533bcf77ce3",
+      "bytes": 4059
+    },
+    {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-source.ts",
+      "sha256": "d156df984762813a1dbcdc7dedc1957d8425335fd0d5934efa99e6171c4e1acd",
+      "bytes": 3422
+    },
+    {
+      "path": "artifacts/pwa-port/audio-resolution-audit-916314e-2026-10-23.json",
+      "sha256": "73a9653dab66363af5f48839e171b0fe89954f6b173c6869ef835c7d43b16636",
+      "bytes": 1662
+    },
+    {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-after.log",
+      "sha256": "41b68897550c7929a6140ea5edd21192f646ce3ed3ba59a35f7ce7fe20daef3e",
+      "bytes": 12207
+    },
+    {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-audit.json",
+      "sha256": "17a151814c5a03ad4568bf5d65bba21d1e00b6ab2f67b9ae5855935acba56717",
+      "bytes": 2865
+    },
+    {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-before.log",
+      "sha256": "29bade18a54e0201d87e52dcb2544ca299a6c49309958c9e37fac19f45b2d789",
+      "bytes": 12607
+    },
+    {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-source.ts",
+      "sha256": "cbfd1a45db9c22f009996ca22c1db46a9d13da279dab034e1340fd691ef07764",
+      "bytes": 27215
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-manifest.json",
+      "sha256": "f5d3170ce45e17c2221560a537968089bd6b8b0aff26d1f15d5763973509f3fb",
+      "bytes": 7390
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-public-state.json",
+      "sha256": "f63f2b920a2be3cbfbada5dc500344922c436e130f8e8391c467c1a187e11d2a",
+      "bytes": 337
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-source-bc5ba418e43e5d60.mjs",
+      "sha256": "bc5ba418e43e5d60b12c1807350817f33ad7c6b854bd936818033b347a3f24be",
+      "bytes": 29195
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-ui-live-source-0208dc233c3aa7e9.mjs",
+      "sha256": "0208dc233c3aa7e93a2d3d7c357dffd0644ce2d0abba88e7f6503f7e8ca1ea0e",
+      "bytes": 27549
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-ui-live-source-89be5d408e9d10c9.mjs",
+      "sha256": "89be5d408e9d10c96192c2298478ec7c313707b5d0c9355b41e31957bd739fc8",
+      "bytes": 29462
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-ui-live-source-aafbdd8be58a5b7d.mjs",
+      "sha256": "aafbdd8be58a5b7d4d39f9d57a0f83f9497d9fdf1b96c117d8e614ac75f8e0d8",
+      "bytes": 28934
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-local-live-failure.png",
+      "sha256": "0dbb7fbd19954fc6bbd8fc505cb9163b0e81106de1159afbe433f0b634f29b85",
+      "bytes": 276210
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-local-live.json",
+      "sha256": "dde3e582b4fbbbcca3caa22a1d0195f9eac4a1a13b7406186189b7718d21ccaf",
+      "bytes": 32475
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-failure.png",
+      "sha256": "643340e30f42a549462e3d1ec7718d461c56eeb3253ef8c3840438955057a5c7",
+      "bytes": 273752
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-final-failure.png",
+      "sha256": "c4559431e51153b8f7f1ae0319ad12d567149a5889383c4ea2a8cc1de818e2a9",
+      "bytes": 175071
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-final.json",
+      "sha256": "e0fc2c481a1d8dba2411a8c95e9cf52af92f2e840686ea770b36cff7746b4894",
+      "bytes": 2433
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-v3-download-done-mobile.png",
+      "sha256": "9fcf191978528563d6a6b3194c85e8bd1ef998ff14fd959e665593f55f169625",
+      "bytes": 60765
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-v3-download-in-progress-mobile.png",
+      "sha256": "711ef1832cb72b0e91ac0fa399913d425e315ee44cdd2d5e723e16c66e6fb6f6",
+      "bytes": 60743
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-v3.json",
+      "sha256": "806fad4c407be422bd2960421ca177502cf7b331fda37027f1010e89449b600e",
+      "bytes": 23655
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live-v3.png",
+      "sha256": "9b383a4419c5babb53f532e2e9b63a245bb1706dde99b6bd07928229304eb30f",
+      "bytes": 153226
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-public-live.json",
+      "sha256": "2f1d63f1ffb0cac004b54beed2d140b9f8cfeb73333e0ebdcb7a379cb4137c2b",
+      "bytes": 18899
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-local-live-manifest.json",
+      "sha256": "664cc4797453e5484778ce56a75a5e7e414076ca05e4b3e20b9885535eaacb59",
+      "bytes": 4230
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-public-live-initial-manifest.json",
+      "sha256": "2b16b8ec34421c601e989e6fc370ff86ff9918e99f773a31979bae0e22a1fb19",
+      "bytes": 2530
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-public-live-manifest.json",
+      "sha256": "0905d5473cf875d166e98229217b6ef0e311dab2bf78261e02ace16d6693750a",
+      "bytes": 13328
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-webkit.log",
+      "sha256": "bd949970ef37404943d61d92381350055c899651fb2416f2f1ada46c707eb149",
+      "bytes": 3493
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-win-header-final.log",
+      "sha256": "31ef753163a844a0ad25d1723e780724c0911c45a8898094fafe0f6169bbb937",
+      "bytes": 1418
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-win.log",
+      "sha256": "f710e2d1f7d2a2762f1b7399adfc8f08f033abf32b9e76b2e3dab2b6129c64e1",
+      "bytes": 6209
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-final-audit.json",
+      "sha256": "968078dfd9525dc44b8ab34f54541022371174066da1edd1cad02c6f0abccda7",
+      "bytes": 3661
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-final-tests.log",
+      "sha256": "7d510c5d6c81d06b2ddd12b30055b7d77ee66543b1e9351282b65c3516c0904f",
+      "bytes": 18596
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-final-types.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-from-c349e9b.patch",
+      "sha256": "42fc935d577c4513d7b88469766df3bcf04e04311ec95589a4f28a859c69734d",
+      "bytes": 29205
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-scripts-tests-web-audio.test.mjs",
+      "sha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a",
+      "bytes": 77877
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-scripts-tests-web-downloads.test.mjs",
+      "sha256": "722ab08ad2908a61e788d0d37b2ef8d3551bbcf9b1c9948cf8c4a22f41baa899",
+      "bytes": 57322
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-web-port-audio.ts",
+      "sha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8",
+      "bytes": 27868
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-web-port-downloads.ts",
+      "sha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868",
+      "bytes": 25724
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-build-final-2026-10-23.log",
+      "sha256": "30b6210f1de4b39fbddc9f914ea150b3738ac856dca8da5c3e1493b719dcfe28",
+      "bytes": 1993
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-after.log",
+      "sha256": "e284fb79e1c192f572d4a9de100591e1196615386134529e1e0da9a7b2119acc",
+      "bytes": 18156
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-audit.json",
+      "sha256": "d5c03fe513b9a7378603567af6bfc311fd94900f76ade103ac009fe7458da741",
+      "bytes": 3766
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-before.log",
+      "sha256": "6c8f104a81a33901560bb73867f3bb04923895e065fd65184659ea3e4d3a015f",
+      "bytes": 18938
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-from-c349e9b.patch",
+      "sha256": "4d321c53f1e468403863fdff5bcc7e487e6b877abe263b5bcebdbc9141ff46f9",
+      "bytes": 20664
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-types.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-feedback-2026-10-23.log",
+      "sha256": "6d4f691817e8bc553a138ac39fe1ad31c22a49ff9d6b5feaf8f8de015b409987",
+      "bytes": 3457
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-logic-final-2026-10-23.log",
+      "sha256": "f1dffd05d0944c532386936c9e218cc7eedd501a066394cd5ce6a5b13847505e",
+      "bytes": 86651
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-1ea46db9dc0b5af3-90s-manifest.json",
+      "sha256": "14d449b59dfc19afb60f9f82cce6c88de67962e0492d32c9bc144705ccb7611c",
+      "bytes": 5879
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-1ea46db9dc0b5af3-manifest.json",
+      "sha256": "a4d92d8a1886ee49ecab25d2bbfb6705e9944b343647aeb2e9a08c2f294f5c71",
+      "bytes": 3223
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-90s-source-9f84b9c3bcb8687c.mjs",
+      "sha256": "9f84b9c3bcb8687c531700da3cbeabd4afc24fe559dd3dfdfe25ed291f76282f",
+      "bytes": 36298
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-source-ea06fdd0753056a4.mjs",
+      "sha256": "ea06fdd0753056a4ad0e62006e2fd73596a8236cb162e0a2b947be53825d55ba",
+      "bytes": 34693
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-public-verify-6bdc970908569e3c.log",
+      "sha256": "9333468d82afea00a8439f7c8c82303110c994476bbcae57048a635c65d7b0d6",
+      "bytes": 165
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-publish-6bdc970908569e3c.log",
+      "sha256": "907b1366a24b5a336ff67c8060d523985d6a3816946dc5edb2e56b647ccf6c43",
+      "bytes": 310
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-publish-dry-run-6bdc970908569e3c.json",
+      "sha256": "6d8182d6cab6e2c67dfd9c64e4a89ef082b5611d68cedbdc85da341dc1d87ff3",
+      "bytes": 1521
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-qa-candidate-2026-10-23/manifest.json",
+      "sha256": "ccd1854dbf5aa31b06a9b38946c8c57f8444d5d32890157eca4ef4937df27ccb",
+      "bytes": 1542
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-qa-candidate-2026-10-23/media-scenarios.mjs",
+      "sha256": "acfa54e68a30366754bfe4a42bbf47112a213fdc0e3047483a3108c84c164f8c",
+      "bytes": 167590
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-qa-candidate-2026-10-23/provider-fixtures.mjs",
+      "sha256": "d391ad7d19082c730628dd70bb5144a381856c4895fc09ab0c50c3a5613ba39e",
+      "bytes": 58285
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-release-manifest-generator.mjs",
+      "sha256": "d215dcfd32eb987690dc0bf767e6a8b531239f94c152b34bfa055df654ce8584",
+      "bytes": 8471
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-scripts-tests-web-audio.test.mjs",
+      "sha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a",
+      "bytes": 77877
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-scripts-tests-web-downloads.test.mjs",
+      "sha256": "82a40712babc3c530f672d00b3cf6d11247b3391c6c95efd889a3ed26e108978",
+      "bytes": 52764
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-timeout-after.log",
+      "sha256": "650cc54cf3a0c1b9ac9ba8f28a5b93d6f6ede216a5d5392e322ae917bdc86d9b",
+      "bytes": 6099
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-timeout-before.log",
+      "sha256": "065e892d4287c9bf5f71d84da87b9d03dbc552576f467c61826ab67b4cb81057",
+      "bytes": 8273
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-types-final-2026-10-23.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-update-6bdc970908569e3c.log",
+      "sha256": "c74df38ae24c906843125e8d45a2d8c7af24f6286c39481b74fd5534850264cf",
+      "bytes": 1205
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-web-port-audio.ts",
+      "sha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8",
+      "bytes": 27868
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-web-port-downloads.ts",
+      "sha256": "bd3a29ee9284311a6174bd2083bca87da00ee84ec9b68e3fdb1edbc1a590a24c",
+      "bytes": 25153
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-euri-public.json",
+      "sha256": "6bdce07c5113e2b811ede2a53561163233f31980b45a43dc595018ab1ea130ad",
+      "bytes": 19426
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-euri-public.png",
+      "sha256": "30fc42bc8260480b5c4be4fb3e7be2fdc2f5f6f1583338ee8b42e93809398d3e",
+      "bytes": 270925
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-ninini-public.json",
+      "sha256": "ae2deb90273713906b813a293dd875eea3dd73941217ed66d7be7858d571a30a",
+      "bytes": 43751
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-opaque-prototype-1ea46db9dc0b5af3-euri-public-90s.json",
+      "sha256": "962da9680f07b081ece619b7eec313d813bfed4784cb4ee69639dbfc43d88693",
+      "bytes": 42440
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-opaque-prototype-1ea46db9dc0b5af3-euri-public-90s.png",
+      "sha256": "fdc8622100d644b55705fd203a97bc2e202f7699c334ab6c012ba46b4e3fb6e6",
+      "bytes": 118332
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-opaque-prototype-1ea46db9dc0b5af3-euri-public.json",
+      "sha256": "ed3f0f8f2f7c727af87399b29eb87831dd040bf2980193520cc37a986924c59b",
+      "bytes": 24622
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-browser-negative-2026-10-23.log",
+      "sha256": "f8cf4e2b2485df2bcaf85a432b5d712266fe10ae3a88e63fad7706971fa5be13",
+      "bytes": 1327
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-directed-2026-10-23.log",
+      "sha256": "77af1c3025766c3b0bc5784ca51d96e42f104130ae66b545f6f3091dae369cbd",
+      "bytes": 15788
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-integration-2026-10-23.log",
+      "sha256": "ff66b0a0066bf986be5d53e2d8e6e917cc20357453914a4eaa14549a1a078e5f",
+      "bytes": 6062
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-logic-2026-10-23.log",
+      "sha256": "9098f82f81264af4b59614995da97fa5192ecd556d83da111041253ad97492b9",
+      "bytes": 85177
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-2026-10-23.log",
+      "sha256": "efa38c0a608cfe426fdb7a3d235ed129b3b4fe2ab608691d3187890190567ec9",
+      "bytes": 10013
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-frozen-2026-10-23.log",
+      "sha256": "795f9e676a42a1765a60cc56ec6b9b08341095372eb1fd752b2917bfc53c616b",
+      "bytes": 15045
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/manifest.json",
+      "sha256": "0306bc7fd8e5adb0f423d493cabfbd8f998e65ade7609f5f40e752710f5f0ae6",
+      "bytes": 1172
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs",
+      "sha256": "b915a6b86a5faefa03ff440ea10ff2d5da73dd3f6176cfc7648451dea2ee3a31",
+      "bytes": 40537
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs",
+      "sha256": "7bc92938f92b40025b7cfc272a110a01ca13abe1683292a656e2f41662f3c8c1",
+      "bytes": 13220
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/web-port/youtube-p1-probe.ts",
+      "sha256": "1341ae91d40e67a42de8ef9ddbe3f5cafe83caa1b895c79bc3980f8cd741b801",
+      "bytes": 11251
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/web-port/youtube-p1.ts",
+      "sha256": "7a47d495e7f256911a390807bd3143518e31d234ce18448c00b7e7f227c6bc62",
+      "bytes": 22038
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-negative-sources/web-port/youtube.ts",
+      "sha256": "66a4661b4886e3e69827fafb92bd4faaddaa54ffb4a401bba72508ebaf3eba7b",
+      "bytes": 27221
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-types-2026-10-23.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-6bdc970908569e3c.json",
+      "sha256": "a4799bd6d5de663f8d8b3834ea081d49b85fd6821e6e19d8adaeef59c5438b62",
+      "bytes": 22880
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-webkit/summary.json",
+      "sha256": "0b8035f6e4c9c923e9d80c53c41561fb7f7c506f62f46d3f649cdd518a7a2250",
+      "bytes": 154116
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-webkit/webkit-iphone-layout/report.json",
+      "sha256": "17d2547f6f2fbb7cb89537a057f39f290e0b1a64b2bea20d58495d79f1593e41",
+      "bytes": 132122
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-webkit-frozen-copy.json",
+      "sha256": "72080039e8c13a5a2588a10af5678ed3d604e0f48124981ecd7eb20574fc7d47",
+      "bytes": 11715
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/chromium-android-layout/14-media-p1-opaque-download-completes-and-reloads-for-local-play-seek-wit.png",
+      "sha256": "ae9846632c0a16570bf0d6eef09c2e2fc1607f5081b1b8caf9c3ebb717b6f2e0",
+      "bytes": 47601
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/chromium-android-layout/15-media-p1-opaque-download-http403-html-rolls-back-without-done-or-parti.png",
+      "sha256": "7705bc406a412820171ee99834197f8b28fe7b43a8e9cc2b0e6ca442343bbc44",
+      "bytes": 53753
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/chromium-android-layout/report.json",
+      "sha256": "f8f7e8dfed9b2366a74ca4cd98ef5791f73ba1a6641de580856e35629d5b901f",
+      "bytes": 132810
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/firefox-narrow/report.json",
+      "sha256": "87c1fbbb7597da1b23865412b1470cd7cb5d3c42f0fb9029271ee43c80cfd0a6",
+      "bytes": 130601
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/frozen-sources.json",
+      "sha256": "97b9cd434f241620fb2efd6a0dbf9a91423bda6c489aec0ab08173309f20da62",
+      "bytes": 3052
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/source-scripts-preview-pwa.mjs",
+      "sha256": "7a08162d1379c0ffe451af84753e8be71f4ad00eb7e2e07fca323f8df857acdb",
+      "bytes": 2216
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/source-scripts-tests-e2e-harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/source-scripts-tests-e2e-media-scenarios.mjs",
+      "sha256": "acfa54e68a30366754bfe4a42bbf47112a213fdc0e3047483a3108c84c164f8c",
+      "bytes": 167590
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/source-scripts-tests-e2e-provider-fixtures.mjs",
+      "sha256": "d391ad7d19082c730628dd70bb5144a381856c4895fc09ab0c50c3a5613ba39e",
+      "bytes": 58285
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/source-scripts-tests-e2e-run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win/summary.json",
+      "sha256": "c1308b60342132bb46799be908f99d88eca83ddd9da53779dbee6dd1eea41a4c",
+      "bytes": 304999
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/chromium-android-layout/report.json",
+      "sha256": "a1c581238b52f4ec66f399a8878ed4bde92dbb5488492d26394581fc014e2b4d",
+      "bytes": 56877
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/frozen-sources.json",
+      "sha256": "81e5ea36b86ec73875f2cbf7c67a4e2104385002193f72e02072e6cb86e49251",
+      "bytes": 2342
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/source-scripts-preview-pwa.mjs",
+      "sha256": "7a08162d1379c0ffe451af84753e8be71f4ad00eb7e2e07fca323f8df857acdb",
+      "bytes": 2216
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/source-scripts-tests-e2e-harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/source-scripts-tests-e2e-media-scenarios.mjs",
+      "sha256": "3b19da7ab00aabf48a720d6f77c6a991f2b7766bc43431c4e7987300f5eab439",
+      "bytes": 167691
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/source-scripts-tests-e2e-provider-fixtures.mjs",
+      "sha256": "d391ad7d19082c730628dd70bb5144a381856c4895fc09ab0c50c3a5613ba39e",
+      "bytes": 58285
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/source-scripts-tests-e2e-run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-header-final/summary.json",
+      "sha256": "0a4450957c7e902f0c91f0dd5f8f836a4c8cd291d544db111c3dc29b888e9669",
+      "bytes": 67286
+    },
+    {
+      "path": "artifacts/pwa-e2e/p1-opaque-download-6bdc970908569e3c-win-manifest.json",
+      "sha256": "951dd5e4aa9e0efdb063cdf4cbb4102b394f05b6dd2f400360be6152b8ef7868",
+      "bytes": 17971
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/chromium-android-layout/04-media-p1-primary-json-ok-cdn403-repairs-same-id-without-extra-click-or.png",
+      "sha256": "13de7c4e5e13a1e67b2c2d919eac176d92a28857fce1ce6fe1b3397b6519ddff",
+      "bytes": 64174
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/chromium-android-layout/report.json",
+      "sha256": "34853685440806b1b465a5168c8b5e246964b38baa5ef77ec60d1b73e8814ad3",
+      "bytes": 24279
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/provenance-before.json",
+      "sha256": "fd4b3f35dfd81c0b07522c0a35d5db3e60352764078ed37ed862d02850303756",
+      "bytes": 8222
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/provenance-final.json",
+      "sha256": "0fcd9a73f6d0c1ae0293e03cef55bac72eea5efd545893d7230b453e7a58536a",
+      "bytes": 2148
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/artifacts/pwa-e2e/latest.json",
+      "sha256": "0f599eb07c0e36567715309fc1ed4b52e53237cba523b202e0508642a82028fa",
+      "bytes": 402
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/build-pwa.mjs",
+      "sha256": "95b2d1190f8fb8c41297777e813f69769af5648400ca56c5aba6dd5a6e19029d",
+      "bytes": 7964
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/preview-pwa.mjs",
+      "sha256": "7a08162d1379c0ffe451af84753e8be71f4ad00eb7e2e07fca323f8df857acdb",
+      "bytes": 2216
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/fixtures/silence-12s.m4a",
+      "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+      "bytes": 5002
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/fixtures/silence-12s.webm",
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+      "bytes": 52225
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/fixtures/silence-90s.m4a",
+      "sha256": "74aa70b375092504de10410f0a079b307ebb094a3040f2d138f411ff583973f7",
+      "bytes": 32095
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/media-scenarios.mjs",
+      "sha256": "64a4187b81197dd2356ed4a98ac55ac444f64359f151999e5bdefc03fee0c902",
+      "bytes": 161505
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "d161bd57b70fa900c9d14689316809872305e404b375623779333d9403558fbc",
+      "bytes": 55025
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/scripts/tests/e2e/webkit-network-transport.mjs",
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e",
+      "bytes": 6486
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/summary.json",
+      "sha256": "ed65c0dd1b9017e4b1ea96bd79a4309285a8dcc095dfad19a81b2d0add8b29c2",
+      "bytes": 29834
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-6bdc970908569e3c.json",
+      "sha256": "cbf3203447652f2b505361046ddd7a96e54b31eab2e8722da4aa11d32331a15f",
+      "bytes": 10937
+    },
+    {
+      "path": "artifacts/pwa-deploy/workflow-6bdc970908569e3c.json",
+      "sha256": "5b3eb895abd120705d1c39490788ea01d4248546d3cb940096a3f3566d20453f",
+      "bytes": 166
+    }
+  ]
+}

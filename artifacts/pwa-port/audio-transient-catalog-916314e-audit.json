@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T20:42:22.854Z",
+  "baseSourceCommit": "916314e3e76c0279c99411e4b9944e2b9e8cb04e",
+  "scope": "Automatic catalog-track playback may try the existing strict-identity Audius resolver after a typed YouTube network/timeout failure. No text-substitution expansion or new provider, media, recipe or deployment.",
+  "source": {
+    "path": "web-port/audio.ts",
+    "sha256": "cbfd1a45db9c22f009996ca22c1db46a9d13da279dab034e1340fd691ef07764"
+  },
+  "sourceSnapshot": {
+    "path": "artifacts/pwa-port/audio-transient-catalog-916314e-source.ts",
+    "sha256": "cbfd1a45db9c22f009996ca22c1db46a9d13da279dab034e1340fd691ef07764"
+  },
+  "tests": {
+    "path": "scripts/tests/web-audio.test.mjs",
+    "sha256": "2518257e679b56e94e947cd2801139c2a4ef97df465e6a2d8453d8ca43c5ea5d"
+  },
+  "rootChangesPreserved": {
+    "streamRecoverPrimaryFourthArgumentForwardedAtFourCalls": true,
+    "rootPlaybackAndDownloadRecoveryTestsPreserved": true
+  },
+  "before": {
+    "log": {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-before.log",
+      "sha256": "29bade18a54e0201d87e52dcb2544ca299a6c49309958c9e37fac19f45b2d789"
+    },
+    "tests": 81,
+    "passed": 76,
+    "failed": 5
+  },
+  "after": {
+    "log": {
+      "path": "artifacts/pwa-port/audio-transient-catalog-916314e-after.log",
+      "sha256": "41b68897550c7929a6140ea5edd21192f646ce3ed3ba59a35f7ce7fe20daef3e"
+    },
+    "tests": 115,
+    "passed": 115,
+    "failed": 0,
+    "files": [
+      "scripts/tests/web-audio.test.mjs",
+      "scripts/tests/web-catalog-sources.test.mjs",
+      "scripts/tests/web-p1-parser.test.mjs"
+    ]
+  },
+  "behavior": [
+    "Typed YouTube network/timeout failures in search, stream and cached automatic-source phases can try catalog once per existing operation.",
+    "Only the existing resolver that validates ISRC/title/artist/version/duration may return an alternate source.",
+    "Provider absence or error does not replace the original YouTube transport error or write a YouTube association.",
+    "Cancellation and the original45000ms operation deadline reject late recovery and prevent writes/fallback UI.",
+    "Manual choices, directly added YouTube videos, podcasts and downloads never gain this transient catalog-rescue policy.",
+    "Restricted, malformed or untyped errors do not authorize this new route."
+  ],
+  "testsAdded": 6,
+  "priorPolicyTestUpdated": "Restrictions/response exclusions now count actual catalog calls; typed-network recovery has explicit positive and negative tests.",
+  "limitations": [
+    "Synthetic module-level transport/storage fixtures only; not a new live-provider coverage claim.",
+    "Existing mixed definitive/transport failure policy and existing definitive-error download rescue remain unchanged.",
+    "No build, publication, recipe refresh or commit by this agent."
+  ]
+}

@@ -1,6 +1,6 @@
 # Cola offline, descargas y recuperación de audio
 
-La versión actual es `c8ed230fbf100850`: añade [Opus como rescate de audio](pwa-opus-fallback.md) y conserva estos cambios de cola/descarga. La evidencia siguiente corresponde a C2 y mantiene su alcance histórico.
+La versión actual es `6bdc970908569e3c`: añade [descargas de canciones P1 mediante caché opaca](pwa-p1-offline-cache.md), además del rescate Opus y estos cambios de cola/descarga. La evidencia siguiente corresponde a C2 y mantiene su alcance histórico. La prohibición de descargar P1 descrita en C2 ha sido superada para canciones con los metadatos y validaciones de la nueva ruta; no se reetiquetan las pruebas antiguas.
 
 Compilación `c2a70158ef06a3d5`, fuente `cf0dd4487c58033301faf2bbcbbcd93782187f6f`. Todo se ejecuta en la PWA, con peticiones directas y almacenamiento del navegador; no incorpora servidor, proxy, cuentas ni APK.
 

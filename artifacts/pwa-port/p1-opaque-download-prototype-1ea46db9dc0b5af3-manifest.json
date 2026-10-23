@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T20:50:34.654Z",
+  "state": "frozen-failed-isolated-prototype-no-product-change",
+  "baseline": {
+    "build": "1ea46db9dc0b5af3",
+    "url": "https://diad87.github.io/pletina/",
+    "stateSnapshot": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-public-state.json"
+  },
+  "bindings": [
+    {
+      "path": "scripts/tests/p1-opaque-download-prototype.browser.mjs",
+      "sha256": "ea06fdd0753056a4ad0e62006e2fd73596a8236cb162e0a2b947be53825d55ba",
+      "bytes": 34693
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-source-ea06fdd0753056a4.mjs",
+      "sha256": "ea06fdd0753056a4ad0e62006e2fd73596a8236cb162e0a2b947be53825d55ba",
+      "bytes": 34693
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-opaque-prototype-1ea46db9dc0b5af3-euri-public.json",
+      "sha256": "ed3f0f8f2f7c727af87399b29eb87831dd040bf2980193520cc37a986924c59b",
+      "bytes": 24622
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-manifest.json",
+      "sha256": "f5d3170ce45e17c2221560a537968089bd6b8b0aff26d1f15d5763973509f3fb",
+      "bytes": 7390
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-public-state.json",
+      "sha256": "f63f2b920a2be3cbfbada5dc500344922c436e130f8e8391c467c1a187e11d2a",
+      "bytes": 337
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json",
+      "sha256": "623f2886e04ca909b2301d45d7e1dc1fcd126bddd9105fd2031d248ba0c782c3",
+      "bytes": 10937
+    }
+  ],
+  "scope": "ISOLATED QA PROTOTYPE: public PWA selects real audio; diagnostic-only no-cors Cache.put and added DOM Audio/buttons test a local staging key offline. Not product-download E2E. Desktop foreground only.",
+  "result": {
+    "processExitCode": 1,
+    "exactSelectedCatalogId": 3266421971,
+    "exactSelectedVideoId": "CJ1A6FJnWTU",
+    "nativePlaybackPassed": true,
+    "format": "AAC140",
+    "durationSeconds": 108.999,
+    "declaredBytes": 1767085,
+    "actualBodyBytes": null,
+    "sha256": null,
+    "noCorsGetHttpStatus": 200,
+    "noCorsGetContentType": "audio/mp4",
+    "cachePutCompleted": false,
+    "deadlineMs": 30000,
+    "error": "Opaque transfer deadline",
+    "offlineChecksExecuted": false,
+    "productDownloadVerified": false,
+    "idbDownloadRowWritten": false,
+    "cleanup": {
+      "stageKeyKnown": true,
+      "removed": false,
+      "retained": false
+    },
+    "resourcesClosed": true
+  },
+  "limitations": [
+    "A 30-second Cache.put deadline does not prove that opaque caching is impossible.",
+    "No partial file was demonstrated; this run does not distinguish a slow body transfer from a storage wait.",
+    "8 MiB is a declared-size budget only; no actual body-byte limit or checksum can be asserted for an opaque response.",
+    "The UI-selected URL remained only in RAM; artifacts contain its hash, not a signed media URL.",
+    "No product download action, IDB download row, physical mobile or background proof."
+  ],
+  "followUp": {
+    "authorizedComparison": "one same-song Euri run with the existing manager 90-second budget and CDP transfer counters",
+    "status": "pending-separate-run"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "build": "1ea46db9dc0b5af3",
+  "productSourceCommit": "af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad",
+  "completedAt": "2026-10-23T20:45:35.577Z",
+  "scope": "Negative compiled regression control: older product distribution with new HTTP fixture QA, Chrome Windows only. Expected native media CDN403 repair failure plus healthy-primary success; no physical mobile or live-provider claim.",
+  "expectedHistoricalFailureObserved": true,
+  "rawFailurePreserved": true,
+  "counts": {
+    "pass": 4,
+    "fail": 1,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "errors": 0,
+  "browserVersion": "153.0.8010.52",
+  "observations": {
+    "failingTrackId": 208,
+    "primaryJsonOKAttempts": 2,
+    "primaryMediaHTTP403Responses": 2,
+    "P1RequestsForFailedTrack": 0,
+    "healthyTrackId": 209,
+    "healthyPrimaryJsonOKAttempts": 1,
+    "healthyNativeAACAdvanced": true,
+    "interpretation": "The older compiled player retries the same primary JSON route after native media403 and never requests P1. The healthy-primary control succeeds using the identical real AAC HTTP fixture."
+  },
+  "distributionUnchangedBeforeAfter": true,
+  "qaSourceAndSnapshotUnchangedBeforeAfter": true,
+  "resources": {
+    "browserClosed": true,
+    "puppeteerBrowserClosed": true,
+    "previewServerClosed": true
+  },
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/provenance-before.json",
+      "sha256": "fd4b3f35dfd81c0b07522c0a35d5db3e60352764078ed37ed862d02850303756"
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/summary.json",
+      "sha256": "ed65c0dd1b9017e4b1ea96bd79a4309285a8dcc095dfad19a81b2d0add8b29c2"
+    },
+    {
+      "path": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/chromium-android-layout/report.json",
+      "sha256": "34853685440806b1b465a5168c8b5e246964b38baa5ef77ec60d1b73e8814ad3"
+    },
+    {
+      "path": "artifacts/pwa-port/primary-cdn-recovery-browser-negative-2026-10-23.log",
+      "sha256": "f8cf4e2b2485df2bcaf85a432b5d712266fe10ae3a88e63fad7706971fa5be13",
+      "rawCRLF": true
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T21:02:23.097Z",
+  "state": "frozen-real-provider-failure-before-product-download",
+  "candidate": {
+    "build": "6bdc970908569e3c",
+    "productSourceCommit": "9c437f92c385a418f95f5f014cf07d7ba756c5c6",
+    "origin": "ephemeral static loopback serving unmodified compiled dist-pwa"
+  },
+  "bindings": [
+    {
+      "path": "scripts/tests/p1-download-ui-live.browser.mjs",
+      "sha256": "0208dc233c3aa7e93a2d3d7c357dffd0644ce2d0abba88e7f6503f7e8ca1ea0e",
+      "bytes": 27549
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-ui-live-source-0208dc233c3aa7e9.mjs",
+      "sha256": "0208dc233c3aa7e93a2d3d7c357dffd0644ce2d0abba88e7f6503f7e8ca1ea0e",
+      "bytes": 27549
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-local-live.json",
+      "sha256": "dde3e582b4fbbbcca3caa22a1d0195f9eac4a1a13b7406186189b7718d21ccaf",
+      "bytes": 32475
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-6bdc970908569e3c-euri-local-live-failure.png",
+      "sha256": "0dbb7fbd19954fc6bbd8fc505cb9163b0e81106de1159afbe433f0b634f29b85",
+      "bytes": 276210
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-publish-dry-run-6bdc970908569e3c.json",
+      "sha256": "6d8182d6cab6e2c67dfd9c64e4a89ef082b5611d68cedbdc85da341dc1d87ff3",
+      "bytes": 1521
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-prototype-1ea46db9dc0b5af3-90s-manifest.json",
+      "sha256": "14d449b59dfc19afb60f9f82cce6c88de67962e0492d32c9bc144705ccb7611c",
+      "bytes": 5879
+    }
+  ],
+  "scope": "One Euri Tanta real-provider compiled-product UI download, read-only opaque-cache metadata, offline reload/native playback/tail seek, and UI removal. Desktop Chrome foreground only.",
+  "result": {
+    "processExitCode": 1,
+    "plannedChecks": 4,
+    "completedChecks": 0,
+    "passedChecks": 0,
+    "runnerErrors": 1,
+    "failedPhase": "online-play",
+    "requestedCatalogId": 3266421971,
+    "requestedVideoId": "CJ1A6FJnWTU",
+    "primarySameIdResponses": [
+      "UNPLAYABLE",
+      "UNPLAYABLE",
+      "UNPLAYABLE"
+    ],
+    "p1SameIdResponses": [
+      {
+        "status": "OK",
+        "exactResponseId": true
+      },
+      {
+        "status": "OK",
+        "exactResponseId": true
+      },
+      {
+        "status": "OK",
+        "exactResponseId": true
+      }
+    ],
+    "targetProbeWindowsBeforeAnyOtherPlayerResponse": {
+      "distinctLocatorHashes": 12,
+      "itags": [
+        "251",
+        "140",
+        "250",
+        "249"
+      ],
+      "statuses": [
+        403
+      ],
+      "contentTypes": [
+        "text/plain"
+      ],
+      "declaredBodyLengths": [
+        0
+      ]
+    },
+    "exactIdentityGuardRejectedLaterSong": {
+      "catalogId": 3266422001,
+      "title": "Askatasuna (ipuintxoa)",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "duration": 49
+    },
+    "downloadedActionInvoked": false,
+    "downloadManagerTransferExercised": false,
+    "offlineReloadExercised": false,
+    "productDownloadIntegrityClaimed": false,
+    "downloadDeletionExercised": false,
+    "resourcesClosed": true
+  },
+  "limitations": [
+    "This is a real-provider failure before Download, not a failure of the new download manager.",
+    "The runner deliberately rejects a different automatically selected song instead of treating later native playback as a pass.",
+    "The three exact-video P1 responses were OK but their AAC/Opus probes received HTTP403; no new product-download transfer was attempted.",
+    "Other videos and CDN requests occurred after those target windows; their results do not establish Euri playback.",
+    "No retry of this canary, alternate song, provider mock, Node bootstrap, account, proxy or browser security/autoplay override.",
+    "No QA IDB/Cache writes or added DOM; Audio was observed with CDP queryObjects and every observation RPC lacked a user gesture.",
+    "No physical mobile/background proof, readable opaque body-byte count, audio file or signed locator was persisted."
+  ],
+  "previousPositiveScope": "The separate public-1ea prototype 90-second result passed offline caching/playback, but it does not validate the new manager or this build."
+}

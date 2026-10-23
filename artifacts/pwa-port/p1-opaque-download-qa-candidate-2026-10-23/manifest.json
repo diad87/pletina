@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "status": "prepared-not-executed",
+  "createdAt": "2026-10-23T20:53:29.351Z",
+  "gate": "Root real opaque-P1 Cache.put and offline decoder pilot must pass before these candidate scenarios or policy assertions are used.",
+  "files": [
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-qa-candidate-2026-10-23/media-scenarios.mjs",
+      "bytes": 167590,
+      "sha256": "acfa54e68a30366754bfe4a42bbf47112a213fdc0e3047483a3108c84c164f8c"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-qa-candidate-2026-10-23/provider-fixtures.mjs",
+      "bytes": 58285,
+      "sha256": "d391ad7d19082c730628dd70bb5144a381856c4895fc09ab0c50c3a5613ba39e"
+    }
+  ],
+  "restoreSources": "artifacts/pwa-e2e/primary-cdn-recovery-negative-1ea46db9dc0b5af3/qa-sources/",
+  "restoreHashes": {
+    "media": "64a4187b81197dd2356ed4a98ac55ac444f64359f151999e5bdefc03fee0c902",
+    "fixtures": "d161bd57b70fa900c9d14689316809872305e404b375623779333d9403558fbc"
+  },
+  "newScenarioIds": [
+    "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+    "media.p1-opaque-download-http403-html-rolls-back-without-done-or-partial-cache"
+  ],
+  "changedAssertions": "Three previous P1 codec/multi-AAC cases assert no automatic media download, without a manual download-denial gesture. They do not promise opaque-file integrity or live-provider availability."
+}

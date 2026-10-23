@@ -1,5 +1,7 @@
 # Recuperación de audio del mismo vídeo con Opus
 
+La publicación actual `6bdc970908569e3c` conserva este rescate y añade [copia P1 para escuchar música sin conexión](pwa-p1-offline-cache.md). La descripción y evidencia de C8 que siguen son históricas; no habilitaban esa descarga.
+
 Compilación `c8ed230fbf100850`, fuente `5acf1a58af2e12555059c35f72b64ae240d9dc0c`. La PWA incorpora una parte portable del motor nativo: probar audio WebM/Opus del mismo vídeo cuando no funciona el AAC. Todo se ejecuta directamente en el navegador, sin servidor intermedio, cuentas ni suscripciones. No añade un reproductor de vídeo.
 
 AAC conserva la prioridad. Opus sólo entra si `canPlayType('audio/webm; codecs="opus"')` devuelve `maybe` o `probably`; una excepción, ausencia o respuesta desconocida mantiene el comportamiento AAC anterior. Se rechazan vídeo multiplexado, otros códecs, DRM, DRC y pistas dobladas o descriptivas. La identidad del vídeo debe ser exacta y la política de audio original considera todos los metadatos, incluidos los formatos rechazados.

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-23",
+  "status": "source-frozen-no-build",
+  "baseSource": "c349e9bfbd77f830b1d011015f4e1e9b220a61d7",
+  "files": [
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-adaptive-web-port-audio.ts",
+      "snapshotSha256": "b6fe1cdecaa480acd80488e63cb8b7577692debbb380b028b65d1d8fb41d3ac8"
+    },
+    {
+      "path": "web-port/downloads.ts",
+      "sha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-adaptive-web-port-downloads.ts",
+      "snapshotSha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868"
+    },
+    {
+      "path": "scripts/tests/web-audio.test.mjs",
+      "sha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-adaptive-scripts-tests-web-audio.test.mjs",
+      "snapshotSha256": "c14f137f74add3a23b3ff976c9b2a54c3509d89d8d5951d954fae696668daa2a"
+    },
+    {
+      "path": "scripts/tests/web-downloads.test.mjs",
+      "sha256": "722ab08ad2908a61e788d0d37b2ef8d3551bbcf9b1c9948cf8c4a22f41baa899",
+      "snapshot": "artifacts/pwa-port/p1-opaque-download-adaptive-scripts-tests-web-downloads.test.mjs",
+      "snapshotSha256": "722ab08ad2908a61e788d0d37b2ef8d3551bbcf9b1c9948cf8c4a22f41baa899"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-capability-audit.json",
+      "sha256": "d5c03fe513b9a7378603567af6bfc311fd94900f76ade103ac009fe7458da741"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-timeout-before.log",
+      "sha256": "065e892d4287c9bf5f71d84da87b9d03dbc552576f467c61826ab67b4cb81057"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-timeout-after.log",
+      "sha256": "650cc54cf3a0c1b9ac9ba8f28a5b93d6f6ede216a5d5392e322ae917bdc86d9b"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-final-tests.log",
+      "sha256": "7d510c5d6c81d06b2ddd12b30055b7d77ee66543b1e9351282b65c3516c0904f"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-final-types.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opaque-download-adaptive-from-c349e9b.patch",
+      "sha256": "42fc935d577c4513d7b88469766df3bcf04e04311ec95589a4f28a859c69734d"
+    }
+  ],
+  "tests": {
+    "timeoutBefore": {
+      "tests": 53,
+      "passed": 50,
+      "failed": 3
+    },
+    "timeoutAfter": {
+      "tests": 53,
+      "passed": 53,
+      "failed": 0
+    },
+    "finalDirected": {
+      "tests": 169,
+      "passed": 169,
+      "failed": 0
+    },
+    "types": {
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "policy": {
+    "p1Budget": "max(90000,min(600000,duration*1000+30000))",
+    "clock": "monotonic performance.now() from download job start",
+    "sameDeadlineAcrossRetries": true,
+    "explicitOptionsTimeoutHasPriority": true,
+    "otherSourcesTimeoutMilliseconds": 90000,
+    "resolverUnchanged": true,
+    "opaqueSize": "Declared quota estimate, not actual measured bytes",
+    "opaqueHashOrVerifiedMimeClaim": false
+  },
+  "scope": {
+    "runtimeServer": false,
+    "credentials": "omit",
+    "buildExecuted": false,
+    "published": false,
+    "physicalDeviceVerified": false,
+    "browserPilot": "Parent reports positive separate pilot; not counted in these unit results"
+  }
+}

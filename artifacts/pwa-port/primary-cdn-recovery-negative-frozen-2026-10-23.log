@@ -1,0 +1,219 @@
+✔ native maybe Opus support rescues the same video after the AAC probe fails (10.708ms)
+✔ native probably Opus support rescues the same video after the AAC probe fails (5.6565ms)
+✔ a healthy AAC wins even when the higher-bitrate Opus probe finishes first (1.7559ms)
+✔ unsupported Opus capability  never reaches a probe (1.4092ms)
+✔ unsupported Opus capability no never reaches a probe (1.3905ms)
+✔ unsupported Opus capability true never reaches a probe (1.2923ms)
+✔ unsupported Opus capability Error: Capability unavailable never reaches a probe (1.3694ms)
+✔ Opus cannot borrow originality from a rejected or dubbed AAC encoding (1.6612ms)
+✔ a rejected AAC does not hide an explicitly original Opus of the same video (1.4067ms)
+✔ mixed codecs retain the four-format bound and never evict an AAC sibling for Opus (2.4914ms)
+✔ abort while Opus is ready and AAC pending unloads both and caches neither (2.0857ms)
+✔ a failed Opus duration check cannot hide a transient AAC failure or poison the cache (1.3017ms)
+✔ P1 tries another original AAC when the best metadata probe fails with network (1.3349ms)
+✔ P1 tries another original AAC when the best metadata probe fails with timeout (1.3855ms)
+✔ P1 tries another original AAC when the best metadata probe fails with duration (1.5245ms)
+✔ a valid higher-quality AAC wins and cancels a still-pending lower probe (1.1114ms)
+✔ a lower AAC success waits for the preferred candidate instead of silently lowering quality (1.1212ms)
+✔ an invalid AAC locator does not hide a healthy original AAC (1.0901ms)
+✔ many dubbed AAC encodings cannot use the four-candidate budget before the original (1.0895ms)
+✔ P1 transient network from all AAC probes stays transient and caches none (1.3944ms)
+✔ P1 transient timeout from all AAC probes stays transient and caches none (1.3547ms)
+✔ P1 transient failure is not hidden by a later AAC duration rejection (1.3722ms)
+✔ only a typed P1 probe failure can replace the original error category (1.4682ms)
+✔ a typed P1 engine timeout remains transient instead of authorizing a visible fallback (0.8748ms)
+✔ abort cancels all simultaneous probes and late metadata cannot enter the cache (1.7468ms)
+✔ abort while unloading an unused probe prevents the chosen locator from being cached (1.5904ms)
+✔ duplicate AAC URLs use only one metadata probe (1.1941ms)
+✔ an expired highest-quality locator does not hide another fresh original AAC (5.8211ms)
+✔ VISIONOS success avoids all P1 imports and reuses only the in-memory stream (0.8222ms)
+✖ refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client (1.6006ms)
+✖ a failed P1 repair still allows one freshly resolved primary locator (0.8477ms)
+✖ a failed P1 repair is not repeated after the fresh primary also fails and its transport category survives (0.799ms)
+✖ cancelling primary repair cannot start a fresh primary request or cache late P1 audio (0.9137ms)
+✖ a P1 repair with another video ID is rejected before fresh primary recovery (0.9703ms)
+✔ an expired primary locator renews through the normal client order (1.2764ms)
+✔ refresh without an earlier primary locator keeps the initial fast path (0.7795ms)
+✔ a refresh without playback repair permission preserves the primary download path (0.9017ms)
+✔ unavailable invokes P1 and validates metadata before caching (1.4ms)
+✔ format invokes P1 and validates metadata before caching (1.0261ms)
+✔ successful P1 refresh replaces the old locator instead of returning it (1.6939ms)
+✔ failed refresh evicts the previously usable P1 URL and a retry resolves anew (1.7794ms)
+✔ login restriction never activates the format/unavailable rescue (0.6466ms)
+✔ identity mismatch never activates the format/unavailable rescue (0.5804ms)
+✔ anonymous session network transport failure can use the same-ID P1 recipe without a VISIONOS request (0.9852ms)
+✔ anonymous session timeout transport failure can use the same-ID P1 recipe without a VISIONOS request (0.9562ms)
+✔ VISIONOS network transport failure can recover the same ID with probed P1 audio (1.1876ms)
+✔ VISIONOS timeout transport failure can recover the same ID with probed P1 audio (1.0101ms)
+✔ an anonymous session malformed response does not activate P1 (0.5353ms)
+✔ P1 request network remains transient after a primary format rejection (0.8435ms)
+✔ P1 request timeout remains transient after a primary format rejection (0.7681ms)
+✔ transport recovery still rejects a P1 identity mismatch without caching it (4.3448ms)
+✔ invalid anonymous recipe does not replace a primary transport category or reach a P1 request (0.8686ms)
+✔ P1 invalid format preserves original format for later providers (1.0469ms)
+✔ P1 invalid format preserves original unavailable for later providers (0.857ms)
+✔ rejected lazy import leaves the original source error and no cached locator (0.7915ms)
+✔ P1 identity mismatch cannot enter the stream cache (1.0061ms)
+✔ P1 duration mismatch cannot enter the stream cache (0.9691ms)
+✔ P1 secondary-audio mismatch cannot enter the stream cache (0.8944ms)
+✔ abort before starting creates no frames, imports or cached stream (0.5419ms)
+✔ abort during primary session transport never activates P1 recovery (0.5913ms)
+✔ abort during primary VISIONOS transport never activates P1 recovery (0.6067ms)
+✔ abort during lazy loading does not invoke the loaded P1 engine (0.7485ms)
+✔ abort during P1 request removes transport and ignores its late successful response (1.1999ms)
+✔ abort during metadata probing unloads its frame and never caches a late result (1.5366ms)
+✔ account-bearing recipes are rejected before the P1 transport; anonymous IDs remain RAM only (0.988ms)
+✔ a fresh module instance cannot retrieve another instance's signed locator (1.5074ms)
+✔ abort between completed P1 cleanup and the public stream continuation cannot cache the locator (1.1024ms)
+✔ P1 flat and tabbed Music containers keep the same primary candidates and recognize real empty results (2.3089ms)
+✔ an API error or ERROR alert cannot masquerade as a valid Music shelf or an empty result (0.3048ms)
+✔ unknown nested renderers and promotions are not promoted to primary song matches (0.1336ms)
+✔ OK is insufficient without an exact valid video identity (0.4996ms)
+✔ wholly untagged MP4 responses preserve the existing highest-bitrate compatible selection (0.5793ms)
+✖ an expired preferred AAC cannot hide a fresh lower-bitrate encoding of the same video (0.2544ms)
+✔ all eligible expired or nearly expired encodings retain the expiration response error (0.2329ms)
+✔ a preferred AAC still wins while its locator exceeds the existing one-minute safety window (0.1825ms)
+✖ skipping expired encodings never relaxes response-wide original-audio requirements (0.9365ms)
+✔ WebM Opus is opt-in and a healthy AAC still wins over higher-bitrate Opus (0.4753ms)
+✔ Opus opt-in does not admit muxed video, other codecs, DRM, DRC or unconfirmed original tracks (0.6135ms)
+✔ default auto-dub never outranks explicitly original audio even when original is not default (0.3418ms)
+✔ metadata anywhere in an audio response requires explicit originality for every encoding (0.3583ms)
+✔ corrupt, oversized or contradictory xtags cannot authorize a track (0.9732ms)
+✔ URL-safe and percent-encoded standard FormatXTags both confirm explicit original audio (0.3665ms)
+✔ noncanonical trailing bits and a BOM cannot be normalized into original identity (0.412ms)
+✔ DRC, described/secondary tracks and every DRM metadata form fail closed (0.3831ms)
+ℹ tests 84
+ℹ suites 0
+ℹ pass 77
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 583.8765
+
+✖ failing tests:
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-integration.test.mjs:418:1
+✖ refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client (1.6006ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'VISIONOS'
+  - 'WEB_EMBEDDED_PLAYER'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs:422:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VISIONOS',
+    expected: 'WEB_EMBEDDED_PLAYER',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-integration.test.mjs:433:1
+✖ a failed P1 repair still allows one freshly resolved primary locator (0.8477ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'VISIONOS'
+  - 'WEB_EMBEDDED_PLAYER'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs:437:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VISIONOS',
+    expected: 'WEB_EMBEDDED_PLAYER',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-integration.test.mjs:448:1
+✖ a failed P1 repair is not repeated after the fresh primary also fails and its transport category survives (0.799ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'VISIONOS'
+  - 'WEB_EMBEDDED_PLAYER'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs:452:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VISIONOS',
+    expected: 'WEB_EMBEDDED_PLAYER',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-integration.test.mjs:463:1
+✖ cancelling primary repair cannot start a fresh primary request or cache late P1 audio (0.9137ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'VISIONOS'
+  - 'WEB_EMBEDDED_PLAYER'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs:467:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VISIONOS',
+    expected: 'WEB_EMBEDDED_PLAYER',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-integration.test.mjs:478:1
+✖ a P1 repair with another video ID is rejected before fresh primary recovery (0.9703ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'VISIONOS'
+  - 'WEB_EMBEDDED_PLAYER'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-integration.test.mjs:482:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'VISIONOS',
+    expected: 'WEB_EMBEDDED_PLAYER',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-parser.test.mjs:65:1
+✖ an expired preferred AAC cannot hide a fresh lower-bitrate encoding of the same video (0.2544ms)
+  Error [YouTubeError]: La dirección de audio ha caducado. Vuelve a intentarlo.
+      at Object.parsePlayer (eval at <anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:10:17), <anonymous>:463:15)
+      at select (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:15:31)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:68:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'response'
+  }
+
+test at artifacts\pwa-port\primary-cdn-recovery-negative-sources\scripts\tests\web-p1-parser.test.mjs:90:1
+✖ skipping expired encodings never relaxes response-wide original-audio requirements (0.9365ms)
+  Error [YouTubeError]: La dirección de audio ha caducado. Vuelve a intentarlo.
+      at Object.parsePlayer (eval at <anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:10:17), <anonymous>:463:15)
+      at select (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:15:31)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/primary-cdn-recovery-negative-sources/scripts/tests/web-p1-parser.test.mjs:96:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'response'
+  }

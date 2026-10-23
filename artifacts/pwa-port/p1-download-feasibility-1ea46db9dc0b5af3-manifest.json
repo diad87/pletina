@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T20:41:33.008Z",
+  "state": "frozen-diagnostic-no-product-change",
+  "baseline": {
+    "build": "1ea46db9dc0b5af3",
+    "productSourceCommit": "af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad",
+    "repositoryHeadAtProbe": "916314e3e76c0279c99411e4b9944e2b9e8cb04e",
+    "publicCommit": "c03c2ec2aab2f2127a265e42515a0333fde9a50b",
+    "url": "https://diad87.github.io/pletina/",
+    "stateSnapshot": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-public-state.json"
+  },
+  "bindings": [
+    {
+      "path": "scripts/tests/p1-download-feasibility.browser.mjs",
+      "sha256": "bc5ba418e43e5d60b12c1807350817f33ad7c6b854bd936818033b347a3f24be",
+      "bytes": 29195
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-ninini-public.json",
+      "sha256": "ae2deb90273713906b813a293dd875eea3dd73941217ed66d7be7858d571a30a",
+      "bytes": 43751
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-euri-public.json",
+      "sha256": "6bdce07c5113e2b811ede2a53561163233f31980b45a43dc595018ab1ea130ad",
+      "bytes": 19426
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-source-bc5ba418e43e5d60.mjs",
+      "sha256": "bc5ba418e43e5d60b12c1807350817f33ad7c6b854bd936818033b347a3f24be",
+      "bytes": 29195
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-download-feasibility-1ea46db9dc0b5af3-euri-public.png",
+      "sha256": "30fc42bc8260480b5c4be4fb3e7be2fdc2f5f6f1583338ee8b42e93809398d3e",
+      "bytes": 270925
+    },
+    {
+      "path": "artifacts/pwa-port/p1-download-feasibility-1ea46db9dc0b5af3-public-state.json",
+      "sha256": "f63f2b920a2be3cbfbada5dc500344922c436e130f8e8391c467c1a187e11d2a",
+      "bytes": 337
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json",
+      "sha256": "623f2886e04ca909b2301d45d7e1dc1fcd126bddd9105fd2031d248ba0c782c3",
+      "bytes": 10937
+    }
+  ],
+  "runnerSha256": "bc5ba418e43e5d60b12c1807350817f33ad7c6b854bd936818033b347a3f24be",
+  "cases": [
+    {
+      "name": "Ni, Ni, Ni!",
+      "status": "playback-failed-before-download-probe",
+      "requestedCatalogId": 3266784871,
+      "requestedVideoId": "NGp3dh-hBe8",
+      "primaryResponses": [
+        "UNPLAYABLE",
+        "UNPLAYABLE",
+        "UNPLAYABLE"
+      ],
+      "p1Responses": [
+        {
+          "status": "OK",
+          "exactResponseId": true
+        },
+        {
+          "status": "OK",
+          "exactResponseId": true
+        },
+        {
+          "status": "OK",
+          "exactResponseId": true
+        }
+      ],
+      "targetLocatorHashesObserved": 12,
+      "targetHttpStatuses": [
+        403
+      ],
+      "targetItags": [
+        "140",
+        "251",
+        "250",
+        "249"
+      ],
+      "wrongLaterSong": {
+        "catalogId": 3266421971,
+        "title": "Euri Tanta",
+        "titleVersion": "",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Euri Tanta Banintz (Joxan Ormazabal)",
+        "duration": 109,
+        "isrc": null
+      },
+      "titleAssertionRejected": true,
+      "downloadCorsProbesExecuted": 0,
+      "reason": "The exact-title guard rejected Euri Tanta after Ni failed. Later native-audio outcome is not a Ni pass."
+    },
+    {
+      "name": "Euri Tanta",
+      "status": "native-playback-passed-but-readable-download-blocked",
+      "catalogId": 3266421971,
+      "videoId": "CJ1A6FJnWTU",
+      "nativeOutcome": "native-audio",
+      "selectedLocator": {
+        "urlSha256": "4882612c39b30fad34a3097da272dd2515800922314f939262a3f9e1614fd8aa",
+        "itag": "140",
+        "expectedBytes": 1767085,
+        "rawUrlSaved": false
+      },
+      "selectedTransportRequests": [
+        {
+          "resourceType": "Media",
+          "httpStatus": 206,
+          "corsAllowOrigin": null,
+          "contentType": "audio/mp4",
+          "contentLength": 1767085
+        },
+        {
+          "resourceType": "Media",
+          "httpStatus": 206,
+          "corsAllowOrigin": null,
+          "contentType": "audio/mp4",
+          "contentLength": 1767085
+        },
+        {
+          "resourceType": "Fetch",
+          "httpStatus": 200,
+          "corsAllowOrigin": null,
+          "contentType": "audio/mp4",
+          "contentLength": 1767085
+        },
+        {
+          "resourceType": "Fetch",
+          "httpStatus": 200,
+          "corsAllowOrigin": null,
+          "contentType": "audio/mp4",
+          "contentLength": 1767085
+        }
+      ],
+      "fullFileProbes": [
+        {
+          "origin": "pages",
+          "maximumBytes": 8388608,
+          "readable": false,
+          "status": null,
+          "responseType": null,
+          "mime": null,
+          "declaredBytes": null,
+          "contentRange": null,
+          "expectedBytes": 1767085,
+          "actualBytes": 0,
+          "complete": false,
+          "error": "fetch-typeerror-cors-or-network",
+          "sha256": null,
+          "nativeValidation": null,
+          "bytesPersisted": false
+        },
+        {
+          "origin": "opaque",
+          "maximumBytes": 8388608,
+          "readable": false,
+          "status": null,
+          "responseType": null,
+          "mime": null,
+          "declaredBytes": null,
+          "contentRange": null,
+          "expectedBytes": 1767085,
+          "actualBytes": 0,
+          "complete": false,
+          "error": "fetch-typeerror-cors-or-network",
+          "sha256": null,
+          "nativeValidation": null,
+          "bytesPersisted": false
+        }
+      ],
+      "corsErrors": [
+        {
+          "error": "net::ERR_FAILED",
+          "corsError": "MissingAllowOriginHeader"
+        },
+        {
+          "error": "net::ERR_FAILED",
+          "corsError": "MissingAllowOriginHeader"
+        }
+      ],
+      "readableFullFileDemonstrated": false
+    }
+  ],
+  "conclusions": {
+    "corsReading": "The exact functioning native AAC locator returned HTTP200 to both normal CORS fetch origins, but no Access-Control-Allow-Origin. Browser JavaScript could read no bytes. This is an observed CORS failure, not a403 or partial-file proof.",
+    "opaqueCache": "No no-cors CacheStorage or offline-tail attempt was made. CORS failure does not establish that opaque response storage is impossible. Existing primary YouTube download code already stores opaque responses.",
+    "historicalPartialP1": "No real partial P1 file was established by these or this agents previous reports. Previous failures were HTTP403/availability or unmeasured integrity.",
+    "nextGate": "A future opaque-download experiment must await Cache.put completion, validate expected duration and decodable tail using only its local cached response, reload offline, and roll back on failure. It cannot claim a verified byte count or hash without readable CORS."
+  },
+  "limits": {
+    "maximumReadableBytesPerProbe": 8388608,
+    "fetchDeadlineMs": 10000,
+    "providerTracks": 2,
+    "corsFetches": 2,
+    "rawSignedUrlsPersisted": false,
+    "audioBytesPersisted": false,
+    "cacheStorageWritesByProbe": false,
+    "productEdited": false,
+    "recipeEdited": false,
+    "backendProxy": false,
+    "accounts": false,
+    "securityOverrides": false,
+    "physicalDeviceVerified": false,
+    "backgroundVerified": false,
+    "resourcesClosed": true,
+    "newCandidateVerified": false
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T20:38:02.970Z",
+  "baseSourceCommit": "916314e3e76c0279c99411e4b9944e2b9e8cb04e",
+  "scope": "Only parsePlayer() and its existing parser tests edited by catalog_sources. Other working changes in stream()/integration tests belong to root and are not part of this ownership.",
+  "productFile": "web-port/youtube.ts",
+  "function": "parsePlayer",
+  "beforeFunctionSha256": "f8168a2abef0602d82fe172417e5a0ef25390728bfda0d83fca09c22129ba306",
+  "afterFunctionSha256": "9a4b1a76452142883512c5ed14abf54fe9fbc35df11f20ddecf6edbf79f02349",
+  "functionSnapshot": {
+    "path": "artifacts/pwa-port/audio-expiration-parser-916314e-source.ts",
+    "sha256": "d156df984762813a1dbcdc7dedc1957d8425335fd0d5934efa99e6171c4e1acd"
+  },
+  "preEditWholeModuleSha256": "dac1d33103748283aa91f8c5edcad63c719eb2b68713fe942fc6f85dcc0b8887",
+  "wholeModuleAtAudit": {
+    "path": "web-port/youtube.ts",
+    "sha256": "c0e02257fd1ccafb6d1a6021d947267bbd452e973b768d23fbb77141aab2a95c"
+  },
+  "tests": {
+    "path": "scripts/tests/web-p1-parser.test.mjs",
+    "sha256": "7bc92938f92b40025b7cfc272a110a01ca13abe1683292a656e2f41662f3c8c1"
+  },
+  "before": {
+    "log": {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-before.log",
+      "sha256": "f1a9becc83bca49d73dab5a8065ec5b291becaf62d78e94dbc43c533bcf77ce3"
+    },
+    "tests": 17,
+    "passed": 15,
+    "failed": 2
+  },
+  "after": {
+    "log": {
+      "path": "artifacts/pwa-port/audio-expiration-parser-916314e-after.log",
+      "sha256": "6c364fc9060152dddae50a80f08d5d8f3574ccb3b3abf0dd4f9259fa8d6e8bdc"
+    },
+    "tests": 90,
+    "passed": 90,
+    "failed": 0,
+    "includes": [
+      "scripts/tests/web-p1-parser.test.mjs",
+      "scripts/tests/web-audio.test.mjs"
+    ]
+  },
+  "assertions": [
+    "Expired preferred AAC falls through to fresh AAC of the exact same response video ID, with correct selected size/expiry.",
+    "All eligible expired/nearly-expired encodings retain the response expiration error.",
+    "A healthy higher-quality AAC retains priority and the existing one-minute expiry margin.",
+    "Expired tagged encodings still contribute to the response-wide original-audio requirement; dubbed or unconfirmed fresh siblings are rejected."
+  ],
+  "limitations": [
+    "No provider network or media was requested by these tests.",
+    "No build, recipe generation, publication or commit.",
+    "Whole-module audit hash may later change through root-owned stream work; function snapshot is immutable."
+  ]
+}

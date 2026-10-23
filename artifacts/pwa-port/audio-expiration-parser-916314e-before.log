@@ -1,0 +1,57 @@
+✔ P1 flat and tabbed Music containers keep the same primary candidates and recognize real empty results (3.9022ms)
+✔ an API error or ERROR alert cannot masquerade as a valid Music shelf or an empty result (0.469ms)
+✔ unknown nested renderers and promotions are not promoted to primary song matches (0.1472ms)
+✔ OK is insufficient without an exact valid video identity (0.6878ms)
+✔ wholly untagged MP4 responses preserve the existing highest-bitrate compatible selection (1.0124ms)
+✖ an expired preferred AAC cannot hide a fresh lower-bitrate encoding of the same video (0.3983ms)
+✔ all eligible expired or nearly expired encodings retain the expiration response error (0.3769ms)
+✔ a preferred AAC still wins while its locator exceeds the existing one-minute safety window (0.2852ms)
+✖ skipping expired encodings never relaxes response-wide original-audio requirements (1.2847ms)
+✔ WebM Opus is opt-in and a healthy AAC still wins over higher-bitrate Opus (0.4954ms)
+✔ Opus opt-in does not admit muxed video, other codecs, DRM, DRC or unconfirmed original tracks (0.7976ms)
+✔ default auto-dub never outranks explicitly original audio even when original is not default (0.3466ms)
+✔ metadata anywhere in an audio response requires explicit originality for every encoding (0.3602ms)
+✔ corrupt, oversized or contradictory xtags cannot authorize a track (0.9579ms)
+✔ URL-safe and percent-encoded standard FormatXTags both confirm explicit original audio (0.3903ms)
+✔ noncanonical trailing bits and a BOM cannot be normalized into original identity (0.4205ms)
+✔ DRC, described/secondary tracks and every DRM metadata form fail closed (0.4093ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 15
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 559.8654
+
+✖ failing tests:
+
+test at scripts\tests\web-p1-parser.test.mjs:65:1
+✖ an expired preferred AAC cannot hide a fresh lower-bitrate encoding of the same video (0.3983ms)
+  Error [YouTubeError]: La dirección de audio ha caducado. Vuelve a intentarlo.
+      at Object.parsePlayer (eval at <anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:10:17), <anonymous>:463:15)
+      at select (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:15:31)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:68:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'response'
+  }
+
+test at scripts\tests\web-p1-parser.test.mjs:90:1
+✖ skipping expired encodings never relaxes response-wide original-audio requirements (1.2847ms)
+  Error [YouTubeError]: La dirección de audio ha caducado. Vuelve a intentarlo.
+      at Object.parsePlayer (eval at <anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:10:17), <anonymous>:463:15)
+      at select (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:15:31)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-parser.test.mjs:96:16)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    code: 'response'
+  }
