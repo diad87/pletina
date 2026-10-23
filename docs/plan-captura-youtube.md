@@ -31,8 +31,8 @@ la identidad en la página pública, se descubre el cliente incrustado y se
 extraen las funciones del reproductor actual para calcular firma y `n` en un
 motor JavaScript acotado. No se evalúa el reproductor completo. La ruta exige
 audio original y una sonda 206 exacta al 80 %. Un rechazo CDN temporal permite
-hasta cinco intentos de la misma URL en ocho segundos; no cambia de canción,
-no entrega anuncios ni acredita que se haya pulsado «Saltar anuncio».
+hasta ocho intentos de la misma URL en ocho segundos; no cambia de canción
+ni acredita anuncios vistos o que se haya pulsado «Saltar anuncio».
 El [informe infantil](informe-contenido-infantil-2026-10-23.md) distingue las
 mediciones del corpus de tres canciones de la compatibilidad general.
 Si el vídeo confirmado sólo ofrece SABR sin localizadores de audio, se renueva
@@ -51,6 +51,27 @@ binario anterior, FreshDecoder y el reinicio: las seis búsquedas infantiles
 usan Native sin Legacy, pero siguen fuera de 300 ms. La regresión de 30 conserva
 Native sin respaldo y mediana 587,55 ms. La caché no elimina la espera CDN ni
 acredita anuncios, escucha continua o una nueva aprobación de captura.
+
+La segunda ronda, `0aa9e1c`, añade preparación selectiva de dependencias sin cambiar el
+script emitido, descubrimiento gzip limitado y ocho turnos CDN acotados, con
+parada ante 429. Página pública, configuración y análisis local pueden solaparse,
+pero el POST espera confirmar identidad y aviso infantil. Un vídeo por proceso,
+con disco omitido, resolvió los tres casos en 4848/5376/4376 ms; el total nuevo
+desde IPC hasta `playing` fue 4979/5504/4499 ms, sin búsqueda. Son mediciones
+debug, con Native/251 y sondas, inicio, salto y cola correctos. Los 1252 ms de
+Pupu en la tanda anterior reutilizaban memoria. La mejora es sustancial, pero
+no se han logrado 3,5 s totales ni se acredita escucha continua. El
+[informe](informe-arranque-frio-2026-10-23.md#ronda-2-preparación-selectiva-y-arranque-realmente-frío)
+separa preparación, extracción y primer evento de reproducción, con sus controles.
+La búsqueda infantil reutilizando decoders dio 5926/5550,9/1492 ms, tres Native
+y cero Legacy. La regresión mantuvo 30 Native, mediana 612,4 ms, pero Octopus's
+Garden eligió un ID distinto al esperado: sólo 29/30 identidades coinciden y
+las treinta filas superan 300 ms. Se conserva ese fallo, sin atribución causal
+al decoder ni aprobación retroactiva del banco.
+La ronda cerró con archivos completos idénticos para los tres infantiles y
+harness Android x86_64 exacto: preparación 6747,1 ms frente a 10911,5 ms en una
+réplica por versión, sin cambiar límites. No fue reproducción de la app Android
+ni prueba en ARM físico.
 
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá

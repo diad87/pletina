@@ -28,7 +28,10 @@ datos de configuración, conservando la rapidez y las comprobaciones del audio.
   edad o vídeo privado.
 - Esta ruta calcula firma y `n` con un bundle local de los analizadores de
   youtubei.js 18.1.0 y Meriyah. El reproductor descargado se analiza como texto;
-  sólo se ejecutan las funciones y dependencias extraídas. La configuración y
+  sólo se ejecutan las funciones y dependencias extraídas. La preparación
+  selectiva calcula dependencias cuando se necesitan, conservando la presencia
+  histórica de declaraciones y el orden de emisión de la biblioteca fijada;
+  no cambia sus reglas de selección ni evalúa el player completo. La configuración y
   las funciones preparadas tienen caché acotada en memoria: hasta cuatro scripts
   preparados, como máximo 8 MiB, sin conservar sus runtimes temporales.
   Desde `8983e26`, una caché separada en datos locales de la app permite
@@ -38,14 +41,20 @@ datos de configuración, conservando la rapidez y las comprobaciones del audio.
   checksums detectan corrupción, no modificaciones maliciosas de un usuario local.
   El POST puede adelantarse con un ST provisional, pero sólo se reutiliza
   si el análisis completo confirma ese ST y se cumplen las guardas habituales.
+  Comprobar la página pública, descubrir la configuración y preparar las
+  funciones locales puede solaparse; el POST espera confirmar el ID y su aviso
+  infantil. El descubrimiento admite gzip con límite de 4 MiB descomprimidos;
+  el cliente de sondas de audio conserva su política independiente.
   Si cualquier formato de audio aporta metadatos de pista, idioma o `xtags`,
   todos los candidatos deben identificar expresamente audio original. Una
   respuesta enteramente sin esas etiquetas conserva la compatibilidad de sus
   variantes de códec/bitrate; es el caso de los tres fixtures infantiles, no
   una prueba semántica universal de originalidad. Se rechazan DRC/DRM y se exige
   una sonda HTTP 206 con rango, tamaño total y cuerpo completos hacia el 80 %.
-  Los rechazos transitorios CDN permiten hasta cinco intentos de la misma URL
-  dentro de ocho segundos, sin multiplicar ese presupuesto por formato.
+  Los rechazos transitorios CDN permiten hasta ocho intentos de la misma URL
+  en los instantes 0/0,25/1/2/3/4/5/6 s, dentro de ocho segundos, sin multiplicar
+  ese presupuesto por formato. Se omiten turnos vencidos con 50 ms de margen
+  del planificador; un 429 detiene los reintentos. No se relaja la sonda 206.
 - Si la respuesta confirma el vídeo pero sólo ofrece SABR, sin URL ni cipher
   en ningún audio seleccionable, se relee la configuración incrustada una vez.
   Sólo se repite el POST si cambian su cuerpo o cabeceras efectivos, incluido
@@ -179,7 +188,7 @@ medir y mejorar ese coste cuando hay resoluciones concurrentes.
 
 ## Continuación: arranque frío
 
-El [informe del 23 de octubre](informe-arranque-frio-2026-10-23.md) recoge
+El [informe del 23 de octubre](informe-arranque-frio-2026-10-23.md) recoge primero
 `8983e26`, la comparación consecutiva con el binario anterior y los hashes.
 QuickJS C O2 reduce la mediana offline de preparación de 7804 a 6604 ms;
 el bundle, los límites y el aislamiento no cambian. Debug ya usaba O2.
@@ -189,3 +198,25 @@ Las seis búsquedas infantiles usaron Native sin Legacy y todas superaron
 300 ms. La regresión de 30 conservó Native sin respaldo, con mediana 587,55 ms.
 Los tres archivos completos siguen coincidiendo con las referencias; no se
 acreditan escucha completa en la app, publicidad vista/saltada ni rendimiento Android nuevo.
+
+En su [segunda ronda](informe-arranque-frio-2026-10-23.md#ronda-2-preparación-selectiva-y-arranque-realmente-frío), `0aa9e1c`,
+la preparación selectiva reduce el harness QuickJS a 3887,7 ms sin cambiar los
+límites ni las firmas emitidas. Con un vídeo por proceso y disco omitido,
+la extracción de los tres infantiles baja de 7617/14160/7667 a 4848/5376/4376 ms.
+El total nuevo desde IPC hasta `playing`, sin búsqueda, es 4979/5504/4499 ms;
+el control no medía ese total. Son builds debug. Los 1252 ms históricos de Pupu
+reutilizaban memoria y no eran un primer arranque. La meta de 3,5 s totales sigue
+pendiente; el usuario permite consolidar mejoras sustanciales.
+Con búsqueda y decoders reutilizados, los tres casos dieron 5926/5550,9/1492 ms,
+todos Native. La regresión conservó 30 Native y cero Legacy, mediana 612,4 ms,
+pero sólo 29 IDs esperados: Octopus's Garden eligió otro ID. Ese fallo se conserva
+junto con los treinta incumplimientos de 300 ms; no se acredita una tanda completa
+aprobada ni EOF mediante estos arranques.
+Los controles anterior y nuevo volvieron a elegir el ID esperado, con búsqueda
+sin cambios; no prueban equivalencia entre la mezcla 2019 del corpus y Remastered
+2009 de Deezer ni borran el fallo observado.
+El harness Android 15 x86_64 pasó seis pruebas y cuatro formatos exactos con
+preparación de 6747,1 ms, frente a 10911,5 ms en la réplica anterior; los límites
+no cambian. Es una medición por versión sin app, JNI, ExoPlayer, audio ni red,
+no rendimiento de un dispositivo ARM físico. Se repitieron los tres archivos
+completos, idénticos a sus referencias y decodificables sin errores.
