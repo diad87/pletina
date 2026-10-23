@@ -446,3 +446,25 @@ test('a fresh module instance cannot retrieve another instance\'s signed locator
   assert.equal((await pending).url, audioUrl('new-instance'))
   assert.deepEqual([...first.storageAccess, ...second.storageAccess], [])
 })
+
+test('abort between completed P1 cleanup and the public stream continuation cannot cache the locator', async t => {
+  const controller = new AbortController()
+  const yt = engine(t, { modules: { './youtube-p1-probe': { async probeP1Audio() {
+    // Move cancellation through four promise jobs after metadata success. This
+    // targets the async handoff to stream(), after p1Stream's cleanup/check, so
+    // the public operation must check its own signal before committing to RAM.
+    // No timer race, product hook, provider transport or audible Audio is used.
+    let jobs = Promise.resolve()
+    for (let index = 0; index < 4; index++) jobs = jobs.then(() => {})
+    jobs.then(() => controller.abort())
+    return { duration: 209.16 }
+  } } } })
+  const { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt)
+  yt.result(player('aborted-at-public-handoff'))
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  const retry = await visionos(yt)
+  yt.result(player('after-public-handoff-abort'))
+  assert.equal((await retry.pending).url, audioUrl('after-public-handoff-abort'))
+})

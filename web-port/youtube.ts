@@ -461,6 +461,7 @@ export async function stream(videoId: string, refresh = false, signal?: AbortSig
       throw error
     }
   }
+  checkAbort(signal)
   // Límite de memoria: las direcciones nunca se guardan en el almacenamiento de biblioteca.
   for (const [id, value] of streams) if (value.expiresAt <= Date.now()) streams.delete(id)
   if (streams.size >= 100) streams.delete(streams.keys().next().value!)
