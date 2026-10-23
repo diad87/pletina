@@ -36,7 +36,7 @@ function validatedUrl(value: string): URL {
       if (part !== null && (!/^\d{1,10}$/.test(part) || Number(part) <= 0 || Number(part) > 2 * 1024 ** 3)) throw 0
     }
     const mime = url.searchParams.get('mime')
-    if (mime !== null && mime !== 'audio/mp4') throw 0
+    if (mime !== null && mime !== 'audio/mp4' && mime !== 'audio/webm') throw 0
     const duration = url.searchParams.get('dur')
     if (duration !== null && (!/^\d{1,6}(?:\.\d{1,6})?$/.test(duration) || Number(duration) <= 0 || Number(duration) > 604800)) throw 0
     for (const name of ['n', 'sig', 'signature', 'lsig']) {

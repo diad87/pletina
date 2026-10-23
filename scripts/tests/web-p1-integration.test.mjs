@@ -54,6 +54,11 @@ function engine(t, options = {}) {
     assert.equal(frame.hidden, true)
   }
   const document = { body: { append }, documentElement: { append }, createElement(name) {
+    if (name === 'audio') return { canPlayType(mime) {
+      assert.equal(mime, 'audio/webm; codecs="opus"')
+      if (options.opusSupport instanceof Error) throw options.opusSupport
+      return options.opusSupport ?? ''
+    } }
     assert.equal(name, 'iframe')
     const frame = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value },
       remove() { const index = frames.indexOf(frame); if (index >= 0) frames.splice(index, 1) } }
@@ -123,6 +128,113 @@ function multipleAac() {
     url: audioUrl('lower').replace('itag=140', 'itag=139') })
   return response
 }
+
+function aacAndOpus() {
+  const response = player('aac'), aac = response.streamingData.adaptiveFormats[0]
+  response.streamingData.adaptiveFormats.push({ ...aac, itag: 251, mimeType: 'audio/webm; codecs="opus"', bitrate: 256000,
+    url: audioUrl('opus').replace('itag=140', 'itag=251') + '&mime=audio%2Fwebm' })
+  return response
+}
+
+for (const support of ['maybe', 'probably']) test(`native ${support} Opus support rescues the same video after the AAC probe fails`, async t => {
+  const yt = engine(t, { opusSupport: support }), { pending } = await visionos(yt)
+  await p1Request(yt); const response = aacAndOpus(); yt.result(response); await flush()
+  assert.equal(yt.frames.length, 2)
+  const [aac, opus] = [...yt.frames]
+  assert.equal(yt.args(aac).url, response.streamingData.adaptiveFormats[0].url)
+  assert.equal(yt.args(opus).url, response.streamingData.adaptiveFormats[1].url)
+  let settled = false; pending.finally(() => { settled = true }).catch(() => {})
+  yt.send({ duration: 209.16 }, opus); await flush()
+  assert.equal(settled, false, 'Opus must wait for the preferred AAC')
+  yt.send({ error: 'network' }, aac)
+  const value = await pending
+  assert.equal(value.videoId, id)
+  assert.equal(value.transport, 'p1')
+  assert.equal(value.url, response.streamingData.adaptiveFormats[1].url)
+  assert.equal(yt.frames.length, 0)
+  const requests = yt.history.length
+  assert.equal(await yt.stream(), value)
+  assert.equal(yt.history.length, requests)
+  assert.deepEqual(yt.storageAccess, [])
+})
+
+test('a healthy AAC wins even when the higher-bitrate Opus probe finishes first', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(aacAndOpus()); await flush()
+  const [aac, opus] = [...yt.frames]
+  yt.send({ duration: 209.16 }, opus); yt.send({ duration: 209.16 }, aac)
+  assert.equal((await pending).url, audioUrl('aac'))
+  assert.equal(yt.frames.length, 0)
+})
+
+for (const support of ['', 'no', true, new Error('Capability unavailable')]) test(`unsupported Opus capability ${String(support)} never reaches a probe`, async t => {
+  const yt = engine(t, { opusSupport: support }), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(aacAndOpus()); await flush()
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().url, audioUrl('aac'))
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, audioUrl('aac'))
+})
+
+test('Opus cannot borrow originality from a rejected or dubbed AAC encoding', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
+  await p1Request(yt); const response = aacAndOpus()
+  response.streamingData.adaptiveFormats[0].audioTrack = { displayName: 'Dubbed', audioIsDefault: true }
+  yt.result(response); await flush()
+  await assert.rejects(pending, error => error.code === 'unavailable')
+  assert.equal(yt.history.filter(entry => entry.config.message === 'pletina-youtube-p1-metadata').length, 0)
+})
+
+test('a rejected AAC does not hide an explicitly original Opus of the same video', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
+  await p1Request(yt); const response = aacAndOpus()
+  response.streamingData.adaptiveFormats[0].audioTrack = { displayName: 'Dubbed', audioIsDefault: true }
+  response.streamingData.adaptiveFormats[1].audioTrack = { displayName: 'Basque (Original)', audioIsDefault: false }
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
+})
+
+test('mixed codecs retain the four-format bound and never evict an AAC sibling for Opus', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
+  await p1Request(yt); const response = aacAndOpus(), [aac, opus] = response.streamingData.adaptiveFormats
+  response.streamingData.adaptiveFormats = [...Array.from({ length: 9 }, (_, n) => ({ ...opus, bitrate: 500000 + n, url: opus.url + '&extra=' + n })),
+    ...Array.from({ length: 4 }, (_, n) => ({ ...aac, bitrate: 64000 + n, url: audioUrl('aac-' + n) }))]
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 4)
+  assert.ok(yt.frames.every(frame => yt.args(frame).url.includes('fixture=aac-')))
+  yt.send({ duration: 209.16 }, yt.frames[0])
+  assert.equal((await pending).url, audioUrl('aac-3'))
+  assert.equal(yt.frames.length, 0)
+})
+
+test('abort while Opus is ready and AAC pending unloads both and caches neither', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), controller = new AbortController()
+  const { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt); yt.result(aacAndOpus()); await flush()
+  const [aac, opus] = [...yt.frames]
+  yt.send({ duration: 209.16 }, opus); await flush()
+  controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  yt.send({ duration: 209.16 }, aac)
+  const retry = await visionos(yt)
+  yt.result(player('new-after-opus-cancel'))
+  assert.equal((await retry.pending).url, audioUrl('new-after-opus-cancel'))
+})
+
+test('a failed Opus duration check cannot hide a transient AAC failure or poison the cache', async t => {
+  const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(aacAndOpus()); await flush()
+  const [aac, opus] = [...yt.frames]
+  yt.send({ error: 'network' }, aac); yt.send({ duration: 120 }, opus)
+  await assert.rejects(pending, error => error.code === 'network')
+  const retry = await visionos(yt)
+  yt.result(player('no-invalid-opus-cache'))
+  assert.equal((await retry.pending).url, audioUrl('no-invalid-opus-cache'))
+})
 
 for (const failure of ['network', 'timeout', 'duration']) test(`P1 tries another original AAC when the best metadata probe fails with ${failure}`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)

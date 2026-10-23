@@ -340,7 +340,7 @@ function explicitOriginalRequired(available: readonly unknown[]): boolean {
   })
 }
 
-export function parsePlayer(response: unknown, videoId: string, now = Date.now()): StreamInfo {
+export function parsePlayer(response: unknown, videoId: string, now = Date.now(), allowOpus = false): StreamInfo {
   const status = string(at(response, 'playabilityStatus', 'status'))
   if (status !== 'OK') {
     throw status === 'ERROR' || status === 'UNPLAYABLE'
@@ -354,16 +354,18 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
   // originality for the other encodings. Wholly untagged responses stay valid.
   const requireExplicit = explicitOriginalRequired(available)
   const formats = available
-    .filter(format => string(format.mimeType).startsWith('audio/mp4') && typeof format.url === 'string' && originalAudio(format, !requireExplicit) &&
+    .filter(format => (string(format.mimeType).startsWith('audio/mp4') || allowOpus === true && /^audio\/webm\s*;\s*codecs\s*=\s*"opus"\s*$/i.test(string(format.mimeType))) &&
+      typeof format.url === 'string' && originalAudio(format, !requireExplicit) &&
       (!Object.hasOwn(format, 'drmFamilies') || Array.isArray(format.drmFamilies) && format.drmFamilies.length === 0) &&
       !Object.hasOwn(format, 'licenseInfos') && !Object.hasOwn(format, 'drmTrackType'))
-    .sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0))
+    .sort((a, b) => Number(!string(a.mimeType).startsWith('audio/mp4')) - Number(!string(b.mimeType).startsWith('audio/mp4')) ||
+      (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0))
   let url: string | undefined
   let selected: Row | undefined
   for (const format of formats) {
     try { url = audioUrl(format.url); selected = format; break } catch { /* No aceptar otro origen como alternativa. */ }
   }
-  if (!url) throw new YouTubeError('Este vídeo no ofrece audio MP4 compatible.', 'format')
+  if (!url) throw new YouTubeError(allowOpus ? 'Este vídeo no ofrece audio compatible.' : 'Este vídeo no ofrece audio MP4 compatible.', 'format')
   const expiration = Number(new URL(url).searchParams.get('expire')) * 1000
   if (expiration > 0 && expiration <= now + 60_000) throw new YouTubeError('La dirección de audio ha caducado. Vuelve a intentarlo.', 'response')
   const expiresAt = Math.min(now + 20 * 60_000, Number.isFinite(expiration) && expiration > 0 ? expiration - 60_000 : now + 5 * 60_000)
@@ -380,16 +382,24 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
     ...(contentLength ? { contentLength } : {}) }
 }
 
+function supportsP1Opus(): boolean {
+  try {
+    const support = document.createElement('audio').canPlayType('audio/webm; codecs="opus"')
+    return support === 'maybe' || support === 'probably'
+  } catch { return false }
+}
+
 async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamInfo> {
   checkAbort(signal)
   const [{ requestP1Player, P1EngineError }, { probeP1Audio, P1ProbeError }, { p1Recipe }] = await Promise.all([
     import('./youtube-p1'), import('./youtube-p1-probe'), import('./p1-recipe.generated'),
   ])
   checkAbort(signal)
+  const allowOpus = supportsP1Opus()
   let response: unknown
   try {
     response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal,
-      (format, available) => originalAudio(format, !explicitOriginalRequired(available)))
+      (format, available) => originalAudio(format, !explicitOriginalRequired(available)), allowOpus)
   } catch (error) {
     checkAbort(signal)
     if (error instanceof P1EngineError && error.code === 'timeout') throw new YouTubeError(error.message, 'timeout')
@@ -400,7 +410,8 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   const candidates: StreamInfo[] = [], seen = new Set<string>()
   let lastError: unknown
   for (const format of available.filter(format => typeof format.url === 'string')
-    .sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0)).slice(0, 4)) {
+    .sort((a, b) => Number(!string(a.mimeType).startsWith('audio/mp4')) - Number(!string(b.mimeType).startsWith('audio/mp4')) ||
+      (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0)).slice(0, 4)) {
     // Keep every format's language/track metadata when testing one locator, so
     // an excluded encoding can never turn an untagged track into the original.
     const formats = available.map(value => {
@@ -409,15 +420,16 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
       return copy
     })
     try {
-      const info = parsePlayer({ ...object(response), streamingData: { ...object(at(response, 'streamingData')), adaptiveFormats: formats } }, videoId)
+      const info = parsePlayer({ ...object(response), streamingData: { ...object(at(response, 'streamingData')), adaptiveFormats: formats } }, videoId, Date.now(), allowOpus)
       if (!seen.has(info.url)) { seen.add(info.url); candidates.push(info) }
     } catch (error) { lastError = error }
   }
-  if (!candidates.length) throw lastError ?? new YouTubeError('Este vídeo no ofrece audio MP4 compatible.', 'format')
+  if (!candidates.length) throw lastError ?? new YouTubeError('Este vídeo no ofrece audio compatible.', 'format')
 
   // All bounded metadata probes share the same eight-second window. Await in
   // quality order: a healthy best encoding starts immediately, while a failed
-  // encoding does not prevent another original AAC from being used.
+  // encoding does not prevent another original encoding from being used. AAC
+  // stays first; Opus is only admitted after a positive native codec check.
   const controller = new AbortController(), cancel = () => controller.abort(abortReason(signal))
   signal?.addEventListener('abort', cancel, { once: true })
   if (signal?.aborted) cancel()

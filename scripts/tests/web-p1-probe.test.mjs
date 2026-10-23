@@ -114,6 +114,17 @@ test('metadata success unloads the unplayed isolated probe before returning the 
   assert.ok(removed >= 0 && destroyed > removed)
 })
 
+test('WebM metadata uses the same muted opaque probe and tears down without playing', async () => {
+  const h = harness(), value = fixture.replace('itag=140', 'itag=251').replace('mime=audio%2Fmp4', 'mime=audio%2Fwebm')
+  const promise = h.probeP1Audio(value, 209)
+  assert.equal(h.audios[0].src, value)
+  assert.equal(h.audios[0].muted, true); assert.equal(h.audios[0].volume, 0)
+  assert.doesNotMatch(h.frames[0].srcdoc, /\.play\(/)
+  await h.advance(0); assert.deepEqual(await promise, { duration: 209.159 })
+  assert.equal(h.audios[0].plays, 0); assert.equal(h.audios[0].src, '')
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
 test('a CDN that becomes metadata-readable is retried at bounded absolute slots without playing', async () => {
   const h = harness({ plan: (audio, index) => {
     assert.ok(h.audios.filter(other => other !== audio).every(other => !other.src && other.paused), 'previous probe must be unloaded before creating a new one')
@@ -226,7 +237,8 @@ test('bad URL/parameters and invalid expected durations fail before creating an 
   for (const value of [fixture.replace('https:', 'http:'), fixture.replace('r1.googlevideo.com', 'googlevideo.com.evil.example'),
     fixture.replace('r1.googlevideo.com', 'user@r1.googlevideo.com'), fixture.replace('/videoplayback?', '/other?'), fixture + '#fragment',
     fixture + '&expire=4102444800', fixture + '&sig=duplicate', fixture + '&signature=conflict', fixture + '&n=', fixture + '&x=%0Aheader', fixture + '&dur=NaN',
-    fixture.replace('expire=4102444800', 'expire=1'), fixture.replace('mime=audio%2Fmp4', 'mime=video%2Fmp4'), fixture.replace('clen=8192', 'clen=NaN'),
+    fixture.replace('expire=4102444800', 'expire=1'), fixture.replace('mime=audio%2Fmp4', 'mime=video%2Fmp4'),
+    fixture.replace('mime=audio%2Fmp4', 'mime=video%2Fwebm'), fixture.replace('mime=audio%2Fmp4', 'mime=audio%2Fogg'), fixture.replace('clen=8192', 'clen=NaN'),
     ' ' + fixture, fixture.replace('sig=good_signature', 'sig=%3Cscript%3E')]) {
     const h = harness(); await assert.rejects(h.probeP1Audio(value, 209), error => error.code === 'response'); assert.equal(h.frames.length, 0)
   }

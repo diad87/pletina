@@ -51,7 +51,8 @@ export async function preparePwaP1() {
   const html = await publicText(NEUTRAL_PUBLIC_EMBED, 4 * 1024 * 1024), cfg = configuration(html.text)
   assert.equal(cfg.INNERTUBE_CLIENT_NAME, 'WEB_EMBEDDED_PLAYER'); assert.equal(cfg.INNERTUBE_CONTEXT_CLIENT_NAME, 56)
   const client = cfg.INNERTUBE_CONTEXT.client, embedded = cfg.WEB_PLAYER_CONTEXT_CONFIGS.WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER
-  const version = bounded(cfg.INNERTUBE_CLIENT_VERSION, 80); assert.match(version, /^\d+(?:\.\d+)+$/)
+  // Public rollout suffixes are opaque version tokens, not dates to reconstruct.
+  const version = bounded(cfg.INNERTUBE_CLIENT_VERSION, 64); assert.match(version, /^[A-Za-z0-9._+-]{1,64}$/)
   const player = new URL(bounded(embedded.jsUrl, 2048), 'https://www.youtube.com'); assert.equal(player.search, '')
   const code = await publicText(player, 5 * 1024 * 1024)
   const analyzer = new JsAnalyzer(code.text, { extractions: [{ friendlyName: 'nsigFunction', match: nsigMatcher }, { friendlyName: 'signatureTimestampVar', match: timestampMatcher, collectDependencies: false }] })

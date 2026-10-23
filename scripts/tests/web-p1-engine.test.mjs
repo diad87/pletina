@@ -14,6 +14,7 @@ const youtube = {}; new Function('exports', youtubeCode)(youtube)
 const videoId = 'aaaaaaaaaaa'
 const baseUrl = 'https://rr1---sn-synthetic.googlevideo.com/videoplayback?expire=9999999999&itag=140'
 const mp4 = extra => ({ itag: 140, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 128000, ...extra })
+const opus = extra => ({ itag: 251, mimeType: 'audio/webm; codecs="opus"', bitrate: 160000, ...extra })
 const cipherFormat = (signature = 'input_signature', n = 'input_n') => mp4({ signatureCipher: new URLSearchParams({
   url: baseUrl + (n === null ? '' : '&n=' + encodeURIComponent(n)), s: signature, sp: 'sig',
 }).toString() })
@@ -202,6 +203,67 @@ test('only AAC/MP4 without DRM is accepted', () => {
     { licenseInfos: [] }, { drmTrackType: 'AUDIO' }, { keySystems: {} }])
     assert.throws(() => h.inspectP1Format(mp4({ url: baseUrl, ...extra })), { code: 'format' })
   assert.equal(h.inspectP1Format(mp4({ url: baseUrl, drmFamilies: [] })).url, baseUrl); h.clean()
+})
+
+test('Opus is explicit opt-in and never admits other containers, codecs, video or DRM', async () => {
+  const h = harness(), format = opus({ url: baseUrl + '&mime=audio%2Fwebm' })
+  assert.throws(() => h.inspectP1Format(format), { code: 'format' })
+  assert.equal(h.inspectP1Format(format, true).url, format.url)
+  await rejects(h, () => h.requestP1Player(videoId, h.request(player([format])), recipe()), 'format')
+  const result = await h.requestP1Player(videoId, h.request(player([format])), recipe(), undefined, undefined, true)
+  assert.equal(result.streamingData.adaptiveFormats[0].url, format.url)
+  for (const extra of [{ mimeType: 'audio/webm' }, { mimeType: 'audio/webm; codecs="vorbis"' },
+    { mimeType: 'audio/webm; codecs="opus, vorbis"' }, { mimeType: 'audio/ogg; codecs="opus"' },
+    { mimeType: 'video/webm; codecs="opus"' }, { mimeType: 'audio/mp4; codecs="opus"' },
+    { drmFamilies: ['WIDEVINE'] }, { drmFamilies: {} }, { licenseInfos: [] }, { drmTrackType: 'AUDIO' }, { keySystems: {} }])
+    assert.throws(() => h.inspectP1Format({ ...format, ...extra }, true), { code: 'format' })
+  assert.equal(h.metrics.workerStarts, 0); h.clean()
+})
+
+test('mixed encodings preserve all metadata, prefer AAC, and share one four-cipher budget', async () => {
+  const h = harness(), encrypted = (format, value) => ({ ...format, signatureCipher: cipherFormat(value).signatureCipher })
+  const formats = [encrypted(opus({ bitrate: 900000 }), 'opus-low'), encrypted(mp4({ bitrate: 96000 }), 'aac-low'),
+    encrypted(opus({ bitrate: 1000000 }), 'opus-mid'), encrypted(opus({ bitrate: 1100000 }), 'opus-high'),
+    encrypted(mp4({ bitrate: 128000 }), 'aac-high'), encrypted(opus({ bitrate: 1200000 }), 'opus-best')]
+  let inspected = 0
+  const result = await h.requestP1Player(videoId, h.request(player(formats)), recipe(), undefined, (_format, all) => {
+    inspected++; assert.equal(all.length, 6); return true
+  }, true)
+  assert.equal(inspected, 6)
+  assert.deepEqual(result.streamingData.adaptiveFormats.map(format => Boolean(format.url)), [false, true, false, true, true, true],
+    'Higher bitrate Opus siblings must not consume the slots needed by healthy AAC')
+  assert.deepEqual(result.streamingData.adaptiveFormats.map(format => format.mimeType), formats.map(format => format.mimeType))
+  assert.ok(result.streamingData.adaptiveFormats.every(format => !Object.hasOwn(format, 'signatureCipher')))
+  assert.deepEqual(h.metrics.batchSizes, [4]); h.clean()
+})
+
+test('Opus uses the same isolated decipher and cannot bypass caller originality or cancellation', async () => {
+  const h = harness(), formats = [opus({ signatureCipher: cipherFormat('dub').signatureCipher, audioTrack: { displayName: 'Dubbed' } }),
+    opus({ signatureCipher: cipherFormat('original').signatureCipher, audioTrack: { displayName: 'Original' } })]
+  const result = await h.requestP1Player(videoId, h.request(player(formats)), recipe(), undefined, (format, all) => {
+    assert.equal(all[0].audioTrack.displayName, 'Dubbed'); return format.audioTrack?.displayName === 'Original'
+  }, true)
+  assert.equal(result.streamingData.adaptiveFormats[0].url, undefined)
+  assert.equal(new URL(result.streamingData.adaptiveFormats[1].url).searchParams.get('n'), 'decoded_n')
+  assert.equal(result.streamingData.adaptiveFormats[0].audioTrack.displayName, 'Dubbed'); h.clean()
+  const held = harness({ holdWorker: true }), controller = new AbortController()
+  const pending = held.requestP1Player(videoId, held.request(player([cipherFormat(), formats[1]])), recipe(), controller.signal, undefined, true)
+  await flush(); assert.deepEqual(held.metrics.batchSizes, [2]); controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' }); held.clean()
+})
+
+test('public rollout version tokens pass through exactly while malformed tokens never call transport', async () => {
+  const h = harness()
+  for (const version of ['2.20261022.01.00-canary_control_2.20261023.01.00', 'release_1+fix-2.3', 'canary', 'v'.repeat(64)]) {
+    let requested
+    await h.requestP1Player(videoId, async body => { requested = body.context.client.clientVersion; return player() },
+      recipe({ context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: version } } }))
+    assert.equal(requested, version)
+  }
+  for (const version of ['', 'v'.repeat(65), '2.1 bad', '2.1\tbad', '2.1\r\nCookie:bad', '2.1é', '2.1/next', '2.1?key', '2.1"', '2.1%2B'])
+    await rejects(h, () => h.requestP1Player(videoId, () => { throw Error('Invalid recipe reached HTTP') },
+      recipe({ context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: version } } })), 'recipe')
+  h.clean()
 })
 
 test('exact ID, OK status, public visibility and embed availability are mandatory', async () => {

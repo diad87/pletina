@@ -62,6 +62,27 @@ test('wholly untagged MP4 responses preserve the existing highest-bitrate compat
   assert.equal(result.duration, 209)
 })
 
+test('WebM Opus is opt-in and a healthy AAC still wins over higher-bitrate Opus', () => {
+  const opus = format('opus', { mimeType: 'audio/webm; codecs="opus"', bitrate: 256000 })
+  rejected(player([opus]))
+  for (const disabled of [false, undefined, 'yes', 1]) assert.throws(() => api.parsePlayer(player([opus]), id, now, disabled), error => error.code === 'format')
+  assert.match(api.parsePlayer(player([opus]), id, now, true).url, /\/opus\?/)
+  assert.match(api.parsePlayer(player([opus, format('aac', { bitrate: 48000 })]), id, now, true).url, /\/aac\?/)
+})
+
+test('Opus opt-in does not admit muxed video, other codecs, DRM, DRC or unconfirmed original tracks', () => {
+  for (const change of [{ mimeType: 'video/webm; codecs="vp9,opus"' }, { mimeType: 'audio/webm; codecs="vorbis"' },
+    { mimeType: 'audio/webm' }, { drmFamilies: ['WIDEVINE'] }, { licenseInfos: [] }, { drmTrackType: null }, { isDrc: true },
+    { audioTrack: { displayName: 'English dubbed Original', audioIsDefault: true } }, { xtags: tags([['acont', 'dubbed-auto']]) }]) {
+    const opus = format('forbidden-opus', { mimeType: 'audio/webm; codecs="opus"', ...change })
+    assert.throws(() => api.parsePlayer(player([opus]), id, now, true), error => error.code === 'format')
+  }
+  const implicit = format('implicit-opus', { mimeType: 'audio/webm; codecs="opus"' })
+  const rejectedAac = format('rejected-aac', { url: undefined, audioTrack: { displayName: 'Dubbed', audioIsDefault: true } })
+  assert.throws(() => api.parsePlayer(player([implicit, rejectedAac]), id, now, true), error => error.code === 'format')
+  assert.match(api.parsePlayer(player([{ ...implicit, xtags: tags([['acont', 'original']]) }, rejectedAac]), id, now, true).url, /\/implicit-opus\?/)
+})
+
 test('default auto-dub never outranks explicitly original audio even when original is not default', () => {
   const original = format('original', { audioTrack: { audioIsDefault: false, displayName: 'Basque (original)' }, xtags: tags([['lang', 'eu'], ['acont', 'original']]) })
   const dub = format('dub', { bitrate: 999999, audioTrack: { audioIsDefault: true, displayName: 'English (auto-dubbed)' }, xtags: tags([['acont', 'dubbed-auto']]) })

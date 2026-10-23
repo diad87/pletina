@@ -61,7 +61,7 @@ function validateRecipe(recipe: P1Recipe): { context: Record<string, unknown>; p
   const context = jsonCopy(recipe.context, 256 * 1024, 'recipe')
   const playbackContext = jsonCopy(recipe.playbackContext, 256 * 1024, 'recipe')
   if (!record(context) || !record(context.client) || context.client.clientName !== 'WEB_EMBEDDED_PLAYER' ||
-      typeof context.client.clientVersion !== 'string' || !/^\d[\d.]{1,60}$/.test(context.client.clientVersion) ||
+      typeof context.client.clientVersion !== 'string' || !/^[A-Za-z0-9._+-]{1,64}$/.test(context.client.clientVersion) ||
       !record(playbackContext) || !record(playbackContext.contentPlaybackContext)) return fail('recipe', 'Invalid anonymous P1 context')
   // The bootstrap is public and anonymous. Never accept account or HTTP credentials.
   const forbidden = /^(?:authorization|cookie|cookies|credentials|accessToken|access_token|idToken|id_token|oauth|password|accountId|onBehalfOfUser|sessionToken|user)$/i
@@ -103,10 +103,12 @@ const hasDrm = (value: Record<string, unknown>) =>
   Object.hasOwn(value, 'licenseInfos') || Object.hasOwn(value, 'drmTrackType') || Object.hasOwn(value, 'keySystems') ||
   Object.hasOwn(value, 'drmFamilies') && (!Array.isArray(value.drmFamilies) || value.drmFamilies.length > 0)
 
-/** Parse only AAC/MP4 locators. It does not claim that the CDN will accept them. */
-export function inspectP1Format(value: unknown): P1Cipher {
+/** AAC remains the default; an explicitly supported browser may also try Opus/WebM. */
+export function inspectP1Format(value: unknown, allowOpus = false): P1Cipher {
   if (!record(value) || typeof value.mimeType !== 'string' ||
-      !/^audio\/mp4\s*;\s*codecs\s*=\s*"mp4a\.40\.(?:1|2|5|29)"\s*$/i.test(value.mimeType) || hasDrm(value)) return fail('format', 'P1 requires unencrypted AAC/MP4')
+      !(/^audio\/mp4\s*;\s*codecs\s*=\s*"mp4a\.40\.(?:1|2|5|29)"\s*$/i.test(value.mimeType) ||
+        allowOpus === true && /^audio\/webm\s*;\s*codecs\s*=\s*"opus"\s*$/i.test(value.mimeType)) || hasDrm(value))
+    return fail('format', 'P1 requires a supported unencrypted audio format')
   const hasSignatureCipher = Object.hasOwn(value, 'signatureCipher'), hasCipher = Object.hasOwn(value, 'cipher')
   const cipherValue = hasSignatureCipher ? value.signatureCipher : value.cipher
   if (hasSignatureCipher && hasCipher || Object.hasOwn(value, 'url') && (hasSignatureCipher || hasCipher))
@@ -247,7 +249,7 @@ function decode(script: string, values: P1Cipher[], signal: AbortSignal): Promis
 
 /** Resolve a public P1 response using a caller-supplied ordinary browser POST. */
 export async function requestP1Player(videoId: string, request: (body: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>, recipe: P1Recipe, signal?: AbortSignal,
-  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean): Promise<unknown> {
+  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean, allowOpus = false): Promise<unknown> {
   checkAbort(signal)
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return fail('response', 'Invalid P1 video ID')
   const { context, playbackContext } = validateRecipe(recipe)
@@ -279,16 +281,17 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
     // format, including rejected and non-AAC language metadata.
     for (const format of available) {
       checkAbort(controller.signal)
-      if (!record(format) || typeof format.mimeType !== 'string' || !/^audio\/mp4(?:\s*;|$)/i.test(format.mimeType)) continue
+      if (!record(format) || typeof format.mimeType !== 'string') continue
       try {
-        const cipher = inspectP1Format(format)
+        const cipher = inspectP1Format(format, allowOpus)
         if (acceptFormat && acceptFormat(format, available) !== true) continue
         candidates.push({ format, cipher })
       } catch { checkAbort(controller.signal) }
     }
     const bitrate = (value: unknown) => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 0
-    const selected = candidates.sort((a, b) => bitrate(b.format.bitrate) - bitrate(a.format.bitrate)).slice(0, 4)
-    if (!selected.length) return fail('format', 'P1 response has no compatible AAC candidate')
+    const family = (format: Record<string, unknown>) => /^audio\/mp4(?:\s*;|$)/i.test(String(format.mimeType)) ? 0 : 1
+    const selected = candidates.sort((a, b) => family(a.format) - family(b.format) || bitrate(b.format.bitrate) - bitrate(a.format.bitrate)).slice(0, 4)
+    if (!selected.length) return fail('format', 'P1 response has no compatible audio candidate')
     const needDecode = selected.filter(({ cipher }) => cipher.signature !== null || cipher.n !== null)
     const results = needDecode.length ? await decode(recipe.script, needDecode.map(({ cipher }) => cipher), controller.signal) : []
     checkAbort(controller.signal)
@@ -304,7 +307,7 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
       try { approved.set(format, applyP1Decoded(cipher, decoded.value)) }
       catch { checkAbort(controller.signal) }
     }
-    if (!approved.size) return fail('decoder', 'P1 decoder rejected every AAC candidate')
+    if (!approved.size) return fail('decoder', 'P1 decoder rejected every audio candidate')
     response.streamingData.adaptiveFormats = available.map(format => {
       if (!record(format)) return format
       const result: Record<string, unknown> = { ...format }
@@ -313,7 +316,7 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
       if (url) result.url = url
       return result
     })
-    // Do not allow an unprocessed muxed/cipher format to bypass this AAC path.
+    // Do not allow an unprocessed muxed/cipher format to bypass this audio path.
     delete response.streamingData.formats
     return response
   } catch (error) {
