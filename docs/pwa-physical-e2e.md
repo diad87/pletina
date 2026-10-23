@@ -1,7 +1,17 @@
 # Pruebas físicas de la PWA
 
+<!-- library-1ea-summary:start -->
+**Actual: `1ea46db9dc0b5af3`, publicada y verificada**, fuente `af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad`. [Copia portátil de biblioteca](pwa-library-portability.md) en **Tu biblioteca → Copia de seguridad**: archivo JSON local, revisión previa e incorporación que conserva los datos existentes y el orden y repeticiones de las listas. No incluye música descargada ni migra la base privada de la APK. También renueva el enlace de un pódcast de YouTube si caducó mientras estaba pausado, conservando la posición. Todo PWA, sin servidor intermedio ni cuentas.
+
+[Validación de esta compilación](../artifacts/pwa-e2e/validation-1ea46db9dc0b5af3.json): **814/814** de lógica, tipos **0 errores/0 avisos**, copia de biblioteca **30/30** en tres motores de escritorio (incluye dos preparaciones por motor), regresión de pódcasts **6/6** en Chrome (tres preparaciones) y actualización desde C8 **11/11**. Los recorridos nuevos usan proveedores HTTP de QA; no acreditan teléfonos físicos ni audio comercial real. El fallo inicial de un selector del runner móvil se conserva separado con su corrección, sin contarlo como aprobado.
+
+Distribución **33 archivos, 881.649 bytes**; entrada **51.243** y aplicación bajo demanda **784.833**. Fuentes tipográficas y receta P1 idénticas a C8; CSS actualizado para la nueva vista. Publicación `c03c2ec2aab2f2127a265e42515a0333fde9a50b`, [workflow correcto](https://github.com/diad87/pletina/actions/runs/40018900487) y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json). **P1 sigue sin descarga offline fiable y no se afirma cobertura universal ni paridad total.** Estas funciones nuevas están pendientes de prueba física; los informes históricos conservan su propio alcance.
+<!-- library-1ea-summary:end -->
+
+## Historial anterior a 1ea46db9dc0b5af3
+
 <!-- opus-c8-summary:start -->
-**Actual: `c8ed230fbf100850`, publicada y verificada**, fuente `5acf1a58af2e12555059c35f72b64ae240d9dc0c`. El [rescate Opus](pwa-opus-fallback.md) prueba otra codificación de audio del mismo vídeo cuando falla AAC y el navegador declara soporte nativo. AAC conserva prioridad; siguen el límite de cuatro formatos, las sondas de ocho segundos, la identidad exacta, la política de pista original y el mismo Audio. No añade vídeo, servidor, cuentas ni descargas P1. CSS, fuentes y receta pública idénticos a C2.
+**Anterior: `c8ed230fbf100850`, publicada y verificada**, fuente `5acf1a58af2e12555059c35f72b64ae240d9dc0c`. El [rescate Opus](pwa-opus-fallback.md) prueba otra codificación de audio del mismo vídeo cuando falla AAC y el navegador declara soporte nativo. AAC conserva prioridad; siguen el límite de cuatro formatos, las sondas de ocho segundos, la identidad exacta, la política de pista original y el mismo Audio. No añade vídeo, servidor, cuentas ni descargas P1. CSS, fuentes y receta pública idénticos a C2.
 
 [Validación](../artifacts/pwa-e2e/validation-c8ed230fbf100850.json): 783/783 pruebas de lógica, tipos sin errores ni avisos, 24/24 comprobaciones multimedia seleccionadas en tres motores de escritorio, 33/33 del recurso oficial y actualización desde C2 11/11. Los dos casos nuevos pasan con AAC rechazado→Opus y AAC sano→AAC; los recuentos consolidan por ID las versiones del observador sin sumar preparaciones repetidas. Publicación `74b5484c703967f16d306b35c260dab58a02ff27`, workflow `40014105145` correcto y [31/31 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-c8ed230fbf100850.json). Son controles de escritorio; Opus en una PWA móvil instalada, pantalla bloqueada y segundo plano sigue pendiente de prueba física. No se afirma disponibilidad universal del proveedor.
 <!-- opus-c8-summary:end -->

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "build": "1ea46db9dc0b5af3",
+  "productCommit": "af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad",
+  "createdAt": "2026-10-23T20:22:17.037Z",
+  "state": "frozen-local-browser-regression",
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/summary.json",
+      "sha256": "fbe20a838a4f3d53d635377fc40ccdc7071d84d15292612f505fc6f7e3c22335",
+      "bytes": 26853
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources.json",
+      "sha256": "226ca949a0d99097d96d0e74c823c776ee183f6049954a0b357fe9b07fba0945",
+      "bytes": 2973
+    }
+  ],
+  "counts": {
+    "pass": 6,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "errors": 0,
+  "resources": {
+    "serverClosed": true,
+    "contextClosed": true,
+    "browserClosed": true,
+    "puppeteerBrowserClosed": true
+  },
+  "checks": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "status": "pass"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "status": "pass"
+    },
+    {
+      "name": "media.selection-html-audio",
+      "status": "pass"
+    },
+    {
+      "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+      "status": "pass"
+    },
+    {
+      "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+      "status": "pass"
+    },
+    {
+      "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+      "status": "pass"
+    }
+  ],
+  "scope": "Three existing podcast regressions plus setup2 and automatic selection-html-audio; desktop Chrome153 with real native silent AAC and synthetic HTTP provider fixtures.",
+  "limits": [
+    "No fixture forces an expired retained podcast locator; no such browser claim is made. Separate unit tests cover that path.",
+    "No physical Android/iPhone, live provider, background, screen-off, AndroidAuto or CarPlay claim.",
+    "No application source, shared QA runner, build, publishing or commits changed during this task."
+  ]
+}

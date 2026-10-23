@@ -1,5 +1,15 @@
 # Port web de Pletina 0.11.2
 
+<!-- library-1ea-summary:start -->
+**Actual: `1ea46db9dc0b5af3`, publicada y verificada**, fuente `af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad`. [Copia portátil de biblioteca](pwa-library-portability.md) en **Tu biblioteca → Copia de seguridad**: archivo JSON local, revisión previa e incorporación que conserva los datos existentes y el orden y repeticiones de las listas. No incluye música descargada ni migra la base privada de la APK. También renueva el enlace de un pódcast de YouTube si caducó mientras estaba pausado, conservando la posición. Todo PWA, sin servidor intermedio ni cuentas.
+
+[Validación de esta compilación](../artifacts/pwa-e2e/validation-1ea46db9dc0b5af3.json): **814/814** de lógica, tipos **0 errores/0 avisos**, copia de biblioteca **30/30** en tres motores de escritorio (incluye dos preparaciones por motor), regresión de pódcasts **6/6** en Chrome (tres preparaciones) y actualización desde C8 **11/11**. Los recorridos nuevos usan proveedores HTTP de QA; no acreditan teléfonos físicos ni audio comercial real. El fallo inicial de un selector del runner móvil se conserva separado con su corrección, sin contarlo como aprobado.
+
+Distribución **33 archivos, 881.649 bytes**; entrada **51.243** y aplicación bajo demanda **784.833**. Fuentes tipográficas y receta P1 idénticas a C8; CSS actualizado para la nueva vista. Publicación `c03c2ec2aab2f2127a265e42515a0333fde9a50b`, [workflow correcto](https://github.com/diad87/pletina/actions/runs/40018900487) y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json). **P1 sigue sin descarga offline fiable y no se afirma cobertura universal ni paridad total.** Estas funciones nuevas están pendientes de prueba física; los informes históricos conservan su propio alcance.
+<!-- library-1ea-summary:end -->
+
+## Historial anterior a 1ea46db9dc0b5af3
+
 > Informe histórico de la primera fase y de su corrección de audio. El estado actual y la ampliación a la APK completa están en [pwa.md](pwa.md) y en la [matriz de paridad](pwa-parity-0.11.2.md).
 
 Actualizado el **18 de octubre de 2026**. Base nativa exacta: commit `4b5691ff50d659fbd048f5a9cff1ddfa91c22a79`, versión **0.11.2**. Build publicado actual: **`74d9ad3aebca421b`**, con corrección de la transición a siguiente pista. El primer build publicado fue `1785b6edf53a230b` y el informe amplio anterior corresponde a `3622b8aa49a2ee7f`; cada ejecución se identifica a continuación.

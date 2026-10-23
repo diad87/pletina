@@ -1,0 +1,678 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T20:25:34.483Z",
+  "build": "1ea46db9dc0b5af3",
+  "sourceCommit": "af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad",
+  "podcastFixCommit": "f2000c5",
+  "runtime": {
+    "purePwa": true,
+    "addedBackend": false,
+    "proxyAtRuntime": false,
+    "userAccountsRequired": false,
+    "subscriptionRequired": false
+  },
+  "changes": {
+    "libraryJSONBackup": true,
+    "importReviewRequired": true,
+    "nonDestructiveMerge": true,
+    "playlistDuplicatesPreserved": true,
+    "APKMigration": false,
+    "downloadedAudioInBackup": false,
+    "expiredYoutubePodcastSourceRefreshOnResume": true,
+    "p1ExtractionUnchanged": true,
+    "p1DownloadEnabled": false
+  },
+  "logic": {
+    "passed": 814,
+    "failed": 0,
+    "skipped": 0,
+    "report": {
+      "path": "artifacts/pwa-port/library-portability-logic-2026-10-23.log",
+      "sha256": "438bd38665370185e6bd006985c251805d40a6a199cf57c0c42e8e5726d02228",
+      "bytes": 83114
+    }
+  },
+  "typecheck": {
+    "errors": 0,
+    "warnings": 0,
+    "report": {
+      "path": "artifacts/pwa-port/library-portability-types-2026-10-23.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    }
+  },
+  "backupBrowser": {
+    "passed": 30,
+    "failed": 0,
+    "countsIncludeTwoContextSetupPerEngine": true,
+    "scope": "Compiled UI, real JSON file download/upload, real IndexedDB and CacheStorage read assertions. HTTP provider fixtures with synthetic metadata and silent audio. Desktop engines only; narrow viewport is not physical Android/iOS.",
+    "downloadStoragePreservationScope": "Download storage is unchanged, initially empty in these backup UI runs. Populated cache-byte persistence is separately checked during A-to-B update.",
+    "profiles": [
+      {
+        "profile": "chromium-mobile-final",
+        "report": {
+          "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/summary.json",
+          "sha256": "c70222459f53527e471c355f1395d27cee24562d3f6244825e9ecaff1e53b4dc",
+          "bytes": 37620
+        },
+        "counts": {
+          "pass": 10,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "runnerSha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4",
+        "engine": "chromium",
+        "browserVersion": "153.0.8010.52"
+      },
+      {
+        "profile": "firefox-desktop",
+        "report": {
+          "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/summary.json",
+          "sha256": "760c900a91edd5a8f4c01f5af305a029d4b12c00a3e5ee0687d539d448710547",
+          "bytes": 36119
+        },
+        "counts": {
+          "pass": 10,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "runnerSha256": "d620d3da6b2f69b006d17df1ede0339d75be8e849d491e026bdb28067c2e1776",
+        "engine": "firefox",
+        "browserVersion": "153.0"
+      },
+      {
+        "profile": "webkit-mobile",
+        "report": {
+          "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/summary.json",
+          "sha256": "38baab6fe5c7677f1e8085edaea95d379aaeff5014c8f5626f7ff7001435ccad",
+          "bytes": 39694
+        },
+        "counts": {
+          "pass": 10,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "runnerSha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4",
+        "engine": "webkit",
+        "browserVersion": "26.5"
+      }
+    ]
+  },
+  "podcastRegression": {
+    "passed": 6,
+    "failed": 0,
+    "preparationChecks": 3,
+    "featureChecks": 3,
+    "scope": "Chrome desktop with HTTP fixtures. RSS progress/reload/resume/completion and YouTube episode namespace. Does not force locator expiry; the expired-resume behavior has six directed Player unit tests.",
+    "manifest": {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/manifest.json",
+      "sha256": "3d18cfbbfbb16951377c26dc51347065b73fa2baec932cac570dee9f683f22c4",
+      "bytes": 2083
+    }
+  },
+  "update": {
+    "fromBuild": "c8ed230fbf100850",
+    "passed": 11,
+    "failed": 0,
+    "scope": "Uses the final compiled application graph and old frozen distribution, with test-only versioned workers. Real IndexedDB/CacheStorage persistence, not extraction or physical icon migration.",
+    "report": {
+      "path": "artifacts/pwa-port/update-e2e-1ea46db9dc0b5af3.json",
+      "sha256": "e82269c422d8f23502fad48ca19e9acd58808ad690ee7a2177a36db7a8ea3459",
+      "bytes": 22902
+    }
+  },
+  "qaDiagnostic": {
+    "countedAsProductFailure": false,
+    "initialChromiumCounts": {
+      "pass": 2,
+      "fail": 1
+    },
+    "cause": "QA mobile selector requested Ir al álbum; product action is Ir al disco. Only that selector was corrected. Firefox uses the desktop menu branch and was not rerun or rebound to the new source.",
+    "raw": {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/summary.json",
+      "sha256": "7da8b7835398bc3076e30c66f272ecd5413834da7585be66f12d40de6c1867fb",
+      "bytes": 27323
+    }
+  },
+  "distribution": {
+    "files": 33,
+    "bytes": 881649,
+    "sourceHash": "8a23fe29ac5517f344be0e40aab66dfa864f8203f28f2706245d2fbff1363f3f",
+    "initialBytes": 51243,
+    "onDemandBytes": 784833,
+    "unchangedFontsAndRecipe": [
+      "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+      "application/assets/p1-recipe.generated-BGYpK-b1.js"
+    ],
+    "css": "Changed deliberately for the new backup view.",
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "path": "app.f806ab582d85e14d.js",
+        "sha256": "f806ab582d85e14dc56803bd936ab61a85167beef3b1248a13e343d974f7d211",
+        "bytes": 16483
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+        "bytes": 10280
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+        "bytes": 20156
+      },
+      {
+        "path": "application/assets/index-BBZQKxHP.js",
+        "sha256": "01fd314cff217b10e02db78e4218957401eab497fe1536f3123ce05ae74e6124",
+        "bytes": 369196
+      },
+      {
+        "path": "application/assets/index-W2XYcCbw.css",
+        "sha256": "14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47",
+        "bytes": 90362
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+        "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13",
+        "bytes": 76
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+        "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812",
+        "bytes": 175818
+      },
+      {
+        "path": "application/assets/p1check-DM1A69LV.js",
+        "sha256": "61689fbb3c07e6e516c96d59c8eda7fdd29cad79ff29b4c33683e8bc71bf83af",
+        "bytes": 3465
+      },
+      {
+        "path": "application/assets/storage-BJF4eTjj.js",
+        "sha256": "25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b",
+        "bytes": 32111
+      },
+      {
+        "path": "application/assets/storage-PSZZs3R7.js",
+        "sha256": "95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba",
+        "bytes": 138
+      },
+      {
+        "path": "application/assets/updates.svelte-CaKsDr0l.js",
+        "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a",
+        "bytes": 77
+      },
+      {
+        "path": "application/assets/updates.svelte-d2-IJVos.js",
+        "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4",
+        "bytes": 46008
+      },
+      {
+        "path": "application/assets/youtube-BmuQ4-vc.js",
+        "sha256": "c426b097c16c1036c6965aff7ba223e2dc3501701eb83b1444dc121ab4657c8c",
+        "bytes": 16557
+      },
+      {
+        "path": "application/assets/youtube-p1-D6JsRkrB.js",
+        "sha256": "705ac7f9c675e978c0d943ff1d3b564a4f7f0d5f102afd1e778e063a3898fe8a",
+        "bytes": 11395
+      },
+      {
+        "path": "application/assets/youtube-p1-probe-D3C8r15R.js",
+        "sha256": "fa0f6050c1d7695072926ad4b3faf0a577a9f1c97eec3988d7b783fdbdf09470",
+        "bytes": 5302
+      },
+      {
+        "path": "application/index.3d5013bb61a98045.html",
+        "sha256": "3d5013bb61a98045e64b7f4c45ef46892cdeb2702bac7f12fef2833c045387f8",
+        "bytes": 1018
+      },
+      {
+        "path": "application/launcher.877eb1a6f54058da.js",
+        "sha256": "877eb1a6f54058da6cc193c01bb3487b4d47aaf0bac05920771f92ca2a8f29b7",
+        "bytes": 897
+      },
+      {
+        "path": "application/p1-check.html",
+        "sha256": "542209d2ebc39818ccab2c861dc02a5f97e62c678f0306f23411b027da26a747",
+        "bytes": 1977
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740",
+        "bytes": 3411
+      },
+      {
+        "path": "icons/icon-192.png",
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+        "bytes": 3564
+      },
+      {
+        "path": "icons/icon-512.png",
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf",
+        "bytes": 8870
+      },
+      {
+        "path": "index.html",
+        "sha256": "f5ee892d0d35d9f612e4a0558b3f7e7345c01f439fb248cacbf7311f4c779c2e",
+        "bytes": 7798
+      },
+      {
+        "path": "manifest.webmanifest",
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f",
+        "bytes": 499
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741",
+        "bytes": 15259
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740",
+        "bytes": 3411
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+        "bytes": 3564
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf",
+        "bytes": 8870
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9",
+        "bytes": 5810
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba",
+        "bytes": 581
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6",
+        "bytes": 4843
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e",
+        "bytes": 3235
+      },
+      {
+        "path": "sw.js",
+        "sha256": "cd612ae8ea6fc71a0b48a649db9b2fd3f95eb2f2a1516bdf5cad3fbcf8710b8e",
+        "bytes": 10618
+      }
+    ]
+  },
+  "publication": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "c03c2ec2aab2f2127a265e42515a0333fde9a50b",
+    "tree": "750ab53ee385c986bdca834e0eacc1f4552d914f",
+    "source_hash": "8a23fe29ac5517f344be0e40aab66dfa864f8203f28f2706245d2fbff1363f3f",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "1ea46db9dc0b5af3",
+    "workflow": "https://github.com/diad87/pletina/actions/runs/40018900487",
+    "workflowConclusion": "success",
+    "publicFilesPassed": 33,
+    "report": {
+      "path": "artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json",
+      "sha256": "623f2886e04ca909b2301d45d7e1dc1fcd126bddd9105fd2031d248ba0c782c3",
+      "bytes": 10937
+    }
+  },
+  "physical": {
+    "newAndroidTests": false,
+    "newIOSTests": false,
+    "screenOffVerifiedForThisBuild": false,
+    "backgroundDownloadsGuaranteed": false,
+    "androidAuto": false,
+    "carPlay": false
+  },
+  "qaSourceSnapshots": [
+    {
+      "originalPath": "scripts/tests/e2e/harness.mjs",
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "originalPath": "scripts/tests/e2e/provider-fixtures.mjs",
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/provider-fixtures.mjs",
+      "sha256": "d948aeab421e688ce578e6a91384f2270c0f3e0f5f546debf946c894727a5cb4",
+      "bytes": 51351
+    },
+    {
+      "originalPath": "scripts/tests/e2e/webkit-network-transport.mjs",
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/webkit-network-transport.mjs",
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e",
+      "bytes": 6486
+    }
+  ],
+  "evidence": [
+    {
+      "path": "artifacts/pwa-port/library-backup-source-5dbaeaf6121960bb.mjs",
+      "sha256": "5dbaeaf6121960bba77ef32df8414180d8a6a93a9c2f896dda9eb2b7a25be61c",
+      "bytes": 23605
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/provider-fixtures.mjs",
+      "sha256": "d948aeab421e688ce578e6a91384f2270c0f3e0f5f546debf946c894727a5cb4",
+      "bytes": 51351
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-1ea46db9dc0b5af3-qa-sources/webkit-network-transport.mjs",
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e",
+      "bytes": 6486
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-browser-1ea46db9dc0b5af3-chromium-mobile-final.log",
+      "sha256": "4a0a27b439c780a9aff2801bbb8cc2f24a3595abd6e8080710383bb7a81d205e",
+      "bytes": 1649
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-browser-1ea46db9dc0b5af3-chromium-mobile.log",
+      "sha256": "20433992a07242f754589df0a6c0f9eec9dca994a71ccee17dcbfef95216ee39",
+      "bytes": 555
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-browser-1ea46db9dc0b5af3-firefox-desktop.log",
+      "sha256": "eaa72b3dabe3cc529d742bcdf4931dfe2416383f7c3335beb81d21b93e7bcab5",
+      "bytes": 1683
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-browser-1ea46db9dc0b5af3-local-manifest.json",
+      "sha256": "f176f7d1af49af6e2266588320ec677b29006ccadf0262fa625f38fea41d8de6",
+      "bytes": 10624
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-browser-webkit.log",
+      "sha256": "b1cd95ac24974391edfcfe1729bd01e08a190eb7b2759d919133d336ac618ad4",
+      "bytes": 1755
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-build-2026-10-23.log",
+      "sha256": "66209c15ea39333afb8d9105014bbdbfe05cb0a33267dda98c3528d6c27ec4f4",
+      "bytes": 1993
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-logic-2026-10-23.log",
+      "sha256": "438bd38665370185e6bd006985c251805d40a6a199cf57c0c42e8e5726d02228",
+      "bytes": 83114
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-navigation-2026-10-23.log",
+      "sha256": "f2f000d3980f027f7d80c7cd9db4466cd5283580cf9f999a273b16dccf99a528",
+      "bytes": 4619
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-public-verify-1ea46db9dc0b5af3.log",
+      "sha256": "9333468d82afea00a8439f7c8c82303110c994476bbcae57048a635c65d7b0d6",
+      "bytes": 165
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-publish-1ea46db9dc0b5af3.log",
+      "sha256": "4a0843fc4e714ae484912ac361257c4748f7b1d70c885dae25f815ed8015c194",
+      "bytes": 310
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-publish-dry-run-1ea46db9dc0b5af3.json",
+      "sha256": "b146acd2e42c2c49fc87814d98c189462800397c0c4a61dd1a3cd9a22d43d596",
+      "bytes": 1521
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-types-2026-10-23.log",
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "bytes": 271
+    },
+    {
+      "path": "artifacts/pwa-port/library-portability-update-1ea46db9dc0b5af3.log",
+      "sha256": "587eb50fdcc587bea7079b59aff0114357e553c9ad436392257d4e9de882fffc",
+      "bytes": 1205
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-1ea46db9dc0b5af3.json",
+      "sha256": "e82269c422d8f23502fad48ca19e9acd58808ad690ee7a2177a36db7a8ea3459",
+      "bytes": 22902
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/chromium/destination/02-backup-source-ui-and-real-file-export.png",
+      "sha256": "85e8e501b9843c8d3c63ad082e5ccbd41a722c3872eea9cdfaa1adec90e12e36",
+      "bytes": 49054
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/chromium/destination/report.json",
+      "sha256": "c39d6a4d7992396c9098837b5e6256b6a7b0f546b826c479242b7d72e9fe7228",
+      "bytes": 4470
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/chromium/source/report.json",
+      "sha256": "45cd23a9f2e8a340aa4588a2f205553bd6fea928cb17e61cbbbddc5dd9600997",
+      "bytes": 12043
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/chromium/summary.json",
+      "sha256": "3b030afd1fce4404001e7be7ded6139c5b5056aa0888172d8ad3c553ce635474",
+      "bytes": 22317
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/library-backup-source-d620d3da6b2f69b0.mjs",
+      "sha256": "d620d3da6b2f69b006d17df1ede0339d75be8e849d491e026bdb28067c2e1776",
+      "bytes": 24588
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile/summary.json",
+      "sha256": "7da8b7835398bc3076e30c66f272ecd5413834da7585be66f12d40de6c1867fb",
+      "bytes": 27323
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/destination/report.json",
+      "sha256": "71f2185df3551a4abe5b5cbf9a8193cc1372a4de741dce093b305dce4f5577e2",
+      "bytes": 8926
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/merge-success.png",
+      "sha256": "115bafa9fe92ef305586d060ce230d645eb57c5bce3922124f73a49a19d85376",
+      "bytes": 55312
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/preview-readonly.png",
+      "sha256": "cdbbd5df79719ec0c71ec700ac5962f2d7a4f1d7bec2b5d79861a29bb6255b6d",
+      "bytes": 55038
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/source/report.json",
+      "sha256": "8d2974d1a57899471020894e030f7a307637effaad6ba9dbeefbb114e7ac472c",
+      "bytes": 12726
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/summary.json",
+      "sha256": "9eba17131112a5d829843b3ff8b4c13daad124955ab9c17c48f1c984508d789f",
+      "bytes": 31426
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/chromium/synthetic-library-export.json",
+      "sha256": "4b9c708830716f9dea1dc260c53d0e5dd47b54da3960eeadaed7ab78d53f73d8",
+      "bytes": 1738
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/library-backup-source-b106bba4a15cf07e.mjs",
+      "sha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4",
+      "bytes": 24587
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-chromium-mobile-final/summary.json",
+      "sha256": "c70222459f53527e471c355f1395d27cee24562d3f6244825e9ecaff1e53b4dc",
+      "bytes": 37620
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/destination/report.json",
+      "sha256": "51c1594e9dd1979b5986235a18cb805030301809003846a63c7eda9801413edf",
+      "bytes": 8456
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/merge-success.png",
+      "sha256": "b8b25524ec0c5eba4257bdcfa658260a3bc201ca72719bca362eb01e044d00df",
+      "bytes": 113864
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/preview-readonly.png",
+      "sha256": "bd300f6077d2b71e8feb78e8f8d657c1f9ee5656ed129e08f7034b31073dd88e",
+      "bytes": 111132
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/source/report.json",
+      "sha256": "8e44b71fc5e94b3895e2130182599a5b583b6b1e1e3c05fee2a34db180372c60",
+      "bytes": 12122
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/summary.json",
+      "sha256": "ae1580e041f2c56e4e969ee365a03945f3bb5e80d11ed8721c1a396ebec4f7d8",
+      "bytes": 30135
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/firefox/synthetic-library-export.json",
+      "sha256": "257c8b9a9cc3e6601f0712981d8b63b9f0ceb3ee2678a95f034f0dd5a85b3884",
+      "bytes": 1738
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/library-backup-source-d620d3da6b2f69b0.mjs",
+      "sha256": "d620d3da6b2f69b006d17df1ede0339d75be8e849d491e026bdb28067c2e1776",
+      "bytes": 24588
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-firefox-desktop/summary.json",
+      "sha256": "760c900a91edd5a8f4c01f5af305a029d4b12c00a3e5ee0687d539d448710547",
+      "bytes": 36119
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-frozen-copy.json",
+      "sha256": "80b83315fae0852eff9c66148214099804a16ea72bdcc0dfc9710f9bbfb7773a",
+      "bytes": 12802
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/library-backup-source-b106bba4a15cf07e.mjs",
+      "sha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4",
+      "bytes": 24587
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/summary.json",
+      "sha256": "38baab6fe5c7677f1e8085edaea95d379aaeff5014c8f5626f7ff7001435ccad",
+      "bytes": 39694
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/destination/report.json",
+      "sha256": "5af707e8c1b9684c0c8b46ba64ca981c55a4a4d2b8760a7519c37583c622faa0",
+      "bytes": 9359
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/merge-success.png",
+      "sha256": "65990e462a709e58eaae6b3306a75a67e0490860812e61a34671ad5e5b389bcb",
+      "bytes": 60133
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/preview-readonly.png",
+      "sha256": "8e749432c3b0e912d3e7124e41e39b532bde35ee8017eae6506c6b832e62f6a1",
+      "bytes": 58549
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/source/report.json",
+      "sha256": "3eb25a194062a09af378318711bc6cb8baa63f97d1546fb4bbd953d2ecd56248",
+      "bytes": 13924
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/summary.json",
+      "sha256": "7f0a4697fc17744ae858d7e34f3b4aa0a92ba71bf5d48c9635d770076e6621dc",
+      "bytes": 33288
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-backup-1ea46db9dc0b5af3-webkit-mobile/webkit/synthetic-library-export.json",
+      "sha256": "97f91b4bf38cf11e44997948c99651f15127997e007038b7e335fd359463619e",
+      "bytes": 1738
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/chromium-android-layout/report.json",
+      "sha256": "6dd369fa7820f7dabeb84abbdbeda9cd437e14ec49d9befc6197c50dd740c9e3",
+      "bytes": 21508
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/manifest.json",
+      "sha256": "3d18cfbbfbb16951377c26dc51347065b73fa2baec932cac570dee9f683f22c4",
+      "bytes": 2083
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources.json",
+      "sha256": "226ca949a0d99097d96d0e74c823c776ee183f6049954a0b357fe9b07fba0945",
+      "bytes": 2973
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/media-scenarios.mjs",
+      "sha256": "be6cc921ea40634064033d1c312090ba6850d1f6366dba72516af844b3f6ecd6",
+      "bytes": 152464
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/provider-fixtures.mjs",
+      "sha256": "d948aeab421e688ce578e6a91384f2270c0f3e0f5f546debf946c894727a5cb4",
+      "bytes": 51351
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-12s.m4a",
+      "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+      "bytes": 5002
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-12s.webm",
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+      "bytes": 52225
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-90s.m4a",
+      "sha256": "74aa70b375092504de10410f0a079b307ebb094a3040f2d138f411ff583973f7",
+      "bytes": 32095
+    },
+    {
+      "path": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/summary.json",
+      "sha256": "fbe20a838a4f3d53d635377fc40ccdc7071d84d15292612f505fc6f7e3c22335",
+      "bytes": 26853
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-1ea46db9dc0b5af3.json",
+      "sha256": "623f2886e04ca909b2301d45d7e1dc1fcd126bddd9105fd2031d248ba0c782c3",
+      "bytes": 10937
+    },
+    {
+      "path": "artifacts/pwa-deploy/workflow-1ea46db9dc0b5af3.json",
+      "sha256": "6a2bf9b295eb5e7715c225d969b443aa4b56721375515d3f33ffe57ebec037ae",
+      "bytes": 166
+    }
+  ]
+}

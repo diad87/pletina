@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "build": "1ea46db9dc0b5af3",
+  "productCommit": "af1c3f4a6900fb8ca8052328f8ed539bc2cc11ad",
+  "createdAt": "2026-10-23T20:21:37.932Z",
+  "state": "source-frozen-before-execution",
+  "bindings": [
+    {
+      "path": "scripts/tests/e2e/run.mjs",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699
+    },
+    {
+      "path": "scripts/tests/e2e/harness.mjs",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609
+    },
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/media-scenarios.mjs",
+      "sha256": "be6cc921ea40634064033d1c312090ba6850d1f6366dba72516af844b3f6ecd6",
+      "bytes": 152464
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/provider-fixtures.mjs",
+      "sha256": "d948aeab421e688ce578e6a91384f2270c0f3e0f5f546debf946c894727a5cb4",
+      "bytes": 51351
+    },
+    {
+      "path": "scripts/tests/e2e/fixtures/silence-12s.m4a",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-12s.m4a",
+      "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+      "bytes": 5002
+    },
+    {
+      "path": "scripts/tests/e2e/fixtures/silence-90s.m4a",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-90s.m4a",
+      "sha256": "74aa70b375092504de10410f0a079b307ebb094a3040f2d138f411ff583973f7",
+      "bytes": 32095
+    },
+    {
+      "path": "scripts/tests/e2e/fixtures/silence-12s.webm",
+      "snapshot": "artifacts/pwa-e2e/library-portability-podcasts-1ea46db9dc0b5af3/qa-sources/silence-12s.webm",
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+      "bytes": 52225
+    }
+  ],
+  "profile": "chromium-android-layout",
+  "selectedScenarios": [
+    "media.rss-podcast-direct-audio-progress-reload-and-resume",
+    "media.rss-completion-next-episode-and-relisten-from-zero",
+    "media.youtube-podcast-keeps-episode-namespace-and-progress"
+  ],
+  "automaticPreparations": [
+    "setup.open",
+    "setup.fixture",
+    "media.selection-html-audio"
+  ],
+  "limits": [
+    "Synthetic RSS and YouTube HTTP metadata with real native silent AAC. Desktop Chrome153 only.",
+    "These existing fixtures do not force an expired retained podcast locator. Expired-resume coverage belongs to separate directed unit tests.",
+    "No physical Android/iPhone, background, screen-off or live-provider claim. No product, build or shared QA edits."
+  ]
+}
