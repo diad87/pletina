@@ -21,6 +21,7 @@
   let generation = 0
   let disposed = false
   let requested = false
+  let activeRead: AbortController | null = null
   const cache = new Map<string, LibTrack | null>()
 
   const found = $derived(results.flatMap((row) => row.match ? [row.match] : []))
@@ -37,11 +38,15 @@
   onDestroy(() => {
     disposed = true
     generation++
+    activeRead?.abort()
+    activeRead = null
   })
 
   function cancel() {
     if (phase === 'saving') return
     generation++
+    activeRead?.abort()
+    activeRead = null
     phase = 'input'
     source = null
     results = []
@@ -54,6 +59,9 @@
     if (phase !== 'input' || disposed) return
     if (kind === 'spotify' ? !url.trim() : !file) return
     const token = ++generation
+    activeRead?.abort()
+    const controller = new AbortController()
+    activeRead = controller
     phase = 'reading'
     error = ''
     results = []
@@ -69,7 +77,7 @@
         if (!isCurrent(token)) return
         imported = await api.readPlaylistCsv(content, selected.name.replace(/\.csv$/i, ''))
       } else {
-        imported = await api.readSpotifyPlaylist(url.trim())
+        imported = await api.readSpotifyPlaylist(url.trim(), { signal: controller.signal })
       }
       if (!isCurrent(token)) return
       source = imported
@@ -80,6 +88,8 @@
       error = `No se pudo leer la lista: ${message(e)}`
       if (kind === 'csv') file = null
       phase = 'input'
+    } finally {
+      if (activeRead === controller) activeRead = null
     }
   }
 
@@ -162,7 +172,7 @@
       <label for="spotify-url">Enlace de Spotify</label>
       <input id="spotify-url" type="text" inputmode="url" bind:value={url} placeholder="https://open.spotify.com/playlist/…" autocomplete="off" spellcheck="false" required />
       {#if api.inPwa}
-        <p class="hint">La importación por enlace aún no está disponible en la PWA. Usa un archivo CSV con tus canciones.</p>
+        <p class="hint">Listas públicas, sin iniciar sesión. Podrás revisar las canciones encontradas antes de guardarlas. Para listas privadas, usa un archivo CSV.</p>
       {:else}
         <p class="hint">El enlace público puede incluir solo las primeras 100 canciones. Para listas privadas o más largas, usa un archivo CSV.</p>
       {/if}

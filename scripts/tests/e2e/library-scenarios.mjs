@@ -10,7 +10,7 @@ export const libraryScenarioInventory = [
   { id: 'library.favorites', actions: ['save/remove artist', 'save/remove album', 'like/filter/unlike song'] },
   { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
   { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'cancel pending catalog response', 'navigate away during pending match', 'ignore obsolete matches without saving', 'all omitted', 'empty name', 'review matches/omissions', 'transaction abort rollback and retry', 'save duplicate entries', 'reload'] },
-  { id: 'library.spotify', actions: ['unsupported public URL has a visible explanation'] },
+  { id: 'library.spotify', actions: ['anonymous guest token and persisted-query metadata HTTP contracts', 'public URL review without writes', 'save order and duplicates', 'reload', 'explicit provider 403 explains CSV fallback', 'cancel held token/metadata responses', 'leave during metadata read without ghost creation'] },
   { id: 'library.youtube', actions: ['reject invalid link', 'preview/change link', 'edit/validate metadata', 'save/update without duplicate', 'remove saved link', 'edited metadata survives old player copies in favorites/queue/history/downloads without transferring audio again'] },
   { id: 'library.source-picker', actions: ['choose listed candidate', 'invalid link', 'manual choice', 'remember choice', 'native dialog close'] },
   { id: 'library.podcasts', actions: ['RSS and YouTube search', 'language filters', 'episode detail', 'save/remove show', 'reload persistence', 'total feed failure/error/retry/genuine empty'] },
@@ -384,25 +384,135 @@ export async function runLibraryScenarios(ctx) {
     return { duplicateEntriesIndependent: true, filteredReorderDisabled: true, reorderedAndPersisted: true, remaining: 5 }
   })
 
-  const csvCreated = await check('library.csv: visible Spotify limit, invalid CSV, retry, review and save', async () => {
+  await check('library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates', async () => {
+    await fixture.set({ spotifyDenied403: false })
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    // A fresh application document also resets any in-memory anonymous token.
+    await page.reload({ waitUntil: 'load' }); await page.locator('#spotify-url').waitFor()
+    const before = await readLibraryState(page), requestStart = fixture.requests.length
+    await u.fill('#spotify-url', fixture.spotify.url)
+    assert.match(await page.locator('form .hint').textContent(), /públic|CSV/i)
+    assert.doesNotMatch(await page.locator('form .hint').textContent(), /aún no está disponible/i)
+    await u.text('form button', 'Buscar canciones')
+    await page.locator('#playlist-name').waitFor()
+    assert.equal(await page.locator('#playlist-name').inputValue(), fixture.spotify.name)
+    assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['3', '1'])
+    await u.text('summary', 'Canciones que se guardarán (3)')
+    const expectedTitles = [first.title, second.title, first.title]
+    assert.deepEqual(await page.locator('.track-details ol li strong').allTextContents(), expectedTitles)
+    assert.deepEqual(await readLibraryState(page), before, 'Reading Spotify and reviewing its matches must not create library rows')
+    const providerRequests = fixture.requests.slice(requestStart).filter(row => row.spotifyStage)
+    assert.equal(providerRequests.filter(row => row.spotifyStage === 'token').length, 1)
+    const metadata = providerRequests.filter(row => row.spotifyStage === 'playlist')
+    assert.equal(metadata.length, 2)
+    assert.deepEqual(metadata.map(row => row.spotifyOffset), [0, 2], 'The reader must follow the explicit nextOffset from both fixture pages')
+    assert.ok(metadata.every(row => row.spotifyOperation === 'queryPlaylist' && row.spotifyAuthorizationValid === true && !row.fixtureRejected),
+      'Only the anonymous fixture contract may provide playlist metadata')
+    const name = 'E2E Spotify Enlace Duplicados'
+    await u.fill('#playlist-name', name); await u.text('.actions button', 'Guardar playlist')
+    await u.wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
+    assert.deepEqual((await u.titles()).map(title => title.trim()), expectedTitles)
+    const saved = await readLibraryState(page)
+    assert.equal(saved.playlists.length, before.playlists.length + 1)
+    const playlist = saved.playlists.find(list => list.name === name)
+    assert.ok(playlist)
+    assert.equal(saved.entries.filter(entry => entry.playlistId === playlist.id).length, 3)
+    await page.reload({ waitUntil: 'load' })
+    await u.wait(name => document.querySelector('.hero h1')?.textContent.trim() === name, name)
+    assert.deepEqual((await u.titles()).map(title => title.trim()), expectedTitles)
+    await u.tap('.actions button[title="Más opciones"]'); await u.menu('Eliminar playlist')
+    await u.text('.confirm button', 'Eliminar'); await page.locator('.greeting').waitFor()
+    return { anonymousGuestToken: true, realReaderAndMatcher: true, persistedQueryContract: true, explicitNextOffsetPages: [0, 2],
+      found: 3, omitted: 1, noWritesBeforeSave: true, orderedDuplicateEntries: true,
+      persistedAcrossReload: true, temporaryPlaylistDeleted: true, providerSource: 'Synthetic intercepted HTTP only' }
+  })
+
+  for (const stage of ['token', 'playlist']) await check('library.spotify-in-flight: cancelling the held ' + stage + ' response preserves the next review', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    await page.reload({ waitUntil: 'load' }); await page.locator('#spotify-url').waitFor()
+    const before = await readLibraryState(page), requestStart = fixture.requests.length
+    const searches = () => fixture.requests.slice(requestStart).filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length
+    const gate = fixture.holdNextSpotifyRequest(stage)
+    const nextName = 'E2E Spotify Cancelada ' + stage
+    try {
+      await u.fill('#spotify-url', fixture.spotify.url); await u.text('form button', 'Buscar canciones')
+      const held = await gate.waitForRequest()
+      assert.equal(held.spotifyStage, stage)
+      assert.match(await page.locator('.loading [role="status"]').textContent(), /Leyendo tu lista/)
+      assert.equal(await page.locator('#playlist-name').count(), 0)
+      await u.text('.loading button', 'Cancelar'); await page.locator('#playlist-csv').waitFor()
+      const csv = `Track Name,Artist Name(s)\n"${second.title}","${trackArtist}"\n`
+      await page.locator('#playlist-csv').setInputFiles({ name: nextName + '.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) })
+      await u.text('details.csv button', 'Buscar canciones del CSV'); await page.locator('#playlist-name').waitFor()
+      assert.equal(await page.locator('#playlist-name').inputValue(), nextName)
+      gate.release(); await gate.waitForDelivery(); await u.settle()
+      assert.equal(await page.locator('#playlist-name').inputValue(), nextName)
+      assert.deepEqual(await page.locator('.totals strong').allTextContents(), ['1', '0'])
+      assert.equal(await page.locator('[role="alert"]').count(), 0)
+      assert.equal(searches(), 1, 'The cancelled Spotify read must never start catalog matching')
+      if (stage === 'token') assert.equal(fixture.requests.slice(requestStart).filter(row => row.spotifyStage === 'playlist').length, 0,
+        'A cancelled token request must not issue the playlist metadata request')
+      assert.deepEqual(await readLibraryState(page), before, 'Cancelling the read and reviewing a replacement must not create a ghost playlist')
+      await u.text('.actions button', 'Importar otra lista')
+      await page.reload({ waitUntil: 'load' }); await page.locator('#spotify-url').waitFor()
+      assert.deepEqual(await readLibraryState(page), before)
+      return { heldStage: stage, cancelledBeforeMatching: true, nextReviewPreserved: true,
+        noGhostPlaylist: true, noWritesBeforeSave: true, reloadUnchanged: true }
+    } finally { gate.release() }
+  })
+
+  await check('library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation', async () => {
+    await u.tab('Tu biblioteca'); await u.tap('button.import')
+    await page.reload({ waitUntil: 'load' }); await page.locator('#spotify-url').waitFor()
+    const before = await readLibraryState(page), requestStart = fixture.requests.length
+    const gate = fixture.holdNextSpotifyRequest('playlist')
+    try {
+      await u.fill('#spotify-url', fixture.spotify.url); await u.text('form button', 'Buscar canciones')
+      await gate.waitForRequest()
+      await u.tab('Inicio'); await page.locator('.greeting').waitFor()
+      const destination = await page.evaluate(() => ({ url: location.href, index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] }))
+      gate.release(); await gate.waitForDelivery(); await u.settle()
+      assert.deepEqual(await page.evaluate(() => ({ url: location.href, index: history.state?.index, route: history.state?.snapshot?.stack[history.state?.index] })), destination)
+      assert.equal(await page.locator('.greeting').count(), 1)
+      assert.equal(await page.locator('.import-page, #playlist-name').count(), 0)
+      assert.equal(fixture.requests.slice(requestStart).filter(row => row.host === 'api.deezer.com' && row.path === '/search/track').length, 0,
+        'Leaving the metadata read must prevent all catalog matching')
+      assert.deepEqual(await readLibraryState(page), before)
+      await u.tab('Tu biblioteca'); await u.tap('button.import'); await page.locator('#spotify-url').waitFor()
+      assert.equal(await page.locator('#spotify-url').inputValue(), '')
+      assert.equal(await page.locator('#playlist-name, .result, [role="alert"]').count(), 0)
+      await page.reload({ waitUntil: 'load' }); await page.locator('#spotify-url').waitFor()
+      assert.deepEqual(await readLibraryState(page), before)
+      return { heldStage: 'playlist', destination: 'home', navigationPreserved: true,
+        noCatalogMatching: true, noGhostPlaylist: true, reopenedImportEmpty: true, reloadUnchanged: true }
+    } finally { gate.release() }
+  })
+
+  const csvCreated = await check('library.csv: explicit Spotify denial, invalid CSV, retry, review and save', async () => {
     await u.tab('Tu biblioteca'); await u.tap('button.import')
     const errors = ctx.report.errors ??= []
-    const spotifyErrorStart = errors.length
-    await u.fill('#spotify-url', 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M')
-    await u.text('form button', 'Buscar canciones')
-    await page.locator('[role="alert"]').waitFor()
-    assert.match(await page.locator('[role="alert"]').textContent(), /Spotify/)
-    assert.match(await page.locator('details.csv').textContent(), /CSV/)
-    await u.settle()
+    const spotifyErrorStart = errors.length, requestStart = fixture.requests.length
+    await fixture.set({ spotifyDenied403: true })
+    try {
+      await u.fill('#spotify-url', fixture.spotify.url)
+      await u.text('form button', 'Buscar canciones')
+      await page.locator('[role="alert"]').waitFor()
+      assert.match(await page.locator('[role="alert"]').textContent(), /Spotify/)
+      assert.match(await page.locator('details.csv').textContent(), /CSV/)
+      assert.match(await page.locator('form .hint').textContent(), /públic|CSV/i)
+      assert.doesNotMatch(await page.locator('form .hint').textContent(), /aún no está disponible/i)
+      assert.ok(fixture.requests.slice(requestStart).some(row => row.injectedFailure === 'spotify-denied-403'))
+      await u.settle()
+    } finally { await fixture.set({ spotifyDenied403: false }) }
     // Windows WebKit also emits this handled fetch rejection as a pageerror.
     // Keep the original diagnostic and annotate only the exact negative case,
     // after verifying that the application explained the failure to the user.
     const expectedSpotifyErrors = errors.slice(spotifyErrorStart).filter(error =>
       error.name === 'Fetch API cannot load https' &&
-      /^\/{1,2}open\.spotify\.com\/embed\/playlist\/37i9dQZF1DXcBWIGoYBM5M due to access control checks\.$/.test(error.message))
+      /^\/{1,2}(?:open\.spotify\.com\/embed\/api\/token|api-partner\.spotify\.com\/pathfinder\/v1\/query)(?:\?[^ ]*)? due to access control checks\.$/.test(error.message))
     for (const error of expectedSpotifyErrors) {
       error.handledExpected = true
-      error.scope = 'library.csv.spotify-unsupported'
+      error.scope = 'library.csv.spotify-denied-403'
       ;(ctx.report.expectedHandledNetworkErrors ??= []).push({ ...error,
         reason: 'The deliberate direct Spotify import rejection is displayed in the UI; other page errors remain failures.' })
     }
@@ -431,7 +541,7 @@ export async function runLibraryScenarios(ctx) {
     await u.wait(() => document.querySelectorAll('ol.tracks > li[data-reorder-index]').length === 3)
     assert.deepEqual((await u.titles()).map(x => x.trim()), [first.title, first.title, second.title])
     return { found: 3, omitted: 1, retriedProviderFailure: true, repeatedEntriesPreserved: true,
-      spotifyUnsupportedVisible: true, expectedHandledNetworkErrors: expectedSpotifyErrors.length }
+      spotifyDenied403Visible: true, expectedHandledNetworkErrors: expectedSpotifyErrors.length }
   })
 
   await check('library.csv-validation: size limit, all omitted, empty name and cancel', async () => {

@@ -1,5 +1,6 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { webInvoke } from '../../web-port/invoke'
+import { readSpotifyPlaylist as readWebSpotifyPlaylist } from '../../web-port/imports'
 import { getOfficialFallback, retainAudioRequests } from '../../web-port/audio'
 import { retainFunkwhaleAudio } from '../../web-port/funkwhale-audio'
 import { openAutomaticOfficialYouTube } from '../../web-port/official-youtube.svelte'
@@ -152,7 +153,8 @@ export const youtubeTracks = () => invoke<Entry[]>('youtube_tracks')
 export const removeYouTubeTrack = (id: number) => invoke<void>('remove_youtube_track', { id })
 export const createPlaylist = (name: string, tracks: LibTrack[] = []) =>
   invoke<PlaylistSummary>('create_playlist', { name, tracks })
-export const readSpotifyPlaylist = (url: string) => invoke<ImportSource>('read_spotify_playlist', { url })
+export const readSpotifyPlaylist = (url: string, options: { signal?: AbortSignal } = {}) =>
+  inPwa ? readWebSpotifyPlaylist(url, options) : invoke<ImportSource>('read_spotify_playlist', { url })
 export const readPlaylistCsv = (content: string, name: string) => invoke<ImportSource>('read_playlist_csv', { content, name })
 export const matchImportTrack = (track: ImportTrack) => invoke<LibTrack | null>('match_import_track', { track })
 export const renamePlaylist = (id: number, name: string) => invoke<void>('rename_playlist', { id, name })

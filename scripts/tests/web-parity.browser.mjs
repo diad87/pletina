@@ -200,11 +200,7 @@ try{
   await check('CSV import uses real catalog matches and preserves repeated entries',async()=>{
     await tab('Tu biblioteca')
     await page.click('button.import')
-    await page.type('#spotify-url','https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M')
-    await clickText('form button','Buscar canciones')
-    await page.waitForSelector('[role="alert"]',{timeout:30000})
-    const spotifyError=await page.$eval('[role="alert"]',e=>e.textContent.trim())
-    assert.match(spotifyError,/Spotify|navegador|CSV|servidor|permite/i)
+    // Public URL success has its own real-provider canary in web-spotify.browser.mjs.
     if(!await page.$eval('details.csv',e=>e.open))await page.click('details.csv summary')
     const input=await page.$('#playlist-csv');await input.uploadFile(fileURLToPath(csv))
     await clickText('details.csv button','Buscar canciones del CSV')
@@ -216,7 +212,7 @@ try{
     await wait(()=>document.querySelector('.hero h1')?.textContent.includes('QA CSV PWA 0.11.2'))
     const titles=await page.$$eval('.tracks li[data-reorder-index] .name',nodes=>nodes.map(e=>e.textContent.trim()))
     assert.deepEqual(titles,['Creep','Creep'])
-    return{matches:totals,titles,spotifyURLReportedLimitation:scrub(spotifyError)}
+    return{matches:totals,titles}
   })
 
   await check('downloads show browser storage without native folder controls in either layout',async()=>{

@@ -46,6 +46,12 @@ const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ tit
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
 const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
+const spotifyId = '0123456789ABCDEFGHIJKL'
+const spotify = { id: spotifyId, uri: 'spotify:playlist:' + spotifyId,
+  url: 'https://open.spotify.com/playlist/' + spotifyId, name: 'Spotify QA Orden y Duplicados',
+  tracks: [tracks[0], tracks[1], tracks[0], { id: 999, title: 'Canción inexistente',
+    artist: { name: 'Artista inexistente' }, duration: 12 }] }
+const spotifyToken = 'fixture-anonymous-token'
 const runs = (...texts) => ({ runs: texts.map(text => ({ text })) })
 const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0')
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
@@ -110,9 +116,27 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   const pending = new Set()
   const catalogGates = new Set()
   const playerGates = new Set()
+  const spotifyGates = new Set()
   const playerPlans = new Map()
   const releaseDownloads = () => { for (const resolve of pending) resolve(); pending.clear() }
-  const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release(); for (const gate of playerGates) gate.release() }
+  const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release(); for (const gate of playerGates) gate.release(); for (const gate of spotifyGates) gate.release() }
+  // Hold the actual guest-token or playlist HTTP response. Cancellation still
+  // runs through the compiled reader and its AbortSignal; no API is replaced.
+  function holdNextSpotifyRequest(stage) {
+    if (!['token', 'playlist'].includes(stage)) throw new Error('Invalid Spotify fixture gate stage.')
+    let reached, delivered, resume, claimed = false
+    const entered = new Promise(resolve => { reached = resolve }), completed = new Promise(resolve => { delivered = resolve }),
+      blocked = new Promise(resolve => { resume = resolve })
+    const bounded = async (promise, message) => { let timer; try { return await Promise.race([promise,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 15000) })]) } finally { clearTimeout(timer) } }
+    const gate = { stage, get claimed() { return claimed },
+      claim(row) { claimed = true; row.spotifyGate = 'held'; reached(row); return blocked },
+      release() { resume(); spotifyGates.delete(gate) },
+      delivered(row, cancelled = false) { row.spotifyGate = cancelled ? 'aborted-before-delivery' : 'delivered'; delivered({ ...row }) },
+      waitForRequest: () => bounded(entered, 'The import did not reach its Spotify ' + stage + ' HTTP gate.'),
+      waitForDelivery: () => bounded(completed, 'The released Spotify ' + stage + ' response was not handled.') }
+    spotifyGates.add(gate); return gate
+  }
   function holdNextPlayer(videoId, { clientName = null, occurrence = 1 } = {}) {
     if (!/^[\w-]{11}$/.test(videoId)) throw new Error('Invalid player gate identity.')
     if (clientName !== null && !['VISIONOS', 'WEB_EMBEDDED_PLAYER'].includes(clientName) || !Number.isInteger(occurrence) || occurrence < 1 || occurrence > 10) throw new Error('Invalid player gate selection.')
@@ -230,7 +254,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0); playerPlans.clear() }
   const handler = async route => {
     const request = route.request(), url = new URL(request.url())
-    let playerGate = null
+    let playerGate = null, spotifyGate = null
     if (baseURL && url.origin === new URL(baseURL).origin) return route.continue()
     if (!/^https?:$/.test(url.protocol)) return route.continue()
     const row = { host: url.hostname, path: url.pathname, method: request.method(), type: request.resourceType() }
@@ -245,6 +269,13 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS',
       'access-control-allow-headers': '*', 'cache-control': 'no-store' }
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers, body: '' })
+    const spotifyStage = url.hostname === 'open.spotify.com' && url.pathname === '/embed/api/token' ? 'token'
+      : url.hostname === 'api-partner.spotify.com' && url.pathname === '/pathfinder/v1/query' ? 'playlist' : null
+    if (spotifyStage) {
+      row.spotifyStage = spotifyStage
+      spotifyGate = [...spotifyGates].find(gate => !gate.claimed && gate.stage === spotifyStage)
+      if (spotifyGate) await spotifyGate.claim(row)
+    }
     const catalogGate = url.hostname === 'api.deezer.com' && url.pathname === '/search/track'
       ? [...catalogGates].find(gate => !gate.claimed) : null
     if (catalogGate) await catalogGate.claim(row)
@@ -259,9 +290,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       try {
         await route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify(value) })
         playerGate?.delivered(row)
+        spotifyGate?.delivered(row)
       } catch (error) {
-        if (playerGate && /Invalid InterceptionId|interception.*(?:cancel|invalid)|Target closed|Request is already handled|has been closed/i.test(String(error.message))) {
-          playerGate.delivered(row, true); return
+        if ((playerGate || spotifyGate) && /Invalid InterceptionId|interception.*(?:cancel|invalid)|Target closed|Request is already handled|has been closed/i.test(String(error.message))) {
+          playerGate?.delivered(row, true); spotifyGate?.delivered(row, true); return
         }
         throw error
       }
@@ -270,6 +302,43 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       await route.fulfill({ status: 200, headers, contentType: 'text/javascript',
         body: (url.searchParams.get('callback') || '__pletinaPodcasts') + '(' + JSON.stringify(value) + ');' })
       catalogGate?.delivered(row)
+    }
+    if (spotifyStage) {
+      if (flags.spotifyDenied403) {
+        row.injectedFailure = 'spotify-denied-403'
+        await route.fulfill({ status: 403, headers, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture Spotify access denied' }) })
+        spotifyGate?.delivered(row)
+        return
+      }
+      if (request.method() !== 'GET') return route.abort('blockedbyclient')
+      if (spotifyStage === 'token') return json({ accessToken: spotifyToken, isAnonymous: true,
+        accessTokenExpirationTimestampMs: Date.now() + 3600000 })
+      let variables, extensions
+      try {
+        variables = JSON.parse(url.searchParams.get('variables'))
+        extensions = JSON.parse(url.searchParams.get('extensions'))
+      } catch { return route.abort('blockedbyclient') }
+      row.spotifyOperation = url.searchParams.get('operationName')
+      row.spotifyAuthorizationValid = request.headers().authorization === 'Bearer ' + spotifyToken
+      row.spotifyOffset = variables?.offset
+      row.spotifyLimit = variables?.limit
+      if (row.spotifyOperation !== 'queryPlaylist' || !row.spotifyAuthorizationValid || variables?.uri !== spotify.uri ||
+        !Number.isInteger(variables.offset) || variables.offset < 0 || !Number.isInteger(variables.limit) || variables.limit < 1 || variables.limit > 1000 ||
+        extensions?.persistedQuery?.version !== 1 || !/^[a-f0-9]{64}$/i.test(extensions?.persistedQuery?.sha256Hash ?? '')) {
+        row.fixtureRejected = 'Unexpected Spotify request contract'
+        return route.abort('blockedbyclient')
+      }
+      // Deliberately shorter server pages exercise the real explicit-nextOffset
+      // reader; the duplicate straddles pages, so loss/reordering cannot pass.
+      const pageTracks = spotify.tracks.slice(variables.offset, variables.offset + Math.min(variables.limit, 2))
+      const nextOffset = variables.offset + pageTracks.length < spotify.tracks.length ? variables.offset + pageTracks.length : null
+      return json({ data: { playlistV2: { __typename: 'Playlist', id: spotify.id, uri: spotify.uri, name: spotify.name,
+        content: { totalCount: spotify.tracks.length, pagingInfo: { offset: variables.offset, limit: variables.limit, nextOffset },
+          items: pageTracks.map(track => ({
+            itemV2: { __typename: 'TrackResponseWrapper', data: { __typename: 'Track',
+              uri: 'spotify:track:' + String(track.id).padStart(22, '0'), name: track.title,
+              artists: { items: [{ profile: { name: track.artist.name } }] }, duration: { totalMilliseconds: track.duration * 1000 } } },
+          })) } } } })
     }
     if (url.hostname === 'api.deezer.com') {
       const q = url.searchParams.get('q') || ''
@@ -473,7 +542,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     if (routingActive && context.unroute) { await context.unroute('**/*', handler); routingActive = false }
   }
   await resumeRoutes()
-  return { data: { artists, albums, tracks }, artists, albums, tracks, media, requests, counts, flags, set, reset, failNext,
-    holdNextCatalogSearch, holdNextPlayer, planPlayer, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
+  return { data: { artists, albums, tracks }, artists, albums, tracks, media, spotify, requests, counts, flags, set, reset, failNext,
+    holdNextCatalogSearch, holdNextPlayer, holdNextSpotifyRequest, planPlayer, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
     source: 'Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.' }
 }

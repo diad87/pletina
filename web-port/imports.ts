@@ -1,8 +1,8 @@
 import type { ImportSource, ImportTrack } from '../src/lib/types'
+import { readPublicSpotifyPlaylist } from './spotify.ts'
 
 const MAX_CSV_BYTES = 10 * 1024 * 1024
 const MAX_TRACKS = 10_000
-const MAX_PAGE_BYTES = 4 * 1024 * 1024
 const encoder = new TextEncoder()
 const bytes = (value: string) => encoder.encode(value).length
 const trim = (value: string) => value.replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '')
@@ -180,48 +180,5 @@ export function parseSpotifyPlaylist(html: string, expectedId: string): ImportSo
 
 export async function readSpotifyPlaylist(input: string, options: { fetch?: typeof fetch; signal?: AbortSignal } = {}): Promise<ImportSource> {
   const id = spotifyPlaylistId(input)
-  const controller = new AbortController()
-  const abort = () => controller.abort(options.signal?.reason)
-  if (options.signal?.aborted) abort()
-  else options.signal?.addEventListener('abort', abort, { once: true })
-  const timer = setTimeout(() => controller.abort(), 20000)
-  try {
-    let response: Response
-    try {
-      response = await (options.fetch ?? fetch)(`https://open.spotify.com/embed/playlist/${id}`, {
-        credentials: 'omit', redirect: 'error', cache: 'no-store', signal: controller.signal,
-      })
-    } catch {
-      if (options.signal?.aborted) throw options.signal.reason ?? new DOMException('Importación cancelada.', 'AbortError')
-      throw new Error('No se pudo leer directamente esta playlist de Spotify desde el navegador. Spotify puede bloquear esta lectura; exporta la playlist como CSV e importa ese archivo.')
-    }
-    if (response.status === 404) throw new Error('No se encontró la playlist. Comprueba el enlace y que sea pública')
-    if (response.status === 429) throw new Error('Spotify ha limitado las consultas. Espera un momento y vuelve a intentarlo')
-    if (response.status !== 200 || response.redirected) throw new Error('Spotify no permite leer esta playlist. Comprueba que sea pública y vuelve a intentarlo')
-    const length = Number(response.headers.get('content-length'))
-    if (length > MAX_PAGE_BYTES) { void response.body?.cancel(); throw new Error('La respuesta de Spotify es demasiado grande') }
-    const chunks: Uint8Array[] = []
-    let size = 0
-    const reader = response.body?.getReader()
-    if (!reader) throw new Error('Spotify devolvió una respuesta que no se pudo leer')
-    try {
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        size += value.byteLength
-        if (size > MAX_PAGE_BYTES) { await reader.cancel(); throw new Error('La respuesta de Spotify es demasiado grande') }
-        chunks.push(value)
-      }
-    } finally { reader.releaseLock() }
-    const content = new Uint8Array(size)
-    let offset = 0
-    for (const chunk of chunks) { content.set(chunk, offset); offset += chunk.length }
-    let html: string
-    try { html = new TextDecoder('utf-8', { fatal: true }).decode(content) }
-    catch { throw new Error('Spotify devolvió una respuesta que no se pudo leer') }
-    return parseSpotifyPlaylist(html, id)
-  } finally {
-    clearTimeout(timer)
-    options.signal?.removeEventListener('abort', abort)
-  }
+  return readPublicSpotifyPlaylist(id, options)
 }

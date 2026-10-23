@@ -328,6 +328,23 @@ test('CORE-IMP-012: cancel pending CSV read prevents parsing and late UI mutatio
   assert.equal(h.state.source, null)
 })
 
+test('Spotify cancel and leaving the view abort the active read and prevent late imports', async () => {
+  for (const leave of ['cancel', 'destroy']) {
+    let signal
+    const pending = deferred()
+    const h = importHarness({ readSpotifyPlaylist: (_url, options) => { signal = options.signal; return pending.promise } })
+    const reading = h.state.read('spotify')
+    assert.equal(signal.aborted, false)
+    if (leave === 'cancel') h.state.cancel()
+    else h.destroy()
+    assert.equal(signal.aborted, true)
+    pending.resolve(playlist())
+    await reading
+    assert.equal(h.state.source, null)
+    assert.equal(h.calls.filter(([kind]) => kind === 'create').length, 0)
+  }
+})
+
 test('CORE-IMP-012: an old read cannot overwrite a newer import', async () => {
   const old = deferred(), next = deferred()
   let count = 0

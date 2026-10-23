@@ -115,36 +115,38 @@ test('la vista pública conserva los avisos nativos de truncamiento y entradas o
   assert.ok(source.warnings.some((warning) => warning.includes('omitido 2')))
 })
 
-test('el lector Spotify usa solo el embed HTTPS validado, sin cookies, redirecciones ni credenciales', async () => {
+test('el enlace validado usa la sesión anónima y los metadatos públicos sin cookies ni HTML', async () => {
   const calls = []
   const source = await readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async (url, options) => {
     calls.push({ url, options })
-    return new Response(page([track()]))
+    if (String(url).includes('/embed/api/token')) return Response.json({ accessToken: 'test-guest-token', isAnonymous: true,
+      accessTokenExpirationTimestampMs: Date.now() + 3600000 })
+    return Response.json({ data: { playlistV2: { __typename: 'Playlist', id, uri: `spotify:playlist:${id}`, name: 'Mi lista',
+      content: { totalCount: 1, pagingInfo: { nextOffset: null }, items: [{ itemV2: { __typename: 'TrackResponseWrapper', data: {
+        __typename: 'Track', uri: 'spotify:track:4rzfv0JLZfVhOhbSQ8o5jZ', name: 'Tema',
+        artists: { items: [{ profile: { name: 'Artista' } }] }, duration: { totalMilliseconds: 210500 },
+      } } }] } } } })
   } })
   assert.equal(source.tracks.length, 1)
-  assert.equal(calls.length, 1)
-  assert.equal(calls[0].url, `https://open.spotify.com/embed/playlist/${id}`)
-  assert.equal(calls[0].options.credentials, 'omit')
-  assert.equal(calls[0].options.redirect, 'error')
-  assert.equal('headers' in calls[0].options, false)
+  assert.equal(calls.length, 2)
+  assert.equal(String(calls[0].url), 'https://open.spotify.com/embed/api/token')
+  const metadata = new URL(calls[1].url)
+  assert.equal(metadata.origin, 'https://api-partner.spotify.com')
+  assert.equal(JSON.parse(metadata.searchParams.get('variables')).uri, `spotify:playlist:${id}`)
+  assert.equal(calls[1].options.headers.Authorization, 'Bearer test-guest-token')
+  for (const call of calls) {
+    assert.equal(call.options.credentials, 'omit')
+    assert.equal(call.options.redirect, 'error')
+  }
   await assert.rejects(readSpotifyPlaylist('https://evil.test/playlist/' + id, { fetch: () => { throw new Error('Must not fetch') } }), /enlace completo/)
 })
 
-test('CORS o errores públicos producen fallo visible, nunca una playlist ficticia ni búsqueda por nombre', async () => {
-  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => { throw new TypeError('Failed to fetch') } }), /navegador.*CSV/)
-  for (const [status, pattern] of [[404, /No se encontró/], [429, /limitado/], [403, /no permite/]]) {
-    await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => new Response('', { status }) }), pattern)
-  }
-  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => new Response(page([], { id: 'other' })) }), /vista pública/)
-})
-
-test('la lectura pública limita los bytes anunciados y reales y rechaza UTF8 inválido', async () => {
-  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => new Response('', { headers: { 'content-length': String(4 * 1024 * 1024 + 1) } }) }), /demasiado grande/)
-  let cancelled = false
-  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => new Response(new ReadableStream({
-    start(controller) { controller.enqueue(new Uint8Array(4 * 1024 * 1024)); controller.enqueue(new Uint8Array(1)) },
-    cancel() { cancelled = true },
-  })) }), /demasiado grande/)
-  assert.equal(cancelled, true)
-  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: async () => new Response(new Uint8Array([0xC3, 0x28])) }), /no se pudo leer/)
+test('el enlace inválido o una cancelación previa no inicia peticiones', async () => {
+  let calls = 0
+  const request = async () => { calls++; throw new Error('Must not fetch') }
+  await assert.rejects(readSpotifyPlaylist('https://evil.test/playlist/' + id, { fetch: request }), /enlace completo/)
+  const controller = new AbortController()
+  controller.abort()
+  await assert.rejects(readSpotifyPlaylist(`spotify:playlist:${id}`, { fetch: request, signal: controller.signal }), { name: 'AbortError' })
+  assert.equal(calls, 0)
 })
