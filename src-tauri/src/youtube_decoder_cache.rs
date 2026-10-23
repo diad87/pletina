@@ -29,6 +29,7 @@ static ABI: LazyLock<String> = LazyLock::new(|| {
     let mut hash = Sha256::new();
     hash.update(b"pletina-youtube-decoder-cache-v1\0");
     hash.update(include_bytes!("youtube-decoder.bundle.js"));
+    hash.update(include_bytes!("youtube-decoder-execute.bundle.js"));
     hash.update(include_bytes!("youtube_decoder.rs"));
     format!("{:x}", hash.finalize())
 });

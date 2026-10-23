@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 
 const BUNDLE: &str = include_str!("youtube-decoder.bundle.js");
+const DECODE_BUNDLE: &str = include_str!("youtube-decoder-execute.bundle.js");
 const MAX_SOURCE: usize = 5 * 1024 * 1024;
 const MAX_SCRIPT: usize = 2 * 1024 * 1024;
 const MAX_VALUE: usize = 4096;
@@ -127,6 +128,7 @@ fn interrupted(cancelled: &AtomicBool, deadline: Instant) -> Result<(), String> 
     }
 }
 
+#[cfg(test)]
 async fn execute<T, F>(gate: Arc<Semaphore>, limits: Limits, work: F) -> Result<T, String>
 where
     T: Send + 'static,
@@ -139,6 +141,23 @@ async fn execute_until<T, F>(
     gate: Arc<Semaphore>,
     limits: Limits,
     deadline: Instant,
+    work: F,
+) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: for<'js> FnOnce(Ctx<'js>, Object<'js>) -> Result<T, String> + Send + 'static,
+{
+    execute_asset_until(gate, limits, deadline, BUNDLE, work).await
+}
+
+// Both assets enter the same worker, deadlines and hardening. The smaller asset
+// avoids parsing the analyzer during decode; it never retains a runtime or moves
+// initialization outside the caller's budget.
+async fn execute_asset_until<T, F>(
+    gate: Arc<Semaphore>,
+    limits: Limits,
+    deadline: Instant,
+    asset: &'static str,
     work: F,
 ) -> Result<T, String>
 where
@@ -176,7 +195,7 @@ where
         })));
         let context = Context::full(&rt).map_err(js_error)?;
         let result = context.with(|ctx| {
-            ctx.eval::<(), _>(BUNDLE).map_err(js_error)?;
+            ctx.eval::<(), _>(asset).map_err(js_error)?;
             let api: Object = ctx
                 .globals()
                 .get("__musifyYouTubeDecoder")
@@ -297,6 +316,15 @@ pub async fn decode(
     sig: Option<String>,
     n: Option<String>,
 ) -> Result<Decoded, String> {
+    decode_with_asset(prepared, sig, n, DECODE_BUNDLE).await
+}
+
+async fn decode_with_asset(
+    prepared: Arc<PreparedDecoder>,
+    sig: Option<String>,
+    n: Option<String>,
+    asset: &'static str,
+) -> Result<Decoded, String> {
     if prepared.script.is_empty()
         || prepared.script.len() > MAX_SCRIPT
         || sig.as_deref().is_some_and(|v| !valid_value(v))
@@ -307,19 +335,33 @@ pub async fn decode(
     if sig.is_none() && n.is_none() {
         return Ok(Decoded::default());
     }
-    execute(WORKER.clone(), DECODE, move |ctx, api| {
-        let function: Function = api.get("decode").map_err(js_error)?;
-        let result = object(
-            function
-                .call((prepared.script.as_str(), sig.as_deref(), n.as_deref()))
-                .map_err(|e| js_failure(&ctx, e))?,
-        )?;
-        Ok(Decoded {
-            sig: read_token(&result, "sig", &sig)?,
-            n: read_token(&result, "n", &n)?,
-        })
-    })
+    execute_asset_until(
+        WORKER.clone(),
+        DECODE,
+        Instant::now() + DECODE.time,
+        asset,
+        move |ctx, api| call_decode(&ctx, &api, &prepared, &sig, &n),
+    )
     .await
+}
+
+fn call_decode(
+    ctx: &Ctx<'_>,
+    api: &Object<'_>,
+    prepared: &PreparedDecoder,
+    sig: &Option<String>,
+    n: &Option<String>,
+) -> Result<Decoded, String> {
+    let function: Function = api.get("decode").map_err(js_error)?;
+    let result = object(
+        function
+            .call((prepared.script.as_str(), sig.as_deref(), n.as_deref()))
+            .map_err(|e| js_failure(ctx, e))?,
+    )?;
+    Ok(Decoded {
+        sig: read_token(&result, "sig", sig)?,
+        n: read_token(&result, "n", n)?,
+    })
 }
 
 #[cfg(test)]
@@ -559,6 +601,151 @@ mod tests {
         assert_eq!(result.unwrap_err(), error("TIMEOUT"));
         assert_eq!(gate.available_permits(), 0);
         drop(permit);
+    }
+
+    #[tokio::test]
+    async fn minimal_asset_has_no_analyzer_and_keeps_decode_resource_limits() {
+        execute_asset_until(
+            gate(),
+            DECODE,
+            Instant::now() + DECODE.time,
+            DECODE_BUNDLE,
+            |_, api| {
+                assert!(api
+                    .get::<_, Value>("prepare")
+                    .map_err(js_error)?
+                    .is_undefined());
+                assert!(api
+                    .get::<_, Value>("decode")
+                    .map_err(js_error)?
+                    .is_function());
+                Ok(())
+            },
+        )
+        .await
+        .unwrap();
+        for script in [
+            "for (;;) {}",
+            "const held=[]; for(let i=0;i<128;i++) held.push(new ArrayBuffer(1024*1024));",
+            "function recurse(){ return recurse()+1; } recurse();",
+        ] {
+            let result = decode(prepared(script), Some("input".into()), None).await;
+            assert!(matches!(
+                result.as_ref().map_err(String::as_str),
+                Err("YOUTUBE_DECODER_TIMEOUT"
+                    | "YOUTUBE_DECODER_EXECUTION"
+                    | "YOUTUBE_DECODER_MEMORY"
+                    | "YOUTUBE_DECODER_STACK")
+            ));
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "Offline full/minimal asset comparison; verifies independent output hashes, no network"]
+    async fn real_decode_asset_comparison() {
+        let directory = std::path::PathBuf::from(
+            std::env::var_os("MUSIFY_DECODER_FIXTURE_DIR").expect("explicit local fixture"),
+        );
+        let source = std::fs::read_to_string(directory.join("player.js.local")).unwrap();
+        let expected: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(directory.join("decoder-output-hashes.json.local")).unwrap(),
+        )
+        .unwrap();
+        let hash = |value: &str| format!("{:x}", Sha256::digest(value.as_bytes()));
+        assert_eq!(expected["schema"], "youtube-decoder-output-hashes-v1");
+        assert_eq!(expected["playerSha256"], hash(&source));
+        assert_eq!(expected["bundleSha256"], hash(BUNDLE));
+        assert_eq!(expected["decodeBundleSha256"], hash(DECODE_BUNDLE));
+        let started = Instant::now();
+        let prepared = Arc::new(prepare(source).await.unwrap());
+        let prepare_ms = started.elapsed().as_secs_f64() * 1000.0;
+        assert_eq!(expected["signatureTimestamp"], prepared.signature_timestamp);
+        assert_eq!(expected["scriptSha256"], hash(&prepared.script));
+        let response: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(directory.join("player-response.json.local")).unwrap(),
+        )
+        .unwrap();
+        let mut rows = Vec::new();
+        let mut first_inputs = None;
+        let mut checked = 0;
+        for format in response["streamingData"]["adaptiveFormats"]
+            .as_array()
+            .unwrap()
+        {
+            if !matches!(format["itag"].as_u64(), Some(140 | 249 | 250 | 251)) {
+                continue;
+            }
+            let Some(cipher) = format["signatureCipher"].as_str() else {
+                continue;
+            };
+            let cipher =
+                reqwest::Url::parse(&format!("https://example.invalid/?{cipher}")).unwrap();
+            let args: std::collections::HashMap<_, _> = cipher.query_pairs().into_owned().collect();
+            let url = reqwest::Url::parse(args.get("url").unwrap()).unwrap();
+            let n = url
+                .query_pairs()
+                .find(|(name, _)| name == "n")
+                .map(|(_, value)| value.into_owned());
+            let sig = args.get("s").cloned();
+            first_inputs.get_or_insert_with(|| (sig.clone(), n.clone()));
+            let golden = expected["outputs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|item| item["itag"] == format["itag"])
+                .unwrap();
+            // Each call includes validation, queue, fresh Runtime/Context, asset
+            // evaluation, hardening, actual deciphering and runtime destruction.
+            // ABBA uses the same binary, worker and prepared script. No VM cache.
+            for (order, (name, asset)) in [
+                ("full", BUNDLE),
+                ("minimal", DECODE_BUNDLE),
+                ("minimal", DECODE_BUNDLE),
+                ("full", BUNDLE),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let started = Instant::now();
+                let output = decode_with_asset(prepared.clone(), sig.clone(), n.clone(), asset)
+                    .await
+                    .unwrap();
+                let total_ms = started.elapsed().as_secs_f64() * 1000.0;
+                assert_eq!(golden["sigSha256"], hash(output.sig.as_deref().unwrap()));
+                assert_eq!(golden["nSha256"], hash(output.n.as_deref().unwrap()));
+                rows.push(serde_json::json!({"itag":format["itag"],"order":order,"asset":name,"totalMs":total_ms}));
+            }
+            checked += 1;
+        }
+        assert_eq!(checked, 4);
+        // Separate attribution pass; it does not replace the complete call
+        // measurements above. Bootstrap includes admission and hardening; body
+        // covers Function.call + Rust validation; cleanup is in total only.
+        let mut phases = Vec::new();
+        for (name, asset) in [("full", BUNDLE), ("minimal", DECODE_BUNDLE)] {
+            let prepared = prepared.clone();
+            let (sig, n) = first_inputs.clone().unwrap();
+            let started = Instant::now();
+            let (bootstrap_ms, body_ms) = execute_asset_until(
+                WORKER.clone(),
+                DECODE,
+                started + DECODE.time,
+                asset,
+                move |ctx, api| {
+                    let bootstrap_ms = started.elapsed().as_secs_f64() * 1000.0;
+                    let body = Instant::now();
+                    call_decode(&ctx, &api, &prepared, &sig, &n)?;
+                    Ok((bootstrap_ms, body.elapsed().as_secs_f64() * 1000.0))
+                },
+            )
+            .await
+            .unwrap();
+            phases.push(serde_json::json!({"asset":name,"bootstrapMs":bootstrap_ms,"bodyMs":body_ms,"totalMs":started.elapsed().as_secs_f64()*1000.0}));
+        }
+        eprintln!(
+            "decoder asset comparison {}",
+            serde_json::json!({"playerSha256":expected["playerSha256"],"bundleSha256":hash(BUNDLE),"decodeBundleSha256":hash(DECODE_BUNDLE),"prepareMs":prepare_ms,"formats":checked,"measurements":rows,"attributionRealTokens":phases})
+        );
     }
 
     #[tokio::test]

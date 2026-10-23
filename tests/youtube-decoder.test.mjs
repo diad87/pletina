@@ -8,6 +8,7 @@ import { JsAnalyzer, JsExtractor } from '../node_modules/youtubei.js/dist/src/ut
 import { nsigMatcher, timestampMatcher } from '../node_modules/youtubei.js/dist/src/utils/javascript/matchers.js'
 
 const bundle = await fs.readFile(new URL('../src-tauri/src/youtube-decoder.bundle.js', import.meta.url), 'utf8')
+const decodeBundle = await fs.readFile(new URL('../src-tauri/src/youtube-decoder-execute.bundle.js', import.meta.url), 'utf8')
 const analyzerPath = '../node_modules/youtubei.js/dist/src/utils/javascript/JsAnalyzer.js'
 const meriyahPath = '../node_modules/meriyah/dist/meriyah.mjs'
 const analyzerSource = await fs.readFile(new URL(analyzerPath, import.meta.url), 'utf8')
@@ -151,9 +152,9 @@ const syntheticPlayer = `(function(g) {
   throw new Error('The full player must never run');
 })({});`
 
-function sandbox() {
+function sandbox(asset = bundle) {
   const context = vm.createContext(Object.create(null), { codeGeneration: { strings: true, wasm: false } })
-  vm.runInContext(bundle, context, { timeout: 1000 })
+  vm.runInContext(asset, context, { timeout: 1000 })
   // This mirrors native hardening after loading the bundle: only the private
   // compiler remains. There are no host functions, modules, DOM or I/O APIs.
   vm.runInContext(`
@@ -379,4 +380,35 @@ test('bounds input sizes and lets the host interrupt an extracted infinite loop'
   assert.throws(() => call(context, 'decode', 'const exportedVars={};', 'x'.repeat(4097)), /DECODER_INPUT/)
   context.loopScript = 'const exportedVars = { nsigFunction: () => { for (;;) {} } };'
   assert.throws(() => vm.runInContext('__musifyYouTubeDecoder.decode(loopScript,"s")', context, { timeout: 25 }), /timed out/)
+})
+
+
+test('minimal asset exposes only decode and shares exact semantics with the full asset', () => {
+  const full = sandbox(), minimal = sandbox(decodeBundle)
+  assert.deepEqual(Object.keys(minimal.__musifyYouTubeDecoder), ['decode'])
+  const { script } = call(full, 'prepare', syntheticPlayer)
+  for (const args of [[], ['abc'], [null, 'token'], ['abc', 'token'], ['"\\;=ñ', 'emoji😀']]) {
+    assert.deepEqual(call(minimal, 'decode', script, ...args), call(full, 'decode', script, ...args))
+  }
+  for (const expression of ['null', '42', "'enhanced_except_invalid'", "'same'"]) {
+    const invalid = `class Url { get() { return ${expression} } }; const exportedVars = { nsigFunction: () => new Url() };`
+    for (const context of [full, minimal]) assert.throws(() => call(context, 'decode', invalid, null, 'same'), /DECODER_RESULT|URI/)
+  }
+})
+
+test('minimal asset keeps private compiler isolation, size checks and interruptibility', () => {
+  const context = sandbox(decodeBundle), api = context.__musifyYouTubeDecoder
+  assert.equal(vm.runInContext('delete globalThis.__musifyYouTubeDecoder', context), true)
+  const script = `
+    class Url { get() { return 'isolated' } }
+    if (['process','require','fetch','XMLHttpRequest','document','window','eval','Function','__musifyYouTubeDecoder'].some(name => typeof globalThis[name] !== 'undefined')) throw Error('exposed');
+    try { void arguments.callee; throw Error('exposed'); } catch (error) { if (error.message === 'exposed') throw error; }
+    const exportedVars = { nsigFunction: () => new Url() };
+  `
+  assert.equal(api.decode(script, 'input').sig, 'isolated')
+  assert.throws(() => api.decode('x'.repeat(2 * 1024 * 1024 + 1), 'a'), /DECODER_SCRIPT_SIZE/)
+  assert.throws(() => api.decode('ignored', 'x'.repeat(4097)), /DECODER_INPUT/)
+  const loop = sandbox(decodeBundle)
+  loop.loopScript = 'const exportedVars={nsigFunction:()=>{for(;;){}}};'
+  assert.throws(() => vm.runInContext('__musifyYouTubeDecoder.decode(loopScript,"s")', loop, { timeout: 25 }), /timed out/)
 })
