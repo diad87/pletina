@@ -136,27 +136,36 @@ inició dos por Native y Epoitaitaye por Legacy, tras `CIPHER_MISSING`; tardaron
 7726,6, 1660,7 y 11831,9 ms, respectivamente. Ese intento fallido se conserva.
 Después se añadió la renovación SABR acotada: una prueba real posterior resolvió
 las tres y recuperó Maite Zaitut! tras una configuración efectiva nueva. No se
-ha aislado qué campo concreto causó la diferencia; falta medir la app final.
+ha aislado qué campo concreto causó la diferencia. La app final `540521e`
+inició las tres por Native sin Legacy, con búsqueda incluida: Epoitaitaye
+14191,9 ms, Maite Zaitut! 4873,6 ms y Pupu Eta Lore 1675,6 ms. No cumplen 300 ms.
 
-Un ensayo directo posterior resolvió las tres mediante WEB_EMBEDDED_PLAYER/251:
-14073, 7446 y 8325 ms. Pasaron las sondas de inicio/80 % y las comprobaciones de
+El ensayo directo final resolvió las tres mediante WEB_EMBEDDED_PLAYER/251:
+8033, 7240 y 1188 ms. Pasaron las sondas de inicio/80 % y las comprobaciones de
 reproducción inicial, salto y cola. No fue escucha completa en la app. En una
 prueba separada, los tres archivos completos fueron idénticos byte a byte a las
 referencias 251 obtenidas con yt-dlp y FFmpeg los decodificó sin errores.
 
-La regresión con búsqueda de las 30 canciones habituales conservó 30 rutas
+La regresión final con búsqueda de las 30 canciones habituales conservó 30 rutas
 Native, cero respaldos y ningún fallo distinto del umbral de 300 ms: mediana
-595,5 ms, intervalo 431,7–949,1 ms. Ninguna cumplió ese umbral. No mide EOF ni
+592,35 ms, intervalo 463,7–1004,6 ms. Ninguna cumplió ese umbral. No mide EOF ni
 continuidad completa. Preparar un reproductor en frío tardó 6,85 segundos en
 QuickJS; la caché evita repetirlo para el mismo reproductor, pero YouTube puede
 publicar distintos scripts. Ese tiempo y los límites del runtime no miden RSS
 de la aplicación ni predicen el rendimiento de Android.
 
 El [informe infantil](informe-contenido-infantil-2026-10-23.md) separa esos
-resultados, fallos e historial. Android x86_64/arm64 compilaba antes de la última
-guarda de selección. Además, un harness del mismo decoder pasó 6 pruebas de
+resultados, fallos e historial. La revisión final pasó 196 pruebas Rust y
+`cargo check --tests --offline` para Android x86_64/arm64. Además, un harness del mismo decoder pasó 6 pruebas de
 aislamiento y el fixture real en un emulador Android 15 x86_64: preparación de
 10911,5 ms, con los mismos límites y cuatro firmas/`n` idénticas a V8. No ejecutó
 la app, JNI ni ExoPlayer; la reproducción Android y el dispositivo ARM físico
 siguen pendientes. No se presenta el corpus de tres canciones como compatibilidad
 con todo el catálogo infantil ni como una medición de ausencia de publicidad.
+
+Esta ruta necesita una app nueva; no se distribuye publicando la receta o los
+scripts OTA existentes. La PWA necesita su propia integración web. Después de
+instalar el motor, éste descubre el reproductor publicado y sus funciones sin
+una receta nueva mientras el analizador comprenda su estructura. La renovación
+retiene el mutex global de configuración durante la preparación; queda pendiente
+medir y mejorar ese coste cuando hay resoluciones concurrentes.

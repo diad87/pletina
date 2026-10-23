@@ -88,7 +88,7 @@ $plan = if ($MseOnly) {
     $mseFixtures | ConvertTo-Json -Depth 8
 } elseif ($Suite -eq 'native-direct') {
     # Reutiliza el banco nativo existente: extracción, rangos, reproducción, seek al 80 % y final.
-    @{ videos = $nativeVideos; tier1 = $true; audio = $true } | ConvertTo-Json -Depth 8
+    @{ videos = $nativeVideos; tier1 = $true; audio = $true; nativeTail = $true } | ConvertTo-Json -Depth 8
 } else { @{
     videos = @()
     captureSuite = $suitePlan

@@ -35,6 +35,12 @@ hasta cinco intentos de la misma URL en ocho segundos; no cambia de canción,
 no entrega anuncios ni acredita que se haya pulsado «Saltar anuncio».
 El [informe infantil](informe-contenido-infantil-2026-10-23.md) distingue las
 mediciones del corpus de tres canciones de la compatibilidad general.
+Si el vídeo confirmado sólo ofrece SABR sin localizadores de audio, se renueva
+la configuración una vez y sólo se repite una petición efectiva diferente,
+con deduplicación de 30 s y el mismo presupuesto total. La recuperación se
+ejercitó en una respuesta real. En la app final las tres arrancaron sin Legacy,
+en 14,2 / 4,9 / 1,7 s con búsqueda; la latencia continúa pendiente. Las 30
+canciones de regresión conservaron audio Native sin respaldo (mediana 592 ms).
 Esta mejora requiere actualizar la app: no modifica la receta, `youtubei.ts`,
 `capture.js` ni su protocolo, y no promueve la captura progresiva.
 

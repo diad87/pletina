@@ -219,6 +219,20 @@ test('los motores con URL de red no exigen buffer completo ni reproducción fina
   assert.equal(b.result().tier1[0].audio.tailMs, undefined)
 })
 
+for (const [tail, expected] of [['normal', true], ['error', false], ['early', false]]) {
+  test(`el banco nativo con final explícito comprueba ${tail} sin exigir buffer completo`, async t => {
+    fakeAudio(t, { ranges: [[75, 90]], tail })
+    const b = await bench(t, { bench_native: native, bench_probe: { length: 100, start: 206, deep: 206 } })
+    await b.run({ videos, tier1: true, audio: true, nativeTail: true })
+    const row = b.result().tier1[0]
+    assert.equal(b.result().ok, expected)
+    assert.equal(row.audio.ok, expected)
+    assert.equal(row.probeOk, true)
+    assert.equal(row.audio.coverageEnd, undefined)
+    if (expected) assert(Number.isFinite(row.audio.tailMs))
+  })
+}
+
 test('el informe conserva la duración exacta usada al comprobar el audio', async t => {
   fakeAudio(t, { duration: 287.901 })
   const b = await bench(t, { bench_native: native, bench_probe: { length: 100, start: 206, deep: 206 } })

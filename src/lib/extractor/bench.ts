@@ -23,6 +23,8 @@ interface Plan {
   ytdlpFirst?: boolean
   /** Comprobar que cada URL suena en un <audio> (y que se puede saltar al 80 %). */
   audio?: boolean
+  /** Exigir también el final reproducible en el banco de audio directo de Native. */
+  nativeTail?: boolean
   /** Motor propio, nivel rápido (Rust), con todos los vídeos. */
   tier1?: boolean
   /** Captura oficial experimental en la ventana oculta, con los primeros `count`. */
@@ -331,7 +333,7 @@ async function viaYtdlp(videoId: string, plan: Plan) {
 async function viaNative(videoId: string, plan: Plan) {
   try {
     const r = await invoke<{ ms: number; url: string; client: string; itag: number; mime: string }>('bench_native', { videoId })
-    return { videoId, extractionOk: true, ms: r.ms, client: r.client, itag: r.itag, mime: r.mime, ...(await check(r.url, plan)) }
+    return { videoId, extractionOk: true, ms: r.ms, client: r.client, itag: r.itag, mime: r.mime, ...(await check(r.url, plan, plan.nativeTail === true)) }
   } catch (e) {
     return { videoId, extractionOk: false, ok: false, error: String(e) }
   }
@@ -374,15 +376,15 @@ async function viaCapture(videoId: string) {
   }
 }
 
-async function check(url: string, plan: Plan) {
+async function check(url: string, plan: Plan, verifyTail = false) {
   const probe = await invoke<Probe>('bench_probe', { url }).catch((e) => String(e))
   const probeOk = typeof probe !== 'string' && probe.length > 0 && probe.start === 206 && probe.deep === 206
-  const audio = plan.audio ? await playCheck(url) : undefined
+  const audio = plan.audio ? await playCheck(url, false, undefined, verifyTail) : undefined
   return { ok: probeOk && (!plan.audio || audio?.ok === true), probeOk, probe, audio }
 }
 
 /** Que suene en un <audio> (en silencio) y que se pueda saltar al 80 % y siga sonando. */
-async function playCheck(url: string, capture = false, beforeStop?: () => Promise<void>): Promise<AudioCheck> {
+async function playCheck(url: string, capture = false, beforeStop?: () => Promise<void>, verifyTail = false): Promise<AudioCheck> {
   const a = new Audio()
   const controller = new AbortController()
   a.muted = true
@@ -412,15 +414,17 @@ async function playCheck(url: string, capture = false, beforeStop?: () => Promis
       // done nativo sólo sella el productor; el lector aún puede estar haciendo appendBuffer.
       result.coverageEnd = await captureCoverage(a, duration)
     }
-    const tailStarted = performance.now()
-    a.pause()
-    const tailSeeked = until(a, 'seeked', 15000, controller.signal)
-    a.currentTime = Math.max(0, Math.min(duration, result.coverageEnd ?? duration) - 0.5)
-    await tailSeeked
-    await Promise.all([until(a, 'ended', 10000, controller.signal), a.play()])
-    if (a.currentTime < duration - CAPTURE_EDGE_TOLERANCE)
-      throw new Error(`audio terminado antes del final: ${a.currentTime.toFixed(3)} / ${duration.toFixed(3)} s`)
-    result.tailMs = Math.round(performance.now() - tailStarted)
+    if (capture || verifyTail) {
+      const tailStarted = performance.now()
+      a.pause()
+      const tailSeeked = until(a, 'seeked', 15000, controller.signal)
+      a.currentTime = Math.max(0, Math.min(duration, result.coverageEnd ?? duration) - 0.5)
+      await tailSeeked
+      await Promise.all([until(a, 'ended', 10000, controller.signal), a.play()])
+      if (a.currentTime < duration - CAPTURE_EDGE_TOLERANCE)
+        throw new Error(`audio terminado antes del final: ${a.currentTime.toFixed(3)} / ${duration.toFixed(3)} s`)
+      result.tailMs = Math.round(performance.now() - tailStarted)
+    }
     return { ...result, ok: true }
   } catch (e) {
     return { ...result, ok: false, error: String(e) }
