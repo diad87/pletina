@@ -441,7 +441,7 @@ async function scenarios(ctx, requests, directory, control) {
   if (!automatic) return
 
   const paused = await ctx.check('official.pause-before-held-player-rejection-prevents-late-automatic-modal', async () => {
-    const before = await reloadSearch(), embedMark = embedCount(), searchMark = searchCount()
+    const before = await reloadSearch(), embedMark = embedCount(), searchMark = searchCount(), requestMark = requests.length
     const gate = holdNextSearch({})
     control.playerGate = gate
     control.rejectIds = new Set([fixtureIds.first, fixtureIds.second])
@@ -450,25 +450,28 @@ async function scenarios(ctx, requests, directory, control) {
       await bounded(gate.reached, 'The normal song click did not reach the held direct-player response')
       assert.equal(await dialog.isVisible(), false)
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
-      assert.match(await page.locator('.mini .artist').textContent(), /Cargando/)
-      // This real public button pauses an in-flight load although its icon is
-      // still the Play icon; the app owns the loading/cancellation transition.
-      await tap('.mini button[aria-label="Reproducir"]')
-      await page.waitForFunction(() => !document.querySelector('.mini .artist')?.textContent.includes('Cargando'))
+      assert.equal(await page.locator('.mini').getAttribute('aria-busy'), 'true')
+      assert.match(await page.locator('.mini .artist').textContent(), /Preparando audio|Está tardando/)
+      // Loading has an explicit cancellation control. It must retire the
+      // provider request as well as the player's intent before a late reply.
+      await tap('.mini button[aria-label="Cancelar carga"]')
+      await page.waitForFunction(() => document.querySelector('.mini')?.getAttribute('aria-busy') === 'false')
       gate.closed = true
       gate.release()
-      await bounded(gate.delivered, 'The held direct-player response did not finish after the pause')
-      for (let attempt = 0; attempt < 60 && searchCount() - searchMark < 2; attempt++) await page.waitForTimeout(50)
-      assert.equal(searchCount() - searchMark, 2, 'The late bounded resolver actually finishes both candidate searches')
-      await page.waitForTimeout(150)
+      await bounded(gate.delivered, 'The held direct-player response did not finish after cancellation')
+      await page.waitForTimeout(500)
       await ctx.settle()
+      assert.equal(searchCount() - searchMark, 0, 'Cancelling retires the resolver before any recovery candidate search')
+      assert.equal(requests.slice(requestMark).filter(row => row.operation === 'direct-player-rejection').length, 1,
+        'The retired request cannot expand into P1 or another recording after its late reply')
       assert.equal(await dialog.isVisible(), false)
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
       assert.equal(embedCount(), embedMark)
       assert.ok(await page.evaluate(() => window.__qaAudio.instances.every(audio => audio.paused)))
       assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)
       assert.deepEqual(await storedState(page), before)
-      return { heldHttpPlayerResponse: true, cancellation: 'trusted mini-player button', lateResolverDelivered: true,
+      return { heldHttpPlayerResponse: true, cancellation: 'trusted mini-player Cancelar carga button', heldDeliveryReleased: true,
+        recoverySearchesAfterCancellation: 0, additionalPlayerAttempts: 0,
         reopened: false, newEmbeds: 0, queueAndCurrentPreserved: true, savedSourceWrites: 0 }
     } finally { gate.release(); control.playerGate = null; control.rejectIds = null }
   })

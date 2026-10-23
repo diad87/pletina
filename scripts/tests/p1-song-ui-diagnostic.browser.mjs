@@ -12,6 +12,9 @@ const expectedBuild = option('--expected-build', ''); assert.match(expectedBuild
 const query = option('--query', ''), title = option('--title', ''), artist = option('--artist', '')
 assert.ok(query.length > 0 && query.length <= 200 && title.length > 0 && title.length <= 200 && artist.length <= 200)
 const diagnostic = args.includes('--exceptions'), reportName = option('--report', 'p1-song-ui-diagnostic.json')
+const artistView = args.includes('--artist-view')
+const songControl = option('--song-control', 'title')
+assert.ok(['title', 'cover'].includes(songControl))
 assert.match(reportName, /^p1-song-[a-z0-9.-]+\.json$/)
 const source = await readFile(new URL(import.meta.url)), sha = value => crypto.createHash('sha256').update(value).digest('hex')
 const directory = new URL('../../artifacts/pwa-port/', import.meta.url), began = Date.now(), timestamp = () => ({ at: new Date().toISOString(), elapsedMs: Date.now() - began })
@@ -40,6 +43,10 @@ async function poll(name, fn, maximumMs = 15000) {
   throw Error(name + ' timed out' + (last ? ': ' + last : ''))
 }
 async function click(selector, purpose) {
+  if (artistView) {
+    report.inputActions.push({ ...timestamp(), kind: 'declared viewport scroll without activation', purpose })
+    await rpc(selector => document.querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'instant' }), selector)
+  }
   const point = await rpc(selector => { const node = document.querySelector(selector); if (!node) return null
     const rect = node.getBoundingClientRect(), style = getComputedStyle(node), x = rect.x + rect.width / 2, y = rect.y + rect.height / 2
     const hit = document.elementFromPoint(x, y)
@@ -135,21 +142,51 @@ try {
   await poll('Search input', () => rpc(() => Boolean(document.querySelector('input[aria-label="Buscar música"]'))), 45000)
   await click('input[aria-label="Buscar música"]', 'focus normal search')
   report.inputActions.push({ ...timestamp(), kind: 'trusted keyboard typing', characters: query.length }); await page.keyboard.type(query)
-  const rows = await poll('Canonical track search result', async () => {
+  const readRows = () => rpc(() => [...document.querySelectorAll('.tracks li[data-reorder-index]')].slice(0, 30).map(element => ({
+    index: element.dataset.reorderIndex, title: element.querySelector('.name')?.textContent.trim() ?? '', artist: element.querySelector('.by')?.textContent.trim() ?? '', album: element.querySelector('.album')?.textContent.trim() ?? '' })))
+  let rows = await poll('Canonical track search result', async () => {
     const rows = await rpc(() => [...document.querySelectorAll('.tracks li[data-reorder-index]')].slice(0, 30).map(element => ({
       index: element.dataset.reorderIndex, title: element.querySelector('.name')?.textContent.trim() ?? '', artist: element.querySelector('.by')?.textContent.trim() ?? '', album: element.querySelector('.album')?.textContent.trim() ?? '' })))
     return rows.some(row => normalize(row.title) === normalize(title) && artist.split(/\s+/).every(word => normalize(row.artist).includes(normalize(word)))) ? rows : null
   }, 45000)
   report.searchResults = rows
-  const selected = rows.find(row => normalize(row.title) === normalize(title) && artist.split(/\s+/).every(word => normalize(row.artist).includes(normalize(word))))
+  let selected = rows.find(row => normalize(row.title) === normalize(title) && artist.split(/\s+/).every(word => normalize(row.artist).includes(normalize(word))))
+  if (artistView) {
+    await click(`.tracks li[data-reorder-index="${selected.index}"] .by button.link`, 'open artist from canonical search result')
+    report.artistHeading = await poll('Canonical artist page', () => rpc(() => document.querySelector('.banner h1')?.textContent.trim() ?? null))
+    assert.ok(artist.split(/\s+/).every(word => normalize(report.artistHeading).includes(normalize(word))))
+    await poll('Artist popular songs', async () => (await readRows()).length > 0)
+    if (await rpc(() => document.querySelector('.page > button.more')?.textContent.trim() === 'Mostrar más')) await click('.page > button.more', 'expand artist popular songs')
+    rows = await readRows()
+    selected = rows.find(row => normalize(row.title) === normalize(title))
+    assert.ok(selected?.title, 'The exact preferred song must exist in artist popular songs')
+    report.artistPopularSelection = { preferredTitle: title, preferredTitleFound: normalize(selected.title) === normalize(title), rows, selected }
+  }
   report.clickedRow = selected
   if (diagnostic) await cdp.send('Debugger.setPauseOnExceptions', { state: 'all' })
-  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] .num`, 'single normal song play click')
+  report.songControl = artistView ? songControl : 'number'
+  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] ${artistView ? songControl === 'cover' ? '.thumb' : '.name' : '.num'}`, artistView ? `single artist popular ${songControl} click` : 'single normal song play click')
   const outcome = await poll('Native audio or official fallback', async () => {
     const value = await state()
     return value.fallback.opened || value.mediaSession.playbackState === 'playing' && value.progress?.time > 2 ? value : null
   }, 120000)
   report.finalState = outcome; report.outcome = outcome.fallback.opened ? 'official-video-fallback' : 'native-audio'
+  if (artistView) {
+    assert.equal(outcome.selected?.title, selected.title, 'The played catalog entry must be the chosen popular row')
+    assert.equal(outcome.mediaSession.title, selected.title, 'Media metadata must name the chosen popular song')
+    report.covers = await rpc(async selector => {
+      const describe = async image => {
+        if (!image) return null
+        const address = image.currentSrc || image.src
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(address))
+        return { addressSha256: [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join(''),
+          loaded: image.complete && image.naturalWidth > 0, width: image.naturalWidth, height: image.naturalHeight }
+      }
+      return { row: await describe(document.querySelector(selector + ' .thumb img')), player: await describe(document.querySelector('.mini .thumb img,.player .thumb img')) }
+    }, `.tracks li[data-reorder-index="${selected.index}"]`)
+    assert.ok(report.covers.row?.loaded && report.covers.player?.loaded, 'Both selected and player artwork must load')
+    assert.equal(report.covers.row.addressSha256, report.covers.player.addressSha256, 'Player artwork must belong to the selected row')
+  }
   if (diagnostic) await cdp.send('Debugger.setPauseOnExceptions', { state: 'none' })
   report.checks.push({ name: 'normal song click plays native audio without a video modal', pass: report.outcome === 'native-audio', outcome: report.outcome })
   report.screenshot = reportName.replace(/\.json$/, '.png'); await page.screenshot({ path: new URL(report.screenshot, directory).pathname.replace(/^\/C:/, 'C:'), fullPage: true })

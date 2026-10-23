@@ -1,7 +1,7 @@
 // Compiled Svelte UI + real HTMLAudio. Provider bytes and failure modes come from HTTP fixtures.
 // Reads of browser storage and the test-only Audio observer are assertions, never player commands.
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
@@ -9,6 +9,12 @@ export const mediaScenarioInventory = Object.freeze([
   'youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio',
   'audius-homonym-with-wrong-isrc-or-artist-never-starts-audio',
   'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
+  'artist-popular-selection-immediately-shows-loading-and-long-wait-feedback',
+  'artist-current-byline-plays-row-and-guest-byline-only-navigates',
+  'artist-latest-selection-wins-before-previous-provider-response',
+  'artist-a-b-a-never-reuses-the-aborting-first-request',
+  'artist-loading-cancel-prevents-late-play-and-explicit-retry-recovers',
+  'artist-final-track-error-clears-loading-and-explicit-retry-keeps-track',
   'now-playing-synthetic-touch-swipe-threshold-and-interactive-origin',
   'home-surprise-album-starts-saved-album-in-track-order', 'artist-radio-builds-bounded-mixed-queue-and-plays',
   'artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning',
@@ -28,10 +34,12 @@ export const mediaScenarioInventory = Object.freeze([
   'youtube-podcast-keeps-episode-namespace-and-progress', 'audio-log-export-is-local-bounded-and-has-no-source-addresses',
 ].map(name => ({ id: 'media.' + name })))
 
-export async function runMediaScenarios(ctx) {
+export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   const { page, context, fixture, check, tap, clickText } = ctx
   const media = fixture.media
-  const run = (name, fn) => check('media.' + name, fn)
+  const requested = scenarioIds ? new Set(scenarioIds.map(name => name.replace(/^media\./, ''))) : null
+  const selectedScenario = name => !requested || name === 'selection-html-audio' || requested.has(name)
+  const run = (name, fn) => selectedScenario(name) ? check('media.' + name, fn) : true
   const visible = async selector => page.locator(selector).first().isVisible().catch(() => false)
   const row = index => `.tracks li[data-reorder-index="${index}"]`
   const wait = (fn, arg, timeout = 15000) => page.waitForFunction(fn, arg, { timeout })
@@ -187,7 +195,7 @@ export async function runMediaScenarios(ctx) {
   // Linux CI must run the scenarios instead of inheriting a blanket WebKit exemption.
   const webkitVersion = ctx.engine === 'webkit' ? ctx.browser.version() : null
   if (process.platform === 'win32' && webkitVersion === '26.5') {
-    for (const scenario of mediaScenarioInventory) await check(scenario.id, async () => ({
+    for (const scenario of mediaScenarioInventory.filter(scenario => selectedScenario(scenario.id.replace(/^media\./, '')))) await check(scenario.id, async () => ({
       status: 'blocked',
       reason: 'Windows WebKit native HTMLAudio bypasses the controlled provider transport and service worker. Same-origin HTTP AAC decodes; the seven-case host probe documents the transport failure. This does not determine Safari iOS behavior.',
       evidence: 'artifacts/pwa-e2e/webkit-aac-probe.json',
@@ -206,8 +214,189 @@ export async function runMediaScenarios(ctx) {
     return { audio: value, media: 'Real silent AAC/MP4; no song-content claim' }
   })
   if (!ready) {
-    for (const scenario of mediaScenarioInventory.slice(1)) await check(scenario.id, async () => ({ status: 'blocked', reason: 'The initial compiled-player audio prerequisite failed.' }))
+    for (const scenario of mediaScenarioInventory.slice(1).filter(scenario => selectedScenario(scenario.id.replace(/^media\./, '')))) await check(scenario.id, async () => ({ status: 'blocked', reason: 'The initial compiled-player audio prerequisite failed.' }))
     return
+  }
+
+  const selection = media.artistSelection
+  const selectionIds = ['artist-popular-selection-immediately-shows-loading-and-long-wait-feedback',
+    'artist-current-byline-plays-row-and-guest-byline-only-navigates', 'artist-latest-selection-wins-before-previous-provider-response',
+    'artist-a-b-a-never-reuses-the-aborting-first-request', 'artist-loading-cancel-prevents-late-play-and-explicit-retry-recovers',
+    'artist-final-track-error-clears-loading-and-explicit-retry-keeps-track']
+  async function captureSelection(name) {
+    const directory = new URL('../../../artifacts/pwa-e2e/', import.meta.url)
+    await mkdir(directory, { recursive: true })
+    const filename = `artist-selection-${ctx.report.build}-${ctx.profile}-${name}.png`
+    await writeFile(new URL(filename, directory), await page.screenshot({ fullPage: true }))
+    return 'artifacts/pwa-e2e/' + filename
+  }
+  async function selectionArtist() {
+    await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
+    await ctx.fillSearch('Buscar', selection.query)
+    await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, selection.tracks[0].title)
+    await tap('.top-result')
+    await wait(name => document.querySelector('.banner h1')?.textContent.trim() === name && document.querySelectorAll('.tracks li[data-reorder-index]').length === 4, selection.artists[0].name)
+  }
+  async function selectedLoading(index) {
+    const selected = row(index)
+    await page.locator(selected + ' .row.loading[aria-busy="true"][aria-current="true"]').waitFor()
+    assert.equal((await page.locator(selected + ' .loading-text').textContent()).trim(), 'Preparando audio…')
+    await page.locator('.mini[aria-busy="true"]').waitFor()
+    assert.equal((await page.locator('.mini .title').textContent()).trim(), selection.tracks[index].title)
+    assert.equal((await page.locator('.mini .artist').textContent()).trim(), 'Preparando audio…')
+    await page.locator('.mini button[aria-label="Cancelar carga"]').waitFor()
+    assert.ok((await state()).audios.every(audio => audio.paused), 'The preceding source must stop while the selected song resolves')
+    assert.equal(await page.locator('.banner h1').textContent(), selection.artists[0].name, 'A song click must not navigate away from its artist')
+  }
+  async function selectedPlaying(index) {
+    const expected = selection.tracks[index]
+    await wait(({ title, videoId }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+      document.querySelector('.mini')?.getAttribute('aria-busy') !== 'true' &&
+      window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > .15 && new URL(audio.currentSrc || audio.src).pathname === '/audio/' + videoId),
+    { title: expected.title, videoId: expected.videoId })
+    const value = await state()
+    assert.equal(value.audios.length, 1); assert.equal(value.audios.filter(audio => audio.playing).length, 1)
+    assert.equal(value.title, expected.title)
+    await wait(index => document.querySelector(`.tracks li[data-reorder-index="${index}"] .row`)?.getAttribute('aria-busy') !== 'true', index)
+    assert.equal(await page.locator(row(index) + ' .row[aria-busy="true"]').count(), 0, 'The playing row must finish loading')
+    return value
+  }
+  async function observeSelectionSources() {
+    await page.evaluate(() => {
+      const qa = window.__qaAudio, audio = qa.instances[0]
+      qa.selectionSamples = []
+      const observe = event => {
+        const identity = value => { try { return new URL(value).pathname.match(/^\/audio\/([\w-]{11})$/)?.[1] ?? null } catch { return null } }
+        qa.selectionSamples.push({ event: event.type, videoId: identity(audio.currentSrc || audio.src), requestedVideoId: identity(audio.src),
+          paused: audio.paused, time: Number.isFinite(audio.currentTime) ? audio.currentTime : null,
+          duration: Number.isFinite(audio.duration) ? audio.duration : null, readyState: audio.readyState,
+          at: performance.now(), playing: qa.instances.filter(value => !value.paused).length })
+      }
+      const events = ['playing', 'timeupdate', 'loadstart', 'emptied', 'pause']
+      for (const event of events) audio.addEventListener(event, observe)
+      observe({ type: 'initial' })
+      qa.stopSelectionObserver = () => { for (const event of events) audio.removeEventListener(event, observe) }
+    })
+  }
+  function assertSelectedSource(samples, expected) {
+    // play() clears paused before a new resource becomes currentSrc. A queued
+    // reset timeupdate may still name the former source before the new playing
+    // event; it is not evidence that the old recording resumed. The requested
+    // resource must already be the latest selection throughout, and every real
+    // playing event plus subsequent progress must identify that selection.
+    const firstPlaying = samples.findIndex(sample => sample.event === 'playing')
+    const active = samples.filter(sample => !sample.paused)
+    assert.ok(firstPlaying >= 0 && active.every(sample => sample.requestedVideoId === expected && sample.playing === 1) &&
+      samples.filter(sample => sample.event === 'playing').every(sample => sample.videoId === expected) &&
+      samples.slice(firstPlaying).filter(sample => !sample.paused).every(sample => sample.videoId === expected), JSON.stringify({ expected, samples }))
+    for (const sample of samples.slice(0, firstPlaying)) {
+      if (sample.paused || sample.videoId === expected || sample.readyState === 0 || sample.time === 0) continue
+      const sameOldSource = samples.slice(0, firstPlaying).filter(value => value.videoId === sample.videoId && value.time !== null)
+      const times = sameOldSource.map(value => value.time)
+      assert.ok(times.length > 1 && Math.max(...times) - Math.min(...times) <= .1,
+        JSON.stringify({ expected, reason: 'The former source advanced before the new source started', samples }))
+    }
+  }
+  async function selectionCleanup() {
+    fixture.release()
+    await page.evaluate(() => { window.__qaAudio?.stopSelectionObserver?.() }).catch(() => {})
+    await fixture.reset(); await closeOverlays(); await pause()
+  }
+  if (selectionIds.some(selectedScenario)) {
+    await run(selectionIds[0], async () => {
+      await selectionArtist(); const gate = fixture.holdNextPlayer(selection.tracks[1].videoId)
+      try {
+        await tap(row(0) + ' .name'); await selectedPlaying(0)
+        await tap(row(1) + ' .name'); await gate.waitForRequest(); await selectedLoading(1)
+        const screenshot = await captureSelection('loading')
+        // Only the application's six-second feedback clock advances. The HTTP
+        // provider response remains held, so this cannot simulate a fast source.
+        await page.clock.runFor(6100)
+        await page.locator('.mini .loading-wait').waitFor()
+        assert.equal((await page.locator('.mini .loading-wait').textContent()).trim(), 'Está tardando… Puedes elegir otra canción')
+        const waitingScreenshot = await captureSelection('long-wait')
+        gate.release(); const delivery = await gate.waitForDelivery(); const value = await selectedPlaying(1)
+        return { selected: selection.tracks[1].title, actualHTTPGate: true, delivery: delivery.playerGate, audio: value,
+          feedbackClockAdvancedMs: 6100, physicalWaitClaimed: false, screenshots: [screenshot, waitingScreenshot] }
+      } finally { await selectionCleanup() }
+    })
+    await run(selectionIds[1], async () => {
+      await selectionArtist(); const gate = fixture.holdNextPlayer(selection.tracks[1].videoId)
+      try {
+        await tap(row(0) + ' .name'); await selectedPlaying(0)
+        // Same-artist bylines are deliberately row content on an artist page;
+        // guest-artist links retain navigation and stop propagation.
+        const byline = await page.locator(row(1) + ' .by .artist-name').count() ? row(1) + ' .by .artist-name' : row(1) + ' .by button.link'
+        await tap(byline); await frame()
+        assert.equal((await state()).title, selection.tracks[1].title, 'The byline of the already-open artist must select its song, rather than silently navigating to the same artist')
+        await gate.waitForRequest(); await selectedLoading(1)
+        gate.release(); await gate.waitForDelivery(); await selectedPlaying(1)
+        await tap(row(3) + ' .by button.artist-name')
+        await wait(name => document.querySelector('.banner h1')?.textContent.trim() === name, selection.artists[1].name)
+        assert.equal((await state()).title, selection.tracks[1].title)
+        assert.equal((await state()).audios.filter(audio => audio.playing).length, 1)
+        return { currentArtistByline: 'selected row without navigation', guestArtistByline: 'navigated without changing audio', audio: await state() }
+      } finally { await selectionCleanup() }
+    })
+    await run(selectionIds[2], async () => {
+      await selectionArtist(); const b = fixture.holdNextPlayer(selection.tracks[1].videoId), c = fixture.holdNextPlayer(selection.tracks[2].videoId)
+      try {
+        await tap(row(0) + ' .name'); await selectedPlaying(0)
+        await tap(row(1) + ' .name'); await b.waitForRequest(); await selectedLoading(1)
+        await tap(row(2) + ' .name'); await c.waitForRequest(); await selectedLoading(2)
+        await observeSelectionSources(); b.release(); const oldDelivery = await b.waitForDelivery(); await frame()
+        await selectedLoading(2); assert.equal(await page.locator(row(1) + ' .row.loading').count(), 0)
+        c.release(); await c.waitForDelivery(); const value = await selectedPlaying(2)
+        const samples = await page.evaluate(() => window.__qaAudio.selectionSamples)
+        assertSelectedSource(samples, selection.tracks[2].videoId)
+        return { obsoleteRequest: oldDelivery.playerGate, selected: selection.tracks[2].title, samples, audio: value }
+      } finally { await selectionCleanup() }
+    })
+    await run(selectionIds[3], async () => {
+      await selectionArtist(); const mark = fixture.requests.length, a = fixture.holdNextPlayer(selection.tracks[0].videoId), b = fixture.holdNextPlayer(selection.tracks[1].videoId)
+      try {
+        await tap(row(0) + ' .name'); await a.waitForRequest()
+        await tap(row(1) + ' .name'); await b.waitForRequest()
+        await observeSelectionSources(); await tap(row(0) + ' .name')
+        const value = await selectedPlaying(0)
+        assert.equal(fixture.requests.slice(mark).filter(request => request.operation === 'player' && request.videoId === selection.tracks[0].videoId).length, 2,
+          'Returning to A must issue a fresh player request while its first request is being aborted')
+        a.release(); b.release(); await Promise.all([a.waitForDelivery(), b.waitForDelivery()]); await frame()
+        assert.equal((await state()).title, selection.tracks[0].title)
+        const samples = await page.evaluate(() => window.__qaAudio.selectionSamples)
+        assertSelectedSource(samples, selection.tracks[0].videoId)
+        return { gestureSequence: 'A → B → A', freshARequests: 2, samples, audio: value }
+      } finally { await selectionCleanup() }
+    })
+    await run(selectionIds[4], async () => {
+      await selectionArtist(); const gate = fixture.holdNextPlayer(selection.tracks[1].videoId)
+      try {
+        await tap(row(0) + ' .name'); await selectedPlaying(0)
+        await tap(row(1) + ' .name'); await gate.waitForRequest(); await selectedLoading(1)
+        await tap('.mini button[aria-label="Cancelar carga"]')
+        await page.locator('.mini button[aria-label="Reproducir"]').waitFor()
+        gate.release(); const delivery = await gate.waitForDelivery(); await frame()
+        const stopped = await state(); assert.equal(stopped.title, selection.tracks[1].title); assert.ok(stopped.audios.every(audio => audio.paused))
+        assert.equal(await page.locator('.mini[aria-busy="true"]').count(), 0, 'The cancelled selection must finish loading')
+        await tap('.mini button[aria-label="Reproducir"]'); const value = await selectedPlaying(1)
+        return { cancelledDelivery: delivery.playerGate, lateAutoplay: false, explicitRetry: true, audio: value }
+      } finally { await selectionCleanup() }
+    })
+    await run(selectionIds[5], async () => {
+      await selectionArtist(); await fixture.set({ failPlayer: true })
+      try {
+        const last = selection.tracks.length - 1
+        await tap(row(last) + ' .name')
+        await wait(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('No se pudo reproducir')) &&
+          window.__qaAudio.instances.every(audio => audio.paused) && !document.querySelector('.mini[aria-busy="true"]'))
+        assert.equal((await state()).title, selection.tracks[last].title)
+        assert.equal(await visible('dialog[data-official-youtube][open]'), false)
+        await page.locator('.mini button[aria-label="Reproducir"]').waitFor()
+        await fixture.set({ failPlayer: false }); await tap('.mini button[aria-label="Reproducir"]')
+        const value = await selectedPlaying(last)
+        return { queuePosition: 'final entry: no automatic-next policy change', retainedTitle: selection.tracks[last].title, visibleFailure: true, explicitRetry: true, audio: value }
+      } finally { await selectionCleanup() }
+    })
   }
 
   await run('music-unplayable-rescues-distinct-web-source-without-skipping-song', async () => {
@@ -770,8 +959,8 @@ export async function runMediaScenarios(ctx) {
   })
   await run('pause-during-delayed-resolution-prevents-late-autoplay', async () => {
     await fixture.reset(); await reload(); await fixture.set({ delayPlayerMs: 1000 })
-    const titles = await music(); await tap(row(0) + ' .name'); await page.locator('.mini button[aria-label="Reproducir"]').waitFor()
-    await tap('.mini button[aria-label="Reproducir"]')
+    const titles = await music(); await tap(row(0) + ' .name'); await page.locator('.mini button[aria-label="Cancelar carga"]').waitFor()
+    await tap('.mini button[aria-label="Cancelar carga"]')
     await page.waitForTimeout(1300)
     let value = await state(); assert.equal(value.title, titles[0]); assert.ok(value.audios.every(audio => audio.paused))
     await fixture.reset(); await tap('.mini button[aria-label="Reproducir"]'); value = await playing(titles[0]); await pause()
@@ -791,7 +980,7 @@ export async function runMediaScenarios(ctx) {
       const titles = await music(), mark = fixture.requests.length
       await tap(row(0) + ' .name')
       await wait(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('No se pudo reproducir')) &&
-        !document.querySelector('.mini .artist')?.textContent.includes('Cargando') && window.__qaAudio.instances.every(audio => audio.paused), null, 25000)
+        !document.querySelector('.mini[aria-busy="true"]') && window.__qaAudio.instances.every(audio => audio.paused), null, 25000)
       const failed = await state(); assert.ok(failed.audios.every(audio => audio.paused))
       assert.equal(await page.locator('dialog[data-official-youtube][open]').count(), 0, 'Provider restrictions cannot open an automatic video fallback')
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)

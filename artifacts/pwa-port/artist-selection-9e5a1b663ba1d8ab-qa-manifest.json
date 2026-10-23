@@ -1,0 +1,354 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T12:39:06.655Z",
+  "build": "9e5a1b663ba1d8ab",
+  "status": "local-targeted-and-live-artist-validated",
+  "scenarioInventory": 43,
+  "newArtistScenarios": 6,
+  "qaSources": [
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "sha256": "48ab1b4ffb77484e263dd230c7ed0dbec7933c18efcc297cc25130dbadee5e78",
+      "snapshot": "artifacts/pwa-port/artist-selection-media-scenarios-48ab1b4ffb77484e.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "a20d2b28e88126c0c4cd8c5105885aa6a4d0bd7c6b874f04225f39b6c92c65ff",
+      "snapshot": "artifacts/pwa-port/artist-selection-provider-fixtures-a20d2b28e88126c0.mjs"
+    }
+  ],
+  "focusedHelper": {
+    "snapshot": "artifacts/pwa-port/artist-selection-targeted-helper-72f76028103bab1f.mjs",
+    "sha256": "72f76028103bab1f1f675b03779073911a26470a6a15bff8dd69bfcb5b508b5c"
+  },
+  "finalTargeted": {
+    "path": "artifacts/pwa-e2e/artist-selection-9e5-final/report.json",
+    "sha256": "e74a2fb97bce1116a278459fb2c92b2b6488b12123aec7998efedc73cd89e44f",
+    "build": "9e5a1b663ba1d8ab",
+    "counts": {
+      "pass": 8,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "errors": 0,
+    "note": "Final frozen QA: setup+real AAC prerequisite+six feature cases all pass, with full safe source observations and DOM completion."
+  },
+  "previousControlsAndQaFailures": [
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-05f6-baseline/report.json",
+      "sha256": "eba0fc3151fde81e41955c6662c552a53aff3ce7cc3a4b3d1aa13d3a31ab3970",
+      "build": "9e5a1b663ba1d8ab",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Anticipated directory name only: actual report.build is 9e5, a positive control, not a 05f6 baseline."
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-05f6-byline-negative/report.json",
+      "sha256": "f23afefecc23fb60272809924502ab3a4dc33d77d1482ea797831c97bd6ee2d5",
+      "build": "05f6dd1dea2e4c06",
+      "counts": {
+        "pass": 2,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Exact frozen 05f6 snapshot: clicking the current-artist byline left song A selected instead of B. Two prerequisites pass; this behavior assertion fails."
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5-targeted/report.json",
+      "sha256": "a693b344aaf56d411cadf8f0c307e950d278965c0d232e22adcf4ac87de177ee",
+      "build": "9e5a1b663ba1d8ab",
+      "counts": {
+        "pass": 7,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Initial QA observer rejected a queued timeupdate naming old currentSrc before new playing. The following diagnostic recorded requestedSrc C and clarified the transition."
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5-latest-source-diagnostic/report.json",
+      "sha256": "dd3558a86ad5e909d60a36d340b8027c1025a8ba3d30df785f0b402701a4f518",
+      "build": "9e5a1b663ba1d8ab",
+      "counts": {
+        "pass": 2,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Preserved source diagnostic: old A currentSrc/timeupdate with requested C, then actual playing C. The final observer adds numeric state and rejects old-source advancement."
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5-targeted-final/report.json",
+      "sha256": "ab1daf326ee60c0291b50c549d5da9de3431995014f6857c498bff1fc32f73b0",
+      "build": "9e5a1b663ba1d8ab",
+      "counts": {
+        "pass": 8,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Intermediate observer revision passed all six feature cases before numeric source-state observations were added."
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5-observed-final/report.json",
+      "sha256": "5faebe38c04d5d5de0eb1ff5e15a9c1949d1fea6e55db39d2fef7081108c580a",
+      "build": "9e5a1b663ba1d8ab",
+      "counts": {
+        "pass": 7,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "errors": 0,
+      "note": "Numeric observer pass for latest/ABA, but one unlabeled 1!=0 loading-DOM assertion failed in cancel/retry. Final QA waits for actual mini/row aria-busy completion alongside native playback; no product or HTTP delay changed."
+    }
+  ],
+  "liveArtist": {
+    "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local.json",
+    "sha256": "ef32258f2390d4ff8c38a661fc4956e1ab35e9518840c8ac252c43a9dd2f1cc0",
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "sourceSnapshot": "artifacts/pwa-port/p1-song-ui-diagnostic-source-f94fa896a8ca1229.mjs",
+    "build": "9e5a1b663ba1d8ab",
+    "outcome": "native-audio",
+    "passed": 1,
+    "errors": 0,
+    "screenshot": {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local.png",
+      "sha256": "0607ccadc4448a2ddab96f80c3d2d8ea99016da934a48565c64452948becfb1f"
+    },
+    "songControl": "title"
+  },
+  "previousLiveArtistControls": [
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local-num.json",
+      "sha256": "f732e17e5b5aadd94ef8bd4005909ee4a3025fd1c0b6e07cf35ed8b907b233d1",
+      "runnerSha256": "14ae2023c3cff591158e43ef21c7cf1e5c2ceb11cc73a4db07b87f25016ed190",
+      "sourceSnapshot": "artifacts/pwa-port/p1-song-ui-diagnostic-source-14ae2023c3cff591.mjs",
+      "build": "9e5a1b663ba1d8ab",
+      "outcome": "native-audio",
+      "passed": 1,
+      "errors": 0,
+      "screenshot": {
+        "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local-num.png",
+        "sha256": "9552a8a38229c9a446b881610eb058a2069b1659632b0af7d9a85b8c6423424b"
+      },
+      "songControl": "number"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local-title-initial.json",
+      "sha256": "0d0a295609fefaf8310c3b6b2b706da34aba0886d1edb95417f945c798133fd6",
+      "runnerSha256": "cc4c0d1b91414986e5a8b3e1bbeea3f3c3bc4050fb84144a2824d7b2d7b94078",
+      "sourceSnapshot": "artifacts/pwa-port/p1-song-ui-diagnostic-source-cc4c0d1b91414986.mjs",
+      "build": "9e5a1b663ba1d8ab",
+      "outcome": "native-audio",
+      "passed": 1,
+      "errors": 0,
+      "screenshot": {
+        "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local-title-initial.png",
+        "sha256": "a4c6c4dfb6907008d98a596a96432307dcba593df9a648e67e324d210e8b82bf"
+      },
+      "songControl": "title",
+      "songControlEvidence": "Recorded inputActions and preserved source snapshot use the artist popular title control."
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-loading.png",
+      "sha256": "60a9f6b76293c4d6dee6258c383866d8f88da118d35ad55b85c5e6c7c64f507b"
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-long-wait.png",
+      "sha256": "5c893455c860a0b4d2b56d490633b40c053a3dd1d45f0a38f0693836fa272215"
+    }
+  ],
+  "sourceTransitionEvidence": [
+    {
+      "name": "media.artist-latest-selection-wins-before-previous-provider-response",
+      "samples": [
+        {
+          "event": "initial",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": null,
+          "paused": true,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 19796,
+          "playing": 0
+        },
+        {
+          "event": "emptied",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0003c",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 19846,
+          "playing": 1
+        },
+        {
+          "event": "timeupdate",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0003c",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 19847,
+          "playing": 1
+        },
+        {
+          "event": "loadstart",
+          "videoId": "qaPick0003c",
+          "requestedVideoId": "qaPick0003c",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 19848,
+          "playing": 1
+        },
+        {
+          "event": "playing",
+          "videoId": "qaPick0003c",
+          "requestedVideoId": "qaPick0003c",
+          "paused": false,
+          "time": 0,
+          "duration": 12,
+          "readyState": 4,
+          "at": 19857,
+          "playing": 1
+        }
+      ]
+    },
+    {
+      "name": "media.artist-a-b-a-never-reuses-the-aborting-first-request",
+      "samples": [
+        {
+          "event": "initial",
+          "videoId": null,
+          "requestedVideoId": null,
+          "paused": true,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 22952,
+          "playing": 0
+        },
+        {
+          "event": "emptied",
+          "videoId": null,
+          "requestedVideoId": null,
+          "paused": true,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 23084,
+          "playing": 0
+        },
+        {
+          "event": "timeupdate",
+          "videoId": null,
+          "requestedVideoId": null,
+          "paused": true,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 23084,
+          "playing": 0
+        },
+        {
+          "event": "emptied",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0001a",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 23095,
+          "playing": 1
+        },
+        {
+          "event": "timeupdate",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0001a",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 23095,
+          "playing": 1
+        },
+        {
+          "event": "loadstart",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0001a",
+          "paused": false,
+          "time": 0,
+          "duration": null,
+          "readyState": 0,
+          "at": 23096,
+          "playing": 1
+        },
+        {
+          "event": "playing",
+          "videoId": "qaPick0001a",
+          "requestedVideoId": "qaPick0001a",
+          "paused": false,
+          "time": 0,
+          "duration": 12,
+          "readyState": 4,
+          "at": 23107,
+          "playing": 1
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "targetedPassed": 8,
+    "targetedFailed": 0,
+    "fullMediaSuiteClaimed": false,
+    "liveArtistPassed": 1,
+    "liveArtistFailed": 0,
+    "liveArtistExactTitle": "Epoitaitaye",
+    "liveArtistCatalogId": 3279314641,
+    "liveArtistVideoId": "DJzjkMBMook",
+    "liveArtistArtworkAddressesMatch": true,
+    "expectedCurrentArtistBylineBehavior": "play the tapped row",
+    "expectedGuestArtistBylineBehavior": "navigate without changing current audio",
+    "loadingWaitClockAdvancedMs": 6100
+  },
+  "redaction": {
+    "reportsScanned": 10,
+    "stringsScanned": 5054,
+    "findings": [],
+    "rawMediaUrlsSaved": false,
+    "rawRecipeOrSessionValuesSaved": false,
+    "providerAudioSaved": false,
+    "syntheticAacFixturesOnly": true
+  },
+  "limits": {
+    "physicalMobile": false,
+    "background": false,
+    "screenOff": false,
+    "installedPwa": false,
+    "fixtureControlledFeatureCases": true,
+    "realUnmockedArtistCanary": true,
+    "nodeProviderBootstrap": false,
+    "productOrBuildChangedByThisTask": false,
+    "publicArtistCanaryPending": true,
+    "previousFailuresPreserved": true
+  }
+}

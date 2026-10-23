@@ -1,0 +1,691 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T12:34:34.471Z",
+  "build": "9e5a1b663ba1d8ab",
+  "status": "published-and-verified",
+  "sourceCommit": "66afbdf0f1a05e45445bc2de984d8521fdb04aa2",
+  "previousBuild": "05f6dd1dea2e4c06",
+  "productChange": "PWA selection/cancellation retires cancelled local in-flight play promises so fast A-B-A starts a fresh A request; cancelling loading retires current/prepared provider play work without cancelling downloads and retains assigned source/position. UI shows selected loading rows, spinner, Preparing audio, cancellable loading control and a six-second long-wait hint. Auxiliary same-artist byline bubbles to row play; other artist links still navigate. No runtime server/account or per-song patch.",
+  "logic": {
+    "pass": 658,
+    "fail": 0,
+    "report": "artifacts/pwa-port/player-selection-loading-logic-2026-10-23.txt",
+    "lineEndings": "LF before hash binding"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "report": "artifacts/pwa-port/player-selection-loading-types-2026-10-23.txt",
+    "lineEndings": "LF before hash binding"
+  },
+  "directedSelection": {
+    "pass": 137,
+    "fail": 0,
+    "negativeControlsBeforeFix": 3,
+    "report": "artifacts/pwa-port/pwa-player-selection-cancellation-2026-10-23.json",
+    "scope": "Synthetic player/audio adapters with before/after controls. Demonstrated code defect is not established as the physical screenshot cause."
+  },
+  "loadingUI": {
+    "selectedRow": "loading + aria-busy=true + aria-current=true",
+    "initialMessage": "Preparando audio…",
+    "longWaitAfterMs": 6000,
+    "longWaitMessage": "Está tardando… Puedes elegir otra canción",
+    "controlLabel": "Cancelar carga",
+    "liveAnnouncements": "One polite status outside busy regions; Mini/Bar when NowPlaying closed, NowPlaying when open.",
+    "spinnerReducedMotion": true,
+    "resetOnPauseAndNewTrack": true,
+    "physicalAssistiveTechnologyVerified": false,
+    "cssIntentionallyChanged": true,
+    "visualReview": {
+      "screenshots": [
+        "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-loading.png",
+        "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-long-wait.png",
+        "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-webkit-iphone-layout-loading.png",
+        "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-webkit-iphone-layout-long-wait.png"
+      ],
+      "observations": [
+        "Selected B remains highlighted with a visible in-row loading label/spinner.",
+        "MiniPlayer names B and the long-wait message fits in two lines without hiding the four bottom tabs."
+      ],
+      "scope": "Review of isolated desktop browser fixture screenshots at Android/iPhone layouts; not a phone or assistive-technology test."
+    }
+  },
+  "responsive": {
+    "status": "complete",
+    "pass": 21,
+    "fail": 0,
+    "unsupported": 0,
+    "reports": [
+      "artifacts/pwa-e2e/responsive-9e5a1b663ba1d8ab-win-final/summary.json",
+      "artifacts/pwa-e2e/responsive-9e5a1b663ba1d8ab-linux-final/summary.json"
+    ],
+    "scope": "Three desktop engines with mobile layouts; no physical keyboard/safe-area/install claim."
+  },
+  "media": {
+    "status": "complete",
+    "reports": [
+      "artifacts/pwa-e2e/media-9e5a1b663ba1d8ab-win-final/summary.json",
+      "artifacts/pwa-e2e/media-9e5a1b663ba1d8ab-linux-final/summary.json"
+    ],
+    "pass": 133,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 2,
+    "total": 135,
+    "profiles": [
+      {
+        "profile": "chromium-android-layout",
+        "engine": "chromium",
+        "host": {
+          "platform": "win32",
+          "arch": "x64",
+          "node": "v24.18.1"
+        },
+        "counts": {
+          "pass": 44,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 1
+        }
+      },
+      {
+        "profile": "firefox-narrow",
+        "engine": "firefox",
+        "host": {
+          "platform": "win32",
+          "arch": "x64",
+          "node": "v24.18.1"
+        },
+        "counts": {
+          "pass": 45,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "engine": "webkit",
+        "host": {
+          "platform": "linux",
+          "arch": "x64",
+          "node": "v24.22.0"
+        },
+        "counts": {
+          "pass": 44,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 1
+        }
+      }
+    ],
+    "unsupportedCases": [
+      {
+        "profile": "chromium-android-layout",
+        "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+        "reason": "This engine delegates file sharing to an OS picker; automated recipient selection is outside browser-only E2E."
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "media.download-quotaFailure-rollback-and-no-false-done",
+        "reason": "This browser does not expose navigator.storage.estimate; the quota-estimation failure cannot be injected without fabricating a platform API."
+      }
+    ],
+    "newControlledCases": 6,
+    "scope": "Three desktop engines with mobile layouts. Provider HTTP gates and real silent AAC fixtures; physical devices and all-suite execution not claimed. Platform API gaps remain unsupported, not passes."
+  },
+  "officialVideoRegression": {
+    "status": "complete",
+    "pass": 33,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0,
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-win-cancel-final/summary.json",
+      "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-linux-cancel-final/summary.json"
+    ],
+    "runnerSha256": "b6ea896f1b35c40c724c53d9fc61c72adf0ad114e769d22377c616d87e377da7",
+    "realYouTubePlaybackVerified": false,
+    "scope": "Controlled same-video rejections and loading cancellation across three desktop engines; no real YouTube media claim.",
+    "runnerSnapshot": "artifacts/pwa-port/official-youtube-9e5a-final-b6ea896f1b35c40c.mjs",
+    "sourceAtRelease": "scripts/tests/official-youtube.browser.mjs"
+  },
+  "preservedInitialOfficialQa": {
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-win-final/summary.json",
+      "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-linux-final/summary.json"
+    ],
+    "counts": {
+      "pass": 27,
+      "fail": 3
+    },
+    "runnerSnapshot": "artifacts/pwa-port/official-youtube-9e5a-initial-74807717027c9e95.mjs",
+    "failure": "The old assertion required a source search after a deliberately cancelled held player response. Real cancellation now prevents that work. The failed observations are preserved; final assertions must still require no late visible-video modal and same identity.",
+    "productChangedForQa": false
+  },
+  "liveWebKit": {
+    "pass": 3,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-integrated-webkit-9e5a1b663ba1d8ab-epoitaitaye-final.json",
+    "physicalIPhoneVerified": false,
+    "scope": "Real provider foreground Audio in desktop Linux WebKit; no human audible, full-file, installed PWA, background or screen-off assertion."
+  },
+  "liveP1": {
+    "status": "not-rerun-in-current-candidate",
+    "previousBuildReport": "artifacts/pwa-port/p1-integrated-live-05f6dd1dea2e4c06-public-manifest.json",
+    "countsReassigned": false
+  },
+  "update": {
+    "from": "05f6dd1dea2e4c06",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-9e5a1b663ba1d8ab.json",
+    "chrome": "153.0.8010.52",
+    "scope": "Real desktop service worker/IndexedDB and seeded WAV bytes; A/B protocol distributions are derived fixtures and legacy migration uses the 05f6 full distribution. No physical icon migration claim."
+  },
+  "distribution": {
+    "files": 31,
+    "totalBytes": 838889,
+    "initialBytes": 50993,
+    "initialAccounting": {
+      "requiredFilesBytes": 40625,
+      "serviceWorkerBytes": 10368
+    },
+    "applicationBytes": 742323,
+    "cssAndFontsUnchanged": false,
+    "cssChangedIntentionally": true,
+    "fontsUnchanged": true,
+    "cssAndFonts": [
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-CthTmUxG.css",
+        "bytes": 88269,
+        "sha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77"
+      }
+    ],
+    "comparedWithBuild": "05f6dd1dea2e4c06",
+    "sourceHash": "2b919c496da7c61bd395ec475b3ae854311449c239108abca97369d7403f0fd5",
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "app.451e6a64fa1593f3.js",
+        "bytes": 16483,
+        "sha256": "451e6a64fa1593f3156c22b8a51b104bd9a9bf17627a2d9b55593c46d6dcb9e7"
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-BI8vx7wW.js",
+        "bytes": 362148,
+        "sha256": "4c830eb07171607858fdebc968ab790cde07332b35daae0685ba277c6b785ab0"
+      },
+      {
+        "path": "application/assets/index-CthTmUxG.css",
+        "bytes": 88269,
+        "sha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+        "bytes": 76,
+        "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+        "bytes": 175818,
+        "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812"
+      },
+      {
+        "path": "application/assets/p1check-CvK81Rq4.js",
+        "bytes": 3465,
+        "sha256": "d95a0c0c5a0f160b730eea333f88f1c73f9e7a99287843b32a229155d9f96423"
+      },
+      {
+        "path": "application/assets/updates.svelte-CaKsDr0l.js",
+        "bytes": 77,
+        "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"
+      },
+      {
+        "path": "application/assets/updates.svelte-d2-IJVos.js",
+        "bytes": 46008,
+        "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"
+      },
+      {
+        "path": "application/assets/youtube-OlVfgcSX.js",
+        "bytes": 15746,
+        "sha256": "0a6b4ec5f3e1870c273aec3d70869faf4989934a6938f002ce199b660c72176a"
+      },
+      {
+        "path": "application/assets/youtube-p1-CST2XekA.js",
+        "bytes": 11241,
+        "sha256": "5dc78735a57cebc952ad45836d0d3753347420e4a0a8c6a22b98d5831423db22"
+      },
+      {
+        "path": "application/assets/youtube-p1-probe-DF1rSiy4.js",
+        "bytes": 5284,
+        "sha256": "233ff5b2d805acab01f147695df82fea32394888d847dbc32339e648d9a8462d"
+      },
+      {
+        "path": "application/index.81d08c619c566eac.html",
+        "bytes": 939,
+        "sha256": "81d08c619c566eacdde7f60c0dd134ddb25eb84d3373ad98941c4974e25fee13"
+      },
+      {
+        "path": "application/launcher.5ef7f630b443ad14.js",
+        "bytes": 839,
+        "sha256": "5ef7f630b443ad143b27320f5eacb066df96797e5c9524efea568eb059251a0e"
+      },
+      {
+        "path": "application/p1-check.html",
+        "bytes": 1977,
+        "sha256": "261d419323a0ecdce3d4cb51dc606e8d21122ece552acd4be08bf818f11aefdb"
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "index.html",
+        "bytes": 7798,
+        "sha256": "e13dfdd24e66cf9073a275af5a860f8368e4d0fdcd8d2cad3a1e65d8b954704d"
+      },
+      {
+        "path": "manifest.webmanifest",
+        "bytes": 499,
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "bytes": 15259,
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741"
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "bytes": 5810,
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9"
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "bytes": 581,
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba"
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "bytes": 4843,
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6"
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "bytes": 3235,
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e"
+      },
+      {
+        "path": "sw.js",
+        "bytes": 10368,
+        "sha256": "6c8e8113e81076ff37f733faeea70a006b16489fee25add70a5f2f414b2e9d30"
+      }
+    ],
+    "dryRunReport": "artifacts/pwa-deploy/dry-run-9e5a1b663ba1d8ab.json",
+    "published": true,
+    "commit": "a66f28476f2966e836d9915fa174002c935fdd0a",
+    "tree": "3da1b5aea135b2d3fc7b194233095c1db2aff734"
+  },
+  "p1": {
+    "runtimeRouteActivated": true,
+    "sameVideoId": true,
+    "codec": "AAC/MP4 original",
+    "perCandidateIsolation": true,
+    "maxResponseRows": 128,
+    "maxEligibleProcessed": 4,
+    "workerBatchMaxMs": 1500,
+    "requestMaxMs": 15000,
+    "metadataWindowSharedMs": 8000,
+    "qualityOrderedSelection": true,
+    "abortsAndAwaitsProbeCleanup": true,
+    "allFormatMetadataRetained": true,
+    "rejectedLocatorsRemoved": true,
+    "cacheGuardAfterCancellation": true,
+    "perSongMapping": false,
+    "offlineDownloadAllowed": false,
+    "publicAnonymousBuildRecipe": true,
+    "anonymousRecipeSha256": "4fe25bbb8cabebd1a31761f0e7e861869ea9b359a9c7248dc461de71354fe21d",
+    "runtimeServer": false,
+    "accountAuthentication": false,
+    "mediaUrlsPersisted": false,
+    "validLifetimeEstablished": false,
+    "crossIpPortabilityEstablished": false,
+    "policyUnchangedFromBuild": "05f6dd1dea2e4c06"
+  },
+  "physicalDeviceChecks": {
+    "newBuildRetestPending": true,
+    "observedBuild": null,
+    "selectionReport": "artifacts/pwa-port/android-artist-selection-user-report-2026-10-23.json",
+    "priorPositiveReport": "artifacts/pwa-port/android-p1-user-report-2026-10-23.json",
+    "priorNegativeReport": "artifacts/pwa-port/android-p1-ninini-user-report-2026-10-23.json",
+    "priorReportsReassigned": false,
+    "android": "Earlier title/artwork selection failure with screenshot, followed by tentative user confirmation of changes after requested 9e5a update; observed build and individual loading/rapid selection checks unknown.",
+    "iphone": "No new physical iPhone test.",
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "newFullPhysicalProtocolConfirmation": false,
+    "partialUserConfirmation": {
+      "response": "Parece que ahora si cambia",
+      "requestedBuild": "9e5a1b663ba1d8ab",
+      "observedBuild": null,
+      "selectionChangeReported": true,
+      "individualStepsConfirmed": false,
+      "scope": "Tentative user selection-change feedback; full physical regression and observed installed build remain unconfirmed."
+    }
+  },
+  "physicalFailureResolved": false,
+  "publicFiles": {
+    "status": "verified",
+    "pass": 31,
+    "total": 31,
+    "report": "artifacts/pwa-deploy/public-files-9e5a1b663ba1d8ab.json"
+  },
+  "deployment": {
+    "status": "success",
+    "url": "https://diad87.github.io/pletina/",
+    "pagesRun": "39954732270",
+    "report": "artifacts/pwa-deploy/pages-9e5a1b663ba1d8ab.json",
+    "publicFilesVerified": true,
+    "publicArtistUICanaryVerified": true
+  },
+  "limits": [
+    "No universal catalog coverage or acoustic full-master identity claim.",
+    "Physical Ni,Ni,Ni failure cause unresolved; new candidate is a generic resilience change, not a demonstrated phone fix.",
+    "General positive feedback is not per-step confirmation of observed build, network, Home, screen lock or timing.",
+    "Static public anonymous recipe can expire or vary by IP/cohort; native cache TTL is not a provider guarantee.",
+    "Desktop results do not replace installed Android/iPhone, long-session, background, screen-off, queue or car checks.",
+    "P1 download remains disabled.",
+    "The title/artwork report is distinct from the auxiliary same-artist subtitle no-op; neither screenshot nor a desktop synthetic race establishes physical causality.",
+    "Loading text reports work in progress; it does not guarantee eventual provider availability or provide a fake percentage."
+  ],
+  "historicalValidation": {
+    "previousBuildReport": "artifacts/pwa-e2e/validation-05f6dd1dea2e4c06.json",
+    "previousResultsReassigned": false
+  },
+  "bindings": [
+    {
+      "path": "artifacts/pwa-port/player-selection-loading-logic-2026-10-23.txt",
+      "sha256": "19b1345fa08b2d190421f57c8945cb1df50d1e7825d25e0fdbae30370e88b994",
+      "bytes": 65945
+    },
+    {
+      "path": "artifacts/pwa-port/player-selection-loading-types-2026-10-23.txt",
+      "sha256": "a4c37bcff614def22a0aa69d0afeed0632d0bd0b850db61892f22165c237ce4b",
+      "bytes": 263
+    },
+    {
+      "path": "artifacts/pwa-port/pwa-player-selection-cancellation-2026-10-23.json",
+      "sha256": "4dae92b362601c4e52c84af3258b40780451a0818861277c0cbd3271692068f6",
+      "bytes": 4227
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-9e5a1b663ba1d8ab.json",
+      "sha256": "1a721b7427ff73c212d15854a73815bc07bdfba21e31127f2b87fa7b790d4e8b",
+      "bytes": 21992
+    },
+    {
+      "path": "artifacts/pwa-e2e/responsive-9e5a1b663ba1d8ab-win-final/summary.json",
+      "sha256": "44567cf867a57cc47684746ae9df7d6eb0e9b2ea10510ca52c21ce34e8d560b4",
+      "bytes": 40958
+    },
+    {
+      "path": "artifacts/pwa-e2e/responsive-9e5a1b663ba1d8ab-linux-final/summary.json",
+      "sha256": "b9bb5d5efc0db54600bbd443676cf71676d5732cc11c63809400a57dba55be04",
+      "bytes": 21504
+    },
+    {
+      "path": "artifacts/pwa-port/p1-integrated-webkit-9e5a1b663ba1d8ab-epoitaitaye-final.json",
+      "sha256": "40a4b741efb7bc0975009b3ca4a10697dd945594c198f889a852f771fe6129dd",
+      "bytes": 35916
+    },
+    {
+      "path": "artifacts/pwa-deploy/dry-run-9e5a1b663ba1d8ab.json",
+      "sha256": "6a520d27c8124d34e09330adf5bd2b9c071be8724ac850792afe5526ce4e6435",
+      "bytes": 1525
+    },
+    {
+      "path": "artifacts/pwa-port/android-artist-selection-user-report-2026-10-23.json",
+      "sha256": "7b82b59dce4e9d8ca76aab50641ec33447db8ace06f7167dcd10dda74d0bb779",
+      "bytes": 2544
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-win-final/summary.json",
+      "sha256": "2c4163476052d015e893f8f3fd179e4be18f6068812c4745890479ab6767d8a3",
+      "bytes": 43601
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-linux-final/summary.json",
+      "sha256": "f29c3fb5d1126d92b99d27a7712b8de576c217305c49261a837db1dde5e9f3cf",
+      "bytes": 22196
+    },
+    {
+      "path": "artifacts/pwa-port/official-youtube-9e5a-initial-74807717027c9e95.mjs",
+      "sha256": "74807717027c9e954d5494b8518bbc1ebb00549a98cd24fefbaab2b7dd1a0853",
+      "bytes": 41024
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-win-cancel-final/summary.json",
+      "sha256": "4262746a6334ef1febe84161db90a754f2a567d0c655cb2c1654fa944aca5878",
+      "bytes": 55386
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-linux-cancel-final/summary.json",
+      "sha256": "1916c91b2f7e24fe521faa84e848448d20aaedc562f3693c0412062871e0b89f",
+      "bytes": 27543
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5-final/report.json",
+      "sha256": "e74a2fb97bce1116a278459fb2c92b2b6488b12123aec7998efedc73cd89e44f",
+      "bytes": 48570
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-05f6-byline-negative/report.json",
+      "sha256": "f23afefecc23fb60272809924502ab3a4dc33d77d1482ea797831c97bd6ee2d5",
+      "bytes": 16942
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-9e5a1b663ba1d8ab-frozen-copy.json",
+      "sha256": "619f59245a6953bc42217ec5f037a9d35db3aa1f5bb52fd4eadf943b1ca8ae80",
+      "bytes": 15227
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-9e5a1b663ba1d8ab-linux-final/summary.json",
+      "sha256": "39059c45248db6da269377976c5758bd09fd995d97e65d7e9929717bcd3069a4",
+      "bytes": 230710
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-loading.png",
+      "sha256": "60a9f6b76293c4d6dee6258c383866d8f88da118d35ad55b85c5e6c7c64f507b",
+      "bytes": 99533
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-chromium-android-layout-long-wait.png",
+      "sha256": "5c893455c860a0b4d2b56d490633b40c053a3dd1d45f0a38f0693836fa272215",
+      "bytes": 99904
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-webkit-iphone-layout-loading.png",
+      "sha256": "0cdc38cbd43a391bfbd4d33e4b3e3a1129c892c2cbb61533117a9c19b92739f0",
+      "bytes": 91792
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-9e5a1b663ba1d8ab-webkit-iphone-layout-long-wait.png",
+      "sha256": "c2a11fabf80e2c49d7d0e3e4c212369af733a4fce0a758e8844bf8fe6e7cbe54",
+      "bytes": 92502
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-9e5a1b663ba1d8ab-win-final/summary.json",
+      "sha256": "ca43d7982242c29bf85a4dc17bc91b51b8314a542d5b2dfc3c02a7f1906b4a89",
+      "bytes": 445726
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-9e5a1b663ba1d8ab.json",
+      "sha256": "f4acca8a48544a18a02e65814a5bbed42fa0c7e36f21a8827c6e4512e5b5b135",
+      "bytes": 10255
+    },
+    {
+      "path": "artifacts/pwa-deploy/pages-9e5a1b663ba1d8ab.json",
+      "sha256": "ae33538e8d94f92105116cd03b52560391d544bc97fbdb964c7d767ca7566038",
+      "bytes": 652
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local.json",
+      "sha256": "ef32258f2390d4ff8c38a661fc4956e1ab35e9518840c8ac252c43a9dd2f1cc0",
+      "bytes": 14460
+    },
+    {
+      "path": "artifacts/pwa-port/artist-selection-9e5a1b663ba1d8ab-qa-manifest.json",
+      "sha256": "8f2a17d7f9819be01b9882a9208784dd7ae1b681b55e7d449d5eb81622d6a20c",
+      "bytes": 11993
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-ui-diagnostic-source-f94fa896a8ca1229.mjs",
+      "sha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+      "bytes": 20594
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-public.json",
+      "sha256": "860cae9e06373ae53e8722a4d98d77fa702d5fe1ae4231ec7120e8ee1784b403",
+      "bytes": 13771
+    },
+    {
+      "path": "artifacts/pwa-port/artist-selection-9e5a1b663ba1d8ab-public-manifest.json",
+      "sha256": "57eaa744610a7a2ab71786ef891df153851e6fc34c13cb64af343e16c24b36bb",
+      "bytes": 4087
+    },
+    {
+      "path": "artifacts/pwa-port/official-youtube-9e5a-final-b6ea896f1b35c40c.mjs",
+      "sha256": "b6ea896f1b35c40c724c53d9fc61c72adf0ad114e769d22377c616d87e377da7",
+      "bytes": 41243
+    }
+  ],
+  "directedArtistUI": {
+    "pass": 8,
+    "fail": 0,
+    "report": "artifacts/pwa-e2e/artist-selection-9e5-final/report.json",
+    "previousBuildAuxiliaryBylineControl": {
+      "build": "05f6dd1dea2e4c06",
+      "pass": 2,
+      "fail": 1,
+      "report": "artifacts/pwa-e2e/artist-selection-05f6-byline-negative/report.json",
+      "scope": "Shows same-artist byline no-op only; user clarified title/artwork, so this is not the physical cause."
+    },
+    "scope": "Setup, AAC control and six new controlled scenarios. Provider gates and silent fixture audio; no physical device or real provider claim."
+  },
+  "webkitProvenance": "artifacts/pwa-e2e/webkit-9e5a1b663ba1d8ab-frozen-copy.json",
+  "webkitProvenanceVerified": {
+    "before": true,
+    "after": true,
+    "sha256": "619f59245a6953bc42217ec5f037a9d35db3aa1f5bb52fd4eadf943b1ca8ae80",
+    "scope": "Exact compiled PWA snapshot for desktop Linux WebKit UI/media fixtures and one real-provider foreground smoke. No rebuild or physical-device claim."
+  },
+  "deploymentRequest": {
+    "commit": "a66f28476f2966e836d9915fa174002c935fdd0a",
+    "tree": "3da1b5aea135b2d3fc7b194233095c1db2aff734",
+    "status": "success",
+    "publicHttpShaVerified": true,
+    "pagesRun": "39954732270",
+    "publicUICanaryVerified": true
+  },
+  "liveArtistUI": {
+    "status": "complete",
+    "pass": 1,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-local.json",
+    "selectedTitle": "Epoitaitaye",
+    "selectedArtist": "PIrritx Porrotx eta MariMotots",
+    "surface": "Artist popular songs",
+    "activation": "single trusted title click",
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "providerMocked": false,
+    "physicalPhoneVerified": false,
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "scope": "One desktop foreground real-provider selection from Artist popular songs; no universal catalogue or physical-title/artwork resolution claim."
+  },
+  "artistQaProvenance": "artifacts/pwa-port/artist-selection-9e5a1b663ba1d8ab-qa-manifest.json",
+  "updatedAt": "2026-10-23T12:42:30.256Z",
+  "livePublicArtistUI": {
+    "status": "complete",
+    "pass": 1,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-song-artist-popular-9e5a1b663ba1d8ab-public.json",
+    "manifest": "artifacts/pwa-port/artist-selection-9e5a1b663ba1d8ab-public-manifest.json",
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "selectedTitle": "Epoitaitaye",
+    "selectedArtist": "PIrritx Porrotx eta MariMotots",
+    "surface": "Artist popular songs",
+    "activation": "single trusted cover click",
+    "providerMocked": false,
+    "physicalPhoneVerified": false,
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "resourcesClosed": true,
+    "scope": "Published compiled UI and real provider foreground Audio from one Artist popular cover click on desktop. No universal catalogue or physical failure-resolution claim."
+  },
+  "verifiedAt": "2026-10-23T12:42:30.252Z",
+  "bindingCorrections": [
+    {
+      "path": "artifacts/pwa-port/android-artist-selection-user-report-2026-10-23.json",
+      "previousBindingSha256": "1c5d6846084e674e55ce853bc52d4729fec47f1a8b630f5b2d9c9ed91eea1663",
+      "finalSha256": "7b82b59dce4e9d8ca76aab50641ec33447db8ace06f7167dcd10dda74d0bb779",
+      "reason": "Follow-up user feedback appended, preserving the original failure and its limited scope."
+    },
+    {
+      "path": "artifacts/pwa-port/artist-selection-9e5a1b663ba1d8ab-qa-manifest.json",
+      "previousBindingSha256": "7fff58523a9118d5332cf644b01c74671912ee2c32575786621e1df225b75b0c",
+      "finalSha256": "8f2a17d7f9819be01b9882a9208784dd7ae1b681b55e7d449d5eb81622d6a20c",
+      "reason": "Final local QA manifest completed with corrected historical title observation; final results unchanged."
+    }
+  ]
+}

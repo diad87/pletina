@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T12:21:44.432Z",
+  "scope": "Player PWA selection/cancellation implementation and synthetic regression evidence. No provider calls, new build, publish, or physical-device verification.",
+  "baselineSourceCommit": "6a52da89c392e73df969d40250b762601d5334f1",
+  "files": [
+    {
+      "path": "src/lib/player.svelte.ts",
+      "baselineSha256": "32a14acbb9295e72790629b46c5040dd2b1bb90830e7eec523fc74032268e7da",
+      "sha256": "490190dc45b7d17776ff76a5187dc1c44a5691a71b7e5eb6cd7e1794ce25cb6f"
+    },
+    {
+      "path": "scripts/tests/web-player.test.mjs",
+      "baselineSha256": "d1149dd10379339adffea4d350eb4dcf5f807b45bf61f877c45cac0ddef05968",
+      "sha256": "58e255cc42a22fe964b230f9fedfb7e8e8e016a0be6f9c039bf0898a32e33cdf"
+    }
+  ],
+  "reproduced": {
+    "sequence": [
+      "Select A and keep its resolution pending",
+      "Select B; its current/next retention cancels A",
+      "Select A again before the cancelled A promise settles",
+      "Old A rejects after cleanup"
+    ],
+    "before": {
+      "currentTrackReturnsToB": true,
+      "sourceAssignments": [
+        "B",
+        "B"
+      ],
+      "newApiResolutionForA": false
+    },
+    "cause": "The player retained its own in-flight promise for a track discarded by retainWebAudioRequests. Returning to that ID reused its cancelled promise and the current load handled its late AbortError as a real failure, advancing the queue.",
+    "fix": "Remove excluded local in-flight entries before cancelling provider play requests; pending-PWA-load cancellation retires all local/current/prepared play requests but retains an already assigned source and position."
+  },
+  "regressionEvidence": {
+    "beforePatch": {
+      "command": "node --test --test-name-pattern='reselecting a song cancelled|cancelling a pending load|cancelling startup preserves' scripts/tests/web-player.test.mjs",
+      "passed": 0,
+      "failed": 3,
+      "failures": [
+        "Discarded A was reused: attempt count 1 instead of 2",
+        "Cancelling pending load kept retained IDs [1,2] instead of []",
+        "Cancelling assigned startup kept retained ID [1] instead of []"
+      ]
+    },
+    "afterPatch": {
+      "command": "node --test scripts/tests/web-player.test.mjs scripts/tests/player.test.mjs scripts/tests/player-recovery.test.mjs scripts/tests/web-audio.test.mjs",
+      "passed": 137,
+      "failed": 0
+    },
+    "checks": [
+      "Fast A-B-A starts a new A request",
+      "A retired promise cannot remove the new A request in finally",
+      "Late rejection neither starts old audio nor skips the current selection",
+      "Cancel and immediate retry do not inherit cancelled current/prefetch promises",
+      "Cancel preserves an assigned source and explicit seek for resume",
+      "Existing audio-adapter test confirms play retention does not abort downloads"
+    ],
+    "typeCheck": {
+      "command": "npm run check",
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "uiReadOnlyFinding": {
+    "file": "src/components/TrackList.svelte",
+    "observation": "The artist subtitle calls go(), stops propagation and navigates to the artist. nav.go returns on an identical current route. On that artist page, tapping the subtitle therefore neither plays the row nor visibly navigates.",
+    "scope": "Source-level deterministic event-flow review; no claim that the physical user tapped this exact area."
+  },
+  "oldMediaEventReview": {
+    "changed": false,
+    "conclusion": "No newly demonstrated late-playing cause of ignored selections. Existing token/paused-intent tests passed; the event policy was left untouched."
+  },
+  "nativeScope": "Both changes are guarded by api.inPwa; native player and native transport code were not modified.",
+  "limitations": {
+    "syntheticAudioAndProviderAdapters": true,
+    "physicalMobile": false,
+    "publicBuildChanged": false,
+    "audioPersisted": false,
+    "rawProviderUrlsPersisted": false
+  },
+  "afterSourceCommit": "66afbdf0f1a05e45445bc2de984d8521fdb04aa2",
+  "afterFilesMatchCommit": true,
+  "userClarification": "The user reports tapping the title or artwork. The subtitle navigation observation is auxiliary and is not attributed as the physical cause."
+}

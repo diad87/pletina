@@ -28,16 +28,28 @@ const audiusRescue = { query: 'QA Rescate Audius', track: audiusRescueTrack, sou
 const p1MultiTrack = { ...tracks[0], id: 193, title: 'Canción QA AAC múltiple', title_short: 'Canción QA AAC múltiple',
   isrc: 'QAABC2600193', videoId: 'qaP1Multi1a' }
 const p1Multi = { query: 'QA P1 AAC', track: p1MultiTrack, videoId: p1MultiTrack.videoId, nextTrackId: tracks[3].id }
+// A separate artist/top namespace keeps selection races independent from source
+// caches and the radio/search fixtures used by the rest of the suite.
+const selectionArtists = [{ ...artists[0], id: 9, name: 'Artista QA Selección' }, { ...artists[1], id: 10, name: 'Artista QA Invitado' }]
+const selectionAlbum = { ...albums[0], id: 14, title: 'Disco QA Selección', artist: selectionArtists[0] }
+const selectionTracks = ['A', 'B', 'C', 'D'].map((letter, i) => ({ ...tracks[i], id: 194 + i,
+  title: 'Selección QA ' + letter, title_short: 'Selección QA ' + letter, artist: selectionArtists[i === 3 ? 1 : 0],
+  artistName: selectionArtists[i === 3 ? 1 : 0].name, album: selectionAlbum, isrc: 'QAABC260019' + (4 + i),
+  videoId: 'qaPick000' + (i + 1) + letter.toLowerCase() }))
+const artistSelection = { query: 'QA Artist Selection', artists: selectionArtists, album: selectionAlbum, tracks: selectionTracks }
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, artistSelection, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
 const runs = (...texts) => ({ runs: texts.map(text => ({ text })) })
 const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0')
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 function selected(query) {
   const q = normalize(query)
+  if (q === normalize(artistSelection.query)) return selectionTracks
+  const selection = selectionTracks.filter(track => q.includes(normalize(track.title)))
+  if (selection.length) return selection
   // The search queue includes another healthy song: skipping the requested song
   // must not masquerade as successful recovery. Audio matching sees only song 190.
   if (q === normalize(webRescue.query)) return [webRescueTrack, tracks[3]]
@@ -91,8 +103,23 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   const flags = {}, failures = [], requests = [], counts = {}
   const pending = new Set()
   const catalogGates = new Set()
+  const playerGates = new Set()
   const releaseDownloads = () => { for (const resolve of pending) resolve(); pending.clear() }
-  const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release() }
+  const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release(); for (const gate of playerGates) gate.release() }
+  function holdNextPlayer(videoId) {
+    if (!/^[\w-]{11}$/.test(videoId)) throw new Error('Invalid player gate identity.')
+    let reached, delivered, resume, claimed = false
+    const entered = new Promise(resolve => { reached = resolve }), completed = new Promise(resolve => { delivered = resolve }),
+      blocked = new Promise(resolve => { resume = resolve })
+    const bounded = async (promise, message) => { let timer; try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 15000) })]) } finally { clearTimeout(timer) } }
+    const gate = { videoId, get claimed() { return claimed },
+      claim(row) { claimed = true; row.playerGate = 'held'; reached(row); return blocked },
+      release() { resume(); playerGates.delete(gate) },
+      delivered(row, cancelled = false) { row.playerGate = cancelled ? 'aborted-before-delivery' : 'delivered'; delivered({ ...row }) },
+      waitForRequest: () => bounded(entered, 'The selected fixture video never reached its HTTP player gate.'),
+      waitForDelivery: () => bounded(completed, 'The released fixture player response was not delivered.') }
+    playerGates.add(gate); return gate
+  }
   // A single real JSONP response can remain in flight while the user cancels or
   // leaves import. No application promise, parser or storage module is replaced.
   function holdNextCatalogSearch() {
@@ -190,6 +217,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0) }
   const handler = async route => {
     const request = route.request(), url = new URL(request.url())
+    let playerGate = null
     if (baseURL && url.origin === new URL(baseURL).origin) return route.continue()
     if (!/^https?:$/.test(url.protocol)) return route.continue()
     const row = { host: url.hostname, path: url.pathname, method: request.method(), type: request.resourceType() }
@@ -214,7 +242,17 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         body: (url.searchParams.get('callback') || '__pletinaCatalog') + '(' + JSON.stringify({ error: { code: 4, message: 'Fixture failure' } }) + ');' })
       return route.abort('failed')
     }
-    const json = value => route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify(value) })
+    const json = async value => {
+      try {
+        await route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify(value) })
+        playerGate?.delivered(row)
+      } catch (error) {
+        if (playerGate && /Invalid InterceptionId|interception.*(?:cancel|invalid)|Target closed|Request is already handled|has been closed/i.test(String(error.message))) {
+          playerGate.delivered(row, true); return
+        }
+        throw error
+      }
+    }
     const jsonp = async value => {
       await route.fulfill({ status: 200, headers, contentType: 'text/javascript',
         body: (url.searchParams.get('callback') || '__pletinaPodcasts') + '(' + JSON.stringify(value) + ');' })
@@ -222,12 +260,19 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
     if (url.hostname === 'api.deezer.com') {
       const q = url.searchParams.get('q') || ''
-      if (url.pathname === '/chart/0/albums' || url.pathname === '/search/album') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : albums })
-      if (url.pathname === '/chart/0/artists' || url.pathname === '/search/artist') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : artists })
+      if (url.pathname === '/chart/0/albums' || url.pathname === '/search/album') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(artistSelection.query) ? [selectionAlbum] : albums })
+      if (url.pathname === '/chart/0/artists' || url.pathname === '/search/artist') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(artistSelection.query) ? [selectionArtists[0]] : artists })
       if (url.pathname.startsWith('/search')) return jsonp({ data: selected(q), total: selected(q).length })
       const match = /^\/(artist|album|track)\/(\d+)(?:\/(albums|top|related|tracks))?$/.exec(url.pathname)
       if (match) {
         const [, type, raw, child] = match, id = Number(raw)
+        if (type === 'artist' && selectionArtists.some(artist => artist.id === id)) {
+          if (child === 'top') return jsonp({ data: id === selectionArtists[0].id ? selectionTracks : selectionTracks.filter(track => track.artist.id === id) })
+          if (child === 'albums') return jsonp({ data: [selectionAlbum] })
+          if (child === 'related') return jsonp({ data: [] })
+          return jsonp(selectionArtists.find(artist => artist.id === id))
+        }
+        if (type === 'album' && id === selectionAlbum.id) return jsonp(child === 'tracks' ? { data: selectionTracks } : selectionAlbum)
         if (type === 'artist') {
           if (child === 'albums') return jsonp({ data: albums.filter(album => album.artist.id === id) })
           if (child === 'top') return jsonp({ data: tracks.filter(track => track.artist.id === id).slice(0, 10) })
@@ -235,7 +280,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...tracks].find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -304,6 +349,12 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         } })
       }
       if (url.pathname.endsWith('/player')) {
+        const playerVideoId = body.videoId || tracks[0].videoId
+        playerGate = [...playerGates].find(gate => !gate.claimed && gate.videoId === playerVideoId) ?? null
+        Object.assign(row, { operation: 'player', videoId: playerVideoId, clientName: body.context?.client?.clientName ?? null })
+        if (playerGate) {
+          await playerGate.claim(row)
+        }
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
@@ -346,7 +397,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         }
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
-          : tracks.find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
+          : [...selectionTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
         const bytes = cast >= 0 ? castAudio : audio
         return json({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: track?.title || 'Episodio QA YouTube ' + titles[Math.max(0, cast)],
           author: track?.artist.name || 'Autor QA', lengthSeconds: String(cast >= 0 ? 90 : 12) },
@@ -395,6 +446,6 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   }
   await resumeRoutes()
   return { data: { artists, albums, tracks }, artists, albums, tracks, media, requests, counts, flags, set, reset, failNext,
-    holdNextCatalogSearch, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
+    holdNextCatalogSearch, holdNextPlayer, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
     source: 'Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.' }
 }

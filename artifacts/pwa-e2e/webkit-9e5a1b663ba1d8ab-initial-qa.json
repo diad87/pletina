@@ -1,0 +1,70 @@
+{
+  "createdAt": "2026-10-23T12:30:12.719Z",
+  "build": "9e5a1b663ba1d8ab",
+  "sourceCommit": "66afbdf0f1a05e45445bc2de984d8521fdb04aa2",
+  "qaFiles": [
+    {
+      "path": "scripts/tests/e2e/run.mjs",
+      "bytes": 15486,
+      "sha256": "5c91f16dc761213a3661b490ad0763940443edd76b35f61dfd5f90ec6a78a0bf"
+    },
+    {
+      "path": "scripts/tests/e2e/harness.mjs",
+      "bytes": 15451,
+      "sha256": "2937c67c1209e598e0f78da45e02eaff840808d13d1ee9c5516f09fb7a3f6d0f"
+    },
+    {
+      "path": "scripts/tests/e2e/responsive-scenarios.mjs",
+      "bytes": 13791,
+      "sha256": "ed487d81f3eaaaabff60d10947ba8ad20db2c5f51c27231cc76bb0690aa53cb6"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "bytes": 33896,
+      "sha256": "a20d2b28e88126c0c4cd8c5105885aa6a4d0bd7c6b874f04225f39b6c92c65ff"
+    },
+    {
+      "path": "scripts/tests/official-youtube.browser.mjs",
+      "bytes": 41024,
+      "sha256": "74807717027c9e954d5494b8518bbc1ebb00549a98cd24fefbaab2b7dd1a0853"
+    }
+  ],
+  "officialRunnerSnapshot": "artifacts/pwa-port/official-youtube-9e5a-initial-74807717027c9e95.mjs",
+  "results": [
+    {
+      "file": "artifacts/pwa-e2e/responsive-9e5a1b663ba1d8ab-linux-final/summary.json",
+      "sha256": "b9bb5d5efc0db54600bbd443676cf71676d5732cc11c63809400a57dba55be04",
+      "counts": {
+        "pass": 7,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "browser": "26.5",
+      "serverClosed": true,
+      "browserClosed": true,
+      "failures": []
+    },
+    {
+      "file": "artifacts/pwa-e2e/official-youtube-9e5a1b663ba1d8ab-linux-final/summary.json",
+      "sha256": "f29c3fb5d1126d92b99d27a7712b8de576c217305c49261a837db1dde5e9f3cf",
+      "counts": {
+        "pass": 9,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "browser": "26.5",
+      "serverClosed": true,
+      "browserClosed": true,
+      "failures": [
+        {
+          "name": "official.pause-before-held-player-rejection-prevents-late-automatic-modal",
+          "error": "The late bounded resolver actually finishes both candidate searches\n\n0 !== 2\n",
+          "screenshot": "10-official-pause-before-held-player-rejection-prevents-late-automatic-mo.png"
+        }
+      ]
+    }
+  ],
+  "interpretation": "Responsive passes. The initial official runner expected cancelled background candidate searches to finish, but the new product explicitly aborts pending play work; parent notified before any QA alteration or rerun. Initial failure and screenshot retained."
+}
