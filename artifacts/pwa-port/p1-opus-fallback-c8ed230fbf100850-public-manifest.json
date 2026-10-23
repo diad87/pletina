@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T19:49:43.962Z",
+  "build": "c8ed230fbf100850",
+  "sourceCommit": "5acf1a58af2e12555059c35f72b64ae240d9dc0c",
+  "distributionCommit": "74b5484c703967f16d306b35c260dab58a02ff27",
+  "distributionTree": "e0f98a16a6b1e51fc62c75f8da8f1e82eb6766e3",
+  "workflow": {
+    "id": 40014105145,
+    "result": "success"
+  },
+  "status": "published-HTTP-SHA-and-real-public-natural-plus-forced-Opus-canaries-validated",
+  "scope": "Two sequential unique public HTTPS real-UI desktop Chrome148 foreground runs. Natural playback and separately declared AAC-only transport fault injection; no physical phone/background/full-file/download claim.",
+  "publishedFiles": {
+    "path": "artifacts/pwa-deploy/public-files-c8ed230fbf100850.json",
+    "sha256": "2c742e553e5df035a6ac81adf23b6f057fc365697c334b66bacfc129281eb335",
+    "passed": 31,
+    "failed": 0,
+    "allHTTP200": true,
+    "allSha256Match": true,
+    "allMatchFrozenLocalInventory": true
+  },
+  "localManifest": {
+    "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-local-manifest.json",
+    "sha256": "9eb4358fa231d0b8bd2cdbdeca74180585d43d5c49ae874d5f9e4977e878ef25"
+  },
+  "natural": {
+    "path": "artifacts/pwa-port/p1-song-audit-c8ed230fbf100850-ninini-public.json",
+    "sha256": "e8cc729395e4e288d7507e2e922cd95bd63c814f8baf38b7ce6959f6da95fd9e",
+    "passed": 1,
+    "failed": 0,
+    "errors": 0,
+    "browser": "Chrome/148.0.7778.97",
+    "runner": {
+      "path": "scripts/tests/p1-song-ui-diagnostic.browser.mjs",
+      "sha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e"
+    },
+    "runnerSnapshot": {
+      "path": "artifacts/pwa-port/p1-song-ui-diagnostic-source-f94fa896a8ca1229.mjs",
+      "sha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e"
+    },
+    "screenshot": {
+      "path": "artifacts/pwa-port/p1-song-audit-c8ed230fbf100850-ninini-public.png",
+      "sha256": "7df7e440566cadce81f5bf011b2f26a1619e7c567bdd2599d09d4d60b879af6f",
+      "visualReview": "Ni, Ni, Ni! selected row/title/artwork and native player visible; no video modal."
+    },
+    "providerFaultInjection": false,
+    "selected": {
+      "catalogId": 3266784871,
+      "title": "Ni, Ni, Ni!",
+      "titleVersion": "",
+      "artist": "PIrritx Porrotx eta MariMotots",
+      "album": "Zazpikoloroa",
+      "duration": 125,
+      "isrc": null
+    },
+    "nativeAudio": true,
+    "uiTime": 3,
+    "uiDuration": 125.559592,
+    "frameCount": 0,
+    "officialFallbackOpened": false,
+    "resourcesClosed": true,
+    "note": "Genuine initial 403 CDN responses occurred; native audio recovered without replacing the chosen catalog song. The original UI runner does not inspect the final audio currentSrc, so it does not independently identify the final selected encoding."
+  },
+  "forcedAAC": {
+    "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-public.json",
+    "sha256": "d93f27d6c15c85761a38caf21b503a27870983fc52ce437f2bd21ef77d6383e8",
+    "passed": 2,
+    "failed": 0,
+    "errors": 0,
+    "browser": "Chrome/148.0.7778.97",
+    "runner": {
+      "path": "scripts/tests/p1-opus-fallback-ui.browser.mjs",
+      "sha256": "daf26c98ff777f014b425c4677b8db4018072c5f62af936b19a4869d189b92c2"
+    },
+    "runnerSnapshot": {
+      "path": "artifacts/pwa-port/p1-opus-fallback-source-daf26c98ff777f01.mjs",
+      "sha256": "daf26c98ff777f014b425c4677b8db4018072c5f62af936b19a4869d189b92c2"
+    },
+    "screenshot": {
+      "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-public.png",
+      "sha256": "1a39e7672d613f62a446767f050de06492059e36a19bbcb839b68434b462797d",
+      "visualReview": "Same Ni, Ni, Ni! selected row/title/artwork with playing controls and four-second progress; no video modal."
+    },
+    "faultInjection": {
+      "type": "target-video AAC HTTP request abort",
+      "targetVideoId": "NGp3dh-hBe8",
+      "aacItags": [
+        139,
+        140,
+        141
+      ],
+      "attribution": "Exact player response video ID plus content locator and itag; locators stay in RAM",
+      "blockedAAC": [
+        {
+          "at": "2026-10-23T19:48:23.252Z",
+          "elapsedMs": 4567,
+          "videoId": "NGp3dh-hBe8",
+          "urlSha256": "2f9b35e99885da896758d40542c2502370591971e4c7b635779e573ac0af42f9",
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\""
+        },
+        {
+          "at": "2026-10-23T19:48:23.790Z",
+          "elapsedMs": 5105,
+          "videoId": "NGp3dh-hBe8",
+          "urlSha256": "2f9b35e99885da896758d40542c2502370591971e4c7b635779e573ac0af42f9",
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\""
+        },
+        {
+          "at": "2026-10-23T19:48:24.750Z",
+          "elapsedMs": 6065,
+          "videoId": "NGp3dh-hBe8",
+          "urlSha256": "2f9b35e99885da896758d40542c2502370591971e4c7b635779e573ac0af42f9",
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\""
+        },
+        {
+          "at": "2026-10-23T19:48:29.290Z",
+          "elapsedMs": 10605,
+          "videoId": "NGp3dh-hBe8",
+          "urlSha256": "2f9b35e99885da896758d40542c2502370591971e4c7b635779e573ac0af42f9",
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\""
+        }
+      ],
+      "otherVideosBlocked": 0,
+      "opusBlocked": 0
+    },
+    "targetCatalogId": 3266784871,
+    "targetVideoId": "NGp3dh-hBe8",
+    "attributedPlayedVideoId": "NGp3dh-hBe8",
+    "itag": 251,
+    "codec": "audio/webm; codecs=\"opus\"",
+    "duration": 125.581,
+    "initialTime": 2.220001,
+    "finalTime": 4.50092,
+    "measuredAdvance": 2.280919,
+    "sameUrlHash": true,
+    "playedOpusHttpStatuses": [
+      403,
+      403,
+      403,
+      206,
+      206
+    ],
+    "providerJSONModified": false,
+    "decoderModified": false,
+    "audioConstructorReplaced": false,
+    "otherVideoIDsObserved": [
+      "CJ1A6FJnWTU"
+    ],
+    "otherVideoPrefetchKeptSeparate": true,
+    "noVideoModal": true,
+    "visibleVideoFrames": 0,
+    "resourcesClosed": true
+  },
+  "counts": {
+    "publicRuns": 2,
+    "publicChecksPassed": 3,
+    "publicChecksFailed": 0,
+    "localForcedChecksPassed": 2,
+    "uniqueCatalogRecordings": 1
+  },
+  "unchangedFromC2": {
+    "cssAndFonts": {
+      "count": 3,
+      "allUnchanged": true,
+      "files": [
+        {
+          "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+          "bytes": 10280,
+          "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+          "baselineSha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+          "unchanged": true
+        },
+        {
+          "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+          "bytes": 20156,
+          "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+          "baselineSha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+          "unchanged": true
+        },
+        {
+          "path": "application/assets/index-CthTmUxG.css",
+          "bytes": 88269,
+          "sha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77",
+          "baselineSha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77",
+          "unchanged": true
+        }
+      ]
+    },
+    "publicRecipeAssets": {
+      "count": 2,
+      "allUnchanged": true,
+      "files": [
+        {
+          "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+          "bytes": 76,
+          "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13",
+          "baselineSha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13",
+          "unchanged": true
+        },
+        {
+          "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+          "bytes": 175818,
+          "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812",
+          "baselineSha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812",
+          "unchanged": true
+        }
+      ]
+    }
+  },
+  "redaction": {
+    "reportsScanned": 2,
+    "stringsScanned": 1082,
+    "findings": [],
+    "rawSignedURLs": false,
+    "rawContext": false,
+    "mediaPersisted": false
+  },
+  "limits": [
+    "Natural and forced reports are separate; the forced run is not claimed as a reproduction of the natural failure.",
+    "Real same-video Opus251 playback was measured in desktop Chrome148 only.",
+    "No iPhone/Android physical, screen-off/background, universal codec or complete-media download guarantee.",
+    "No mutable deployment state.json binding; immutable public-file verification and frozen local inventory are referenced."
+  ]
+}

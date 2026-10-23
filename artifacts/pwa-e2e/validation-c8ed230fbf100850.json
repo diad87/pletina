@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T19:50:19.434Z",
+  "build": "c8ed230fbf100850",
+  "sourceCommit": "5acf1a58af2e12555059c35f72b64ae240d9dc0c",
+  "runtime": {
+    "purePwa": true,
+    "addedBackend": false,
+    "proxyAtRuntime": false,
+    "userAccountsRequired": false,
+    "subscriptionRequired": false
+  },
+  "change": {
+    "sameVideoOnly": true,
+    "nativeOpusCapabilityRequired": true,
+    "healthyAACFirst": true,
+    "formatsMaximum": 4,
+    "sharedProbeMilliseconds": 8000,
+    "globalResolveMilliseconds": 45000,
+    "p1DownloadEnabled": false,
+    "publicClientVersionTokenBound": 64
+  },
+  "logic": {
+    "passed": 783,
+    "failed": 0
+  },
+  "typecheck": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "update": {
+    "fromBuild": "c2a70158ef06a3d5",
+    "passed": 11,
+    "failed": 0,
+    "musicExtractionClaimed": false
+  },
+  "media": {
+    "scope": "Selected two new codec cases and three P1 regressions plus real HTMLAudio selection and setup. Synthetic HTTP contracts and genuine silent codec bytes; desktop engines, not physical phones.",
+    "counts": {
+      "pass": 24,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "profiles": [
+      {
+        "profile": "chromium-android-layout",
+        "engine": "chromium",
+        "browserVersion": "153.0.8010.52",
+        "counts": {
+          "pass": 8,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "checkIds": [
+          "setup.open: install shell and open compiled application",
+          "setup.fixture: opaque-frame catalog requests are controlled",
+          "media.selection-html-audio",
+          "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+          "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+          "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+          "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+          "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download"
+        ],
+        "source": "Base reports plus the same two IDs from v2; setup and selection counted once.",
+        "physicalPhone": false
+      },
+      {
+        "profile": "firefox-narrow",
+        "engine": "firefox",
+        "browserVersion": "153.0",
+        "counts": {
+          "pass": 8,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "checkIds": [
+          "setup.open: install shell and open compiled application",
+          "setup.fixture: opaque-frame catalog requests are controlled",
+          "media.selection-html-audio",
+          "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+          "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+          "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+          "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+          "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download"
+        ],
+        "source": "Base reports plus the same two IDs from v2; setup and selection counted once.",
+        "physicalPhone": false
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "engine": "webkit",
+        "browserVersion": "26.5",
+        "counts": {
+          "pass": 8,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "checkIds": [
+          "setup.open: install shell and open compiled application",
+          "setup.fixture: opaque-frame catalog requests are controlled",
+          "media.selection-html-audio",
+          "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+          "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+          "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+          "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+          "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download"
+        ],
+        "source": "Base reports plus the same two IDs from v2; setup and selection counted once.",
+        "physicalPhone": false
+      }
+    ],
+    "observerCorrection": "v1 AAC403 fixture rows mislabeled expected media MIME/hash as the actual error response; v2 reports the real text/plain body. Original v1 preserved. Merge by check ID, not sum reruns."
+  },
+  "official": {
+    "passed": 33,
+    "failed": 0,
+    "scope": "Controlled official-player contracts only; not real YouTube video playback."
+  },
+  "realProviders": {
+    "localForcedAAC": {
+      "passed": 2,
+      "failed": 0,
+      "actualOpusSameVideo": true
+    },
+    "publicForcedAAC": {
+      "passed": 2,
+      "failed": 0,
+      "actualOpusSameVideo": true
+    },
+    "publicNatural": {
+      "passed": 1,
+      "failed": 0,
+      "artificialNetworkFaults": false,
+      "scope": "Ni recovered with AAC after genuine initial CDN rejections; not attributed to Opus alone."
+    },
+    "previousNaturalC2": {
+      "passed": 1,
+      "scope": "Pre-change AAC success and earlier1662 CDN403 failures retained as variability."
+    },
+    "physicalPhone": false,
+    "backgroundVerified": false,
+    "completeFileVerified": false,
+    "offlineDownloadVerified": false,
+    "publicManifest": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-public-manifest.json"
+  },
+  "distribution": {
+    "files": 31,
+    "totalBytes": 857488,
+    "initialBytes": 50993,
+    "onDemandBytes": 760922,
+    "sourceHash": "52b9e7b78252ff45aabf30c8e4df351bc0683ccacd59ca37ec7c91b8d07830a1",
+    "cssFontsAndRecipeUnchangedFromC2": true
+  },
+  "publicDeployment": {
+    "url": "https://diad87.github.io/pletina/",
+    "branch": "gh-pages",
+    "commit": "74b5484c703967f16d306b35c260dab58a02ff27",
+    "tree": "e0f98a16a6b1e51fc62c75f8da8f1e82eb6766e3",
+    "workflowId": 40014105145,
+    "workflowConclusion": "success",
+    "filesVerified": 31
+  },
+  "limits": [
+    "The provider can still reject every AAC and Opus encoding; no universal availability guarantee.",
+    "Native canPlayType is a capability hint; physical Android/iPhone screen-off and background Opus playback remain pending.",
+    "P1 streams remain non-downloadable without a complete browser-readable verified file.",
+    "No runtime backend, accounts, proxy, APK, Android Auto or CarPlay added.",
+    "Historical C2/offline and1662 results keep their original build and scope."
+  ],
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+      "bytes": 186181,
+      "sha256": "81b83894568d38862baff5b0ce4e97ed9a3d1856931a4f763ad8e8c85243a0b4"
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+      "bytes": 93340,
+      "sha256": "2f58b15c6e7b718fe3bc1b4afede9e1312d4f84c0b621d60360df38ab9b4b933"
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+      "bytes": 73077,
+      "sha256": "3e8222cd57f58882f93ee0f55cc9ff6b12a908dfd31bcc61041d62f5e4e0da77"
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+      "bytes": 37471,
+      "sha256": "19487257c47b2b24233a0c7f06f2d3048ee9927a192d26347de26e5d3190a166"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-win/summary.json",
+      "bytes": 59219,
+      "sha256": "c1e0cf52c9d0e5dd3bfab8978776e12154a58b2447da623b197267af4728163f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-linux/summary.json",
+      "bytes": 29597,
+      "sha256": "d48e9abe4534fe2bf5445c084e75097ebec177d02811f84275359ed20c274553"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-consolidated-manifest.json",
+      "bytes": 12751,
+      "sha256": "35a167a52a777caec350fb8a0d6d9df6c16578abfaa94358f82a46c8c6b39774"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources.json",
+      "bytes": 2777,
+      "sha256": "8b148987f2e0f23a66646979efdcd2b43f29878520de8242aba1a1fcb653a24e"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2.json",
+      "bytes": 3132,
+      "sha256": "8845fb5f46f7e0a29f3b9f0c74fadf55143ebeb668870983af825b1493db7c71"
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-c8ed230fbf100850.json",
+      "bytes": 22014,
+      "sha256": "00ba1f894521b74211d8df453088250cbf59879c2b46503df3b7d8004ad5adc2"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-local-manifest.json",
+      "bytes": 11223,
+      "sha256": "9eb4358fa231d0b8bd2cdbdeca74180585d43d5c49ae874d5f9e4977e878ef25"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-local.json",
+      "bytes": 56366,
+      "sha256": "6dbea98b864b00a3288db8dbcbe94635bc29d506f43c3da2e1a2305c60dcaef5"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-c8ed230fbf100850-ninini-public.json",
+      "bytes": 26648,
+      "sha256": "e8cc729395e4e288d7507e2e922cd95bd63c814f8baf38b7ce6959f6da95fd9e"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-public.json",
+      "bytes": 59607,
+      "sha256": "d93f27d6c15c85761a38caf21b503a27870983fc52ce437f2bd21ef77d6383e8"
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-c8ed230fbf100850.json",
+      "bytes": 10255,
+      "sha256": "2c742e553e5df035a6ac81adf23b6f057fc365697c334b66bacfc129281eb335"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-manifest.json",
+      "bytes": 3675,
+      "sha256": "8ba55848ea6553a4b2eac52eaa98a74baf31f06195714de0ee1c222ccb4c00ac"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-fallback-logic-2026-10-23.log",
+      "bytes": 79907,
+      "sha256": "79e1d3bbfd715fd092c5269c7ec58c21386f395487efd619b49a715dbba60780"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-fallback-types-2026-10-23.log",
+      "bytes": 271,
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-fallback-build-2026-10-23.log",
+      "bytes": 1797,
+      "sha256": "fedb78dcec53219dda34adbc9c55384e5a3d0cad72711a509fc3cfbf55d0ee12"
+    },
+    {
+      "path": "artifacts/pwa-port/opus-fallback-publish-dry-run-c8ed230fbf100850.json",
+      "bytes": 1429,
+      "sha256": "64721ed2fd485c9cece0a100ab3010b4286aef25a7c4b6e13dcfda22cd5efec9"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-opus-fallback-c8ed230fbf100850-public-manifest.json",
+      "bytes": 8754,
+      "sha256": "bc846b588309f53795da5f7df1bb7b3c148b3c825f01395c53063cb57e7fe88b"
+    }
+  ]
+}

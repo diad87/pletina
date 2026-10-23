@@ -1,5 +1,7 @@
 # Cola offline, descargas y recuperación de audio
 
+La versión actual es `c8ed230fbf100850`: añade [Opus como rescate de audio](pwa-opus-fallback.md) y conserva estos cambios de cola/descarga. La evidencia siguiente corresponde a C2 y mantiene su alcance histórico.
+
 Compilación `c2a70158ef06a3d5`, fuente `cf0dd4487c58033301faf2bbcbbcd93782187f6f`. Todo se ejecuta en la PWA, con peticiones directas y almacenamiento del navegador; no incorpora servidor, proxy, cuentas ni APK.
 
 | Área | Comportamiento nuevo |

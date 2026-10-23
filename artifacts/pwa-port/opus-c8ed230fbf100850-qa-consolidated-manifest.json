@@ -1,0 +1,331 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T19:48:03.734Z",
+  "build": "c8ed230fbf100850",
+  "sourceCommit": "5acf1a58af2e12555059c35f72b64ae240d9dc0c",
+  "state": "qa-frozen-local-compiled-product",
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+      "sha256": "81b83894568d38862baff5b0ce4e97ed9a3d1856931a4f763ad8e8c85243a0b4",
+      "bytes": 186181
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+      "sha256": "2f58b15c6e7b718fe3bc1b4afede9e1312d4f84c0b621d60360df38ab9b4b933",
+      "bytes": 93340
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+      "sha256": "3e8222cd57f58882f93ee0f55cc9ff6b12a908dfd31bcc61041d62f5e4e0da77",
+      "bytes": 73077
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+      "sha256": "19487257c47b2b24233a0c7f06f2d3048ee9927a192d26347de26e5d3190a166",
+      "bytes": 37471
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-win/summary.json",
+      "sha256": "c1e0cf52c9d0e5dd3bfab8978776e12154a58b2447da623b197267af4728163f",
+      "bytes": 59219
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-linux/summary.json",
+      "sha256": "d48e9abe4534fe2bf5445c084e75097ebec177d02811f84275359ed20c274553",
+      "bytes": 29597
+    },
+    {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources.json",
+      "sha256": "8b148987f2e0f23a66646979efdcd2b43f29878520de8242aba1a1fcb653a24e",
+      "bytes": 2777
+    },
+    {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2.json",
+      "sha256": "8845fb5f46f7e0a29f3b9f0c74fadf55143ebeb668870983af825b1493db7c71",
+      "bytes": 3132
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-c8ed230fbf100850-frozen-copy.json",
+      "sha256": "3d21f22c9e00c5ff6ee883e52c9ad82882b5d48b82dd83f74bf9f3aaae45d2ab",
+      "bytes": 14147
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-c8ed230fbf100850-qa-v2.json",
+      "sha256": "83ca4dbf3b0d03e82e539e34922bb8b8de35815e3f2212008b866dceb7742d1b",
+      "bytes": 8208
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-manifest-first.json",
+      "sha256": "99f5dc1196084d75d6f0e3bc8ebb4dd5c41d6f9b2c4d7ee7416b91bc0c3a4403",
+      "bytes": 3623
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-manifest.json",
+      "sha256": "8ba55848ea6553a4b2eac52eaa98a74baf31f06195714de0ee1c222ccb4c00ac",
+      "bytes": 3675
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-state-snapshot.json",
+      "sha256": "9dd0dc19ed8c217098b6f8680ca586941d5e882a08fef3a960d1172f67c513e5",
+      "bytes": 337
+    }
+  ],
+  "consolidatedMedia": {
+    "counts": {
+      "pass": 24,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "policy": "One check per profile and scenario ID. Revision2 supersedes the same two codec cases plus repeated setup/selection checks; the three unaffected regressions retain revision1 evidence. Repeated setups are not added twice.",
+    "profiles": [
+      {
+        "profile": "chromium-android-layout",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          }
+        ]
+      },
+      {
+        "profile": "firefox-narrow",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+            "qaRevision": 1
+          }
+        ]
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+            "qaRevision": 2
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+            "qaRevision": 1
+          },
+          {
+            "name": "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+            "qaRevision": 1
+          }
+        ]
+      }
+    ]
+  },
+  "official": {
+    "counts": {
+      "pass": 33,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-win/summary.json",
+        "counts": {
+          "pass": 22,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "path": "artifacts/pwa-e2e/official-youtube-c8ed230fbf100850-linux/summary.json",
+        "counts": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      }
+    ],
+    "realYouTubePlaybackVerified": false
+  },
+  "allRecordedResourcesClosed": true,
+  "rawRuns": [
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win/summary.json",
+      "counts": {
+        "pass": 16,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux/summary.json",
+      "counts": {
+        "pass": 8,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-win-v2/summary.json",
+      "counts": {
+        "pass": 10,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "path": "artifacts/pwa-e2e/opus-c8ed230fbf100850-linux-v2/summary.json",
+      "counts": {
+        "pass": 5,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    }
+  ],
+  "observerCorrection": {
+    "productChanged": false,
+    "firstRunsPreserved": true,
+    "reason": "Revision1 denied AAC403 metadata described the expected AAC MIME/hash before serving an error body. Revision2 records actual text/plain/error-body SHA; only the two codec scenarios were repeated. Do not interpret revision1 denied-body fields as actual AAC bytes.",
+    "selectedMediaProofUnchanged": true
+  },
+  "c2BindingPortabilityRepair": {
+    "reason": "Before deployment state changed, the exact C2 state bytes were copied to an immutable snapshot; only the C2 manifest binding path changed. Original manifest and all natural-provider results remain unchanged.",
+    "firstManifest": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-manifest-first.json",
+    "manifest": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-manifest.json",
+    "snapshot": "artifacts/pwa-port/p1-song-audit-c2a70158ef06a3d5-ninini-public-state-snapshot.json",
+    "onlyBindingPathChanged": true
+  },
+  "limits": [
+    "Desktop Chromium153, Firefox and Linux WebKit layouts only. No physical Android/iPhone, screen-off, background, AndroidAuto or CarPlay claim.",
+    "Directed codec/media cases use synthetic provider HTTP metadata, real silent AAC and Opus/WebM bytes and unmodified native canPlayType/HTMLAudio.",
+    "No live musical recording, provider delivery, subscription, server or universal song compatibility claim.",
+    "No product, build, deployment or commits were changed by this QA task."
+  ]
+}

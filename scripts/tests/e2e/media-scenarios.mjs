@@ -6,6 +6,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
   'p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download',
+  'p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video',
+  'p1-healthy-aac-keeps-priority-over-higher-bitrate-opus',
   'p1-primary-network-rescues-same-id-with-native-aac-without-video',
   'p1-all-probes-transient-retries-same-id-and-stops-without-video',
   'youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio',
@@ -797,6 +799,100 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         scope: 'Controlled HTTP Music VISIONOS+P1 UNPLAYABLE / distinct WEB VISIONOS OK; P1 rejected before decoder/probe; real silent AAC, no live-provider or physical-phone claim.' }
     } finally {
       ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
+      await closeOverlays(); await pause(); await fixture.reset()
+    }
+  })
+
+  for (const [index, name] of ['p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video',
+    'p1-healthy-aac-keeps-priority-over-higher-bitrate-opus'].entries()) await run(name, async () => {
+    const capability = await page.evaluate(() => {
+      const audio = document.createElement('audio')
+      return { opus: audio.canPlayType('audio/webm; codecs="opus"'), aac: audio.canPlayType('audio/mp4; codecs="mp4a.40.2"') }
+    })
+    if (!['maybe', 'probably'].includes(capability.opus)) return { status: 'unsupported',
+      reason: 'This exact desktop engine reports no native Opus/WebM capability. No canPlayType replacement or renamed AAC bytes are used; compatible-Opus rescue and its ordering against AAC remain unverified here.', capability }
+    const track = media.p1Codecs?.tracks[index]
+    assert.ok(track && fixture.opusAudioFile?.codec === 'opus', 'Dedicated real Opus HTTP fixture is required')
+    await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
+    const mark = fixture.requests.length
+    const trace = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'p1-codecs')
+      .map(({ operation, videoId, clientName, playability, itag, responseStatus, responseMime, bodySha256, injectedFailure, candidateIds }) => ({ operation,
+        ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}),
+        ...(itag ? { itag } : {}), ...(responseStatus ? { responseStatus } : {}), ...(responseMime ? { responseMime } : {}),
+        ...(bodySha256 ? { bodySha256 } : {}), ...(injectedFailure ? { injectedFailure } : {}), ...(candidateIds ? { candidateIds } : {}) }))
+    let completed = false
+    try {
+      await fixture.set({ p1Codecs: true })
+      await ctx.fillSearch('Buscar', media.p1Codecs.query(track))
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 1)
+      const before = await state()
+      assert.equal(before.audios.length, 1)
+      await page.evaluate(() => {
+        const observation = window.__p1CodecQA = { officialObserved: false, clicks: [] }
+        const inspect = () => { if (document.querySelector('iframe[data-official-video],dialog[data-official-youtube][open]')) observation.officialObserved = true }
+        observation.observer = new MutationObserver(inspect)
+        observation.observer.observe(document.body, { subtree: true, childList: true, attributes: true })
+        observation.click = event => { if (event.target.closest?.('.tracks .name,.mini button[aria-label="Reproducir"]')) observation.clicks.push({ trusted: event.isTrusted }) }
+        document.addEventListener('click', observation.click, true)
+      })
+      await tap(row(0) + ' .name')
+      // Exactly one ordinary title click. playing() is intentionally avoided
+      // because its extra Play gesture could hide an automatic-recovery failure.
+      await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > .2), track.title)
+      const value = await state(), audio = active(value)
+      assert.equal(value.audios.length, 1); assert.equal(audio.index, before.audios[0].index)
+      assert.equal(audio.muted, false); assert.ok(audio.volume > 0 && audio.duration >= 11 && audio.duration < 14)
+      const selected = await page.evaluate(index => {
+        const audio = window.__qaAudio.instances[index], url = new URL(audio.currentSrc || audio.src)
+        return { path: url.pathname, videoId: url.searchParams.get('qa_codecs'), itag: Number(url.searchParams.get('itag')), mime: url.searchParams.get('mime') }
+      }, audio.index)
+      assert.deepEqual(selected, { path: '/videoplayback', videoId: track.videoId, itag: index === 0 ? 251 : 140, mime: index === 0 ? 'audio/webm' : 'audio/mp4' })
+      await wait(({ index, time }) => window.__qaAudio.instances[index].currentTime > time + .15, { index: audio.index, time: audio.time })
+      const attempts = trace()
+      assert.deepEqual(attempts.filter(request => request.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'OK' },
+      ])
+      assert.deepEqual(attempts.filter(request => request.operation.endsWith('-search')).map(request => request.operation), ['music-search'])
+      assert.ok(attempts.some(request => request.operation === 'media' && request.itag === selected.itag &&
+        request.responseMime === selected.mime && request.bodySha256 === (index === 0 ? fixture.opusAudioFile.sha256 : fixture.audioFile.sha256)), 'Selected MIME must serve its real encoded fixture bytes')
+      if (index === 0) assert.ok(attempts.some(request => request.operation === 'media' && request.itag === 140 && request.responseStatus === 403))
+      else assert.ok(attempts.filter(request => request.operation === 'media' && request.itag === 140).every(request => !request.responseStatus || request.responseStatus < 400))
+      const observed = await page.evaluate(() => {
+        const value = window.__p1CodecQA, queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return { officialObserved: value.officialObserved, clicks: value.clicks,
+          currentId: queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null, ids: queue?.queue?.map(item => item.track.id) ?? [] }
+      })
+      assert.equal(observed.officialObserved, false); assert.deepEqual(observed.clicks, [{ trusted: true }])
+      assert.equal(observed.currentId, track.id); assert.deepEqual(observed.ids, [track.id])
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      if (await page.evaluate(() => 'mediaSession' in navigator)) assert.equal(value.metadata?.title, track.title)
+
+      const downloadsBefore = await downloadState(), transfer = await transferMark(), requestMark = fixture.requests.length
+      await menu(0, 'Descargar')
+      const denied = await terminal(transfer, track.id)
+      assert.equal(denied.state, 'error'); assert.match(denied.error, /permite escuchar.*no descargarla.*sin conexión/)
+      assert.deepEqual(await downloadState(), downloadsBefore)
+      assert.equal(fixture.requests.slice(requestMark).filter(request => request.fixtureCase === 'p1-codecs' &&
+        ['player', 'media'].includes(request.operation)).length, 0, 'A listening-only cached P1 source must not start a download or renewed player request')
+      const after = await state()
+      assert.equal(after.title, track.title); assert.equal(after.audios.length, 1); assert.equal(active(after)?.index, audio.index)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      completed = true
+      return { requestedTrackId: track.id, selected, capability, opusFixture: fixture.opusAudioFile, aacFixture: fixture.audioFile,
+        attempts, observed, sameNativeAudio: true, audioAdvanced: true, download: denied,
+        scope: 'Synthetic same-ID HTTP formats and real encoded silent Opus/WebM plus AAC/MP4. Native codec detection only; no provider availability, musical identity, physical phone or background assertion.' }
+    } finally {
+      ctx.report.p1Codecs ??= []
+      ctx.report.p1Codecs.push({ trackId: track.id, completed, capability, attempts: trace() })
+      await page.evaluate(() => {
+        const value = window.__p1CodecQA
+        value?.observer?.disconnect()
+        if (value?.click) document.removeEventListener('click', value.click, true)
+        delete window.__p1CodecQA
+      })
       await closeOverlays(); await pause(); await fixture.reset()
     }
   })

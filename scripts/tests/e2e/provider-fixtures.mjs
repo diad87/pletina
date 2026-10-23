@@ -32,6 +32,9 @@ const p1Multi = { query: 'QA P1 AAC', track: p1MultiTrack, videoId: p1MultiTrack
 const p1TransientTracks = ['Red primaria', 'CDN agotado'].map((name, i) => ({ ...tracks[0], id: 204 + i,
   title: 'P1 QA ' + name, title_short: 'P1 QA ' + name, isrc: 'QAABC2600' + (204 + i), videoId: 'qaP1Tran0' + (i + 1) + String.fromCharCode(97 + i) }))
 const p1Transient = { tracks: p1TransientTracks, query: track => 'QA transitorio ' + track.title }
+const p1CodecTracks = ['Opus rescate', 'AAC preferente'].map((name, i) => ({ ...tracks[0], id: 206 + i,
+  title: 'P1 QA ' + name, title_short: 'P1 QA ' + name, isrc: 'QAABC2600' + (206 + i), videoId: 'qaP1Opus0' + (i + 1) + String.fromCharCode(97 + i) }))
+const p1Codecs = { tracks: p1CodecTracks, query: track => 'QA formatos ' + track.title }
 // A separate artist/top namespace keeps selection races independent from source
 // caches and the radio/search fixtures used by the rest of the suite.
 const selectionArtists = [{ ...artists[0], id: 9, name: 'Artista QA Selección' }, { ...artists[1], id: 10, name: 'Artista QA Invitado' }]
@@ -48,7 +51,7 @@ const audioRetry = { tracks: retryTracks, query: name => 'QA Reintento ' + name 
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, p1Codecs, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
 const spotifyId = '0123456789ABCDEFGHIJKL'
 const spotify = { id: spotifyId, uri: 'spotify:playlist:' + spotifyId,
@@ -61,6 +64,8 @@ const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 function selected(query) {
   const q = normalize(query)
+  const codec = p1CodecTracks.find(track => q.includes(normalize(track.title)))
+  if (codec) return [codec]
   const transient = p1TransientTracks.find(track => q.includes(normalize(track.title)))
   if (transient) return [transient]
   const retry = retryTracks.find(track => q === normalize(audioRetry.query(track.title.replace('Reintento QA ', ''))) || q.includes(normalize(track.title)))
@@ -118,6 +123,8 @@ function rss(english) {
 export async function createProviderFixtures(context, { baseURL } = {}) {
   const audio = await readFile(new URL('./fixtures/silence-12s.m4a', import.meta.url))
   const castAudio = await readFile(new URL('./fixtures/silence-90s.m4a', import.meta.url))
+  // Generated silence, never music: ffmpeg -f lavfi -i anullsrc=r=48000:cl=stereo -t 12 -c:a libopus -b:a 32k -vbr off -application audio -map_metadata -1 -fflags +bitexact -flags:a +bitexact.
+  const opusAudio = await readFile(new URL('./fixtures/silence-12s.webm', import.meta.url))
   const flags = {}, failures = [], requests = [], counts = {}
   const pending = new Set()
   const catalogGates = new Set()
@@ -386,7 +393,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...p1TransientTracks, ...retryTracks, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...p1TransientTracks, ...p1CodecTracks, ...retryTracks, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -438,6 +445,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
         let selectedTracks = selected(body.query || '')
+        if (flags.p1Codecs && selectedTracks.length === 1 && p1CodecTracks.some(track => track.id === selectedTracks[0].id)) {
+          Object.assign(row, { fixtureCase: 'p1-codecs', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
+            requestedTrackId: selectedTracks[0].id, candidateIds: selectedTracks.map(track => track.videoId) })
+        }
         if (flags.p1Transient && selectedTracks.length === 1 && p1TransientTracks.some(track => track.id === selectedTracks[0].id)) {
           Object.assign(row, { fixtureCase: 'p1-transient', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
             requestedTrackId: selectedTracks[0].id, candidateIds: selectedTracks.map(track => track.videoId) })
@@ -477,6 +488,25 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
+        const codec = flags.p1Codecs && p1CodecTracks.find(track => track.videoId === videoId)
+        if (codec) {
+          Object.assign(row, { fixtureCase: 'p1-codecs', operation: 'player', videoId, clientName })
+          if (clientName === 'VISIONOS') {
+            row.playability = 'UNPLAYABLE'
+            return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
+          }
+          if (clientName !== 'WEB_EMBEDDED_PLAYER') return route.abort('blockedbyclient')
+          row.playability = 'OK'
+          const format = (itag, bitrate, mime, bytes) => ({ itag, bitrate, mimeType: mime === 'audio/webm' ? 'audio/webm; codecs="opus"' : 'audio/mp4; codecs="mp4a.40.2"',
+            contentLength: String(bytes.length), audioTrack: { audioIsDefault: true, displayName: 'Original' },
+            url: 'https://fixture.googlevideo.com/videoplayback?expire=' + (Math.floor(Date.now() / 1000) + 7200) +
+              '&itag=' + itag + '&mime=' + encodeURIComponent(mime) + '&clen=' + bytes.length + '&qa_codecs=' + videoId })
+          // Opus is deliberately first and higher bitrate. A healthy AAC must
+          // still win. Bytes below are real Opus/WebM, never renamed AAC.
+          return json({ playabilityStatus: { status: 'OK', playableInEmbed: true },
+            videoDetails: { videoId, title: codec.title, author: codec.artist.name, lengthSeconds: '12' },
+            streamingData: { adaptiveFormats: [format(251, 160000, 'audio/webm', opusAudio), format(140, 128000, 'audio/mp4', audio)] } })
+        }
         const transient = flags.p1Transient && p1TransientTracks.find(track => track.videoId === videoId)
         if (transient) {
           if (clientName === 'VISIONOS') transientCycles.set(videoId, (transientCycles.get(videoId) ?? 0) + 1)
@@ -554,6 +584,18 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.abort()
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test' || audiusStream) {
+      const codec = flags.p1Codecs && p1CodecTracks.find(track => track.videoId === url.searchParams.get('qa_codecs'))
+      if (codec) {
+        const opus = url.searchParams.get('itag') === '251'
+        Object.assign(row, { fixtureCase: 'p1-codecs', operation: 'media', videoId: codec.videoId, itag: opus ? 251 : 140,
+          responseMime: opus ? 'audio/webm' : 'audio/mp4', bodySha256: createHash('sha256').update(opus ? opusAudio : audio).digest('hex') })
+        if (!opus && codec.id === p1CodecTracks[0].id) {
+          const body = 'Controlled AAC source denied; Opus remains available'
+          Object.assign(row, { responseStatus: 403, injectedFailure: 'p1-aac-cdn-http-403',
+            responseMime: 'text/plain', bodySha256: createHash('sha256').update(body).digest('hex') })
+          return route.fulfill({ status: 403, headers, contentType: 'text/plain', body })
+        }
+      }
       const transient = flags.p1Transient && p1TransientTracks.find(track => track.videoId === url.searchParams.get('qa_transient'))
       if (transient) {
         Object.assign(row, { fixtureCase: 'p1-transient', operation: 'media', videoId: transient.videoId,
@@ -579,15 +621,17 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       const download = request.resourceType() === 'fetch'
       if (flags.holdDownload && download) await new Promise(resolve => pending.add(resolve))
       if (flags.failMedia) return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'Fixture denied audio' })
-      const bytes = url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) ? castAudio : audio
+      const bytes = codec && url.searchParams.get('itag') === '251' ? opusAudio
+        : url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) ? castAudio : audio
+      const contentType = codec && url.searchParams.get('itag') === '251' ? 'audio/webm' : 'audio/mp4'
       const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers().range || '')
       if (range) {
         const start = Number(range[1]), end = range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1
         if (start > end || start >= bytes.length) return route.fulfill({ status: 416, headers: { ...headers, 'content-range': 'bytes */' + bytes.length }, body: '' })
         return route.fulfill({ status: 206, headers: { ...headers, 'accept-ranges': 'bytes', 'content-range': 'bytes ' + start + '-' + end + '/' + bytes.length },
-          contentType: 'audio/mp4', body: bytes.subarray(start, end + 1) })
+          contentType, body: bytes.subarray(start, end + 1) })
       }
-      return route.fulfill({ status: 200, headers: { ...headers, 'accept-ranges': 'bytes' }, contentType: 'audio/mp4', body: bytes })
+      return route.fulfill({ status: 200, headers: { ...headers, 'accept-ranges': 'bytes' }, contentType, body: bytes })
     }
     if (url.hostname === 'open.spotify.com') return route.fulfill({ status: 403, headers, contentType: 'text/html', body: '<!doctype html><title>Fixture access denied</title>' })
     if (['images.pletina.test', 'i.ytimg.com'].includes(url.hostname)) return route.fulfill({ status: 200, headers, contentType: 'image/svg+xml',
@@ -619,6 +663,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   await resumeRoutes()
   return { data: { artists, albums, tracks }, artists, albums, tracks, media, spotify, requests, counts, flags, set, reset, failNext,
     audioFile: { bytes: audio.length, sha256: createHash('sha256').update(audio).digest('hex'), mime: 'audio/mp4', duration: 12 },
+    opusAudioFile: { bytes: opusAudio.length, sha256: createHash('sha256').update(opusAudio).digest('hex'), mime: 'audio/webm', codec: 'opus', duration: 12.008 },
     // Additional pages must share the primary transport: Chromium opaque-frame
     // fetches need the same Puppeteer HTTP bridge, while other engines route normally.
     attachPage,

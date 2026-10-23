@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "build": "c8ed230fbf100850",
+  "sourceCommit": "5acf1a5",
+  "createdAt": "2026-10-23T19:45:37.405Z",
+  "state": "qa-source-frozen-before-browser-execution",
+  "bindings": [
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "sha256": "be6cc921ea40634064033d1c312090ba6850d1f6366dba72516af844b3f6ecd6",
+      "bytes": 152464,
+      "snapshot": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2/media-scenarios.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "d948aeab421e688ce578e6a91384f2270c0f3e0f5f546debf946c894727a5cb4",
+      "bytes": 51351,
+      "snapshot": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2/provider-fixtures.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/run.mjs",
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53",
+      "bytes": 16699,
+      "snapshot": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2/run.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739",
+      "bytes": 15609,
+      "snapshot": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2/harness.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/fixtures/silence-12s.webm",
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+      "bytes": 52225,
+      "snapshot": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources-v2/silence-12s.webm"
+    }
+  ],
+  "scenarioIds": [
+    "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+    "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus"
+  ],
+  "fixture": {
+    "origin": "Locally generated digital silence; no musical recording",
+    "command": "ffmpeg -hide_banner -loglevel error -f lavfi -i anullsrc=r=48000:cl=stereo -t 12 -c:a libopus -b:a 32k -vbr off -application audio -map_metadata -1 -fflags +bitexact -flags:a +bitexact -n scripts/tests/e2e/fixtures/silence-12s.webm",
+    "generator": "ffmpeg8.1",
+    "codec": "opus",
+    "mime": "audio/webm",
+    "sampleRate": 48000,
+    "channels": 2,
+    "duration": 12.008,
+    "bytes": 52225
+  },
+  "limits": [
+    "No browser results claimed by this source freeze.",
+    "Native canPlayType remains unmodified. Missing Opus/WebM support is explicit unsupported for the two new compatible-codec scenarios.",
+    "P1 URLs are synthetic direct locators in HTTP fixtures, while the compiled resolver, normal decoder and HTMLAudio remain real."
+  ],
+  "revision": 2,
+  "supersedesObservation": {
+    "originalManifest": {
+      "path": "artifacts/pwa-port/opus-c8ed230fbf100850-qa-sources.json",
+      "sha256": "8b148987f2e0f23a66646979efdcd2b43f29878520de8242aba1a1fcb653a24e"
+    },
+    "reason": "The denied AAC HTTP403 row recorded expected AAC MIME/hash before returning an error body. Revision2 records actual text/plain MIME and actual error-body SHA. Positive selected media bytes, application behavior and all other scenario implementations are unchanged.",
+    "originalReportsPreserved": true,
+    "productChanged": false
+  }
+}

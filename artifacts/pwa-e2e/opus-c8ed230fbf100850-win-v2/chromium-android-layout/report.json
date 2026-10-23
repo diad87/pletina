@@ -1,0 +1,1151 @@
+{
+  "profile": "chromium-android-layout",
+  "engine": "chromium",
+  "checks": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "startedAt": "2026-10-23T19:45:58.362Z",
+      "status": "pass",
+      "build": "c8ed230fbf100850",
+      "applicationPath": "/pletina/application/index.8a3ebff29a2ec9fb.html",
+      "viewport": {
+        "width": 393,
+        "height": 852
+      },
+      "physicalPlatform": false,
+      "finishedAt": "2026-10-23T19:45:59.135Z"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "startedAt": "2026-10-23T19:45:59.137Z",
+      "status": "pass",
+      "firstSong": "Canción QA Uno",
+      "interceptedTrackSearches": 1,
+      "playbackStarted": false,
+      "finishedAt": "2026-10-23T19:46:00.522Z"
+    },
+    {
+      "name": "media.selection-html-audio",
+      "startedAt": "2026-10-23T19:46:00.530Z",
+      "status": "pass",
+      "audio": {
+        "title": "Canción QA Uno",
+        "metadata": {
+          "title": "Canción QA Uno",
+          "artist": "Artista QA Uno"
+        },
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "online": true,
+        "events": [
+          {
+            "type": "waiting",
+            "index": 0,
+            "time": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0,
+            "time": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0,
+            "time": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0,
+            "time": 0
+          },
+          {
+            "type": "playing",
+            "index": 0,
+            "time": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0,
+            "time": 0.161406
+          }
+        ],
+        "audios": [
+          {
+            "index": 0,
+            "playing": true,
+            "paused": false,
+            "time": 0.171626,
+            "duration": 12,
+            "source": true,
+            "local": false,
+            "host": "fixture.googlevideo.com",
+            "error": null,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 4
+          }
+        ]
+      },
+      "media": "Real silent AAC/MP4; no song-content claim",
+      "finishedAt": "2026-10-23T19:46:01.980Z"
+    },
+    {
+      "name": "media.p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video",
+      "startedAt": "2026-10-23T19:46:01.981Z",
+      "status": "pass",
+      "requestedTrackId": 206,
+      "selected": {
+        "path": "/videoplayback",
+        "videoId": "qaP1Opus01a",
+        "itag": 251,
+        "mime": "audio/webm"
+      },
+      "capability": {
+        "opus": "probably",
+        "aac": "probably"
+      },
+      "opusFixture": {
+        "bytes": 52225,
+        "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+        "mime": "audio/webm",
+        "codec": "opus",
+        "duration": 12.008
+      },
+      "aacFixture": {
+        "bytes": 5002,
+        "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+        "mime": "audio/mp4",
+        "duration": 12
+      },
+      "attempts": [
+        {
+          "operation": "music-search",
+          "candidateIds": [
+            "qaP1Opus01a"
+          ]
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus01a",
+          "clientName": "VISIONOS",
+          "playability": "UNPLAYABLE"
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus01a",
+          "clientName": "WEB_EMBEDDED_PLAYER",
+          "playability": "OK"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        }
+      ],
+      "observed": {
+        "officialObserved": false,
+        "clicks": [
+          {
+            "trusted": true
+          }
+        ],
+        "currentId": 206,
+        "ids": [
+          206
+        ]
+      },
+      "sameNativeAudio": true,
+      "audioAdvanced": true,
+      "download": {
+        "id": 206,
+        "state": "error",
+        "progress": 0,
+        "error": "Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión."
+      },
+      "scope": "Synthetic same-ID HTTP formats and real encoded silent Opus/WebM plus AAC/MP4. Native codec detection only; no provider availability, musical identity, physical phone or background assertion.",
+      "finishedAt": "2026-10-23T19:46:10.830Z"
+    },
+    {
+      "name": "media.p1-healthy-aac-keeps-priority-over-higher-bitrate-opus",
+      "startedAt": "2026-10-23T19:46:10.832Z",
+      "status": "pass",
+      "requestedTrackId": 207,
+      "selected": {
+        "path": "/videoplayback",
+        "videoId": "qaP1Opus02b",
+        "itag": 140,
+        "mime": "audio/mp4"
+      },
+      "capability": {
+        "opus": "probably",
+        "aac": "probably"
+      },
+      "opusFixture": {
+        "bytes": 52225,
+        "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4",
+        "mime": "audio/webm",
+        "codec": "opus",
+        "duration": 12.008
+      },
+      "aacFixture": {
+        "bytes": 5002,
+        "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+        "mime": "audio/mp4",
+        "duration": 12
+      },
+      "attempts": [
+        {
+          "operation": "music-search",
+          "candidateIds": [
+            "qaP1Opus02b"
+          ]
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus02b",
+          "clientName": "VISIONOS",
+          "playability": "UNPLAYABLE"
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus02b",
+          "clientName": "WEB_EMBEDDED_PLAYER",
+          "playability": "OK"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 140,
+          "responseMime": "audio/mp4",
+          "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 140,
+          "responseMime": "audio/mp4",
+          "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+        }
+      ],
+      "observed": {
+        "officialObserved": false,
+        "clicks": [
+          {
+            "trusted": true
+          }
+        ],
+        "currentId": 207,
+        "ids": [
+          207
+        ]
+      },
+      "sameNativeAudio": true,
+      "audioAdvanced": true,
+      "download": {
+        "id": 207,
+        "state": "error",
+        "progress": 0,
+        "error": "Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión."
+      },
+      "scope": "Synthetic same-ID HTTP formats and real encoded silent Opus/WebM plus AAC/MP4. Native codec detection only; no provider availability, musical identity, physical phone or background assertion.",
+      "finishedAt": "2026-10-23T19:46:13.741Z"
+    }
+  ],
+  "errors": [],
+  "build": "c8ed230fbf100850",
+  "providerMode": "fixture",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "puppeteerVersion": "25.14.0",
+  "browserVersion": "153.0.8010.52",
+  "kind": "desktop-emulation",
+  "physical": false,
+  "startedAt": "2026-10-23T19:45:58.259Z",
+  "networkTransport": "Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.",
+  "counts": {
+    "pass": 5,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "p1Codecs": [
+    {
+      "trackId": 206,
+      "completed": true,
+      "capability": {
+        "opus": "probably",
+        "aac": "probably"
+      },
+      "attempts": [
+        {
+          "operation": "music-search",
+          "candidateIds": [
+            "qaP1Opus01a"
+          ]
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus01a",
+          "clientName": "VISIONOS",
+          "playability": "UNPLAYABLE"
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus01a",
+          "clientName": "WEB_EMBEDDED_PLAYER",
+          "playability": "OK"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 140,
+          "responseStatus": 403,
+          "responseMime": "text/plain",
+          "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+          "injectedFailure": "p1-aac-cdn-http-403"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus01a",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        }
+      ]
+    },
+    {
+      "trackId": 207,
+      "completed": true,
+      "capability": {
+        "opus": "probably",
+        "aac": "probably"
+      },
+      "attempts": [
+        {
+          "operation": "music-search",
+          "candidateIds": [
+            "qaP1Opus02b"
+          ]
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus02b",
+          "clientName": "VISIONOS",
+          "playability": "UNPLAYABLE"
+        },
+        {
+          "operation": "player",
+          "videoId": "qaP1Opus02b",
+          "clientName": "WEB_EMBEDDED_PLAYER",
+          "playability": "OK"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 140,
+          "responseMime": "audio/mp4",
+          "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 251,
+          "responseMime": "audio/webm",
+          "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+        },
+        {
+          "operation": "media",
+          "videoId": "qaP1Opus02b",
+          "itag": 140,
+          "responseMime": "audio/mp4",
+          "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+        }
+      ]
+    }
+  ],
+  "offlineTransitions": [
+    {
+      "requestedOffline": false,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": false,
+      "expectedNavigatorOnline": true,
+      "before": true,
+      "after": true,
+      "at": "2026-10-23T19:46:13.746Z"
+    }
+  ],
+  "finalState": {
+    "path": "/pletina/application/index.8a3ebff29a2ec9fb.html",
+    "online": true,
+    "title": "Pletina",
+    "headings": [
+      "Canciones",
+      "Resultado principal",
+      "Artistas",
+      "Discos"
+    ],
+    "navigation": {
+      "index": 3,
+      "route": {
+        "name": "search",
+        "query": "QA formatos P1 QA AAC preferente"
+      },
+      "historyLength": 7
+    },
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "notices": [
+      "No se pudo descargar «P1 QA AAC preferente»: Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión."
+    ],
+    "audio": {
+      "instances": [
+        {
+          "index": 0,
+          "srcPresent": true,
+          "local": false,
+          "time": 0.997198,
+          "duration": 12,
+          "paused": true,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 4,
+          "error": null
+        }
+      ],
+      "events": [
+        {
+          "type": "waiting",
+          "index": 0,
+          "at": 14317,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "loadstart",
+          "index": 0,
+          "at": 14317,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "durationchange",
+          "index": 0,
+          "at": 14320,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "loadedmetadata",
+          "index": 0,
+          "at": 14320,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "playing",
+          "index": 0,
+          "at": 14330,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 14585,
+          "time": 0.221034,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 14861,
+          "time": 0.495352,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 15120,
+          "time": 0.74989,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 15377,
+          "time": 0.997198,
+          "paused": true,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "pause",
+          "index": 0,
+          "at": 15377,
+          "time": 0.997198,
+          "paused": true,
+          "hidden": false,
+          "error": null,
+          "local": false
+        }
+      ],
+      "handlers": [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto"
+      ]
+    },
+    "viewport": {
+      "width": 393,
+      "height": 852,
+      "documentWidth": 393
+    }
+  },
+  "fixture": {
+    "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+    "counts": {
+      "api.deezer.com/chart/0/albums": 1,
+      "api.deezer.com/chart/0/artists": 1,
+      "images.pletina.test/cover.svg": 16,
+      "api.deezer.com/search/artist": 6,
+      "api.deezer.com/search/album": 6,
+      "api.deezer.com/search/track": 6,
+      "music.youtube.com/youtubei/v1/search": 4,
+      "www.youtube.com/youtubei/v1/search": 3,
+      "www.youtube.com/youtubei/v1/player": 6,
+      "fixture.googlevideo.com/audio/qaAudio001a": 1,
+      "fixture.googlevideo.com/videoplayback": 10,
+      "api.audius.co/v1/tracks": 2
+    },
+    "requests": [
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/artists",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio001a",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio001a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio002b",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch",
+        "fixtureCase": "p1-codecs",
+        "operation": "music-search",
+        "requestedTrackId": 206,
+        "candidateIds": [
+          "qaP1Opus01a"
+        ]
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaP1Opus01a",
+        "clientName": "VISIONOS",
+        "fixtureCase": "p1-codecs",
+        "playability": "UNPLAYABLE"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaP1Opus01a",
+        "clientName": "WEB_EMBEDDED_PLAYER",
+        "fixtureCase": "p1-codecs",
+        "playability": "OK"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 140,
+        "responseMime": "text/plain",
+        "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+        "responseStatus": 403,
+        "injectedFailure": "p1-aac-cdn-http-403"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 251,
+        "responseMime": "audio/webm",
+        "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 140,
+        "responseMime": "text/plain",
+        "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+        "responseStatus": 403,
+        "injectedFailure": "p1-aac-cdn-http-403"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 140,
+        "responseMime": "text/plain",
+        "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+        "responseStatus": 403,
+        "injectedFailure": "p1-aac-cdn-http-403"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 140,
+        "responseMime": "text/plain",
+        "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+        "responseStatus": 403,
+        "injectedFailure": "p1-aac-cdn-http-403"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 140,
+        "responseMime": "text/plain",
+        "bodySha256": "a88a44ccab7fef106770efc582dc18ce843250a959bb8e893c1eec2cb30b24ea",
+        "responseStatus": 403,
+        "injectedFailure": "p1-aac-cdn-http-403"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus01a",
+        "itag": 251,
+        "responseMime": "audio/webm",
+        "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.audius.co",
+        "path": "/v1/tracks",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch",
+        "fixtureCase": "p1-codecs",
+        "operation": "music-search",
+        "requestedTrackId": 207,
+        "candidateIds": [
+          "qaP1Opus02b"
+        ]
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaP1Opus02b",
+        "clientName": "VISIONOS",
+        "fixtureCase": "p1-codecs",
+        "playability": "UNPLAYABLE"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaP1Opus02b",
+        "clientName": "WEB_EMBEDDED_PLAYER",
+        "fixtureCase": "p1-codecs",
+        "playability": "OK"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus02b",
+        "itag": 140,
+        "responseMime": "audio/mp4",
+        "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus02b",
+        "itag": 251,
+        "responseMime": "audio/webm",
+        "bodySha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/videoplayback",
+        "method": "GET",
+        "type": "media",
+        "fixtureCase": "p1-codecs",
+        "operation": "media",
+        "videoId": "qaP1Opus02b",
+        "itag": 140,
+        "responseMime": "audio/mp4",
+        "bodySha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.audius.co",
+        "path": "/v1/tracks",
+        "method": "GET",
+        "type": "fetch"
+      }
+    ]
+  },
+  "contextClosed": true,
+  "finishedAt": "2026-10-23T19:46:13.768Z",
+  "browserClosed": true,
+  "puppeteerBrowserClosed": true
+}
