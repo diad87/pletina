@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T12:56:03.788Z",
+  "build": "3b0bf2498ba109f3",
+  "sourceCommit": "7dfedd3714783e74193b1f6b53da44debbddf2d9",
+  "status": "qa-sources-frozen-local-canary-validated-public-pending",
+  "sources": [
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "sha256": "18f3bc40435366cc35602bf51c3ee0209ed3b18cf1c6d2ba655882c0558b8273",
+      "snapshot": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources/media-scenarios.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "445476fd44d4e82ad303eedb39fb4530fff8fac62e791cfa39b69d48ac619086",
+      "snapshot": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources/provider-fixtures.mjs"
+    },
+    {
+      "path": "scripts/tests/official-youtube.browser.mjs",
+      "sha256": "9b5abd7e4556833e60e38777e62dc1c6d1c8f04647e1890670be06bcc73d0627",
+      "snapshot": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources/official-youtube.browser.mjs"
+    },
+    {
+      "path": "scripts/tests/e2e/run.mjs",
+      "sha256": "d658c9989ea37d0d92aa596478e1b8cf198dad650c492f4070198f8e9ba7e852",
+      "snapshot": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources/run.mjs"
+    }
+  ],
+  "mediaInventoryCount": 47,
+  "selectedMediaScenarios": [
+    "media.selection-html-audio",
+    "media.music-unplayable-rescues-distinct-web-source-without-skipping-song",
+    "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+    "media.youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio",
+    "media.audius-homonym-with-wrong-isrc-or-artist-never-starts-audio",
+    "media.pause-seek-next-previous-one-audio",
+    "media.media-session-metadata-and-idempotent-actions",
+    "media.artist-popular-selection-immediately-shows-loading-and-long-wait-feedback",
+    "media.artist-current-byline-plays-row-and-guest-byline-only-navigates",
+    "media.artist-latest-selection-wins-before-previous-provider-response",
+    "media.artist-a-b-a-never-reuses-the-aborting-first-request",
+    "media.artist-loading-cancel-prevents-late-play-and-explicit-retry-recovers",
+    "media.artist-final-track-error-clears-loading-and-explicit-retry-keeps-track",
+    "media.audio-final-retry-first-refresh-recovers-without-video-or-extra-click",
+    "media.audio-final-retry-second-refresh-recovers-without-video-or-extra-click",
+    "media.audio-final-retry-exhaustion-opens-video-only-after-three-audio-failures",
+    "media.audio-final-retry-cancel-or-replace-prevents-late-audio-and-video",
+    "media.automatic-next-real-ended-same-audio",
+    "media.pause-during-delayed-resolution-prevents-late-autoplay",
+    "media.rapid-song-selection-ignores-obsolete-player-response",
+    "media.provider-errors-stop-boundedly-and-explicit-retry-recovers",
+    "media.reload-restores-current-dj-position-and-paused-intent"
+  ],
+  "expectedPerProfile": {
+    "setupChecks": 2,
+    "selectedMediaChecks": 22,
+    "total": 24
+  },
+  "newCases": [
+    "media.audio-final-retry-first-refresh-recovers-without-video-or-extra-click",
+    "media.audio-final-retry-second-refresh-recovers-without-video-or-extra-click",
+    "media.audio-final-retry-exhaustion-opens-video-only-after-three-audio-failures",
+    "media.audio-final-retry-cancel-or-replace-prevents-late-audio-and-video"
+  ],
+  "contracts": {
+    "firstRetry": "One original trusted title click; initial VISIONOS/P1 unavailable, retry1 succeeds; same title/queue/Audio, no iframe or third cycle.",
+    "secondRetry": "The same contract with retry1 unavailable and retry2 success; exact two retry events and visible 2/2 feedback.",
+    "exhaustion": "Three total unavailable cycles for the same recording, two discovery searches, no video before retry2 settles, exactly one matched official iframe.",
+    "cancellation": "Cancel and change-song controls each hold retry1 HTTP; released obsolete response cannot invoke P1, retry2, audio or video. Explicit retry recovers; source event observations catch brief obsolete playback."
+  },
+  "localCanary": {
+    "path": "artifacts/pwa-port/p1-song-artist-popular-3b0bf2498ba109f3-local.json",
+    "sha256": "c49cc5411c689d8ac5061f10e7b67069e74c24f2dc8e827ec5d9e8a55c62af13",
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "sourceSnapshot": "artifacts/pwa-port/p1-song-ui-diagnostic-source-f94fa896a8ca1229.mjs",
+    "songControl": "title",
+    "passed": 1,
+    "failed": 0
+  },
+  "provenance": {
+    "previousQaSourcesUnchanged": "The 9e5a1b663ba1d8ab snapshots/manifests are preserved; these are new immutable snapshots.",
+    "controlledE2E": "HTTP provider fixtures and real native synthetic AAC; no live-provider, mobile background or physical phone claim.",
+    "liveCanary": "Real provider/catalog requests from the compiled PWA; no provider mocks, Node bootstrap, autoplay or security overrides. Desktop foreground only."
+  }
+}

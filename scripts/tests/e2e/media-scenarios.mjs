@@ -15,6 +15,10 @@ export const mediaScenarioInventory = Object.freeze([
   'artist-a-b-a-never-reuses-the-aborting-first-request',
   'artist-loading-cancel-prevents-late-play-and-explicit-retry-recovers',
   'artist-final-track-error-clears-loading-and-explicit-retry-keeps-track',
+  'audio-final-retry-first-refresh-recovers-without-video-or-extra-click',
+  'audio-final-retry-second-refresh-recovers-without-video-or-extra-click',
+  'audio-final-retry-exhaustion-opens-video-only-after-three-audio-failures',
+  'audio-final-retry-cancel-or-replace-prevents-late-audio-and-video',
   'now-playing-synthetic-touch-swipe-threshold-and-interactive-origin',
   'home-surprise-album-starts-saved-album-in-track-order', 'artist-radio-builds-bounded-mixed-queue-and-plays',
   'artist-radio-related-provider-failure-keeps-playable-seed-and-visible-warning',
@@ -399,6 +403,163 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     })
   }
 
+  const retryIds = ['audio-final-retry-first-refresh-recovers-without-video-or-extra-click',
+    'audio-final-retry-second-refresh-recovers-without-video-or-extra-click',
+    'audio-final-retry-exhaustion-opens-video-only-after-three-audio-failures',
+    'audio-final-retry-cancel-or-replace-prevents-late-audio-and-video']
+  if (retryIds.some(selectedScenario)) {
+    const retries = media.audioRetry
+    assert.ok(retries?.tracks?.length === 6 && fixture.planPlayer, 'Dedicated final-retry HTTP fixtures are required')
+    const trace = (mark, id) => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'audio-final-retry' && (!id || request.videoId === id))
+      .map(({ operation, videoId, clientName, playability, cycle, requestedTrackId, candidateIds }) => ({ operation,
+        ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}), ...(cycle ? { cycle } : {}),
+        ...(requestedTrackId ? { requestedTrackId } : {}), ...(candidateIds ? { candidateIds } : {}) }))
+    const observe = () => {
+      if (window.__qaRetry) return
+      const observation = window.__qaRetry = { events: [], clicks: [] }
+      window.addEventListener('pletina:audio-retry', ({ detail }) => observation.events.push({ trackId: detail.trackId, attempt: detail.attempt, total: detail.total }))
+      document.addEventListener('click', event => {
+        const title = event.target.closest?.('.tracks li[data-reorder-index] .name')
+        if (title) observation.clicks.push({ title: title.textContent.trim(), trusted: event.isTrusted })
+      }, true)
+    }
+    async function retrySearch(track) {
+      await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
+      await page.evaluate(observe)
+      await ctx.fillSearch('Buscar', retries.query(track.title.replace('Reintento QA ', '')))
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, track.title)
+    }
+    const retryEvents = track => page.evaluate(id => window.__qaRetry.events.filter(event => event.trackId === id), track.id)
+    async function retryBusy(track, attempt) {
+      await wait(({ title, message }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        document.querySelector('.mini[aria-busy="true"] .artist')?.textContent.trim() === message &&
+        document.querySelector('.mini button[aria-label="Cancelar carga"]'), { title: track.title, message: `Reintentando audio (${attempt}/2)…` })
+      assert.equal(await visible('dialog[data-official-youtube][open]'), false)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.deepEqual(await retryEvents(track), Array.from({ length: attempt }, (_, i) => ({ trackId: track.id, attempt: i + 1, total: 2 })))
+    }
+    async function retryPlaying(track) {
+      // No helper may supply another Play gesture: automatic recovery must use
+      // the original title click and the same native Audio pipeline.
+      await wait(({ title, videoId }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.readyState >= 2 && audio.currentTime > .2 &&
+          new URL(audio.currentSrc || audio.src).pathname === '/audio/' + videoId), { title: track.title, videoId: track.videoId })
+      await page.locator('.mini button[aria-label="Pausa"]').waitFor()
+      const value = await state()
+      assert.equal(value.audios.length, 1); assert.equal(value.title, track.title)
+      if (value.metadata) assert.equal(value.metadata.title, track.title)
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.equal(await visible('dialog[data-official-youtube][open]'), false)
+      return value
+    }
+    async function queueIdentity() {
+      return page.evaluate(() => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return { currentId: queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null, ids: queue?.queue?.map(item => item.track.id) ?? [] }
+      })
+    }
+    async function retryCleanup() {
+      fixture.release(); await closeOverlays()
+      await page.evaluate(() => { window.__qaAudio?.stopSelectionObserver?.() }).catch(() => {})
+      if (await visible('.mini button[aria-label="Cancelar carga"]')) await tap('.mini button[aria-label="Cancelar carga"]')
+      await pause(); await fixture.reset()
+    }
+    for (const attempt of [1, 2]) await run(retryIds[attempt - 1], async () => {
+      const track = retries.tracks[attempt - 1]
+      await retrySearch(track); fixture.planPlayer(track.videoId, { rejectCycles: attempt })
+      const gate = fixture.holdNextPlayer(track.videoId, { clientName: 'VISIONOS', occurrence: attempt + 1 }), mark = fixture.requests.length
+      try {
+        await tap(row(0) + ' .name'); await gate.waitForRequest(); await retryBusy(track, attempt)
+        const screenshot = await captureSelection('audio-retry-' + attempt)
+        assert.deepEqual(await queueIdentity(), { currentId: track.id, ids: [track.id] })
+        gate.release(); await gate.waitForDelivery(); const value = await retryPlaying(track)
+        const players = trace(mark, track.videoId).filter(request => request.operation === 'player')
+        const expected = Array.from({ length: attempt }, (_, i) => [
+          { operation: 'player', videoId: track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE', cycle: i + 1 },
+          { operation: 'player', videoId: track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE', cycle: i + 1 },
+        ]).flat().concat({ operation: 'player', videoId: track.videoId, clientName: 'VISIONOS', playability: 'OK', cycle: attempt + 1 })
+        assert.deepEqual(players, expected, 'Only the chosen recording may be retried; stop immediately after success')
+        const searches = trace(mark).filter(request => /^(music|web)-search$/.test(request.operation))
+        assert.deepEqual(searches.map(request => request.operation), ['music-search', 'web-search'], 'Final audio retries cannot repeat discovery or modal searches')
+        assert.deepEqual(await retryEvents(track), Array.from({ length: attempt }, (_, i) => ({ trackId: track.id, attempt: i + 1, total: 2 })))
+        assert.deepEqual(await page.evaluate(() => window.__qaRetry.clicks), [{ title: track.title, trusted: true }])
+        assert.deepEqual(await queueIdentity(), { currentId: track.id, ids: [track.id] })
+        await page.waitForTimeout(200)
+        assert.deepEqual(trace(mark, track.videoId).filter(request => request.operation === 'player'), expected, 'Successful retry must not launch another attempt')
+        return { recoveredOnRetry: attempt, screenshot, originalTrustedClicks: 1, searches: searches.length, events: await retryEvents(track), players, sameAudio: true, audio: value }
+      } finally { await retryCleanup() }
+    })
+    await run(retryIds[2], async () => {
+      const track = retries.tracks[2]
+      await retrySearch(track); fixture.planPlayer(track.videoId, { rejectCycles: 3 })
+      const gate = fixture.holdNextPlayer(track.videoId, { clientName: 'VISIONOS', occurrence: 3 }), mark = fixture.requests.length
+      try {
+        await tap(row(0) + ' .name'); await gate.waitForRequest(); await retryBusy(track, 2)
+        assert.equal(trace(mark).filter(request => request.operation === 'official-embed').length, 0, 'No video document before the last audio attempt settles')
+        gate.release(); await gate.waitForDelivery()
+        await page.locator('dialog[data-official-youtube][open] iframe[data-official-video]').waitFor({ state: 'visible' })
+        const source = new URL(await page.locator('iframe[data-official-video]').getAttribute('src'))
+        assert.equal(source.pathname, '/embed/' + track.videoId); assert.equal(source.searchParams.get('autoplay'), '1')
+        await wait(id => JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')?.queue?.some(item => item.track.id === id), track.id)
+        assert.deepEqual(await queueIdentity(), { currentId: track.id, ids: [track.id] })
+        assert.equal((await state()).title, track.title)
+        assert.ok((await state()).audios.every(audio => audio.paused && !audio.source))
+        assert.deepEqual(await retryEvents(track), [{ trackId: track.id, attempt: 1, total: 2 }, { trackId: track.id, attempt: 2, total: 2 }])
+        const players = trace(mark, track.videoId).filter(request => request.operation === 'player')
+        assert.deepEqual(players, [1, 2, 3].flatMap(cycle => ['VISIONOS', 'WEB_EMBEDDED_PLAYER'].map(clientName => ({ operation: 'player', videoId: track.videoId, clientName, playability: 'UNPLAYABLE', cycle }))))
+        assert.equal(trace(mark).filter(request => /^(music|web)-search$/.test(request.operation)).length, 2)
+        assert.deepEqual(await page.evaluate(() => window.__qaRetry.clicks), [{ title: track.title, trusted: true }])
+        await wait(() => document.querySelector('iframe[data-official-video]')?.contentWindow !== null)
+        await page.waitForTimeout(200)
+        assert.equal(trace(mark).filter(request => request.operation === 'official-embed').length, 1)
+        assert.equal(trace(mark, track.videoId).filter(request => request.operation === 'player').length, 6, 'Three total cycles are a hard bound, not an endless recovery loop')
+        return { audioCycles: 3, finalVideoId: track.videoId, events: await retryEvents(track), players,
+          officialEmbedDocuments: 1, originalTrustedClicks: 1, videoContent: 'benign HTTP fixture; no YouTube playback or autoplay-policy claim' }
+      } finally { await retryCleanup() }
+    })
+    await run(retryIds[3], async () => {
+      const results = []
+      for (const mode of ['cancel', 'replace']) {
+        const track = retries.tracks[mode === 'cancel' ? 3 : 4], destination = retries.tracks[5]
+        await retrySearch(track); fixture.planPlayer(track.videoId, { rejectCycles: 1 })
+        const gate = fixture.holdNextPlayer(track.videoId, { clientName: 'VISIONOS', occurrence: 2 }), mark = fixture.requests.length
+        try {
+          await tap(row(0) + ' .name'); await gate.waitForRequest(); await retryBusy(track, 1)
+          await observeSelectionSources()
+          if (mode === 'cancel') {
+            await tap('.mini button[aria-label="Cancelar carga"]')
+            await page.locator('.mini button[aria-label="Reproducir"]').waitFor()
+            await wait(() => !document.querySelector('.mini[aria-busy="true"]'))
+          } else {
+            await tap(row(1) + ' .name'); await retryPlaying(destination)
+          }
+          gate.release(); const delivery = await gate.waitForDelivery(); await page.waitForTimeout(1000)
+          assert.deepEqual(await retryEvents(track), [{ trackId: track.id, attempt: 1, total: 2 }])
+          assert.equal(trace(mark, track.videoId).filter(request => request.operation === 'player').length, 3,
+            'Retired retry cannot continue to P1, another retry or video after the late HTTP response')
+          assert.equal(trace(mark).filter(request => request.operation === 'official-embed').length, 0)
+          assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+          const value = await state(); assert.equal(value.audios.length, 1)
+          const samples = await page.evaluate(() => window.__qaAudio.selectionSamples)
+          if (mode === 'cancel') {
+            assert.equal(value.title, track.title); assert.ok(value.audios.every(audio => audio.paused))
+            assert.ok(samples.every(sample => sample.paused), 'The released cancelled response cannot briefly start native audio')
+            // Explicit user retry gets a new operation; the cancelled reply must
+            // never itself revive playback or consume its next retry budget.
+            await tap('.mini button[aria-label="Reproducir"]'); await retryPlaying(track)
+          } else {
+            assert.equal(value.title, destination.title)
+            assert.ok(active(value)?.time > .2)
+            assertSelectedSource(samples, destination.videoId)
+          }
+          results.push({ mode, cancelledTrackId: track.id, heldDelivery: delivery.playerGate,
+            events: await retryEvents(track), noLateAudioOrVideo: true, samples, observed: value })
+        } finally { await retryCleanup() }
+      }
+      return { controls: results, providerReplies: 'real HTTP interception, no application promises or decoder replacement' }
+    })
+  }
+
   await run('music-unplayable-rescues-distinct-web-source-without-skipping-song', async () => {
     const rescue = media.webRescue
     assert.ok(rescue?.track && rescue.musicVideoId !== rescue.webVideoId)
@@ -664,7 +825,11 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       assert.deepEqual(trace.filter(attempt => attempt.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
         { videoId: rejected.track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
         { videoId: rejected.track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
-      ], 'Rejected homonyms do not permit retries beyond one VISIONOS and one P1 attempt for the original ID')
+        { videoId: rejected.track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rejected.track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
+        { videoId: rejected.track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: rejected.track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'UNPLAYABLE' },
+      ], 'Rejected homonyms cannot play; the original ID receives at most two fresh final audio retries before video')
       const catalog = trace.filter(request => request.operation === 'catalog-search')
       assert.ok(catalog.length >= 1)
       assert.equal(catalog[0].isrc, rejected.track.isrc)

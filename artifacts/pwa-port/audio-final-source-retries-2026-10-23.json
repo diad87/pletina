@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T12:53:15.292Z",
+  "scope": "Two extra fresh playback attempts of the single final selected video before the existing official fallback. PWA only; no new build or publication by this task.",
+  "baselineSourceCommit": "66afbdf0f1a05e45445bc2de984d8521fdb04aa2",
+  "files": [
+    {
+      "path": "web-port/audio.ts",
+      "sha256": "5ff8383e6e852bad8900a4370cd674d940f61d69a2d868e623f472e898232af9"
+    },
+    {
+      "path": "scripts/tests/web-audio.test.mjs",
+      "sha256": "051bfc9b5b4a1c7d82c20a90c72aeb6a1be4ff9b3e179af392b949b090858301"
+    }
+  ],
+  "before": {
+    "command": "node --test --test-name-pattern='final audio fallback retries|a final manual or added source retries|downloads and explicit source changes do not inherit' scripts/tests/web-audio.test.mjs",
+    "pass": 1,
+    "fail": 2,
+    "negativeControl": "Downloads and chooseSource retain their prior single-resolution policy."
+  },
+  "after": {
+    "audio": {
+      "command": "node --test scripts/tests/web-audio.test.mjs",
+      "pass": 63,
+      "fail": 0,
+      "newTests": 14
+    },
+    "cacheAndDownloads": {
+      "command": "node --test scripts/tests/web-downloads.test.mjs scripts/tests/web-p1-integration.test.mjs",
+      "pass": 63,
+      "fail": 0
+    },
+    "types": {
+      "command": "npm run check",
+      "errors": 0,
+      "warnings": 0
+    }
+  },
+  "contract": {
+    "extraFreshStreamAttempts": 2,
+    "backoffMs": [
+      250,
+      750
+    ],
+    "sharedOperationDeadlineMs": 45000,
+    "exactFinalVideoId": true,
+    "repeatSearches": false,
+    "downloadAndChooseAndPodcastPolicyChanged": false,
+    "event": {
+      "type": "pletina:audio-retry",
+      "detailFields": [
+        "trackId",
+        "attempt",
+        "total"
+      ],
+      "total": 2
+    },
+    "finalTransientFailureOpensVideo": false,
+    "restrictedOrResponseRetries": false,
+    "metadataOnlyAssociationOnSuccessfulAutomaticRecovery": true
+  },
+  "limits": {
+    "syntheticAdapters": true,
+    "physicalPhone": false,
+    "liveProvider": false,
+    "persistedMedia": false,
+    "signedProviderUrlsPersisted": false
+  }
+}

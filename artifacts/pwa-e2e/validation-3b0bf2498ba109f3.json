@@ -1,0 +1,593 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T12:56:18.720Z",
+  "build": "3b0bf2498ba109f3",
+  "status": "published-and-verified",
+  "sourceCommit": "7dfedd3714783e74193b1f6b53da44debbddf2d9",
+  "previousBuild": "9e5a1b663ba1d8ab",
+  "productChange": "PWA playback retries the single final selected video at most twice with fresh stream refreshes before the existing eligible official fallback. Backoffs of 250 and 750 ms share the existing 45-second operation deadline, with no extra searches. Downloads, explicit chooseSource and podcasts retain their prior policy. UI shows attempts 1/2 and 2/2 with spinner/cancel and resets the label on replacement, pause, failure or confirmed playing.",
+  "logic": {
+    "pass": 678,
+    "fail": 0,
+    "report": "artifacts/pwa-port/audio-final-retry-logic-2026-10-23.txt",
+    "lineEndings": "LF before hash binding"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "report": "artifacts/pwa-port/audio-final-retry-types-2026-10-23.txt",
+    "lineEndings": "LF before hash binding"
+  },
+  "directedAudio": {
+    "pass": 63,
+    "fail": 0,
+    "newTests": 14,
+    "negativeControlsBeforeFix": 2,
+    "unchangedPolicyControlBeforeFix": 1,
+    "report": "artifacts/pwa-port/audio-final-source-retries-2026-10-23.json",
+    "scope": "Synthetic source adapters; no live provider or physical-device claim."
+  },
+  "directedCacheDownloadsAndP1": {
+    "pass": 63,
+    "fail": 0,
+    "suites": [
+      "scripts/tests/web-downloads.test.mjs",
+      "scripts/tests/web-p1-integration.test.mjs"
+    ],
+    "report": "artifacts/pwa-port/audio-final-source-retries-2026-10-23.json"
+  },
+  "directedPlayer": {
+    "pass": 94,
+    "fail": 0,
+    "newTests": 6,
+    "tests": "scripts/tests/web-player.test.mjs",
+    "includedInFullLogic": true,
+    "scope": "PWA/native desktop/recovery harnesses. Retry events validated, other IDs and inactive loads ignored, labels reset on selection/cancel/failure/playing including fulfilled play without playing and sleep cancellation. Emission checks AbortSignal synchronously to retire old same-ID operations."
+  },
+  "retry": {
+    "extraAttemptsMax": 2,
+    "sameFinalVideoId": true,
+    "freshStreamRefresh": true,
+    "backoffMs": [
+      250,
+      750
+    ],
+    "sharedOperationDeadlineMs": 45000,
+    "noNewSearches": true,
+    "playbackOnly": true,
+    "downloadsChanged": false,
+    "podcastsChanged": false,
+    "explicitChooseSourceChanged": false,
+    "restrictedOrResponseRetries": false,
+    "finalNetworkOrTimeoutOpensVideo": false,
+    "event": {
+      "type": "pletina:audio-retry",
+      "detail": {
+        "trackId": "active numeric catalog ID",
+        "attempt": "1|2",
+        "total": 2
+      }
+    },
+    "uiMessages": [
+      "Reintentando audio (1/2)…",
+      "Reintentando audio (2/2)…"
+    ],
+    "counterInRamOnly": true,
+    "existingSpinnerAndCancelPreserved": true,
+    "retryHasPriorityOverLongWaitHint": true,
+    "sixSecondHintRetainedWithoutRetry": true
+  },
+  "focusedMedia": {
+    "status": "complete",
+    "expectedTotal": 72,
+    "selectedChecksPerProfile": 22,
+    "setupChecksPerProfile": 2,
+    "expectedProfiles": 3,
+    "reports": [
+      "artifacts/pwa-e2e/audio-retry-3b0bf2498ba109f3-win-final/summary.json",
+      "artifacts/pwa-e2e/media-3b0bf2498ba109f3-linux-final/summary.json"
+    ],
+    "scope": "22 selected integration cases plus two setup checks per profile across three desktop engines with Android/iPhone layouts. Not a rerun of all 135 media cases, 21 responsive checks or all PWA functions.",
+    "qaSourcesManifest": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources.json",
+    "newRetryScenarios": 4,
+    "pass": 72,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0,
+    "total": 72,
+    "profiles": [
+      {
+        "profile": "chromium-android-layout",
+        "engine": "chromium",
+        "counts": {
+          "pass": 24,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "profile": "firefox-narrow",
+        "engine": "firefox",
+        "counts": {
+          "pass": 24,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "engine": "webkit",
+        "counts": {
+          "pass": 24,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      }
+    ]
+  },
+  "officialVideoRegression": {
+    "status": "complete",
+    "pass": 33,
+    "fail": 0,
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-3b0bf2498ba109f3-win-final/summary.json",
+      "artifacts/pwa-e2e/official-youtube-3b0bf2498ba109f3-linux-final/summary.json"
+    ],
+    "scope": "Controlled source rejection/cancellation/visible-video behavior; no real YouTube media or physical phone claim.",
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "update": {
+    "from": "9e5a1b663ba1d8ab",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-3b0bf2498ba109f3.json",
+    "chrome": "153.0.8010.52",
+    "scope": "Real desktop service worker/IndexedDB and seeded WAV bytes; derived A/B protocol distributions and exact immutable 9e5 legacy migration. No physical icon migration claim."
+  },
+  "visualReview": {
+    "screenshots": [
+      "artifacts/pwa-e2e/artist-selection-3b0bf2498ba109f3-chromium-android-layout-audio-retry-1.png",
+      "artifacts/pwa-e2e/artist-selection-3b0bf2498ba109f3-chromium-android-layout-audio-retry-2.png"
+    ],
+    "observations": [
+      "Both retry counters fit in the selected song row and MiniPlayer.",
+      "Spinner and all four bottom tabs remain visible without clipping."
+    ],
+    "scope": "Desktop Chromium Android-layout fixture screenshots, not a phone, responsive-suite rerun or assistive-technology test.",
+    "screenshotsManifest": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-public-manifest.json"
+  },
+  "historicalCoverage": {
+    "report": "artifacts/pwa-e2e/validation-9e5a1b663ba1d8ab.json",
+    "fullMedia": {
+      "pass": 133,
+      "unsupported": 2,
+      "total": 135
+    },
+    "responsive": {
+      "pass": 21
+    },
+    "realP1WebKit": {
+      "pass": 3
+    },
+    "realArtistUI": {
+      "local": 1,
+      "public": 1
+    },
+    "countsReassigned": false,
+    "scope": "Prior build results keep their original hashes. No fresh full 135-case media suite, 21 responsive checks or 15 P1 decoder checks are claimed for this build."
+  },
+  "liveProvider": {
+    "status": "complete",
+    "pass": 1,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-song-artist-popular-3b0bf2498ba109f3-local.json",
+    "activation": "single trusted title click",
+    "title": "Epoitaitaye",
+    "surface": "Artist popular songs",
+    "providerMocked": false,
+    "physicalPhoneVerified": false,
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "retryTriggeredByRealProviderClaimed": false,
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "scope": "Desktop foreground real-provider selection, not proof that retry1/2 were needed or that the new retry policy passed physically.",
+    "manifest": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-public-manifest.json"
+  },
+  "distribution": {
+    "files": 31,
+    "totalBytes": 840820,
+    "initialBytes": 50993,
+    "initialAccounting": {
+      "requiredFilesBytes": 40625,
+      "serviceWorkerBytes": 10368
+    },
+    "applicationBytes": 744254,
+    "cssAndFontsUnchanged": true,
+    "cssAndFonts": [
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-CthTmUxG.css",
+        "bytes": 88269,
+        "sha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77"
+      }
+    ],
+    "comparedWithBuild": "9e5a1b663ba1d8ab",
+    "sourceHash": "daf246e7445f4cc8327b979872e30ca668bfd2807bc99fc9dd76769f30234a0d",
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "app.983e97a836dd9370.js",
+        "bytes": 16483,
+        "sha256": "983e97a836dd9370173142c8d181c5ecd5f11041148348c514f9fd1c8aec2983"
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-CthTmUxG.css",
+        "bytes": 88269,
+        "sha256": "78c8aacdf2cd649d252f6a774fad436dfe3a5fb79522b928e6c97d1189052b77"
+      },
+      {
+        "path": "application/assets/index-D54kqzp3.js",
+        "bytes": 364079,
+        "sha256": "bfc9316d7a5618617d2e8a0e1bdff1adba27316f31542bfb7b297a2fced62412"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+        "bytes": 76,
+        "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+        "bytes": 175818,
+        "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812"
+      },
+      {
+        "path": "application/assets/p1check-CvK81Rq4.js",
+        "bytes": 3465,
+        "sha256": "d95a0c0c5a0f160b730eea333f88f1c73f9e7a99287843b32a229155d9f96423"
+      },
+      {
+        "path": "application/assets/updates.svelte-CaKsDr0l.js",
+        "bytes": 77,
+        "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"
+      },
+      {
+        "path": "application/assets/updates.svelte-d2-IJVos.js",
+        "bytes": 46008,
+        "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"
+      },
+      {
+        "path": "application/assets/youtube-OlVfgcSX.js",
+        "bytes": 15746,
+        "sha256": "0a6b4ec5f3e1870c273aec3d70869faf4989934a6938f002ce199b660c72176a"
+      },
+      {
+        "path": "application/assets/youtube-p1-CST2XekA.js",
+        "bytes": 11241,
+        "sha256": "5dc78735a57cebc952ad45836d0d3753347420e4a0a8c6a22b98d5831423db22"
+      },
+      {
+        "path": "application/assets/youtube-p1-probe-DF1rSiy4.js",
+        "bytes": 5284,
+        "sha256": "233ff5b2d805acab01f147695df82fea32394888d847dbc32339e648d9a8462d"
+      },
+      {
+        "path": "application/index.3a8f503bc79fb44b.html",
+        "bytes": 939,
+        "sha256": "3a8f503bc79fb44b2c5dbdfc59b47af488fe18fa3cee0a84d481cfea90b179e8"
+      },
+      {
+        "path": "application/launcher.97a0a245ac1f296d.js",
+        "bytes": 839,
+        "sha256": "97a0a245ac1f296d11279a93318bfda9bd1e0203584929c6c37ee8f29b08eb22"
+      },
+      {
+        "path": "application/p1-check.html",
+        "bytes": 1977,
+        "sha256": "261d419323a0ecdce3d4cb51dc606e8d21122ece552acd4be08bf818f11aefdb"
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "index.html",
+        "bytes": 7798,
+        "sha256": "4b2480f987edcb159ab98b84119801f08a576f5a4cf6ff19aa7cc8bcc81bb078"
+      },
+      {
+        "path": "manifest.webmanifest",
+        "bytes": 499,
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "bytes": 15259,
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741"
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "bytes": 5810,
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9"
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "bytes": 581,
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba"
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "bytes": 4843,
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6"
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "bytes": 3235,
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e"
+      },
+      {
+        "path": "sw.js",
+        "bytes": 10368,
+        "sha256": "138541d36e90605e7db1bc6ce7a86d6e3cf1beb7f702f3ca9bfafaf3abee55fe"
+      }
+    ],
+    "published": true,
+    "dryRunReport": "artifacts/pwa-deploy/dry-run-3b0bf2498ba109f3.json",
+    "commit": "582697581d6be217382dacf1f638a885150e17ac",
+    "tree": "54e2c4b6ac0ab43d96c5f20ce7bf64f91f22187d"
+  },
+  "p1": {
+    "runtimeRouteActivated": true,
+    "sameVideoId": true,
+    "codec": "AAC/MP4 original",
+    "perCandidateIsolation": true,
+    "maxResponseRows": 128,
+    "maxEligibleProcessed": 4,
+    "workerBatchMaxMs": 1500,
+    "requestMaxMs": 15000,
+    "metadataWindowSharedMs": 8000,
+    "qualityOrderedSelection": true,
+    "abortsAndAwaitsProbeCleanup": true,
+    "allFormatMetadataRetained": true,
+    "rejectedLocatorsRemoved": true,
+    "cacheGuardAfterCancellation": true,
+    "perSongMapping": false,
+    "offlineDownloadAllowed": false,
+    "publicAnonymousBuildRecipe": true,
+    "anonymousRecipeSha256": "4fe25bbb8cabebd1a31761f0e7e861869ea9b359a9c7248dc461de71354fe21d",
+    "runtimeServer": false,
+    "accountAuthentication": false,
+    "mediaUrlsPersisted": false,
+    "validLifetimeEstablished": false,
+    "crossIpPortabilityEstablished": false,
+    "policyUnchangedFromBuild": "9e5a1b663ba1d8ab"
+  },
+  "physicalDeviceChecks": {
+    "newRetryPhysicalConfirmation": false,
+    "newBuildRetestPending": true,
+    "observedBuild": null,
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "priorSelectionReport": "artifacts/pwa-port/android-artist-selection-user-report-2026-10-23.json",
+    "priorSelectionRequestedBuild": "9e5a1b663ba1d8ab",
+    "priorSelectionFeedback": "Parece que ahora si cambia",
+    "previousFeedbackReassigned": false,
+    "scope": "Prior tentative selection-change feedback is not validation of the new retry policy, counters, timing, cancellation, background or installed build."
+  },
+  "publicFiles": {
+    "status": "verified",
+    "pass": 31,
+    "total": 31,
+    "report": "artifacts/pwa-deploy/public-files-3b0bf2498ba109f3.json"
+  },
+  "deployment": {
+    "status": "success",
+    "url": "https://diad87.github.io/pletina/",
+    "pagesRun": "39957434883",
+    "report": "artifacts/pwa-deploy/pages-3b0bf2498ba109f3.json",
+    "publicFilesVerified": true,
+    "publicArtistUICanaryVerified": true
+  },
+  "physicalFailureResolved": false,
+  "limits": [
+    "Two extra attempts are bounded and conditional; they do not guarantee provider availability or universal catalogue coverage.",
+    "A transient final network/timeout remains an error, not an automatic video launch.",
+    "Historical selection feedback does not confirm the new retry UI or physical protocol.",
+    "No new physical Android/iPhone, screen-off/background, long-session or car integration claim.",
+    "P1 anonymous recipe lifetime/IP/cohort limits and download.allowed:false remain unchanged."
+  ],
+  "lineEndingNormalization": [
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-logic-2026-10-23.txt",
+      "beforeSha256": "6b7be5a306af36715a679f7e4f612e7ab4476e00a403ba37c9b6cd0e4c8c6c40",
+      "afterSha256": "5d6d72b2cda702f6b4c1015a472eb4da9efff89bdfc9615520f4122100946bc8",
+      "changed": true,
+      "final": "LF"
+    },
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-types-2026-10-23.txt",
+      "beforeSha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "afterSha256": "a4c37bcff614def22a0aa69d0afeed0632d0bd0b850db61892f22165c237ce4b",
+      "changed": true,
+      "final": "LF"
+    }
+  ],
+  "bindings": [
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-logic-2026-10-23.txt",
+      "sha256": "5d6d72b2cda702f6b4c1015a472eb4da9efff89bdfc9615520f4122100946bc8",
+      "bytes": 68057
+    },
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-types-2026-10-23.txt",
+      "sha256": "a4c37bcff614def22a0aa69d0afeed0632d0bd0b850db61892f22165c237ce4b",
+      "bytes": 263
+    },
+    {
+      "path": "artifacts/pwa-port/audio-final-source-retries-2026-10-23.json",
+      "sha256": "678970da6dea1ac0abf34d3d476f5dd820f2eaf30093041e549fd268f3c686b5",
+      "bytes": 2141
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-3b0bf2498ba109f3-win-final/summary.json",
+      "sha256": "7321b695617b9fb6044d8de5a350b05d1fbae8d1703709490907557982771146",
+      "bytes": 58952
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-3b0bf2498ba109f3.json",
+      "sha256": "4ab95193db2445d49f6c3fecc686c46c0c231fa9a0c988a839c1b7758629a0ec",
+      "bytes": 22014
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-3b0bf2498ba109f3-chromium-android-layout-audio-retry-1.png",
+      "sha256": "5927a841037555f1a79b1afd8277909cdff766412251886e0183ac27018529d5",
+      "bytes": 65097
+    },
+    {
+      "path": "artifacts/pwa-e2e/artist-selection-3b0bf2498ba109f3-chromium-android-layout-audio-retry-2.png",
+      "sha256": "26df7835cb891a61e87f2c00afdd460dd81183f3f2804968bcb6f3f9114206bf",
+      "bytes": 66585
+    },
+    {
+      "path": "artifacts/pwa-e2e/validation-9e5a1b663ba1d8ab.json",
+      "sha256": "4eac94a39ade54b6d55f8f620084e13939192d4217c3d9bfa6a7bdd47edc08b3",
+      "bytes": 28480
+    },
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-qa-sources.json",
+      "sha256": "6b67ed7ef478e0074b1339623681d884d9e3a666ef5722c76b269a86c2a3feee",
+      "bytes": 4988
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-3b0bf2498ba109f3-local.json",
+      "sha256": "c49cc5411c689d8ac5061f10e7b67069e74c24f2dc8e827ec5d9e8a55c62af13",
+      "bytes": 13788
+    },
+    {
+      "path": "artifacts/pwa-e2e/audio-retry-3b0bf2498ba109f3-win-final/summary.json",
+      "sha256": "38e962654c8a6f5494ce2b9cada6b20dbae70056e2508d414326860939147f99",
+      "bytes": 329420
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-3b0bf2498ba109f3-linux-final/summary.json",
+      "sha256": "5f61cee5954a067dc7cfe9bce75ad72532651573cfe1f2836820f50882e85b7f",
+      "bytes": 167779
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-3b0bf2498ba109f3-linux-final/summary.json",
+      "sha256": "fe9b8b41ae993d2c29bef4df5c9e96545b0f4bbf9fc141b1696535794bf25192",
+      "bytes": 29327
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-3b0bf2498ba109f3-frozen-copy.json",
+      "sha256": "197e9082b3fc5fa998cd18b726ee6e773c9f1e579f8e8574360aaa607297657d",
+      "bytes": 13936
+    },
+    {
+      "path": "artifacts/pwa-deploy/dry-run-3b0bf2498ba109f3.json",
+      "sha256": "893c194c19b62d993ad002ab3e90c66ac648d17b4b7696c508eb0ca49d2531be",
+      "bytes": 1525
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-3b0bf2498ba109f3.json",
+      "sha256": "b9148e67341e76d4859634ec5304d8a7e0e20a34a709611461995b12a7454889",
+      "bytes": 10255
+    },
+    {
+      "path": "artifacts/pwa-deploy/pages-3b0bf2498ba109f3.json",
+      "sha256": "bf784eb7fd35d111110106ad5406c02075f3f587bd40884856a59d01de9def3b",
+      "bytes": 652
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-artist-popular-3b0bf2498ba109f3-public.json",
+      "sha256": "a170ff3fa38c435cc096f7f0e173dbd5b3d7b73c5ad209a782214e6c8c82dcf0",
+      "bytes": 13765
+    },
+    {
+      "path": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-public-manifest.json",
+      "sha256": "414e0cb118ff9b5c67b033420778516b27ee0760fcfdf0cd5376d9534a3c4a02",
+      "bytes": 7548
+    }
+  ],
+  "updatedAt": "2026-10-23T13:02:11.630Z",
+  "webkitProvenance": "artifacts/pwa-e2e/webkit-3b0bf2498ba109f3-frozen-copy.json",
+  "deploymentRequest": {
+    "commit": "582697581d6be217382dacf1f638a885150e17ac",
+    "tree": "54e2c4b6ac0ab43d96c5f20ce7bf64f91f22187d",
+    "status": "success",
+    "publicHttpShaVerified": true,
+    "pagesRun": "39957434883",
+    "publicUICanaryVerified": true
+  },
+  "livePublicArtistUI": {
+    "status": "complete",
+    "pass": 1,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-song-artist-popular-3b0bf2498ba109f3-public.json",
+    "manifest": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-public-manifest.json",
+    "runnerSha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e",
+    "title": "Epoitaitaye",
+    "surface": "Artist popular songs",
+    "activation": "single trusted cover click",
+    "providerMocked": false,
+    "physicalPhoneVerified": false,
+    "backgroundVerified": false,
+    "screenOffVerified": false,
+    "retryTriggeredByRealProviderClaimed": false,
+    "resourcesClosed": true,
+    "scope": "Published compiled UI with real-provider native audio in desktop foreground. Does not prove a retry was needed, a physical phone fix or universal coverage."
+  },
+  "verifiedAt": "2026-10-23T13:02:11.628Z"
+}

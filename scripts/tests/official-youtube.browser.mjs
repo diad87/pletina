@@ -421,7 +421,11 @@ async function scenarios(ctx, requests, directory, control) {
         { videoId: fixtureIds.first, clientName: 'WEB_EMBEDDED_PLAYER' },
         { videoId: fixtureIds.second, clientName: 'VISIONOS' },
         { videoId: fixtureIds.second, clientName: 'WEB_EMBEDDED_PLAYER' },
-      ], 'Each distinct matching recording has one VISIONOS attempt and one bounded P1 rescue, in that order')
+        { videoId: fixtureIds.first, clientName: 'VISIONOS' },
+        { videoId: fixtureIds.first, clientName: 'WEB_EMBEDDED_PLAYER' },
+        { videoId: fixtureIds.first, clientName: 'VISIONOS' },
+        { videoId: fixtureIds.first, clientName: 'WEB_EMBEDDED_PLAYER' },
+      ], 'Discovery tries each distinct recording once; only the final exact recording gets two fresh audio retries before video')
       assert.equal(embedCount() - embedMark, 1)
       assert.ok(await page.evaluate(() => window.__qaAudio.instances.every(audio => audio.paused && !audio.src)))
       assert.equal(await page.locator('.mini .title').textContent(), fixtureTrack.title)

@@ -37,16 +37,22 @@ const selectionTracks = ['A', 'B', 'C', 'D'].map((letter, i) => ({ ...tracks[i],
   artistName: selectionArtists[i === 3 ? 1 : 0].name, album: selectionAlbum, isrc: 'QAABC260019' + (4 + i),
   videoId: 'qaPick000' + (i + 1) + letter.toLowerCase() }))
 const artistSelection = { query: 'QA Artist Selection', artists: selectionArtists, album: selectionAlbum, tracks: selectionTracks }
+const retryTracks = ['Primero', 'Segundo', 'Agotado', 'Cancelar', 'Cambiar', 'Destino'].map((name, i) => ({ ...tracks[0], id: 198 + i,
+  title: 'Reintento QA ' + name, title_short: 'Reintento QA ' + name, isrc: 'QAABC2600' + (198 + i),
+  videoId: 'qaRetry00' + (i + 1) + String.fromCharCode(97 + i) }))
+const audioRetry = { tracks: retryTracks, query: name => 'QA Reintento ' + name }
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, artistSelection, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
 const runs = (...texts) => ({ runs: texts.map(text => ({ text })) })
 const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60).padStart(2, '0')
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 function selected(query) {
   const q = normalize(query)
+  const retry = retryTracks.find(track => q === normalize(audioRetry.query(track.title.replace('Reintento QA ', ''))) || q.includes(normalize(track.title)))
+  if (retry) return q === normalize(audioRetry.query('Cambiar')) ? [retry, retryTracks.at(-1)] : [retry]
   if (q === normalize(artistSelection.query)) return selectionTracks
   const selection = selectionTracks.filter(track => q.includes(normalize(track.title)))
   if (selection.length) return selection
@@ -104,21 +110,28 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   const pending = new Set()
   const catalogGates = new Set()
   const playerGates = new Set()
+  const playerPlans = new Map()
   const releaseDownloads = () => { for (const resolve of pending) resolve(); pending.clear() }
   const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release(); for (const gate of playerGates) gate.release() }
-  function holdNextPlayer(videoId) {
+  function holdNextPlayer(videoId, { clientName = null, occurrence = 1 } = {}) {
     if (!/^[\w-]{11}$/.test(videoId)) throw new Error('Invalid player gate identity.')
-    let reached, delivered, resume, claimed = false
+    if (clientName !== null && !['VISIONOS', 'WEB_EMBEDDED_PLAYER'].includes(clientName) || !Number.isInteger(occurrence) || occurrence < 1 || occurrence > 10) throw new Error('Invalid player gate selection.')
+    let reached, delivered, resume, claimed = false, seen = 0
     const entered = new Promise(resolve => { reached = resolve }), completed = new Promise(resolve => { delivered = resolve }),
       blocked = new Promise(resolve => { resume = resolve })
     const bounded = async (promise, message) => { let timer; try { return await Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), 15000) })]) } finally { clearTimeout(timer) } }
     const gate = { videoId, get claimed() { return claimed },
+      matches(id, client) { return id === videoId && (!clientName || clientName === client) && ++seen === occurrence },
       claim(row) { claimed = true; row.playerGate = 'held'; reached(row); return blocked },
       release() { resume(); playerGates.delete(gate) },
       delivered(row, cancelled = false) { row.playerGate = cancelled ? 'aborted-before-delivery' : 'delivered'; delivered({ ...row }) },
       waitForRequest: () => bounded(entered, 'The selected fixture video never reached its HTTP player gate.'),
       waitForDelivery: () => bounded(completed, 'The released fixture player response was not delivered.') }
     playerGates.add(gate); return gate
+  }
+  function planPlayer(videoId, { rejectCycles = 1 } = {}) {
+    if (!retryTracks.some(track => track.videoId === videoId) || !Number.isInteger(rejectCycles) || rejectCycles < 0 || rejectCycles > 3) throw new Error('Invalid retry response plan.')
+    playerPlans.set(videoId, { rejectCycles, cycle: 0 })
   }
   // A single real JSONP response can remain in flight while the user cancels or
   // leaves import. No application promise, parser or storage module is replaced.
@@ -214,7 +227,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
   }
   function failNext(path, count = 1) { failures.push({ path, remaining: count }) }
-  async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0) }
+  async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0); playerPlans.clear() }
   const handler = async route => {
     const request = route.request(), url = new URL(request.url())
     let playerGate = null
@@ -280,7 +293,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...retryTracks, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -320,6 +333,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       }
       return route.fulfill({ status: 200, headers, contentType: 'application/rss+xml', body: rss(url.pathname === '/english') })
     }
+    if (['www.youtube.com', 'www.youtube-nocookie.com'].includes(url.hostname) && /^\/embed\/[\w-]{11}$/.test(url.pathname) && retryTracks.some(track => track.videoId === url.pathname.split('/').at(-1))) {
+      Object.assign(row, { fixtureCase: 'audio-final-retry', operation: 'official-embed', videoId: url.pathname.split('/').at(-1) })
+      return route.fulfill({ status: 200, headers, contentType: 'text/html', body: '<!doctype html><title>Controlled visible official-player frame</title><p>Video fixture</p>' })
+    }
     if (url.hostname === 'www.youtube.com' || url.hostname === 'music.youtube.com') {
       let body
       try { body = request.postDataJSON() || {} } catch { body = {} }
@@ -327,6 +344,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
         let selectedTracks = selected(body.query || '')
+        if (selectedTracks.length === 1 && retryTracks.some(track => track.id === selectedTracks[0].id)) {
+          Object.assign(row, { fixtureCase: 'audio-final-retry', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
+            requestedTrackId: selectedTracks[0].id, candidateIds: selectedTracks.map(track => track.videoId) })
+        }
         if (flags.p1MultiAacRescue && selectedTracks.length === 1 && selectedTracks[0].id === p1MultiTrack.id) {
           Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
             candidateIds: [p1Multi.videoId] })
@@ -350,7 +371,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       }
       if (url.pathname.endsWith('/player')) {
         const playerVideoId = body.videoId || tracks[0].videoId
-        playerGate = [...playerGates].find(gate => !gate.claimed && gate.videoId === playerVideoId) ?? null
+        playerGate = [...playerGates].find(gate => !gate.claimed && gate.matches(playerVideoId, body.context?.client?.clientName ?? null)) ?? null
         Object.assign(row, { operation: 'player', videoId: playerVideoId, clientName: body.context?.client?.clientName ?? null })
         if (playerGate) {
           await playerGate.claim(row)
@@ -358,6 +379,12 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
+        const plan = playerPlans.get(videoId)
+        if (plan) {
+          if (clientName === 'VISIONOS') plan.cycle++
+          Object.assign(row, { fixtureCase: 'audio-final-retry', cycle: plan.cycle, playability: plan.cycle <= plan.rejectCycles ? 'UNPLAYABLE' : 'OK' })
+          if (plan.cycle <= plan.rejectCycles) return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
+        }
         if (flags.p1MultiAacRescue && videoId === p1Multi.videoId) {
           Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: 'player', videoId, clientName })
           if (clientName === 'VISIONOS') {
@@ -397,7 +424,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         }
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
-          : [...selectionTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
+          : [...retryTracks, ...selectionTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
         const bytes = cast >= 0 ? castAudio : audio
         return json({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: track?.title || 'Episodio QA YouTube ' + titles[Math.max(0, cast)],
           author: track?.artist.name || 'Autor QA', lengthSeconds: String(cast >= 0 ? 90 : 12) },
@@ -408,6 +435,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test' || audiusStream) {
       const videoId = /^\/audio\/([\w-]{11})$/.exec(url.pathname)?.[1]
+      if (retryTracks.some(track => track.videoId === videoId)) Object.assign(row, { fixtureCase: 'audio-final-retry', operation: 'media', videoId })
       if (flags.p1MultiAacRescue && url.searchParams.get('qa_video') === p1Multi.videoId) {
         const candidate = url.searchParams.get('qa')
         Object.assign(row, { fixtureCase: 'p1-multi-aac-rescue', operation: 'media', videoId: p1Multi.videoId, candidate })
@@ -446,6 +474,6 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   }
   await resumeRoutes()
   return { data: { artists, albums, tracks }, artists, albums, tracks, media, requests, counts, flags, set, reset, failNext,
-    holdNextCatalogSearch, holdNextPlayer, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
+    holdNextCatalogSearch, holdNextPlayer, planPlayer, abortNextLibraryWrite, release, suspendRoutes, resumeRoutes,
     source: 'Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.' }
 }

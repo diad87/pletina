@@ -19,6 +19,14 @@ const requested = option('--profiles', 'chromium-android-layout,webkit-iphone-la
 for (const profile of requested) assert.ok(PROFILES[profile], `Unknown profile ${profile}`)
 const suite = option('--suite', 'all')
 assert.ok(['smoke', 'library', 'responsive', 'media', 'all'].includes(suite), 'Invalid suite')
+const selectedMedia = option('--scenarios', null)?.split(',').filter(Boolean).map(id => id.startsWith('media.') ? id : 'media.' + id)
+if (selectedMedia) {
+  assert.equal(suite, 'media', '--scenarios is restricted to the media suite')
+  assert.ok(selectedMedia.length && new Set(selectedMedia).size === selectedMedia.length, 'Select distinct media scenarios')
+  const { mediaScenarioInventory } = await import('./media-scenarios.mjs')
+  for (const id of selectedMedia) assert.ok(mediaScenarioInventory.some(item => item.id === id), 'Unknown media scenario: ' + id)
+  if (!selectedMedia.includes('media.selection-html-audio')) selectedMedia.unshift('media.selection-html-audio')
+}
 const dist = resolve(option('--dist', join(workspace, 'dist-pwa')))
 const worker = await readFile(join(dist, 'sw.js'), 'utf8')
 const build = worker.match(/const VERSION = "([a-f0-9]{16})"/)?.[1]
@@ -26,7 +34,7 @@ assert.ok(build, 'Compiled PWA build required')
 const stamp = new Date().toISOString().replace(/[:.]/g, '-')
 const output = resolve(option('--output', join(workspace, 'artifacts/pwa-e2e', `${build}-${stamp}`)))
 await mkdir(output, { recursive: true })
-const summary = { schemaVersion: 1, startedAt: new Date().toISOString(), build, suite, profiles: [],
+const summary = { schemaVersion: 1, startedAt: new Date().toISOString(), build, suite, selectedMediaScenarios: selectedMedia ?? null, profiles: [],
   host: { platform: process.platform, arch: process.arch, node: process.version },
   scope: 'Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.',
   allRequestedPlatformsVerified: false, platforms: [
@@ -120,6 +128,7 @@ async function blockRemaining(ctx, reason) {
     let inventory = []
     try { inventory = (await import(file))[name] ?? [] } catch { /* A missing suite is explicitly blocked below. */ }
     if (!inventory.length) inventory = [{ id: fallback + '.scenarios' }]
+    if (fallback === 'media' && selectedMedia) inventory = inventory.filter(item => selectedMedia.includes(typeof item === 'string' ? item : item.id ?? item.name))
     for (const item of inventory) await ctx.check(typeof item === 'string' ? item : item.id ?? item.name, async () => ({ status: 'blocked', reason }))
   }
 }
@@ -181,7 +190,7 @@ try {
       }
       if (suite === 'media' || suite === 'all') {
         const media = await loadScenario(ctx, './media-scenarios.mjs', 'runMediaScenarios')
-        if (media) await media(ctx)
+        if (media) await media(ctx, { scenarioIds: selectedMedia })
       }
       if (suite === 'all' && library) {
         const { runLibraryHistoryScenario } = await import('./library-scenarios.mjs')
