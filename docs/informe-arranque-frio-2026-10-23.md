@@ -1,11 +1,12 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 4: POST anticipado verificado, sin mejora uniforme del total ni solución universal de SABR.**
+**Ronda 5: renovación temprana implementada y comprobada; sin ganancia estable demostrada.**
 El usuario acepta unos **600 ms como base provisional del camino habitual**;
-la última tanda tiene mediana 642 ms, no una cota de 600 ms por canción.
-El candidato inició los seis controles infantiles directos, pero una recuperación
-tardó 9,813 s y una búsqueda posterior necesitó Legacy. El arranque infantil de
-3,5 s y la fiabilidad de la ruta nativa ante SABR siguen pendientes.
+la última tanda tiene mediana 703,1 ms. Los 24 controles infantiles independientes
+reproducen correctamente, con medianas nuevas de 4,52/4,54/5,09 s. Una prueba
+separada ejercitó la cancelación real de un análisis innecesario, pero no permite
+cuantificar el ahorro. La búsqueda infantil de Epo necesitó Legacy por un fallo
+de configuración. Los 3,5 s infantiles y la fiabilidad nativa siguen pendientes.
 Se conserva el historial de cada ronda; no se presenta 1,25 s como requisito logrado. Continúa el
 [informe infantil](informe-contenido-infantil-2026-10-23.md), sin sustituir su historial.
 
@@ -496,3 +497,186 @@ No se usó Premium ni se midieron anuncios vistos o
 saltados; un 403 temporal no demuestra publicidad. No cambia la aprobación de
 Oficial, yt-dlp predeterminado, Propio/Legacy, la receta ni OTA. Quedan abiertas
 la meta de arranque infantil, la fiabilidad SABR y la validación más amplia.
+
+## Ronda 5: renovación temprana y presupuesto compartido
+
+Código `80100dd699568910dd0bcaa29ff6fc737db9a229`, candidato limpio **debug**
+`6348a600b094509e2d0171496b23c872fc636398846111bfa3848ca205df8db5`.
+Control inmutable de la ronda 4, commit limpio `3fa0237`, binario `adef5ea3…`;
+la procedencia original se conserva byte a byte. No se atribuye al control una
+compilación posterior sobre el commit documental `9046dd9`.
+
+### Cambio y límites
+
+Tras una respuesta provisional SABR, el coordinador espera la admisión de watch
+(MFK, identidad, estado y permiso de inserción) antes de reservar la única
+renovación. Conserva AST1 mientras descarga configuración y fuente alternativas.
+Sólo cancela realmente el futuro propietario de AST1 si la fuente completa tiene
+otro SHA y cambia el cuerpo efectivo en campos independientes del ST. La VM
+interrumpida conserva su permiso hasta que sale: no aparecen dos trabajadores.
+La respuesta alternativa sigue retenida hasta que el análisis completo confirme
+su ST; después continúan identidad, audio original, descifrado y sonda 206.
+
+Una fuente con el mismo SHA reutiliza el análisis inicial. Si cambia únicamente
+el reproductor, se termina AST1 y se conserva la recuperación secuencial: los dos
+ST completos deben producir cuerpos distintos para autorizar POST2. Un primer
+indicio de ST erróneo conserva su única petición correctiva. Una discrepancia
+después de POST2 falla sin POST3. Las reservas de caché se vinculan a la instancia
+exacta para no borrar un fallo o una configuración concurrentes más recientes.
+
+La preparación y su reemplazo comparten un **plazo absoluto de 12 s**, incluidas
+colas, bloqueos, descarga, caché y análisis; una renovación no reinicia ese reloj.
+La resolución embedded exterior conserva su límite separado de 30 s, y el CDN
+sus ocho turnos dentro de ocho segundos. No cambia el parser, su bundle, los
+presupuestos de memoria/pila ni el nivel rápido habitual. Los tests cubren además
+watch rechazado, cancelación, fuente idéntica, AST1 terminado durante la descarga,
+cambios sólo de ST, concurrencia y agotamiento del presupuesto compartido.
+
+### Veinticuatro arranques independientes
+
+Índice `cold-paired-20261023-150518-68feba4d-index.json.local`: cuatro repeticiones
+por canción y binario, orden alternado, proceso nuevo por fila, sin sesión,
+`FreshDecoder`, seis variables permitidas y ningún override de política.
+No se omiten fallos ni lentitudes. Todas las filas terminaron con exit 0 y pasaron
+identidad, 206 de inicio/80 %, avance de Audio, salto y cola. Es resolución directa
+sin búsqueda ni Legacy. `playing` es un evento de Audio silenciado, no una medida
+acústica ni escucha continua de cada canción.
+
+Milisegundos; las medianas y rangos describen cuatro muestras por grupo.
+
+| Canción | Control: éxitos | Control: `playing`, mediana [rango] | Candidato: éxitos | Candidato: `playing`, mediana [rango] |
+|---|---:|---:|---:|---:|
+| Epoitaitaye | 4/4 | 4508 [4439–4723] | 4/4 | 4519 [4422–4670] |
+| Maite Zaitut! | 4/4 | 4532,5 [4377–5088] | 4/4 | 4541,5 [4490–4748] |
+| Pupu Eta Lore | 4/4 | 4507,5 [4378–5267] | 4/4 | 5090 [4340–5557] |
+
+| Orden | Canción | Binario / réplica | `playing` | Preparación terminada | POST | Resultado |
+|---:|---|---|---:|---:|---:|---|
+| 0 | Epo | Control 1 | 4723 | 4090,8 | 1 | Correcto |
+| 1 | Epo | Candidato 1 | 4670 | 4009,0 | 1 | Correcto |
+| 2 | Maite | Candidato 1 | 4748 | 4056,3 | 1 | Correcto |
+| 3 | Maite | Control 1 | 5088 | 4465,1 | 1 | Correcto |
+| 4 | Pupu | Control 1 | 5267 | 4131,2 | 2 | SABR recuperado; correcto |
+| 5 | Pupu | Candidato 1 | 5100 | 4338,1 | 1 | Correcto |
+| 6 | Epo | Candidato 2 | 4422 | 3747,7 | 1 | Correcto |
+| 7 | Epo | Control 2 | 4476 | 3860,8 | 1 | Correcto |
+| 8 | Maite | Control 2 | 4490 | 3843,5 | 1 | Correcto |
+| 9 | Maite | Candidato 2 | 4509 | 3831,0 | 1 | Correcto |
+| 10 | Pupu | Candidato 2 | 5080 | 4343,9 | 1 | Correcto |
+| 11 | Pupu | Control 2 | 4575 | 3918,3 | 1 | Correcto |
+| 12 | Epo | Control 3 | 4540 | 3762,9 | 1 | Correcto |
+| 13 | Epo | Candidato 3 | 4441 | 3777,5 | 1 | Correcto |
+| 14 | Maite | Candidato 3 | 4574 | 3844,7 | 1 | Correcto |
+| 15 | Maite | Control 3 | 4377 | 3751,0 | 1 | Correcto |
+| 16 | Pupu | Control 3 | 4440 | 3803,9 | 1 | Correcto |
+| 17 | Pupu | Candidato 3 | 5557 | 3827,1 | 1 | Correcto |
+| 18 | Epo | Candidato 4 | 4597 | 3948,3 | 1 | Correcto |
+| 19 | Epo | Control 4 | 4439 | 3810,0 | 1 | Correcto |
+| 20 | Maite | Control 4 | 4575 | 3887,1 | 1 | Correcto |
+| 21 | Maite | Candidato 4 | 4490 | 3846,1 | 1 | Correcto |
+| 22 | Pupu | Candidato 4 | 4340 | 3781,4 | 1 | Correcto |
+| 23 | Pupu | Control 4 | 4378 | 3802,5 | 1 | Correcto |
+
+**24/24 funcionales, 24 Native, cero Legacy.** Hubo 25 POST: sólo el control de
+Pupu de orden 4 necesitó la renovación antigua, con otra configuración pero el
+mismo reproductor/ST. Su evento adicional `memory`, de 0,0187 ms con ID nulo,
+se conserva separado; no acredita otro análisis completo. Los 24 sondeos CDN
+internos pasaron en el primer turno, sin 403/429; no se estresó aquí su límite.
+Las trazas verifican consumo posterior a watch/ST y descifrado/CDN posteriores.
+
+**Ninguno de los doce candidatos activó la renovación temprana.** Epo y Maite
+quedan prácticamente iguales; Pupu empeora 582,5 ms de mediana (12,9 %). No se
+atribuye esa variación a una rama que no se ejecutó, ni se demuestra una ganancia
+causal o estable. La preparación terminada de la tabla no es CPU pura ni incluye
+trabajo cancelado; el análisis local conserva también la fase mural y todos los
+resultados. En el control antiguo, la renovación posterior queda fuera de esa
+fase, por lo que tampoco se compara ésta como si fuera la extracción completa.
+
+### Ejecución real del reemplazo, separada del A/B
+
+El primer control tras compilar, `20261023-150354-88d18762`, sí recibió SABR y
+ejercitó `reserved` a 958,3 ms, `replaced` a 1206,5 ms con
+`initialCancelled:true`, y `ready` a 5333,1 ms. POST2 empezó a 1245,8 ms y
+terminó a 1505,7 ms; permaneció retenido hasta consumirse a 5338,8 ms tras
+comprobar el ST completo. No hubo POST3. Reemplazo terminado en 4119,6 ms,
+fase mural de 5336,0 ms, extracción de 6120 ms y `playing` de **6279 ms**;
+inicio, salto y cola correctos. El sondeo CDN tardó 478,1 ms.
+
+Este dato acredita cancelación y reemplazo reales, **no cuánto se ahorró**:
+no existe un control equivalente de esa misma respuesta remota, y la duración/CPU
+de AST1 cancelado es desconocida. No se mezcla con las medianas de los 24 casos.
+La implementación se conserva en evaluación en esta rama; no se promueve por
+velocidad ni se prolonga la campaña para escoger resultados más favorables.
+
+### Camino habitual, búsqueda infantil y archivos completos
+
+La tanda habitual `20261023-150834-2706ff63` conserva **30 Native, cero Legacy**,
+30 IDs esperados y ninguna pausa posterior al arranque en la ventana observada.
+Búsqueda más `playing`: mínimo **491,2**, mediana **703,1**, máximo **1358,1 ms**.
+La mediana anterior fue 642,15 ms: esta tanda tampoco mejora el camino habitual.
+Los treinta fallos del umbral histórico de 300 ms permanecen en el informe;
+`ok:false` no se oculta ni se presenta como aprobación de ese umbral.
+
+La búsqueda infantil `20261023-150933-5bdfd3f2` conserva los tres IDs correctos:
+
+| Canción | Búsqueda → `playing` | Ruta y diagnóstico |
+|---|---:|---|
+| Epoitaitaye | 4064,5 ms | Legacy; Native falló con `NATIVE_EMBEDDED_CONFIG` |
+| Maite Zaitut! | 4869,7 ms | Native; primer análisis efectivo en este proceso |
+| Pupu Eta Lore | 1820,4 ms | Native; decoder reutilizado de memoria |
+
+Sólo Epo es la primera búsqueda del proceso nuevo con `FreshDecoder`. Su embed
+se descargó (152067 bytes, 189,1 ms), pero no se obtuvo configuración válida:
+falló antes de descargar el player, lanzar POST o preparar un decoder. El banco
+no guardó ese HTML, por lo que no determina qué campo faltaba. No se atribuye a
+SABR, publicidad o la cancelación nueva. Maite analizó el decoder en 4054,1 ms;
+Pupu usó memoria en 0,0188 ms. No son tres arranques fríos independientes.
+Las tres filas superan 300 ms y el éxito por Legacy no cuenta como éxito nativo.
+
+En una prueba separada, los **tres archivos 251 completos** se obtuvieron en un
+único pase de 11,09 s. Los tres hashes coinciden con las referencias independientes
+de yt-dlp; FFmpeg `-xerror` terminó con salida 0 para los tres. Esto comprueba esos
+archivos completos; el banco de inicio/salto/cola no acredita escuchar las tres
+canciones enteras en la app ni una campaña publicitaria.
+
+### Descartes, validación y alcance
+
+- Acorn 8.19 con el mismo analizador conservó en V8 las cuatro fuentes por cuatro
+  formatos, pero agotó 12 s en QuickJS frente a 4622,6 ms de Meriyah. Se descartó; no se
+  aumentaron límites ni se incorporó el parser alternativo al producto.
+- Dos ajustes de posiciones de Meriyah dieron 3679,5 ms de control frente a
+  3698,1 (+0,51 %) y 3621,3 (−1,58 %), con salidas exactas. No acreditan una mejora
+  sustancial y no se incorporaron. Son microcontroles, no tiempos de la app.
+- Pasaron **226 pruebas Rust, 27 ignoradas, 430 JavaScript**, tipos sin errores
+  ni avisos y checks Android arm64/x86_64 sin avisos nuevos. No se ejecutó emulador,
+  reproducción móvil ni rendimiento de Android en esta ronda.
+
+| Perfil | Medidas de esta ronda | Anuncios vistos / saltados / entregados |
+|---|---|---|
+| Sin sesión | 24 A/B, control inicial, 30 habituales, 3 búsquedas infantiles y 3 archivos | No medidos; SABR/403 no los identifican |
+| Premium | No repetidas; referencias anteriores permanecen separadas | No medidos en esta ronda |
+
+No cambia la aprobación de Oficial ni de su entrega progresiva. yt-dlp continúa
+predeterminado y Propio conserva Legacy. No cambian `capture.js`, la receta,
+`youtubei.ts`, el bundle ni la API de extractores: este cambio Rust necesita una
+compilación nueva de la app y no llega mediante publicar sólo un extractor o la
+PWA. Sin push a main, publicación de extractores, etiquetas ni releases.
+
+La meta de **3,5 s infantiles sigue pendiente**. El siguiente trabajo debe reducir
+la preparación completa (aproximadamente 3,8–4,3 s aquí) y resolver configuraciones
+que fallan antes de él, manteniendo los mismos controles y midiendo el total.
+
+Evidencias en `capture-bench.local`, ignoradas; el manifiesto final conserva las
+huellas de informes, errores, metadata, procedencias, fuentes y verificaciones.
+
+| Evidencia local de la ronda 5 | SHA-256 |
+|---|---|
+| Índice de los 24 controles | `924ccccc355cf1769cf30b16b6f8eaa801e3fee929d399e4082b116e9ce43136` |
+| Análisis de los controles | `3aad6b10947f8d2d24ee4bbfc817458cfa245b09780f9e18eb4e0ac9b9f8bd01` |
+| `round5-complete-audio-verified.json.local` | `aeeb79b6a67afe0f278cd8a97e9401b7a57a812e092850017077b62b2cb4fd5c` |
+| `android-round5-final-checks-20261023-150002.json.local` | `c1d032eae68fee61793eb05866f1628f34074d8ca021c86d1f9f8684a133e94a` |
+| `round5-final-manifest.json.local` | `c20d13cc3bd70e9a4c37975d7a0361a81e7c45f10b692c6cdce11a90b72b093f` |
+
+Se verificaron las **185 huellas** del manifiesto sin discrepancias. Incluye los
+dos ejecutables inmutables y su procedencia; los documentos quedan fuera para
+evitar hashes circulares. Sólo se suben código y resúmenes, en `p1-oficial`.

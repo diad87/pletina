@@ -256,3 +256,29 @@ Legacy tras dos SABR. Las 30 habituales conservan Native e IDs correctos,
 mediana 642,15 ms. No se promociona Oficial ni se publica una app o extractor.
 Un parser WASM seguro de 6,5–8,4 s y un ajuste GC con sólo 3,9 % en un par se
 descartan; las fuentes y evidencias del experimento quedan fuera de Git.
+
+La [quinta ronda](informe-arranque-frio-2026-10-23.md#ronda-5-renovación-temprana-y-presupuesto-compartido),
+`80100dd`, prepara una renovación al detectar SABR provisional, después de la
+admisión de watch. Conserva el primer análisis mientras descarga la alternativa;
+sólo lo cancela si la fuente completa tiene otro SHA y la petición cambia por
+campos independientes del ST. Una fuente idéntica reutiliza el análisis. Si sólo
+cambia el reproductor, espera los ST de ambos análisis completos antes de decidir
+si corresponde el segundo POST. No acepta una respuesta por su ST provisional.
+El máximo es una renovación y dos POST de esta ruta. La preparación comparte
+un plazo absoluto de 12 segundos, incluidas sus colas, descargas y renovación,
+sin reiniciarlo al sustituir el análisis; el plazo exterior sigue en 30 segundos.
+Se mantienen identidad, audio original y sonda estricta 206, con los mismos
+ocho sondeos y presupuesto CDN. Pasan 226 pruebas Rust, con 27 ignoradas,
+430 JavaScript, tipos y checks Android arm64/x86_64 sin avisos nuevos.
+Los 24 casos A/B completan, 12 por binario. Las medianas control/candidato son
+4508/4519 ms en Epo, 4532,5/4541,5 en Maite y 4507,5/5090 en Pupu. Ninguno de
+los 12 candidatos ejercita la renovación temprana; un control separado de
+6279 ms sí registra cancelación real de AST1 y análisis de AST2, sin cuantificar
+una ganancia. Las 30 habituales conservan Native, sin Legacy, con mediana
+703,1 ms y rango 491,2–1358,1. Con búsqueda, Epo usa Legacy en 4064,5 ms;
+Maite y Pupu usan Native en 4869,7 y 1820,4 ms. El proceso usa FreshDecoder:
+Epo es el primer caso, Maite realiza el primer análisis efectivo y Pupu reutiliza
+memoria. Los tres archivos completos coinciden con sus
+referencias y FFmpeg termina con código 0. La evaluación permanece en la rama:
+no acredita mejora de velocidad ni recuperación universal de SABR, y los 3,5 s
+siguen pendientes. No se añaden campañas para escoger mejores resultados.

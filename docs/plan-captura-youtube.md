@@ -115,6 +115,28 @@ ni el estado de publicación; la siguiente prioridad sigue siendo el análisis
 frío y recuperar SABR sin otra preparación completa cuando pueda hacerse con
 las mismas verificaciones.
 
+La quinta ronda, `80100dd`, adelanta la única renovación SABR después de la
+admisión de watch. Descarga la alternativa mientras conserva el primer análisis;
+sólo cancela éste ante una fuente completa con otro SHA y un cambio efectivo de
+petición independiente del ST. Reutiliza el análisis si la fuente es idéntica;
+si el cambio sólo afecta al reproductor, compara los ST completos antes de un
+segundo POST. Mantiene un máximo de dos POST y una renovación, con un plazo
+absoluto compartido de 12 segundos para la preparación, sus colas, descargas y
+renovación. Identidad, audio original, sonda 206 y presupuesto CDN no cambian.
+Pasan 226 pruebas Rust, con 27 ignoradas, 430 JavaScript, tipos y checks Android
+arm64/x86_64 sin avisos nuevos. El
+[informe de la ronda 5](informe-arranque-frio-2026-10-23.md#ronda-5-renovación-temprana-y-presupuesto-compartido)
+conserva los 24 A/B completados, 12 por binario: medianas control/candidato de
+4508/4519 ms en Epo, 4532,5/4541,5 en Maite y 4507,5/5090 en Pupu. Ningún
+candidato ejercita la renovación temprana; sólo un control separado de 6279 ms
+confirma cancelación de AST1 y análisis de AST2, sin medir una ganancia. Las
+30 habituales mantienen Native y mediana 703,1 ms; la búsqueda infantil usa
+Legacy en Epo y Native en Maite/Pupu, siendo sólo Epo el primer caso del proceso
+con FreshDecoder. Los tres archivos completos coinciden con las referencias y
+FFmpeg termina sin errores. Se mantiene la evaluación en la rama, sin promoción
+por velocidad ni campañas para escoger mejores resultados. Los 3,5 s y la
+recuperación uniforme de SABR siguen pendientes; tampoco se aprueba Oficial.
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
