@@ -1,0 +1,310 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import ts from 'typescript'
+
+// The real orchestration, P1 response validator and metadata validator run here.
+// Only dynamic loading and opaque-frame transport are supplied by this harness;
+// no provider JavaScript, network, audio, account or persistent storage is used.
+const compile = async name => ts.transpileModule(await readFile(new URL(`../../web-port/${name}.ts`, import.meta.url), 'utf8'), {
+  compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
+}).outputText
+const [youtubeCode, p1Code, probeCode] = await Promise.all(['youtube', 'youtube-p1', 'youtube-p1-probe'].map(compile))
+const id = 'DJzjkMBMook', other = 'aqz-KE-bpKQ'
+const flush = async () => { for (let i = 0; i < 45; i++) await Promise.resolve() }
+const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
+const recipe = () => ({
+  context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: '2.20261022.01.00', visitorData: 'anonymous-synthetic-fixture' },
+    thirdParty: { embedUrl: 'https://www.reddit.com/' } },
+  playbackContext: { contentPlaybackContext: { html5Preference: 'HTML5_PREF_WANTS' } },
+  signatureTimestamp: 20746, script: 'var exportedVars = {};', playerSHA: 'a'.repeat(64), createdAt: '2026-01-01T00:00:00Z',
+})
+const audioUrl = label => `https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=${label}`
+const player = (label = 'visionos', videoId = id) => ({ playabilityStatus: { status: 'OK', playableInEmbed: true },
+  videoDetails: { videoId, title: 'Synthetic exact recording', author: 'Synthetic artist', lengthSeconds: '209' },
+  streamingData: { adaptiveFormats: [{ itag: 140, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 128000,
+    contentLength: '123456', url: audioUrl(label) }] } })
+const unavailable = () => ({ playabilityStatus: { status: 'UNPLAYABLE' } })
+const noFormat = () => ({ ...player(), streamingData: { adaptiveFormats: [] } })
+
+function engine(t, options = {}) {
+  const listeners = new Set(), frames = [], history = [], imports = [], controllers = [], storageAccess = []
+  const window = new EventTarget()
+  const add = window.addEventListener.bind(window), remove = window.removeEventListener.bind(window)
+  window.addEventListener = (name, listener, ...rest) => { if (name === 'message') listeners.add(listener); add(name, listener, ...rest) }
+  window.removeEventListener = (name, listener, ...rest) => { if (name === 'message') listeners.delete(listener); remove(name, listener, ...rest) }
+  const forbidden = name => { storageAccess.push(name); throw new Error(`Unexpected persistence/network access: ${name}`) }
+  const storage = new Proxy({}, { get: (_, name) => forbidden(String(name)) })
+  for (const name of ['localStorage', 'sessionStorage', 'indexedDB', 'caches']) Object.defineProperty(window, name, { get: () => forbidden(name) })
+  const args = (frame = frames[0]) => {
+    assert.ok(frame, 'expected an active opaque transport frame')
+    return JSON.parse(frame.srcdoc.slice(frame.srcdoc.lastIndexOf(')(') + 2, -')</script>'.length))
+  }
+  const send = (data, frame = frames[0], overrides = {}) => {
+    const config = args(frame), event = new Event('message')
+    Object.defineProperties(event, { source: { value: frame.contentWindow }, origin: { value: 'null' },
+      data: { value: { type: config.message, requestId: config.requestId, ...data, ...overrides } } })
+    window.dispatchEvent(event)
+  }
+  const append = frame => {
+    frames.push(frame)
+    const config = args(frame)
+    history.push({ frame, config })
+    assert.equal(frame.sandbox, 'allow-scripts')
+    assert.equal(frame.hidden, true)
+  }
+  const document = { body: { append }, documentElement: { append }, createElement(name) {
+    assert.equal(name, 'iframe')
+    const frame = { attributes: {}, setAttribute(key, value) { this.attributes[key] = value },
+      remove() { const index = frames.indexOf(frame); if (index >= 0) frames.splice(index, 1) } }
+    frame.contentWindow = { postMessage(data) {
+      if (data.cancel === true) queueMicrotask(() => send({ error: 'cancelled' }, frame))
+    } }
+    return frame
+  } }
+  const instantiate = (code, dependency = () => assert.fail('Unexpected static import')) => {
+    const exports = {}
+    new Function('exports', 'require', 'window', 'document', 'fetch', 'localStorage', 'sessionStorage', 'indexedDB', 'caches', code)(
+      exports, dependency, window, document, () => forbidden('fetch'), storage, storage, storage, storage)
+    return exports
+  }
+  const realP1 = instantiate(p1Code), realProbe = instantiate(probeCode), p1Recipe = options.recipe ?? recipe()
+  const dependencies = { './youtube-p1': realP1, './youtube-p1-probe': realProbe, './p1-recipe.generated': { p1Recipe }, ...options.modules }
+  const api = instantiate(youtubeCode, path => {
+    imports.push(path)
+    assert.ok(Object.hasOwn(dependencies, path), `unexpected module ${path}`)
+    const value = dependencies[path]
+    if (value instanceof Error) throw value
+    return value
+  })
+  const stream = (videoId = id, refresh = false, signal) => {
+    const controller = new AbortController(); controllers.push(controller)
+    const operation = api.stream(videoId, refresh, signal ? AbortSignal.any([controller.signal, signal]) : controller.signal)
+    operation.catch(() => {}) // Assertions attach after the manually driven transport.
+    return operation
+  }
+  t.after(async () => { for (const controller of controllers) controller.abort(); await flush(); assert.equal(frames.length, 0); assert.equal(listeners.size, 0) })
+  return { ...api, stream, frames, history, imports, args, send, realP1, realProbe, p1Recipe, storageAccess,
+    result: (result, frame) => send({ result }, frame), error: (error, frame) => send({ error }, frame) }
+}
+
+async function visionos(yt, refresh = false, signal) {
+  const pending = yt.stream(id, refresh, signal)
+  await flush()
+  if (yt.args().url.includes('/search?')) {
+    yt.result({ responseContext: { visitorData: 'anonymous-browser-fixture' } })
+    await flush()
+  }
+  assert.equal(yt.args().body.context.client.clientName, 'VISIONOS')
+  assert.equal(yt.args().body.videoId, id)
+  return { pending }
+}
+
+async function p1Request(yt, rejected = unavailable()) {
+  yt.result(rejected)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  assert.equal(yt.args().body.videoId, id)
+}
+
+async function completeP1(yt, label = 'p1') {
+  yt.result(player(label))
+  await flush()
+  assert.equal(yt.args().message, 'pletina-youtube-p1-metadata')
+  assert.equal(yt.args().expectedDuration, 209)
+  assert.equal(yt.args().url, audioUrl(label))
+  yt.send({ duration: 209.16 })
+  await flush()
+}
+
+test('VISIONOS success avoids all P1 imports and reuses only the in-memory stream', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  yt.result(player())
+  const value = await pending, requests = yt.history.length
+  assert.equal(value.url, audioUrl('visionos'))
+  assert.equal(value.transport, undefined)
+  assert.equal(await yt.stream(), value)
+  assert.equal(yt.history.length, requests)
+  assert.deepEqual(yt.imports, [])
+  assert.deepEqual(yt.storageAccess, [])
+})
+
+for (const category of ['unavailable', 'format']) test(`${category} invokes P1 and validates metadata before caching`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  let settled = false; pending.finally(() => { settled = true }).catch(() => {})
+  await p1Request(yt, category === 'format' ? noFormat() : unavailable())
+  assert.deepEqual(yt.imports.toSorted(), ['./p1-recipe.generated', './youtube-p1', './youtube-p1-probe'].toSorted())
+  yt.result(player('p1'))
+  await flush()
+  assert.equal(settled, false, 'a locator alone must not be returned as a playable stream')
+  assert.equal(yt.args().message, 'pletina-youtube-p1-metadata')
+  yt.send({ duration: 209.16 })
+  const value = await pending, requests = yt.history.length
+  assert.equal(value.transport, 'p1')
+  assert.equal(value.videoId, id)
+  assert.equal(value.contentLength, 123456)
+  assert.equal(await yt.stream(), value)
+  assert.equal(yt.history.length, requests)
+  assert.deepEqual(yt.storageAccess, [])
+})
+
+test('successful P1 refresh replaces the old locator instead of returning it', async t => {
+  const yt = engine(t), first = await visionos(yt)
+  await p1Request(yt); await completeP1(yt, 'first')
+  const before = await first.pending, renewal = await visionos(yt, true)
+  await p1Request(yt); await completeP1(yt, 'renewed')
+  const after = await renewal.pending
+  assert.notEqual(after.url, before.url)
+  assert.equal(after.url, audioUrl('renewed'))
+  assert.equal(await yt.stream(), after)
+  assert.equal(yt.history.filter(entry => entry.config.url?.includes('/search?')).length, 1, 'refresh may reuse the anonymous session, never the old media URL')
+})
+
+test('failed refresh evicts the previously usable P1 URL and a retry resolves anew', async t => {
+  const yt = engine(t), first = await visionos(yt)
+  await p1Request(yt); await completeP1(yt, 'old')
+  const before = await first.pending, renewal = await visionos(yt, true)
+  await p1Request(yt)
+  yt.error('network')
+  await assert.rejects(renewal.pending, error => error instanceof yt.YouTubeError && error.code === 'unavailable')
+  const retry = await visionos(yt)
+  yt.result(player('new-normal'))
+  assert.notEqual((await retry.pending).url, before.url)
+})
+
+for (const [name, reply, code] of [
+  ['login restriction', { result: { playabilityStatus: { status: 'LOGIN_REQUIRED' } } }, 'restricted'],
+  ['identity mismatch', { result: player('wrong', other) }, 'response'],
+  ['network failure', { error: 'network' }, 'network'],
+  ['timeout', { error: 'timeout' }, 'timeout'],
+]) test(`${name} never activates the format/unavailable rescue`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  yt.send(reply)
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === code)
+  assert.deepEqual(yt.imports, [])
+  assert.equal(yt.frames.length, 0)
+})
+
+test('anonymous session failure never attempts either player or P1', async t => {
+  const yt = engine(t), pending = yt.stream()
+  yt.error('network')
+  await assert.rejects(pending, error => error.code === 'network')
+  assert.equal(yt.history.length, 1)
+  assert.deepEqual(yt.imports, [])
+})
+
+for (const category of ['format', 'unavailable']) test(`P1 failure preserves original ${category} for later providers`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  const originalReply = category === 'format' ? noFormat() : unavailable()
+  let original
+  try { yt.parsePlayer(originalReply, id) } catch (error) { original = error }
+  await p1Request(yt, originalReply)
+  yt.error('timeout')
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === category && error.message === original.message)
+  assert.equal(yt.frames.length, 0)
+  const retry = await visionos(yt)
+  yt.result(player('retry'))
+  assert.equal((await retry.pending).url, audioUrl('retry'))
+})
+
+test('rejected lazy import leaves the original source error and no cached locator', async t => {
+  const yt = engine(t, { modules: { './youtube-p1': new Error('Synthetic chunk unavailable') } }), { pending } = await visionos(yt)
+  yt.result(unavailable())
+  await assert.rejects(pending, error => error.code === 'unavailable')
+  const retry = await visionos(yt)
+  yt.result(player('no-stale-cache'))
+  assert.equal((await retry.pending).url, audioUrl('no-stale-cache'))
+})
+
+for (const mismatch of ['identity', 'duration', 'secondary-audio']) test(`P1 ${mismatch} mismatch cannot enter the stream cache`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = player('invalid', mismatch === 'identity' ? other : id)
+  if (mismatch === 'secondary-audio') response.streamingData.adaptiveFormats[0].audioTrack = { displayName: 'Descriptive audio', audioIsDefault: true }
+  yt.result(response)
+  await flush()
+  if (mismatch === 'duration') yt.send({ duration: 120 })
+  else assert.equal(yt.frames.length, 0, 'an invalid response must be rejected before metadata probing')
+  await assert.rejects(pending, error => error.code === 'unavailable')
+  const retry = await visionos(yt)
+  yt.result(player('valid-after-rejection'))
+  assert.equal((await retry.pending).url, audioUrl('valid-after-rejection'))
+})
+
+test('abort before starting creates no frames, imports or cached stream', async t => {
+  const yt = engine(t), controller = new AbortController(); controller.abort()
+  await assert.rejects(yt.stream(id, false, controller.signal), { name: 'AbortError' })
+  assert.equal(yt.history.length, 0)
+  assert.deepEqual(yt.imports, [])
+})
+
+test('abort during lazy loading does not invoke the loaded P1 engine', async t => {
+  const gate = deferred(), calls = []
+  // TypeScript's CJS import interop must pass this deferred module through;
+  // otherwise it wraps the Promise itself as a completed namespace object.
+  Object.defineProperty(gate.promise, '__esModule', { value: true })
+  const yt = engine(t, { modules: { './youtube-p1': gate.promise } }), controller = new AbortController()
+  const { pending } = await visionos(yt, false, controller.signal)
+  yt.result(unavailable()); await flush()
+  assert.ok(yt.imports.includes('./youtube-p1'))
+  controller.abort()
+  gate.resolve({ requestP1Player() { calls.push('p1'); throw new Error('must not run') } })
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.deepEqual(calls, [])
+  assert.equal(yt.frames.length, 0)
+})
+
+test('abort during P1 request removes transport and ignores its late successful response', async t => {
+  const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt)
+  const obsolete = yt.frames[0]
+  controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  yt.result(player('late'), obsolete)
+  const retry = await visionos(yt)
+  yt.result(player('fresh'))
+  assert.equal((await retry.pending).url, audioUrl('fresh'))
+})
+
+test('abort during metadata probing unloads its frame and never caches a late result', async t => {
+  const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt)
+  yt.result(player('awaiting-metadata')); await flush()
+  assert.equal(yt.args().message, 'pletina-youtube-p1-metadata')
+  const obsolete = yt.frames[0]
+  controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  yt.send({ duration: 209 }, obsolete)
+  const retry = await visionos(yt)
+  yt.result(player('after-probe-abort'))
+  assert.equal((await retry.pending).url, audioUrl('after-probe-abort'))
+})
+
+test('account-bearing recipes are rejected before the P1 transport; anonymous IDs remain RAM only', async t => {
+  const badRecipe = recipe(); badRecipe.context.client.authorization = 'synthetic-forbidden-value'
+  const yt = engine(t, { recipe: badRecipe }), { pending } = await visionos(yt)
+  yt.result(unavailable())
+  await assert.rejects(pending, error => error.code === 'unavailable')
+  assert.equal(yt.history.length, 2, 'a credential-bearing recipe must not reach a player POST')
+  assert.deepEqual(yt.storageAccess, [])
+  for (const { config, frame } of yt.history) {
+    assert.match(config.url, /^https:\/\/www\.youtube\.com\/youtubei\/v1\/(?:search|player)\?prettyPrint=false$/)
+    assert.equal(new URL(config.url).searchParams.has('key'), false)
+    assert.match(frame.srcdoc, /credentials: 'omit'/)
+    assert.doesNotMatch(JSON.stringify(config.body), /authorization|synthetic-forbidden-value/)
+  }
+})
+
+test('a fresh module instance cannot retrieve another instance\'s signed locator', async t => {
+  const first = engine(t), initial = await visionos(first)
+  await p1Request(first); await completeP1(first, 'ram-only')
+  await initial.pending
+  const second = engine(t), pending = second.stream()
+  assert.ok(second.args().url.includes('/search?'), 'the media URL and visitor must not survive a module reload')
+  second.result({ responseContext: { visitorData: 'another-anonymous-fixture' } }); await flush()
+  second.result(player('new-instance'))
+  assert.equal((await pending).url, audioUrl('new-instance'))
+  assert.deepEqual([...first.storageAccess, ...second.storageAccess], [])
+})

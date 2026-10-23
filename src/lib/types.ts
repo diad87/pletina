@@ -153,7 +153,7 @@ export interface TrackQuery {
 
 /** Identidad de una fuente; las direcciones temporales sólo viven en Playable.url. */
 export interface PlayableSource {
-  provider: 'audius' | 'archive' | 'hearthis' | 'verified' | 'funkwhale'
+  provider: 'audius' | 'archive' | 'hearthis' | 'verified' | 'funkwhale' | 'youtube-p1'
   id: string
   /** Caducidad del audio resuelto, en milisegundos Unix. */
   expiresAt?: number

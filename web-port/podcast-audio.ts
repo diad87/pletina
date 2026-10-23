@@ -34,7 +34,10 @@ export async function resolvePodcastTrack(track: TrackQuery, refresh = false, si
     if (!validVideoId(videoId)) throw new Error('El vídeo de este episodio no es válido.')
     const audio = await stream(videoId, refresh, signal)
     checkAbort(signal)
-    return { videoId, url: audio.url, title: track.title, channel: track.artist, local: false }
+    return { videoId, url: audio.url, title: track.title, channel: track.artist, local: false,
+      ...(audio.transport === 'p1' ? { source: { provider: 'youtube-p1' as const, id: videoId, expiresAt: audio.expiresAt,
+        download: { allowed: false } } } : {}),
+    }
   }
   return { videoId: '', url: podcastAudioUrl(episode.audioUrl), title: track.title, channel: track.artist, local: false }
 }

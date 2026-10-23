@@ -14,6 +14,7 @@ export default defineConfig({
     ],
   },
   build: {
+    rolldownOptions: { input: { index: resolve('web-port/index.html'), p1check: resolve('web-port/p1-check.html') } },
     target: 'es2022',
     outDir: resolve('dist-web-port'),
     emptyOutDir: true,

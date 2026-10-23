@@ -63,7 +63,10 @@ function validTrack(track: TrackQuery): void {
 }
 const isDirect = (track: TrackQuery) => track.id >= YOUTUBE_BASE && track.id < PODCAST_BASE
 const isPodcast = (track: TrackQuery) => track.id >= PODCAST_BASE && track.id < LOCAL_BASE
-const playable = (info: StreamInfo, title = info.title, channel = info.channel): Playable => ({ videoId: info.videoId, url: info.url, title, channel, local: false })
+const playable = (info: StreamInfo, title = info.title, channel = info.channel): Playable => ({ videoId: info.videoId, url: info.url, title, channel, local: false,
+  ...(info.transport === 'p1' ? { source: { provider: 'youtube-p1' as const, id: info.videoId, expiresAt: info.expiresAt,
+    download: { allowed: false } } } : {}),
+})
 const choice = (candidate: Candidate, score: number, verified: boolean) => ({ videoId: candidate.videoId, title: candidate.title,
   channel: candidate.artists.join(', '), duration: candidate.duration, score, verified })
 

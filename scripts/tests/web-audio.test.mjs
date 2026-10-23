@@ -81,6 +81,21 @@ const song = (videoId = id) => ({ musicResponsiveListItemRenderer: { playlistIte
 const video = (videoId = id, extra = {}) => ({ videoRenderer: { videoId, title: { runs: [{ text: 'Radiohead - ' }, { text: 'Airbag' }] },
   ownerText: { runs: [{ text: 'Radiohead' }] }, lengthText: { simpleText: '4:47' }, ...extra } })
 const videoFixture = (items) => ({ contents: { twoColumnSearchResultsRenderer: { primaryContents: { sectionListRenderer: { contents: [{ itemSectionRenderer: { contents: items } }] } } } } })
+
+test('P1 keeps the same music and episode identity without offering unverified offline downloads', async () => {
+  const primary = { ...info(), transport: 'p1' }
+  const music = engine({ stream: async () => primary })
+  const song = await music.resolveTrack(query)
+  assert.equal(song.videoId, id)
+  assert.equal(song.url, primary.url)
+  assert.deepEqual(song.source, { provider: 'youtube-p1', id, expiresAt: primary.expiresAt, download: { allowed: false } })
+  const podcast = { ...query, id: 750_000_000_000_001 }
+  const episode = engine({ stream: async () => primary }, null, id, { id: podcast.id, audioUrl: `youtube:${id}` })
+  const result = await episode.resolveRemoteTrack(podcast)
+  assert.equal(result.videoId, id)
+  assert.deepEqual(result.source, song.source)
+  assert.deepEqual(episode.writes, [], 'An episode never becomes a musical source association')
+})
 const playerFixture = (videoId = id) => ({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: 'Airbag', author: 'Radiohead', lengthSeconds: '287' },
   streamingData: { adaptiveFormats: [{ mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 128000, url: `https://r1.googlevideo.com/audio?expire=${Math.floor(Date.now() / 1000) + 3600}` }] } })
 

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111015"><title>Prueba P1 · Pletina</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,sans-serif;background:#111015;color:#f8f7fa}body{margin:0;padding:24px;max-width:620px;margin:auto}h1{font-size:26px;margin:16px 0}p{line-height:1.5;color:#c7c2d1}button,a{font:inherit}section{display:grid;gap:12px;margin:24px 0}button{border:0;border-radius:14px;padding:18px;color:#171220;background:#b394ff;font-weight:700;text-align:left;cursor:pointer}button.secondary{background:#302937;color:#fff}audio{width:100%;margin:12px 0}output{display:block;min-height:52px;padding:16px;border-radius:14px;background:#25212c;line-height:1.5}small{display:block;overflow-wrap:anywhere;color:#a8a1b5;margin:16px 0}a{color:#ccb7ff}
+  </style>
+</head>
+<body>
+  <h1>Audio P1, sin vídeo</h1>
+  <p>Pulsa una canción. Cuando suene, pulsa Inicio de Android durante 30 segundos. Vuelve y bloquea la pantalla otros 30 segundos.</p>
+  <section aria-label="Canciones de prueba">
+    <button data-song="epoitaitaye">▶ Epoitaitaye</button>
+    <button data-song="maite">▶ Maite Zaitut!</button>
+    <button data-song="iritsi">▶ Iritsi da Eguna</button>
+    <button class="secondary" id="stop">Parar</button>
+  </section>
+  <output id="status" role="status" aria-live="polite">Lista para probar.</output>
+  <audio controls preload="none"></audio>
+  <small id="version"></small>
+  <button class="secondary" id="export">Guardar resultado</button>
+  <p><a href="../?open=app">Volver a Pletina</a></p>
+  <script type="module" src="./p1-check.ts"></script>
+</body>
+</html>

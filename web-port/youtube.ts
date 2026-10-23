@@ -14,6 +14,8 @@ export interface StreamInfo {
   channel: string
   duration: number | null
   expiresAt: number
+  /** P1 URLs have passed a silent metadata probe before reaching the player. */
+  transport?: 'p1'
   /** Tamaño declarado del mismo formato MP4 seleccionado; no se guardan sus URLs. */
   contentLength?: number
 }
@@ -371,6 +373,20 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
     ...(contentLength ? { contentLength } : {}) }
 }
 
+async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamInfo> {
+  checkAbort(signal)
+  const [{ requestP1Player }, { probeP1Audio }, { p1Recipe }] = await Promise.all([
+    import('./youtube-p1'), import('./youtube-p1-probe'), import('./p1-recipe.generated'),
+  ])
+  checkAbort(signal)
+  const response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal)
+  checkAbort(signal)
+  const info = parsePlayer(response, videoId)
+  await probeP1Audio(info.url, info.duration, signal)
+  checkAbort(signal)
+  return { ...info, transport: 'p1' }
+}
+
 export async function stream(videoId: string, refresh = false, signal?: AbortSignal): Promise<StreamInfo> {
   if (!validVideoId(videoId)) throw new Error('El vídeo de YouTube no es válido.')
   checkAbort(signal)
@@ -387,7 +403,17 @@ export async function stream(videoId: string, refresh = false, signal?: AbortSig
   checkAbort(signal)
   let result: StreamInfo
   try { result = parsePlayer(response, videoId) }
-  catch (error) { if (error instanceof YouTubeError && error.code === 'restricted') visitor = null; throw error }
+  catch (error) {
+    if (error instanceof YouTubeError && error.code === 'restricted') visitor = null
+    if (!(error instanceof YouTubeError) || !['format', 'unavailable'].includes(error.code)) throw error
+    try { result = await p1Stream(videoId, signal) }
+    catch {
+      checkAbort(signal)
+      // Preserve the original category for verified providers and the existing
+      // visible fallback. A stale static recipe must not replace those paths.
+      throw error
+    }
+  }
   // Límite de memoria: las direcciones nunca se guardan en el almacenamiento de biblioteca.
   for (const [id, value] of streams) if (value.expiresAt <= Date.now()) streams.delete(id)
   if (streams.size >= 100) streams.delete(streams.keys().next().value!)
