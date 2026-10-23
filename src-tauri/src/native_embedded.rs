@@ -82,10 +82,15 @@ fn stage_timing(id: &str, stage: &str, started: Instant) {
     if std::env::var_os("MUSIFY_BENCH").is_some() {
         eprintln!(
             "[native-stage] {}",
-            json!({"id":id,"stage":stage,
+            json!({"id":id,"stage":stage,"atMs":trace_time(),
             "ms":started.elapsed().as_secs_f64()*1000.0})
         );
     }
+}
+
+fn trace_time() -> f64 {
+    static EPOCH: LazyLock<Instant> = LazyLock::new(Instant::now);
+    EPOCH.elapsed().as_secs_f64() * 1000.0
 }
 
 fn fail(code: &str) -> Error {
@@ -199,6 +204,9 @@ async fn get(http: &reqwest::Client, url: reqwest::Url) -> Result<String, Error>
         "player-source"
     };
     let started = Instant::now();
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        let _ = trace_time();
+    }
     let response = http
         .get(url)
         .header("Accept-Language", "en")
@@ -211,7 +219,7 @@ async fn get(http: &reqwest::Client, url: reqwest::Url) -> Result<String, Error>
     if std::env::var_os("MUSIFY_BENCH").is_some() {
         eprintln!(
             "[native-text] {}",
-            json!({"role":role,"headersMs":headers_ms,
+            json!({"role":role,"headersMs":headers_ms,"atMs":trace_time(),
             "totalMs":started.elapsed().as_secs_f64()*1000.0,
             "decodedBytes":result.as_ref().ok().map(String::len)})
         );
@@ -1406,9 +1414,14 @@ async fn resolve_config(
                 let url = &direct.url;
                 async move {
                     let probe_started = Instant::now();
+                    let at_ms = if std::env::var_os("MUSIFY_BENCH").is_some() {
+                        trace_time()
+                    } else {
+                        0.0
+                    };
                     let result = strict_probe(http, url, length).await;
                     if std::env::var_os("MUSIFY_BENCH").is_some() {
-                        eprintln!("[native-cdn-attempt] {}", json!({"id":video_id,
+                        eprintln!("[native-cdn-attempt] {}", json!({"id":video_id,"atMs":at_ms,
                             "attempt":attempt,"startedMs":probe_started.duration_since(probe_epoch).as_secs_f64()*1000.0,
                             "ms":probe_started.elapsed().as_secs_f64()*1000.0,
                             "code":result.as_ref().err().map(|e|validation_code(&e.to_string())).unwrap_or_else(||"ok".into())}));

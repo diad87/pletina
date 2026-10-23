@@ -4896,27 +4896,27 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		return 1048576;
 	}
 	function matchOrInsertSemicolon(parser, context) {
-		if ((parser.flags & 1) === 0 && (parser.getToken() & 1048576) !== 1048576) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if ((parser.flags & 1) === 0 && (parser.token & 1048576) !== 1048576) parser.report(30, KeywordDescTable[parser.token & 255]);
 		if (!consumeOpt(parser, context, 1074790417)) parser.options.onInsertedSemicolon?.(parser.startIndex);
 	}
 	function isValidStrictMode(parser, index, tokenIndex, tokenValue) {
 		if (index - tokenIndex < 13 && tokenValue === "use strict") {
-			if ((parser.getToken() & 1048576) === 1048576 || parser.flags & 1) return 1;
+			if ((parser.token & 1048576) === 1048576 || parser.flags & 1) return 1;
 		}
 		return 0;
 	}
 	function optionalBit(parser, context, t) {
-		if (parser.getToken() !== t) return 0;
+		if (parser.token !== t) return 0;
 		nextToken(parser, context);
 		return 1;
 	}
 	function consumeOpt(parser, context, t) {
-		if (parser.getToken() !== t) return false;
+		if (parser.token !== t) return false;
 		nextToken(parser, context);
 		return true;
 	}
 	function consume(parser, context, t) {
-		if (parser.getToken() !== t) parser.report(25, KeywordDescTable[t & 255]);
+		if (parser.token !== t) parser.report(25, KeywordDescTable[t & 255]);
 		nextToken(parser, context);
 	}
 	function reinterpretToPattern(parser, node) {
@@ -5298,7 +5298,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		parser.startColumn = parser.tokenColumn = parser.column;
 		parser.startLine = parser.tokenLine = parser.line;
 		parser.setToken(CharTypes[parser.currentChar] & 8192 ? scanJSXString(parser) : scanSingleToken(parser, context, 0));
-		return parser.getToken();
+		return parser.token;
 	}
 	function scanJSXString(parser) {
 		const quote = parser.currentChar;
@@ -5370,14 +5370,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		parser.setToken(138);
 	}
 	function rescanJSXIdentifier(parser) {
-		if (parser.getToken() & 143360) {
+		if (parser.token & 143360) {
 			const { index } = parser;
 			let char = parser.currentChar;
 			while (CharTypes[char] & 32770) char = advanceChar(parser);
 			parser.tokenValue += parser.source.slice(index, parser.index);
 			parser.setToken(208897, true);
 		}
-		return parser.getToken();
+		return parser.token;
 	}
 	const nextFeatures = 7;
 	function normalizeRanges(ranges) {
@@ -5620,29 +5620,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			};
 		}
 		finishNode(node, start, end) {
-			const { ranges } = this.options;
-			if (ranges) {
-				const endIndex = end ? end.index : this.startIndex;
-				if (ranges.start) node.start = start.index;
-				if (ranges.end) node.end = endIndex;
-				if (ranges.range) node.range = [start.index, endIndex];
-			}
-			if (this.options.loc) {
-				node.loc = {
-					start: {
-						line: start.line,
-						column: start.column
-					},
-					end: end ? {
-						line: end.line,
-						column: end.column
-					} : {
-						line: this.startLine,
-						column: this.startColumn
-					}
-				};
-				if (this.options.source) node.loc.source = this.options.source;
-			}
+			node.start = start.index;
+			node.end = end ? end.index : this.startIndex;
 			return node;
 		}
 		addBindingToExports(name) {
@@ -5730,9 +5709,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseStatementList(parser, context, scope) {
 		nextToken(parser, context | 262176);
 		const statements = [];
-		while (parser.getToken() === 134283267) {
+		while (parser.token === 134283267) {
 			const { index, tokenValue, tokenStart, tokenIndex } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			const expr = parseLiteral(parser, context);
 			if (isValidStrictMode(parser, index, tokenIndex, tokenValue)) {
 				context |= 1;
@@ -5741,27 +5720,27 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			}
 			statements.push(parseDirective(parser, context, expr, token, tokenStart));
 		}
-		while (parser.getToken() !== 1048576) statements.push(parseStatementListItem(parser, context, scope, void 0, {}, 4));
+		while (parser.token !== 1048576) statements.push(parseStatementListItem(parser, context, scope, void 0, {}, 4));
 		return statements;
 	}
 	function parseModuleItemList(parser, context, scope) {
 		nextToken(parser, context | 32);
 		const statements = [];
-		while (parser.getToken() === 134283267) {
+		while (parser.token === 134283267) {
 			const { tokenStart } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			statements.push(parseDirective(parser, context, parseLiteral(parser, context), token, tokenStart));
 		}
-		while (parser.getToken() !== 1048576) statements.push(parseModuleItem(parser, context, scope));
+		while (parser.token !== 1048576) statements.push(parseModuleItem(parser, context, scope));
 		return statements;
 	}
 	function parseModuleItem(parser, context, scope) {
-		if (parser.getToken() === 133) Object.assign(parser.leadingDecorators, {
+		if (parser.token === 133) Object.assign(parser.leadingDecorators, {
 			start: parser.tokenStart,
 			decorators: parseDecorators(parser, context, void 0)
 		});
 		let moduleItem;
-		switch (parser.getToken()) {
+		switch (parser.token) {
 			case 20564:
 				moduleItem = parseExportDeclaration(parser, context, scope);
 				break;
@@ -5775,8 +5754,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseStatementListItem(parser, context, scope, privateScope, labels, origin = 2) {
 		const start = parser.tokenStart;
-		if (parser.leadingDecorators.decorators.length && parser.getToken() !== 86094) parser.report(172);
-		switch (parser.getToken()) {
+		if (parser.leadingDecorators.decorators.length && parser.token !== 86094) parser.report(172);
+		switch (parser.token) {
 			case 86104: return parseFunctionDeclaration(parser, context, scope, privateScope, 1, 0, 0, start, origin);
 			case 133: if (!(parser.features & 1)) parser.report(30, "@");
 			case 86094: return parseClassDeclaration(parser, context, scope, privateScope, 0);
@@ -5789,7 +5768,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			case 20564: parser.report(103, "export");
 			case 86106:
 				nextToken(parser, context);
-				switch (parser.getToken()) {
+				switch (parser.token) {
 					case 67174411: return parseImportCallDeclaration(parser, context, privateScope, start);
 					case 67108877: return parseImportMetaDeclaration(parser, context, start);
 					default: parser.report(103, "import");
@@ -5799,7 +5778,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 	}
 	function parseStatement(parser, context, scope, privateScope, labels, allowFuncDecl, origin = 0) {
-		switch (parser.getToken()) {
+		switch (parser.token) {
 			case 86088: return parseVariableStatement(parser, context, scope, privateScope);
 			case 20572: return parseReturnStatement(parser, context, privateScope);
 			case 20569: return parseIfStatement(parser, context, scope, privateScope, labels);
@@ -5825,29 +5804,29 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseExpressionOrLabelledStatement(parser, context, scope, privateScope, labels, allowFuncDecl, origin) {
 		const { tokenValue, tokenStart } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		let expr;
 		switch (token) {
 			case 241737:
 				expr = parseIdentifier(parser, context);
 				if (context & 1) parser.report(85);
-				if (parser.getToken() === 69271571) parser.report(84);
+				if (parser.token === 69271571) parser.report(84);
 				break;
 			default: expr = parsePrimaryExpression(parser, context, privateScope, 2, 0, 1, 0, 1, parser.tokenStart, 0, 1);
 		}
 		return finishExpressionOrLabelledStatement(parser, context, scope, privateScope, labels, allowFuncDecl, expr, token, tokenValue, tokenStart, origin);
 	}
 	function finishExpressionOrLabelledStatement(parser, context, scope, privateScope, labels, allowFuncDecl, initialExpression, token, tokenValue, tokenStart, origin) {
-		if (token & 143360 && parser.getToken() === 21) return parseLabelledStatement(parser, context, scope, privateScope, labels, tokenValue, initialExpression, token, allowFuncDecl, tokenStart, origin);
+		if (token & 143360 && parser.token === 21) return parseLabelledStatement(parser, context, scope, privateScope, labels, tokenValue, initialExpression, token, allowFuncDecl, tokenStart, origin);
 		let expression = parseMemberOrUpdateExpression(parser, context, privateScope, initialExpression, 0, 0, tokenStart);
 		expression = parseAssignmentExpression(parser, context, privateScope, 0, 0, tokenStart, expression);
-		if (parser.getToken() === 18) expression = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, expression);
+		if (parser.token === 18) expression = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, expression);
 		return parseExpressionStatement(parser, context, expression, tokenStart);
 	}
 	function parseBlock(parser, context, scope, privateScope, labels, start = parser.tokenStart, type = "BlockStatement") {
 		const body = [];
 		consume(parser, context | 32, 2162700);
-		while (parser.getToken() !== 1074790415) body.push(parseStatementListItem(parser, context, scope, privateScope, { parent: labels }));
+		while (parser.token !== 1074790415) body.push(parseStatementListItem(parser, context, scope, privateScope, { parent: labels }));
 		consume(parser, context | 32, 1074790415);
 		return parser.finishNode({
 			type,
@@ -5858,7 +5837,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		if ((context & 4096) === 0) parser.report(92);
 		const start = parser.tokenStart;
 		nextToken(parser, context | 32);
-		const argument = parser.flags & 1 || parser.getToken() & 1048576 ? null : parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
+		const argument = parser.flags & 1 || parser.token & 1048576 ? null : parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
 		matchOrInsertSemicolon(parser, context | 32);
 		return parser.finishNode({
 			type: "ReturnStatement",
@@ -5876,7 +5855,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		validateBindingIdentifier(parser, context, 0, token, 1);
 		validateAndDeclareLabel(parser, labels, value);
 		nextToken(parser, context | 32);
-		const body = allowFuncDecl && (context & 1) === 0 && parser.options.webcompat && parser.getToken() === 86104 ? parseFunctionDeclaration(parser, context, scope?.createChildScope(), privateScope, 0, 0, 0, parser.tokenStart, origin) : parseStatement(parser, context, scope, privateScope, labels, allowFuncDecl, origin);
+		const body = allowFuncDecl && (context & 1) === 0 && parser.options.webcompat && parser.token === 86104 ? parseFunctionDeclaration(parser, context, scope?.createChildScope(), privateScope, 0, 0, 0, parser.tokenStart, origin) : parseStatement(parser, context, scope, privateScope, labels, allowFuncDecl, origin);
 		return parser.finishNode({
 			type: "LabeledStatement",
 			label: expr,
@@ -5885,24 +5864,24 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseAsyncArrowOrAsyncFunctionDeclaration(parser, context, scope, privateScope, labels, allowFuncDecl, origin) {
 		const { tokenValue, tokenStart: start } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		let expr = parseIdentifier(parser, context);
-		if (parser.getToken() === 21) return parseLabelledStatement(parser, context, scope, privateScope, labels, tokenValue, expr, token, 1, start, origin);
+		if (parser.token === 21) return parseLabelledStatement(parser, context, scope, privateScope, labels, tokenValue, expr, token, 1, start, origin);
 		const asyncNewLine = parser.flags & 1;
 		if (!asyncNewLine) {
-			if (parser.getToken() === 86104) {
+			if (parser.token === 86104) {
 				if (!allowFuncDecl) parser.report(125);
 				return parseFunctionDeclaration(parser, context, scope, privateScope, 1, 0, 1, start, origin);
 			}
-			if (isValidIdentifier(context, parser.getToken())) {
+			if (isValidIdentifier(context, parser.token)) {
 				expr = parseAsyncArrowAfterIdent(parser, context, privateScope, 1, start);
-				if (parser.getToken() === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
+				if (parser.token === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
 				return parseExpressionStatement(parser, context, expr, start);
 			}
 		}
-		if (parser.getToken() === 67174411) expr = parseAsyncArrowOrCallExpression(parser, context, privateScope, expr, 1, 1, asyncNewLine, start);
+		if (parser.token === 67174411) expr = parseAsyncArrowOrCallExpression(parser, context, privateScope, expr, 1, 1, asyncNewLine, start);
 		else {
-			if (parser.getToken() === 10) {
+			if (parser.token === 10) {
 				classifyIdentifier(parser, context, token);
 				if ((token & 36864) === 36864) parser.flags |= 256;
 				expr = parseArrowFromIdentifier(parser, context | 2048, privateScope, parser.tokenValue, expr, 0, 1, 0, start);
@@ -5912,7 +5891,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 0, start);
 		expr = parseAssignmentExpression(parser, context, privateScope, 0, 0, start, expr);
 		parser.assignable = 1;
-		if (parser.getToken() === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
+		if (parser.token === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
 		return parseExpressionStatement(parser, context, expr, start);
 	}
 	function parseDirective(parser, context, expression, token, start) {
@@ -5920,9 +5899,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		if (token !== 1074790417) {
 			parser.assignable = 2;
 			expression = parseMemberOrUpdateExpression(parser, context, void 0, expression, 0, 0, start);
-			if (parser.getToken() !== 1074790417) {
+			if (parser.token !== 1074790417) {
 				expression = parseAssignmentExpression(parser, context, void 0, 0, 0, start, expression);
-				if (parser.getToken() === 18) expression = parseSequenceExpression(parser, context, void 0, 0, start, expression);
+				if (parser.token === 18) expression = parseSequenceExpression(parser, context, void 0, 0, start, expression);
 			}
 			matchOrInsertSemicolon(parser, context | 32);
 		}
@@ -5958,7 +5937,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		consume(parser, context | 32, 16);
 		const consequent = parseConsequentOrAlternative(parser, context, scope, privateScope, labels);
 		let alternate = null;
-		if (parser.getToken() === 20563) {
+		if (parser.token === 20563) {
 			nextToken(parser, context | 32);
 			alternate = parseConsequentOrAlternative(parser, context, scope, privateScope, labels);
 		}
@@ -5971,7 +5950,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseConsequentOrAlternative(parser, context, scope, privateScope, labels) {
 		const { tokenStart } = parser;
-		return context & 1 || !parser.options.webcompat || parser.getToken() !== 86104 ? parseStatement(parser, context, scope, privateScope, { parent: labels }, 0) : parseFunctionDeclaration(parser, context, scope?.createChildScope(), privateScope, 0, 0, 0, tokenStart);
+		return context & 1 || !parser.options.webcompat || parser.token !== 86104 ? parseStatement(parser, context, scope, privateScope, { parent: labels }, 0) : parseFunctionDeclaration(parser, context, scope?.createChildScope(), privateScope, 0, 0, 0, tokenStart);
 	}
 	function parseSwitchStatement(parser, context, scope, privateScope, labels) {
 		const start = parser.tokenStart;
@@ -5983,7 +5962,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const cases = [];
 		let seenDefault = 0;
 		scope = scope?.createChildScope(8);
-		while (parser.getToken() !== 1074790415) {
+		while (parser.token !== 1074790415) {
 			const { tokenStart } = parser;
 			let test = null;
 			const consequent = [];
@@ -5994,7 +5973,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				seenDefault = 1;
 			}
 			consume(parser, context | 32, 21);
-			while (parser.getToken() !== 20556 && parser.getToken() !== 1074790415 && parser.getToken() !== 20561) {
+			while (parser.token !== 20556 && parser.token !== 1074790415 && parser.token !== 20561) {
 				const statement = parseStatementListItem(parser, context | 4, scope, privateScope, { parent: labels });
 				if (statement.type === "VariableDeclaration" && (statement.kind === "using" || statement.kind === "await using")) parser.report(30, statement.kind);
 				consequent.push(statement);
@@ -6036,7 +6015,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const start = parser.tokenStart;
 		nextToken(parser, context);
 		let label = null;
-		if ((parser.flags & 1) === 0 && parser.getToken() & 143360) {
+		if ((parser.flags & 1) === 0 && parser.token & 143360) {
 			const { tokenValue } = parser;
 			if (!isValidLabel(parser, labels, tokenValue, 1)) parser.report(140, tokenValue);
 			label = parseIdentifier(parser, context | 32);
@@ -6051,7 +6030,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const start = parser.tokenStart;
 		nextToken(parser, context | 32);
 		let label = null;
-		if ((parser.flags & 1) === 0 && parser.getToken() & 143360) {
+		if ((parser.flags & 1) === 0 && parser.token & 143360) {
 			const { tokenValue } = parser;
 			if (!isValidLabel(parser, labels, tokenValue, 0)) parser.report(140, tokenValue);
 			label = parseIdentifier(parser, context | 32);
@@ -6090,7 +6069,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const { tokenStart } = parser;
 		const handler = consumeOpt(parser, context | 32, 20557) ? parseCatchBlock(parser, context, scope, privateScope, labels, tokenStart) : null;
 		let finalizer = null;
-		if (parser.getToken() === 20566) {
+		if (parser.token === 20566) {
 			nextToken(parser, context | 32);
 			const finalizerScope = scope?.createChildScope(4);
 			finalizer = parseBlock(parser, context, finalizerScope, privateScope, { parent: labels });
@@ -6107,9 +6086,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let param = null;
 		if (consumeOpt(parser, context, 67174411)) {
 			scope = scope?.createChildScope(4);
-			param = parseBindingPattern(parser, context, scope, privateScope, (parser.getToken() & 2097152) === 2097152 ? 256 : 512);
-			if (parser.getToken() === 18) parser.report(86);
-			else if (parser.getToken() === 1077936155) parser.report(87);
+			param = parseBindingPattern(parser, context, scope, privateScope, (parser.token & 2097152) === 2097152 ? 256 : 512);
+			if (parser.token === 18) parser.report(86);
+			else if (parser.token === 1077936155) parser.report(87);
 			consume(parser, context | 32, 16);
 		}
 		const additionalScope = scope?.createChildScope(32);
@@ -6143,9 +6122,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseLetIdentOrVarDeclarationStatement(parser, context, scope, privateScope, origin) {
 		const { tokenValue, tokenStart, currentLocation } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		let expr = parseIdentifier(parser, context);
-		if (parser.getToken() & 2240512 && (parser.getToken() & 20480) !== 20480) {
+		if (parser.token & 2240512 && (parser.token & 20480) !== 20480) {
 			const declarations = parseVariableDeclarationList(parser, context, scope, privateScope, 8);
 			matchOrInsertSemicolon(parser, context | 32);
 			return parser.finishNode({
@@ -6156,8 +6135,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 		parser.assignable = 1;
 		if (context & 1) parser.report(85);
-		if (parser.getToken() === 21) return parseLabelledStatement(parser, context, scope, privateScope, {}, tokenValue, expr, token, 0, tokenStart, origin);
-		if (parser.getToken() === 10) {
+		if (parser.token === 21) return parseLabelledStatement(parser, context, scope, privateScope, {}, tokenValue, expr, token, 0, tokenStart, origin);
+		if (parser.token === 10) {
 			let scope = void 0;
 			if (parser.options.lexical) scope = createArrowHeadParsingScope(parser, context, tokenValue, tokenStart, currentLocation);
 			parser.flags = (parser.flags | 128) ^ 128;
@@ -6166,7 +6145,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 0, tokenStart);
 			expr = parseAssignmentExpression(parser, context, privateScope, 0, 0, tokenStart, expr);
 		}
-		if (parser.getToken() === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, expr);
+		if (parser.token === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, expr);
 		return parseExpressionStatement(parser, context, expr, tokenStart);
 	}
 	function nextTokenIsUsingOnSameLine(parser) {
@@ -6203,14 +6182,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseUsingDeclarationOrExpressionStatement(parser, context, scope, privateScope, labels, origin) {
 		const { tokenStart, tokenValue, currentLocation } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		const expression = parseIdentifier(parser, context);
-		if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.getToken())) {
-			if (origin & 4 && context & 8 && (context & 2) === 0 && (context & 4096) === 0) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.token)) {
+			if (origin & 4 && context & 8 && (context & 2) === 0 && (context & 4096) === 0) parser.report(30, KeywordDescTable[parser.token & 255]);
 			return parseLexicalDeclaration(parser, context, scope, privateScope, 16, origin, "using", tokenStart, 1);
 		}
 		parser.assignable = 1;
-		if (parser.getToken() === 10) {
+		if (parser.token === 10) {
 			let arrowScope = void 0;
 			if (parser.options.lexical) arrowScope = createArrowHeadParsingScope(parser, context, tokenValue, tokenStart, currentLocation);
 			parser.flags = (parser.flags | 128) ^ 128;
@@ -6223,13 +6202,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		if (context & 524288) parser.report(179);
 		nextToken(parser, context | 32);
 		let argument;
-		if ((parser.flags & 1) === 0 && parser.getToken() === 209013) {
+		if ((parser.flags & 1) === 0 && parser.token === 209013) {
 			const usingStart = parser.tokenStart;
 			const usingIdentifier = parseIdentifier(parser, context);
-			if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.getToken())) return parseLexicalDeclaration(parser, context, scope, privateScope, 16, origin, "await using", start, 1);
+			if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.token)) return parseLexicalDeclaration(parser, context, scope, privateScope, 16, origin, "await using", start, 1);
 			argument = parseMemberOrUpdateExpression(parser, context, privateScope, usingIdentifier, 0, 0, usingStart);
 		} else argument = parseLeftHandSideExpression(parser, context, privateScope, 0, 0, 1);
-		if (parser.getToken() === 8391735) parser.report(33);
+		if (parser.token === 8391735) parser.report(33);
 		parser.assignable = 2;
 		return finishExpressionOrLabelledStatement(parser, context, scope, privateScope, labels, 0, parser.finishNode({
 			type: "AwaitExpression",
@@ -6273,22 +6252,22 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			}
 			list.push(declaration);
 		}
-		if (bindingCount > 1 && origin & 32 && parser.getToken() & 262144) parser.report(61, KeywordDescTable[parser.getToken() & 255]);
+		if (bindingCount > 1 && origin & 32 && parser.token & 262144) parser.report(61, KeywordDescTable[parser.token & 255]);
 		return list;
 	}
 	function parseVariableDeclaration(parser, context, scope, privateScope, kind, origin, declarationKind) {
 		const { tokenStart } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		let init = null;
 		if (declarationKind && (token & 2097152) === 2097152) parser.report(50);
 		const id = parseBindingPattern(parser, context, scope, privateScope, kind, origin);
-		if (parser.getToken() === 1077936155) {
+		if (parser.token === 1077936155) {
 			nextToken(parser, context | 32);
 			init = parseExpression(parser, context, privateScope, 1, 0, parser.tokenStart, origin);
 			if (origin & 32) {
-				if (parser.getToken() === 471156 || parser.getToken() === 8673330 && (token & 2097152 || (kind & 4) === 0 || context & 1 || !parser.options.webcompat)) throw new ParseError(tokenStart, parser.currentLocation, 60, parser.getToken() === 471156 ? "of" : "in");
+				if (parser.token === 471156 || parser.token === 8673330 && (token & 2097152 || (kind & 4) === 0 || context & 1 || !parser.options.webcompat)) throw new ParseError(tokenStart, parser.currentLocation, 60, parser.token === 471156 ? "of" : "in");
 			}
-		} else if ((kind & 16 || (token & 2097152) > 0) && (parser.getToken() & 262144) !== 262144) parser.report(59, declarationKind ?? (kind & 16 ? "const" : "destructuring"));
+		} else if ((kind & 16 || (token & 2097152) > 0) && (parser.token & 262144) !== 262144) parser.report(59, declarationKind ?? (kind & 16 ? "const" : "destructuring"));
 		return parser.finishNode({
 			type: "VariableDeclarator",
 			id,
@@ -6305,16 +6284,16 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let update = null;
 		let destructible = 0;
 		let init = null;
-		let isVarDecl = parser.getToken() === 86088 || parser.getToken() === 241737 || parser.getToken() === 86090 || parser.getToken() === 209013;
+		let isVarDecl = parser.token === 86088 || parser.token === 241737 || parser.token === 86090 || parser.token === 209013;
 		let resourceDeclarationKind;
 		let consumedForOfDelimiter = false;
 		let right;
 		const { tokenStart } = parser;
-		const token = parser.getToken();
+		const token = parser.token;
 		if (isVarDecl) {
 			if (token === 241737) {
 				init = parseIdentifier(parser, context);
-				if (parser.getToken() & 2240512 && (parser.getToken() & 20480) !== 20480) {
+				if (parser.token & 2240512 && (parser.token & 20480) !== 20480) {
 					init = parser.finishNode({
 						type: "VariableDeclaration",
 						kind: "let",
@@ -6326,21 +6305,21 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					isVarDecl = false;
 					parser.assignable = 1;
 					init = parseMemberOrUpdateExpression(parser, context, privateScope, init, 0, 0, tokenStart);
-					if (parser.getToken() === 471156) parser.report(117);
+					if (parser.token === 471156) parser.report(117);
 				}
 			} else if (token === 209013) {
 				const usingIdentifier = parseIdentifier(parser, context);
-				if ((parser.flags & 1) !== 0 || !isResourceBindingStart(parser.getToken())) {
+				if ((parser.flags & 1) !== 0 || !isResourceBindingStart(parser.token)) {
 					isVarDecl = false;
 					parser.assignable = 1;
 					init = parseMemberOrUpdateExpression(parser, context, privateScope, usingIdentifier, 0, 0, tokenStart);
-				} else if (parser.getToken() === 471156) {
+				} else if (parser.token === 471156) {
 					const ofStart = parser.tokenStart;
 					const ofEnd = parser.currentLocation;
-					const ofToken = parser.getToken();
+					const ofToken = parser.token;
 					const ofValue = parser.tokenValue;
 					const ofIdentifier = parseIdentifier(parser, context);
-					if (parser.getToken() !== 1077936155 && parser.getToken() !== 8673330 && parser.getToken() !== 1074790417 && parser.getToken() !== 18) {
+					if (parser.token !== 1077936155 && parser.token !== 8673330 && parser.token !== 1074790417 && parser.token !== 18) {
 						isVarDecl = false;
 						consumedForOfDelimiter = true;
 						parser.assignable = 1;
@@ -6350,11 +6329,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						validateBindingIdentifier(parser, context, 16, ofToken, 0);
 						scope?.addBlockName(context, ofValue, 16, ofStart, ofEnd, 32);
 						let declarationInitializer = null;
-						if (parser.getToken() === 1077936155) {
+						if (parser.token === 1077936155) {
 							nextToken(parser, context | 32);
 							declarationInitializer = parseExpression(parser, context | 131072, privateScope, 1, 0, parser.tokenStart);
-							if ((parser.getToken() & 262144) === 262144) throw new ParseError(ofStart, parser.currentLocation, 60, parser.getToken() === 471156 ? "of" : "in");
-						} else if (parser.getToken() !== 8673330) parser.report(59, resourceDeclarationKind);
+							if ((parser.token & 262144) === 262144) throw new ParseError(ofStart, parser.currentLocation, 60, parser.token === 471156 ? "of" : "in");
+						} else if (parser.token !== 8673330) parser.report(59, resourceDeclarationKind);
 						const declarations = [parser.finishNode({
 							type: "VariableDeclarator",
 							id: ofIdentifier,
@@ -6370,7 +6349,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 							}
 							declarations.push(declaration);
 						}
-						if (declarations.length > 1 && parser.getToken() & 262144) parser.report(61, KeywordDescTable[parser.getToken() & 255]);
+						if (declarations.length > 1 && parser.token & 262144) parser.report(61, KeywordDescTable[parser.token & 255]);
 						init = parser.finishNode({
 							type: "VariableDeclaration",
 							kind: resourceDeclarationKind,
@@ -6404,10 +6383,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			if (context & 524288) parser.report(179);
 			nextToken(parser, context | 32);
 			let awaitArgument;
-			if ((parser.flags & 1) === 0 && parser.getToken() === 209013) {
+			if ((parser.flags & 1) === 0 && parser.token === 209013) {
 				const usingStart = parser.tokenStart;
 				const usingIdentifier = parseIdentifier(parser, context);
-				if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.getToken())) {
+				if ((parser.flags & 1) === 0 && isResourceBindingStart(parser.token)) {
 					resourceDeclarationKind = "await using";
 					isVarDecl = true;
 					init = parser.finishNode({
@@ -6419,7 +6398,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				} else awaitArgument = parseMemberOrUpdateExpression(parser, context, privateScope, usingIdentifier, 0, 0, usingStart);
 			} else awaitArgument = parseLeftHandSideExpression(parser, context, privateScope, 0, 0, 1);
 			if (!isVarDecl) {
-				if (parser.getToken() === 8391735) parser.report(33);
+				if (parser.token === 8391735) parser.report(33);
 				parser.assignable = 2;
 				init = parser.finishNode({
 					type: "AwaitExpression",
@@ -6440,8 +6419,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			parser.assignable = destructible & 16 ? 2 : 1;
 			init = parseMemberOrUpdateExpression(parser, context | 131072, privateScope, init, 0, 0, patternStart);
 		} else init = parseLeftHandSideExpression(parser, context | 131072, privateScope, 1, 0, 1);
-		if (consumedForOfDelimiter || (parser.getToken() & 262144) === 262144) {
-			if (consumedForOfDelimiter || parser.getToken() === 471156) {
+		if (consumedForOfDelimiter || (parser.token & 262144) === 262144) {
+			if (consumedForOfDelimiter || parser.token === 471156) {
 				if (parser.assignable & 2) parser.report(80, forAwait ? "await" : "of");
 				reinterpretToPattern(parser, init);
 				if (!consumedForOfDelimiter) nextToken(parser, context | 32);
@@ -6473,14 +6452,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 		if (forAwait) parser.report(82);
 		if (!isVarDecl) {
-			if (destructible & 8 && parser.getToken() !== 1077936155) parser.report(80, "loop");
+			if (destructible & 8 && parser.token !== 1077936155) parser.report(80, "loop");
 			init = parseAssignmentExpression(parser, context | 131072, privateScope, 0, 0, tokenStart, init);
 		}
-		if (parser.getToken() === 18) init = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, init);
+		if (parser.token === 18) init = parseSequenceExpression(parser, context, privateScope, 0, tokenStart, init);
 		consume(parser, context | 32, 1074790417);
-		if (parser.getToken() !== 1074790417) test = parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
+		if (parser.token !== 1074790417) test = parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
 		consume(parser, context | 32, 1074790417);
-		if (parser.getToken() !== 16) update = parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
+		if (parser.token !== 16) update = parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart);
 		consume(parser, context | 32, 16);
 		const body = parseIterationStatementBody(parser, context, scope, privateScope, labels);
 		return parser.finishNode({
@@ -6492,8 +6471,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start);
 	}
 	function parseRestrictedIdentifier(parser, context, scope) {
-		if (!isValidIdentifier(context, parser.getToken())) parser.report(120);
-		if ((parser.getToken() & 537079808) === 537079808) parser.report(121);
+		if (!isValidIdentifier(context, parser.token)) parser.report(120);
+		if ((parser.token & 537079808) === 537079808) parser.report(121);
 		scope?.addBlockName(context, parser.tokenValue, 8, parser.tokenStart, parser.currentLocation);
 		return parseIdentifier(parser, context);
 	}
@@ -6505,32 +6484,32 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let phase = null;
 		const { tokenStart } = parser;
 		let specifiers = [];
-		if (parser.getToken() === 134283267) source = parseLiteral(parser, context);
+		if (parser.token === 134283267) source = parseLiteral(parser, context);
 		else {
-			if (parser.getToken() & 143360) {
-				const token = parser.getToken();
+			if (parser.token & 143360) {
+				const token = parser.token;
 				const { tokenValue, tokenStart: start, currentLocation } = parser;
 				const isPhaseDefer = parser.features & 2 && (token & -2147483648) === 0 && tokenValue == "defer";
 				const isPhaseSource = parser.features & 4 && (token & -2147483648) === 0 && tokenValue == "source";
 				if (isPhaseDefer || isPhaseSource) {
 					const phaseOrLocal = parseIdentifier(parser, context);
 					if (tokenValue === "defer") {
-						if (parser.getToken() === 8391476) {
+						if (parser.token === 8391476) {
 							phase = "defer";
 							specifiers = [parseImportNamespaceSpecifier(parser, context, scope)];
-						} else if (parser.getToken() === 209011 || parser.getToken() === 18) {
+						} else if (parser.token === 209011 || parser.token === 18) {
 							scope?.addBlockName(context, tokenValue, 8, start, currentLocation);
 							specifiers = [parser.finishNode({
 								type: "ImportDefaultSpecifier",
 								local: phaseOrLocal
 							}, tokenStart)];
 						} else parser.report(108);
-					} else if (parser.getToken() === 209011) {
-						const fromToken = parser.getToken();
+					} else if (parser.token === 209011) {
+						const fromToken = parser.token;
 						const fromStart = parser.tokenStart;
 						const fromEnd = parser.currentLocation;
 						const fromLocal = parseIdentifier(parser, context);
-						if (parser.getToken() === 209011) {
+						if (parser.token === 209011) {
 							validateBindingIdentifier(parser, context, 16, fromToken, 0);
 							scope?.addBlockName(context, fromLocal.name, 8, fromStart, fromEnd);
 							phase = "source";
@@ -6544,11 +6523,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 								type: "ImportDefaultSpecifier",
 								local: phaseOrLocal
 							}, tokenStart)];
-							if (parser.getToken() !== 134283267) parser.report(105, "Import");
+							if (parser.token !== 134283267) parser.report(105, "Import");
 							source = parseLiteral(parser, context);
 							sourceParsed = true;
 						}
-					} else if (parser.getToken() & 143360) {
+					} else if (parser.token & 143360) {
 						phase = "source";
 						const localStart = parser.tokenStart;
 						const local = parseRestrictedIdentifier(parser, context, scope);
@@ -6556,7 +6535,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 							type: "ImportDefaultSpecifier",
 							local
 						}, localStart)];
-					} else if (parser.getToken() === 18) {
+					} else if (parser.token === 18) {
 						scope?.addBlockName(context, tokenValue, 8, start, currentLocation);
 						specifiers = [parser.finishNode({
 							type: "ImportDefaultSpecifier",
@@ -6570,7 +6549,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						local
 					}, tokenStart)];
 				}
-				if (phase === null && !sourceParsed && consumeOpt(parser, context, 18)) switch (parser.getToken()) {
+				if (phase === null && !sourceParsed && consumeOpt(parser, context, 18)) switch (parser.token) {
 					case 8391476:
 						specifiers.push(parseImportNamespaceSpecifier(parser, context, scope));
 						break;
@@ -6579,7 +6558,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						break;
 					default: parser.report(107);
 				}
-			} else switch (parser.getToken()) {
+			} else switch (parser.token) {
 				case 8391476:
 					specifiers = [parseImportNamespaceSpecifier(parser, context, scope)];
 					break;
@@ -6588,7 +6567,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					break;
 				case 67174411: return parseImportCallDeclaration(parser, context, void 0, start);
 				case 67108877: return parseImportMetaDeclaration(parser, context, start);
-				default: parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+				default: parser.report(30, KeywordDescTable[parser.token & 255]);
 			}
 			if (!sourceParsed) source = parseModuleSpecifier(parser, context);
 		}
@@ -6607,7 +6586,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const { tokenStart } = parser;
 		nextToken(parser, context);
 		consume(parser, context, 77932);
-		if ((parser.getToken() & 134217728) === 134217728) throw new ParseError(tokenStart, parser.currentLocation, 30, KeywordDescTable[parser.getToken() & 255]);
+		if ((parser.token & 134217728) === 134217728) throw new ParseError(tokenStart, parser.currentLocation, 30, KeywordDescTable[parser.token & 255]);
 		return parser.finishNode({
 			type: "ImportNamespaceSpecifier",
 			local: parseRestrictedIdentifier(parser, context, scope)
@@ -6615,20 +6594,20 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseModuleSpecifier(parser, context) {
 		consume(parser, context, 209011);
-		if (parser.getToken() !== 134283267) parser.report(105, "Import");
+		if (parser.token !== 134283267) parser.report(105, "Import");
 		return parseLiteral(parser, context);
 	}
 	function parseImportSpecifierOrNamedImports(parser, context, scope, specifiers) {
 		nextToken(parser, context);
-		while (parser.getToken() & 143360 || parser.getToken() === 134283267) {
+		while (parser.token & 143360 || parser.token === 134283267) {
 			let { tokenValue, tokenStart, currentLocation } = parser;
 			const start = tokenStart;
-			const token = parser.getToken();
+			const token = parser.token;
 			const imported = parseModuleExportName(parser, context);
 			let local;
 			if (consumeOpt(parser, context, 77932)) {
-				if ((parser.getToken() & 134217728) === 134217728 || parser.getToken() === 18) parser.report(106);
-				else validateBindingIdentifier(parser, context, 16, parser.getToken(), 0);
+				if ((parser.token & 134217728) === 134217728 || parser.token === 18) parser.report(106);
+				else validateBindingIdentifier(parser, context, 16, parser.token, 0);
 				tokenValue = parser.tokenValue;
 				tokenStart = parser.tokenStart;
 				currentLocation = parser.currentLocation;
@@ -6643,7 +6622,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				local,
 				imported
 			}, start));
-			if (parser.getToken() !== 1074790415) consume(parser, context, 18);
+			if (parser.token !== 1074790415) consume(parser, context, 18);
 		}
 		consume(parser, context, 1074790415);
 		return specifiers;
@@ -6655,26 +6634,26 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start), start);
 		expr = parseMemberOrUpdateExpression(parser, context, void 0, expr, 0, 0, start);
 		expr = parseAssignmentExpression(parser, context, void 0, 0, 0, start, expr);
-		if (parser.getToken() === 18) expr = parseSequenceExpression(parser, context, void 0, 0, start, expr);
+		if (parser.token === 18) expr = parseSequenceExpression(parser, context, void 0, 0, start, expr);
 		return parseExpressionStatement(parser, context, expr, start);
 	}
 	function parseImportCallDeclaration(parser, context, privateScope, start) {
 		let expr = parseImportExpression(parser, context, privateScope, 0, start);
 		expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 0, start);
-		if (parser.getToken() === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
+		if (parser.token === 18) expr = parseSequenceExpression(parser, context, privateScope, 0, start, expr);
 		return parseExpressionStatement(parser, context, expr, start);
 	}
 	function parseExportDeclaration(parser, context, scope) {
 		const start = parser.leadingDecorators.decorators.length ? parser.leadingDecorators.start : parser.tokenStart;
 		nextToken(parser, context | 32);
 		const isDefaultExport = consumeOpt(parser, context | 32, 20561);
-		if (parser.leadingDecorators.decorators.length && parser.getToken() !== 86094) parser.report(172);
+		if (parser.leadingDecorators.decorators.length && parser.token !== 86094) parser.report(172);
 		const specifiers = [];
 		let declaration = null;
 		let source = null;
 		let attributes = [];
 		if (isDefaultExport) {
-			switch (parser.getToken()) {
+			switch (parser.token) {
 				case 86104:
 					declaration = parseFunctionDeclaration(parser, context, scope, void 0, 1, 1, 0, parser.tokenStart, 4);
 					break;
@@ -6687,12 +6666,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					declaration = parseIdentifier(parser, context);
 					const { flags } = parser;
 					if ((flags & 1) === 0) {
-						if (parser.getToken() === 86104) declaration = parseFunctionDeclaration(parser, context, scope, void 0, 1, 1, 1, tokenStart, 4);
-						else if (parser.getToken() === 67174411) {
+						if (parser.token === 86104) declaration = parseFunctionDeclaration(parser, context, scope, void 0, 1, 1, 1, tokenStart, 4);
+						else if (parser.token === 67174411) {
 							declaration = parseAsyncArrowOrCallExpression(parser, context, void 0, declaration, 1, 1, flags, tokenStart);
 							declaration = parseMemberOrUpdateExpression(parser, context, void 0, declaration, 0, 0, tokenStart);
 							declaration = parseAssignmentExpression(parser, context, void 0, 0, 0, tokenStart, declaration);
-						} else if (parser.getToken() & 143360) {
+						} else if (parser.token & 143360) {
 							if (scope) scope = createArrowHeadParsingScope(parser, context, parser.tokenValue, parser.tokenStart, parser.currentLocation);
 							declaration = parseIdentifier(parser, context);
 							declaration = parseArrowFunctionExpression(parser, context, scope, void 0, [declaration], 1, tokenStart);
@@ -6710,7 +6689,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				declaration
 			}, start);
 		}
-		switch (parser.getToken()) {
+		switch (parser.token) {
 			case 8391476: {
 				nextToken(parser, context);
 				let exported = null;
@@ -6719,7 +6698,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					exported = parseModuleExportName(parser, context);
 				}
 				consume(parser, context, 209011);
-				if (parser.getToken() !== 134283267) parser.report(105, "Export");
+				if (parser.token !== 134283267) parser.report(105, "Export");
 				source = parseLiteral(parser, context);
 				const attributes = parseImportAttributes(parser, context);
 				const node = {
@@ -6736,14 +6715,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				const tmpExportedNames = [];
 				const tmpExportedBindings = [];
 				let hasLiteralLocal = 0;
-				while (parser.getToken() & 143360 || parser.getToken() === 134283267) {
+				while (parser.token & 143360 || parser.token === 134283267) {
 					const { tokenStart, tokenValue } = parser;
 					const local = parseModuleExportName(parser, context);
 					if (local.type === "Literal") hasLiteralLocal = 1;
 					let exported;
-					if (parser.getToken() === 77932) {
+					if (parser.token === 77932) {
 						nextToken(parser, context);
-						if ((parser.getToken() & 143360) === 0 && parser.getToken() !== 134283267) parser.report(106);
+						if ((parser.token & 143360) === 0 && parser.token !== 134283267) parser.report(106);
 						if (scope) {
 							tmpExportedNames.push(parser.tokenValue);
 							tmpExportedBindings.push(tokenValue);
@@ -6761,11 +6740,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						local,
 						exported
 					}, tokenStart));
-					if (parser.getToken() !== 1074790415) consume(parser, context, 18);
+					if (parser.token !== 1074790415) consume(parser, context, 18);
 				}
 				consume(parser, context, 1074790415);
 				if (consumeOpt(parser, context, 209011)) {
-					if (parser.getToken() !== 134283267) parser.report(105, "Export");
+					if (parser.token !== 134283267) parser.report(105, "Export");
 					source = parseLiteral(parser, context);
 					attributes = parseImportAttributes(parser, context);
 					if (scope) tmpExportedNames.forEach((n) => parser.declareUnboundVariable(n));
@@ -6798,12 +6777,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			case 209005: {
 				const { tokenStart } = parser;
 				nextToken(parser, context);
-				if ((parser.flags & 1) === 0 && parser.getToken() === 86104) {
+				if ((parser.flags & 1) === 0 && parser.token === 86104) {
 					declaration = parseFunctionDeclaration(parser, context, scope, void 0, 1, 2, 1, tokenStart, 4);
 					break;
 				}
 			}
-			default: parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+			default: parser.report(30, KeywordDescTable[parser.token & 255]);
 		}
 		const node = {
 			type: "ExportNamedDeclaration",
@@ -6829,10 +6808,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseExpressions(parser, context, privateScope, inGroup, canAssign, start) {
 		const expr = parseExpression(parser, context, privateScope, canAssign, inGroup, start);
-		return parser.getToken() === 18 ? parseSequenceExpression(parser, context, privateScope, inGroup, start, expr) : expr;
+		return parser.token === 18 ? parseSequenceExpression(parser, context, privateScope, inGroup, start, expr) : expr;
 	}
 	function parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, start, left) {
-		const token = parser.getToken();
+		const token = parser.token;
 		if ((token & 4194304) === 4194304) {
 			if (parser.assignable & 2) parser.report(26);
 			if ((token & 524288) === 524288 && parser.assignable & 4) parser.report(26);
@@ -6856,7 +6835,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		return left;
 	}
 	function parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, start, left) {
-		const token = parser.getToken();
+		const token = parser.token;
 		nextToken(parser, context | 32);
 		const right = parseExpression(parser, context, privateScope, 1, inGroup, parser.tokenStart);
 		left = parser.finishNode(isPattern ? {
@@ -6890,8 +6869,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let t;
 		let precedence;
 		parser.assignable = 2;
-		while (parser.getToken() & 8388608) {
-			t = parser.getToken();
+		while (parser.token & 8388608) {
+			t = parser.token;
 			precedence = t & 3840;
 			if (t & 524288 && operator & 268435456 || operator & 524288 && t & 268435456) parser.report(167);
 			if (precedence + ((t === 8391735) << 8) - ((bit === t) << 12) <= minPrecedence) break;
@@ -6903,16 +6882,16 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				operator: KeywordDescTable[t & 255]
 			}, start);
 		}
-		if (parser.getToken() === 1077936155) parser.report(26);
+		if (parser.token === 1077936155) parser.report(26);
 		return left;
 	}
 	function parseUnaryExpression(parser, context, privateScope, isLHS, inGroup) {
 		if (!isLHS) parser.report(0);
 		const { tokenStart } = parser;
-		const unaryOperator = parser.getToken();
+		const unaryOperator = parser.token;
 		nextToken(parser, context | 32);
 		const arg = parseLeftHandSideExpression(parser, context, privateScope, 0, inGroup, 1);
-		if (parser.getToken() === 8391735) parser.report(33);
+		if (parser.token === 8391735) parser.report(33);
 		if (context & 1 && unaryOperator === 16863276) {
 			if (arg.type === "Identifier") parser.report(123);
 			else if (isPropertyWithPrivateFieldKey(arg)) parser.report(129);
@@ -6926,19 +6905,19 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, tokenStart);
 	}
 	function parseAsyncExpression(parser, context, privateScope, inGroup, isLHS, canAssign, inNew, start) {
-		const token = parser.getToken();
+		const token = parser.token;
 		const expr = parseIdentifier(parser, context);
 		const { flags } = parser;
 		if ((flags & 1) === 0) {
-			if (parser.getToken() === 86104) return parseFunctionExpression(parser, context, privateScope, 1, inGroup, start);
-			if (isValidIdentifier(context, parser.getToken())) {
+			if (parser.token === 86104) return parseFunctionExpression(parser, context, privateScope, 1, inGroup, start);
+			if (isValidIdentifier(context, parser.token)) {
 				if (!isLHS) parser.report(0);
-				if ((parser.getToken() & 36864) === 36864) parser.flags |= 256;
+				if ((parser.token & 36864) === 36864) parser.flags |= 256;
 				return parseAsyncArrowAfterIdent(parser, context, privateScope, canAssign, start);
 			}
 		}
-		if (!inNew && parser.getToken() === 67174411) return parseAsyncArrowOrCallExpression(parser, context, privateScope, expr, canAssign, 1, flags, start);
-		if (parser.getToken() === 10) {
+		if (!inNew && parser.token === 67174411) return parseAsyncArrowOrCallExpression(parser, context, privateScope, expr, canAssign, 1, flags, start);
+		if (parser.token === 10) {
 			classifyIdentifier(parser, context, token);
 			if (inNew) parser.report(51);
 			if ((token & 36864) === 36864) parser.flags |= 256;
@@ -6959,13 +6938,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			nextToken(parser, context | 32);
 			if (context & 8192) throw new ParseError(start, parser.startPosition, 32);
 			if (!canAssign) parser.report(26);
-			if (parser.getToken() === 22) parser.report(126);
+			if (parser.token === 22) parser.report(126);
 			let argument = null;
 			let delegate = false;
 			if ((parser.flags & 1) === 0) {
 				delegate = consumeOpt(parser, context | 32, 8391476);
-				if (parser.getToken() & 77824 || delegate) argument = parseExpression(parser, context, privateScope, 1, 0, parser.tokenStart);
-			} else if (parser.getToken() === 8391476) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+				if (parser.token & 77824 || delegate) argument = parseExpression(parser, context, privateScope, 1, 0, parser.tokenStart);
+			} else if (parser.token === 8391476) parser.report(30, KeywordDescTable[parser.token & 255]);
 			parser.assignable = 2;
 			return parser.finishNode({
 				type: "YieldExpression",
@@ -6985,19 +6964,19 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			parser.destructible |= 128;
 		}
 		if (context & 524288) parser.report(179);
-		const isEscaped = (parser.getToken() & -2147483648) !== 0;
+		const isEscaped = (parser.token & -2147483648) !== 0;
 		const possibleIdentifierOrArrowFunc = parseIdentifierOrArrow(parser, context, privateScope, !isEscaped && context & 2050 ? 1 : 0);
-		if (isEscaped || possibleIdentifierOrArrowFunc.type === "ArrowFunctionExpression" || (parser.getToken() & 65536) === 0) {
+		if (isEscaped || possibleIdentifierOrArrowFunc.type === "ArrowFunctionExpression" || (parser.token & 65536) === 0) {
 			if (context & 2048) throw new ParseError(start, parser.startPosition, 178);
 			if (context & 2) throw new ParseError(start, parser.startPosition, 112);
 			if (context & 8192 && context & 2048) throw new ParseError(start, parser.startPosition, 112);
 			return possibleIdentifierOrArrowFunc;
 		}
-		if (context & 8192 && (context & 2050 || parser.getToken() & 143360)) throw new ParseError(start, parser.startPosition, 31);
+		if (context & 8192 && (context & 2050 || parser.token & 143360)) throw new ParseError(start, parser.startPosition, 31);
 		if (context & 2048 || context & 2 && context & 8) {
 			if (inNew) throw new ParseError(start, parser.startPosition, 0);
 			const argument = parseLeftHandSideExpression(parser, context, privateScope, 0, 0, 1);
-			if (parser.getToken() === 8391735) parser.report(33);
+			if (parser.token === 8391735) parser.report(33);
 			parser.assignable = 2;
 			return parser.finishNode({
 				type: "AwaitExpression",
@@ -7012,10 +6991,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		parser.flags &= -4161;
 		consume(parser, context | 32, 2162700);
 		const body = [];
-		if (parser.getToken() !== 1074790415) {
-			while (parser.getToken() === 134283267) {
+		if (parser.token !== 1074790415) {
+			while (parser.token === 134283267) {
 				const { index, tokenStart, tokenIndex, tokenValue } = parser;
-				const token = parser.getToken();
+				const token = parser.token;
 				const expr = parseLiteral(parser, context);
 				if (isValidStrictMode(parser, index, tokenIndex, tokenValue)) {
 					context |= 1;
@@ -7040,10 +7019,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 		parser.flags = (parser.flags | 4928) ^ 4928;
 		parser.destructible = (parser.destructible | 256) ^ 256;
-		while (parser.getToken() !== 1074790415) body.push(parseStatementListItem(parser, context, scope, privateScope, {}, 4));
+		while (parser.token !== 1074790415) body.push(parseStatementListItem(parser, context, scope, privateScope, {}, 4));
 		consume(parser, origin & 24 ? context | 32 : context, 1074790415);
 		parser.flags &= -4289;
-		if (parser.getToken() === 1077936155) parser.report(26);
+		if (parser.token === 1077936155) parser.report(26);
 		return parser.finishNode({
 			type: "BlockStatement",
 			body
@@ -7052,7 +7031,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseSuperExpression(parser, context) {
 		const { tokenStart } = parser;
 		nextToken(parser, context);
-		switch (parser.getToken()) {
+		switch (parser.token) {
 			case 67108991: parser.report(169);
 			case 67174411:
 				if ((context & 512) === 0) parser.report(28);
@@ -7073,7 +7052,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseUpdateExpression(parser, context, expr, start) {
 		if (parser.assignable & 2) parser.report(55);
-		const token = parser.getToken();
+		const token = parser.token;
 		nextToken(parser, context);
 		parser.assignable = 2;
 		return parser.finishNode({
@@ -7084,13 +7063,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start);
 	}
 	function parseMemberOrUpdateExpression(parser, context, privateScope, expr, inGroup, inChain, start) {
-		if ((parser.getToken() & 33619968) === 33619968 && (parser.flags & 1) === 0) expr = parseUpdateExpression(parser, context, expr, start);
-		else if ((parser.getToken() & 67108864) === 67108864) {
+		if ((parser.token & 33619968) === 33619968 && (parser.flags & 1) === 0) expr = parseUpdateExpression(parser, context, expr, start);
+		else if ((parser.token & 67108864) === 67108864) {
 			context = (context | 131072) ^ 131072;
-			switch (parser.getToken()) {
+			switch (parser.token) {
 				case 67108877: {
 					nextToken(parser, (context | 262152) ^ 8);
-					if (context & 16 && parser.getToken() === 131 && parser.tokenValue === "super") parser.report(175);
+					if (context & 16 && parser.token === 131 && parser.tokenValue === "super") parser.report(175);
 					parser.assignable = (parser.flags & 2048) === 2048 ? 2 : 1;
 					const property = parsePropertyOrPrivatePropertyName(parser, context | 64, privateScope, 1);
 					expr = parser.finishNode({
@@ -7161,7 +7140,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					expr = parser.finishNode({
 						type: "TaggedTemplateExpression",
 						tag: expr,
-						quasi: parser.getToken() === 67174408 ? parseTemplate(parser, context | 64, privateScope) : parseTemplateLiteral(parser, context)
+						quasi: parser.token === 67174408 ? parseTemplate(parser, context | 64, privateScope) : parseTemplateLiteral(parser, context)
 					}, start);
 			}
 			expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 1, start);
@@ -7178,13 +7157,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseOptionalChain(parser, context, privateScope, expr, start) {
 		let restoreHasOptionalChaining = false;
 		let node;
-		if (parser.getToken() === 69271571 || parser.getToken() === 67174411) {
+		if (parser.token === 69271571 || parser.token === 67174411) {
 			if ((parser.flags & 2048) === 2048) {
 				restoreHasOptionalChaining = true;
 				parser.flags = (parser.flags | 2048) ^ 2048;
 			}
 		}
-		if (parser.getToken() === 69271571) {
+		if (parser.token === 69271571) {
 			nextToken(parser, context | 32);
 			const { tokenStart } = parser;
 			const property = parseExpressions(parser, context, privateScope, 0, 1, tokenStart);
@@ -7197,7 +7176,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				optional: true,
 				property
 			}, start);
-		} else if (parser.getToken() === 67174411) {
+		} else if (parser.token === 67174411) {
 			const args = parseArguments(parser, context, privateScope, 0);
 			if (!(context & 1) && parser.options.webcompat) parser.assignable = 4;
 			else parser.assignable = 2;
@@ -7222,13 +7201,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		return node;
 	}
 	function parsePropertyOrPrivatePropertyName(parser, context, privateScope, allowPrivateId = 0) {
-		if ((parser.getToken() & 143360) === 0 && parser.getToken() !== -2147483527 && parser.getToken() !== -2147483526 && (parser.getToken() !== 131 || !allowPrivateId)) parser.report(162);
-		return parser.getToken() === 131 ? parsePrivateIdentifier(parser, context, privateScope, 0) : parseIdentifier(parser, context);
+		if ((parser.token & 143360) === 0 && parser.token !== -2147483527 && parser.token !== -2147483526 && (parser.token !== 131 || !allowPrivateId)) parser.report(162);
+		return parser.token === 131 ? parsePrivateIdentifier(parser, context, privateScope, 0) : parseIdentifier(parser, context);
 	}
 	function parseUpdateExpressionPrefixed(parser, context, privateScope, inNew, isLHS, start) {
 		if (inNew) parser.report(56);
 		if (!isLHS) parser.report(0);
-		const token = parser.getToken();
+		const token = parser.token;
 		nextToken(parser, context | 32);
 		const arg = parseLeftHandSideExpression(parser, context, privateScope, 0, 0, 1);
 		if (parser.assignable & 2) parser.report(55);
@@ -7241,17 +7220,17 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start);
 	}
 	function parsePrimaryExpression(parser, context, privateScope, kind, inNew, canAssign, inGroup, isLHS, start, origin = 0, allowPrivateId = 0) {
-		if ((parser.getToken() & 143360) === 143360) {
-			switch (parser.getToken()) {
+		if ((parser.token & 143360) === 143360) {
+			switch (parser.token) {
 				case 209006:
 				case -2147274642: return parseAwaitExpressionOrIdentifier(parser, context, privateScope, inNew, inGroup, start);
 				case 241771: return parseYieldExpressionOrIdentifier(parser, context, privateScope, inGroup, canAssign, start);
 				case 209005: return parseAsyncExpression(parser, context, privateScope, inGroup, isLHS, canAssign, inNew, start);
 			}
 			const { tokenValue } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			const expr = parseIdentifier(parser, context | 64);
-			if (parser.getToken() === 10) {
+			if (parser.token === 10) {
 				if (!isLHS) parser.report(0);
 				classifyIdentifier(parser, context, token);
 				if ((token & 36864) === 36864) parser.flags |= 256;
@@ -7265,8 +7244,8 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			parser.assignable = context & 1 && (token & 537079808) === 537079808 ? 2 : 1;
 			return expr;
 		}
-		if ((parser.getToken() & 134217728) === 134217728) return parseLiteral(parser, context);
-		switch (parser.getToken()) {
+		if ((parser.token & 134217728) === 134217728) return parseLiteral(parser, context);
+		switch (parser.token) {
 			case 33619993:
 			case 33619994: return parseUpdateExpressionPrefixed(parser, context, privateScope, inNew, isLHS, start);
 			case 16863276:
@@ -7296,19 +7275,19 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				if (!allowPrivateId) parser.report(30, "PrivateField");
 				const { tokenStart } = parser;
 				const expression = parsePrivateIdentifier(parser, context, privateScope, 0);
-				if (parser.getToken() !== 8673330) throw new ParseError(tokenStart, parser.startPosition, 151);
+				if (parser.token !== 8673330) throw new ParseError(tokenStart, parser.startPosition, 151);
 				return expression;
 			}
 			case 86106: return parseImportCallOrMetaExpression(parser, context, privateScope, inNew, inGroup, start);
 			case 8456256: if (parser.options.jsx) return parseJSXRootElementOrFragment(parser, context, privateScope, 0, parser.tokenStart);
 			default:
-				if (isValidIdentifier(context, parser.getToken())) return parseIdentifierOrArrow(parser, context, privateScope);
-				parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+				if (isValidIdentifier(context, parser.token)) return parseIdentifierOrArrow(parser, context, privateScope);
+				parser.report(30, KeywordDescTable[parser.token & 255]);
 		}
 	}
 	function parseImportCallOrMetaExpression(parser, context, privateScope, inNew, inGroup, start) {
 		let expr = parseIdentifier(parser, context);
-		if (parser.getToken() === 67108877) return parseImportMetaExpression(parser, context, expr, start, privateScope, inGroup, inNew);
+		if (parser.token === 67108877) return parseImportMetaExpression(parser, context, expr, start, privateScope, inGroup, inNew);
 		if (inNew) parser.report(144);
 		expr = parseImportExpression(parser, context, privateScope, inGroup, start);
 		parser.assignable = 2;
@@ -7318,7 +7297,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const propertyStart = parser.tokenStart;
 		const propertyEnd = parser.currentLocation;
 		nextToken(parser, context);
-		const token = parser.getToken();
+		const token = parser.token;
 		const isPhaseDefer = parser.features & 2 && (token & -2147483648) === 0 && parser.tokenValue === "defer";
 		const isPhaseSource = parser.features & 4 && (token & -2147483648) === 0 && parser.tokenValue === "source";
 		if (isPhaseDefer || isPhaseSource) {
@@ -7340,12 +7319,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseImportExpression(parser, context, privateScope, inGroup, start, phase = null) {
 		consume(parser, context | 32, 67174411);
-		if (parser.getToken() === 14) parser.report(145);
+		if (parser.token === 14) parser.report(145);
 		const source = parseExpression(parser, context, privateScope, 1, inGroup, parser.tokenStart);
 		let options = null;
-		if (parser.getToken() === 18) {
+		if (parser.token === 18) {
 			consume(parser, context, 18);
-			if (parser.getToken() !== 16) options = parseExpression(parser, (context | 131072) ^ 131072, privateScope, 1, inGroup, parser.tokenStart);
+			if (parser.token !== 16) options = parseExpression(parser, (context | 131072) ^ 131072, privateScope, 1, inGroup, parser.tokenStart);
 			consumeOpt(parser, context, 18);
 		}
 		const node = {
@@ -7362,7 +7341,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		consume(parser, context, 2162700);
 		const attributes = [];
 		const keysContent = /* @__PURE__ */ new Set();
-		while (parser.getToken() !== 1074790415) {
+		while (parser.token !== 1074790415) {
 			const start = parser.tokenStart;
 			const key = parseIdentifierOrStringLiteral(parser, context);
 			consume(parser, context, 21);
@@ -7375,26 +7354,26 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				key,
 				value
 			}, start));
-			if (parser.getToken() !== 1074790415) consume(parser, context, 18);
+			if (parser.token !== 1074790415) consume(parser, context, 18);
 		}
 		consume(parser, context, 1074790415);
 		return attributes;
 	}
 	function parseStringLiteral(parser, context) {
-		if (parser.getToken() === 134283267) return parseLiteral(parser, context);
-		else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if (parser.token === 134283267) return parseLiteral(parser, context);
+		else parser.report(30, KeywordDescTable[parser.token & 255]);
 	}
 	function parseIdentifierOrStringLiteral(parser, context) {
-		if (parser.getToken() === 134283267) return parseLiteral(parser, context);
-		else if (parser.getToken() & 143360) return parseIdentifier(parser, context);
-		else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if (parser.token === 134283267) return parseLiteral(parser, context);
+		else if (parser.token & 143360) return parseIdentifier(parser, context);
+		else parser.report(30, KeywordDescTable[parser.token & 255]);
 	}
 	function parseModuleExportName(parser, context) {
-		if (parser.getToken() === 134283267) {
+		if (parser.token === 134283267) {
 			if (!parser.tokenValue.isWellFormed()) parser.report(173);
 			return parseLiteral(parser, context);
-		} else if (parser.getToken() & 143360) return parseIdentifier(parser, context);
-		else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		} else if (parser.token & 143360) return parseIdentifier(parser, context);
+		else parser.report(30, KeywordDescTable[parser.token & 255]);
 	}
 	function parseBigIntLiteral(parser, context) {
 		const { tokenRaw, tokenValue, tokenStart } = parser;
@@ -7425,13 +7404,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		consume(parser, context & -65 | 32, 67174408);
 		const quasis = [parseTemplateElement(parser, tokenValue, tokenRaw, tokenStart, false)];
 		const expressions = [parseExpressions(parser, context & -65, privateScope, 0, 1, parser.tokenStart)];
-		if (parser.getToken() !== 1074790415) parser.report(83);
+		if (parser.token !== 1074790415) parser.report(83);
 		while (parser.setToken(scanTemplateTail(parser, context), true) !== 67174409) {
 			const { tokenValue, tokenRaw, tokenStart } = parser;
 			consume(parser, context & -65 | 32, 67174408);
 			quasis.push(parseTemplateElement(parser, tokenValue, tokenRaw, tokenStart, false));
 			expressions.push(parseExpressions(parser, context, privateScope, 0, 1, parser.tokenStart));
-			if (parser.getToken() !== 1074790415) parser.report(83);
+			if (parser.token !== 1074790415) parser.report(83);
 		}
 		{
 			const { tokenValue, tokenRaw, tokenStart } = parser;
@@ -7484,16 +7463,16 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseArguments(parser, context, privateScope, inGroup) {
 		nextToken(parser, context | 32);
 		const args = [];
-		if (parser.getToken() === 16) {
+		if (parser.token === 16) {
 			nextToken(parser, context | 64);
 			return args;
 		}
-		while (parser.getToken() !== 16) {
-			if (parser.getToken() === 14) args.push(parseSpreadElement(parser, context, privateScope));
+		while (parser.token !== 16) {
+			if (parser.token === 14) args.push(parseSpreadElement(parser, context, privateScope));
 			else args.push(parseExpression(parser, context, privateScope, 1, inGroup, parser.tokenStart));
-			if (parser.getToken() !== 18) break;
+			if (parser.token !== 18) break;
 			nextToken(parser, context | 32);
-			if (parser.getToken() === 16) break;
+			if (parser.token === 16) break;
 		}
 		consume(parser, context | 64, 16);
 		return args;
@@ -7508,7 +7487,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseLiteral(parser, context) {
 		const { tokenValue, tokenRaw, tokenStart } = parser;
-		if (parser.getToken() === 134283389) return parseBigIntLiteral(parser, context);
+		if (parser.token === 134283389) return parseBigIntLiteral(parser, context);
 		const node = {
 			type: "Literal",
 			value: tokenValue
@@ -7520,10 +7499,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseNullOrTrueOrFalseLiteral(parser, context) {
 		const start = parser.tokenStart;
-		const raw = KeywordDescTable[parser.getToken() & 255];
+		const raw = KeywordDescTable[parser.token & 255];
 		const node = {
 			type: "Literal",
-			value: parser.getToken() === 86023 ? null : raw === "true"
+			value: parser.token === 86023 ? null : raw === "true"
 		};
 		if (parser.options.raw) node.raw = raw;
 		nextToken(parser, context);
@@ -7542,11 +7521,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let id = null;
 		let funcNameToken;
 		let functionScope = scope ? parser.createScope() : void 0;
-		if (parser.getToken() === 67174411) {
+		if (parser.token === 67174411) {
 			if ((flags & 1) === 0) parser.report(39, "Function");
 		} else {
 			const kind = origin & 4 && ((context & 8) === 0 || (context & 2) === 0) ? 4 : 64 | (isAsync ? 1024 : 0) | (isGenerator ? 1024 : 0);
-			validateFunctionName(parser, context, parser.getToken());
+			validateFunctionName(parser, context, parser.token);
 			if (scope) {
 				scope.addVarOrBlock(context, parser.tokenValue, kind, parser.tokenStart, parser.currentLocation, origin);
 				functionScope = functionScope?.createChildScope(128);
@@ -7554,9 +7533,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					if (flags & 2) parser.declareUnboundVariable(parser.tokenValue);
 				}
 			}
-			funcNameToken = parser.getToken();
-			if (parser.getToken() & 143360) id = parseIdentifier(parser, context);
-			else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+			funcNameToken = parser.token;
+			if (parser.token & 143360) id = parseIdentifier(parser, context);
+			else parser.report(30, KeywordDescTable[parser.token & 255]);
 		}
 		{
 			const modifierFlags = 28416;
@@ -7583,10 +7562,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let funcNameToken;
 		let scope = parser.createScopeIfLexical();
 		const modifierFlags = 552704;
-		if (parser.getToken() & 143360) {
-			validateFunctionName(parser, (context | modifierFlags) ^ modifierFlags | generatorAndAsyncFlags, parser.getToken());
+		if (parser.token & 143360) {
+			validateFunctionName(parser, (context | modifierFlags) ^ modifierFlags | generatorAndAsyncFlags, parser.token);
 			scope = scope?.createChildScope(128);
-			funcNameToken = parser.getToken();
+			funcNameToken = parser.token;
 			id = parseIdentifier(parser, context);
 		}
 		context = (context | modifierFlags) ^ modifierFlags | 65536 | generatorAndAsyncFlags | (isGenerator ? 0 : 262144);
@@ -7615,14 +7594,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const elements = [];
 		let destructible = 0;
 		context = (context | 131072) ^ 131072;
-		while (parser.getToken() !== 20) if (consumeOpt(parser, context | 32, 18)) elements.push(null);
+		while (parser.token !== 20) if (consumeOpt(parser, context | 32, 18)) elements.push(null);
 		else {
 			let left;
 			const { tokenStart, tokenValue, currentLocation } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token & 143360) {
 				left = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, inGroup, 1, tokenStart);
-				if (parser.getToken() === 1077936155) {
+				if (parser.token === 1077936155) {
 					if (parser.assignable & 2) parser.report(26);
 					nextToken(parser, context | 32);
 					scope?.addVarOrBlock(context, tokenValue, kind, tokenStart, currentLocation, origin);
@@ -7638,38 +7617,38 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						right
 					}, tokenStart);
 					destructible |= (parser.destructible & 256 ? 256 : 0) | (parser.destructible & 128 ? 128 : 0);
-				} else if (parser.getToken() === 18 || parser.getToken() === 20) {
+				} else if (parser.token === 18 || parser.token === 20) {
 					if (parser.assignable & 2) destructible |= 16;
 					else scope?.addVarOrBlock(context, tokenValue, kind, tokenStart, currentLocation, origin);
 					destructible |= (parser.destructible & 256 ? 256 : 0) | (parser.destructible & 128 ? 128 : 0);
 				} else {
 					destructible |= kind & 1 ? 32 : (kind & 2) === 0 ? 16 : 0;
 					left = parseMemberOrUpdateExpression(parser, context, privateScope, left, inGroup, 0, tokenStart);
-					if (parser.getToken() !== 18 && parser.getToken() !== 20) {
-						if (parser.getToken() !== 1077936155) destructible |= 16;
+					if (parser.token !== 18 && parser.token !== 20) {
+						if (parser.token !== 1077936155) destructible |= 16;
 						left = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, left);
-					} else if (parser.getToken() !== 1077936155) destructible |= parser.assignable & 1 ? 32 : 16;
+					} else if (parser.token !== 1077936155) destructible |= parser.assignable & 1 ? 32 : 16;
 				}
 			} else if (token & 2097152) {
-				left = parser.getToken() === 2162700 ? parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
+				left = parser.token === 2162700 ? parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
 				destructible |= parser.destructible;
 				parser.assignable = parser.destructible & 16 ? 2 : 1;
-				if (parser.getToken() === 18 || parser.getToken() === 20) {
+				if (parser.token === 18 || parser.token === 20) {
 					if (parser.assignable & 2) destructible |= 16;
 				} else if (parser.destructible & 8) parser.report(71);
 				else {
 					left = parseMemberOrUpdateExpression(parser, context, privateScope, left, inGroup, 0, tokenStart);
 					destructible = parser.assignable & 2 ? 16 : 0;
-					if (parser.getToken() !== 18 && parser.getToken() !== 20) left = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, left);
-					else if (parser.getToken() !== 1077936155) destructible |= parser.assignable & 1 ? 32 : 16;
+					if (parser.token !== 18 && parser.token !== 20) left = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, left);
+					else if (parser.token !== 1077936155) destructible |= parser.assignable & 1 ? 32 : 16;
 				}
 			} else if (token === 14) {
 				left = parseSpreadOrRestElement(parser, context, scope, privateScope, 20, kind, 0, inGroup, isPattern, origin);
 				destructible |= parser.destructible;
-				if (parser.getToken() !== 18 && parser.getToken() !== 20) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+				if (parser.token !== 18 && parser.token !== 20) parser.report(30, KeywordDescTable[parser.token & 255]);
 			} else {
 				left = parseLeftHandSideExpression(parser, context, privateScope, 1, 0, 1);
-				if (parser.getToken() !== 18 && parser.getToken() !== 20) {
+				if (parser.token !== 18 && parser.token !== 20) {
 					left = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, left);
 					if ((kind & 3) === 0 && token === 67174411) destructible |= 16;
 				} else if (parser.assignable & 2) destructible |= 16;
@@ -7677,7 +7656,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			}
 			elements.push(left);
 			if (consumeOpt(parser, context | 32, 18)) {
-				if (parser.getToken() === 20) break;
+				if (parser.token === 20) break;
 			} else break;
 		}
 		consume(parser, context, 20);
@@ -7685,12 +7664,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			type: isPattern ? "ArrayPattern" : "ArrayExpression",
 			elements
 		}, start);
-		if (!skipInitializer && parser.getToken() & 4194304) return parseArrayOrObjectAssignmentPattern(parser, context, privateScope, destructible, inGroup, isPattern, start, node);
+		if (!skipInitializer && parser.token & 4194304) return parseArrayOrObjectAssignmentPattern(parser, context, privateScope, destructible, inGroup, isPattern, start, node);
 		parser.destructible = destructible;
 		return node;
 	}
 	function parseArrayOrObjectAssignmentPattern(parser, context, privateScope, destructible, inGroup, isPattern, start, node) {
-		if (parser.getToken() !== 1077936155) parser.report(26);
+		if (parser.token !== 1077936155) parser.report(26);
 		nextToken(parser, context | 32);
 		if (destructible & 16) parser.report(26);
 		if (!isPattern) reinterpretToPattern(parser, node);
@@ -7714,14 +7693,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let argument = null;
 		let destructible = 0;
 		const { tokenValue, tokenStart, currentLocation } = parser;
-		let token = parser.getToken();
+		let token = parser.token;
 		if (token & 143360) {
 			parser.assignable = 1;
 			argument = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, inGroup, 1, tokenStart);
-			token = parser.getToken();
+			token = parser.token;
 			argument = parseMemberOrUpdateExpression(parser, context, privateScope, argument, inGroup, 0, tokenStart);
-			if (parser.getToken() !== 18 && parser.getToken() !== closingToken) {
-				if (parser.assignable & 2 && parser.getToken() === 1077936155) parser.report(71);
+			if (parser.token !== 18 && parser.token !== closingToken) {
+				if (parser.assignable & 2 && parser.token === 1077936155) parser.report(71);
 				destructible |= 16;
 				argument = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, argument);
 			}
@@ -7731,17 +7710,17 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			destructible |= parser.destructible & 128 ? 128 : 0;
 		} else if (token === closingToken) parser.report(41);
 		else if (token & 2097152) {
-			argument = parser.getToken() === 2162700 ? parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, inGroup, isPattern, kind, origin) : parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, inGroup, isPattern, kind, origin);
-			token = parser.getToken();
+			argument = parser.token === 2162700 ? parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, inGroup, isPattern, kind, origin) : parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, inGroup, isPattern, kind, origin);
+			token = parser.token;
 			if (token !== 1077936155 && token !== closingToken && token !== 18) {
 				if (parser.destructible & 8) parser.report(71);
 				argument = parseMemberOrUpdateExpression(parser, context, privateScope, argument, inGroup, 0, tokenStart);
 				destructible |= parser.assignable & 1 ? 0 : 16;
-				if ((parser.getToken() & 4194304) === 4194304) {
-					if (parser.getToken() !== 1077936155) destructible |= 16;
+				if ((parser.token & 4194304) === 4194304) {
+					if (parser.token !== 1077936155) destructible |= 16;
 					argument = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, argument);
 				} else {
-					if ((parser.getToken() & 8388608) === 8388608) argument = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, argument);
+					if ((parser.token & 8388608) === 8388608) argument = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, argument);
 					if (consumeOpt(parser, context | 32, 22)) argument = parseConditionalExpression(parser, context, privateScope, argument, tokenStart);
 					destructible |= parser.assignable & 1 ? 32 : 16;
 				}
@@ -7750,7 +7729,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			destructible |= 32;
 			argument = parseLeftHandSideExpression(parser, context, privateScope, 1, inGroup, 1);
 			const { tokenStart } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token === 1077936155) {
 				if (parser.assignable & 2) parser.report(26);
 				argument = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, argument);
@@ -7761,13 +7740,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				destructible |= parser.assignable & 1 ? 32 : 16;
 			}
 			parser.destructible = destructible;
-			if (parser.getToken() !== closingToken && parser.getToken() !== 18) parser.report(163);
+			if (parser.token !== closingToken && parser.token !== 18) parser.report(163);
 			return parser.finishNode({
 				type: isPattern ? "RestElement" : "SpreadElement",
 				argument
 			}, start);
 		}
-		if (parser.getToken() !== closingToken) {
+		if (parser.token !== closingToken) {
 			if (kind & 1) destructible |= isAsync ? 16 : 32;
 			if (consumeOpt(parser, context | 32, 1077936155)) {
 				if (destructible & 16) parser.report(26);
@@ -7821,18 +7800,18 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let destructible = 0;
 		let prototypeCount = 0;
 		context = (context | 131072) ^ 131072;
-		while (parser.getToken() !== 1074790415) {
+		while (parser.token !== 1074790415) {
 			const { tokenValue, tokenStart, currentLocation } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token === 14) properties.push(parseSpreadOrRestElement(parser, context, scope, privateScope, 1074790415, kind, 0, inGroup, isPattern, origin));
 			else {
 				let state = 0;
 				let key = null;
 				let value;
-				if (parser.getToken() & 143360 || parser.getToken() === -2147483527 || parser.getToken() === -2147483526) {
-					if (parser.getToken() === -2147483526) destructible |= 16;
+				if (parser.token & 143360 || parser.token === -2147483527 || parser.token === -2147483526) {
+					if (parser.token === -2147483526) destructible |= 16;
 					key = parseIdentifier(parser, context);
-					if (parser.getToken() === 18 || parser.getToken() === 1074790415 || parser.getToken() === 1077936155) {
+					if (parser.token === 18 || parser.token === 1074790415 || parser.token === 1077936155) {
 						state |= 4;
 						if (context & 1 && (token & 537079808) === 537079808) destructible |= 16;
 						else validateBindingIdentifier(parser, context, kind, token, 0);
@@ -7853,41 +7832,41 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					} else if (consumeOpt(parser, context | 32, 21)) {
 						const { tokenStart, currentLocation } = parser;
 						if (tokenValue === "__proto__") prototypeCount++;
-						if (parser.getToken() & 143360) {
-							const tokenAfterColon = parser.getToken();
+						if (parser.token & 143360) {
+							const tokenAfterColon = parser.token;
 							const valueAfterColon = parser.tokenValue;
 							value = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, inGroup, 1, tokenStart);
-							const token = parser.getToken();
+							const token = parser.token;
 							value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (token === 1077936155 || token === 1074790415 || token === 18) {
 									destructible |= parser.destructible & 128 ? 128 : 0;
 									if (parser.assignable & 2) destructible |= 16;
 									else if ((tokenAfterColon & 143360) === 143360) scope?.addVarOrBlock(context, valueAfterColon, kind, tokenStart, currentLocation, origin);
 								} else destructible |= parser.assignable & 1 ? 32 : 16;
-							} else if ((parser.getToken() & 4194304) === 4194304) {
+							} else if ((parser.token & 4194304) === 4194304) {
 								if (parser.assignable & 2) destructible |= 16;
 								else if (token !== 1077936155) destructible |= 32;
 								else scope?.addVarOrBlock(context, valueAfterColon, kind, tokenStart, currentLocation, origin);
 								value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 							} else {
 								destructible |= 16;
-								if ((parser.getToken() & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
+								if ((parser.token & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
 								if (consumeOpt(parser, context | 32, 22)) value = parseConditionalExpression(parser, context, privateScope, value, tokenStart);
 							}
-						} else if ((parser.getToken() & 2097152) === 2097152) {
-							value = parser.getToken() === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
+						} else if ((parser.token & 2097152) === 2097152) {
+							value = parser.token === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
 							destructible = parser.destructible;
 							parser.assignable = destructible & 16 ? 2 : 1;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else if (parser.destructible & 8) parser.report(71);
 							else {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 2 ? 16 : 0;
-								if ((parser.getToken() & 4194304) === 4194304) value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
+								if ((parser.token & 4194304) === 4194304) value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								else {
-									if ((parser.getToken() & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
+									if ((parser.token & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
 									if (consumeOpt(parser, context | 32, 22)) value = parseConditionalExpression(parser, context, privateScope, value, tokenStart);
 									destructible |= parser.assignable & 1 ? 32 : 16;
 								}
@@ -7895,25 +7874,25 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						} else {
 							value = parseLeftHandSideExpression(parser, context, privateScope, 1, inGroup, 1);
 							destructible |= parser.assignable & 1 ? 32 : 16;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 2 ? 16 : 0;
-								if (parser.getToken() !== 18 && token !== 1074790415) {
-									if (parser.getToken() !== 1077936155) destructible |= 16;
+								if (parser.token !== 18 && token !== 1074790415) {
+									if (parser.token !== 1077936155) destructible |= 16;
 									value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								}
 							}
 						}
-					} else if (parser.getToken() === 69271571) {
+					} else if (parser.token === 69271571) {
 						destructible |= 16;
 						if (token === 209005) state |= 16;
 						state |= (token === 209008 ? 256 : token === 209009 ? 512 : 1) | 2;
 						key = parseComputedPropertyName(parser, context, privateScope, inGroup);
 						destructible |= parser.assignable;
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-					} else if (parser.getToken() & 143360) {
+					} else if (parser.token & 143360) {
 						destructible |= 16;
 						if (token === -2147483527) parser.report(95);
 						if (token === 209005) {
@@ -7924,67 +7903,67 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						else parser.report(0);
 						key = parseIdentifier(parser, context);
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-					} else if (parser.getToken() === 67174411) {
+					} else if (parser.token === 67174411) {
 						destructible |= 16;
 						state |= 1;
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-					} else if (parser.getToken() === 8391476) {
+					} else if (parser.token === 8391476) {
 						destructible |= 16;
 						if (token === 209008) parser.report(42);
 						else if (token === 209009) parser.report(43);
 						else if (token !== 209005) parser.report(30, KeywordDescTable[52]);
 						nextToken(parser, context);
 						state |= 9 | (token === 209005 ? 16 : 0);
-						if (parser.getToken() & 143360) key = parseIdentifier(parser, context);
-						else if ((parser.getToken() & 134217728) === 134217728) key = parseLiteral(parser, context);
-						else if (parser.getToken() === 69271571) {
+						if (parser.token & 143360) key = parseIdentifier(parser, context);
+						else if ((parser.token & 134217728) === 134217728) key = parseLiteral(parser, context);
+						else if (parser.token === 69271571) {
 							state |= 2;
 							key = parseComputedPropertyName(parser, context, privateScope, inGroup);
 							destructible |= parser.assignable;
-						} else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+						} else parser.report(30, KeywordDescTable[parser.token & 255]);
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-					} else if ((parser.getToken() & 134217728) === 134217728) {
+					} else if ((parser.token & 134217728) === 134217728) {
 						if (token === 209005) state |= 16;
 						state |= token === 209008 ? 256 : token === 209009 ? 512 : 1;
 						destructible |= 16;
 						key = parseLiteral(parser, context);
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
 					} else parser.report(135);
-				} else if ((parser.getToken() & 134217728) === 134217728) {
+				} else if ((parser.token & 134217728) === 134217728) {
 					key = parseLiteral(parser, context);
-					if (parser.getToken() === 21) {
+					if (parser.token === 21) {
 						consume(parser, context | 32, 21);
 						const { tokenStart } = parser;
 						if (tokenValue === "__proto__") prototypeCount++;
-						if (parser.getToken() & 143360) {
+						if (parser.token & 143360) {
 							value = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, inGroup, 1, tokenStart);
 							const { tokenValue: valueAfterColon, tokenStart: start, currentLocation } = parser;
-							const token = parser.getToken();
+							const token = parser.token;
 							value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (token === 1077936155 || token === 1074790415 || token === 18) {
 									if (parser.assignable & 2) destructible |= 16;
 									else scope?.addVarOrBlock(context, valueAfterColon, kind, start, currentLocation, origin);
 								} else destructible |= parser.assignable & 1 ? 32 : 16;
-							} else if (parser.getToken() === 1077936155) {
+							} else if (parser.token === 1077936155) {
 								if (parser.assignable & 2) destructible |= 16;
 								value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 							} else {
 								destructible |= 16;
 								value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 							}
-						} else if ((parser.getToken() & 2097152) === 2097152) {
-							value = parser.getToken() === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
+						} else if ((parser.token & 2097152) === 2097152) {
+							value = parser.token === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
 							destructible = parser.destructible;
 							parser.assignable = destructible & 16 ? 2 : 1;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else if ((parser.destructible & 8) !== 8) {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 2 ? 16 : 0;
-								if ((parser.getToken() & 4194304) === 4194304) value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
+								if ((parser.token & 4194304) === 4194304) value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								else {
-									if ((parser.getToken() & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
+									if ((parser.token & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
 									if (consumeOpt(parser, context | 32, 22)) value = parseConditionalExpression(parser, context, privateScope, value, tokenStart);
 									destructible |= parser.assignable & 1 ? 32 : 16;
 								}
@@ -7992,38 +7971,38 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						} else {
 							value = parseLeftHandSideExpression(parser, context, privateScope, 1, 0, 1);
 							destructible |= parser.assignable & 1 ? 32 : 16;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 1 ? 0 : 16;
-								if (parser.getToken() !== 18 && parser.getToken() !== 1074790415) {
-									if (parser.getToken() !== 1077936155) destructible |= 16;
+								if (parser.token !== 18 && parser.token !== 1074790415) {
+									if (parser.token !== 1077936155) destructible |= 16;
 									value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								}
 							}
 						}
-					} else if (parser.getToken() === 67174411) {
+					} else if (parser.token === 67174411) {
 						state |= 1;
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
 						destructible = 16;
 					} else parser.report(136);
-				} else if (parser.getToken() === 69271571) {
+				} else if (parser.token === 69271571) {
 					key = parseComputedPropertyName(parser, context, privateScope, inGroup);
 					destructible |= parser.destructible & 256 ? 256 : 0;
 					state |= 2;
-					if (parser.getToken() === 21) {
+					if (parser.token === 21) {
 						nextToken(parser, context | 32);
 						const { tokenStart, tokenValue, currentLocation } = parser;
-						const tokenAfterColon = parser.getToken();
-						if (parser.getToken() & 143360) {
+						const tokenAfterColon = parser.token;
+						if (parser.token & 143360) {
 							value = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, inGroup, 1, tokenStart);
-							const token = parser.getToken();
+							const token = parser.token;
 							value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
-							if ((parser.getToken() & 4194304) === 4194304) {
+							if ((parser.token & 4194304) === 4194304) {
 								destructible |= parser.assignable & 1 ? token === 1077936155 ? 0 : 32 : 16;
 								value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
-							} else if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							} else if (parser.token === 18 || parser.token === 1074790415) {
 								if (token === 1077936155 || token === 1074790415 || token === 18) {
 									if (parser.assignable & 2) destructible |= 16;
 									else if ((tokenAfterColon & 143360) === 143360) scope?.addVarOrBlock(context, tokenValue, kind, tokenStart, currentLocation, origin);
@@ -8032,21 +8011,21 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 								destructible |= 16;
 								value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 							}
-						} else if ((parser.getToken() & 2097152) === 2097152) {
-							value = parser.getToken() === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
+						} else if ((parser.token & 2097152) === 2097152) {
+							value = parser.token === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, inGroup, isPattern, kind, origin);
 							destructible = parser.destructible;
 							parser.assignable = destructible & 16 ? 2 : 1;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else if (destructible & 8) parser.report(62);
 							else {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 2 ? destructible | 16 : 0;
-								if ((parser.getToken() & 4194304) === 4194304) {
-									if (parser.getToken() !== 1077936155) destructible |= 16;
+								if ((parser.token & 4194304) === 4194304) {
+									if (parser.token !== 1077936155) destructible |= 16;
 									value = parseAssignmentExpressionOrPattern(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								} else {
-									if ((parser.getToken() & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
+									if ((parser.token & 8388608) === 8388608) value = parseBinaryExpression(parser, context, privateScope, 1, tokenStart, 4, token, value);
 									if (consumeOpt(parser, context | 32, 22)) value = parseConditionalExpression(parser, context, privateScope, value, tokenStart);
 									destructible |= parser.assignable & 1 ? 32 : 16;
 								}
@@ -8054,18 +8033,18 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 						} else {
 							value = parseLeftHandSideExpression(parser, context, privateScope, 1, 0, 1);
 							destructible |= parser.assignable & 1 ? 32 : 16;
-							if (parser.getToken() === 18 || parser.getToken() === 1074790415) {
+							if (parser.token === 18 || parser.token === 1074790415) {
 								if (parser.assignable & 2) destructible |= 16;
 							} else {
 								value = parseMemberOrUpdateExpression(parser, context, privateScope, value, inGroup, 0, tokenStart);
 								destructible = parser.assignable & 1 ? 0 : 16;
-								if (parser.getToken() !== 18 && parser.getToken() !== 1074790415) {
-									if (parser.getToken() !== 1077936155) destructible |= 16;
+								if (parser.token !== 18 && parser.token !== 1074790415) {
+									if (parser.token !== 1077936155) destructible |= 16;
 									value = parseAssignmentExpression(parser, context, privateScope, inGroup, isPattern, tokenStart, value);
 								}
 							}
 						}
-					} else if (parser.getToken() === 67174411) {
+					} else if (parser.token === 67174411) {
 						state |= 1;
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
 						destructible = 16;
@@ -8073,20 +8052,20 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				} else if (token === 8391476) {
 					consume(parser, context | 32, 8391476);
 					state |= 8;
-					if (parser.getToken() & 143360) {
-						const token = parser.getToken();
+					if (parser.token & 143360) {
+						const token = parser.token;
 						key = parseIdentifier(parser, context);
 						state |= 1;
-						if (parser.getToken() === 67174411) {
+						if (parser.token === 67174411) {
 							destructible |= 16;
 							value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-						} else throw new ParseError(parser.tokenStart, parser.currentLocation, token === 209005 ? 46 : token === 209008 || parser.getToken() === 209009 ? 45 : 47, KeywordDescTable[token & 255]);
-					} else if ((parser.getToken() & 134217728) === 134217728) {
+						} else throw new ParseError(parser.tokenStart, parser.currentLocation, token === 209005 ? 46 : token === 209008 || parser.token === 209009 ? 45 : 47, KeywordDescTable[token & 255]);
+					} else if ((parser.token & 134217728) === 134217728) {
 						destructible |= 16;
 						key = parseLiteral(parser, context);
 						state |= 1;
 						value = parseMethodDefinition(parser, context, privateScope, state, inGroup, parser.tokenStart);
-					} else if (parser.getToken() === 69271571) {
+					} else if (parser.token === 69271571) {
 						destructible |= 16;
 						state |= 3;
 						key = parseComputedPropertyName(parser, context, privateScope, inGroup);
@@ -8106,7 +8085,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				}, tokenStart));
 			}
 			destructible |= parser.destructible;
-			if (parser.getToken() !== 18) break;
+			if (parser.token !== 18) break;
 			nextToken(parser, context);
 		}
 		consume(parser, context, 1074790415);
@@ -8115,7 +8094,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			type: isPattern ? "ObjectPattern" : "ObjectExpression",
 			properties
 		}, start);
-		if (!skipInitializer && parser.getToken() & 4194304) return parseArrayOrObjectAssignmentPattern(parser, context, privateScope, destructible, inGroup, isPattern, start, node);
+		if (!skipInitializer && parser.token & 4194304) return parseArrayOrObjectAssignmentPattern(parser, context, privateScope, destructible, inGroup, isPattern, start, node);
 		parser.destructible = destructible;
 		return node;
 	}
@@ -8126,36 +8105,36 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		parser.strictReservedRange = null;
 		parser.firstAwaitLocation = null;
 		parser.firstYieldLocation = null;
-		if (parser.getToken() === 16) {
+		if (parser.token === 16) {
 			if (kind & 512) parser.report(37, "Setter", "one", "");
 			nextToken(parser, context);
 			return params;
 		}
 		if (kind & 256) parser.report(37, "Getter", "no", "s");
-		if (kind & 512 && parser.getToken() === 14) parser.report(38);
+		if (kind & 512 && parser.token === 14) parser.report(38);
 		context = (context | 131072) ^ 131072;
 		let setterArgs = 0;
 		let isNonSimpleParameterList = 0;
-		while (parser.getToken() !== 18) {
+		while (parser.token !== 18) {
 			let left = null;
 			const { tokenStart } = parser;
-			if (parser.getToken() & 143360) {
+			if (parser.token & 143360) {
 				if ((context & 1) === 0) {
-					if ((parser.getToken() & 36864) === 36864) {
+					if ((parser.token & 36864) === 36864) {
 						parser.flags |= 256;
 						parser.strictReservedRange ??= [tokenStart, parser.currentLocation];
 					}
-					if ((parser.getToken() & 537079808) === 537079808) parser.flags |= 512;
+					if ((parser.token & 537079808) === 537079808) parser.flags |= 512;
 				}
 				left = parseAndClassifyIdentifier(parser, context, scope, kind | 1);
 			} else {
-				if (parser.getToken() === 2162700) left = parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, inGroup, 1, type);
-				else if (parser.getToken() === 69271571) left = parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, inGroup, 1, type);
-				else if (parser.getToken() === 14) left = parseSpreadOrRestElement(parser, context, scope, privateScope, 16, type, 0, inGroup, 1);
+				if (parser.token === 2162700) left = parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, inGroup, 1, type);
+				else if (parser.token === 69271571) left = parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, inGroup, 1, type);
+				else if (parser.token === 14) left = parseSpreadOrRestElement(parser, context, scope, privateScope, 16, type, 0, inGroup, 1);
 				isNonSimpleParameterList = 1;
 				if (parser.destructible & 48) parser.report(50);
 			}
-			if (parser.getToken() === 1077936155) {
+			if (parser.token === 1077936155) {
 				nextToken(parser, context | 32);
 				isNonSimpleParameterList = 1;
 				const right = parseExpression(parser, context, privateScope, 1, 0, parser.tokenStart);
@@ -8168,7 +8147,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			setterArgs++;
 			params.push(left);
 			if (!consumeOpt(parser, context, 18)) break;
-			if (parser.getToken() === 16) break;
+			if (parser.token === 16) break;
 		}
 		if (kind & 512 && setterArgs !== 1) parser.report(37, "Setter", "one", "");
 		scope?.reportScopeError();
@@ -8203,48 +8182,48 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let hasStrictReserved = 0;
 		const tokenAfterParenthesesStart = parser.tokenStart;
 		parser.assignable = 1;
-		while (parser.getToken() !== 16) {
+		while (parser.token !== 16) {
 			const { tokenStart, currentLocation } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token & 143360) {
 				scope?.addBlockName(context, parser.tokenValue, 1, tokenStart, currentLocation);
 				if ((token & 537079808) === 537079808) isNonSimpleParameterList = 1;
 				else if ((token & 36864) === 36864) hasStrictReserved = 1;
 				expr = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, 1, 1, tokenStart, 0);
-				if (parser.getToken() === 16 || parser.getToken() === 18) {
+				if (parser.token === 16 || parser.token === 18) {
 					if (parser.assignable & 2) {
 						destructible |= 16;
 						isNonSimpleParameterList = 1;
 					}
 				} else {
-					if (parser.getToken() === 1077936155) isNonSimpleParameterList = 1;
+					if (parser.token === 1077936155) isNonSimpleParameterList = 1;
 					else destructible |= 16;
 					expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 1, 0, tokenStart);
-					if (parser.getToken() !== 16 && parser.getToken() !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 1, 0, tokenStart, expr);
+					if (parser.token !== 16 && parser.token !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 1, 0, tokenStart, expr);
 				}
 			} else if ((token & 2097152) === 2097152) {
 				expr = token === 2162700 ? parseObjectLiteralOrPattern(parser, context | 262144, scope, privateScope, 0, 1, 0, kind) : parseArrayExpressionOrPattern(parser, context | 262144, scope, privateScope, 0, 1, 0, kind);
 				destructible |= parser.destructible;
 				isNonSimpleParameterList = 1;
 				parser.assignable = 2;
-				if (parser.getToken() !== 16 && parser.getToken() !== 18) {
+				if (parser.token !== 16 && parser.token !== 18) {
 					if (destructible & 8) parser.report(124);
 					expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 0, tokenStart);
 					destructible |= 16;
-					if (parser.getToken() !== 16 && parser.getToken() !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 0, 0, tokenStart, expr);
+					if (parser.token !== 16 && parser.token !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 0, 0, tokenStart, expr);
 				}
 			} else if (token === 14) {
 				expr = parseSpreadOrRestElement(parser, context, scope, privateScope, 16, kind, 0, 1, 0);
 				if (parser.destructible & 16) parser.report(74);
 				isNonSimpleParameterList = 1;
-				if (isSequence && (parser.getToken() === 16 || parser.getToken() === 18)) expressions.push(expr);
+				if (isSequence && (parser.token === 16 || parser.token === 18)) expressions.push(expr);
 				destructible |= 8;
 				break;
 			} else {
 				destructible |= 16;
 				expr = parseExpression(parser, context, privateScope, 1, 1, tokenStart);
-				if (isSequence && (parser.getToken() === 16 || parser.getToken() === 18)) expressions.push(expr);
-				if (parser.getToken() === 18) {
+				if (isSequence && (parser.token === 16 || parser.token === 18)) expressions.push(expr);
+				if (parser.token === 18) {
 					if (!isSequence) {
 						isSequence = 1;
 						expressions = [expr];
@@ -8267,13 +8246,13 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					expression: expr
 				}, parenthesesStart) : expr;
 			}
-			if (isSequence && (parser.getToken() === 16 || parser.getToken() === 18)) expressions.push(expr);
+			if (isSequence && (parser.token === 16 || parser.token === 18)) expressions.push(expr);
 			if (!consumeOpt(parser, context | 32, 18)) break;
 			if (!isSequence) {
 				isSequence = 1;
 				expressions = [expr];
 			}
-			if (parser.getToken() === 16) {
+			if (parser.token === 16) {
 				destructible |= 8;
 				break;
 			}
@@ -8288,7 +8267,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		consume(parser, context, 16);
 		if (destructible & 16 && destructible & 8) parser.report(153);
 		destructible |= (parser.destructible & 256 ? 256 : 0) | (parser.destructible & 128 ? 128 : 0);
-		if (parser.getToken() === 10) {
+		if (parser.token === 10) {
 			if (destructible & 48) parser.report(49);
 			if (context & 2050 && destructible & 128) {
 				const loc = parser.firstAwaitLocation;
@@ -8321,11 +8300,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const { tokenValue, tokenStart, currentLocation } = parser;
 		let isNonSimpleParameterList = 0;
 		let hasStrictReserved = 0;
-		if ((parser.getToken() & 537079808) === 537079808) isNonSimpleParameterList = 1;
-		else if ((parser.getToken() & 36864) === 36864) hasStrictReserved = 1;
+		if ((parser.token & 537079808) === 537079808) isNonSimpleParameterList = 1;
+		else if ((parser.token & 36864) === 36864) hasStrictReserved = 1;
 		const expr = parseIdentifier(parser, context, allowRegExp);
 		parser.assignable = 1;
-		if (parser.getToken() === 10) {
+		if (parser.token === 10) {
 			const scope = parser.options.lexical ? createArrowHeadParsingScope(parser, context, tokenValue, tokenStart, currentLocation) : void 0;
 			if (isNonSimpleParameterList) parser.flags |= 128;
 			if (hasStrictReserved) parser.flags |= 256;
@@ -8349,7 +8328,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		consume(parser, context | 32, 10);
 		const modifierFlags = 535552;
 		context = (context | modifierFlags) ^ modifierFlags | (isAsync ? 2048 : 0);
-		const expression = parser.getToken() !== 2162700;
+		const expression = parser.token !== 2162700;
 		let body;
 		scope?.reportScopeError();
 		if (expression) {
@@ -8359,7 +8338,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			scope = scope?.createChildScope(64);
 			const modifierFlags = 131084;
 			body = parseFunctionBody(parser, (context | modifierFlags) ^ modifierFlags | 4096, scope, privateScope, void 0, void 0, 16);
-			switch (parser.getToken()) {
+			switch (parser.token) {
 				case 69271571:
 					if ((parser.flags & 1) === 0) parser.report(118);
 					parser.flags |= 8192;
@@ -8371,10 +8350,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 					if ((parser.flags & 1) === 0) parser.report(118);
 					parser.flags |= 1024;
 			}
-			if ((parser.getToken() & 8388608) === 8388608 && (parser.flags & 1) === 0) {
-				if (parser.getToken() !== 8673330 || origin !== 32) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+			if ((parser.token & 8388608) === 8388608 && (parser.flags & 1) === 0) {
+				if (parser.token !== 8673330 || origin !== 32) parser.report(30, KeywordDescTable[parser.token & 255]);
 			}
-			if ((parser.getToken() & 33619968) === 33619968) parser.report(127);
+			if ((parser.token & 33619968) === 33619968) parser.report(127);
 		}
 		parser.assignable = 2;
 		return parser.finishNode({
@@ -8396,10 +8375,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		if (consumeOpt(parser, context, 16)) return params;
 		context = (context | 131072) ^ 131072;
 		let isNonSimpleParameterList = 0;
-		while (parser.getToken() !== 18) {
+		while (parser.token !== 18) {
 			let left;
 			const { tokenStart } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token & 143360) {
 				if ((context & 1) === 0) {
 					if ((token & 36864) === 36864) {
@@ -8417,7 +8396,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				isNonSimpleParameterList = 1;
 				if (parser.destructible & 48) parser.report(50);
 			}
-			if (parser.getToken() === 1077936155) {
+			if (parser.token === 1077936155) {
 				nextToken(parser, context | 32);
 				isNonSimpleParameterList = 1;
 				const right = parseExpression(parser, context, privateScope, 1, inGroup, parser.tokenStart);
@@ -8429,7 +8408,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 			}
 			params.push(left);
 			if (!consumeOpt(parser, context, 18)) break;
-			if (parser.getToken() === 16) break;
+			if (parser.token === 16) break;
 		}
 		if (isNonSimpleParameterList) parser.flags |= 128;
 		if (isNonSimpleParameterList || context & 1) scope?.reportScopeError();
@@ -8437,7 +8416,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		return params;
 	}
 	function parseMemberExpressionNoCall(parser, context, privateScope, expr, inGroup, start) {
-		const token = parser.getToken();
+		const token = parser.token;
 		if (token & 67108864) {
 			if (token === 67108877) {
 				nextToken(parser, context | 262144);
@@ -8468,7 +8447,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				return parseMemberExpressionNoCall(parser, context, privateScope, parser.finishNode({
 					type: "TaggedTemplateExpression",
 					tag: expr,
-					quasi: parser.getToken() === 67174408 ? parseTemplate(parser, context | 64, privateScope) : parseTemplateLiteral(parser, context | 64)
+					quasi: parser.token === 67174408 ? parseTemplate(parser, context | 64, privateScope) : parseTemplateLiteral(parser, context | 64)
 				}, start), 0, start);
 			}
 		}
@@ -8479,23 +8458,23 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const id = parseIdentifier(parser, context | 32);
 		const { tokenStart } = parser;
 		if (consumeOpt(parser, context, 67108877)) {
-			if (context & 65536 && parser.getToken() === 209030) {
+			if (context & 65536 && parser.token === 209030) {
 				parser.assignable = 2;
 				return parseMetaProperty(parser, context, id, start);
 			}
 			parser.report(94);
 		}
 		parser.assignable = 2;
-		if ((parser.getToken() & 16842752) === 16842752) parser.report(65, KeywordDescTable[parser.getToken() & 255]);
+		if ((parser.token & 16842752) === 16842752) parser.report(65, KeywordDescTable[parser.token & 255]);
 		const expr = parsePrimaryExpression(parser, context, privateScope, 2, 1, 0, inGroup, 1, tokenStart);
 		context = (context | 131072) ^ 131072;
-		if (parser.getToken() === 67108991) parser.report(170);
+		if (parser.token === 67108991) parser.report(170);
 		const callee = parseMemberExpressionNoCall(parser, context, privateScope, expr, inGroup, tokenStart);
 		parser.assignable = 2;
 		return parser.finishNode({
 			type: "NewExpression",
 			callee,
-			arguments: parser.getToken() === 67174411 ? parseArguments(parser, context, privateScope, inGroup) : []
+			arguments: parser.token === 67174411 ? parseArguments(parser, context, privateScope, inGroup) : []
 		}, start);
 	}
 	function parseMetaProperty(parser, context, meta, start) {
@@ -8507,10 +8486,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start);
 	}
 	function parseAsyncArrowAfterIdent(parser, context, privateScope, canAssign, start) {
-		if ((parser.getToken() & 255) === 110) parser.report(31);
-		if (context & 1025 && parser.getToken() === 241771) parser.report(32);
-		classifyIdentifier(parser, context, parser.getToken());
-		if ((parser.getToken() & 36864) === 36864) parser.flags |= 256;
+		if ((parser.token & 255) === 110) parser.report(31);
+		if (context & 1025 && parser.token === 241771) parser.report(32);
+		classifyIdentifier(parser, context, parser.token);
+		if ((parser.token & 36864) === 36864) parser.flags |= 256;
 		return parseArrowFromIdentifier(parser, context & -524289 | 2048, privateScope, parser.tokenValue, parseIdentifier(parser, context), 0, canAssign, 1, start);
 	}
 	function parseAsyncArrowOrCallExpression(parser, context, privateScope, callee, canAssign, kind, flags, start) {
@@ -8522,7 +8501,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		parser.firstYieldLocation = null;
 		context = (context | 131072) ^ 131072;
 		if (consumeOpt(parser, context, 16)) {
-			if (parser.getToken() === 10) {
+			if (parser.token === 10) {
 				if (flags & 1) parser.report(48);
 				return parseParenthesizedArrow(parser, context, scope, privateScope, [], canAssign, 1, start);
 			}
@@ -8542,39 +8521,39 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let isNonSimpleParameterList = 0;
 		parser.destructible = (parser.destructible | 384) ^ 384;
 		const params = [];
-		while (parser.getToken() !== 16) {
+		while (parser.token !== 16) {
 			const { tokenStart, currentLocation } = parser;
-			const token = parser.getToken();
+			const token = parser.token;
 			if (token & 143360) {
 				scope?.addBlockName(context, parser.tokenValue, kind, tokenStart, currentLocation);
 				if ((token & 537079808) === 537079808) parser.flags |= 512;
 				else if ((token & 36864) === 36864) parser.flags |= 256;
 				expr = parsePrimaryExpression(parser, context, privateScope, kind, 0, 1, 1, 1, tokenStart);
-				if (parser.getToken() === 16 || parser.getToken() === 18) {
+				if (parser.token === 16 || parser.token === 18) {
 					if (parser.assignable & 2) {
 						destructible |= 16;
 						isNonSimpleParameterList = 1;
 					}
 				} else {
-					if (parser.getToken() === 1077936155) isNonSimpleParameterList = 1;
+					if (parser.token === 1077936155) isNonSimpleParameterList = 1;
 					else destructible |= 16;
 					expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 1, 0, tokenStart);
-					if (parser.getToken() !== 16 && parser.getToken() !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 1, 0, tokenStart, expr);
+					if (parser.token !== 16 && parser.token !== 18) expr = parseAssignmentExpression(parser, context, privateScope, 1, 0, tokenStart, expr);
 				}
 			} else if (token & 2097152) {
 				expr = token === 2162700 ? parseObjectLiteralOrPattern(parser, context, scope, privateScope, 0, 1, 0, kind) : parseArrayExpressionOrPattern(parser, context, scope, privateScope, 0, 1, 0, kind);
 				destructible |= parser.destructible;
 				isNonSimpleParameterList = 1;
-				if (parser.getToken() !== 16 && parser.getToken() !== 18) {
+				if (parser.token !== 16 && parser.token !== 18) {
 					if (destructible & 8) parser.report(124);
 					expr = parseMemberOrUpdateExpression(parser, context, privateScope, expr, 0, 0, tokenStart);
 					destructible |= 16;
-					if ((parser.getToken() & 8388608) === 8388608) expr = parseBinaryExpression(parser, context, privateScope, 1, start, 4, token, expr);
+					if ((parser.token & 8388608) === 8388608) expr = parseBinaryExpression(parser, context, privateScope, 1, start, 4, token, expr);
 					if (consumeOpt(parser, context | 32, 22)) expr = parseConditionalExpression(parser, context, privateScope, expr, start);
 				}
 			} else if (token === 14) {
 				expr = parseSpreadOrRestElement(parser, context, scope, privateScope, 16, kind, 1, 1, 0);
-				destructible |= (parser.getToken() === 16 ? 0 : 16) | parser.destructible;
+				destructible |= (parser.token === 16 ? 0 : 16) | parser.destructible;
 				isNonSimpleParameterList = 1;
 			} else {
 				expr = parseExpression(parser, context, privateScope, 1, 0, tokenStart);
@@ -8600,7 +8579,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 		consume(parser, context, 16);
 		destructible |= (parser.destructible & 256 ? 256 : 0) | (parser.destructible & 128 ? 128 : 0);
-		if (parser.getToken() === 10) {
+		if (parser.token === 10) {
 			if (destructible & 48) parser.report(27);
 			if (parser.flags & 1 || flags & 1) parser.report(48);
 			if (destructible & 128) {
@@ -8657,9 +8636,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		let id = null;
 		let superClass = null;
 		const { tokenValue, tokenStart, currentLocation } = parser;
-		if (parser.getToken() & 4096 && parser.getToken() !== 20565) {
-			if (isStrictReservedWord(parser, context, parser.getToken())) parser.report(120);
-			if ((parser.getToken() & 537079808) === 537079808) parser.report(121);
+		if (parser.token & 4096 && parser.token !== 20565) {
+			if (isStrictReservedWord(parser, context, parser.token)) parser.report(120);
+			if ((parser.token & 537079808) === 537079808) parser.report(121);
 			if (scope) {
 				scope.addBlockName(context, tokenValue, 32, tokenStart, currentLocation);
 				if (flags) {
@@ -8688,9 +8667,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const decorators = parseDecorators(parser, context, privateScope);
 		context = (context | 16385) ^ 16384;
 		consume(parser, context, 86094);
-		if (parser.getToken() & 4096 && parser.getToken() !== 20565) {
-			if (isStrictReservedWord(parser, context, parser.getToken())) parser.report(120);
-			if ((parser.getToken() & 537079808) === 537079808) parser.report(121);
+		if (parser.token & 4096 && parser.token !== 20565) {
+			if (isStrictReservedWord(parser, context, parser.token)) parser.report(120);
+			if ((parser.token & 537079808) === 537079808) parser.report(121);
 			id = parseIdentifier(parser, context);
 		}
 		let inheritedContext = context;
@@ -8710,7 +8689,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseDecorators(parser, context, privateScope) {
 		const list = [];
-		if (parser.features & 1) while (parser.getToken() === 133) list.push(parseDecorator(parser, context, privateScope));
+		if (parser.features & 1) while (parser.token === 133) list.push(parseDecorator(parser, context, privateScope));
 		return list;
 	}
 	function parseDecorator(parser, context, privateScope) {
@@ -8718,14 +8697,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		nextToken(parser, context | 32);
 		const expressionStart = parser.tokenStart;
 		let expression;
-		if (parser.getToken() === 67174411) expression = parsePrimaryExpression(parser, context, privateScope, 2, 0, 1, 0, 1, start);
+		if (parser.token === 67174411) expression = parsePrimaryExpression(parser, context, privateScope, 2, 0, 1, 0, 1, start);
 		else {
-			const token = parser.getToken();
+			const token = parser.token;
 			if ((token & 143360) !== 143360 && !isValidIdentifier(context, token) || context & 1 && (token & 36864) === 36864) parser.report(30, KeywordDescTable[token & 255]);
 			if (token === 209006 && context & 2050) parser.report(112);
 			if (token === 241771 && context & 1024) parser.report(97, "yield");
 			let memberExpression = parseIdentifier(parser, context | 64);
-			while (parser.getToken() === 67108877) {
+			while (parser.token === 67108877) {
 				nextToken(parser, (context | 262152) ^ 8);
 				const property = parsePropertyOrPrivatePropertyName(parser, context | 64, privateScope, 1);
 				memberExpression = parser.finishNode({
@@ -8737,7 +8716,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				}, expressionStart);
 			}
 			expression = memberExpression;
-			if (parser.getToken() === 67174411) {
+			if (parser.token === 67174411) {
 				const args = parseArguments(parser, context, privateScope, 0);
 				expression = parser.finishNode({
 					type: "CallExpression",
@@ -8761,11 +8740,11 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const hasConstr = parser.flags & 32;
 		parser.flags = (parser.flags | 32) ^ 32;
 		const body = [];
-		while (parser.getToken() !== 1074790415) {
+		while (parser.token !== 1074790415) {
 			const decoratorStart = parser.tokenStart;
 			const decorators = parseDecorators(parser, context, privateScope);
 			if (decorators.length > 0 && parser.tokenValue === "constructor") parser.report(111);
-			if (parser.getToken() === 1074790415) parser.report(110);
+			if (parser.token === 1074790415) parser.report(110);
 			if (consumeOpt(parser, context, 1074790417)) {
 				if (decorators.length > 0) parser.report(122);
 				continue;
@@ -8783,35 +8762,35 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseClassElementList(parser, context, scope, privateScope, inheritedContext, type, decorators, isStatic, inGroup, start) {
 		let kind = isStatic ? 32 : 0;
 		let key = null;
-		const token = parser.getToken();
+		const token = parser.token;
 		if (token & 176128 || token === -2147483527) {
 			key = parseIdentifier(parser, context);
 			switch (token) {
 				case 36970:
-					if (!isStatic && parser.getToken() !== 67174411 && (parser.getToken() & 1048576) !== 1048576 && parser.getToken() !== 1077936155) return parseClassElementList(parser, context, scope, privateScope, inheritedContext, type, decorators, 1, inGroup, start);
+					if (!isStatic && parser.token !== 67174411 && (parser.token & 1048576) !== 1048576 && parser.token !== 1077936155) return parseClassElementList(parser, context, scope, privateScope, inheritedContext, type, decorators, 1, inGroup, start);
 					break;
 				case 209005:
-					if (parser.getToken() !== 67174411 && (parser.flags & 1) === 0) {
-						if ((parser.getToken() & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+					if (parser.token !== 67174411 && (parser.flags & 1) === 0) {
+						if ((parser.token & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
 						kind |= 16 | (optionalBit(parser, context, 8391476) ? 8 : 0);
 					}
 					break;
 				case 209008:
-					if (parser.getToken() !== 67174411) {
-						if (parser.getToken() === 8391476 && parser.flags & 1) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
-						if ((parser.getToken() & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+					if (parser.token !== 67174411) {
+						if (parser.token === 8391476 && parser.flags & 1) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+						if ((parser.token & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
 						kind |= 256;
 					}
 					break;
 				case 209009:
-					if (parser.getToken() !== 67174411) {
-						if (parser.getToken() === 8391476 && parser.flags & 1) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
-						if ((parser.getToken() & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+					if (parser.token !== 67174411) {
+						if (parser.token === 8391476 && parser.flags & 1) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+						if ((parser.token & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
 						kind |= 512;
 					}
 					break;
-				case 209010: if (parser.getToken() !== 67174411 && (parser.flags & 1) === 0) {
-					if ((parser.getToken() & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+				case 209010: if (parser.token !== 67174411 && (parser.flags & 1) === 0) {
+					if ((parser.token & 1073741824) === 1073741824) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
 					if (parser.features & 1) kind |= 1024;
 				}
 			}
@@ -8822,30 +8801,30 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		else if (token === 8391476) {
 			kind |= 8;
 			nextToken(parser, context);
-		} else if (parser.getToken() === 131) {
+		} else if (parser.token === 131) {
 			kind |= 8192;
 			key = parsePrivateIdentifier(parser, context | 16, privateScope, 768);
-		} else if ((parser.getToken() & 1073741824) === 1073741824) kind |= 128;
+		} else if ((parser.token & 1073741824) === 1073741824) kind |= 128;
 		else if (isStatic && token === 2162700) return parseStaticBlock(parser, context | 16, scope, privateScope, start);
 		else if (token === -2147483526) {
 			key = parseIdentifier(parser, context);
-			if (parser.getToken() !== 67174411) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
-		} else parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+			if (parser.token !== 67174411) parser.report(30, KeywordDescTable[parser.token & 255]);
+		} else parser.report(30, KeywordDescTable[parser.token & 255]);
 		if (kind & 1816) {
-			if (parser.getToken() & 143360 || parser.getToken() === -2147483527 || parser.getToken() === -2147483526) key = parseIdentifier(parser, context);
-			else if ((parser.getToken() & 134217728) === 134217728) key = parseLiteral(parser, context);
-			else if (parser.getToken() === 69271571) {
+			if (parser.token & 143360 || parser.token === -2147483527 || parser.token === -2147483526) key = parseIdentifier(parser, context);
+			else if ((parser.token & 134217728) === 134217728) key = parseLiteral(parser, context);
+			else if (parser.token === 69271571) {
 				kind |= 2;
 				key = parseComputedPropertyName(parser, context, privateScope, 0);
-			} else if (parser.getToken() === 131) {
+			} else if (parser.token === 131) {
 				kind |= 8192;
 				key = parsePrivateIdentifier(parser, context, privateScope, kind);
 			} else parser.report(137);
 		}
 		if ((kind & 2) === 0) {
 			if (parser.tokenValue === "constructor") {
-				if ((parser.getToken() & 1073741824) === 1073741824) parser.report(131);
-				else if ((kind & 32) === 0 && parser.getToken() === 67174411) {
+				if ((parser.token & 1073741824) === 1073741824) parser.report(131);
+				else if ((kind & 32) === 0 && parser.token === 67174411) {
 					if (kind & 920) parser.report(53, "accessor");
 					else if ((context & 512) === 0) {
 						if (parser.flags & 32) parser.report(54);
@@ -8855,7 +8834,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				kind |= 64;
 			} else if ((kind & 8192) === 0 && kind & 32 && parser.tokenValue === "prototype") parser.report(52);
 		}
-		if (kind & 1024 || parser.getToken() !== 67174411 && (kind & 768) === 0) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
+		if (kind & 1024 || parser.token !== 67174411 && (kind & 768) === 0) return parsePropertyDefinition(parser, context, privateScope, key, kind, decorators, start);
 		const value = parseMethodDefinition(parser, context | 16, privateScope, kind, inGroup, parser.tokenStart);
 		return parser.finishNode({
 			type: "MethodDefinition",
@@ -8886,14 +8865,14 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parsePropertyDefinition(parser, context, privateScope, key, state, decorators, start) {
 		let value = null;
 		if (state & 8) parser.report(0);
-		if (parser.getToken() === 1077936155) {
+		if (parser.token === 1077936155) {
 			nextToken(parser, context | 32);
 			const { tokenStart } = parser;
-			if (parser.getToken() === 537079928) parser.report(121);
+			if (parser.token === 537079928) parser.report(121);
 			const modifierFlags = 11272 | ((state & 64) === 0 ? 16896 : 0);
 			context = (context | modifierFlags) ^ modifierFlags | (state & 8 ? 1024 : 0) | (state & 16 ? 2048 : 0) | (state & 64 ? 16384 : 0) | 65792;
 			value = parsePrimaryExpression(parser, context | 16, privateScope, 2, 0, 1, 0, 1, tokenStart, 0, 1);
-			if ((parser.getToken() & 1073741824) !== 1073741824 || (parser.getToken() & 4194304) === 4194304) {
+			if ((parser.token & 1073741824) !== 1073741824 || (parser.token & 4194304) === 4194304) {
 				value = parseMemberOrUpdateExpression(parser, context | 16, privateScope, value, 0, 0, tokenStart);
 				value = parseAssignmentExpression(parser, context | 16, privateScope, 0, 0, tokenStart, value);
 			}
@@ -8909,15 +8888,15 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}, start);
 	}
 	function parseBindingPattern(parser, context, scope, privateScope, kind, origin = 0) {
-		if (parser.getToken() & 143360 || (context & 1) === 0 && parser.getToken() === -2147483526) return parseAndClassifyIdentifier(parser, context, scope, kind, origin);
-		if ((parser.getToken() & 2097152) !== 2097152) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
-		const left = parser.getToken() === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, 0, 1, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, 0, 1, kind, origin);
+		if (parser.token & 143360 || (context & 1) === 0 && parser.token === -2147483526) return parseAndClassifyIdentifier(parser, context, scope, kind, origin);
+		if ((parser.token & 2097152) !== 2097152) parser.report(30, KeywordDescTable[parser.token & 255]);
+		const left = parser.token === 69271571 ? parseArrayExpressionOrPattern(parser, context, scope, privateScope, 1, 0, 1, kind, origin) : parseObjectLiteralOrPattern(parser, context, scope, privateScope, 1, 0, 1, kind, origin);
 		if (parser.destructible & 16) parser.report(50);
 		if (parser.destructible & 32) parser.report(50);
 		return left;
 	}
 	function parseAndClassifyIdentifier(parser, context, scope, kind, origin = 0) {
-		const token = parser.getToken();
+		const token = parser.token;
 		if (context & 1) {
 			if ((token & 537079808) === 537079808) parser.report(121);
 			else if ((token & 36864) === 36864 || token === -2147483526) parser.report(120);
@@ -8944,7 +8923,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseJSXRootElementOrFragment(parser, context, privateScope, inJSXChild, start) {
 		if (!inJSXChild) consume(parser, context, 8456256);
-		if (parser.getToken() === 8390721) {
+		if (parser.token === 8390721) {
 			const openingFragment = parseJSXOpeningFragment(parser, start);
 			const [children, closingFragment] = parseJSXChildrenAndClosingFragment(parser, context, privateScope, inJSXChild);
 			return parser.finishNode({
@@ -8954,7 +8933,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				closingFragment
 			}, start);
 		}
-		if (parser.getToken() === 8457014) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if (parser.token === 8457014) parser.report(30, KeywordDescTable[parser.token & 255]);
 		let closingElement = null;
 		let children = [];
 		const openingElement = parseJSXOpeningElementOrSelfCloseElement(parser, context, privateScope, inJSXChild, start);
@@ -8977,7 +8956,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	function parseJSXClosingElement(parser, context, inJSXChild, start) {
 		consume(parser, context, 8457014);
 		const name = parseJSXElementName(parser, context);
-		if (parser.getToken() !== 8390721) parser.report(25, KeywordDescTable[65]);
+		if (parser.token !== 8390721) parser.report(25, KeywordDescTable[65]);
 		if (inJSXChild) nextJSXToken(parser);
 		else nextToken(parser, context);
 		return parser.finishNode({
@@ -8987,7 +8966,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseJSXClosingFragment(parser, context, inJSXChild, start) {
 		consume(parser, context, 8457014);
-		if (parser.getToken() !== 8390721) parser.report(25, KeywordDescTable[65]);
+		if (parser.token !== 8390721) parser.report(25, KeywordDescTable[65]);
 		if (inJSXChild) nextJSXToken(parser);
 		else nextToken(parser, context);
 		return parser.finishNode({ type: "JSXClosingFragment" }, start);
@@ -9009,23 +8988,23 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		}
 	}
 	function parseJSXChildOrClosingElement(parser, context, privateScope, inJSXChild) {
-		if (parser.getToken() === 138) return parseJSXText(parser);
-		if (parser.getToken() === 2162700) return parseJSXExpressionContainer(parser, context, privateScope, 1, 0);
-		if (parser.getToken() === 8456256) {
+		if (parser.token === 138) return parseJSXText(parser);
+		if (parser.token === 2162700) return parseJSXExpressionContainer(parser, context, privateScope, 1, 0);
+		if (parser.token === 8456256) {
 			const { tokenStart } = parser;
 			nextToken(parser, context);
-			if (parser.getToken() === 8457014) return parseJSXClosingElement(parser, context, inJSXChild, tokenStart);
+			if (parser.token === 8457014) return parseJSXClosingElement(parser, context, inJSXChild, tokenStart);
 			return parseJSXRootElementOrFragment(parser, context, privateScope, 1, tokenStart);
 		}
 		parser.report(0);
 	}
 	function parseJSXChildOrClosingFragment(parser, context, privateScope, inJSXChild) {
-		if (parser.getToken() === 138) return parseJSXText(parser);
-		if (parser.getToken() === 2162700) return parseJSXExpressionContainer(parser, context, privateScope, 1, 0);
-		if (parser.getToken() === 8456256) {
+		if (parser.token === 138) return parseJSXText(parser);
+		if (parser.token === 2162700) return parseJSXExpressionContainer(parser, context, privateScope, 1, 0);
+		if (parser.token === 8456256) {
 			const { tokenStart } = parser;
 			nextToken(parser, context);
-			if (parser.getToken() === 8457014) return parseJSXClosingFragment(parser, context, inJSXChild, tokenStart);
+			if (parser.token === 8457014) return parseJSXClosingFragment(parser, context, inJSXChild, tokenStart);
 			return parseJSXRootElementOrFragment(parser, context, privateScope, 1, tokenStart);
 		}
 		parser.report(0);
@@ -9041,12 +9020,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		return parser.finishNode(node, start);
 	}
 	function parseJSXOpeningElementOrSelfCloseElement(parser, context, privateScope, inJSXChild, start) {
-		if ((parser.getToken() & 143360) !== 143360 && (parser.getToken() & 4096) !== 4096) parser.report(0);
+		if ((parser.token & 143360) !== 143360 && (parser.token & 4096) !== 4096) parser.report(0);
 		const tagName = parseJSXElementName(parser, context);
 		const attributes = parseJSXAttributes(parser, context, privateScope);
-		const selfClosing = parser.getToken() === 8457014;
+		const selfClosing = parser.token === 8457014;
 		if (selfClosing) consume(parser, context | 1048576, 8457014);
-		if (parser.getToken() !== 8390721) parser.report(25, KeywordDescTable[65]);
+		if (parser.token !== 8390721) parser.report(25, KeywordDescTable[65]);
 		if (inJSXChild || !selfClosing) nextJSXToken(parser);
 		else nextToken(parser, context);
 		return parser.finishNode({
@@ -9060,7 +9039,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const { tokenStart } = parser;
 		rescanJSXIdentifier(parser);
 		let key = parseJSXIdentifier(parser, context);
-		if (parser.getToken() === 21) return parseJSXNamespacedName(parser, context, key, tokenStart);
+		if (parser.token === 21) return parseJSXNamespacedName(parser, context, key, tokenStart);
 		while (consumeOpt(parser, context, 67108877)) {
 			rescanJSXIdentifier(parser);
 			key = parseJSXMemberExpression(parser, context, key, tokenStart);
@@ -9077,7 +9056,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseJSXAttributes(parser, context, privateScope) {
 		const attributes = [];
-		while (parser.getToken() !== 8457014 && parser.getToken() !== 8390721 && parser.getToken() !== 1048576) attributes.push(parseJsxAttribute(parser, context, privateScope));
+		while (parser.token !== 8457014 && parser.token !== 8390721 && parser.token !== 1048576) attributes.push(parseJsxAttribute(parser, context, privateScope));
 		return attributes;
 	}
 	function parseJSXSpreadAttribute(parser, context, privateScope) {
@@ -9093,12 +9072,12 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseJsxAttribute(parser, context, privateScope) {
 		const { tokenStart } = parser;
-		if (parser.getToken() === 2162700) return parseJSXSpreadAttribute(parser, context, privateScope);
+		if (parser.token === 2162700) return parseJSXSpreadAttribute(parser, context, privateScope);
 		rescanJSXIdentifier(parser);
 		let value = null;
 		let name = parseJSXIdentifier(parser, context);
-		if (parser.getToken() === 21) name = parseJSXNamespacedName(parser, context, name, tokenStart);
-		if (parser.getToken() === 1077936155) switch (scanJSXAttributeValue(parser, context)) {
+		if (parser.token === 21) name = parseJSXNamespacedName(parser, context, name, tokenStart);
+		if (parser.token === 1077936155) switch (scanJSXAttributeValue(parser, context)) {
 			case 134283267:
 				value = parseLiteral(parser, context);
 				break;
@@ -9129,9 +9108,9 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 		const { tokenStart: start } = parser;
 		nextToken(parser, context | 32);
 		const { tokenStart } = parser;
-		if (parser.getToken() === 14) return parseJSXSpreadChild(parser, context, privateScope, start);
+		if (parser.token === 14) return parseJSXSpreadChild(parser, context, privateScope, start);
 		let expression;
-		if (parser.getToken() === 1074790415) {
+		if (parser.token === 1074790415) {
 			if (isAttr) parser.report(159);
 			expression = parseJSXEmptyExpression(parser, {
 				index: parser.startIndex,
@@ -9139,7 +9118,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 				column: parser.startColumn
 			});
 		} else expression = parseExpression(parser, context, privateScope, 1, 0, tokenStart);
-		if (parser.getToken() !== 1074790415) parser.report(25, KeywordDescTable[15]);
+		if (parser.token !== 1074790415) parser.report(25, KeywordDescTable[15]);
 		if (inJSXChild) nextJSXToken(parser);
 		else nextToken(parser, context);
 		return parser.finishNode({
@@ -9161,7 +9140,7 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	}
 	function parseJSXIdentifier(parser, context) {
 		const start = parser.tokenStart;
-		if (!(parser.getToken() & 143360)) parser.report(30, KeywordDescTable[parser.getToken() & 255]);
+		if (!(parser.token & 143360)) parser.report(30, KeywordDescTable[parser.token & 255]);
 		const { tokenValue } = parser;
 		nextToken(parser, context | 1048576);
 		return parser.finishNode({

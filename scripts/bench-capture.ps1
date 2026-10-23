@@ -197,6 +197,14 @@ try {
     }
 } finally {
     if ($testProcess -and !$testProcess.HasExited) { Stop-Process -Id $testProcess.Id -ErrorAction SilentlyContinue }
-    foreach ($key in $envKeys) { [Environment]::SetEnvironmentVariable($key, $savedEnv[$key], 'Process') }
+    foreach ($key in $envKeys) {
+        # On Windows/.NET, setting null can retain a present-but-empty variable.
+        # Native benchmark switches test presence, so absence must be restored.
+        if ($null -eq $savedEnv[$key]) {
+            Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
+        } else {
+            [Environment]::SetEnvironmentVariable($key, $savedEnv[$key], 'Process')
+        }
+    }
     Pop-Location
 }

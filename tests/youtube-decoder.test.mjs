@@ -2,10 +2,89 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import vm from 'node:vm'
+import { parseScript } from 'meriyah'
+import { assertDecoderCompatibility, transformDecoderDependency } from '../scripts/build-youtube-decoder.mjs'
 import { JsAnalyzer, JsExtractor } from '../node_modules/youtubei.js/dist/src/utils/javascript/index.js'
 import { nsigMatcher, timestampMatcher } from '../node_modules/youtubei.js/dist/src/utils/javascript/matchers.js'
 
 const bundle = await fs.readFile(new URL('../src-tauri/src/youtube-decoder.bundle.js', import.meta.url), 'utf8')
+const analyzerPath = '../node_modules/youtubei.js/dist/src/utils/javascript/JsAnalyzer.js'
+const meriyahPath = '../node_modules/meriyah/dist/meriyah.mjs'
+const analyzerSource = await fs.readFile(new URL(analyzerPath, import.meta.url), 'utf8')
+const meriyahSource = await fs.readFile(new URL(meriyahPath, import.meta.url), 'utf8')
+const specializedParser = await import('data:text/javascript;base64,' + Buffer.from(
+  transformDecoderDependency(meriyahSource, meriyahPath).code,
+).toString('base64'))
+
+test('generator accepts only the reviewed dependency versions and exact private parser options', () => {
+  assert.doesNotThrow(() => assertDecoderCompatibility('18.1.0', '7.4.0'))
+  for (const versions of [['18.1.1', '7.4.0'], ['18.1.0', '7.4.1'], ['18.1.0', undefined]]) {
+    assert.throws(() => assertDecoderCompatibility(...versions), /compatibility/)
+  }
+  assert.ok(transformDecoderDependency(analyzerSource, analyzerPath))
+  for (const changed of [
+    analyzerSource.replace('loc: false', 'loc: true'),
+    analyzerSource.replace('module: false', 'module: true'),
+    analyzerSource.replace('ranges: true', 'ranges: false'),
+    analyzerSource.replace('module: false', 'module: false, onToken: []'),
+    analyzerSource + '\nparseScript(otherSource);',
+  ]) assert.throws(() => transformDecoderDependency(changed, analyzerPath), /parser .*compatibility/)
+})
+
+test('generator rejects changed token getter and node offset semantics', () => {
+  for (const changed of [
+    meriyahSource.replace('return this.token;', 'return this.token + 1;'),
+    meriyahSource.replace('node.start = start.index;', 'node.start = start.index + 1;'),
+    meriyahSource.replace('parser.getToken()', 'parser.peekToken()'),
+  ]) assert.throws(() => transformDecoderDependency(changed, meriyahPath), /Meriyah .*compatibility/)
+})
+
+const syntaxCases = [
+  ['ASCII strings', 'var ascii = "plain text", another = \'single quote\';'],
+  ['Unicode identifiers', 'var ñandú = "áé😀", 𐐀 = 1;'],
+  ['escaped identifier', String.raw`var \u0061bc = 'ok', str = "escaped \\";`],
+  ['string escapes', String.raw`var s = "a\"b\\c\n\r\t\u2028\u{1F600}";`],
+  ['continued lines', 'var s = "continued\\\nline"; var t = "continued\\\r\nline";'],
+  ['literal line separators', 'var s = "\u2028\u2029";'],
+  ['NUL and unpaired surrogate', 'var s = "\0\x01\uD800";'],
+  ['legacy octal escape', String.raw`var legacy = '\123\8\9';`],
+  ['strict octal rejected', String.raw`"use strict"; var legacy = '\123';`],
+  ['escaped directive is not strict', String.raw`"use\x20strict"; var legacy = '\123';`],
+  ['unterminated string', 'var s = "unterminated'],
+  ['newline in string', 'var s = "line\nbreak";'],
+  ['carriage return in string', 'var s = "line\rbreak";'],
+  ['invalid Unicode escape', String.raw`var s = '\u{}';`],
+  ['invalid hex escape', String.raw`var s = '\xq0';`],
+  ['empty string', 'var s = "";'],
+  ['end of input', '"last"'],
+  ['long string', 'var value = "' + 'long'.repeat(10000) + '";'],
+  ['regular expression', String.raw`var r = /[a"']+\//giu; var s = "// not a comment";`],
+  ['invalid regular expression class', 'var bad = /[/;'],
+  ['duplicate regular expression flags', 'var bad = /a/gg;'],
+  ['invalid regular expression group', 'var bad = /(/;'],
+  ['automatic semicolon insertion', 'function sample(){return\n"value";} /* quote " */'],
+  ['nested templates', '`prefix ${"inside"} suffix ${`nested ${1}`}`;'],
+  ['reserved keyword binding', 'var \u0069f = 1;'],
+  ['default parameter', 'var important = 0; function ordinary(a = "foo"){return a;}'],
+  ['computed properties', 'const o = {"key": "value", plain: \'field\', ["computed"]: 1};'],
+  ['astral identifier and BigInt', 'var \u{10400} = 1; var x = 10n;'],
+]
+
+function syntaxResult(parse, source) {
+  try {
+    const ast = parse(source, { ranges: { start: true, end: true, range: false }, loc: false, module: false })
+    return { ok: true, ast: JSON.stringify(ast, (_, value) => typeof value === 'bigint' ? { bigintValue: String(value) } : value) }
+  } catch (error) {
+    return { ok: false, name: error.name, message: error.message,
+      start: error.start, end: error.end, range: error.range && Array.from(error.range) }
+  }
+}
+
+for (const [name, source] of syntaxCases) {
+  test(`specialized parser preserves stock AST or syntax error: ${name}`, () => {
+    assert.deepEqual(syntaxResult(specializedParser.parseScript, source), syntaxResult(parseScript, source))
+  })
+}
 
 // Deliberately synthetic: the structural matcher sees a tiny player-shaped
 // program, not a copied YouTube player or any real signature/visitor data.
