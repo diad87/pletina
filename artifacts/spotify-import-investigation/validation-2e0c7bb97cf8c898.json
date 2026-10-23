@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T14:11:07.268Z",
+  "build": "2e0c7bb97cf8c898",
+  "sourceCommit": "56be347fea3b86ef10ee774f94780351d38d3914",
+  "runtime": {
+    "addedBackend": false,
+    "proxy": false,
+    "userLogin": false,
+    "subscription": false,
+    "tokenStorage": "RAM only; anonymous Spotify-issued token"
+  },
+  "logic": {
+    "command": "npm test",
+    "observedPassed": 691,
+    "observedFailed": 0
+  },
+  "typecheck": {
+    "command": "npm run check",
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "buildCheck": {
+    "command": "npm run build:pwa",
+    "exitCode": 0,
+    "build": "2e0c7bb97cf8c898"
+  },
+  "browserTransport": {
+    "report": "artifacts/spotify-import-investigation/guest-playlist-pagination-browser.json",
+    "results": [
+      {
+        "engine": "chromium",
+        "version": "153.0.8010.52",
+        "id": "5C8xpz7lZLk5oliw5hB7Av",
+        "requestedTotal": 502,
+        "returnedCount": 502,
+        "completeCount": true,
+        "uniqueTrackUris": 502,
+        "duplicateTrackUris": 0
+      },
+      {
+        "engine": "firefox",
+        "version": "153.0",
+        "id": "5C8xpz7lZLk5oliw5hB7Av",
+        "requestedTotal": 502,
+        "returnedCount": 502,
+        "completeCount": true,
+        "uniqueTrackUris": 502,
+        "duplicateTrackUris": 0
+      },
+      {
+        "engine": "webkit",
+        "version": "26.5",
+        "id": "5C8xpz7lZLk5oliw5hB7Av",
+        "requestedTotal": 502,
+        "returnedCount": 502,
+        "completeCount": true,
+        "uniqueTrackUris": 502,
+        "duplicateTrackUris": 0
+      }
+    ]
+  },
+  "liveUiLocal": {
+    "report": "artifacts/spotify-import-investigation/spotify-ui-2e0c7bb97cf8c898-local-retry.json",
+    "checks": 5,
+    "sourceItems": 5,
+    "found": 3,
+    "omitted": 2,
+    "earlierHarnessFailurePreserved": "artifacts/spotify-import-investigation/spotify-ui-2e0c7bb97cf8c898-local.json",
+    "passed": true
+  },
+  "fixtureUi": {
+    "reports": [
+      "artifacts/pwa-e2e/spotify-link-2e0c7bb97cf8c898/summary.json",
+      "artifacts/pwa-e2e/spotify-link-2e0c7bb97cf8c898-webkit-routing-fixed/summary.json"
+    ],
+    "importChecks": [
+      {
+        "profile": "chromium-android-layout",
+        "name": "library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates",
+        "status": "pass"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "library.spotify-in-flight: cancelling the held token response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "library.spotify-in-flight: cancelling the held playlist response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation",
+        "status": "pass"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "library.csv: explicit Spotify denial, invalid CSV, retry, review and save",
+        "status": "pass"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates",
+        "status": "pass"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "library.spotify-in-flight: cancelling the held token response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "library.spotify-in-flight: cancelling the held playlist response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation",
+        "status": "pass"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "library.csv: explicit Spotify denial, invalid CSV, retry, review and save",
+        "status": "pass"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates",
+        "status": "pass"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.spotify-in-flight: cancelling the held token response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.spotify-in-flight: cancelling the held playlist response preserves the next review",
+        "status": "pass"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation",
+        "status": "pass"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.csv: explicit Spotify denial, invalid CSV, retry, review and save",
+        "status": "pass"
+      }
+    ],
+    "passed": 15,
+    "total": 15,
+    "wholeLibrary": [
+      {
+        "profile": "chromium-android-layout",
+        "counts": {
+          "pass": 30,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "profile": "firefox-narrow",
+        "counts": {
+          "pass": 30,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        }
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "counts": {
+          "pass": 28,
+          "fail": 1,
+          "blocked": 1,
+          "unsupported": 0
+        }
+      }
+    ],
+    "remainingFailures": [
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.search: tracks, artists, albums and expanded results",
+        "status": "fail",
+        "error": "page.waitForFunction: Timeout 15000ms exceeded."
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+        "status": "blocked",
+        "error": "Windows WebKit native audio bypasses the controlled fixture transport; this integration requires real fixture audio."
+      }
+    ],
+    "scope": "Synthetic HTTP fixtures. WebKit uses a QA-only loopback fixture transport after its SW fetches bypassed Playwright. The first failed WebKit run is preserved, not reassigned as passed."
+  },
+  "update": {
+    "report": "artifacts/pwa-port/spotify-link-update-2e0c7bb97cf8c898.json",
+    "passed": true,
+    "checks": 10,
+    "scope": "A/B update with current compiled application graph, generic update/persistence QA; not an exact previous-live-version migration claim."
+  },
+  "distribution": {
+    "files": 31,
+    "bytes": 843221,
+    "initialBytes": 50993,
+    "applicationBytes": 746655,
+    "commit": "72b279cb50453d0fef1934fc5288ab55dd269e1f",
+    "workflow": 39967050726,
+    "sourceHash": "50c9d9bae2d5ab65ca0530018fa922036984f7211adff58aad55dfd1a6abafdd",
+    "publicVerificationPending": false,
+    "workflowStatus": "success",
+    "publicFiles": {
+      "report": "artifacts/pwa-deploy/public-files-2e0c7bb97cf8c898.json",
+      "passed": true,
+      "count": 31
+    },
+    "cssAndFontsUnchanged": true
+  },
+  "physicalMobileVerified": false,
+  "sources": [
+    {
+      "path": "web-port/spotify.ts",
+      "sha256": "19e1669fe07e9b0fde298b06cbe098d17792d492db3712d16dde5b1416260d39"
+    },
+    {
+      "path": "web-port/imports.ts",
+      "sha256": "f7d82e400b2da169ebdd855d5f85dc40711463591ebe8e7e27a916d98401cf33"
+    },
+    {
+      "path": "src/lib/api.ts",
+      "sha256": "b8e8656c3f3b13dd7e37fce2a6b74ddbd60c6222cf88c8a1ab38f6c08c6b932a"
+    },
+    {
+      "path": "src/views/ImportPlaylist.svelte",
+      "sha256": "4d9692a2097f98d7d9d4555fda579e8979361b7642fe77bab81d4f8422ca8382"
+    },
+    {
+      "path": "scripts/tests/web-spotify.test.mjs",
+      "sha256": "623ef91268c9e276d1d4ee093786c0523a16538cf44fb861a0fd3015ad7636f5"
+    },
+    {
+      "path": "scripts/tests/web-spotify.browser.mjs",
+      "sha256": "f40dd226173e3312a705770555d93645bd74fdc2953dc010294fdf890dd3859f"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "c6271e4ab03ac1e81ca79d0e67a44019bc3f23429b35a9a308af70960c8152cb"
+    },
+    {
+      "path": "scripts/tests/e2e/library-scenarios.mjs",
+      "sha256": "fa583ea138d530376bc95683c7fa3f0fc41920dc4e2d54c3839ab442d681509a"
+    },
+    {
+      "path": "scripts/tests/e2e/run.mjs",
+      "sha256": "149f20a28d1265fe80a0c3cbbfd0418b188feaec56bbb22f79938eb14092c902"
+    },
+    {
+      "path": "scripts/tests/e2e/webkit-network-transport.mjs",
+      "sha256": "c154f1e666bc7ad151481e7ceec65e3b1d8b4d707be163a86b2f2536b5168782"
+    }
+  ],
+  "liveUiPublic": {
+    "report": "artifacts/spotify-import-investigation/spotify-ui-2e0c7bb97cf8c898-public.json",
+    "passed": true,
+    "checks": 5,
+    "sourceItems": 5,
+    "found": 3,
+    "omitted": 2,
+    "spotifyCookies": 0
+  }
+}

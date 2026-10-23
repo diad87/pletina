@@ -1,0 +1,98 @@
+{
+  "testedAt": "2026-10-23T13:50:13.650Z",
+  "proxy": false,
+  "account": false,
+  "credentials": "omit",
+  "tokensPersisted": false,
+  "source": "Current Spotify-owned embed runtime: https://embed-cdn.spotifycdn.com/_next/static/chunks/7995-854bb504ac405c84.js invokes /embed/api/token without authorization. Current mobile web runtime invokes /api/token and /api/server-time.",
+  "probes": [
+    {
+      "url": "https://open.spotify.com/embed/api/token",
+      "readable": true,
+      "status": 200,
+      "contentType": "application/json",
+      "bytes": 226,
+      "keys": [
+        "accessToken",
+        "accessTokenExpirationTimestampMs",
+        "isAnonymous"
+      ],
+      "tokenReturned": true,
+      "isAnonymous": true,
+      "expiryRemainingSeconds": 1251,
+      "responseType": "cors",
+      "authenticatedMetadata": {
+        "status": 429,
+        "keys": [
+          "error"
+        ],
+        "count": null
+      }
+    },
+    {
+      "url": "https://open.spotify.com/api/token?reason=init&productType=embed",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "url": "https://open.spotify.com/api/token?reason=init&productType=web-player",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "url": "https://open.spotify.com/api/server-time",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "url": "https://open.spotify.com/get_access_token?reason=transport&productType=embed",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "url": "https://spclient.wg.spotify.com/playlist/v2/playlist/37i9dQZF1DXcBWIGoYBM5M?decorate=revision,attributes,length,contents",
+      "readable": true,
+      "status": 401,
+      "contentType": null,
+      "bytes": 0,
+      "keys": [],
+      "tokenReturned": false,
+      "isAnonymous": null,
+      "expiryRemainingSeconds": null,
+      "responseType": "cors"
+    },
+    {
+      "url": "https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylist&variables=%7B%22uri%22%3A%22spotify%3Aplaylist%3A37i9dQZF1DXcBWIGoYBM5M%22%2C%22offset%22%3A0%2C%22limit%22%3A10%7D",
+      "readable": true,
+      "status": 401,
+      "contentType": "application/json",
+      "bytes": 94,
+      "keys": [
+        "error"
+      ],
+      "tokenReturned": false,
+      "isAnonymous": null,
+      "expiryRemainingSeconds": null,
+      "responseType": "cors"
+    }
+  ],
+  "browserVersion": "153.0.8010.52",
+  "origin": "https://diad87.github.io",
+  "opaqueFrame": {
+    "kind": "guest-opaque-result",
+    "readable": true,
+    "status": 200,
+    "keys": [
+      "accessToken",
+      "accessTokenExpirationTimestampMs",
+      "isAnonymous"
+    ],
+    "tokenReturned": true,
+    "isAnonymous": true
+  },
+  "conclusion": "The fresh /embed/api/token route succeeds through browser CORS and returns a dynamic anonymous token with credentials omitted, also in a null-origin sandbox frame. The initial Web API items request using it is rate-limited (429); no playlist list has been established by this probe. This is a concrete guest-token route for further metadata transport testing, not the former direct embed-HTML route."
+}

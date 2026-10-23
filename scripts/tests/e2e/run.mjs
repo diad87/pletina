@@ -155,7 +155,7 @@ try {
     summary.profiles.push(report)
     let ctx, platformTransport
     try {
-      if (spec.engine === 'webkit' && process.platform !== 'win32') {
+      if (spec.engine === 'webkit') {
         const { createWebKitNetworkTransport } = await import('./webkit-network-transport.mjs')
         platformTransport = await createWebKitNetworkTransport()
       }

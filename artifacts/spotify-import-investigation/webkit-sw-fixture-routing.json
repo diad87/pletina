@@ -1,0 +1,263 @@
+{
+  "startedAt": "2026-10-23T14:05:36.159Z",
+  "host": {
+    "platform": "win32",
+    "node": "v24.18.1"
+  },
+  "scope": "Isolated native SW fetch and HTMLAudio in desktop WebKit, unchanged shared provider fixtures, no product modules. Actual token values omitted.",
+  "cases": [
+    {
+      "proxyEnabled": false,
+      "serviceWorkerControlled": true,
+      "token": {
+        "status": 200,
+        "hasAccessToken": true,
+        "fixtureToken": false,
+        "isAnonymous": true,
+        "expiresInFuture": true
+      },
+      "metadata": null,
+      "media": {
+        "currentTime": 0,
+        "errorCode": 4,
+        "playError": {
+          "name": "NotSupportedError",
+          "message": "The operation is not supported."
+        }
+      },
+      "unknownHostBlocked": null,
+      "fixtureRequests": [],
+      "browserRequests": [
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "method": "GET",
+          "resourceType": "document"
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/sw.js",
+          "method": "GET",
+          "resourceType": "xhr"
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "method": "GET",
+          "resourceType": "document"
+        },
+        {
+          "host": "open.spotify.com",
+          "path": "/embed/api/token",
+          "method": "GET",
+          "resourceType": "fetch"
+        }
+      ],
+      "browserResponses": [
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "status": 200
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/sw.js",
+          "status": 200
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "status": 200
+        },
+        {
+          "host": "open.spotify.com",
+          "path": "/embed/api/token",
+          "status": 200
+        }
+      ],
+      "pageErrors": [],
+      "proxy": null
+    },
+    {
+      "proxyEnabled": true,
+      "serviceWorkerControlled": true,
+      "token": {
+        "status": 200,
+        "hasAccessToken": true,
+        "fixtureToken": true,
+        "isAnonymous": true,
+        "expiresInFuture": true
+      },
+      "metadata": {
+        "status": 200,
+        "name": "Spotify QA Orden y Duplicados",
+        "itemCount": 2,
+        "nextOffset": 2
+      },
+      "media": {
+        "currentTime": 0,
+        "errorCode": 4,
+        "playError": {
+          "name": "NotSupportedError",
+          "message": "The operation is not supported."
+        }
+      },
+      "unknownHostBlocked": true,
+      "fixtureRequests": [
+        {
+          "host": "open.spotify.com",
+          "path": "/embed/api/token",
+          "method": "GET",
+          "type": "fetch",
+          "spotifyStage": "token"
+        },
+        {
+          "host": "api-partner.spotify.com",
+          "path": "/pathfinder/v1/query",
+          "method": "OPTIONS",
+          "type": "fetch"
+        },
+        {
+          "host": "api-partner.spotify.com",
+          "path": "/pathfinder/v1/query",
+          "method": "GET",
+          "type": "fetch",
+          "spotifyStage": "playlist",
+          "spotifyOperation": "queryPlaylist",
+          "spotifyAuthorizationValid": true,
+          "spotifyOffset": 0,
+          "spotifyLimit": 100
+        }
+      ],
+      "browserRequests": [
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "method": "GET",
+          "resourceType": "document"
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/sw.js",
+          "method": "GET",
+          "resourceType": "xhr"
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "method": "GET",
+          "resourceType": "document"
+        },
+        {
+          "host": "open.spotify.com",
+          "path": "/embed/api/token",
+          "method": "GET",
+          "resourceType": "fetch"
+        },
+        {
+          "host": "api-partner.spotify.com",
+          "path": "/pathfinder/v1/query",
+          "method": "GET",
+          "resourceType": "fetch"
+        },
+        {
+          "host": "not-allowlisted.pletina.test",
+          "path": "/no-upstream",
+          "method": "GET",
+          "resourceType": "fetch"
+        }
+      ],
+      "browserResponses": [
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "status": 200
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/sw.js",
+          "status": 200
+        },
+        {
+          "host": "127.0.0.1",
+          "path": "/",
+          "status": 200
+        },
+        {
+          "host": "open.spotify.com",
+          "path": "/embed/api/token",
+          "status": 200
+        },
+        {
+          "host": "api-partner.spotify.com",
+          "path": "/pathfinder/v1/query",
+          "status": 200
+        }
+      ],
+      "pageErrors": [
+        {
+          "name": "FetchEvent.respondWith received an error",
+          "message": "TypeError: Load failed"
+        },
+        {
+          "name": "Fetch API cannot load https",
+          "message": "/not-allowlisted.pletina.test/no-upstream."
+        }
+      ],
+      "proxy": {
+        "allowlistedHosts": [
+          "fixture.googlevideo.com",
+          "media.pletina.test",
+          "feeds.pletina.test",
+          "images.pletina.test",
+          "i.ytimg.com",
+          "api.audius.co",
+          "open.spotify.com",
+          "api-partner.spotify.com"
+        ],
+        "requests": [
+          {
+            "host": "open.spotify.com",
+            "path": "/embed/api/token",
+            "method": "GET"
+          },
+          {
+            "host": "api-partner.spotify.com",
+            "path": "/pathfinder/v1/query",
+            "method": "OPTIONS"
+          },
+          {
+            "host": "api-partner.spotify.com",
+            "path": "/pathfinder/v1/query",
+            "method": "GET"
+          }
+        ],
+        "rejected": [
+          {
+            "host": "not-allowlisted.pletina.test",
+            "method": "CONNECT",
+            "reason": "target not allowlisted"
+          }
+        ],
+        "externalUpstreamConnections": 0
+      },
+      "proxyClosed": true
+    }
+  ],
+  "browserVersion": "26.5",
+  "assertions": {
+    "beforeTokenBypassedFixture": true,
+    "afterExactFixtureToken": true,
+    "afterExactMetadata": true,
+    "afterSyntheticAuthorization": true,
+    "unknownHostBlocked": true,
+    "noExternalUpstream": true,
+    "unknownConnectDenied": true
+  },
+  "mediaObservation": {
+    "afterMediaAdvanced": false,
+    "afterMediaRequestReachedProxy": false,
+    "interpretation": "The independent Windows native media path still fails and bypasses both interception and this context proxy. The successful local exact-AAC probe rules out a general missing decoder. This observation remains a failure, separate from the corrected Spotify fetch transport."
+  },
+  "finishedAt": "2026-10-23T14:05:37.643Z"
+}

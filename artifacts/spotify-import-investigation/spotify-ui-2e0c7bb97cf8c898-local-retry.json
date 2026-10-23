@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T13:57:18.154Z",
+  "expectedBuild": "2e0c7bb97cf8c898",
+  "build": "2e0c7bb97cf8c898",
+  "playlistId": "3cEYpjA9oz9GiPac4AsH4n",
+  "execution": {
+    "script": "scripts/tests/web-spotify.browser.mjs",
+    "scriptSha256": "f40dd226173e3312a705770555d93645bd74fdc2953dc010294fdf890dd3859f"
+  },
+  "scope": "Compiled PWA UI, real direct Spotify metadata, live catalog matching, review-before-save, order and reload persistence.",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "physicalPhoneVerified": false,
+  "installedPwaVerified": false,
+  "providerResponsesMocked": false,
+  "runtimeProxy": false,
+  "securityOverrides": false,
+  "login": false,
+  "tokensPersisted": false,
+  "rawRequestHeadersPersisted": false,
+  "checks": [
+    {
+      "name": "compiled build and fresh mobile layout",
+      "pass": true,
+      "build": "2e0c7bb97cf8c898"
+    },
+    {
+      "name": "real direct Spotify metadata without login cookies",
+      "pass": true,
+      "sourceCount": 5
+    },
+    {
+      "name": "review shows correct source and creates no playlist",
+      "pass": true,
+      "found": 3,
+      "omitted": 2
+    },
+    {
+      "name": "save preserves reviewed matches and order",
+      "pass": true,
+      "count": 3
+    },
+    {
+      "name": "saved playlist survives reload in order",
+      "pass": true,
+      "count": 3
+    }
+  ],
+  "network": [
+    {
+      "method": "GET",
+      "host": "open.spotify.com",
+      "path": "/embed/api/token",
+      "cookiePresent": false,
+      "authorizationPresent": false
+    },
+    {
+      "method": "GET",
+      "host": "api-partner.spotify.com",
+      "path": "/pathfinder/v1/query",
+      "cookiePresent": false,
+      "authorizationPresent": true,
+      "operationName": "queryPlaylist",
+      "page": {
+        "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "method": "OPTIONS",
+      "host": "api-partner.spotify.com",
+      "path": "/pathfinder/v1/query",
+      "cookiePresent": false,
+      "authorizationPresent": false,
+      "operationName": "queryPlaylist",
+      "page": {
+        "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+        "limit": 100,
+        "offset": 0
+      }
+    }
+  ],
+  "tokenResponses": [
+    {
+      "status": 200,
+      "anonymous": true,
+      "tokenPresent": true,
+      "expiresInFuture": true
+    }
+  ],
+  "playlistResponses": [
+    {
+      "status": 200,
+      "typename": "Playlist",
+      "id": "3cEYpjA9oz9GiPac4AsH4n",
+      "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+      "name": "Spotify Web API Testing playlist",
+      "itemCount": 5,
+      "totalCount": 5
+    }
+  ],
+  "errors": [],
+  "target": {
+    "origin": "http://127.0.0.1:63170",
+    "path": "/pletina/"
+  },
+  "browserVersion": "Chrome/153.0.8010.52",
+  "libraryBeforeRead": {
+    "playlists": [],
+    "entries": []
+  },
+  "readOnlyMetadataVerified": true,
+  "spotifyCookieCount": 0,
+  "review": {
+    "name": "Spotify Web API Testing playlist",
+    "totals": [
+      3,
+      2
+    ],
+    "found": [
+      {
+        "title": "Api",
+        "artist": "Odiseo"
+      },
+      {
+        "title": "All I Want",
+        "artist": "LCD Soundsystem"
+      },
+      {
+        "title": "You Are So Beautiful",
+        "artist": "Zucchero"
+      }
+    ],
+    "omitted": [
+      {
+        "title": "Is",
+        "artist": "Vlasta Marek"
+      },
+      {
+        "title": "Endpoints",
+        "artist": "Glenn Horiuchi, Glenn Horiuchi Trio"
+      }
+    ],
+    "warnings": []
+  },
+  "libraryBeforeSave": {
+    "playlists": [],
+    "entries": []
+  },
+  "reviewScreenshot": "spotify-ui-2e0c7bb97cf8c898-local-retry-review.png",
+  "saved": {
+    "name": "QA Spotify 2026-10-23T13-57-18-153Z",
+    "titles": [
+      "Api",
+      "All I Want",
+      "You Are So Beautiful"
+    ]
+  },
+  "libraryAfterSave": {
+    "playlists": [
+      {
+        "id": 1,
+        "name": "QA Spotify 2026-10-23T13-57-18-153Z"
+      }
+    ],
+    "entries": [
+      {
+        "playlistId": 1,
+        "trackId": 13961303,
+        "position": 0
+      },
+      {
+        "playlistId": 1,
+        "trackId": 5749148,
+        "position": 1
+      },
+      {
+        "playlistId": 1,
+        "trackId": 910907,
+        "position": 2
+      }
+    ]
+  },
+  "savedScreenshot": "spotify-ui-2e0c7bb97cf8c898-local-retry-saved.png",
+  "actualSaveVerified": true,
+  "pass": true,
+  "finishedAt": "2026-10-23T13:57:21.601Z"
+}

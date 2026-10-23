@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-23T13:45:30.407Z",
+  "scope": "Read-only review of the current public embed HTML, its referenced JavaScript chunks, and repository import integration. No user login, account token, playback request, runtime proxy or product change.",
+  "playlistId": "37i9dQZF1DXcBWIGoYBM5M",
+  "embedUrl": "https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M",
+  "embedBuildId": "4c157c12-a77e-4e9e-b0dc-1a1b18848f0e",
+  "scriptUrl": "https://embed-cdn.spotifycdn.com/_next/static/chunks/7995-854bb504ac405c84.js",
+  "scriptBytes": 143826,
+  "commandSwitchApproximateOffset": 26500,
+  "protocolEnumModule": 91598,
+  "inboundCommands": [
+    "play_from_start",
+    "play",
+    "pause",
+    "resume",
+    "toggle",
+    "seek",
+    "load_complete_ack",
+    "fullscreen_change",
+    "fullscreen_error"
+  ],
+  "outboundEvents": {
+    "ready": [],
+    "playback_started": [
+      "playingURI"
+    ],
+    "playback_update": [
+      "isPaused",
+      "isBuffering",
+      "duration",
+      "position",
+      "playingURI"
+    ],
+    "error": [
+      "code",
+      "message",
+      "recoverable"
+    ],
+    "uiaction/enterfullscreen": [],
+    "uiaction/exitfullscreen": []
+  },
+  "trackListExportMethodFound": false,
+  "arbitraryStateCommandFound": false,
+  "unknownCommandBehavior": "The command switch default returns without replying.",
+  "findings": [
+    "The parent protocol has playback controls and bounded playback state, without playlist name, track titles, artists or a track-list export.",
+    "The public embed HTML contains __NEXT_DATA__ with playlist tracks, but its response had no Access-Control-Allow-Origin header for either the PWA origin or Origin null during this review.",
+    "The public _app chunk includes Sentry/rrweb cross-origin telemetry machinery. It is sampling/configuration dependent and is not an import API or a stable product transport."
+  ],
+  "otherScriptUrls": [
+    "https://embed-cdn.spotifycdn.com/_next/static/chunks/pages/_app-3b6e117a14a04830.js",
+    "https://embed-cdn.spotifycdn.com/_next/static/chunks/pages/playlist/%5Bid%5D-a1a2d48d360eca87.js"
+  ],
+  "repositoryIntegration": {
+    "adapter": "web-port/imports.ts",
+    "invoke": "web-port/invoke.ts:61",
+    "api": "src/lib/api.ts:155",
+    "view": "src/views/ImportPlaylist.svelte",
+    "cancellation": "Generation checks prevent obsolete results from matching or saving. Cancel/unmount do not physically abort the current URL read because no signal is passed through api/invoke.",
+    "existingE2E": "scripts/tests/e2e/library-scenarios.mjs:387 expects a visible deliberate Spotify URL failure."
+  },
+  "validation": {
+    "command": "node --test scripts/tests/web-imports.test.mjs",
+    "passed": 11,
+    "failed": 0
+  },
+  "conclusion": "No viable browser-native track-list export was identified in the inspected current Spotify embed protocol. A minimal service, official authenticated API, or explicit user-mediated export would change one of the current static/no-server/no-login constraints."
+}

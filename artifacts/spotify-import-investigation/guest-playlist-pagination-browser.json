@@ -1,0 +1,1772 @@
+{
+  "testedAt": "2026-10-23T13:51:55.896Z",
+  "origin": "https://diad87.github.io",
+  "login": false,
+  "server": false,
+  "proxy": false,
+  "tokensPersisted": false,
+  "conclusion": "All three desktop browser runtimes directly read the anonymous guest token and full public metadata, including 502/502 entries over six pages of size 100. Limit 100 is therefore a verified page size, not an overall import cap. Chrome/Firefox/WebKit success does not establish a physical installed mobile PWA result. A missing playlist returns HTTP 200 with playlistV2.__typename=NotFound; private playlist behavior lacks a known fixture.",
+  "requestMocking": "QA HTML only; all Spotify fetches real and direct.",
+  "primaryLargePlaylistSource": "https://open.spotify.com/playlist/5C8xpz7lZLk5oliw5hB7Av",
+  "privatePlaylistCase": {
+    "executed": false,
+    "reason": "No known private playlist fixture accessible without an account. Missing identifiers are exercised; their result cannot distinguish private from nonexistent."
+  },
+  "browsers": [
+    {
+      "name": "chromium",
+      "probes": [],
+      "browserVersion": "153.0.8010.52",
+      "results": {
+        "tokenStatus": 200,
+        "anonymous": true,
+        "probes": [
+          {
+            "id": "3cEYpjA9oz9GiPac4AsH4n",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 13704,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "3cEYpjA9oz9GiPac4AsH4n",
+            "returnedUri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+            "identityMatches": true,
+            "name": "Spotify Web API Testing playlist",
+            "totalCount": 5,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 5,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4rzfv0JLZfVhOhbSQ8o5jZ",
+              "title": "Api",
+              "artists": [
+                "Odiseo"
+              ],
+              "duration": {
+                "totalMilliseconds": 376000
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 239678,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 50,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+              "title": "Housewife",
+              "artists": [
+                "Tate McRae"
+              ],
+              "duration": {
+                "totalMilliseconds": 208810
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 30,
+            "status": 200,
+            "bytes": 94181,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 20,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0FZd4IaxB12sUTKSUUGwWq",
+              "title": "STORM II",
+              "artists": [
+                "GENER8ION",
+                "Yung Lean"
+              ],
+              "duration": {
+                "totalMilliseconds": 173433
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 50,
+            "status": 200,
+            "bytes": 797,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 0,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 431926,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 100
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4hfIVhq0F0zFUcrbecsYmo",
+              "title": "Let's Get It Started - Spike Mix",
+              "artists": [
+                "Black Eyed Peas"
+              ],
+              "duration": {
+                "totalMilliseconds": 217733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 100,
+            "status": 200,
+            "bytes": 443883,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 200
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1auxYwYrFRqZP7t3s7w4um",
+              "title": "Ni**as In Paris",
+              "artists": [
+                "JAŸ-Z",
+                "Kanye West"
+              ],
+              "duration": {
+                "totalMilliseconds": 219333
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 200,
+            "status": 200,
+            "bytes": 449323,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 300
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:5gOfC9UzZQzTyShqPMrpjT",
+              "title": "wacced out murals",
+              "artists": [
+                "Kendrick Lamar"
+              ],
+              "duration": {
+                "totalMilliseconds": 317092
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 300,
+            "status": 200,
+            "bytes": 449010,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 400
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:3cSuhzV7wKX5diQ8hos78P",
+              "title": "Steady Mobbin",
+              "artists": [
+                "Young Money",
+                "Gucci Mane"
+              ],
+              "duration": {
+                "totalMilliseconds": 310733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 400,
+            "status": 200,
+            "bytes": 448353,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 500
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0BCPKOYdS2jbQ8iyB56Zns",
+              "title": "Clocks",
+              "artists": [
+                "Coldplay"
+              ],
+              "duration": {
+                "totalMilliseconds": 307879
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 500,
+            "status": 200,
+            "bytes": 10868,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 2,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1jqUrsOrIbQiTXQceRa8os",
+              "title": "Farewell Demise",
+              "artists": [
+                "DYLVN"
+              ],
+              "duration": {
+                "totalMilliseconds": 244406
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "0000000000000000000000",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 129,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "message"
+            ],
+            "contentKeys": [],
+            "typename": "NotFound",
+            "returnedId": null,
+            "returnedUri": null,
+            "identityMatches": false,
+            "name": null,
+            "totalCount": null,
+            "pagingInfo": null,
+            "itemCount": null,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": {
+              "message": "Object with uri 'spotify:playlist:0000000000000000000000' not found"
+            }
+          }
+        ],
+        "fullLargePlaylist": {
+          "id": "5C8xpz7lZLk5oliw5hB7Av",
+          "requestedTotal": 502,
+          "returnedCount": 502,
+          "completeCount": true,
+          "uniqueTrackUris": 502,
+          "duplicateTrackUris": 0
+        }
+      }
+    },
+    {
+      "name": "firefox",
+      "probes": [],
+      "browserVersion": "153.0",
+      "results": {
+        "tokenStatus": 200,
+        "anonymous": true,
+        "probes": [
+          {
+            "id": "3cEYpjA9oz9GiPac4AsH4n",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 13704,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "3cEYpjA9oz9GiPac4AsH4n",
+            "returnedUri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+            "identityMatches": true,
+            "name": "Spotify Web API Testing playlist",
+            "totalCount": 5,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 5,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4rzfv0JLZfVhOhbSQ8o5jZ",
+              "title": "Api",
+              "artists": [
+                "Odiseo"
+              ],
+              "duration": {
+                "totalMilliseconds": 376000
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 239678,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 50,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+              "title": "Housewife",
+              "artists": [
+                "Tate McRae"
+              ],
+              "duration": {
+                "totalMilliseconds": 208810
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 30,
+            "status": 200,
+            "bytes": 94181,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 20,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0FZd4IaxB12sUTKSUUGwWq",
+              "title": "STORM II",
+              "artists": [
+                "GENER8ION",
+                "Yung Lean"
+              ],
+              "duration": {
+                "totalMilliseconds": 173433
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 50,
+            "status": 200,
+            "bytes": 797,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 0,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 431926,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 100
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4hfIVhq0F0zFUcrbecsYmo",
+              "title": "Let's Get It Started - Spike Mix",
+              "artists": [
+                "Black Eyed Peas"
+              ],
+              "duration": {
+                "totalMilliseconds": 217733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 100,
+            "status": 200,
+            "bytes": 443883,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 200
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1auxYwYrFRqZP7t3s7w4um",
+              "title": "Ni**as In Paris",
+              "artists": [
+                "JAŸ-Z",
+                "Kanye West"
+              ],
+              "duration": {
+                "totalMilliseconds": 219333
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 200,
+            "status": 200,
+            "bytes": 449323,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 300
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:5gOfC9UzZQzTyShqPMrpjT",
+              "title": "wacced out murals",
+              "artists": [
+                "Kendrick Lamar"
+              ],
+              "duration": {
+                "totalMilliseconds": 317092
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 300,
+            "status": 200,
+            "bytes": 449010,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 400
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:3cSuhzV7wKX5diQ8hos78P",
+              "title": "Steady Mobbin",
+              "artists": [
+                "Young Money",
+                "Gucci Mane"
+              ],
+              "duration": {
+                "totalMilliseconds": 310733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 400,
+            "status": 200,
+            "bytes": 448353,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 500
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0BCPKOYdS2jbQ8iyB56Zns",
+              "title": "Clocks",
+              "artists": [
+                "Coldplay"
+              ],
+              "duration": {
+                "totalMilliseconds": 307879
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 500,
+            "status": 200,
+            "bytes": 10868,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 2,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1jqUrsOrIbQiTXQceRa8os",
+              "title": "Farewell Demise",
+              "artists": [
+                "DYLVN"
+              ],
+              "duration": {
+                "totalMilliseconds": 244406
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "0000000000000000000000",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 129,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "message"
+            ],
+            "contentKeys": [],
+            "typename": "NotFound",
+            "returnedId": null,
+            "returnedUri": null,
+            "identityMatches": false,
+            "name": null,
+            "totalCount": null,
+            "pagingInfo": null,
+            "itemCount": null,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": {
+              "message": "Object with uri 'spotify:playlist:0000000000000000000000' not found"
+            }
+          }
+        ],
+        "fullLargePlaylist": {
+          "id": "5C8xpz7lZLk5oliw5hB7Av",
+          "requestedTotal": 502,
+          "returnedCount": 502,
+          "completeCount": true,
+          "uniqueTrackUris": 502,
+          "duplicateTrackUris": 0
+        }
+      }
+    },
+    {
+      "name": "webkit",
+      "probes": [],
+      "browserVersion": "26.5",
+      "results": {
+        "tokenStatus": 200,
+        "anonymous": true,
+        "probes": [
+          {
+            "id": "3cEYpjA9oz9GiPac4AsH4n",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 13704,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "3cEYpjA9oz9GiPac4AsH4n",
+            "returnedUri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+            "identityMatches": true,
+            "name": "Spotify Web API Testing playlist",
+            "totalCount": 5,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 5,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4rzfv0JLZfVhOhbSQ8o5jZ",
+              "title": "Api",
+              "artists": [
+                "Odiseo"
+              ],
+              "duration": {
+                "totalMilliseconds": 376000
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 239678,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 50,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:2sFepQNyl1WjpROruP8bJ0",
+              "title": "Housewife",
+              "artists": [
+                "Tate McRae"
+              ],
+              "duration": {
+                "totalMilliseconds": 208810
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 30,
+            "status": 200,
+            "bytes": 94181,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 20,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0FZd4IaxB12sUTKSUUGwWq",
+              "title": "STORM II",
+              "artists": [
+                "GENER8ION",
+                "Yung Lean"
+              ],
+              "duration": {
+                "totalMilliseconds": 173433
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "37i9dQZF1DXcBWIGoYBM5M",
+            "limit": 30,
+            "offset": 50,
+            "status": 200,
+            "bytes": 797,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "37i9dQZF1DXcBWIGoYBM5M",
+            "returnedUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "identityMatches": true,
+            "name": "Today’s Top Hits",
+            "totalCount": 50,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 0,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 431926,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 100
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:4hfIVhq0F0zFUcrbecsYmo",
+              "title": "Let's Get It Started - Spike Mix",
+              "artists": [
+                "Black Eyed Peas"
+              ],
+              "duration": {
+                "totalMilliseconds": 217733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 100,
+            "status": 200,
+            "bytes": 443883,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 200
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1auxYwYrFRqZP7t3s7w4um",
+              "title": "Ni**as In Paris",
+              "artists": [
+                "JAŸ-Z",
+                "Kanye West"
+              ],
+              "duration": {
+                "totalMilliseconds": 219333
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 200,
+            "status": 200,
+            "bytes": 449323,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 300
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:5gOfC9UzZQzTyShqPMrpjT",
+              "title": "wacced out murals",
+              "artists": [
+                "Kendrick Lamar"
+              ],
+              "duration": {
+                "totalMilliseconds": 317092
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 300,
+            "status": 200,
+            "bytes": 449010,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 400
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:3cSuhzV7wKX5diQ8hos78P",
+              "title": "Steady Mobbin",
+              "artists": [
+                "Young Money",
+                "Gucci Mane"
+              ],
+              "duration": {
+                "totalMilliseconds": 310733
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 400,
+            "status": 200,
+            "bytes": 448353,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": 500
+            },
+            "itemCount": 100,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:0BCPKOYdS2jbQ8iyB56Zns",
+              "title": "Clocks",
+              "artists": [
+                "Coldplay"
+              ],
+              "duration": {
+                "totalMilliseconds": 307879
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "5C8xpz7lZLk5oliw5hB7Av",
+            "limit": 100,
+            "offset": 500,
+            "status": 200,
+            "bytes": 10868,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "content",
+              "description",
+              "followers",
+              "id",
+              "images",
+              "name",
+              "ownerV2",
+              "uri"
+            ],
+            "contentKeys": [
+              "__typename",
+              "items",
+              "pagingInfo",
+              "totalCount"
+            ],
+            "typename": "Playlist",
+            "returnedId": "5C8xpz7lZLk5oliw5hB7Av",
+            "returnedUri": "spotify:playlist:5C8xpz7lZLk5oliw5hB7Av",
+            "identityMatches": true,
+            "name": "Traffic Jamz  (polyJAMorous) by Nameless James",
+            "totalCount": 502,
+            "pagingInfo": {
+              "nextOffset": null
+            },
+            "itemCount": 2,
+            "wrapperTypes": [
+              "TrackResponseWrapper"
+            ],
+            "itemTypes": [
+              "Track"
+            ],
+            "first": {
+              "typename": "Track",
+              "uri": "spotify:track:1jqUrsOrIbQiTXQceRa8os",
+              "title": "Farewell Demise",
+              "artists": [
+                "DYLVN"
+              ],
+              "duration": {
+                "totalMilliseconds": 244406
+              }
+            },
+            "error": null
+          },
+          {
+            "id": "0000000000000000000000",
+            "limit": 100,
+            "offset": 0,
+            "status": 200,
+            "bytes": 129,
+            "responseKeys": [
+              "data"
+            ],
+            "playlistKeys": [
+              "__typename",
+              "message"
+            ],
+            "contentKeys": [],
+            "typename": "NotFound",
+            "returnedId": null,
+            "returnedUri": null,
+            "identityMatches": false,
+            "name": null,
+            "totalCount": null,
+            "pagingInfo": null,
+            "itemCount": null,
+            "wrapperTypes": [],
+            "itemTypes": [],
+            "error": {
+              "message": "Object with uri 'spotify:playlist:0000000000000000000000' not found"
+            }
+          }
+        ],
+        "fullLargePlaylist": {
+          "id": "5C8xpz7lZLk5oliw5hB7Av",
+          "requestedTotal": 502,
+          "returnedCount": 502,
+          "completeCount": true,
+          "uniqueTrackUris": 502,
+          "duplicateTrackUris": 0
+        }
+      }
+    }
+  ]
+}

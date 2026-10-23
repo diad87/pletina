@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T13:56:13.291Z",
+  "expectedBuild": "2e0c7bb97cf8c898",
+  "build": "2e0c7bb97cf8c898",
+  "playlistId": "3cEYpjA9oz9GiPac4AsH4n",
+  "execution": {
+    "script": "scripts/tests/web-spotify.browser.mjs",
+    "scriptSha256": "737e927e2a3e3c1c5bad089e54989176c0c85530bee98ef5f9e1f6d3aab1f70f"
+  },
+  "scope": "Compiled PWA UI, real direct Spotify metadata, live catalog matching, review-before-save, order and reload persistence.",
+  "viewport": {
+    "width": 393,
+    "height": 852
+  },
+  "physicalPhoneVerified": false,
+  "installedPwaVerified": false,
+  "providerResponsesMocked": false,
+  "runtimeProxy": false,
+  "securityOverrides": false,
+  "login": false,
+  "tokensPersisted": false,
+  "rawRequestHeadersPersisted": false,
+  "checks": [
+    {
+      "name": "compiled build and fresh mobile layout",
+      "pass": true,
+      "build": "2e0c7bb97cf8c898"
+    },
+    {
+      "name": "real direct Spotify metadata without login cookies",
+      "pass": true,
+      "sourceCount": 5
+    },
+    {
+      "name": "review shows correct source and creates no playlist",
+      "pass": true,
+      "found": 3,
+      "omitted": 2
+    }
+  ],
+  "network": [
+    {
+      "method": "GET",
+      "host": "open.spotify.com",
+      "path": "/embed/api/token",
+      "cookiePresent": false,
+      "authorizationPresent": false
+    },
+    {
+      "method": "GET",
+      "host": "api-partner.spotify.com",
+      "path": "/pathfinder/v1/query",
+      "cookiePresent": false,
+      "authorizationPresent": true,
+      "operationName": "queryPlaylist",
+      "page": {
+        "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+        "limit": 100,
+        "offset": 0
+      }
+    },
+    {
+      "method": "OPTIONS",
+      "host": "api-partner.spotify.com",
+      "path": "/pathfinder/v1/query",
+      "cookiePresent": false,
+      "authorizationPresent": false,
+      "operationName": "queryPlaylist",
+      "page": {
+        "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+        "limit": 100,
+        "offset": 0
+      }
+    }
+  ],
+  "tokenResponses": [
+    {
+      "status": 200,
+      "anonymous": true,
+      "tokenPresent": true,
+      "expiresInFuture": true
+    }
+  ],
+  "playlistResponses": [
+    {
+      "status": 200,
+      "typename": "Playlist",
+      "id": "3cEYpjA9oz9GiPac4AsH4n",
+      "uri": "spotify:playlist:3cEYpjA9oz9GiPac4AsH4n",
+      "name": "Spotify Web API Testing playlist",
+      "itemCount": 5,
+      "totalCount": 5
+    }
+  ],
+  "errors": [
+    {
+      "scope": "network-observation",
+      "name": "ProtocolError",
+      "message": "Could not load response body for this request. This might happen if the request is a preflight request."
+    }
+  ],
+  "target": {
+    "origin": "http://127.0.0.1:65068",
+    "path": "/pletina/"
+  },
+  "browserVersion": "Chrome/153.0.8010.52",
+  "libraryBeforeRead": {
+    "playlists": [],
+    "entries": []
+  },
+  "readOnlyMetadataVerified": true,
+  "spotifyCookieCount": 0,
+  "review": {
+    "name": "Spotify Web API Testing playlist",
+    "totals": [
+      3,
+      2
+    ],
+    "found": [
+      {
+        "title": "Api",
+        "artist": "Odiseo"
+      },
+      {
+        "title": "All I Want",
+        "artist": "LCD Soundsystem"
+      },
+      {
+        "title": "You Are So Beautiful",
+        "artist": "Zucchero"
+      }
+    ],
+    "omitted": [
+      {
+        "title": "Is",
+        "artist": "Vlasta Marek"
+      },
+      {
+        "title": "Endpoints",
+        "artist": "Glenn Horiuchi, Glenn Horiuchi Trio"
+      }
+    ],
+    "warnings": []
+  },
+  "libraryBeforeSave": {
+    "playlists": [],
+    "entries": []
+  },
+  "reviewScreenshot": "spotify-ui-2e0c7bb97cf8c898-local-review.png",
+  "pass": false,
+  "failure": {
+    "stage": "save reviewed matches",
+    "name": "TimeoutError",
+    "message": "Waiting failed: 30000ms exceeded",
+    "state": {
+      "title": "Spotify Web API TestinQA Spotify 2026-10-23T13-56-13-290Zg playlist",
+      "alerts": [],
+      "status": [
+        "3 canciones"
+      ],
+      "totals": [],
+      "buttons": [
+        {
+          "text": "",
+          "disabled": false
+        },
+        {
+          "text": "Aleatorio",
+          "disabled": false
+        },
+        {
+          "text": "",
+          "disabled": false
+        },
+        {
+          "text": "",
+          "disabled": false
+        },
+        {
+          "text": "",
+          "disabled": false
+        }
+      ]
+    }
+  },
+  "failureScreenshot": "spotify-ui-2e0c7bb97cf8c898-local-failure.png",
+  "finishedAt": "2026-10-23T13:56:46.787Z"
+}
