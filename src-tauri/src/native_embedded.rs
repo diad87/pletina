@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 const LIMIT: usize = 4 * 1024 * 1024;
 const TTL: Duration = Duration::from_secs(6 * 3600);
+const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(4);
 // Different embed experiments can publish different players for the same album.
 // Keep four prepared scripts (at most 8 MiB), never their temporary JS runtimes.
 const MAX_DECODERS: usize = 4;
@@ -595,35 +596,131 @@ fn bounded_string(value: &Value, max: usize) -> Result<String, Error> {
         .ok_or_else(|| fail("CONFIG"))
 }
 
+#[derive(Clone, Copy)]
+enum ConfigField {
+    Version,
+    Visitor,
+    HostFlags,
+    PlayerUrl,
+    Platform,
+    FormFactor,
+    OsName,
+    OsVersion,
+    BrowserName,
+    BrowserVersion,
+    Region,
+    DeviceExperiment,
+    Rollout,
+    InstallData,
+}
+
+impl ConfigField {
+    const ALL: [Self; 14] = [
+        Self::Version, Self::Visitor, Self::HostFlags, Self::PlayerUrl,
+        Self::Platform, Self::FormFactor, Self::OsName, Self::OsVersion,
+        Self::BrowserName, Self::BrowserVersion, Self::Region,
+        Self::DeviceExperiment, Self::Rollout, Self::InstallData,
+    ];
+
+    fn code(self) -> &'static str {
+        match self {
+            Self::Version => "VERSION",
+            Self::Visitor => "VISITOR",
+            Self::HostFlags => "HOST_FLAGS",
+            Self::PlayerUrl => "PLAYER_URL",
+            Self::Platform => "PLATFORM",
+            Self::FormFactor => "FORM_FACTOR",
+            Self::OsName => "OS_NAME",
+            Self::OsVersion => "OS_VERSION",
+            Self::BrowserName => "BROWSER_NAME",
+            Self::BrowserVersion => "BROWSER_VERSION",
+            Self::Region => "REGION",
+            Self::DeviceExperiment => "DEVICE_EXPERIMENT",
+            Self::Rollout => "ROLLOUT",
+            Self::InstallData => "INSTALL_DATA",
+        }
+    }
+}
+
+// Both parts are local constants. Never include a remote value or key in errors.
+fn config_string(
+    value: Option<&Value>,
+    field: ConfigField,
+    max: usize,
+    ascii: bool,
+) -> Result<String, Error> {
+    let problem = |code: &'static str| fail(&format!("CONFIG_{}_{}", field.code(), code));
+    let value = value.ok_or_else(|| problem("MISSING"))?;
+    let value = value.as_str().ok_or_else(|| problem("TYPE"))?;
+    if value.is_empty() {
+        return Err(problem("EMPTY"));
+    }
+    if value.len() > max {
+        return Err(problem("SIZE"));
+    }
+    if value.chars().any(char::is_control) {
+        return Err(problem("CONTROL"));
+    }
+    if ascii && !value.is_ascii() {
+        return Err(problem("ASCII"));
+    }
+    Ok(value.to_owned())
+}
+
+fn config_error_code(error: &Error) -> String {
+    let Error::Failed(code) = error else { return "OTHER".into() };
+    let suffix = code.strip_prefix("NATIVE_EMBEDDED_").unwrap_or_default();
+    if matches!(suffix,
+        "CONFIG_OBJECT_TYPE" | "CONFIG_IDENTITY" | "CONFIG_AMBIGUOUS"
+        | "CONFIG_VERSION_FORMAT" | "PLAYER_URL" | "JSON" | "JSON_COUNT" | "SIZE"
+    ) {
+        return suffix.to_owned();
+    }
+    for field in ConfigField::ALL {
+        for problem in ["MISSING", "TYPE", "EMPTY", "SIZE", "CONTROL", "ASCII"] {
+            let expected = format!("CONFIG_{}_{}", field.code(), problem);
+            if suffix == expected {
+                return expected;
+            }
+        }
+    }
+    "OTHER".into()
+}
+
+fn config_diagnostic(id: &str, attempt: u8, error: Option<&Error>) {
+    if diagnostic_enabled() {
+        eprintln!("[native-embedded-config] {}", json!({
+            "resolveId": RESOLVE_TRACE.try_with(|id| *id).unwrap_or(0),
+            "id": valid_id(id).then_some(id), "atMs": trace_time(),
+            "attempt": attempt, "renewalUsed": attempt == 2,
+            "code": error.map(config_error_code).unwrap_or_else(|| "OK".into()),
+        }));
+    }
+}
+
 fn published_client(client: Option<&Value>) -> Result<Map<String, Value>, Error> {
     let mut extra = Map::new();
     let Some(client) = client else {
         return Ok(extra);
     };
-    for (key, limit) in [
-        ("platform", 128),
-        ("clientFormFactor", 128),
-        ("osName", 128),
-        ("osVersion", 128),
-        ("browserName", 128),
-        ("browserVersion", 128),
-        ("gl", 128),
-        ("deviceExperimentId", 4096),
-        ("rolloutToken", 4096),
+    for (key, field, limit) in [
+        ("platform", ConfigField::Platform, 128),
+        ("clientFormFactor", ConfigField::FormFactor, 128),
+        ("osName", ConfigField::OsName, 128),
+        ("osVersion", ConfigField::OsVersion, 128),
+        ("browserName", ConfigField::BrowserName, 128),
+        ("browserVersion", ConfigField::BrowserVersion, 128),
+        ("gl", ConfigField::Region, 128),
+        ("deviceExperimentId", ConfigField::DeviceExperiment, 4096),
+        ("rolloutToken", ConfigField::Rollout, 4096),
     ] {
         if let Some(value) = client.get(key) {
-            let value = bounded_string(value, limit)?;
-            if !value.is_ascii() {
-                return Err(fail("CONFIG"));
-            }
+            let value = config_string(Some(value), field, limit, true)?;
             extra.insert(key.into(), json!(value));
         }
     }
     if let Some(value) = client.pointer("/configInfo/appInstallData") {
-        let value = bounded_string(value, 8192)?;
-        if !value.is_ascii() {
-            return Err(fail("CONFIG"));
-        }
+        let value = config_string(Some(value), ConfigField::InstallData, 8192, true)?;
         extra.insert("configInfo".into(), json!({"appInstallData":value}));
     }
     Ok(extra)
@@ -633,7 +730,7 @@ fn config(html: &str) -> Result<Config, Error> {
     let mut selected = Map::new();
     // Whitelist configuration only; do not propagate request/user/tracking contexts.
     for value in json_after(html, "ytcfg.set(")? {
-        let object = value.as_object().ok_or_else(|| fail("CONFIG"))?;
+        let object = value.as_object().ok_or_else(|| fail("CONFIG_OBJECT_TYPE"))?;
         for key in [
             "INNERTUBE_CLIENT_NAME",
             "INNERTUBE_CLIENT_VERSION",
@@ -656,9 +753,14 @@ fn config(html: &str) -> Result<Config, Error> {
     {
         return Err(fail("CONFIG_IDENTITY"));
     }
-    let version = bounded_string(&value["INNERTUBE_CLIENT_VERSION"], 64)?;
+    let version = config_string(
+        value.get("INNERTUBE_CLIENT_VERSION"),
+        ConfigField::Version,
+        64,
+        false,
+    )?;
     if !version.bytes().all(|b| b.is_ascii_digit() || b == b'.') || !version.contains('.') {
-        return Err(fail("CONFIG"));
+        return Err(fail("CONFIG_VERSION_FORMAT"));
     }
     let client = value.pointer("/INNERTUBE_CONTEXT/client");
     if client.is_some_and(|client| {
@@ -679,13 +781,12 @@ fn config(html: &str) -> Result<Config, Error> {
         &value["WEB_PLAYER_CONTEXT_CONFIGS"]["WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER"];
     let visitor = value
         .get("VISITOR_DATA")
-        .or_else(|| value.pointer("/INNERTUBE_CONTEXT/client/visitorData"))
-        .ok_or_else(|| fail("CONFIG"))?;
+        .or_else(|| value.pointer("/INNERTUBE_CONTEXT/client/visitorData"));
     Ok(Config {
         version,
-        visitor: bounded_string(visitor, 4096)?,
-        flags: bounded_string(&context["encryptedHostFlags"], 32 * 1024)?,
-        player: player_url(&bounded_string(&context["jsUrl"], 2048)?)?,
+        visitor: config_string(visitor, ConfigField::Visitor, 4096, false)?,
+        flags: config_string(context.get("encryptedHostFlags"), ConfigField::HostFlags, 32 * 1024, false)?,
+        player: player_url(&config_string(context.get("jsUrl"), ConfigField::PlayerUrl, 2048, false)?)?,
         client_extra: published_client(client)?,
     })
 }
@@ -728,21 +829,83 @@ fn failure_cache(failed: &mut HashMap<String, Instant>, key: &str) -> Result<(),
     Ok(())
 }
 
-async fn configuration(http: &reqwest::Client, id: &str) -> Result<Arc<Config>, Error> {
-    let mut cache = CONFIGS.lock().await;
+struct DiscoveredConfig {
+    config: Arc<Config>,
+    renewed: bool,
+}
+
+async fn configuration(http: &reqwest::Client, id: &str) -> Result<DiscoveredConfig, Error> {
+    configuration_bounded(&CONFIGS, id, Instant::now() + DISCOVERY_TIMEOUT, |_| async {
+        get(
+            http,
+            reqwest::Url::parse(&format!("https://www.youtube.com/embed/{id}?html5=1")).unwrap(),
+        ).await
+    }).await
+}
+
+async fn configuration_bounded<F, FF>(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    deadline: Instant,
+    fetch: F,
+) -> Result<DiscoveredConfig, Error>
+where
+    F: FnMut(u8) -> FF,
+    FF: std::future::Future<Output = Result<String, Error>>,
+{
+    let result = tokio::time::timeout_at(
+        tokio::time::Instant::from_std(deadline),
+        configuration_inner(cache, id, deadline, fetch),
+    ).await.map_err(|_| fail("DISCOVERY_TIMEOUT"))?;
+    if Instant::now() >= deadline {
+        return Err(fail("DISCOVERY_TIMEOUT"));
+    }
+    result
+}
+
+async fn configuration_inner<F, FF>(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    deadline: Instant,
+    mut fetch: F,
+) -> Result<DiscoveredConfig, Error>
+where
+    F: FnMut(u8) -> FF,
+    FF: std::future::Future<Output = Result<String, Error>>,
+{
+    let mut cache = cache.lock().await;
+    if Instant::now() >= deadline {
+        return Err(fail("DISCOVERY_TIMEOUT"));
+    }
     cache.entries.retain(|_, (_, at)| at.elapsed() < TTL);
     if let Some((value, _)) = cache.entries.get(id) {
-        return Ok(value.clone());
+        return Ok(DiscoveredConfig { config: value.clone(), renewed: false });
     }
     failure_cache(&mut cache.failed, id)?;
-    let html = get(
-        http,
-        reqwest::Url::parse(&format!("https://www.youtube.com/embed/{id}?html5=1")).unwrap(),
-    )
-    .await?;
-    #[cfg(test)]
-    save_private_fixture(Some(id), "embed.html.local", html.as_bytes());
-    let value = Arc::new(config(&html)?);
+    let mut attempt = 1;
+    let value = loop {
+        // Transport/status failures do not enter the parser recovery. Both GETs
+        // share the original four-second budget, including the cache lock.
+        let html = fetch(attempt).await?;
+        if Instant::now() >= deadline {
+            return Err(fail("DISCOVERY_TIMEOUT"));
+        }
+        #[cfg(test)]
+        {
+            save_private_fixture(Some(id), "embed.html.local", html.as_bytes());
+            save_private_fixture(Some(id), &format!("embed-attempt-{attempt}.html.local"), html.as_bytes());
+        }
+        let result = config(&html);
+        config_diagnostic(id, attempt, result.as_ref().err());
+        match result {
+            Ok(value) => break Arc::new(value),
+            Err(_) if attempt == 1 => attempt = 2,
+            Err(error) => return Err(error),
+        }
+    };
+    if Instant::now() >= deadline {
+        return Err(fail("DISCOVERY_TIMEOUT"));
+    }
     if cache.entries.len() >= 16 {
         if let Some(oldest) = cache
             .entries
@@ -757,7 +920,7 @@ async fn configuration(http: &reqwest::Client, id: &str) -> Result<Arc<Config>, 
         .entries
         .insert(id.to_owned(), (value.clone(), Instant::now()));
     cache.failed.remove(id);
-    Ok(value)
+    Ok(DiscoveredConfig { config: value, renewed: attempt == 2 })
 }
 
 fn invalidate_config(cache: &mut ConfigCache, id: &str, used: &Arc<Config>) -> bool {
@@ -1292,6 +1455,7 @@ async fn coordinate_preparation<I, F, FF, R, RF, P, PF>(
     compiled: &tokio::sync::Mutex<DecoderCache>,
     id: &str,
     first_config: Arc<Config>,
+    renewal_used: bool,
     initial: I,
     notice: tokio::sync::oneshot::Receiver<EarlySabr>,
     fetch: F,
@@ -1310,8 +1474,11 @@ where
     let normal = |preparation| CoordinatedPreparation {
         config: first_config.clone(),
         preparation,
-        renewal_used: false,
+        renewal_used,
     };
+    if renewal_used {
+        return initial.await.map(normal);
+    }
     // Box ownership matters: dropping a Pin<&mut Future> would not cancel its
     // underlying worker. Taking this box really drops CancelOnDrop and the lock.
     let mut initial = Some(Box::pin(initial));
@@ -2071,7 +2238,8 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
             Ok::<_, Error>(())
         },
         async {
-            let config = configuration(http, video_id).await?;
+            let discovered = configuration(http, video_id).await?;
+            let config = discovered.config;
             let (early, notice) = tokio::sync::oneshot::channel();
             let previous = config.clone();
             coordinate_preparation(
@@ -2079,12 +2247,15 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
                 &COMPILED,
                 video_id,
                 config.clone(),
+                discovered.renewed,
                 prepare_request(
                     http,
                     &config,
                     Some(video_id),
                     Some(admission),
-                    Some(early),
+                    // Discovery already spent the one renewal. Dropping this
+                    // sender prevents early SABR from reserving another GET.
+                    (!discovered.renewed).then_some(early),
                     None,
                     None,
                 ),
@@ -3090,6 +3261,200 @@ mod tests {
     }
 
     #[test]
+    fn config_failure_identifies_only_closed_fields_and_causes() {
+        for (pointer, field, max) in [
+            ("/INNERTUBE_CLIENT_VERSION", "VERSION", 64),
+            ("/VISITOR_DATA", "VISITOR", 4096),
+            ("/WEB_PLAYER_CONTEXT_CONFIGS/WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER/encryptedHostFlags", "HOST_FLAGS", 32768),
+            ("/WEB_PLAYER_CONTEXT_CONFIGS/WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER/jsUrl", "PLAYER_URL", 2048),
+        ] {
+            for (bad, cause) in [
+                (Value::Null, "TYPE"),
+                (json!(""), "EMPTY"),
+                (json!("secret".repeat(max / 6 + 1)), "SIZE"),
+                (json!("secret\nvalue"), "CONTROL"),
+            ] {
+                let mut published = config_value();
+                *published.pointer_mut(pointer).unwrap() = bad;
+                let error = config(&format!("ytcfg.set({published});")).err().unwrap();
+                assert_eq!(config_error_code(&error), format!("CONFIG_{field}_{cause}"));
+                assert!(!format!("{error:?}").contains("secret"));
+            }
+            let mut published = config_value();
+            let (parent, key) = pointer.rsplit_once('/').unwrap();
+            published.pointer_mut(parent).unwrap().as_object_mut().unwrap().remove(key);
+            let error = config(&format!("ytcfg.set({published});")).err().unwrap();
+            assert_eq!(config_error_code(&error), format!("CONFIG_{field}_MISSING"));
+        }
+        for (key, field) in [
+            ("platform", "PLATFORM"), ("clientFormFactor", "FORM_FACTOR"),
+            ("osName", "OS_NAME"), ("osVersion", "OS_VERSION"),
+            ("browserName", "BROWSER_NAME"), ("browserVersion", "BROWSER_VERSION"),
+            ("gl", "REGION"), ("deviceExperimentId", "DEVICE_EXPERIMENT"),
+            ("rolloutToken", "ROLLOUT"),
+        ] {
+            let mut published = config_value();
+            published["INNERTUBE_CONTEXT"]["client"][key] = json!("private-é");
+            let error = config(&format!("ytcfg.set({published});")).err().unwrap();
+            assert_eq!(config_error_code(&error), format!("CONFIG_{field}_ASCII"));
+        }
+        assert_eq!(config_error_code(&fail("CONFIG_VISITOR_secret")), "OTHER");
+        assert_eq!(config_error_code(&fail("URL_https://private.invalid")), "OTHER");
+    }
+
+    #[tokio::test]
+    async fn config_discovery_local_http_replaces_the_entire_invalid_document_once() {
+        let mut invalid = config_value();
+        invalid["INNERTUBE_CONTEXT"]["client"]["osVersion"] = json!("");
+        invalid["VISITOR_DATA"] = json!("must-not-survive");
+        let mut fresh = config_value();
+        fresh["INNERTUBE_CLIENT_VERSION"] = json!("2.20261023.01.00");
+        let expected = config(&format!("ytcfg.set({fresh});")).unwrap();
+        let (url, server) = local_sequence(vec![
+            response(200, "", format!("ytcfg.set({invalid});").as_bytes()),
+            response(200, "", format!("ytcfg.set({fresh});").as_bytes()),
+        ]);
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let http = local_http();
+        let result = configuration_bounded(
+            &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            |_| async { text_response(http.get(&url).send().await.unwrap()).await },
+        ).await.unwrap();
+        assert!(result.renewed);
+        assert!(*result.config == expected);
+        assert!(cache.lock().await.failed.is_empty());
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0], requests[1], "same public GET, no cookie or partial config");
+        let cached = configuration_bounded(
+            &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            |_| async { panic!("a valid config is already cached") },
+        ).await.unwrap();
+        assert!(!cached.renewed, "a later resolve still owns its own renewal");
+        assert!(Arc::ptr_eq(&cached.config, &result.config));
+
+        let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+        let (early, notice) = tokio::sync::oneshot::channel();
+        let signal = early_signal(&source_fixture("initial"), Duration::from_secs(1));
+        assert!(early.send(signal).is_ok());
+        let mut initial = preparation_fixture(20700, signal.deadline);
+        initial.post_started = true;
+        initial.response = Some(Preview { response: Err(fail("SABR_ONLY")), trace: None });
+        let coordinated = coordinate_preparation(
+            &cache, &compiled, ID, result.config, result.renewed,
+            async { Ok(initial) }, notice,
+            |_| async { panic!("discovery already spent the one renewal") },
+            |_, _| async { panic!("no replacement analysis") },
+            |_, _| async { panic!("no additional POST") },
+        ).await.unwrap();
+        assert!(coordinated.renewal_used, "resolve_inner must skip ordinary SABR recovery too");
+        let error = resolve_config(
+            &http, &coordinated.config, ID, coordinated.preparation.decoder,
+            coordinated.preparation.response,
+        ).await.err().unwrap();
+        assert!(matches!(error, Error::Failed(code) if code == "NATIVE_EMBEDDED_SABR_ONLY"));
+    }
+
+    #[tokio::test]
+    async fn config_discovery_two_invalid_documents_preserve_cooldown_without_partial_cache() {
+        let mut invalid = config_value();
+        invalid["VISITOR_DATA"] = json!("");
+        let response = response(200, "", format!("ytcfg.set({invalid});").as_bytes());
+        let (url, server) = local_sequence(vec![response.clone(), response]);
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let http = local_http();
+        let error = configuration_bounded(
+            &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            |_| async { text_response(http.get(&url).send().await.unwrap()).await },
+        ).await.err().unwrap();
+        assert_eq!(config_error_code(&error), "CONFIG_VISITOR_EMPTY");
+        assert_eq!(server.join().unwrap().len(), 2);
+        let locked = cache.lock().await;
+        assert!(locked.entries.is_empty());
+        assert!(locked.failed.contains_key(ID));
+        drop(locked);
+        let error = configuration_bounded(
+            &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            |_| async { panic!("the failure cooldown must stop repeated GETs") },
+        ).await.err().unwrap();
+        assert!(matches!(error, Error::Failed(code) if code == "NATIVE_EMBEDDED_DISCOVERY_COOLDOWN"));
+    }
+
+    #[tokio::test]
+    async fn config_discovery_does_not_retry_http_transport_or_size_failures() {
+        for status in [403, 429, 500] {
+            let (url, server) = local(response(status, "", b"not configuration"));
+            let http = local_http();
+            let cache = tokio::sync::Mutex::new(ConfigCache::default());
+            let calls = AtomicU64::new(0);
+            let error = configuration_bounded(
+                &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+                |_| { calls.fetch_add(1, Ordering::SeqCst); async {
+                    text_response(http.get(&url).send().await.unwrap()).await
+                } },
+            ).await.err().unwrap();
+            assert!(matches!(error, Error::Failed(code) if code == "NATIVE_EMBEDDED_HTTP_STATUS"));
+            assert_eq!(calls.load(Ordering::SeqCst), 1);
+            server.join().unwrap();
+        }
+        for code in ["TRANSPORT", "SIZE", "UTF8"] {
+            let cache = tokio::sync::Mutex::new(ConfigCache::default());
+            let calls = AtomicU64::new(0);
+            assert!(configuration_bounded(
+                &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+                |_| { calls.fetch_add(1, Ordering::SeqCst); async { Err(fail(code)) } },
+            ).await.is_err());
+            assert_eq!(calls.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn config_discovery_budget_and_cancellation_keep_reservations_and_never_install_late() {
+        assert_eq!(DISCOVERY_TIMEOUT, Duration::from_secs(4));
+        let cache = Arc::new(tokio::sync::Mutex::new(ConfigCache::default()));
+        let begun = Arc::new(tokio::sync::Notify::new());
+        let pending = tokio::spawn({
+            let cache = cache.clone();
+            let begun = begun.clone();
+            async move {
+                configuration_bounded(&cache, ID, Instant::now() + DISCOVERY_TIMEOUT, |_| {
+                    begun.notify_one();
+                    std::future::pending::<Result<String, Error>>()
+                }).await
+            }
+        });
+        begun.notified().await;
+        pending.abort();
+        assert!(pending.await.err().unwrap().is_cancelled());
+        assert!(cache.lock().await.failed.contains_key(ID));
+        assert!(cache.lock().await.entries.is_empty());
+
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let calls = AtomicU64::new(0);
+        let error = configuration_bounded(
+            &cache, ID, Instant::now() + Duration::from_millis(60),
+            |attempt| { calls.fetch_add(1, Ordering::SeqCst); async move {
+                if attempt == 1 { Ok("ytcfg.set({});".into()) }
+                else { std::future::pending().await }
+            } },
+        ).await.err().unwrap();
+        assert!(matches!(error, Error::Failed(code) if code == "NATIVE_EMBEDDED_DISCOVERY_TIMEOUT"));
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        assert!(cache.lock().await.failed.contains_key(ID));
+        assert!(cache.lock().await.entries.is_empty());
+
+        let good = Arc::new(cfg());
+        let cache = cache_with(good.clone());
+        let held = cache.lock().await;
+        assert!(configuration_bounded(
+            &cache, ID, Instant::now() + Duration::from_millis(30),
+            |_| async { panic!("a timed-out lock must not fetch") },
+        ).await.is_err());
+        drop(held);
+        assert!(Arc::ptr_eq(&cache.lock().await.entries[ID].0, &good));
+    }
+
+    #[test]
     fn discovery_origins_and_player_paths_reject_external_credentials_and_queries() {
         player_url("/s/player/cbcfbf2f/player_es6.vflset/en_US/base.js").unwrap();
         for url in [
@@ -3789,6 +4154,7 @@ mod tests {
                 &compiled,
                 ID,
                 first.clone(),
+                false,
                 initial,
                 notice,
                 |current| {
@@ -3919,6 +4285,7 @@ mod tests {
                 &compiled,
                 ID,
                 first.clone(),
+                false,
                 initial,
                 notice,
                 |_| async {
@@ -4012,6 +4379,7 @@ mod tests {
                 &compiled,
                 ID,
                 first.clone(),
+                false,
                 initial,
                 notice,
                 |_| {
@@ -4146,6 +4514,7 @@ mod tests {
                 &compiled,
                 ID,
                 first.clone(),
+                false,
                 initial,
                 notice,
                 |_| async {
@@ -4216,6 +4585,7 @@ mod tests {
                 &compiled,
                 ID,
                 first.clone(),
+                false,
                 initial,
                 notice,
                 |_| async {
