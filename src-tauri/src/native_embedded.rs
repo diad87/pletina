@@ -811,11 +811,29 @@ async fn invalidate_decoder(url: &reqwest::Url, used: &Arc<PreparedDecoder>) {
 struct Preparation {
     decoder: Arc<PreparedDecoder>,
     response: Option<Preview>,
+    post_started: bool,
+    deadline: Option<Instant>,
 }
 
 struct Preview {
     response: Result<Value, Error>,
     trace: Option<PostTrace>,
+}
+
+#[derive(Clone, Copy)]
+struct EarlySabr {
+    sha: [u8; 32],
+    deadline: Instant,
+    reservation: Instant,
+}
+
+struct DownloadedSource {
+    source: String,
+    deadline: Instant,
+}
+
+fn is_sabr<T>(result: &Result<T, Error>) -> bool {
+    matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_SABR_ONLY")
 }
 
 // A speculative request may start the server's readiness clock while the AST
@@ -889,6 +907,24 @@ where
     request.await
 }
 
+async fn admitted_preview<R>(
+    admission: Option<tokio::sync::oneshot::Receiver<()>>,
+    request: R,
+    early: Option<tokio::sync::oneshot::Sender<EarlySabr>>,
+    signal: EarlySabr,
+) -> Result<Value, Error>
+where
+    R: Future<Output = Result<Value, Error>>,
+{
+    let result = admitted_request(admission, request).await;
+    // The notice is a reason to discard work, never proof of an analyzed ST.
+    if is_sabr(&result) {
+        if let Some(early) = early {
+            let _ = early.send(signal);
+        }
+    }
+    result
+}
 fn prepared_measurement(
     id: Option<&str>,
     mode: &str,
@@ -907,8 +943,8 @@ fn prepared_measurement(
     }
 }
 
-async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<PreparedDecoder>, Error> {
-    Ok(prepare_request(http, config, None, None).await?.decoder)
+async fn prepared(http: &reqwest::Client, config: &Config, deadline: Option<Instant>) -> Result<Arc<PreparedDecoder>, Error> {
+    Ok(prepare_request(http, config, None, None, None, None, deadline).await?.decoder)
 }
 
 async fn prepare_request(
@@ -916,24 +952,74 @@ async fn prepare_request(
     config: &Config,
     id: Option<&str>,
     admission: Option<tokio::sync::oneshot::Receiver<()>>,
+    early: Option<tokio::sync::oneshot::Sender<EarlySabr>>,
+    downloaded: Option<DownloadedSource>,
+    inherited: Option<Instant>,
+) -> Result<Preparation, Error> {
+    let deadline = inherited
+        .or(downloaded.as_ref().map(|source| source.deadline))
+        .unwrap_or_else(|| Instant::now() + youtube_decoder::PREPARE_TIMEOUT);
+    let work = prepare_request_inner(
+        http,
+        config,
+        id,
+        admission,
+        early,
+        downloaded,
+        Some(deadline),
+    );
+    let result = tokio::time::timeout_at(deadline.into(), work)
+        .await
+        .map_err(|_| fail("DECODER_PREPARE"))?;
+    if Instant::now() >= deadline {
+        return Err(fail("DECODER_PREPARE"));
+    }
+    result
+}
+
+async fn prepare_request_inner(
+    http: &reqwest::Client,
+    config: &Config,
+    id: Option<&str>,
+    admission: Option<tokio::sync::oneshot::Receiver<()>>,
+    early: Option<tokio::sync::oneshot::Sender<EarlySabr>>,
+    downloaded: Option<DownloadedSource>,
+    inherited: Option<Instant>,
 ) -> Result<Preparation, Error> {
     let started = Instant::now();
+    if inherited.is_some_and(|deadline| started >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     let mut cache = COMPILED.lock().await;
+    if inherited.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     cache.entries.retain(|entry| entry.at.elapsed() < TTL);
     if let Some(entry) = cache
         .entries
         .iter()
-        .find(|entry| entry.url == config.player)
+        .find(|entry| downloaded.is_none() && entry.url == config.player)
     {
         prepared_measurement(id, "memory", started, 0.0, 0.0, false);
         return Ok(Preparation {
             decoder: entry.decoder.clone(),
             response: None,
+            post_started: false,
+            deadline: inherited,
         });
     }
     failure_cache(&mut cache.failed, config.player.as_str())?;
+    let reservation = cache.failed[config.player.as_str()];
     let download_started = Instant::now();
-    let source = get(http, config.player.clone()).await?;
+    let supplied = downloaded.is_some();
+    let (source, inherited_deadline) = if let Some(downloaded) = downloaded {
+        (downloaded.source, Some(downloaded.deadline))
+    } else {
+        (get(http, config.player.clone()).await?, inherited)
+    };
+    if inherited_deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     let download_ms = download_started.elapsed().as_secs_f64() * 1000.0;
     #[cfg(test)]
     save_private_fixture(
@@ -948,6 +1034,8 @@ async fn prepare_request(
     let mut response = None;
     let mut analyze_ms = 0.0;
     let mut preview = false;
+    let mut post_started = false;
+    let mut analysis_deadline = inherited_deadline;
     let mut mode = "memory-sha";
     // Controlled cold benchmarks bypass only persistent reads, never safety checks.
     let fresh = std::env::var_os("MUSIFY_BENCH").is_some()
@@ -957,6 +1045,9 @@ async fn prepare_request(
     } else {
         crate::youtube_decoder_cache::load(config.player.as_str(), &source).await
     };
+    if inherited_deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     let decoder = if let Some(entry) = cache.entries.iter().find(|entry| entry.sha == sha) {
         entry.decoder.clone()
     } else if let Some(decoder) = saved {
@@ -964,19 +1055,39 @@ async fn prepare_request(
         decoder
     } else {
         mode = "analyzed";
-        let hint = id.and_then(|_| timestamp_hint(&source));
+        // Replacement POST2 belongs to the coordinator. Keep its public ID for
+        // timing/fixtures without starting a second speculative request here.
+        let hint = if supplied {
+            None
+        } else {
+            id.and_then(|_| timestamp_hint(&source))
+        };
         let analyze_started = Instant::now();
+        let deadline =
+            inherited_deadline.unwrap_or_else(|| Instant::now() + youtube_decoder::PREPARE_TIMEOUT);
+        analysis_deadline = Some(deadline);
         let decoder = if let (Some(id), Some(hint)) = (id, hint) {
+            post_started = true;
             let trace = post_trace(PostOrigin::Preview);
-            let (decoder, speculative) = analyze_preview(
-                youtube_decoder::prepare(source.clone()),
-                admitted_request(
-                    admission,
-                    player_response_traced(http, PLAYER, config, id, hint, trace),
+            let (decoder, speculative) = tokio::time::timeout_at(
+                deadline.into(),
+                analyze_preview(
+                    youtube_decoder::prepare_until(source.clone(), deadline),
+                    admitted_preview(
+                        admission,
+                        player_response_traced(http, PLAYER, config, id, hint, trace),
+                        early,
+                        EarlySabr {
+                            sha,
+                            deadline,
+                            reservation,
+                        },
+                    ),
+                    hint,
                 ),
-                hint,
             )
-            .await?;
+            .await
+            .map_err(|_| fail("DECODER_PREPARE"))??;
             preview = speculative.is_some();
             post_diagnostic(
                 trace,
@@ -996,15 +1107,22 @@ async fn prepare_request(
             response = speculative.map(|response| Preview { response, trace });
             decoder
         } else {
-            youtube_decoder::prepare(source.clone())
+            youtube_decoder::prepare_until(source.clone(), deadline)
                 .await
                 .map_err(|_| fail("DECODER_PREPARE"))?
         };
         analyze_ms = analyze_started.elapsed().as_secs_f64() * 1000.0;
+        if Instant::now() >= deadline {
+            return Err(fail("DECODER_PREPARE"));
+        }
         let _ =
             crate::youtube_decoder_cache::store(config.player.as_str(), &source, &decoder).await;
         Arc::new(decoder)
     };
+    if analysis_deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
+    cache.entries.retain(|entry| entry.url != config.player);
     if cache.entries.len() >= MAX_DECODERS {
         cache.entries.remove(0);
     }
@@ -1016,9 +1134,13 @@ async fn prepare_request(
     });
     cache.failed.remove(config.player.as_str());
     prepared_measurement(id, mode, started, download_ms, analyze_ms, preview);
-    Ok(Preparation { decoder, response })
+    Ok(Preparation {
+        decoder,
+        response,
+        post_started,
+        deadline: analysis_deadline,
+    })
 }
-
 fn body(config: &Config, id: &str, sts: u32) -> Value {
     let mut request = json!({"videoId":id,"context":{"client":{"clientName":"WEB_EMBEDDED_PLAYER","clientVersion":config.version,"hl":"en","userAgent":UA,"visitorData":config.visitor},"thirdParty":{"embedUrl":"https://www.reddit.com/"}},"contentCheckOk":true,"racyCheckOk":true,"playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS","signatureTimestamp":sts,"encryptedHostFlags":config.flags}}});
     request["context"]["client"]
@@ -1032,8 +1154,340 @@ fn body(config: &Config, id: &str, sts: u32) -> Value {
 struct Ready {
     config: Arc<Config>,
     decoder: Arc<PreparedDecoder>,
+    deadline: Option<Instant>,
 }
 
+struct CoordinatedPreparation {
+    config: Arc<Config>,
+    preparation: Preparation,
+    renewal_used: bool,
+}
+
+struct FreshSource {
+    config: Arc<Config>,
+    source: String,
+}
+
+struct RefreshReservation {
+    expected: Option<Arc<Config>>,
+    newer: Option<Arc<Config>>,
+}
+
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum EarlyPhase {
+    Reserved,
+    SameSource,
+    Replaced,
+    Unchanged,
+    Ready,
+}
+
+fn early_diagnostic(id: &str, phase: EarlyPhase, initial_cancelled: Option<bool>) {
+    if diagnostic_enabled() {
+        eprintln!(
+            "[native-early-sabr] {}",
+            json!({"id":id,"phase":phase,
+            "initialCancelled":initial_cancelled,"atMs":trace_time()})
+        );
+    }
+}
+
+// The initial preparation may own COMPILED. Never await CONFIGS here: the
+// ordinary refresh takes these locks in the opposite order. Busy means no early
+// work, not another reservation. Once reserved, even an unusable candidate has
+// consumed this resolve's only refresh.
+fn reserve_early_refresh(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    previous: &Arc<Config>,
+) -> Option<RefreshReservation> {
+    let mut cache = cache.try_lock().ok()?;
+    let expected = cache.entries.get(id).map(|(config, _)| config.clone());
+    let newer = expected
+        .as_ref()
+        .filter(|config| !Arc::ptr_eq(config, previous))
+        .cloned();
+    if newer.is_none() {
+        failure_cache(&mut cache.failed, id).ok()?;
+    }
+    Some(RefreshReservation { expected, newer })
+}
+
+fn same_config_binding(current: Option<&Arc<Config>>, expected: Option<&Arc<Config>>) -> bool {
+    match (current, expected) {
+        (Some(current), Some(expected)) => Arc::ptr_eq(current, expected),
+        (None, None) => true,
+        _ => false,
+    }
+}
+
+async fn install_early_config(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    reservation: &RefreshReservation,
+    next: &Arc<Config>,
+    deadline: Instant,
+) -> Result<(), Error> {
+    let mut cache = cache.lock().await;
+    if Instant::now() >= deadline {
+        return Err(fail("DECODER_PREPARE"));
+    }
+    if !same_config_binding(
+        cache.entries.get(id).map(|(value, _)| value),
+        reservation.expected.as_ref(),
+    ) {
+        return Err(fail("REFRESH_BINDING"));
+    }
+    if let Some(newer) = &reservation.newer {
+        if !Arc::ptr_eq(newer, next) {
+            return Err(fail("REFRESH_BINDING"));
+        }
+        return Ok(());
+    }
+    if !cache.entries.contains_key(id) && cache.entries.len() >= 16 {
+        if let Some(oldest) = cache
+            .entries
+            .iter()
+            .min_by_key(|(_, (_, at))| *at)
+            .map(|(id, _)| id.clone())
+        {
+            cache.entries.remove(&oldest);
+        }
+    }
+    cache
+        .entries
+        .insert(id.into(), (next.clone(), Instant::now()));
+    Ok(())
+}
+
+async fn clear_abandoned_preparation(
+    cache: &tokio::sync::Mutex<DecoderCache>,
+    player: &reqwest::Url,
+    reservation: Instant,
+) {
+    let mut cache = cache.lock().await;
+    // Only the deliberate replacement owns this cleanup. Ordinary cancellation,
+    // timeout and failure retain their cooldown, as do newer reservations.
+    if cache.failed.get(player.as_str()) == Some(&reservation) {
+        cache.failed.remove(player.as_str());
+    }
+}
+
+async fn finish_initial<I>(
+    initial: Option<std::pin::Pin<Box<I>>>,
+    completed: Option<Preparation>,
+) -> Result<Preparation, Error>
+where
+    I: Future<Output = Result<Preparation, Error>>,
+{
+    match completed {
+        Some(completed) => Ok(completed),
+        None => initial.ok_or_else(|| fail("REFRESH_BINDING"))?.await,
+    }
+}
+
+async fn coordinate_preparation<I, F, FF, R, RF, P, PF>(
+    configs: &tokio::sync::Mutex<ConfigCache>,
+    compiled: &tokio::sync::Mutex<DecoderCache>,
+    id: &str,
+    first_config: Arc<Config>,
+    initial: I,
+    notice: tokio::sync::oneshot::Receiver<EarlySabr>,
+    fetch: F,
+    replace: R,
+    post: P,
+) -> Result<CoordinatedPreparation, Error>
+where
+    I: Future<Output = Result<Preparation, Error>>,
+    F: FnOnce(Option<Arc<Config>>) -> FF,
+    FF: Future<Output = Result<Option<FreshSource>, Error>>,
+    R: FnOnce(Arc<Config>, DownloadedSource) -> RF,
+    RF: Future<Output = Result<Preparation, Error>>,
+    P: FnOnce(Arc<Config>, u32) -> PF,
+    PF: Future<Output = Preview>,
+{
+    let normal = |preparation| CoordinatedPreparation {
+        config: first_config.clone(),
+        preparation,
+        renewal_used: false,
+    };
+    // Box ownership matters: dropping a Pin<&mut Future> would not cancel its
+    // underlying worker. Taking this box really drops CancelOnDrop and the lock.
+    let mut initial = Some(Box::pin(initial));
+    let signal = tokio::select! {
+        biased;
+        result = initial.as_mut().unwrap().as_mut() => return result.map(normal),
+        signal = notice => match signal {
+            Ok(signal) => signal,
+            Err(_) => return initial.take().unwrap().await.map(normal),
+        },
+    };
+    let continued = async {
+        let Some(reservation) = reserve_early_refresh(configs, id, &first_config) else {
+            return initial.take().unwrap().await.map(normal);
+        };
+        early_diagnostic(id, EarlyPhase::Reserved, None);
+        let mut fetching = Box::pin(fetch(reservation.newer.clone()));
+        let mut completed = None;
+        let fresh = tokio::select! {
+            biased;
+            result = initial.as_mut().unwrap().as_mut() => {
+                completed = Some(result?);
+                drop(initial.take());
+                fetching.await
+            },
+            fresh = fetching.as_mut() => fresh,
+        };
+        // A failed/unchanged refresh cannot reserve another one. Keep the first full
+        // analysis: if it disproves hint1, its corrected definitive request can still
+        // spend POST2. If it confirms SABR, consumption simply returns that error.
+        let fresh = match fresh {
+            Ok(Some(fresh))
+                if body(&first_config, id, 0) != body(&fresh.config, id, 0)
+                    || first_config.player != fresh.config.player =>
+            {
+                fresh
+            }
+            _ => {
+                early_diagnostic(id, EarlyPhase::Unchanged, None);
+                return Ok(CoordinatedPreparation {
+                    config: first_config.clone(),
+                    preparation: finish_initial(initial.take(), completed).await?,
+                    renewal_used: true,
+                });
+            }
+        };
+        if body(&first_config, id, 0) == body(&fresh.config, id, 0) {
+            // A new player can change only ST. That cannot justify cancellation
+            // or a hinted POST, but the existing sequential recovery must still
+            // compare both fully analyzed timestamps within this one reservation.
+            let first = finish_initial(initial.take(), completed).await?;
+            let verified_sabr = first
+                .response
+                .as_ref()
+                .is_some_and(|preview| is_sabr(&preview.response));
+            let same_source =
+                <[u8; 32]>::from(Sha256::digest(fresh.source.as_bytes())) == signal.sha;
+            if !verified_sabr || same_source {
+                // In particular, a disproved hint1 keeps its definitive POST2.
+                return Ok(CoordinatedPreparation {
+                    config: first_config.clone(),
+                    preparation: first,
+                    renewal_used: true,
+                });
+            }
+            early_diagnostic(id, EarlyPhase::Replaced, Some(false));
+            let next_config = fresh.config;
+            let mut next = replace(
+                next_config.clone(),
+                DownloadedSource {
+                    source: fresh.source,
+                    deadline: signal.deadline,
+                },
+            )
+            .await?;
+            if body(&first_config, id, first.decoder.signature_timestamp)
+                == body(&next_config, id, next.decoder.signature_timestamp)
+            {
+                return Ok(CoordinatedPreparation {
+                    config: first_config.clone(),
+                    preparation: first,
+                    renewal_used: true,
+                });
+            }
+            let preview = post(next_config.clone(), next.decoder.signature_timestamp).await;
+            install_early_config(configs, id, &reservation, &next_config, signal.deadline).await?;
+            next.response = Some(preview);
+            next.post_started = true;
+            early_diagnostic(id, EarlyPhase::Ready, None);
+            return Ok(CoordinatedPreparation {
+                config: next_config,
+                preparation: next,
+                renewal_used: true,
+            });
+        }
+        let Some(hint) = timestamp_hint(&fresh.source) else {
+            return Ok(CoordinatedPreparation {
+                config: first_config.clone(),
+                preparation: finish_initial(initial.take(), completed).await?,
+                renewal_used: true,
+            });
+        };
+        if Instant::now() >= signal.deadline {
+            return Err(fail("DECODER_PREPARE"));
+        }
+        // Preserve an analysis that finished while the new bytes were being hashed.
+        if let Some(pending) = initial.as_mut() {
+            tokio::select! {
+                biased;
+                result = pending.as_mut() => { completed = Some(result?); },
+                _ = std::future::ready(()) => {},
+            }
+        }
+        if completed.is_some() {
+            drop(initial.take());
+        }
+        let same_source = <[u8; 32]>::from(Sha256::digest(fresh.source.as_bytes())) == signal.sha;
+        if same_source {
+            early_diagnostic(id, EarlyPhase::SameSource, Some(false));
+        } else {
+            let cancelled = initial.is_some();
+            if initial.is_some() {
+                drop(initial.take());
+                clear_abandoned_preparation(compiled, &first_config.player, signal.reservation)
+                    .await;
+            }
+            early_diagnostic(id, EarlyPhase::Replaced, Some(cancelled));
+        }
+        let next_config = fresh.config;
+        let selected = next_config.clone();
+        let analysis = async {
+            if same_source {
+                if let Some(completed) = completed {
+                    Ok(completed)
+                } else {
+                    initial.take().unwrap().await
+                }
+            } else {
+                replace(
+                    selected,
+                    DownloadedSource {
+                        source: fresh.source,
+                        deadline: signal.deadline,
+                    },
+                )
+                .await
+            }
+        };
+        let (preparation, preview) = tokio::time::timeout_at(signal.deadline.into(), async {
+            tokio::join!(analysis, post(next_config.clone(), hint))
+        })
+        .await
+        .map_err(|_| fail("DECODER_PREPARE"))?;
+        let mut preparation = preparation?;
+        if preparation.decoder.signature_timestamp != hint {
+            // POST2 has been spent. Never repair a speculative timestamp with POST3.
+            return Err(fail("REFRESH_TIMESTAMP"));
+        }
+        install_early_config(configs, id, &reservation, &next_config, signal.deadline).await?;
+        preparation.response = Some(preview);
+        preparation.post_started = true;
+        early_diagnostic(id, EarlyPhase::Ready, None);
+        Ok(CoordinatedPreparation {
+            config: next_config,
+            preparation,
+            renewal_used: true,
+        })
+    };
+    let result = tokio::time::timeout_at(signal.deadline.into(), continued)
+        .await
+        .map_err(|_| fail("DECODER_PREPARE"))?;
+    if Instant::now() >= signal.deadline {
+        return Err(fail("DECODER_PREPARE"));
+    }
+    result
+}
 async fn refresh_ready<F, Fut>(
     cache: &tokio::sync::Mutex<ConfigCache>,
     id: &str,
@@ -1044,7 +1498,36 @@ where
     F: FnOnce(Option<Arc<Config>>) -> Fut,
     Fut: Future<Output = Result<Ready, Error>>,
 {
+    let work = refresh_ready_inner(cache, id, previous, fetch);
+    if let Some(deadline) = previous.deadline {
+        let result = tokio::time::timeout_at(deadline.into(), work)
+            .await
+            .map_err(|_| fail("DECODER_PREPARE"))?;
+        if Instant::now() >= deadline {
+            return Err(fail("DECODER_PREPARE"));
+        }
+        result
+    } else {
+        work.await
+    }
+}
+async fn refresh_ready_inner<F, Fut>(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    previous: &Ready,
+    fetch: F,
+) -> Result<Option<Ready>, Error>
+where
+    F: FnOnce(Option<Arc<Config>>) -> Fut,
+    Fut: Future<Output = Result<Ready, Error>>,
+{
+    if previous.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     let mut cache = cache.lock().await;
+    if previous.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
     let newer = cache
         .entries
         .get(id)
@@ -1055,6 +1538,12 @@ where
         failure_cache(&mut cache.failed, id)?;
     }
     let next = fetch(newer.clone()).await?;
+    if previous.deadline.is_some_and(|deadline| Instant::now() >= deadline) {
+        return Err(fail("DECODER_PREPARE"));
+    }
+    if previous.deadline.is_some() && next.deadline != previous.deadline {
+        return Err(fail("REFRESH_BINDING"));
+    }
     if newer
         .as_ref()
         .is_some_and(|current| !Arc::ptr_eq(current, &next.config))
@@ -1563,7 +2052,7 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
     let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
     let discovery_started = Instant::now();
     let (admit, admission) = tokio::sync::oneshot::channel();
-    let (_, (initial_config, preparation)) = tokio::try_join!(
+    let (_, coordinated) = tokio::try_join!(
         async {
             let watch = get(
                 http,
@@ -1583,22 +2072,107 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
         },
         async {
             let config = configuration(http, video_id).await?;
-            let preparation =
-                prepare_request(http, &config, Some(video_id), Some(admission)).await?;
-            Ok::<_, Error>((config, preparation))
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let previous = config.clone();
+            coordinate_preparation(
+                &CONFIGS,
+                &COMPILED,
+                video_id,
+                config.clone(),
+                prepare_request(
+                    http,
+                    &config,
+                    Some(video_id),
+                    Some(admission),
+                    Some(early),
+                    None,
+                    None,
+                ),
+                notice,
+                |current| async move {
+                    let next = if let Some(current) = current {
+                        current
+                    } else {
+                        let html = get(
+                            http,
+                            reqwest::Url::parse(&format!(
+                                "https://www.youtube.com/embed/{video_id}?html5=1"
+                            ))
+                            .unwrap(),
+                        )
+                        .await?;
+                        #[cfg(test)]
+                        save_private_fixture(
+                            Some(video_id),
+                            "embed-refresh.html.local",
+                            html.as_bytes(),
+                        );
+                        Arc::new(self::config(&html)?)
+                    };
+                    // A new player may change ST alone: download it, but only
+                    // full sequential analysis can justify that second POST.
+                    if body(&previous, video_id, 0) == body(&next, video_id, 0)
+                        && previous.player == next.player {
+                        return Ok(None);
+                    }
+                    let source = get(http, next.player.clone()).await?;
+                    #[cfg(test)]
+                    save_private_fixture(
+                        None,
+                        &format!(
+                            "player-{:x}.js.local",
+                            Sha256::digest(next.player.as_str().as_bytes())
+                        ),
+                        source.as_bytes(),
+                    );
+                    Ok(Some(FreshSource {
+                        config: next,
+                        source,
+                    }))
+                },
+                |next, source| async move {
+                    prepare_request(http, &next, Some(video_id), None, None, Some(source), None)
+                        .await
+                },
+                |next, hint| async move {
+                    let trace = post_trace(PostOrigin::Preview);
+                    let response =
+                        player_response_traced(http, PLAYER, &next, video_id, hint, trace).await;
+                    Preview { response, trace }
+                },
+            )
+            .await
         }
     )?;
     stage_timing(video_id, "watch-config-and-prepare", discovery_started);
+    let CoordinatedPreparation {
+        config: initial_config,
+        preparation,
+        renewal_used,
+    } = coordinated;
     let Preparation {
         decoder,
         mut response,
+        post_started,
+        deadline,
     } = preparation;
+    // A discarded first hint has already spent POST1; the definitive request
+    // would be POST2. An early replacement also already owns POST2. Neither can
+    // enter the ordinary SABR recovery and accidentally issue a third request.
+    if renewal_used || (post_started && response.is_none()) {
+        let result = resolve_config(http, &initial_config, video_id, decoder, response).await;
+        if result.as_ref().is_err_and(|error| config_rejected(error)) {
+            invalidate_config(&mut *CONFIGS.lock().await, video_id, &initial_config);
+        }
+        return result;
+    }
     resolve_ready(
         &CONFIGS,
         video_id,
         Ready {
             config: initial_config,
             decoder,
+            deadline,
         },
         |ready| {
             let response = response.take();
@@ -1620,13 +2194,12 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
                 save_private_fixture(Some(video_id), "embed-refresh.html.local", html.as_bytes());
                 Arc::new(config(&html)?)
             };
-            let decoder = prepared(http, &config).await?;
-            Ok(Ready { config, decoder })
+            let decoder = prepared(http, &config, deadline).await?;
+            Ok(Ready { config, decoder, deadline })
         },
     )
     .await
 }
-
 async fn resolve_config(
     http: &reqwest::Client,
     config: &Config,
@@ -3088,6 +3661,7 @@ mod tests {
                 script: "unused-local-fixture".into(),
                 signature_timestamp: sts,
             }),
+            deadline: None,
         }
     }
 
@@ -3105,6 +3679,685 @@ mod tests {
         value
     }
 
+    fn source_fixture(suffix: &str) -> String {
+        format!("var player={{signatureTimestamp:20700}};/*{suffix}*/")
+    }
+
+    fn early_signal(source: &str, duration: Duration) -> EarlySabr {
+        EarlySabr {
+            sha: Sha256::digest(source.as_bytes()).into(),
+            deadline: Instant::now() + duration,
+            reservation: Instant::now(),
+        }
+    }
+
+    fn preparation_fixture(stamp: u32, deadline: Instant) -> Preparation {
+        Preparation {
+            decoder: ready(Arc::new(cfg()), stamp).decoder,
+            response: None,
+            post_started: false,
+            deadline: Some(deadline),
+        }
+    }
+
+    async fn held_initial<R>(
+        compiled: &tokio::sync::Mutex<DecoderCache>,
+        config: &Config,
+        signal: EarlySabr,
+        early: tokio::sync::oneshot::Sender<EarlySabr>,
+        admission: Option<tokio::sync::oneshot::Receiver<()>>,
+        request: R,
+        finish: tokio::sync::oneshot::Receiver<u32>,
+        completed: &std::sync::atomic::AtomicBool,
+    ) -> Result<Preparation, Error>
+    where
+        R: Future<Output = Result<Value, Error>>,
+    {
+        let mut cache = compiled.lock().await;
+        cache
+            .failed
+            .insert(config.player.to_string(), signal.reservation);
+        let analysis = async {
+            let stamp = finish
+                .await
+                .map_err(|_| "LOCAL_ANALYSIS_CANCELLED".to_owned())?;
+            Ok(PreparedDecoder {
+                script: "local-only".into(),
+                signature_timestamp: stamp,
+            })
+        };
+        let (decoder, response) = analyze_preview(
+            analysis,
+            admitted_preview(admission, request, Some(early), signal),
+            20700,
+        )
+        .await?;
+        cache.failed.remove(config.player.as_str());
+        completed.store(true, Ordering::SeqCst);
+        Ok(Preparation {
+            decoder: Arc::new(decoder),
+            response: response.map(|response| Preview {
+                response,
+                trace: None,
+            }),
+            post_started: true,
+            deadline: Some(signal.deadline),
+        })
+    }
+
+    #[tokio::test]
+    async fn early_sabr_local_http_replaces_only_pending_different_source_and_keeps_one_refresh() {
+        // The third case finishes AST1 while the fresh HTTP source is pending;
+        // its result is kept, but the distinct source still needs its own AST.
+        for (same_source, first_finishes) in [(false, false), (true, true), (false, true)] {
+            let first = Arc::new(cfg());
+            let configs = cache_with(first.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let initial_source = source_fixture("first");
+            let fresh_source = source_fixture(if same_source { "first" } else { "second" });
+            let signal = early_signal(&initial_source, Duration::from_secs(2));
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let (finish, finished) = tokio::sync::oneshot::channel();
+            let finish = std::sync::Mutex::new(Some(finish));
+            let completed = std::sync::atomic::AtomicBool::new(false);
+            let mut published = config_value();
+            published["VISITOR_DATA"] = json!("fresh-public-visitor");
+            let mut playable = sabr_response();
+            playable["streamingData"]["adaptiveFormats"][0]["signatureCipher"] =
+                cipher_value(AUDIO)["signatureCipher"].clone();
+            let (url, server) = local_sequence(vec![
+                response(200, "", sabr_response().to_string().as_bytes()),
+                response(200, "", format!("ytcfg.set({published});").as_bytes()),
+                response(200, "", fresh_source.as_bytes()),
+                response(200, "", playable.to_string().as_bytes()),
+            ]);
+            let http = local_http();
+            let endpoint = format!("{url}/player");
+            let initial = held_initial(
+                &compiled,
+                &first,
+                signal,
+                early,
+                None,
+                player_response(&http, &endpoint, &first, ID, 20700),
+                finished,
+                &completed,
+            );
+            let replacements = AtomicU64::new(0);
+            let result = coordinate_preparation(
+                &configs,
+                &compiled,
+                ID,
+                first.clone(),
+                initial,
+                notice,
+                |current| {
+                    let (http, url, finish, completed) = (&http, &url, &finish, &completed);
+                    async move {
+                        assert!(current.is_none());
+                        let html =
+                            text_response(http.get(format!("{url}/embed")).send().await.unwrap())
+                                .await?;
+                        let next = Arc::new(config(&html)?);
+                        let source =
+                            text_response(http.get(format!("{url}/source")).send().await.unwrap())
+                                .await?;
+                        if first_finishes {
+                            finish.lock().unwrap().take().unwrap().send(20700).unwrap();
+                            while !completed.load(Ordering::SeqCst) {
+                                tokio::task::yield_now().await;
+                            }
+                        }
+                        Ok(Some(FreshSource {
+                            config: next,
+                            source,
+                        }))
+                    }
+                },
+                |_, source| {
+                    let (replacements, fresh_source, completed, compiled, first) =
+                        (&replacements, &fresh_source, &completed, &compiled, &first);
+                    async move {
+                        replacements.fetch_add(1, Ordering::SeqCst);
+                        assert!(!same_source);
+                        assert_eq!(&source.source, fresh_source);
+                        assert_eq!(source.deadline, signal.deadline);
+                        assert_eq!(completed.load(Ordering::SeqCst), first_finishes);
+                        assert!(
+                            !compiled
+                                .try_lock()
+                                .unwrap()
+                                .failed
+                                .contains_key(first.player.as_str()),
+                            "the dropped preparation must release its lock and only its cooldown"
+                        );
+                        Ok(preparation_fixture(20700, source.deadline))
+                    }
+                },
+                |next, hint| {
+                    let (http, endpoint) = (&http, &endpoint);
+                    async move {
+                        Preview {
+                            response: player_response(&http, &endpoint, &next, ID, hint).await,
+                            trace: None,
+                        }
+                    }
+                },
+            )
+            .await
+            .unwrap();
+            assert!(result.renewal_used);
+            assert!(result.preparation.post_started);
+            assert_eq!(
+                result.preparation.response.unwrap().response.unwrap(),
+                playable
+            );
+            assert_eq!(replacements.load(Ordering::SeqCst), u64::from(!same_source));
+            assert!(Arc::ptr_eq(
+                &configs.lock().await.entries[ID].0,
+                &result.config
+            ));
+            assert!(
+                reserve_early_refresh(&configs, ID, &result.config).is_none(),
+                "one refresh and cooldown"
+            );
+            let requests = server.join().unwrap();
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| request.starts_with("POST "))
+                    .count(),
+                2
+            );
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| request.starts_with("GET /embed "))
+                    .count(),
+                1
+            );
+            let old: Value =
+                serde_json::from_str(requests[0].split_once("\r\n\r\n").unwrap().1).unwrap();
+            let new: Value =
+                serde_json::from_str(requests[3].split_once("\r\n\r\n").unwrap().1).unwrap();
+            assert_eq!(old["videoId"], new["videoId"]);
+            assert_eq!(old["playbackContext"], new["playbackContext"]);
+            assert_ne!(old, new);
+        }
+    }
+
+    #[tokio::test]
+    async fn unusable_early_refresh_preserves_first_ast_and_its_only_corrected_post() {
+        for invalid_hint in [false, true] {
+            let first = Arc::new(cfg());
+            let configs = cache_with(first.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let signal = early_signal(&source_fixture("first"), Duration::from_secs(2));
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let (finish, finished) = tokio::sync::oneshot::channel();
+            let completed = std::sync::atomic::AtomicBool::new(false);
+            let mut playable = sabr_response();
+            playable["streamingData"]["adaptiveFormats"][0]["signatureCipher"] =
+                cipher_value(AUDIO)["signatureCipher"].clone();
+            let (url, server) = local_sequence(vec![
+                response(200, "", sabr_response().to_string().as_bytes()),
+                response(200, "", playable.to_string().as_bytes()),
+            ]);
+            let http = local_http();
+            let initial = held_initial(
+                &compiled,
+                &first,
+                signal,
+                early,
+                None,
+                player_response(&http, &url, &first, ID, 20700),
+                finished,
+                &completed,
+            );
+            let result = coordinate_preparation(
+                &configs,
+                &compiled,
+                ID,
+                first.clone(),
+                initial,
+                notice,
+                |_| async {
+                    finish.send(20701).unwrap(); // Full AST disproves hint1.
+                    if invalid_hint {
+                        let mut next = cfg();
+                        next.visitor = "new-public-visitor".into();
+                        Ok(Some(FreshSource {
+                            config: Arc::new(next),
+                            source: "no timestamp".into(),
+                        }))
+                    } else {
+                        Ok(None)
+                    }
+                },
+                |_, _| async { panic!("no usable replacement source") },
+                |_, _| async { panic!("the coordinator cannot spend POST2 without a valid hint") },
+            )
+            .await
+            .unwrap();
+            assert!(result.renewal_used && result.preparation.post_started);
+            assert!(result.preparation.response.is_none());
+            assert!(completed.load(Ordering::SeqCst));
+            assert!(Arc::ptr_eq(&configs.lock().await.entries[ID].0, &first));
+            // This is the definitive POST2, not another refresh. Real response
+            // parsing still enforces the requested ID and original candidates.
+            player_response(
+                &http,
+                &url,
+                &result.config,
+                ID,
+                result.preparation.decoder.signature_timestamp,
+            )
+            .await
+            .unwrap();
+            let requests = server.join().unwrap();
+            assert_eq!(requests.len(), 2);
+            let corrected: Value =
+                serde_json::from_str(requests[1].split_once("\r\n\r\n").unwrap().1).unwrap();
+            assert_eq!(
+                corrected["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"],
+                20701
+            );
+            assert!(reserve_early_refresh(&configs, ID, &first).is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn early_player_url_only_change_uses_full_st_and_never_spends_a_third_post() {
+        for (first_st, second_st) in [(20700, 20701), (20700, 20700), (20701, 20702)] {
+            let first = Arc::new(cfg());
+            let configs = cache_with(first.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let signal = early_signal(&source_fixture("first"), Duration::from_secs(2));
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let (finish, finished) = tokio::sync::oneshot::channel();
+            let completed = std::sync::atomic::AtomicBool::new(false);
+            let mut published = config_value();
+            published["WEB_PLAYER_CONTEXT_CONFIGS"]["WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER"]["jsUrl"] =
+                json!("/s/player/abcdef12/player_es6.vflset/en_US/base.js");
+            let mut playable = sabr_response();
+            playable["streamingData"]["adaptiveFormats"][0]["signatureCipher"] =
+                cipher_value(AUDIO)["signatureCipher"].clone();
+            let corrected_first = first_st != 20700;
+            let needs_post2 = corrected_first || first_st != second_st;
+            let mut responses = vec![
+                response(200, "", sabr_response().to_string().as_bytes()),
+                response(200, "", format!("ytcfg.set({published});").as_bytes()),
+                // The literal is deliberately not the injected full AST result.
+                response(200, "", source_fixture("second").as_bytes()),
+            ];
+            if needs_post2 {
+                responses.push(response(200, "", playable.to_string().as_bytes()));
+            }
+            let (url, server) = local_sequence(responses);
+            let http = local_http();
+            let endpoint = format!("{url}/player");
+            let initial = held_initial(
+                &compiled,
+                &first,
+                signal,
+                early,
+                None,
+                player_response(&http, &endpoint, &first, ID, 20700),
+                finished,
+                &completed,
+            );
+            let replacements = AtomicU64::new(0);
+            let result = coordinate_preparation(
+                &configs,
+                &compiled,
+                ID,
+                first.clone(),
+                initial,
+                notice,
+                |_| {
+                    let (http, url, first) = (&http, &url, &first);
+                    async move {
+                        let html =
+                            text_response(http.get(format!("{url}/embed")).send().await.unwrap())
+                                .await?;
+                        let next = Arc::new(config(&html)?);
+                        assert_eq!(body(first, ID, 0), body(&next, ID, 0));
+                        assert_ne!(first.player, next.player);
+                        let source =
+                            text_response(http.get(format!("{url}/source")).send().await.unwrap())
+                                .await?;
+                        finish.send(first_st).unwrap();
+                        Ok(Some(FreshSource {
+                            config: next,
+                            source,
+                        }))
+                    }
+                },
+                |_, source| {
+                    let (replacements, completed) = (&replacements, &completed);
+                    async move {
+                        assert!(
+                            completed.load(Ordering::SeqCst),
+                            "AST1 must finish, never be cancelled"
+                        );
+                        assert_eq!(source.deadline, signal.deadline);
+                        replacements.fetch_add(1, Ordering::SeqCst);
+                        Ok(preparation_fixture(second_st, source.deadline))
+                    }
+                },
+                |next, actual_st| {
+                    let (http, endpoint) = (&http, &endpoint);
+                    async move {
+                        assert_eq!(
+                            actual_st, second_st,
+                            "POST2 uses the full second AST, not its hint"
+                        );
+                        Preview {
+                            response: player_response(http, endpoint, &next, ID, actual_st).await,
+                            trace: None,
+                        }
+                    }
+                },
+            )
+            .await
+            .unwrap();
+            assert!(result.renewal_used);
+            assert!(completed.load(Ordering::SeqCst));
+            assert_eq!(
+                replacements.load(Ordering::SeqCst),
+                u64::from(!corrected_first)
+            );
+            if corrected_first {
+                assert!(result.preparation.response.is_none());
+                assert!(Arc::ptr_eq(&result.config, &first));
+                player_response(
+                    &http,
+                    &endpoint,
+                    &result.config,
+                    ID,
+                    result.preparation.decoder.signature_timestamp,
+                )
+                .await
+                .unwrap();
+            } else if needs_post2 {
+                assert_eq!(
+                    result.preparation.response.unwrap().response.unwrap(),
+                    playable
+                );
+                assert!(!Arc::ptr_eq(&result.config, &first));
+            } else {
+                assert!(is_sabr(&result.preparation.response.unwrap().response));
+                assert!(Arc::ptr_eq(&result.config, &first));
+            }
+            let requests = server.join().unwrap();
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| request.starts_with("POST "))
+                    .count(),
+                if needs_post2 { 2 } else { 1 }
+            );
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| request.starts_with("GET /embed "))
+                    .count(),
+                1
+            );
+            if needs_post2 {
+                let sent: Value =
+                    serde_json::from_str(requests.last().unwrap().split_once("\r\n\r\n").unwrap().1)
+                        .unwrap();
+                assert_eq!(
+                    sent["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"],
+                    if corrected_first { first_st } else { second_st }
+                );
+            }
+            assert!(reserve_early_refresh(&configs, ID, &result.config).is_none());
+        }
+    }
+    #[tokio::test]
+    async fn early_refresh_rejects_timestamp2_and_concurrent_config_replacement_without_third_post() {
+        for replace_binding in [false, true] {
+            let first = Arc::new(cfg());
+            let configs = cache_with(first.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let signal = early_signal(&source_fixture("first"), Duration::from_secs(2));
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let (_finish, finished) = tokio::sync::oneshot::channel();
+            let completed = std::sync::atomic::AtomicBool::new(false);
+            let posts = AtomicU64::new(1);
+            let mut next = cfg();
+            next.visitor = "new-public-visitor".into();
+            let next = Arc::new(next);
+            let newer = Arc::new(cfg());
+            let initial = held_initial(
+                &compiled,
+                &first,
+                signal,
+                early,
+                None,
+                async { Err(fail("SABR_ONLY")) },
+                finished,
+                &completed,
+            );
+            let result = coordinate_preparation(
+                &configs,
+                &compiled,
+                ID,
+                first.clone(),
+                initial,
+                notice,
+                |_| async {
+                    Ok(Some(FreshSource {
+                        config: next.clone(),
+                        source: source_fixture("second"),
+                    }))
+                },
+                |_, source| async move {
+                    Ok(preparation_fixture(
+                        if replace_binding { 20700 } else { 20701 },
+                        source.deadline,
+                    ))
+                },
+                |_, _| async {
+                    posts.fetch_add(1, Ordering::SeqCst);
+                    if replace_binding {
+                        configs
+                            .lock()
+                            .await
+                            .entries
+                            .insert(ID.into(), (newer.clone(), Instant::now()));
+                    }
+                    Preview {
+                        response: Err(fail("SABR_ONLY")),
+                        trace: None,
+                    }
+                },
+            )
+            .await;
+            assert!(
+                matches!(result, Err(Error::Failed(code)) if code == if replace_binding {
+                "NATIVE_EMBEDDED_REFRESH_BINDING"
+            } else { "NATIVE_EMBEDDED_REFRESH_TIMESTAMP" })
+            );
+            assert_eq!(posts.load(Ordering::SeqCst), 2);
+            assert!(Arc::ptr_eq(
+                &configs.lock().await.entries[ID].0,
+                if replace_binding { &newer } else { &first }
+            ));
+        }
+    }
+
+    #[tokio::test]
+    async fn early_shared_deadline_cancels_prefetch_or_second_analysis_without_reset() {
+        for stalls_in_prefetch in [false, true] {
+            let first = Arc::new(cfg());
+            let configs = cache_with(first.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let signal = early_signal(&source_fixture("first"), Duration::from_millis(60));
+            let (early, notice) = tokio::sync::oneshot::channel();
+            let (_finish, finished) = tokio::sync::oneshot::channel();
+            let completed = std::sync::atomic::AtomicBool::new(false);
+            let posts = AtomicU64::new(1);
+            let initial = held_initial(
+                &compiled,
+                &first,
+                signal,
+                early,
+                None,
+                async { Err(fail("SABR_ONLY")) },
+                finished,
+                &completed,
+            );
+            let started = Instant::now();
+            let result = coordinate_preparation(
+                &configs,
+                &compiled,
+                ID,
+                first.clone(),
+                initial,
+                notice,
+                |_| async {
+                    if stalls_in_prefetch {
+                        std::future::pending::<()>().await;
+                    }
+                    let mut next = cfg();
+                    next.visitor = "new-public-visitor".into();
+                    Ok(Some(FreshSource {
+                        config: Arc::new(next),
+                        source: source_fixture("second"),
+                    }))
+                },
+                |_, source| async move {
+                    assert_eq!(source.deadline, signal.deadline);
+                    std::future::pending::<Result<Preparation, Error>>().await
+                },
+                |_, _| async {
+                    posts.fetch_add(1, Ordering::SeqCst);
+                    Preview {
+                        response: Err(fail("SABR_ONLY")),
+                        trace: None,
+                    }
+                },
+            )
+            .await;
+            assert!(
+                matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_DECODER_PREPARE")
+            );
+            assert!(started.elapsed() < Duration::from_secs(1));
+            assert_eq!(
+                posts.load(Ordering::SeqCst),
+                if stalls_in_prefetch { 1 } else { 2 }
+            );
+            assert!(!completed.load(Ordering::SeqCst));
+            // Timeout while still on AST1 is not a voluntary abandonment.
+            assert_eq!(
+                compiled
+                    .try_lock()
+                    .unwrap()
+                    .failed
+                    .contains_key(first.player.as_str()),
+                stalls_in_prefetch
+            );
+            assert!(Arc::ptr_eq(&configs.lock().await.entries[ID].0, &first));
+        }
+    }
+
+    #[tokio::test]
+    async fn early_reservation_and_cleanup_never_wait_on_config_or_remove_newer_cooldown() {
+        let first = Arc::new(cfg());
+        let configs = cache_with(first.clone());
+        let held = configs.lock().await;
+        assert!(reserve_early_refresh(&configs, ID, &first).is_none());
+        drop(held);
+        assert!(reserve_early_refresh(&configs, ID, &first).is_some());
+        assert!(reserve_early_refresh(&configs, ID, &first).is_none());
+        let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+        let own = Instant::now();
+        let newer = own + Duration::from_millis(1);
+        compiled
+            .lock()
+            .await
+            .failed
+            .insert(first.player.to_string(), newer);
+        clear_abandoned_preparation(&compiled, &first.player, own).await;
+        assert_eq!(compiled.lock().await.failed[first.player.as_str()], newer);
+        clear_abandoned_preparation(&compiled, &first.player, newer).await;
+        assert!(
+            !compiled
+                .lock()
+                .await
+                .failed
+                .contains_key(first.player.as_str())
+        );
+    }
+
+    #[tokio::test]
+    async fn rejected_watch_never_notifies_early_sabr_or_admits_a_replacement() {
+        let signal = early_signal(&source_fixture("first"), Duration::from_secs(1));
+        let (admit, admission) = tokio::sync::oneshot::channel();
+        let (early, notice) = tokio::sync::oneshot::channel();
+        let (received, response_received) = tokio::sync::oneshot::channel();
+        let request = async {
+            received.send(()).unwrap();
+            Err(fail("SABR_ONLY"))
+        };
+        let work = admitted_preview(Some(admission), request, Some(early), signal);
+        let reject = async {
+            response_received.await.unwrap();
+            drop(admit);
+        };
+        let (result, _) = tokio::join!(work, reject);
+        assert!(matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_ADMISSION"));
+        assert!(notice.await.is_err());
+    }
+
+    #[tokio::test]
+    async fn inherited_wall_deadline_covers_compiled_lock_and_ordinary_refresh_lock_and_fetch() {
+        let http = local_http();
+        let config = cfg();
+        let held = COMPILED.lock().await;
+        let result = prepare_request(
+            &http,
+            &config,
+            None,
+            None,
+            None,
+            None,
+            Some(Instant::now() + Duration::from_millis(20)),
+        )
+        .await;
+        assert!(
+            matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_DECODER_PREPARE")
+        );
+        drop(held);
+        for hold_lock in [false, true] {
+            let mut first = ready(Arc::new(cfg()), 20700);
+            first.deadline = Some(Instant::now() + Duration::from_millis(20));
+            let cache = cache_with(first.config.clone());
+            let held = if hold_lock {
+                Some(cache.lock().await)
+            } else {
+                None
+            };
+            let fetched = AtomicU64::new(0);
+            let result = refresh_ready(&cache, ID, &first, |_| async {
+                fetched.fetch_add(1, Ordering::SeqCst);
+                std::future::pending::<Result<Ready, Error>>().await
+            })
+            .await;
+            drop(held);
+            assert!(
+                matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_DECODER_PREPARE")
+            );
+            assert_eq!(fetched.load(Ordering::SeqCst), u64::from(!hold_lock));
+            assert!(Arc::ptr_eq(
+                &cache.lock().await.entries[ID].0,
+                &first.config
+            ));
+        }
+    }
     async fn fetch_local_ready(
         http: &reqwest::Client,
         url: &str,

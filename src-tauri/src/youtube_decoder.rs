@@ -6,8 +6,8 @@
 
 use rquickjs::{Context, Ctx, Function, Object, Runtime, Value};
 use std::sync::{
-    Arc, LazyLock,
     atomic::{AtomicBool, Ordering},
+    Arc, LazyLock,
 };
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
@@ -17,6 +17,7 @@ const MAX_SOURCE: usize = 5 * 1024 * 1024;
 const MAX_SCRIPT: usize = 2 * 1024 * 1024;
 const MAX_VALUE: usize = 4096;
 const STACK_BYTES: usize = 512 * 1024;
+pub(crate) const PREPARE_TIMEOUT: Duration = Duration::from_secs(12);
 static WORKER: LazyLock<Arc<Semaphore>> = LazyLock::new(|| Arc::new(Semaphore::new(1)));
 
 #[derive(Clone)]
@@ -50,7 +51,7 @@ const PREPARE: Limits = Limits {
     // The real player takes several seconds to analyze. Its compact AST and
     // runtime are transient and globally limited to one VM.
     bytes: 192 * 1024 * 1024,
-    time: Duration::from_secs(12),
+    time: PREPARE_TIMEOUT,
 };
 const DECODE: Limits = Limits {
     bytes: 32 * 1024 * 1024,
@@ -131,15 +132,35 @@ where
     T: Send + 'static,
     F: for<'js> FnOnce(Ctx<'js>, Object<'js>) -> Result<T, String> + Send + 'static,
 {
+    execute_until(gate, limits, Instant::now() + limits.time, work).await
+}
+
+async fn execute_until<T, F>(
+    gate: Arc<Semaphore>,
+    limits: Limits,
+    deadline: Instant,
+    work: F,
+) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: for<'js> FnOnce(Ctx<'js>, Object<'js>) -> Result<T, String> + Send + 'static,
+{
     // The queue is included in the deadline; callers cannot create an unbounded
     // series of expensive workers. A dropped future also interrupts a started VM.
-    let deadline = Instant::now() + limits.time;
+    // A replacement may inherit less time, but can never extend the engine cap.
+    let deadline = deadline.min(Instant::now() + limits.time);
+    if Instant::now() >= deadline {
+        return Err(error("TIMEOUT"));
+    }
     let cancelled = Arc::new(AtomicBool::new(false));
     let _cancel = CancelOnDrop(cancelled.clone());
-    let permit = tokio::time::timeout(limits.time, gate.acquire_owned())
-        .await
-        .map_err(|_| error("TIMEOUT"))?
-        .map_err(|_| error("WORKER"))?;
+    let permit = tokio::time::timeout(
+        deadline.saturating_duration_since(Instant::now()),
+        gate.acquire_owned(),
+    )
+    .await
+    .map_err(|_| error("TIMEOUT"))?
+    .map_err(|_| error("WORKER"))?;
     let worker_cancel = cancelled.clone();
     let mut worker = tokio::task::spawn_blocking(move || {
         // spawn_blocking cannot be forcibly aborted. Retain admission until the
@@ -245,11 +266,21 @@ fn read_token(
     Ok(Some(value))
 }
 
+#[cfg(test)]
 pub async fn prepare(source: String) -> Result<PreparedDecoder, String> {
+    prepare_until(source, Instant::now() + PREPARE_TIMEOUT).await
+}
+
+/// A discarded provisional analysis and its replacement share the original
+/// deadline, including queue time and the first runtime's actual cancellation.
+pub(crate) async fn prepare_until(
+    source: String,
+    deadline: Instant,
+) -> Result<PreparedDecoder, String> {
     if source.is_empty() || source.len() > MAX_SOURCE {
         return Err(error("INPUT"));
     }
-    execute(WORKER.clone(), PREPARE, move |ctx, api| {
+    execute_until(WORKER.clone(), PREPARE, deadline, move |ctx, api| {
         let function: Function = api.get("prepare").map_err(js_error)?;
         // The complete player is a string argument to the AST analyzer, never eval.
         read_prepared(
@@ -463,6 +494,53 @@ mod tests {
             .unwrap();
         drop(permit);
         assert_eq!(gate.available_permits(), 1);
+    }
+
+    #[tokio::test]
+    async fn replacing_cancelled_analysis_inherits_the_original_deadline() {
+        let gate = gate();
+        let limits = Limits {
+            time: Duration::from_millis(1500),
+            ..DECODE
+        };
+        let started_at = Instant::now();
+        let deadline = started_at + Duration::from_millis(300);
+        let (started, active) = tokio::sync::oneshot::channel();
+        let first = tokio::spawn(execute_until(
+            gate.clone(),
+            limits,
+            deadline,
+            move |ctx, _| {
+                let _ = started.send(());
+                ctx.eval::<(), _>("for (;;) {}").map_err(js_error)
+            },
+        ));
+        active.await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        first.abort();
+        assert!(first.await.unwrap_err().is_cancelled());
+        let second = execute_until(gate.clone(), limits, deadline, |ctx, _| {
+            ctx.eval::<(), _>("for (;;) {}").map_err(js_error)
+        })
+        .await;
+        assert_eq!(second.unwrap_err(), error("TIMEOUT"));
+        // A reset to the 1500 ms job allowance would exceed this by a wide margin.
+        assert!(started_at.elapsed() < Duration::from_millis(1000));
+        let permit = tokio::time::timeout(Duration::from_secs(1), gate.acquire())
+            .await
+            .unwrap()
+            .unwrap();
+        drop(permit);
+        assert_eq!(gate.available_permits(), 1);
+        let invoked = Arc::new(AtomicBool::new(false));
+        let witness = invoked.clone();
+        let expired: Result<(), String> = execute_until(gate, limits, deadline, move |_, _| {
+            witness.store(true, Ordering::Relaxed);
+            Ok(())
+        })
+        .await;
+        assert_eq!(expired.unwrap_err(), error("TIMEOUT"));
+        assert!(!invoked.load(Ordering::Relaxed));
     }
 
     #[tokio::test]
