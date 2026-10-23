@@ -55,7 +55,28 @@ export function validateDownloadedAudio(url: string, signal: AbortSignal, expect
 }
 
 const AUDIO_MIME = /^audio\/(?:mpeg|mp3|mp4|aac|ogg|flac|wav|wave|webm|x-(?:mpeg|m4a|flac|wav))$/
-function externalDownload(source: Playable, track: LibTrack, scope: URL): { url: string; size: number; duration: number; sha256?: string; mime?: string; identity?: PlayableSource } {
+interface DownloadFile { url: string; size: number; duration: number; sha256?: string; mime?: string; identity?: PlayableSource }
+function p1Download(source: Playable): DownloadFile {
+  const identity = source.source, permission = identity?.download
+  if (permission?.allowed !== true) throw new Error('Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión.')
+  const size = permission.contentLength, duration = permission.duration
+  let url: URL
+  try { url = new URL(source.url) } catch { throw new Error('La dirección del audio de YouTube no es válida.') }
+  const declared = url.searchParams.getAll('clen')
+  if (identity?.provider !== 'youtube-p1' || !/^[A-Za-z0-9_-]{11}$/.test(source.videoId) || identity.id !== source.videoId ||
+    url.protocol !== 'https:' || url.username || url.password || url.port || url.hash ||
+    !(url.hostname === 'googlevideo.com' || url.hostname.endsWith('.googlevideo.com')) ||
+    !Number.isSafeInteger(size) || size! <= 0 || size! > MAX_DOWNLOAD_BYTES ||
+    typeof duration !== 'number' || !Number.isFinite(duration) || duration <= 0 || duration > 86400 ||
+    declared.length > 1 || declared.length === 1 && (!/^\d{1,10}$/.test(declared[0]) || Number(declared[0]) !== size)) {
+    throw new Error('Esta fuente no aporta un tamaño y una duración válidos para comprobar la descarga completa.')
+  }
+  // An opaque Googlevideo response cannot expose its size or hash. Its declared
+  // size is a quota estimate; only completed caching and local media validation
+  // authorize commit. No P1 locator or verified-source identity is persisted.
+  return { url: source.url, size: size!, duration }
+}
+function externalDownload(source: Playable, track: LibTrack, scope: URL): DownloadFile {
   const identity = source.source, permission = identity?.download
   if (permission?.allowed !== true) throw new Error('Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión.')
   if (identity && ['verified', 'archive', 'funkwhale'].includes(identity.provider)) {
@@ -123,7 +144,17 @@ export function createDownloadManager(options: Options = {}) {
       controller.signal.addEventListener('abort', abort, { once: true })
       pending.then(resolve, reject).finally(() => controller.signal.removeEventListener('abort', abort))
     })
-    const timer = setTimeout(() => controller.abort(new DOMException('La descarga tardó demasiado. Vuelve a intentarlo.', 'TimeoutError')), options.timeout ?? 90000)
+    const startedAt = performance.now()
+    const timedOut = () => controller.abort(new DOMException('La descarga tardó demasiado. Vuelve a intentarlo.', 'TimeoutError'))
+    let timer = setTimeout(timedOut, options.timeout ?? 90000)
+    const p1Budget = (duration: number) => {
+      if (options.timeout !== undefined) return
+      // Some P1 CDNs pace a complete response near playback speed. All transfer
+      // attempts still share one bounded job deadline; renewal never restarts it.
+      const budget = Math.max(90000, Math.min(600000, duration * 1000 + 30000))
+      clearTimeout(timer)
+      timer = setTimeout(timedOut, Math.max(0, budget - (performance.now() - startedAt)))
+    }
     let stage: string | undefined, committed = false
     let cache: Cache | undefined
     try {
@@ -137,9 +168,11 @@ export function createDownloadManager(options: Options = {}) {
           isrc: track.isrc, titleVersion: track.titleVersion }, refresh))
         check()
         if (source.local || !source.videoId && !source.source) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
-        // resolve(refresh) ya renueva el stream; se consulta aquí esa misma selección y tamaño.
-        const external = Boolean(source.source)
-        const details = external ? externalDownload(source, track, store.scope) : await wait(info(source.videoId))
+        // P1 must retain its already-probed encoding; legacy YouTube can read
+        // the selected stream's details from its existing RAM cache.
+        const p1 = source.source?.provider === 'youtube-p1', external = Boolean(source.source) && !p1
+        const details = p1 ? p1Download(source) : external ? externalDownload(source, track, store.scope) : await wait(info(source.videoId))
+        if (p1) p1Budget(details.duration!)
         check()
         let size = 'size' in details ? details.size : details.contentLength ?? 0
         if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
@@ -155,6 +188,10 @@ export function createDownloadManager(options: Options = {}) {
             ...(external ? { referrerPolicy: 'no-referrer' as const } : {}), signal: controller.signal }))
           check()
           if (response.type !== 'opaque' && !response.ok) throw new Error('No se pudo descargar el audio. Vuelve a intentarlo.')
+          if (p1 && response.type !== 'opaque' && (response.status !== 200 || response.headers.has('content-range'))) {
+            void response.body?.cancel().catch(() => {})
+            throw new Error('La fuente no entregó un archivo de audio completo que se pueda descargar.')
+          }
           let cachedResponse = response, actualBytes = 0, bodyComplete = false
           if (external) {
             const rejectBody = (message: string): never => { void response.body?.cancel().catch(() => {}); throw new Error(message) }
@@ -213,7 +250,7 @@ export function createDownloadManager(options: Options = {}) {
               if (actualHash !== details.sha256) throw new Error('La copia descargada no coincide con el audio verificado.')
             }
           }
-          await wait(validate(attemptStage, controller.signal, external ? details.duration ?? undefined : undefined))
+          await wait(validate(attemptStage, controller.signal, external || p1 ? details.duration ?? undefined : undefined))
           check()
         } catch (error) {
           check()

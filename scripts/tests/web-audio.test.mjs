@@ -91,7 +91,7 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
       return typeof podcastEpisode === 'function' ? podcastEpisode(episodeId) : podcastEpisode
     },
   }
-  const downloads = { readDownloadedPlayable: async () => downloaded, removeDownloadedTrack: async (trackId) => { downloaded = null; removedDownloads.push(trackId) } }
+  const downloads = { MAX_DOWNLOAD_BYTES: 256 * 1024 ** 2, readDownloadedPlayable: async () => downloaded, removeDownloadedTrack: async (trackId) => { downloaded = null; removedDownloads.push(trackId) } }
   const podcasts = {}
   const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
   new Function('exports', 'require', podcastCode)(podcasts, dependency)
@@ -488,6 +488,33 @@ test('P1 keeps the same music and episode identity without offering unverified o
   assert.equal(result.videoId, id)
   assert.deepEqual(result.source, song.source)
   assert.deepEqual(episode.writes, [], 'An episode never becomes a musical source association')
+})
+
+test('P1 exposes only same-format declared size and duration for locally validated opaque downloads', async () => {
+  const primary = { ...info(), transport: 'p1', contentLength: 123456 }
+  const audio = engine({ stream: async () => primary,
+    resolveFunkwhaleAudio: async () => assert.fail('a permitted P1 format needs no replacement'),
+    resolveCatalogSource: async () => assert.fail('a permitted P1 format needs no replacement') })
+  const result = await audio.resolveRemoteTrack(query)
+  assert.equal(result.videoId, primary.videoId); assert.equal(result.url, primary.url)
+  assert.deepEqual(result.source, { provider: 'youtube-p1', id, expiresAt: primary.expiresAt,
+    download: { allowed: true, contentLength: primary.contentLength, duration: primary.duration } })
+  assert.equal(Object.hasOwn(result.source.download, 'sha256'), false)
+  assert.equal(Object.hasOwn(result.source.download, 'mime'), false)
+})
+
+test('missing or invalid P1 download metadata retains the exact-download rescue policy', async () => {
+  for (const patch of [{ contentLength: undefined }, { contentLength: 0 }, { contentLength: -1 }, { contentLength: 1.5 },
+    { contentLength: 256 * 1024 ** 2 + 1 }, { duration: null }, { duration: 0 }, { duration: NaN }, { duration: Infinity }, { duration: 86401 }]) {
+    const primary = { ...info(), transport: 'p1', contentLength: 123456, ...patch }, seen = []
+    const permitted = exactDownload('funkwhale', true)
+    const audio = engine({ stream: async () => primary,
+      resolveFunkwhaleAudio: async () => { seen.push('funkwhale'); return permitted } })
+    assert.deepEqual(await audio.resolveRemoteTrack(query), permitted)
+    assert.deepEqual(seen, ['funkwhale'])
+    const playback = await engine({ stream: async () => primary }).resolveTrack(query)
+    assert.deepEqual(playback.source.download, { allowed: false })
+  }
 })
 const playerFixture = (videoId = id) => ({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: 'Airbag', author: 'Radiohead', lengthSeconds: '287' },
   streamingData: { adaptiveFormats: [{ mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 128000, url: `https://r1.googlevideo.com/audio?expire=${Math.floor(Date.now() / 1000) + 3600}` }] } })

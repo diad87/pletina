@@ -15,6 +15,8 @@ class Downloads {
   done = new SvelteSet<number>()
   /** En cola o descargándose: id → progreso de 0 a 1. */
   active = new SvelteMap<number, number>()
+  /** Transferencias iniciadas, incluso si el navegador no expone sus bytes. */
+  transferring = new SvelteSet<number>()
   /** Canciones de la cola actual, para mostrar título y carátula. */
   queued = new SvelteMap<number, QueueItem>()
   /** Sube al terminar o quitar descargas; la vista de descargas lo lee para recargarse. */
@@ -172,8 +174,13 @@ class Downloads {
     if (p.state === 'queued' || p.state === 'downloading') {
       this.queueIssue = null
       this.active.set(id, p.progress)
-      if (p.state === 'downloading') this.waitingForNetwork = false
-      else if (p.error) this.waitingForNetwork = true
+      if (p.state === 'downloading') {
+        this.transferring.add(id)
+        this.waitingForNetwork = false
+      } else {
+        this.transferring.delete(id)
+        if (p.error) this.waitingForNetwork = true
+      }
       return
     }
     this.#terminal.add(id)
@@ -195,6 +202,7 @@ class Downloads {
   #forget(id: number) {
     this.#change(id)
     this.active.delete(id)
+    this.transferring.delete(id)
     this.queued.delete(id)
   }
 

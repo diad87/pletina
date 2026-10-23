@@ -96,7 +96,7 @@
             <span class="sub">{item.track.artist.name}</span>
           </span>
           <span class="bar"><span style:width="{Math.round(p * 100)}%"></span></span>
-          <span class="pct">{p > 0 ? `${Math.round(p * 100)} %` : 'En cola'}</span>
+          <span class="pct">{p > 0 ? `${Math.round(p * 100)} %` : api.inPwa && downloads.transferring.has(item.track.id) ? 'En curso' : 'En cola'}</span>
         </li>
       {/each}
     </ul>

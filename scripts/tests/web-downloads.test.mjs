@@ -15,6 +15,24 @@ new Function('exports', ts.transpileModule(await readFile(new URL('../../web-por
 }).outputText)(ownershipApi)
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve() }
+function downloadClock() {
+  const timers = new Map()
+  let now = 1792390000000, sequence = 0
+  return { Date: { now: () => now }, performance: { now: () => now },
+    setTimeout(fn, delay) { const id = ++sequence; timers.set(id, { at: now + delay, fn }); return id },
+    clearTimeout(id) { timers.delete(id) },
+    async advance(ms) {
+      const until = now + ms
+      for (;;) {
+        await flush()
+        const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0]
+        if (!next || next[1].at > until) break
+        now = Math.max(now, next[1].at); timers.delete(next[0]); next[1].fn()
+      }
+      now = until; await flush()
+    },
+  }
+}
 const song = (id = 1, extra = {}) => ({ id, title: `Canción ${id}`, duration: 120, explicit: false,
   artistId: 10, artistName: 'Artista', albumId: 20, albumTitle: 'Álbum', albumArtistId: 10, cover: 'https://images.example/cover.jpg', ...extra })
 const scope = 'https://app.example/pletina/'
@@ -27,6 +45,7 @@ function setup(t, options = {}) {
     async put(key, value) {
       if (options.consumeBody) value = new Response(await value.arrayBuffer(), { status: value.status, headers: value.headers })
       rows.set(key, value); if (options.putError) throw options.putError
+      if (options.putGate) await options.putGate(key)
     },
     async match(key) { const value = rows.get(key); return value?.clone ? value.clone() : value },
     async delete(key) { if (options.deleteError) throw options.deleteError; return rows.delete(typeof key === 'string' ? key : key.url) },
@@ -37,13 +56,14 @@ function setup(t, options = {}) {
   const store = createDownloadStore({ indexedDB: factory, name, scope, caches })
   t.after(() => store.close())
   const exports = {}
-  new Function('exports', 'require', 'Audio', code)(exports, (path) => path === './download-store' ? storeModule
+  new Function('exports', 'require', 'Audio', 'setTimeout', 'clearTimeout', 'Date', 'performance', code)(exports, (path) => path === './download-store' ? storeModule
     : path === './audio' ? { resolveRemoteTrack() { assert.fail('uninjected resolver') } }
     : path === './download-queue' ? { defaultDownloadQueueJournal: () => journal }
     : path === './download-ownership' ? { defaultDownloadOwnership: () => ({ acquire: async () => {}, assertOwned() {} }) }
-    : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path), options.Audio ?? globalThis.Audio)
+    : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path), options.Audio ?? globalThis.Audio,
+    options.clock?.setTimeout ?? setTimeout, options.clock?.clearTimeout ?? clearTimeout, options.clock?.Date ?? Date, options.clock?.performance ?? performance)
   const manager = exports.createDownloadManager({
-    store, caches, journal, online: options.online ?? (() => true), emit: (value) => events.push(value), timeout: options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
+    store, caches, journal, online: options.online ?? (() => true), emit: (value) => events.push(value), timeout: options.useDefaultTimeout ? undefined : options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
     ...(options.ownership ? { ownership: options.ownership } : {}),
     resolve: options.resolve ?? (async (query) => { sources.push(query.id); return { videoId: '9RfVp-GhKfs', local: false, url: 'https://r1.googlevideo.com/audio?signature=SECRET' } }),
     stream: options.stream ?? (async () => ({ videoId: '9RfVp-GhKfs', url: 'https://r1.googlevideo.com/audio?signature=SECRET', contentLength: options.size ?? 1234 })),
@@ -408,6 +428,161 @@ const externalPlayable = (download = {}, identity = {}, extra = {}) => ({ videoI
   url: 'https://api.audius.co/v1/tracks/daMWzaJ/stream', title: 'Canción 1', channel: 'Artista',
   source: { provider: 'audius', id: 'daMWzaJ', download: { allowed: true, duration: 120, ...download }, ...identity }, ...extra })
 const audioResponse = (body = 'complete audio bytes', headers = {}) => new Response(body, { headers: { 'content-type': 'audio/mpeg', ...headers } })
+const p1Playable = (download = {}, extra = {}) => ({ videoId: '9RfVp-GhKfs', local: false,
+  url: 'https://r1.googlevideo.com/videoplayback?itag=140&clen=1234&sig=FIXTURE', title: 'Canción 1', channel: 'Artista',
+  source: { provider: 'youtube-p1', id: '9RfVp-GhKfs', download: { allowed: true, contentLength: 1234, duration: 120, ...download } }, ...extra })
+// A pipeline fixture, not evidence about real opaque media. The live browser
+// gate separately checks actual CacheStorage/HTMLAudio with the network off.
+const opaqueResponse = () => ({ type: 'opaque', status: 0, clone() { return this },
+  arrayBuffer() { assert.fail('opaque bytes cannot be counted or hashed') } })
+
+test('P1 uses its selected locator, waits for complete cache.put, then validates duration and tail before a metadata-only commit', async t => {
+  const entered = deferred(), gate = deferred(), source = p1Playable(), order = []
+  const h = setup(t, { resolve: async () => source, stream: async () => assert.fail('must not resolve a second P1 format'),
+    fetch: async (url, init) => { assert.equal(url, source.url); assert.equal(init.mode, 'no-cors'); assert.equal(init.credentials, 'omit'); order.push('fetch'); return opaqueResponse() },
+    putGate: async () => { order.push('cache-body'); entered.resolve(); await gate.promise; order.push('cache-complete') },
+    validate: async (url, _signal, expected) => { order.push('validate'); assert.equal(expected, 120); assert.equal(new URL(url).origin, new URL(scope).origin); assert.ok(new URL(url).searchParams.has('stage')); assert.equal(await h.store.get(1), null) },
+  })
+  await h.enqueueDownloads([song()])
+  await Promise.race([entered.promise, h.idle().then(() => assert.fail('P1 must reach the opaque body transfer'))])
+  assert.deepEqual(order, ['fetch', 'cache-body']); assert.equal(await h.store.get(1), null)
+  assert.ok(!h.events.some(value => value.state === 'done'))
+  gate.resolve(); await h.idle()
+  assert.deepEqual(order, ['fetch', 'cache-body', 'cache-complete', 'validate'])
+  const row = await h.store.get(1)
+  assert.equal(row.size, 1234, 'opaque size is declared metadata, not an observed byte count')
+  assert.equal(Object.hasOwn(row, 'source'), false)
+  assert.doesNotMatch(JSON.stringify(row), /youtube-p1|googlevideo|FIXTURE|sha256/)
+  assert.equal(h.events.filter(value => value.state === 'done').length, 1)
+  await h.store.close()
+  const reopened = createDownloadStore({ indexedDB: h.factory, name: h.name, scope, caches: h.caches })
+  t.after(() => reopened.close())
+  assert.equal((await reopened.readDownloadedPlayable(1)).local, true)
+  assert.equal(Object.hasOwn(await reopened.get(1), 'source'), false)
+})
+
+test('P1 requires a consistent permitted same-ID Googlevideo locator with bounded duration and declared size before fetching', async t => {
+  const good = p1Playable(), bad = [
+    ...[{ allowed: false }, { contentLength: undefined }, { contentLength: 0 }, { contentLength: 1.5 },
+      { contentLength: MAX_DOWNLOAD_BYTES + 1 }, { duration: undefined }, { duration: 0 }, { duration: Infinity }, { duration: 86401 },
+      { contentLength: 1235 }].map(patch => p1Playable(patch)),
+    ...['http://r1.googlevideo.com/file', 'https://googlevideo.com.evil.test/file', 'https://user@r1.googlevideo.com/file',
+      'https://r1.googlevideo.com:8443/file', good.url + '#fragment', good.url + '&clen=1234',
+      'blob:https://app.example/file'].map(url => ({ ...good, url })),
+    { ...good, source: { ...good.source, id: 'aaaaaaaaaaa' } }, { ...good, videoId: '' },
+  ]
+  for (const source of bad) {
+    const h = setup(t, { resolve: async () => source,
+      stream: async () => assert.fail('invalid permission cannot switch formats'), fetch: async () => assert.fail('invalid permission must not fetch') })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), []); assert.ok(!h.events.some(value => value.state === 'done'))
+    assert.ok(h.events.some(value => value.state === 'error'))
+  }
+})
+
+test('P1 validation rejection rolls back every body and renews only the same selected identity once', async t => {
+  const resolutions = [], stages = []
+  const h = setup(t, { resolve: async (_track, refresh) => { resolutions.push(refresh); return p1Playable() },
+    stream: async () => assert.fail('P1 retries use the renewed selected Playable'), fetch: async () => opaqueResponse(),
+    validate: async (url, _signal, expected) => { assert.equal(expected, 120); stages.push(url); throw new Error('No decodable tail') } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.deepEqual(resolutions, [false, true]); assert.equal(stages.length, 2); assert.notEqual(stages[0], stages[1])
+  assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), []); assert.ok(!h.events.some(value => value.state === 'done'))
+})
+
+test('P1 transfer retry uses the renewed same-format URL and preserves legacy two-argument YouTube validation', async t => {
+  const resolutions = [], fetched = [], duration = []
+  const h = setup(t, { resolve: async (_track, refresh) => { resolutions.push(refresh); const value = p1Playable(); return { ...value, url: value.url + '&generation=' + Number(refresh) } },
+    stream: async () => assert.fail('must not look up a different format'),
+    fetch: async url => { fetched.push(new URL(url).searchParams.get('generation')); if (fetched.length === 1) throw new TypeError('Transfer interrupted'); return opaqueResponse() },
+    validate: async (_url, _signal, expected) => { duration.push(expected) } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.deepEqual(resolutions, [false, true]); assert.deepEqual(fetched, ['0', '1']); assert.deepEqual(duration, [120])
+  assert.equal(h.events.filter(value => value.state === 'done').length, 1)
+  let legacyDuration = 'not invoked'
+  const legacy = setup(t, { validate: async (_url, _signal, expected) => { legacyDuration = expected } })
+  await legacy.enqueueDownloads([song()]); await legacy.idle()
+  assert.equal(legacyDuration, undefined)
+})
+
+test('removing a P1 job during a pending cache body cannot commit late audio or leave a stage', async t => {
+  const entered = deferred(), gate = deferred()
+  const h = setup(t, { resolve: async () => p1Playable(), fetch: async () => opaqueResponse(),
+    putGate: async () => { entered.resolve(); await gate.promise }, validate: async () => assert.fail('a removed body must never be validated') })
+  await h.enqueueDownloads([song()])
+  await Promise.race([entered.promise, h.idle().then(() => assert.fail('P1 must start the selected transfer'))])
+  await h.removeDownloads([1]); gate.resolve(); await h.idle()
+  assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), []); assert.ok(!h.events.some(value => value.state === 'done'))
+})
+
+test('a readable partial P1 response cannot become an opaque full-file success', async t => {
+  for (const response of [new Response('part', { status: 206 }), new Response('part', { headers: { 'content-range': 'bytes 0-3/1234' } })]) {
+    const h = setup(t, { resolve: async () => p1Playable(), fetch: async () => response.clone(),
+      validate: async () => assert.fail('known partial responses must be rejected before validation') })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(h.rows.size, 0); assert.deepEqual(await h.store.list(), []); assert.ok(!h.events.some(value => value.state === 'done'))
+  }
+})
+
+test('a longer P1 transfer can finish after ninety seconds within its duration-based total budget', async t => {
+  const clock = downloadClock(), entered = deferred(), body = deferred()
+  let signal
+  const h = setup(t, { clock, useDefaultTimeout: true, resolve: async () => p1Playable({ duration: 180 }),
+    fetch: async (_url, init) => { signal = init.signal; entered.resolve(); return body.promise } })
+  await h.enqueueDownloads([song()]); await entered.promise
+  await clock.advance(90001)
+  assert.equal(signal.aborted, false, 'a full P1 body may need longer than the legacy ninety-second budget')
+  body.resolve(opaqueResponse()); await h.idle()
+  assert.equal(h.events.filter(value => value.state === 'done').length, 1)
+})
+
+test('P1 retries share the original job deadline instead of restarting a duration-based budget', async t => {
+  const clock = downloadClock(), entered = deferred(), retrying = deferred(), firstBody = deferred(), secondBody = deferred()
+  let transfers = 0, signal
+  const h = setup(t, { clock, useDefaultTimeout: true, resolve: async () => p1Playable({ duration: 120 }),
+    fetch: async (_url, init) => {
+      signal = init.signal
+      if (++transfers === 1) { entered.resolve(); return firstBody.promise }
+      retrying.resolve(); return secondBody.promise
+    } })
+  await h.enqueueDownloads([song()]); await entered.promise
+  await clock.advance(119000); assert.equal(signal.aborted, false)
+  firstBody.reject(new TypeError('Transfer interrupted'))
+  await flush(); await clock.advance(0); await retrying.promise
+  await clock.advance(31000)
+  assert.equal(signal.aborted, true, '120 seconds plus 30 seconds is measured from the job start, not attempt two')
+  await h.idle(); secondBody.resolve(opaqueResponse())
+  assert.equal(transfers, 2); assert.deepEqual(h.readJournal().map(value => value.id), [1])
+  assert.ok(!h.events.some(value => value.state === 'done')); assert.equal(h.rows.size, 0)
+})
+
+test('the P1 adaptive budget is capped at ten minutes and keeps interrupted work in its durable FIFO', async t => {
+  const clock = downloadClock(), entered = deferred(), body = deferred()
+  let signal
+  const h = setup(t, { clock, useDefaultTimeout: true, resolve: async () => p1Playable({ duration: 3600 }),
+    fetch: async (_url, init) => { signal = init.signal; entered.resolve(); return body.promise } })
+  await h.enqueueDownloads([song()]); await entered.promise
+  await clock.advance(599999); assert.equal(signal.aborted, false)
+  await clock.advance(1); assert.equal(signal.aborted, true)
+  await h.idle(); body.resolve(opaqueResponse())
+  assert.deepEqual(h.readJournal().map(value => value.id), [1]); assert.equal(h.rows.size, 0)
+  assert.ok(!h.events.some(value => value.state === 'done'))
+})
+
+test('an explicit download timeout wins over P1 duration while legacy YouTube keeps ninety seconds', async t => {
+  for (const legacy of [false, true]) {
+    const clock = downloadClock(), entered = deferred(), body = deferred(), timeout = legacy ? 90000 : 1234
+    let signal
+    const h = setup(t, { clock, ...(legacy ? { useDefaultTimeout: true } : { timeout }),
+      ...(legacy ? {} : { resolve: async () => p1Playable({ duration: 3600 }) }),
+      fetch: async (_url, init) => { signal = init.signal; entered.resolve(); return body.promise } })
+    await h.enqueueDownloads([song()]); await entered.promise
+    await clock.advance(timeout - 1); assert.equal(signal.aborted, false)
+    await clock.advance(1); assert.equal(signal.aborted, true)
+    await h.idle(); body.resolve(opaqueResponse())
+    assert.ok(!h.events.some(value => value.state === 'done')); assert.equal(h.rows.size, 0)
+  }
+})
 
 test('external permitted audio uses CORS, preserves ISRC/version and never asks YouTube for its stream', async t => {
   let query, validatedDuration, requests = 0

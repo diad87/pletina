@@ -80,6 +80,27 @@ test('CORE-DL-010: initial persisted downloads remain available offline', async 
   assert.equal(h.calls.length, 0)
 })
 
+test('PWA-DL: an opaque transfer with unknown byte progress stays distinct from a queued job', async () => {
+  const h = downloadsHarness({ inPwa: true })
+  await h.downloads.init([])
+  h.downloads.start([item(1)])
+  h.emit(1, 'queued')
+  assert.equal(h.downloads.transferring.has(1), false)
+  h.emit(1, 'downloading')
+  assert.equal(h.downloads.active.get(1), 0, 'Do not invent a byte percentage')
+  assert.equal(h.downloads.transferring.has(1), true)
+  h.emit(1, 'queued', 0, 'La conexión se ha interrumpido.')
+  assert.equal(h.downloads.transferring.has(1), false)
+  assert.equal(h.downloads.waitingForNetwork, true)
+  h.emit(1, 'downloading')
+  assert.equal(h.downloads.transferring.has(1), true)
+  h.emit(1, 'done', 1)
+  assert.equal(h.downloads.transferring.has(1), false)
+  assert.equal(h.downloads.done.has(1), true)
+  h.emit(1, 'downloading')
+  assert.equal(h.downloads.transferring.has(1), false, 'Late progress cannot revive a finished transfer')
+})
+
 test('PWA-DL: startup restores pending rows before progress and attaches its listener only once', async () => {
   const rows = [{ id: 3, title: 'Pending three' }, { id: 4, title: 'Already downloaded' }]
   const h = downloadsHarness({ inPwa: true, pendingWebDownloads: async () => rows })
