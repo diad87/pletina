@@ -147,8 +147,14 @@ export function parseDuration(value: unknown): number | null {
 }
 
 export function parseMusicResults(response: unknown): Candidate[] {
-  const tabs = list(at(response, 'contents', 'tabbedSearchResultsRenderer', 'tabs'))
-  const sections = at(tabs[0], 'tabRenderer', 'content', 'sectionListRenderer', 'contents')
+  const root = object(response)
+  if (root.error != null || list(root.alerts).some(alert => at(alert, 'alertRenderer', 'type') === 'ERROR')) {
+    throw new YouTubeError('YouTube Music devolvió un error al buscar canciones.', 'response')
+  }
+  const tabs = at(response, 'contents', 'tabbedSearchResultsRenderer', 'tabs')
+  const tabbed = at(list(tabs)[0], 'tabRenderer', 'content', 'sectionListRenderer', 'contents')
+  const flat = at(response, 'contents', 'sectionListRenderer', 'contents')
+  const sections = Array.isArray(tabbed) ? tabbed : Array.isArray(flat) ? flat : Array.isArray(tabs) && tabs.length === 0 ? [] : null
   if (!Array.isArray(sections)) throw new YouTubeError('No se reconoce la lista de canciones de YouTube Music.', 'response')
   const found: Candidate[] = []
   for (const item of sections.flatMap((section) => list(at(section, 'musicShelfRenderer', 'contents')))) {
@@ -242,6 +248,88 @@ async function session(videoId: string, signal?: AbortSignal): Promise<string> {
   return visitor.value
 }
 
+/** Bounded FormatXTags protobuf, matching P1's original-audio policy. No code is evaluated. */
+function audioTags(encoded: unknown): [string, string][] | null {
+  if (typeof encoded !== 'string' || !encoded || encoded.length > 4096 || !/^[A-Za-z0-9_+=/%-]+$/.test(encoded)) return null
+  try {
+    const value = new URLSearchParams(`tags=${encoded}`).get('tags') ?? ''
+    if (!/^[A-Za-z0-9_+/-]+={0,2}$/.test(value)) return null
+    const bytes = Uint8Array.from(atob(value.replaceAll('-', '+').replaceAll('_', '/')), char => char.charCodeAt(0))
+    // atob accepts nonzero trailing bits and mixed alphabets that Rust's
+    // canonical URL_SAFE_NO_PAD / URL_SAFE / STANDARD decoders reject.
+    const standard = btoa(String.fromCharCode(...bytes)), urlSafe = standard.replaceAll('+', '-').replaceAll('/', '_')
+    if (value !== standard && value !== urlSafe && value !== urlSafe.replace(/=+$/, '')) return null
+    const fields = (data: Uint8Array): { field: bigint; data: Uint8Array | null }[] => {
+      let position = 0
+      const varint = (): bigint => {
+        let result = 0n
+        for (let index = 0; index < 10; index++) {
+          if (position >= data.length) throw new Error('Truncated protobuf')
+          const byte = data[position++]
+          if (index === 9 && byte > 1) throw new Error('Oversized protobuf integer')
+          result |= BigInt(byte & 127) << BigInt(index * 7)
+          if (byte < 128) return result
+        }
+        throw new Error('Invalid protobuf integer')
+      }
+      const result: { field: bigint; data: Uint8Array | null }[] = []
+      while (position < data.length) {
+        if (result.length >= 64) throw new Error('Too many protobuf fields')
+        const tag = varint(), field = tag >> 3n, wire = Number(tag & 7n)
+        if (!field) throw new Error('Invalid protobuf field')
+        let chunk: Uint8Array | null = null
+        if (wire === 0) varint()
+        else if (wire === 1) position += 8
+        else if (wire === 5) position += 4
+        else if (wire === 2) {
+          const length = varint()
+          if (length > BigInt(data.length - position)) throw new Error('Truncated protobuf value')
+          chunk = data.subarray(position, position + Number(length)); position += Number(length)
+        } else throw new Error('Unsupported protobuf field')
+        if (position > data.length) throw new Error('Truncated protobuf field')
+        result.push({ field, data: chunk })
+      }
+      return result
+    }
+    // UTF-8 BOM is data here, as in Rust's str::from_utf8, not a marker to strip.
+    const result: [string, string][] = [], decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
+    for (const entry of fields(bytes)) {
+      if (entry.field !== 1n) continue
+      if (!entry.data) return null
+      const pair: [string | null, string | null] = [null, null]
+      for (const item of fields(entry.data)) {
+        if (item.field !== 1n && item.field !== 2n) continue
+        const target = Number(item.field - 1n)
+        if (pair[target] !== null || !item.data || !item.data.length || item.data.length > 128) return null
+        pair[target] = decoder.decode(item.data)
+      }
+      if (pair[0] === null || pair[1] === null) return null
+      result.push([pair[0], pair[1]])
+    }
+    return result
+  } catch { return null }
+}
+
+function originalAudio(format: Row, allowImplicit: boolean): boolean {
+  if (format.isDrc === true) return false
+  let content: string | null = null
+  if (format.xtags != null) {
+    const tags = audioTags(format.xtags)
+    if (!tags) return false
+    for (const [key, value] of tags) {
+      if (key === 'drc' && value === '1') return false
+      if (key === 'acont') {
+        if (content !== null && content !== value) return false
+        content = value
+      }
+    }
+  }
+  if (content !== null && content !== 'original') return false
+  const track = object(format.audioTrack), name = typeof track.displayName === 'string' ? track.displayName.toLowerCase() : ''
+  if (['dubbed', 'descriptive', 'audio description', 'secondary'].some(marker => name.includes(marker))) return false
+  return content === 'original' || name.includes('original') || allowImplicit && (typeof track.audioIsDefault === 'boolean' ? track.audioIsDefault : true)
+}
+
 export function parsePlayer(response: unknown, videoId: string, now = Date.now()): StreamInfo {
   const status = string(at(response, 'playabilityStatus', 'status'))
   if (status !== 'OK') {
@@ -250,10 +338,16 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
       : new YouTubeError('YouTube no permite reproducir este vídeo ahora.', 'restricted')
   }
   const details = object(object(response).videoDetails)
-  if (validVideoId(details.videoId) && details.videoId !== videoId) throw new YouTubeError('YouTube devolvió otro vídeo distinto.', 'response')
-  const formats = list(at(response, 'streamingData', 'adaptiveFormats')).map(object)
-    .filter((format) => string(format.mimeType).startsWith('audio/mp4') && typeof format.url === 'string' && !format.isDrc &&
-      at(format, 'audioTrack', 'audioIsDefault') !== false)
+  if (!validVideoId(videoId) || details.videoId !== videoId) throw new YouTubeError('YouTube no confirmó el vídeo solicitado o devolvió otro vídeo distinto.', 'response')
+  const available = list(at(response, 'streamingData', 'adaptiveFormats')).map(object)
+  // If any audio carries language/track metadata, default alone cannot establish
+  // originality for the other encodings. Wholly untagged responses stay valid.
+  const requireExplicit = available.some(format => string(format.mimeType).startsWith('audio/') &&
+    ['audioTrack', 'xtags', 'language', 'languageCode'].some(key => format[key] != null))
+  const formats = available
+    .filter(format => string(format.mimeType).startsWith('audio/mp4') && typeof format.url === 'string' && originalAudio(format, !requireExplicit) &&
+      (!Object.hasOwn(format, 'drmFamilies') || Array.isArray(format.drmFamilies) && format.drmFamilies.length === 0) &&
+      !Object.hasOwn(format, 'licenseInfos') && !Object.hasOwn(format, 'drmTrackType'))
     .sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0))
   let url: string | undefined
   let selected: Row | undefined
