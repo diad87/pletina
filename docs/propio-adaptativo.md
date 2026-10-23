@@ -242,3 +242,17 @@ no demuestra mejora móvil. La descarga completa inicial fue 2/3; la réplica
 diagnóstica obtuvo 3/3 idénticos y decodificables, sin borrar el primer fallo.
 No se usan Premium ni nuevos datos publicitarios para aprobar este cambio.
 El bundle nativo requiere una app nueva; no llega por OTA ni cambia la PWA.
+
+La [cuarta ronda](informe-arranque-frio-2026-10-23.md#ronda-4-anticipo-de-metadatos-y-diagnóstico-sabr),
+`3fa0237`, inicia antes el POST público de metadatos y mantiene su resultado y
+errores en cuarentena hasta verificar watch y ST. El parser y sus límites siguen
+iguales. Los diagnósticos distinguen respuestas SABR, renovación efectiva y un
+segundo análisis sin emitir URLs, firmas ni visitantes. El candidato obtiene
+6/6 Native en dos intentos por cada canción infantil; el control, 5/6. Epo pasa
+de mediana 5284,5 a 4658,5 ms, pero no se puede separar la variación de red/SABR
+de la mejora. Pupu tarda 9813 ms en una recuperación con otro JS: los 3,5 s
+siguen pendientes. Con búsqueda, dos infantiles usan Native y Pupu requiere
+Legacy tras dos SABR. Las 30 habituales conservan Native e IDs correctos,
+mediana 642,15 ms. No se promociona Oficial ni se publica una app o extractor.
+Un parser WASM seguro de 6,5–8,4 s y un ajuste GC con sólo 3,9 % en un par se
+descartan; las fuentes y evidencias del experimento quedan fuera de Git.

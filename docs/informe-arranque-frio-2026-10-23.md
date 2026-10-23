@@ -1,9 +1,11 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 3: preparación algo menor, sin mejora estable acreditada del total.**
+**Ronda 4: POST anticipado verificado, sin mejora uniforme del total ni solución universal de SABR.**
 El usuario acepta unos **600 ms como base provisional del camino habitual**;
-la nueva tanda tiene mediana 631 ms, no una cota de 600 ms por canción.
-El arranque infantil de 3,5 s y su recuperación SABR siguen pendientes.
+la última tanda tiene mediana 642 ms, no una cota de 600 ms por canción.
+El candidato inició los seis controles infantiles directos, pero una recuperación
+tardó 9,813 s y una búsqueda posterior necesitó Legacy. El arranque infantil de
+3,5 s y la fiabilidad de la ruta nativa ante SABR siguen pendientes.
 Se conserva el historial de cada ronda; no se presenta 1,25 s como requisito logrado. Continúa el
 [informe infantil](informe-contenido-infantil-2026-10-23.md), sin sustituir su historial.
 
@@ -335,3 +337,162 @@ perfiles, tokens ni respuestas completas en Git. Referencias de procedencia:
 | `round3-complete-files-diagnostic.log.local` | `1a1d052d1f4468ffd85a40537e4f24de4b670a3b1c389433c4dba921273c3a26` |
 | `round3-complete-audio-verified.json.local` | `70c579f356daf637b5e1d6d334fe5957a6971096c1dea217237ecb1760a851b2` |
 | `android-decoder-harness.local/result-20261023-124743-f92e52d7.json.local` | `03a26b274a0ab82e4ea7f3c4d6acd64b9c2469eb551251bc32b2a29a8513ffd2` |
+
+## Ronda 4: anticipo de metadatos y diagnóstico SABR
+
+El código `3fa0237fe8def0cdba6db3ffb47950f425a5989e` adelanta el POST público del
+player mientras se valida watch y se analiza el JavaScript, sólo en el camino
+frío que ya tenía un indicio de ST. La respuesta, incluso si contiene un error
+HTTP o `SABR_ONLY`, permanece retenida hasta que watch confirme estado OK, ID
+exacto, reproducción incrustada permitida y el aviso explícito made-for-kids.
+Además, el analizador completo debe confirmar el mismo ST usado en la petición.
+`isFamilySafe` no sustituye el aviso infantil. Una discrepancia descarta la
+respuesta anticipada; no permite entregar ni cachear una URL o sondear el CDN.
+
+Los aciertos de caché y los casos sin indicio mantienen su recorrido anterior.
+El rechazo de watch cancela los futuros pendientes; un POST que ya llegó al
+servidor no puede deshacerse y supone hasta una consulta pública adicional en
+ese caso. Las pruebas cubren una petición loopback iniciada antes de admitir,
+éxito y SABR retenidos, rechazo por MFK/ID/estado/embed, ST contradictorio,
+ambas órdenes de finalización y cancelación. No se modifica la recuperación
+SABR acotada ya existente ni se repite un POST con el mismo cuerpo efectivo.
+
+Se conservan identidad, audio original, descifrado y sonda estricta 206 al 80 %;
+los ocho turnos de la primera candidata comparten el mismo presupuesto CDN de
+ocho segundos, con parada ante 429 y sin ráfagas para recuperar turnos vencidos.
+La ruta incrustada sigue limitada a 30 s. El camino rápido, el respaldo Legacy,
+los límites QuickJS de 192 MiB/12 s y 32 MiB/1 s, la pila de 512 KiB y el único
+trabajador no cambian. El bundle continúa siendo `2a3f0b44…`, el de la ronda 3.
+
+El diagnóstico añade correlación por intento y conteos de formatos, URL/cipher
+y transformaciones necesarias; los cambios de configuración se expresan como
+booleanos. Sólo registra IDs públicos validados, versión/STS públicos y códigos
+cerrados: no URLs, visitantes, firmas, tokens ni errores remotos completos.
+Se calcula únicamente en el banco. Los seis candidatos de la comparación
+registran POST y respuesta anteriores a la validación de watch, y consumo
+posterior a esa validación y a la comprobación del ST. Esto verifica el orden
+del anticipo; no demuestra por sí solo una reducción del arranque.
+
+### Doce controles fríos, incluidos los fallos
+
+Índice `cold-paired-20261023-140026-433bf723-index.json.local`: dos intentos por
+canción y binario, orden alternado, proceso nuevo por fila, perfil anónimo,
+`FreshDecoder`, política CDN habitual y builds **debug**. Es resolución directa,
+sin búsqueda ni Legacy. `playing` mide el evento de Audio silenciado; después se
+comprueban avance, salto al 80 % y final tras saltar a la cola. No es escucha
+continua completa ni medición acústica. Preparación suma los decoders necesarios
+en ese intento, incluida una eventual renovación; no equivale sólo al parseo.
+
+Todos los tiempos están en milisegundos. El orden corresponde al índice local.
+
+| Orden | Canción | Versión / réplica | Preparación | Extracción | IPC → `playing` | Primer 206 CDN | Resultado |
+|---:|---|---|---:|---:|---:|---:|---|
+| 0 | Epoitaitaye | Control 1 | 4045,1 | 5504 | 5636 | Intento 1 | Inicio, salto y cola correctos |
+| 1 | Epoitaitaye | Candidato 1 | 4071,8 | 4579 | 4722 | Intento 1 | Inicio, salto y cola correctos |
+| 2 | Maite Zaitut! | Candidato 1 | 4020,4 | 4748 | 4877 | Intento 2 | Inicio, salto y cola correctos |
+| 3 | Maite Zaitut! | Control 1 | 3898,7 | — | — | No hubo sonda | Fallo nativo tras dos respuestas SABR |
+| 4 | Pupu Eta Lore | Control 1 | 3772,6 | 4252 | 4375 | Intento 1 | Inicio, salto y cola correctos |
+| 5 | Pupu Eta Lore | Candidato 1 | 4043,7 | 4596 | 4724 | Intento 1 | Inicio, salto y cola correctos |
+| 6 | Epoitaitaye | Candidato 2 | 4002,6 | 4462 | 4595 | Intento 1 | Inicio, salto y cola correctos |
+| 7 | Epoitaitaye | Control 2 | 3871,8 | 4805 | 4933 | Intento 1 | Recuperación SABR; inicio, salto y cola correctos |
+| 8 | Maite Zaitut! | Control 2 | 3781,7 | 5278 | 5406 | Intento 3 | Inicio, salto y cola correctos |
+| 9 | Maite Zaitut! | Candidato 2 | 4010,8 | 4468 | 4656 | Intento 1 | Inicio, salto y cola correctos |
+| 10 | Pupu Eta Lore | Candidato 2 | 8851,8 | 9686 | 9813 | Intento 1 | Recuperación SABR y segundo JS analizado; inicio, salto y cola correctos |
+| 11 | Pupu Eta Lore | Control 2 | 3754,8 | 4306 | 4428 | Intento 1 | Inicio, salto y cola correctos |
+
+Resultado: **control 5/6 Native; candidato 6/6 Native**. Los once éxitos fueron
+WEB_EMBEDDED_PLAYER/251, con salto de 606–623 ms y cola de 521–543 ms. Hubo
+14 sondas CDN: once éxitos 206, tres respuestas 403 y ningún 429. El fallo del
+control de Maite terminó como vídeo no disponible; el diagnóstico conserva
+`NATIVE_EMBEDDED_SABR_ONLY` antes del respaldo WEB. No se asigna cero tiempo a
+esa fila ni se sustituye por un intento posterior. Este banco no ejercita Legacy.
+
+| Canción | Control: éxitos / intentos | Control: `playing`, mediana [rango] | Candidato: éxitos / intentos | Candidato: `playing`, mediana [rango] |
+|---|---:|---:|---:|---:|
+| Epoitaitaye | 2/2 | 5284,5 [4933–5636] | 2/2 | 4658,5 [4595–4722] |
+| Maite Zaitut! | 1/2 | 5406 [un éxito] | 2/2 | 4766,5 [4656–4877] |
+| Pupu Eta Lore | 2/2 | 4401,5 [4375–4428] | 2/2 | 7268,5 [4724–9813] |
+
+Las medianas sólo incluyen éxitos y cada grupo tiene como máximo dos muestras.
+**No se atribuyen causalmente al anticipo los 626 ms de diferencia de Epo.**
+El primer control tardó 1127,7 ms en obtener embed; el segundo renovó la
+configuración tras SABR. La disponibilidad remota, esas renovaciones y la red
+también cambian entre intentos. Pupu empeora en esta muestra: la segunda
+respuesta utilizable requirió otra configuración y otro análisis de JavaScript,
+con 8851,8 ms de preparación acumulada. No se descarta ese dato como atípico ni
+se afirma una solución universal de SABR a partir de seis éxitos. Ningún inicio
+frío medido alcanza 3,5 s; tampoco se ha demostrado una mejora uniforme del total.
+
+### Camino habitual y búsqueda infantil
+
+La regresión `20261023-140339-56e863a6` conserva **30 Native, 0 Legacy y 30/30 IDs
+esperados**: mínimo 453,4, mediana **642,15** y máximo 1317,9 ms, incluida búsqueda.
+Es compatible con la base provisional de aproximadamente 600 ms aceptada por
+el usuario, no con una cota de 600 ms por canción. Los treinta incumplimientos
+del umbral histórico de 300 ms permanecen en el resultado. El banco mide búsqueda
+e inicio, no EOF, continuidad completa ni publicidad.
+
+La tanda infantil con búsqueda `20261023-140456-bda257e2` demuestra por qué los
+seis controles directos no bastan para cerrar la fiabilidad:
+
+| Canción | ID seleccionado | Búsqueda → `playing` | Ruta observada |
+|---|---|---:|---|
+| Epoitaitaye | `DJzjkMBMook` | 5369,6 ms | Native |
+| Maite Zaitut! | `WtTRMAoN2Fw` | 6085,7 ms | Native |
+| Pupu Eta Lore | `kcUgLakr7bU` | 5188,6 ms | Legacy, tras dos respuestas SABR |
+
+Los tres IDs son los esperados. Sólo Epo es la primera canción del proceso nuevo
+con `FreshDecoder`; Maite y Pupu continúan en ese mismo proceso. Maite analizó otro
+reproductor y Pupu reutilizó memoria, por lo que estas tres cifras no son tres
+arranques fríos independientes. La aplicación sí ejercitó Legacy para Pupu:
+el éxito del respaldo no se cuenta como éxito nativo ni acredita soporte de esa
+misma situación en Android. Tampoco equivale a una escucha completa.
+
+### Descartes, validación y procedencia
+
+El parser WASM quedó archivado sólo en `.local` y fuera del cambio productivo.
+El prototipo inicial rápido no bastaba: el despacho portable seguro dio
+aproximadamente **8,0–8,4 s** y la alternativa indirecta **6,503 s**, frente a
+**4,445 s** del preparador compatible en ese control. No se conserva una variante
+con riesgo de pila para presentar un mejor tiempo, ni se amplían los límites.
+El último microexperimento de GC dio **3498,9 → 3361,4 ms** (−3,93 %, un solo
+par), con cuatro formatos exactos. Se descarta por no acreditar una mejora
+estable y sustancial; no hay cambio productivo de GC.
+
+Pasaron **217 pruebas Rust (27 ignoradas), 430 JavaScript**, tipos sin errores
+ni avisos y checks Android arm64/x86_64 sin avisos nuevos. No se repitió aquí
+rendimiento del harness Android ni reproducción JNI/ExoPlayer.
+
+La revalidación de archivos completos pasó **3/3 en un único pase**, sin repetir
+la campaña, en 11,22 s. Los tres archivos 251 coinciden por SHA-256 con las
+referencias independientes anteriores y FFmpeg `-xerror` terminó con salida 0
+para los tres. Maite recibió cinco 403 y el primer 206 en el sexto intento,
+aproximadamente a los 4 s; eso no prueba reproducción ni salto de anuncios.
+Se acredita el contenido completo de estos archivos, no escucha continua en
+la app, ausencia universal de anuncios ni una campaña de sesiones publicitarias.
+
+El candidato es el commit limpio `3fa0237fe8def0cdba6db3ffb47950f425a5989e`, binario
+`adef5ea3a90fb8a4ea0dc332eb7d0ef76187c5a236722bb99bb04e4089b41213`.
+El control es el binario inmutable de la ronda 3,
+`f5c849bba5c964e1879924252e2b5b9f48c79490e37436fca3fe3c039a260f18`;
+se conserva su metadata original de compilación sobre `bdf6a6c` con cambios
+posteriormente registrados, sin atribuirle un checkout limpio que no tuvo.
+Las doce metadata registran exactamente las seis variables permitidas del banco,
+sin overrides, con `FreshDecoder` y primera preparación `analyzed`; no se convierte
+una reutilización posterior dentro de la misma fila en otro arranque frío.
+
+| Evidencia local de la ronda 4 | SHA-256 |
+|---|---|
+| `cold-paired-20261023-140026-433bf723-index.json.local` | `cb7b52423c47009851868377c1f1b4bdbbec0f5d857265a3169ebf9aa9546153` |
+| `round4-cold-analysis.json.local` | `19bf2909672f642aa2b820a66ac81fd2b4d717621971418063bf1f2ca4502717` |
+| `result-20261023-140339-56e863a6.json` | `35fb38873f32135468472c32367ae28540750687ab29a155590a9fb1efe36703` |
+| `result-20261023-140456-bda257e2.json` | `8aef84624c01b370b7267816bdcd6b9963c862ee2e3e8d2251a57c301142dbb2` |
+| `round4-complete-audio-verified.json.local` | `0cd0431129d3cd9b1c761a50417821aa2c098ea003c1f4eb405ece42d4d28d98` |
+| `round4-final-manifest.json.local` | `3b98ddf2d9a8fcb99e9ebb562075e7ec29a8087cfd5230a745640a0103a3d42b` |
+
+El índice y el análisis conservan cada intento y las huellas de sus informes y
+stderr, incluido el fallo. El manifiesto reúne las huellas de 72 artefactos.
+No se usó Premium ni se midieron anuncios vistos o
+saltados; un 403 temporal no demuestra publicidad. No cambia la aprobación de
+Oficial, yt-dlp predeterminado, Propio/Legacy, la receta ni OTA. Quedan abiertas
+la meta de arranque infantil, la fiabilidad SABR y la validación más amplia.

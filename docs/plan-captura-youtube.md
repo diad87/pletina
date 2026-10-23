@@ -97,6 +97,24 @@ conserva tablas, fallos y procedencia. No se publica ni se promueve Oficial.
 Antes de publicar queda integrar `origin/main` `1868d4f` y revisar youtubei.js
 18.3.0 frente al analizador privado fijado a 18.1.0.
 
+La cuarta ronda, `3fa0237`, adelanta el POST público mientras watch y el análisis
+siguen pendientes. Retiene tanto la respuesta como sus errores hasta confirmar
+MFK/ID/estado/embed y el ST del analizador completo; cancelar descarta el trabajo.
+No cambia el parser ni aumenta los ocho sondeos. La comparación fría da 6/6
+Native frente a 5/6 del control, con Epo en mediana 4658,5 frente a 5284,5 ms;
+no aísla una ganancia causal de red/SABR ni cumple 3,5 s. Una recuperación de
+Pupu tarda 9813 ms al analizar un segundo JS. Los diagnósticos nuevos permiten
+distinguir esas causas sin registrar URLs, visitantes ni firmas. La regresión
+habitual conserva 30/30 Native/IDs y mediana 642,15 ms; la tanda infantil con
+búsqueda sí usa Legacy para Pupu tras dos SABR. Se descartan WASM más lento y
+un ajuste GC sin mejora sustancial. Pasan 217 pruebas Rust, 430 JavaScript,
+tipos y checks Android sin avisos nuevos. El
+[informe de la ronda 4](informe-arranque-frio-2026-10-23.md#ronda-4-anticipo-de-metadatos-y-diagnóstico-sabr)
+conserva tiempos y fallos. No cambia la PWA, la receta, la aprobación de Oficial
+ni el estado de publicación; la siguiente prioridad sigue siendo el análisis
+frío y recuperar SABR sin otra preparación completa cuando pueda hacerse con
+las mismas verificaciones.
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
