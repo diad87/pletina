@@ -2,6 +2,7 @@
   // Lo que hay en "Tu biblioteca": favoritas, historial, tu música, descargas, playlists, discos y artistas.
   // Va en la barra lateral (escritorio) y en su propia página (móvil).
   import { downloads } from '../lib/downloads.svelte'
+  import { inPwa } from '../lib/api'
   import { layout } from '../lib/layout.svelte'
   import { songs } from '../lib/format'
   import { library } from '../lib/library.svelte'
@@ -60,6 +61,16 @@
       <span class="sub">
         {#if downloads.active.size}Descargando {downloads.active.size}…{:else}{songs(downloads.done.size)} sin conexión{/if}
       </span>
+    </span>
+  </button>
+  {/if}
+
+  {#if inPwa}
+  <button class="item" class:active={route.name === 'library-backup'} onclick={() => nav.go({ name: 'library-backup' })}>
+    <span class="art plain"><Icon name="folder" size={20} /></span>
+    <span class="text">
+      <span class="title">Copia de seguridad</span>
+      <span class="sub">Guardar o importar tu biblioteca</span>
     </span>
   </button>
   {/if}

@@ -107,6 +107,21 @@ test('Android/browser Back and Forward move the app without changing its URL', (
   nav.forward(); h.flush(); assert.equal(nav.route.query, 'Radiohead Creep')
   nav.forward(); h.flush(); assert.equal(nav.route.name, 'album')
 })
+
+test('the library backup page survives reload and returns to the existing library route', () => {
+  const { nav, h, dispose } = setup()
+  nav.go({ name: 'library' })
+  nav.go({ name: 'library-backup' })
+  dispose()
+  const restored = navigation()
+  const cleanup = initWebNavigation(restored, h.window)
+  assert.equal(restored.route.name, 'library-backup')
+  restored.back(); h.flush()
+  assert.equal(restored.route.name, 'library')
+  restored.forward(); h.flush()
+  assert.equal(restored.route.name, 'library-backup')
+  cleanup()
+})
 test('a branch after Back discards old Forward routes coherently', () => {
   const { nav, h } = setup()
   nav.go({ name: 'search', query: 'A' }); nav.go({ name: 'artist', id: 1 }); nav.back(); h.flush()

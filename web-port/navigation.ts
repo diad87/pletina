@@ -11,7 +11,7 @@ const markerId = () => `${Date.now().toString(36)}-${Math.random().toString(36).
 function route(value: unknown): value is Route {
   if (!value || typeof value !== 'object') return false
   const item = value as Record<string, unknown>
-  if (['home', 'liked', 'import-playlist', 'youtube-tracks', 'history', 'downloads', 'local', 'library'].includes(String(item.name))) return true
+  if (['home', 'liked', 'import-playlist', 'library-backup', 'youtube-tracks', 'history', 'downloads', 'local', 'library'].includes(String(item.name))) return true
   if (item.name === 'search' || item.name === 'podcasts') return typeof item.query === 'string' && item.query.length <= 10000
   if (['artist', 'album', 'playlist', 'podcast'].includes(String(item.name))) {
     return Number.isSafeInteger(item.id) && Number(item.id) > 0 &&

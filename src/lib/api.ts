@@ -180,6 +180,19 @@ export const recordPlay = (track: LibTrack) => invoke<void>('record_play', { tra
 export const history = (limit: number) => invoke<Entry[]>('history', { limit })
 export const clearHistory = () => invoke<void>('clear_history')
 
+export async function exportWebLibrary() {
+  if (!inPwa) throw new Error('La copia de seguridad web sólo está disponible en la PWA.')
+  return (await import('../../web-port/storage')).exportWebLibrary()
+}
+export async function previewWebLibraryBackup(value: unknown) {
+  if (!inPwa) throw new Error('La copia de seguridad web sólo está disponible en la PWA.')
+  return (await import('../../web-port/storage')).previewWebLibraryBackup(value)
+}
+export async function importWebLibraryBackup(value: unknown) {
+  if (!inPwa) throw new Error('La copia de seguridad web sólo está disponible en la PWA.')
+  return (await import('../../web-port/storage')).importWebLibraryBackup(value)
+}
+
 // Descargas.
 export const download = (tracks: LibTrack[]) => invoke<void>('download', { tracks })
 export const cancelDownloads = () => invoke<void>('cancel_downloads')

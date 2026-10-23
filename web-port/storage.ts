@@ -2,6 +2,10 @@ import type {
   Entry, LibTrack, LibraryData, PlaylistDetail, PlaylistSummary, Podcast,
   PodcastDetail, PodcastEpisode, PodcastProgress, SavedAlbum, SavedArtist,
 } from '../src/lib/types'
+import { BACKUP_LIMITS, BACKUP_MAX_ROWS, BACKUP_STORES, emptyBackupSummary, makeWebLibraryBackup, parseWebLibraryBackup,
+  type BackupData, type BackupEnvelope, type BackupImportSummary, type BackupProgress } from './library-backup.ts'
+export { previewWebLibraryBackup } from './library-backup.ts'
+export type { BackupEnvelope, BackupSummary, BackupImportSummary } from './library-backup.ts'
 
 const DATABASE_VERSION = 2
 const DEFAULT_DATABASE = 'pletina-web-library'
@@ -456,12 +460,12 @@ export function createWebStorage(options: WebStorageOptions = {}) {
           }))
         }
         case 'clear_history': await request(tx.objectStore('history').clear()); return
-        case 'save_podcast_progress': await put(tx, 'progress', progress(args.progress)); return
+        case 'save_podcast_progress': await put(tx, 'progress', { ...progress(args.progress), updatedAt: timestamp() }); return
         case 'podcast_progress': {
           if (!Array.isArray(args.ids)) throw new Error('La lista de episodios no es válida.')
           const ids = args.ids.map((value) => integer(value, 'El episodio', EPISODE_BASE, LOCAL_BASE - 1))
           const rows = await Promise.all(ids.map((episode) => get<PodcastProgress>(tx, 'progress', episode)))
-          return rows.filter((row): row is PodcastProgress => Boolean(row))
+          return rows.filter((row): row is PodcastProgress => Boolean(row)).map(progress)
         }
         case 'save_youtube_track': {
           const video = videoId(args.videoId)
@@ -595,6 +599,161 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     const key = id(trackId)
     return transaction('readonly', async (tx) => (await get<YouTubeRow>(tx, 'youtube', key))?.videoId ?? null)
   }
+  async function readBackupRows(tx: IDBTransaction): Promise<BackupData> {
+    const values = await Promise.all(BACKUP_STORES.map(async store => [store, await all(tx, store)] as const))
+    return Object.fromEntries(values) as unknown as BackupData
+  }
+  async function exportBackup(): Promise<BackupEnvelope> {
+    // The same read-only transaction snapshots every related store. Validation
+    // happens before returning a file, including legacy metadata and RSS URLs.
+    return transaction('readonly', async tx => makeWebLibraryBackup(await readBackupRows(tx)))
+  }
+  async function importBackup(input: unknown): Promise<BackupImportSummary> {
+    // Parse, bound and validate every reference before opening a write transaction.
+    const incoming = parseWebLibraryBackup(input).library
+    return transaction('readwrite', async tx => {
+      const current = await readBackupRows(tx)
+      const changed = emptyBackupSummary()
+      const sizes = Object.fromEntries(BACKUP_STORES.map(key => [key, current[key].length])) as BackupImportSummary
+      let total = Object.values(sizes).reduce((sum, size) => sum + size, 0)
+      const adding = (store: keyof BackupData) => {
+        if (++sizes[store] > BACKUP_LIMITS[store] || ++total > BACKUP_MAX_ROWS) throw new Error('La biblioteca combinada supera el límite de la copia de seguridad. No se ha cambiado la biblioteca.')
+        changed[store]++
+      }
+      const ascending = <T extends { order: number }>(values: T[]) => [...values].sort((a, b) => a.order - b.order)
+      // Destination counters are authoritative. Repair a stale lower counter
+      // from destination rows; no imported counter can choose an allocation.
+      const ordered = [...current.likes, ...current.albums, ...current.artists, ...current.podcasts, ...current.playlists, ...current.youtube]
+      const metaOrder = (await get<MetaRow>(tx, 'meta', 'order'))?.value ?? 0
+      const order = ordered.reduce((maximum, value) => Math.max(maximum, value.order), Math.max(metaOrder, 0))
+      integer(order, 'El contador local')
+      await put(tx, 'meta', { key: 'order', value: order })
+      const metaYouTube = (await get<MetaRow>(tx, 'meta', 'youtubeId'))?.value ?? YOUTUBE_BASE
+      const lastYouTube = current.tracks.filter(value => value.id >= YOUTUBE_BASE && value.id < PODCAST_BASE)
+        .reduce((maximum, value) => Math.max(maximum, value.id), current.youtube.reduce((maximum, value) => Math.max(maximum, value.trackId), Math.max(metaYouTube, YOUTUBE_BASE)))
+      integer(lastYouTube, 'El contador local de YouTube', YOUTUBE_BASE, PODCAST_BASE - 1)
+      await put(tx, 'meta', { key: 'youtubeId', value: lastYouTube })
+
+      const trackIds = new Map<number, number>(), showIds = new Map<number, number>()
+      const localTracks = new Map(current.tracks.map(value => [value.id, value]))
+      const videos = new Map(current.youtube.map(value => [value.videoId, value]))
+      const localShows = new Map(current.podcasts.map(value => [value.value.feedUrl, value]))
+      const episodes = new Map(current.episodes.map(value => [JSON.stringify([value.podcastId, value.guid]), value]))
+      for (const value of ascending(incoming.youtube)) {
+        const local = videos.get(value.videoId)
+        if (local) {
+          trackIds.set(value.trackId, local.trackId)
+          if (value.saved && !local.saved) { local.saved = true; await put(tx, 'youtube', local); changed.youtube++ }
+        } else {
+          const trackId = await sequence(tx, 'youtubeId', YOUTUBE_BASE)
+          if (trackId >= PODCAST_BASE) throw new Error('No se pueden guardar más vídeos de YouTube.')
+          const saved = { ...value, trackId, order: await sequence(tx) }
+          adding('youtube'); await put(tx, 'youtube', saved); videos.set(value.videoId, saved); trackIds.set(value.trackId, trackId)
+        }
+      }
+      for (const value of ascending(incoming.podcasts)) {
+        const local = localShows.get(value.value.feedUrl)
+        if (local) {
+          showIds.set(value.id, local.id)
+          if (value.saved && !local.saved) { local.saved = true; await put(tx, 'podcasts', local); changed.podcasts++ }
+        } else {
+          const showId = await podcastId(tx, false)
+          const saved: PodcastRow = { ...value, id: showId, value: { ...value.value, id: showId }, episodeIds: [], order: await sequence(tx) }
+          adding('podcasts'); await put(tx, 'podcasts', saved); localShows.set(value.value.feedUrl, saved); showIds.set(value.id, showId)
+        }
+      }
+      for (const value of incoming.episodes) {
+        const showId = showIds.get(value.podcastId)!, key = JSON.stringify([showId, value.guid]), local = episodes.get(key)
+        if (local) trackIds.set(value.id, local.id)
+        else {
+          const episodeId = await podcastId(tx, true)
+          const saved: EpisodeRow = { ...value, id: episodeId, podcastId: showId, value: { ...value.value, id: episodeId } }
+          adding('episodes'); await put(tx, 'episodes', saved); episodes.set(key, saved); trackIds.set(value.id, episodeId)
+        }
+      }
+      const remap = (value: number) => trackIds.get(value) ?? showIds.get(value) ?? value
+      for (const value of incoming.tracks) {
+        const trackId = remap(value.id)
+        trackIds.set(value.id, trackId)
+        if (localTracks.has(trackId)) continue
+        const saved: LibTrack = { ...value, id: trackId, artistId: remap(value.artistId), albumId: remap(value.albumId), albumArtistId: remap(value.albumArtistId) }
+        adding('tracks'); await put(tx, 'tracks', saved); localTracks.set(trackId, saved)
+      }
+      // Keep existing feed order and metadata, appending only previously unknown
+      // episode identities. Old episodes outside the current RSS remain durable.
+      for (const value of incoming.podcasts) {
+        const saved = localShows.get(value.value.feedUrl)!
+        const ids = [...new Set([...(saved.episodeIds ?? []), ...(value.episodeIds ?? []).map(id => trackIds.get(id)!)])]
+        if (value.episodeIds !== undefined && ids.length !== (saved.episodeIds?.length ?? 0)) {
+          saved.episodeIds = ids
+          saved.value = { ...saved.value, episodeCount: Math.max(saved.value.episodeCount, ids.length) }
+          await put(tx, 'podcasts', saved)
+        }
+      }
+      const likes = new Set(current.likes.map(value => value.trackId))
+      for (const value of ascending(incoming.likes)) {
+        const trackId = trackIds.get(value.trackId)!
+        if (likes.has(trackId)) continue
+        adding('likes'); await put(tx, 'likes', { ...value, trackId, order: await sequence(tx) }); likes.add(trackId)
+      }
+      const mergeTimed = async (store: 'albums' | 'artists') => {
+        const ids = new Set(current[store].map(value => value.id))
+        for (const value of ascending(incoming[store] as { id: number; order: number }[])) {
+          if (ids.has(value.id)) continue
+          adding(store); await put(tx, store, { ...value, order: await sequence(tx) }); ids.add(value.id)
+        }
+      }
+      await mergeTimed('albums'); await mergeTimed('artists')
+      const sources = new Map(current.sources.map(value => [value.trackId, value]))
+      for (const value of incoming.sources) {
+        const trackId = trackIds.get(value.trackId)!
+        if (sources.has(trackId)) continue
+        const saved = { ...value, trackId }
+        adding('sources'); await put(tx, 'sources', saved); sources.set(trackId, saved)
+      }
+      const positions = new Map(current.progress.map(value => [value.id, value]))
+      for (const value of incoming.progress) {
+        const episodeId = trackIds.get(value.id)!, local = positions.get(episodeId)
+        // Old rows have no modification timestamp: a larger playback position
+        // does not establish recency. An unknown local timestamp always wins.
+        if (local && (local.updatedAt === undefined || value.updatedAt === undefined || value.updatedAt <= local.updatedAt)) continue
+        if (local) changed.progress++; else adding('progress')
+        const saved: BackupProgress = { ...value, id: episodeId }
+        await put(tx, 'progress', saved); positions.set(episodeId, saved)
+      }
+      const histories = new Map<string, number>(), incomingHistories = new Map<string, number>()
+      for (const value of current.history) {
+        const key = JSON.stringify([value.trackId, value.at])
+        histories.set(key, (histories.get(key) ?? 0) + 1)
+      }
+      for (const value of incoming.history) {
+        const trackId = trackIds.get(value.trackId)!, key = JSON.stringify([trackId, value.at])
+        const seen = (incomingHistories.get(key) ?? 0) + 1
+        incomingHistories.set(key, seen)
+        if (seen <= (histories.get(key) ?? 0)) continue
+        adding('history'); await request(tx.objectStore('history').add({ trackId, at: value.at }))
+      }
+      const names = new Set(current.playlists.map(value => value.name))
+      for (const value of ascending(incoming.playlists)) {
+        let name = value.name
+        if (names.has(name)) {
+          const base = [...name].slice(0, 88).join('')
+          name = base + ' (importada)'
+          let suffix = 2
+          while (names.has(name)) name = [...base].slice(0, 80).join('') + ` (importada ${suffix++})`
+        }
+        adding('playlists')
+        const playlistId = await request(tx.objectStore('playlists').add({ name, order: await sequence(tx) })) as number
+        names.add(name)
+        const entries = incoming.entries.filter(entry => entry.playlistId === value.id).sort((a, b) => a.position - b.position)
+        for (const entry of entries) {
+          adding('entries')
+          await request(tx.objectStore('entries').add({ playlistId, trackId: trackIds.get(entry.trackId)!, position: entry.position, at: entry.at }))
+        }
+      }
+      return changed
+    })
+  }
   async function close(): Promise<void> {
     const pending = opening
     if (pending) await pending.catch(() => {})
@@ -602,7 +761,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     connection = undefined
   }
   return { storageInvoke, handlesStorage, rememberPodcasts, savePodcastShows, savePodcastDetail,
-    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readStoredTrack, readSourceChoice, saveSourceChoice, readYouTubeVideo, close }
+    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readStoredTrack, readSourceChoice, saveSourceChoice, readYouTubeVideo, exportBackup, importBackup, close }
 }
 
 export const handlesStorage = (command: string): boolean => COMMANDS.has(command)
@@ -621,3 +780,5 @@ export const readStoredTrack = (trackId: number): Promise<LibTrack | null> => st
 export const readSourceChoice = (trackId: number): Promise<SourceChoice | null> => storage().readSourceChoice(trackId)
 export const saveSourceChoice = (trackId: number, choice: SourceChoice): Promise<void> => storage().saveSourceChoice(trackId, choice)
 export const readYouTubeVideo = (trackId: number): Promise<string | null> => storage().readYouTubeVideo(trackId)
+export const exportWebLibrary = (): Promise<BackupEnvelope> => storage().exportBackup()
+export const importWebLibraryBackup = (input: unknown): Promise<BackupImportSummary> => storage().importBackup(input)

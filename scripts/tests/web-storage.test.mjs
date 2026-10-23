@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { IDBFactory, IDBObjectStore } from 'fake-indexeddb'
-import { createWebStorage, handlesStorage } from '../../web-port/storage.ts'
+import { createWebStorage, handlesStorage, previewWebLibraryBackup } from '../../web-port/storage.ts'
+import { BACKUP_MAX_BYTES, BACKUP_LIMITS } from '../../web-port/library-backup.ts'
 
 const YOUTUBE = 250_000_000_000_000
 const PODCAST = 500_000_000_000_000
 const EPISODE = 750_000_000_000_000
+const LOCAL = 1_000_000_000_000_000
 const song = (id, extra = {}) => ({ id, title: `Canción ${id}`, duration: 120, explicit: false,
   artistId: 10, artistName: 'Artista', albumId: 20, albumTitle: 'Álbum', albumArtistId: 10,
   cover: `https://images.example/${id}.jpg`, ...extra })
@@ -45,6 +47,202 @@ async function dump(factory, name) {
     return Object.fromEntries(await Promise.all(stores.map(async (store) => [store, await result(tx.objectStore(store).getAll())])))
   } finally { db.close() }
 }
+
+async function rawPut(factory, name, store, value) {
+  const db = await result(factory.open(name))
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite')
+      tx.oncomplete = resolve; tx.onabort = () => reject(tx.error)
+      tx.objectStore(store).put(value)
+    })
+  } finally { db.close() }
+}
+
+async function backupFixture(store) {
+  const invoke = store.storageInvoke
+  const youtube = await invoke('save_youtube_track', { videoId: 'abcdefghijk', title: 'Vídeo guardado', artist: 'Canal', duration: 123 })
+  const detail = await store.savePodcastDetail({ podcast: show(), episodes: [episode('antiguo'), episode('actual')] })
+  const old = detail.episodes[0]
+  const oldTrack = song(old.id, { title: old.title, artistId: detail.podcast.id, artistName: detail.podcast.author,
+    albumId: detail.podcast.id, albumTitle: detail.podcast.title, albumArtistId: detail.podcast.id, cover: null })
+  await invoke('set_podcast_saved', { id: detail.podcast.id, saved: true })
+  await invoke('save_podcast_progress', { progress: { id: old.id, position: 42, duration: old.duration, completed: false } })
+  // The old episode remains referenced even after it disappears from the feed.
+  await store.savePodcastDetail({ podcast: show(), episodes: [episode('actual')] })
+  const first = song(1, { isrc: 'QM6N21424821', titleVersion: 'Original' })
+  const list = await invoke('create_playlist', { name: 'Mi lista', tracks: [first, youtube, oldTrack, first] })
+  for (const track of [first, youtube, oldTrack]) await invoke('set_liked', { track, liked: true })
+  await invoke('set_album_saved', { album: { id: 20, title: 'Álbum', artistId: 10, artistName: 'Artista', cover: null, releaseDate: null, recordType: 'album' }, saved: true })
+  await invoke('set_artist_saved', { artist: { id: 10, name: 'Artista', picture: null }, saved: true })
+  for (const track of [first, youtube, oldTrack]) await invoke('record_play', { track })
+  await store.saveSourceChoice(first.id, choice({ videoId: 'zzzzzzzzzzz' }))
+  await invoke('remove_youtube_track', { id: youtube.id })
+  return { list, youtube, detail, old, oldTrack }
+}
+
+test('metadata backup roundtrip preserves duplicate entries, hidden YouTube, old RSS episodes and identity without media', async t => {
+  const { store: source } = setup(t), seeded = await backupFixture(source)
+  const file = await source.exportBackup(), summary = previewWebLibraryBackup(JSON.stringify(file))
+  assert.equal(file.format, 'pletina-library'); assert.equal(file.version, 1)
+  assert.equal(summary.playlists, 1); assert.equal(summary.entries, 4); assert.equal(summary.likes, 3); assert.equal(summary.episodes, 2)
+  assert.equal(file.library.youtube[0].saved, false)
+  assert.ok(file.library.episodes.some(value => value.guid === 'antiguo'))
+  assert.equal(file.library.podcasts[0].episodeIds.length, 1)
+  assert.doesNotMatch(JSON.stringify(file), /cacheKey|blob:|playable|__audio__|googlevideo|localStorage|meta"/)
+  const factory = new IDBFactory(), destination = createWebStorage({ indexedDB: factory, name: 'restore' })
+  t.after(() => destination.close())
+  const imported = await destination.importBackup(JSON.stringify(file))
+  assert.equal(imported.playlists, 1); assert.equal(imported.entries, 4); assert.equal(imported.likes, 3)
+  await destination.close()
+  const reopened = createWebStorage({ indexedDB: factory, name: 'restore' }); t.after(() => reopened.close())
+  const library = await reopened.storageInvoke('library'), restored = await reopened.storageInvoke('playlist', { id: library.playlists[0].id })
+  assert.deepEqual(restored.entries.map(value => value.track.title), ['Canción 1', 'Vídeo guardado', 'Episodio antiguo', 'Canción 1'])
+  assert.equal(new Set(restored.entries.map(value => value.entryId)).size, 4)
+  assert.equal(restored.entries[0].track.isrc, 'QM6N21424821')
+  assert.equal(await reopened.readYouTubeVideo(restored.entries[1].track.id), 'abcdefghijk')
+  const episodeId = restored.entries[2].track.id
+  assert.equal((await reopened.readPodcastEpisode(episodeId)).guid, 'antiguo')
+  assert.deepEqual(await reopened.storageInvoke('podcast_progress', { ids: [episodeId] }), [{ id: episodeId, position: 42, duration: seeded.old.duration, completed: false }])
+  assert.deepEqual((await reopened.readSourceChoice(1)).videoId, 'zzzzzzzzzzz')
+})
+
+test('merge remaps occupied YouTube and podcast IDs, preserves local edits and creates a new colliding playlist', async t => {
+  const { store: source } = setup(t); await backupFixture(source)
+  const file = await source.exportBackup(), factory = new IDBFactory(), destination = createWebStorage({ indexedDB: factory, name: 'collisions' })
+  t.after(() => destination.close())
+  const invoke = destination.storageInvoke
+  const unrelated = await invoke('save_youtube_track', { videoId: '11111111111', title: 'Otro vídeo', artist: 'Local', duration: 12 })
+  const shared = await invoke('save_youtube_track', { videoId: 'abcdefghijk', title: 'Edición local', artist: 'Local', duration: 123 })
+  await destination.savePodcastDetail({ podcast: show(PODCAST + 1, { feedUrl: 'https://other.example/rss' }), episodes: [episode('antiguo')] })
+  const localShow = await destination.savePodcastDetail({ podcast: show(PODCAST + 1, { title: 'Título local' }), episodes: [episode('antiguo')] })
+  const localList = await invoke('create_playlist', { name: 'Mi lista', tracks: [song(1, { title: 'Título local canción' }), unrelated] })
+  await destination.saveSourceChoice(1, choice({ videoId: '22222222222' }))
+  const changed = await destination.importBackup(file)
+  assert.equal(changed.youtube, 0, 'The destination already has the same visible video; a hidden imported row cannot replace local state')
+  const library = await invoke('library')
+  assert.equal(library.playlists.length, 2)
+  assert.ok(library.playlists.some(value => value.name === 'Mi lista (importada)'))
+  const imported = await invoke('playlist', { id: library.playlists.find(value => value.id !== localList.id).id })
+  assert.deepEqual(imported.entries.map(value => value.track.title), ['Título local canción', 'Edición local', 'Episodio antiguo', 'Título local canción'])
+  assert.equal(imported.entries[1].track.id, shared.id); assert.notEqual(shared.id, file.library.youtube[0].trackId)
+  assert.equal(imported.entries[2].track.id, localShow.episodes[0].id)
+  assert.equal(imported.entries[2].track.albumId, localShow.podcast.id)
+  assert.equal((await destination.readSourceChoice(1)).videoId, '22222222222')
+  assert.equal((await destination.readPodcastDetail(show().feedUrl)).podcast.title, 'Título local')
+  assert.deepEqual((await invoke('playlist', { id: localList.id })).entries.map(value => value.track.title), ['Título local canción', 'Otro vídeo'])
+})
+
+test('preview has no writes and malformed, unsafe, oversized or orphaned copies fail before mutation', async t => {
+  const { store, factory, name } = setup(t); await backupFixture(store)
+  const valid = await store.exportBackup(), before = await dump(factory, name)
+  assert.equal(previewWebLibraryBackup(valid).entries, 4)
+  const invalid = [
+    file => { file.version = 2 }, file => { file.extra = 'not allowed' }, file => { file.library.meta = [] },
+    file => { file.library.entries[0].trackId = 999 }, file => { file.library.entries[1].position = 0 },
+    file => { file.library.youtube.push(structuredClone(file.library.youtube[0])) },
+    file => { file.library.episodes[0].podcastId = PODCAST + 999 },
+    file => { file.library.sources[0].choice.url = 'https://example.googlevideo.com/videoplayback?sig=secret' },
+    file => { file.library.tracks[0].cover = 'data:text/html,unsafe' },
+    file => { file.library.episodes[0].value.audioUrl = 'https://audio.example/file?token=DO_NOT_EXPORT' },
+    file => { file.library.tracks[0].id = LOCAL },
+    file => { file.library.tracks[0].duration = Infinity },
+    file => { file.library.playlists = Array.from({ length: BACKUP_LIMITS.playlists + 1 }, (_, index) => ({ id: index + 1, name: 'X', order: index + 1 })) },
+  ]
+  for (const mutate of invalid) {
+    const file = structuredClone(valid); mutate(file)
+    assert.throws(() => previewWebLibraryBackup(file), /copia de seguridad/)
+    await assert.rejects(store.importBackup(file), /copia de seguridad/)
+    assert.deepEqual(await dump(factory, name), before)
+  }
+  await assert.rejects(store.importBackup('{broken JSON'), /JSON ilegible/)
+  await assert.rejects(store.importBackup(' '.repeat(BACKUP_MAX_BYTES + 1)), /10 MiB/)
+  assert.deepEqual(await dump(factory, name), before)
+})
+
+test('merge quota failure after partial writes rolls back all thirteen stores and ID allocation', async t => {
+  const source = createWebStorage({ indexedDB: new IDBFactory(), name: 'source-quota' }); t.after(() => source.close())
+  await backupFixture(source); const file = await source.exportBackup()
+  const { store, factory, name, invoke } = setup(t)
+  const existing = await invoke('create_playlist', { name: 'Local', tracks: [song(9)] })
+  const before = await dump(factory, name), original = IDBObjectStore.prototype.add
+  let entries = 0
+  IDBObjectStore.prototype.add = function(...args) {
+    if (this.transaction.db.name === name && this.name === 'entries' && ++entries === 2) throw new DOMException('Fixture quota', 'QuotaExceededError')
+    return Reflect.apply(original, this, args)
+  }
+  try { await assert.rejects(store.importBackup(file), { name: 'QuotaExceededError' }) }
+  finally { IDBObjectStore.prototype.add = original }
+  assert.equal(entries, 2); assert.deepEqual(await dump(factory, name), before)
+  const next = await invoke('create_playlist', { name: 'Después', tracks: [] })
+  assert.equal(next.id, existing.id + 1)
+  await store.importBackup(file)
+  assert.equal((await invoke('library')).playlists.length, 3)
+})
+
+test('two concurrent merges deduplicate stable identities, likes and history but intentionally keep both new playlists', async t => {
+  const source = createWebStorage({ indexedDB: new IDBFactory(), name: 'source-concurrent' }); t.after(() => source.close())
+  await backupFixture(source); const file = await source.exportBackup()
+  const { store, factory, name } = setup(t), other = createWebStorage({ indexedDB: factory, name }); t.after(() => other.close())
+  await Promise.all([store.importBackup(file), other.importBackup(file)])
+  const copy = await store.exportBackup()
+  assert.equal(copy.library.youtube.length, 1); assert.equal(copy.library.podcasts.length, 1); assert.equal(copy.library.episodes.length, 2)
+  assert.equal(copy.library.likes.length, 3); assert.equal(copy.library.history.length, 3)
+  assert.equal(copy.library.playlists.length, 2); assert.equal(copy.library.entries.length, 8)
+  assert.deepEqual(copy.library.playlists.map(value => value.name), ['Mi lista', 'Mi lista (importada)'])
+  assert.equal(new Set(copy.library.entries.map(value => value.entryId)).size, 8)
+})
+
+test('history merge preserves same-second repeated plays by maximum multiplicity without duplicating them on reimport', async t => {
+  const { store: source } = setup(t); await backupFixture(source)
+  const file = await source.exportBackup(), first = file.library.history.find(value => value.trackId === 1)
+  file.library.history.push({ ...first, entryId: 900 })
+  const destination = createWebStorage({ indexedDB: new IDBFactory(), name: 'history-multiplicity' }); t.after(() => destination.close())
+  assert.equal((await destination.importBackup(file)).history, 4)
+  let restored = await destination.exportBackup()
+  assert.equal(restored.library.history.filter(value => value.trackId === 1 && value.at === first.at).length, 2)
+  assert.equal((await destination.importBackup(file)).history, 0)
+  restored = await destination.exportBackup()
+  assert.equal(restored.library.history.length, 4)
+  assert.equal(restored.library.history.filter(value => value.trackId === 1 && value.at === first.at).length, 2)
+})
+
+test('progress recency uses private timestamps and never infers recency from a greater playback position', async t => {
+  const { store, factory, name } = setup(t), seeded = await backupFixture(store), file = await store.exportBackup(), episodeId = seeded.old.id
+  const copied = file.library.progress[0]
+  copied.position = 900; copied.updatedAt = 200
+  await rawPut(factory, name, 'progress', { id: episodeId, position: 10, duration: copied.duration, completed: false })
+  await store.importBackup(file)
+  assert.equal((await store.storageInvoke('podcast_progress', { ids: [episodeId] }))[0].position, 10, 'Unknown local timestamp wins')
+  await rawPut(factory, name, 'progress', { id: episodeId, position: 30, duration: copied.duration, completed: false, updatedAt: 100 })
+  const changed = await store.importBackup(file)
+  assert.equal(changed.progress, 1)
+  assert.deepEqual(await store.storageInvoke('podcast_progress', { ids: [episodeId] }), [{ id: episodeId, position: 900, duration: copied.duration, completed: false }])
+  file.library.progress[0].position = 1; file.library.progress[0].updatedAt = 300
+  await store.importBackup(file)
+  assert.equal((await store.storageInvoke('podcast_progress', { ids: [episodeId] }))[0].position, 1, 'A newer rewind wins over a larger old position')
+})
+
+test('export strips unknown payload fields but rejects malformed or credential-bearing stored metadata without leaking it', async t => {
+  const { store, factory, name } = setup(t)
+  await store.storageInvoke('set_liked', { track: song(1), liked: true })
+  await rawPut(factory, name, 'tracks', { ...song(1), url: 'https://example.googlevideo.com/file?sig=SECRET', playable: { url: 'blob:SECRET' }, bytes: [1, 2, 3] })
+  assert.doesNotMatch(JSON.stringify(await store.exportBackup()), /SECRET|playable|"bytes"/)
+  await rawPut(factory, name, 'tracks', { ...song(1), duration: NaN })
+  await assert.rejects(store.exportBackup(), /duración/)
+  await rawPut(factory, name, 'tracks', song(1))
+  await store.savePodcastDetail({ podcast: show(), episodes: [episode('signed', { audioUrl: 'https://audio.example/file?token=PRIVATE_SECRET' })] })
+  await assert.rejects(store.exportBackup(), error => /temporal o con credenciales/.test(error.message) && !/PRIVATE_SECRET|audio\.example/.test(error.message))
+})
+
+test('legacy orphaned episode progress is rejected with recovery guidance instead of silently omitted from export', async t => {
+  const { store, factory, name, invoke } = setup(t)
+  await invoke('save_podcast_progress', { progress: { id: EPISODE + 1, position: 42, duration: 60, completed: false } })
+  const before = await dump(factory, name)
+  await assert.rejects(store.exportBackup(), /abre y actualiza el pódcast/)
+  assert.deepEqual(await dump(factory, name), before)
+  assert.deepEqual(await invoke('podcast_progress', { ids: [EPISODE + 1] }), [{ id: EPISODE + 1, position: 42, duration: 60, completed: false }])
+})
 
 test('favoritos, álbumes, artistas y programas se conservan al cerrar y reabrir la base', async (t) => {
   const { store, factory, name, invoke } = setup(t)

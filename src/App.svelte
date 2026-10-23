@@ -30,6 +30,7 @@
   import Home from './views/Home.svelte'
   import LikedView from './views/LikedView.svelte'
   import LocalView from './views/LocalView.svelte'
+  import LibraryBackup from './views/LibraryBackup.svelte'
   import PlaylistView from './views/PlaylistView.svelte'
   import Search from './views/Search.svelte'
   import Podcasts from './views/Podcasts.svelte'
@@ -141,6 +142,8 @@
         <PlaylistView id={route.id} />
       {:else if route.name === 'import-playlist'}
         <ImportPlaylist />
+      {:else if route.name === 'library-backup' && inPwa}
+        <LibraryBackup />
       {:else if route.name === 'youtube-tracks'}
         <YouTubeTracks />
       {:else if route.name === 'downloads'}
