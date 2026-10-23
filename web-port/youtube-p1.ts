@@ -30,6 +30,12 @@ const MAX_SCRIPT = 2 * 1024 * 1024
 const MAX_RESPONSE = 4 * 1024 * 1024
 const REQUEST_MS = 15000
 const WORKER_MS = 1500
+// P1 9892b9c4968e7b57a239f3b5bdcb45e74852c848,
+// src-tauri/src/native_embedded.rs cipher()/apply_decoded(): encrypted inputs
+// are opaque, bounded arguments; the output alphabet is checked only after
+// transformation. This web boundary uses a smaller 4096-character budget and
+// also rejects ASCII controls. It never interpolates inputs into source code.
+const opaqueInput = (value: string) => value.length > 0 && value.length <= MAX_VALUE && !/[\u0000-\u001f\u007f]/.test(value)
 const record = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value)
 const fail = (code: P1EngineError['code'], message: string): never => { throw new P1EngineError(message, code) }
@@ -114,11 +120,11 @@ export function inspectP1Format(value: unknown): P1Cipher {
       seen.add(key)
     }
     rawUrl = cipher.get('url'); signature = cipher.get('s'); sp = cipher.get('sp') ?? 'signature'
-    if (!signature || signature.length > MAX_VALUE || !/^[A-Za-z0-9_.-]+={0,2}$/.test(signature)) return fail('format', 'Invalid P1 signature input')
+    if (signature === null || !opaqueInput(signature)) return fail('format', 'Invalid P1 signature input')
   }
   if (!['sig', 'signature', 'lsig'].includes(sp)) return fail('format', 'Invalid P1 signature parameter')
   const url = mediaUrl(rawUrl), n = url.searchParams.get('n')
-  if (n !== null && (!n.length || n.length > MAX_VALUE || !/^[A-Za-z0-9_.-]+$/.test(n))) return fail('format', 'Invalid P1 n input')
+  if (n !== null && !opaqueInput(n)) return fail('format', 'Invalid P1 n input')
   if (signature !== null && url.searchParams.has(sp)) return fail('format', 'P1 signature is already present')
   return { url: url.href, signature, signatureParameter: sp as P1Cipher['signatureParameter'], n }
 }

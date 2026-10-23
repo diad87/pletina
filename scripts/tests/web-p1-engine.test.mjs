@@ -15,7 +15,7 @@ const videoId = 'aaaaaaaaaaa'
 const baseUrl = 'https://rr1---sn-synthetic.googlevideo.com/videoplayback?expire=9999999999&itag=140'
 const mp4 = extra => ({ itag: 140, mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 128000, ...extra })
 const cipherFormat = (signature = 'input_signature', n = 'input_n') => mp4({ signatureCipher: new URLSearchParams({
-  url: baseUrl + (n === null ? '' : '&n=' + n), s: signature, sp: 'sig',
+  url: baseUrl + (n === null ? '' : '&n=' + encodeURIComponent(n)), s: signature, sp: 'sig',
 }).toString() })
 const player = (formats = [mp4({ url: baseUrl })]) => ({ playabilityStatus: { status: 'OK', playableInEmbed: true },
   videoDetails: { videoId, title: 'Synthetic test', lengthSeconds: '210' }, streamingData: { adaptiveFormats: formats } })
@@ -134,6 +134,28 @@ test('signature-only, n-only and four candidates use one bounded worker', async 
   assert.equal(h.metrics.workerStarts, 1); h.clean()
 })
 
+test('encrypted padding, quotes, spaces and punctuation enter the worker only as data', async () => {
+  const h = harness()
+  for (const [signature, n] of [['==prefix=padding', '=opaque=n='], ['quote\"\';throw Error(\"injected\");//', 'punctuation+/%=?&'],
+    ['opaque signature with spaces', 'opaque n with spaces'], ['</script><script>throw Error(1)</script>', '==arbitrary.padding']]) {
+    const input = cipherFormat(signature, n), parsed = h.inspectP1Format(input)
+    assert.equal(parsed.signature, signature); assert.equal(parsed.n, n)
+    const result = await h.requestP1Player(videoId, h.request(player([input])), recipe())
+    const output = new URL(result.streamingData.adaptiveFormats[0].url)
+    assert.equal(output.searchParams.get('sig'), 'decoded_signature=='); assert.equal(output.searchParams.get('n'), 'decoded_n')
+    h.clean()
+  }
+})
+
+test('opaque inputs still reject empty values, ASCII controls and excessive length', () => {
+  const h = harness()
+  for (const value of ['', 'line\nfeed', 'carriage\rreturn', 'nul\0byte', 'tab\tbyte', 'delete\u007fbyte', 'a'.repeat(4097)]) {
+    assert.throws(() => h.inspectP1Format(cipherFormat(value, null)), { code: 'format' })
+    assert.throws(() => h.inspectP1Format(mp4({ url: baseUrl + '&n=' + encodeURIComponent(value) })), { code: 'format' })
+  }
+  h.clean()
+})
+
 test('unknown origins, URL credentials, ports, paths, fragments, malformed escapes and duplicate parameters are rejected', () => {
   const h = harness()
   for (const url of ['http://rr.googlevideo.com/videoplayback', 'https://googlevideo.com.evil.invalid/videoplayback',
@@ -147,13 +169,13 @@ test('signature ciphers must have one URL and signature, known fields and a perm
   const h = harness(), valid = cipherFormat().signatureCipher
   for (const signatureCipher of ['', valid + '&s=other', valid + '&url=x', valid + '&unknown=1', valid + '&sp=sig',
     new URLSearchParams({ url: baseUrl, s: 'abc', sp: 'n' }).toString(), new URLSearchParams({ url: baseUrl, s: '' }).toString(),
-    new URLSearchParams({ url: baseUrl, s: 'bad signature' }).toString(), valid + '%zz', 'x'.repeat(4097)])
+    new URLSearchParams({ url: baseUrl, s: 'bad\nsignature' }).toString(), valid + '%zz', 'x'.repeat(4097)])
     assert.throws(() => h.inspectP1Format(mp4({ signatureCipher })), { code: 'format' })
   assert.throws(() => h.inspectP1Format({ ...cipherFormat(), cipher: valid }), { code: 'format' })
   assert.throws(() => h.inspectP1Format(mp4({ signatureCipher: null })), { code: 'format' })
   assert.throws(() => h.inspectP1Format(mp4({ url: baseUrl, signatureCipher: null })), { code: 'format' })
   assert.throws(() => h.inspectP1Format({ ...cipherFormat(), url: baseUrl }), { code: 'format' })
-  assert.throws(() => h.inspectP1Format(cipherFormat('abc', 'bad=n')), { code: 'format' })
+  assert.throws(() => h.inspectP1Format(cipherFormat('abc', 'bad\nn')), { code: 'format' })
   assert.throws(() => h.inspectP1Format(mp4({ signatureCipher: new URLSearchParams({ url: baseUrl + '&sig=old', s: 'abc', sp: 'sig' }).toString() })), { code: 'format' })
   h.clean()
 })
