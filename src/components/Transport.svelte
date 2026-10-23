@@ -7,6 +7,7 @@
   let { big = false }: { big?: boolean } = $props()
 
   const current = $derived(player.current)
+  const loading = $derived(player.status === 'loading')
 
   // Mientras se arrastra la barra de progreso, manda la posición del ratón, no la del audio.
   let dragging = $state(false)
@@ -16,7 +17,7 @@
   const fill = $derived(`${total > 0 ? Math.min(100, (position / total) * 100) : 0}%`)
 </script>
 
-<div class="transport" class:big>
+<div class="transport" class:big aria-busy={loading}>
   <div class="buttons">
     <button
       class="icon toggle"
@@ -35,10 +36,11 @@
       class="play"
       onclick={() => player.toggle()}
       disabled={!current}
-      title={player.status === 'playing' ? 'Pausa (espacio)' : 'Reproducir (espacio)'}
+      aria-label={loading ? 'Cancelar carga' : player.status === 'playing' ? 'Pausa' : 'Reproducir'}
+      title={loading ? 'Cancelar carga (espacio)' : player.status === 'playing' ? 'Pausa (espacio)' : 'Reproducir (espacio)'}
     >
       {#if player.status === 'loading'}
-        <span class="spinner"></span>
+        <span class="spinner" aria-hidden="true"></span>
       {:else}
         <Icon name={player.status === 'playing' ? 'pause' : 'play'} size={big ? 28 : 18} />
       {/if}
@@ -168,6 +170,9 @@
     to {
       transform: rotate(360deg);
     }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
   }
 
   .progress {

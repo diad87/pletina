@@ -454,9 +454,17 @@ class Player implements PlayerApi {
 
   #pause() {
     if (!this.current) return
+    const cancelLoading = api.inPwa && this.status === 'loading'
     this.#wantsPlay = false
     ++this.#token
     this.#clearProgressTimer()
+    if (cancelLoading) {
+      this.#clearPrepared()
+      // Una cancelación puede tardar en terminar de descargar su iframe. No
+      // reutilizar esa promesa si el usuario vuelve a pulsar Reproducir antes.
+      this.#inFlight.clear()
+      api.retainWebAudioRequests?.([])
+    }
     // Durante una renovación el elemento todavía no contiene audio; se conserva la posición guardada.
     if (this.#audio.src) this.time = Math.max(this.time, this.#audio.currentTime)
     this.#audio.pause()
@@ -978,8 +986,14 @@ class Player implements PlayerApi {
   }
 
   #retainWebRequests() {
-    if (api.inPwa) api.retainWebAudioRequests?.([this.current?.track.id, this.#following()?.track.id]
+    if (!api.inPwa) return
+    const retained = new Set([this.current?.track.id, this.#following()?.track.id]
       .filter((id): id is number => typeof id === 'number'))
+    // El resolvedor web cancela las búsquedas descartadas. Retirarlas también
+    // de esta caché antes de cancelar permite una reselección rápida y evita
+    // heredar el rechazo tardío de una búsqueda que ya no pertenece a la carga.
+    for (const id of this.#inFlight.keys()) if (!retained.has(id)) this.#inFlight.delete(id)
+    api.retainWebAudioRequests?.([...retained])
   }
 
   #preparedExpiry(source: Playable, id: number): number {

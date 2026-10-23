@@ -25,6 +25,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
   duration = () => 180, storage, metadata = true,
   location = 'https://app.example/pletina/application/app.html',
   automaticYouTubeSource = () => null, openAutomaticYouTubePlayer = () => true,
+  retainWebAudioRequests = () => {},
   chooseSource = async (track, videoId) => ({ ...playable(track.id), videoId }) } = {}) {
   const audios = [], sources = [], resolutions = [], messages = [], records = [], audioOperations = [], sourceChoices = []
   const progressReads = [], progressWrites = [], officialOpens = []
@@ -85,6 +86,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
     './api': {
       inPwa: true,
       inTauri: false,
+      retainWebAudioRequests,
       resolve(track, refresh) { resolutions.push([track.id, refresh]); return resolve(track, refresh) },
       automaticYouTubeSource,
       openAutomaticYouTubePlayer(track, source, at) {
@@ -124,7 +126,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
     (id) => timers.delete(id), events, events, { now: () => now }, Clock,
   )
   return {
-    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites, officialOpens,
+    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites, officialOpens, events,
     get audio() { return audios.at(-1) },
     jumpWall(ms) { wallOffset += ms },
     async advance(ms) {
@@ -143,6 +145,112 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
     },
   }
 }
+
+test('PWA reselecting a song cancelled by another selection starts a fresh resolution before old cleanup finishes', async () => {
+  const obsolete = deferred(), fresh = deferred(), retained = []
+  let attempts = 0, firstCancelled = false
+  const h = pwaHarness({
+    resolve: track => track.id === 1 ? ++attempts === 1 ? obsolete.promise : fresh.promise : Promise.resolve(playable(track.id)),
+    // A provider can acknowledge cancellation after its media frame is removed.
+    // Keep that rejection pending to exercise the player's actual promise cache.
+    retainWebAudioRequests: ids => {
+      retained.push([...ids])
+      if (attempts > 0 && !ids.includes(1)) firstCancelled = true
+    },
+  })
+  h.player.playQueue([item(1), item(2), item(3)], 0)
+  await flush()
+  h.player.playAt(1)
+  await flush()
+  assert.equal(firstCancelled, true)
+  assert.equal(h.player.current.track.id, 2)
+  assert.equal(h.player.status, 'playing')
+  h.player.playAt(0)
+  await flush()
+  assert.equal(attempts, 2, 'the discarded resolution cannot be reused when its song is selected again')
+  obsolete.reject(new DOMException('Cancelled source finished unloading', 'AbortError'))
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.status, 'loading')
+  assert.deepEqual(h.messages, [], 'a replaced rejection cannot skip the newly selected song')
+  h.player.playAt(0)
+  await flush()
+  assert.equal(attempts, 2, 'the obsolete finally cannot delete the new in-flight resolution')
+  fresh.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audios.length, 1)
+  assert.deepEqual(h.sources, ['https://audio.test/2', 'https://audio.test/1'])
+  assert.ok(retained.some(ids => ids.join(',') === '2,3'))
+})
+
+test('PWA cancelling a pending load retires current and prefetched requests and a quick retry never inherits their promises', async () => {
+  const obsolete = deferred(), fresh = deferred(), upcoming = deferred(), retained = []
+  let attempts = 0
+  const h = pwaHarness({
+    resolve: track => track.id === 1 ? ++attempts === 1 ? obsolete.promise : fresh.promise : upcoming.promise,
+    retainWebAudioRequests: ids => retained.push([...ids]),
+  })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  // The browser may prepare the following song on a visibility transition even
+  // while the current provider request is still pending.
+  h.events.dispatchEvent(new Event('visibilitychange'))
+  await flush()
+  assert.ok(h.resolutions.some(([id]) => id === 2))
+  h.player.toggle()
+  assert.equal(h.player.status, 'paused')
+  assert.deepEqual(retained.at(-1), [], 'Cancel unloads both play resolutions through the existing API')
+  h.player.toggle()
+  await flush()
+  assert.equal(attempts, 2)
+  obsolete.reject(new DOMException('Late cancellation acknowledgement', 'AbortError'))
+  upcoming.reject(new DOMException('Cancelled prefetch', 'AbortError'))
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.status, 'loading')
+  assert.deepEqual(h.sources, [])
+  assert.deepEqual(h.messages, [])
+  h.player.playAt(0)
+  await flush()
+  assert.equal(attempts, 2, 'settling a retired promise cannot remove the replacement')
+  fresh.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.status, 'playing')
+  assert.deepEqual(h.sources, ['https://audio.test/1'])
+  assert.equal(h.audios.length, 1)
+})
+
+test('PWA cancelling startup preserves an assigned source and seek for an explicit resume', async () => {
+  const pendingPlay = deferred(), retained = []
+  let plays = 0
+  const h = pwaHarness({
+    play: audio => ++plays === 1 ? pendingPlay.promise : audio.begin(),
+    retainWebAudioRequests: ids => retained.push([...ids]),
+  })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  h.player.seek(23)
+  h.player.toggle()
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.player.time, 23)
+  assert.equal(h.audio.src, 'https://audio.test/1')
+  assert.deepEqual(retained.at(-1), [])
+  h.player.toggle()
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audio.currentTime, 23)
+  pendingPlay.reject(new DOMException('Old play was cancelled', 'AbortError'))
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.player.current.track.id, 1)
+  assert.deepEqual(h.resolutions, [[1, false]])
+  assert.deepEqual(h.sources, ['https://audio.test/1'])
+  assert.deepEqual(h.messages, [])
+})
 
 test('PWA autoplay rejection keeps the first source and queue ready for a second user tap', async () => {
   let attempt = 0

@@ -12,6 +12,16 @@
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
+  const loading = $derived(player.status === 'loading')
+  let slow = $state(false)
+  $effect(() => {
+    const id = current?.track.id
+    slow = false
+    if (!loading || id == null) return
+    const timer = setTimeout(() => (slow = true), 6000)
+    return () => clearTimeout(timer)
+  })
+  const loadingMessage = $derived(slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
@@ -31,7 +41,7 @@
 </script>
 
 <footer class="player" style:--now={current ? color : FALLBACK_COLOR} class:idle={!current}>
-  <div class="now">
+  <div class="now" aria-busy={loading}>
     {#if current}
       <button class="thumb" onclick={() => (theme.nowPlaying = true)} title="Sonando ahora">
         <Cover src={current.cover} />
@@ -46,7 +56,7 @@
           >{current.track.artist.name}</button
         >
         {/if}
-        {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Cargando audio…'}</span>{/if}
+        {#if loading}<span class="hint" class:loading-wait={slow}>{loadingMessage}</span>{/if}
       </div>
       <button
         class="icon heart"
@@ -100,6 +110,8 @@
       aria-label="Volumen"
     />
   </div>
+
+  <span class="loading-status" role="status" aria-live="polite" aria-atomic="true">{loading && current && !theme.nowPlaying ? `${current.track.title}. ${loadingMessage}` : ''}</span>
 
   {#if toast.message}
     {#key toast.message}
@@ -180,6 +192,19 @@
   }
   .hint {
     color: var(--accent);
+  }
+  .hint.loading-wait {
+    white-space: normal;
+  }
+  .loading-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .icon {

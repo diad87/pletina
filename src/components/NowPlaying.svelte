@@ -14,6 +14,16 @@
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
+  const loading = $derived(player.status === 'loading')
+  let slow = $state(false)
+  $effect(() => {
+    const id = current?.track.id
+    slow = false
+    if (!loading || id == null) return
+    const timer = setTimeout(() => (slow = true), 6000)
+    return () => clearTimeout(timer)
+  })
+  const loadingMessage = $derived(slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
@@ -97,7 +107,7 @@
         {#key current.track.id}
           <div class="art"><Cover src={big} /></div>
         {/key}
-        <div class="meta">
+        <div class="meta" aria-busy={loading}>
           <div class="text">
             <h1>{current.track.title}</h1>
             {#if youtube}<span class="artist">{current.track.artist.name}</span>{:else}
@@ -105,6 +115,7 @@
               >{current.track.artist.name}</button
             >
             {/if}
+            {#if loading}<p class="loading-text" class:loading-wait={slow}>{loadingMessage}</p>{/if}
           </div>
           <button
             class="heart"
@@ -115,6 +126,7 @@
             <Icon name={liked ? 'heartFilled' : 'heart'} size={28} />
           </button>
         </div>
+        <span class="loading-status" role="status" aria-live="polite" aria-atomic="true">{loading ? `${current.track.title}. ${loadingMessage}` : ''}</span>
         <Transport big />
         <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
         <div class="extras">
@@ -310,6 +322,22 @@
   .artist {
     font-size: 17px;
     color: rgb(255 255 255 / 0.75);
+  }
+  .loading-text {
+    margin: 6px 0 0;
+    color: var(--accent);
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .loading-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .heart {
     color: rgb(255 255 255 / 0.75);

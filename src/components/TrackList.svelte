@@ -161,12 +161,14 @@
 
   {#each visibleRows as { item, index: i }, visibleIndex (entryIds?.[i] ?? `${item.track.id}-${i}`)}
     {@const current = isCurrent(item, i)}
+    {@const loading = current && player.status === 'loading'}
     {@const podcast = isPodcast(item.track.id)}
     {@const youtube = isYouTubeTrack(item.track.id)}
     {@const liked = library.liked.has(item.track.id)}
     {@const downloaded = downloads.done.has(item.track.id)}
     {@const progress = downloads.active.get(item.track.id)}
     {@const showArtist = variant === 'list' || item.track.artist.id !== albumArtistId}
+    {@const selfArtist = !podcast && nav.route.name === 'artist' && nav.route.id === item.track.artist.id}
     {#if multiDisc && (visibleIndex === 0 || disc(i) !== disc(visibleRows[visibleIndex - 1].index))}
       <li class="disc">Disco {disc(i)}</li>
     {/if}
@@ -174,10 +176,14 @@
       <div
         class="row"
         class:current
+        class:loading
         class:dragging={dragFrom === i}
         class:drop-before={dragFrom !== null && dropAt === i}
         class:drop-after={dragFrom !== null && dropAt === items.length && i === items.length - 1}
         role="button"
+        aria-current={current ? 'true' : undefined}
+        aria-busy={loading}
+        title={loading ? 'Cancelar carga' : undefined}
         tabindex="0"
         draggable={!layout.mobile}
         onclick={() => play(i)}
@@ -217,14 +223,15 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
-                  {#if youtube}<span>{item.track.artist.name}</span>{:else}
-                  <button class="link" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
+                  {#if youtube || selfArtist}<span class="artist-name">{item.track.artist.name}</span>{:else}
+                  <button class="link artist-name" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >
                   {/if}
                 {/if}
               </span>
             {/if}
+            {#if loading}<span class="loading-text"><span class="spinner" aria-hidden="true"></span>Preparando audio…</span>{/if}
           </span>
         </span>
 
@@ -439,6 +446,29 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+  .loading-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .spinner {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
   }
   .link:hover {
     color: var(--text);
