@@ -42,11 +42,14 @@ const reportName = option('--report', `funkwhale-rescue-live-${expectedBuild}-${
 assert.match(reportName, /^[a-z0-9.-]+\.json$/i)
 const directory = new URL('../../artifacts/pwa-port/', import.meta.url)
 await mkdir(directory, { recursive: true })
+const scriptBytes = await readFile(new URL(import.meta.url)), scriptSha256 = createHash('sha256').update(scriptBytes).digest('hex')
+const sourceSnapshot = `funkwhale-rescue-live-source-${scriptSha256.slice(0, 16)}.mjs`
+await writeFile(new URL(sourceSnapshot, directory), scriptBytes)
 const scrub = value => String(value ?? '').replace(/(?:https?|blob):[^\s"'<>]+/g, '[URL]').slice(0, 500)
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const report = { schemaVersion: 1, testedAt: new Date().toISOString(), expectedBuild, build: null, caseName, scenario,
   expectedRecording: song, secondRecording: ['queue', 'cancel'].includes(scenario) ? second : null,
-  execution: { scriptSha256: createHash('sha256').update(await readFile(new URL(import.meta.url))).digest('hex') },
+  execution: { script: 'scripts/tests/funkwhale-rescue-live.browser.mjs', scriptSha256, sourceSnapshot: 'artifacts/pwa-port/' + sourceSnapshot },
   scope: describe.scenarios[scenario], limitations: describe.limitations,
   checks: [], errors: [], network: [], inputActions: [], primarySongClicks: 0, sourceMenuClicks: 0, iframePlaybackClicks: 0,
   browserSecurityOverrides: false, backgroundThrottleOverrides: false, outputMuted: false, providerResponsesMocked: false,
@@ -106,6 +109,8 @@ function observeAudio() {
       tabs: [...document.querySelectorAll('.bottom-nav button')].map(button => button.textContent.trim()),
       mediaSession: navigator.mediaSession ? { title: navigator.mediaSession.metadata?.title ?? null, artist: navigator.mediaSession.metadata?.artist ?? null, playbackState: navigator.mediaSession.playbackState } : null,
       nowPlayingOpen: !!document.querySelector('.np[role="dialog"]'), searchValue: document.querySelector('input[aria-label="Buscar música"]')?.value ?? null,
+      searchRows: [...document.querySelectorAll('.tracks li[data-reorder-index]')].map(row => ({ title: row.querySelector('.name')?.textContent.trim(), artist: row.querySelector('.by')?.textContent.trim(), album: row.querySelector('.album button')?.textContent.trim() })),
+      searchStatus: document.querySelector('.page.top .empty-state, .page.top .partial-error, .page.top .status')?.textContent.trim().slice(0, 500) ?? null,
       notices: [...document.querySelectorAll('.notice,[role="alert"]')].map(node => node.textContent.trim()).slice(0, 4) }
   } }
 }
@@ -173,7 +178,8 @@ async function search(expected) {
   await poll('Music search input', () => read(() => !!document.querySelector('input[aria-label="Buscar música"]')))
   await read(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await click('input[aria-label="Buscar música"]', 'focus catalog search')
-  await page.keyboard.press('Control+A'); await page.keyboard.type(expected.title)
+  await page.keyboard.down('Control'); await page.keyboard.press('A'); await page.keyboard.up('Control')
+  await page.keyboard.type(expected.title + ' ' + expected.artist)
   return await poll('Exact title, artist and album row', () => read(expected => {
     const rows = [...document.querySelectorAll('.tracks li[data-reorder-index]')]
     const row = rows.find(row => row.querySelector('.name')?.textContent.trim() === expected.title && row.querySelector('.by')?.textContent.trim() === expected.artist && row.querySelector('.album button')?.textContent.trim() === expected.album)

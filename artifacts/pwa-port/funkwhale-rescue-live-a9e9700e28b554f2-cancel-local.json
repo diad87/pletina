@@ -1,0 +1,700 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T07:05:31.479Z",
+  "expectedBuild": "a9e9700e28b554f2",
+  "build": "a9e9700e28b554f2",
+  "caseName": "cylinder",
+  "scenario": "cancel",
+  "expectedRecording": {
+    "id": 2934405891,
+    "title": "Cylinder Six",
+    "artist": "Chris Zabriskie",
+    "album": "Cylinders",
+    "isrc": "GBKPL1370800",
+    "duration": 105.64,
+    "bytes": 4441693,
+    "mime": "audio/mpeg",
+    "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35"
+  },
+  "secondRecording": {
+    "id": 2988892451,
+    "title": "Melted Wings",
+    "artist": "Kai Engel",
+    "album": "Written in Ink",
+    "isrc": "GBSMU2086183",
+    "duration": 133.333333,
+    "bytes": 5527791,
+    "mime": "audio/mpeg",
+    "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802"
+  },
+  "execution": {
+    "script": "scripts/tests/funkwhale-rescue-live.browser.mjs",
+    "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+    "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs"
+  },
+  "scope": "Hold first real Funkwhale media request temporarily, select a different song through UI, release old request, reject stale playback.",
+  "limitations": [
+    "Desktop Chrome is not an Android/iPhone or screen-off test.",
+    "Chrome Ogg support cannot establish iOS compatibility.",
+    "Known file hashes verify bytes, while source identity evidence covers an official excerpt, not an independently verified whole master.",
+    "Cancellation checks stale-playback suppression; transport abort is observed separately, never inferred."
+  ],
+  "checks": [
+    {
+      "name": "expected compiled launcher opens through the normal control",
+      "pass": true,
+      "activationBeforeInput": {
+        "active": false,
+        "ever": false
+      },
+      "codecs": {
+        "mp3": "probably",
+        "oggVorbis": "probably",
+        "oggOpus": "probably"
+      }
+    },
+    {
+      "name": "exact canonical row is selected once through its title",
+      "pass": true,
+      "selected": {
+        "index": "0",
+        "title": "Cylinder Six",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders"
+      },
+      "primarySongClicks": 1
+    },
+    {
+      "name": "a pending real media load is superseded through ordinary search and title selection",
+      "pass": true,
+      "firstState": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "empty",
+            "blob": null,
+            "currentTime": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [],
+        "blobs": [],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "paused"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "Cylinder Six Chris Zabriskie",
+        "searchRows": [
+          {
+            "title": "Cylinder Six",
+            "artist": "Chris Zabriskie",
+            "album": "Cylinders"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      },
+      "selected": {
+        "index": "0",
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink"
+      },
+      "heldRequest": {
+        "at": 1792739135290,
+        "host": "open.audio",
+        "kind": "real provider media temporarily delayed; body unchanged",
+        "releasedAt": 1792739135954,
+        "releaseReason": "different song selected through UI"
+      }
+    },
+    {
+      "name": "only the replacement recording starts and advances",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 2.249,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 4688,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 4711,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 4770,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 5527791,
+            "mime": "audio/mpeg",
+            "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2988892451,
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "album": "Written in Ink",
+          "isrc": "GBSMU2086183"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "Melted Wings Kai Engel",
+        "searchRows": [
+          {
+            "title": "Melted Wings",
+            "artist": "Kai Engel",
+            "album": "Written in Ink"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      }
+    },
+    {
+      "name": "late completion never replaces or plays over the new recording",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 14.258,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 4688,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 4711,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 4770,
+            "hidden": false,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 5527791,
+            "mime": "audio/mpeg",
+            "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2988892451,
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "album": "Written in Ink",
+          "isrc": "GBSMU2086183"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "Melted Wings Kai Engel",
+        "searchRows": [
+          {
+            "title": "Melted Wings",
+            "artist": "Kai Engel",
+            "album": "Written in Ink"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      },
+      "stalePlaybackSuppressed": true,
+      "obsoleteBlobCreated": false,
+      "transportAbortObserved": true
+    }
+  ],
+  "errors": [],
+  "network": [
+    {
+      "at": 1792739133960,
+      "host": "music.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739134000,
+      "host": "www.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739134298,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739135225,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739135959,
+      "host": "open.audio",
+      "kind": "provider",
+      "failure": "net::ERR_ABORTED"
+    },
+    {
+      "at": 1792739135967,
+      "host": "music.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739135974,
+      "host": "www.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739136073,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739136398,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739136577,
+      "host": "open.audio",
+      "kind": "media",
+      "status": 200,
+      "mime": "audio/mpeg"
+    }
+  ],
+  "inputActions": [
+    {
+      "action": "trusted mouse click",
+      "purpose": "open the music app"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus catalog search"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "play the exact recording with one title click"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus catalog search"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "replace the loading recording with a different exact song"
+    }
+  ],
+  "primarySongClicks": 2,
+  "sourceMenuClicks": 0,
+  "iframePlaybackClicks": 0,
+  "browserSecurityOverrides": false,
+  "backgroundThrottleOverrides": false,
+  "outputMuted": false,
+  "providerResponsesMocked": false,
+  "observationRpcCalls": 51,
+  "observationRpcWithGesture": 0,
+  "mediaFilesWritten": false,
+  "mediaUrlsPersisted": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterIndependentlyVerified": false,
+  "faultInjection": {
+    "youtubeNetworkFailure": true,
+    "heldFunkwhaleRequest": true,
+    "offlineForPreparedQueue": false
+  },
+  "target": {
+    "origin": "http://127.0.0.1:55156",
+    "path": "/pletina/",
+    "temporaryStaticQaPreview": true
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "heldRequest": {
+    "at": 1792739135290,
+    "host": "open.audio",
+    "kind": "real provider media temporarily delayed; body unchanged",
+    "releasedAt": 1792739135954,
+    "releaseReason": "different song selected through UI"
+  },
+  "finalState": {
+    "audio": [
+      {
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 14.261,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "events": [
+      {
+        "type": "loadstart",
+        "at": 4688,
+        "hidden": false,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": null,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "loadedmetadata",
+        "at": 4711,
+        "hidden": false,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 4770,
+        "hidden": false,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "blobs": [
+      {
+        "key": 1,
+        "bytes": 5527791,
+        "mime": "audio/mpeg",
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "revoked": false
+      }
+    ],
+    "current": {
+      "id": 2988892451,
+      "title": "Melted Wings",
+      "artist": "Kai Engel",
+      "album": "Written in Ink",
+      "isrc": "GBSMU2086183"
+    },
+    "repeat": "off",
+    "userQueue": [],
+    "hidden": false,
+    "online": true,
+    "codecs": {
+      "mp3": "probably",
+      "oggVorbis": "probably",
+      "oggOpus": "probably"
+    },
+    "videoIframeCount": 0,
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "mediaSession": {
+      "title": "Melted Wings",
+      "artist": "Kai Engel",
+      "playbackState": "playing"
+    },
+    "nowPlayingOpen": false,
+    "searchValue": "Melted Wings Kai Engel",
+    "searchRows": [
+      {
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink"
+      }
+    ],
+    "searchStatus": null,
+    "notices": []
+  },
+  "pass": true
+}

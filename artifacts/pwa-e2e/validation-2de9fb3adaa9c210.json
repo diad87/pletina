@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T07:26:35.399Z",
+  "build": "2de9fb3adaa9c210",
+  "sourceCommit": "d6092b03fe37587f616954237c2b080a36adac40",
+  "publicationStatus": "published-and-verified",
+  "deployment": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "6800f59c119acc97fb05d93c9182ad073f663c01",
+    "tree": "855bf87ae7794483f1712de025103522aa0f34a1",
+    "source_hash": "37dfe34b9cc6172123c69f28e1d671dc2510bf97c07eb6e99e80b782fda5dffb",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "2de9fb3adaa9c210"
+  },
+  "feature": "Automatic anonymous Funkwhale rescue after YouTube failure, canonical identity index and complete-file SHA before the existing single Audio, quality/codec selection among verified original encodings.",
+  "runtimeBackendAdded": false,
+  "listenerAccountOrSubscriptionAdded": false,
+  "apkOrNativeWrapperAdded": false,
+  "musicFilesBundled": false,
+  "entryBytes": 49831,
+  "optionalApplicationBytes": 533524,
+  "allDistributedBytes": 628928,
+  "identityIndex": {
+    "path": "web-port/funkwhale-identity-index.json",
+    "sha256": "554b2b25838a0c26616e858e2412e7f385f0694d6439ea5ab6efbedfad000204",
+    "generator": {
+      "script": "scripts/build-funkwhale-identity-index.mjs",
+      "sha256": "3b51f9f99fd1e18f474a99ab8f1d3aaff058926cbfc4204f2ff39d95006e3a68",
+      "helperSha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+    },
+    "recordings": 3,
+    "uploads": 3,
+    "identityScope": "official-excerpt-only",
+    "completeMastersIndependentlyVerified": 0,
+    "entries": [
+      {
+        "catalog": {
+          "id": 2934405891,
+          "isrc": "GBKPL1370800",
+          "title": "Cylinder Six",
+          "titleVersion": "",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "duration": 105,
+          "artistId": 1449213,
+          "albumId": 625290251
+        },
+        "uploadUuid": "51b06556-531b-43a9-b714-ab399c986f69",
+        "codec": "mp3",
+        "bytes": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "downloadAllowed": false
+      },
+      {
+        "catalog": {
+          "id": 2988892451,
+          "isrc": "GBSMU2086183",
+          "title": "Melted Wings",
+          "titleVersion": "",
+          "artist": "Kai Engel",
+          "album": "Written in Ink",
+          "duration": 133,
+          "artistId": 4703843,
+          "albumId": 641539631
+        },
+        "uploadUuid": "eac2bd93-8b7c-4d50-94bf-9e285cc5a19f",
+        "codec": "mp3",
+        "bytes": 5527791,
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "downloadAllowed": false
+      },
+      {
+        "catalog": {
+          "id": 57428851,
+          "isrc": "USTC40852265",
+          "title": "36 Ghosts IV",
+          "titleVersion": "",
+          "artist": "Nine Inch Nails",
+          "album": "Ghosts I-IV",
+          "duration": 139,
+          "artistId": 407,
+          "albumId": 5604291
+        },
+        "uploadUuid": "ab913fc8-bfeb-4fd0-bce7-f4aa42140031",
+        "codec": "vorbis",
+        "bytes": 1740870,
+        "sha256": "00c641b9102dcfbd1b1c2f12f7b99ad6fee7af0bf0a3c947359cd07547d7caf7",
+        "downloadAllowed": false
+      }
+    ],
+    "expansionCommand": "node scripts/build-funkwhale-identity-index.mjs --input labels.json",
+    "labelsOnlyInput": true,
+    "runtimeAcousticFft": false,
+    "unindexedRecordingAutomaticallySubstituted": false,
+    "epoitaitayeRecovered": false
+  },
+  "quality": {
+    "policy": "Prefer supported lossless, then codec-aware broad lossy quality tiers; compare bitrate within a codec. Only index-approved encodings are considered and the full file hash must match. Runtime metadata bitrate changes are rejected.",
+    "audibleSuperiorityClaimed": false,
+    "highestQualityAcrossEntireProviderClaimed": false,
+    "realUploadsPerRecording": 1,
+    "multiEncodingChoiceTests": "synthetic metadata/file fixtures in web-funkwhale and web-funkwhale-index tests",
+    "maxCandidateBytes": 33554432,
+    "cacheBytes": 67108864,
+    "maxAcquisitions": 2
+  },
+  "invariants": [
+    "Local/downloaded audio, podcasts, explicitly added YouTube IDs and manual choices keep their priority.",
+    "Failed YouTube searches/streams may use verified Funkwhale without inferring that a recording is absent.",
+    "Funkwhale failure preserves existing Audius/video/error paths; source URLs are not written to library or queue.",
+    "The existing Audio, media session, seek/repeat and prepared-next pipeline are retained; playing and prepared Blob URLs are pinned.",
+    "Player changes cancel stale acquisitions without cancelling downloads; manual selection cancels an older same-track download and a download waits for a pending explicit choice.",
+    "Candidate/hash verification uses the complete CORS-readable body, and those exact bytes become the playback Blob.",
+    "Funkwhale offline downloads are not enabled; RAM copies are not persistent downloads."
+  ],
+  "logic": {
+    "pass": 557,
+    "fail": 0,
+    "command": "npm test",
+    "log": "artifacts/pwa-e2e/logs-funkwhale-2de9fb3adaa9c210/logic.txt"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "log": "artifacts/pwa-e2e/logs-funkwhale-2de9fb3adaa9c210/types.txt"
+  },
+  "buildLog": "artifacts/pwa-e2e/logs-funkwhale-2de9fb3adaa9c210/build-pwa.txt",
+  "controlledMedia": {
+    "counts": {
+      "pass": 112,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 2
+    },
+    "reports": [
+      "artifacts/pwa-e2e/media-2de9fb3adaa9c210-win/summary.json",
+      "artifacts/pwa-e2e/media-2de9fb3adaa9c210-linux/summary.json"
+    ],
+    "scope": "36 existing media scenarios and two setup checks per desktop engine. Synthetic HTTP providers and real browser Audio/IDB/service worker. Not an all-suite run, actual provider or physical phone proof."
+  },
+  "officialVideoRegression": {
+    "counts": {
+      "pass": 33,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-2de9fb3adaa9c210-win/summary.json",
+      "artifacts/pwa-e2e/official-youtube-2de9fb3adaa9c210-linux/summary.json"
+    ],
+    "scope": "Compiled UI with benign iframe/provider fixtures; not actual YouTube autoplay proof."
+  },
+  "compiledRealFunkwhaleLocal": {
+    "pass": 32,
+    "fail": 0,
+    "manifest": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-local-manifest.json",
+    "reports": [
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cylinder-local.json",
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-melted-local.json",
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-nin-local.json",
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-queue-local.json",
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cancel-local.json"
+    ],
+    "scope": "Real compiled UI with actual catalog, Funkwhale bodies and complete-file hashes. Explicit YouTube network-failure injection reaches the fallback.",
+    "youtubeNetworkFailureInjected": true,
+    "funkwhaleBodiesMocked": false,
+    "catalogBodiesMocked": false,
+    "observationsUserGestureFalse": true,
+    "actualPlayGestures": true,
+    "checks": "Three canonical recordings, complete file/Blob SHA, single output Audio/no iframe, seek, hidden 10 seconds, navigation, prepared different-artist natural ended offline/hidden and real stale transport abortion."
+  },
+  "compiledRealFunkwhalePublic": {
+    "pass": 15,
+    "fail": 0,
+    "manifest": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-public-manifest.json",
+    "reports": [
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cylinder-public.json",
+      "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-queue-public.json"
+    ],
+    "youtubeNetworkFailureInjected": true,
+    "funkwhaleBodiesMocked": false,
+    "catalogBodiesMocked": false,
+    "physicalPhoneVerified": false
+  },
+  "update": {
+    "from": "fc56a244ebcc9e6e",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-2de9fb3adaa9c210.json",
+    "scope": "Desktop isolated real controlling service worker and explicit update; playlists/podcast state/downloaded fixture bytes preserved. No physical installation claim."
+  },
+  "publicFiles": {
+    "pass": 22,
+    "total": 22,
+    "report": "artifacts/pwa-deploy/public-files-2de9fb3adaa9c210.json"
+  },
+  "visualInvariants": "artifacts/pwa-port/funkwhale-release-invariants-2de9fb3adaa9c210.json",
+  "webkitDistributionProvenance": "artifacts/pwa-e2e/webkit-2de9fb3adaa9c210-frozen-copy.json",
+  "independentAudit": {
+    "materialIssuesRemaining": 0,
+    "sourceAndManifestHashesVerified": true,
+    "artifactsAndLogsScanned": 151,
+    "persistedActualSignedMediaUrlsOrSecretsDetected": 0,
+    "persistedMusicFilesDetected": 0
+  },
+  "earlierUnpublishedCandidates": [
+    {
+      "build": "2e12fcf9cbbfb0b1",
+      "sourceCommit": "657f744",
+      "localManifest": "artifacts/pwa-port/funkwhale-rescue-live-2e12fcf9cbbfb0b1-local-manifest.json",
+      "reason": "Independent review found player cancellation also aborted pending downloads; fixed before publication."
+    },
+    {
+      "build": "a9e9700e28b554f2",
+      "sourceCommit": "da7ac02",
+      "localManifest": "artifacts/pwa-port/funkwhale-rescue-live-a9e9700e28b554f2-local-manifest.json",
+      "reason": "Independent review found split download operations could overwrite or race an explicit same-track source choice; fixed before publication."
+    }
+  ],
+  "limits": [
+    "Only three canonical recordings currently have generated identity proof. The generator is generic but the approved index is finite; names alone never authorize arbitrary catalog substitution.",
+    "Acoustic evidence compares approximately 30-second official excerpts plus distinct-song negatives; it does not authenticate the unreferenced remainder of a master or guarantee every remaster/medley distinction.",
+    "Physical installed Android/iPhone background, screen-off and codec behavior for these new provider paths remain unverified. Desktop hidden tabs and WebKit/Linux are separate evidence.",
+    "A public pod/development API may change schema, permissions or availability; the adapter rejects unreadable/changed/unsupported metadata and does not keep temporary signed storage URLs.",
+    "No whole commercial catalog or Epoitaitaye recovery is claimed.",
+    "No server, account, subscription, extension or native service is added. Android Auto/CarPlay native integrations remain outside this static PWA."
+  ],
+  "physicalDeviceChecks": {
+    "android": {
+      "status": "pending"
+    },
+    "iphone": {
+      "status": "pending"
+    },
+    "newProviderLockedScreenVerified": false
+  },
+  "githubPagesRun": {
+    "id": 39916793306,
+    "status": "completed",
+    "conclusion": "success",
+    "commit": "6800f59c119acc97fb05d93c9182ad073f663c01"
+  },
+  "publicManifestHashesVerified": true
+}

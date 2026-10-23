@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T06:57:54.451Z",
+  "expectedBuild": "2e12fcf9cbbfb0b1",
+  "build": "2e12fcf9cbbfb0b1",
+  "caseName": "melted",
+  "scenario": "smoke",
+  "expectedRecording": {
+    "id": 2988892451,
+    "title": "Melted Wings",
+    "artist": "Kai Engel",
+    "album": "Written in Ink",
+    "isrc": "GBSMU2086183",
+    "duration": 133.333333,
+    "bytes": 5527791,
+    "mime": "audio/mpeg",
+    "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802"
+  },
+  "secondRecording": null,
+  "execution": {
+    "script": "scripts/tests/funkwhale-rescue-live.browser.mjs",
+    "scriptSha256": "3085661ac1580971e99c56bc0353ca99c32a3d71aeeb88c400a756f813aedf62",
+    "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-3085661ac1580971.mjs"
+  },
+  "scope": "Real catalog + one title click -> real Funkwhale full-file SHA -> seek -> desktop hidden tab -> navigation.",
+  "limitations": [
+    "Desktop Chrome is not an Android/iPhone or screen-off test.",
+    "Chrome Ogg support cannot establish iOS compatibility.",
+    "Known file hashes verify bytes, while source identity evidence covers an official excerpt, not an independently verified whole master.",
+    "Cancellation checks stale-playback suppression; transport abort is observed separately, never inferred."
+  ],
+  "checks": [
+    {
+      "name": "expected compiled launcher opens through the normal control",
+      "pass": true,
+      "activationBeforeInput": {
+        "active": false,
+        "ever": false
+      },
+      "codecs": {
+        "mp3": "probably",
+        "oggVorbis": "probably",
+        "oggOpus": "probably"
+      }
+    },
+    {
+      "name": "exact canonical row is selected once through its title",
+      "pass": false,
+      "error": "Unknown key: \"Control+A\"",
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "empty",
+            "blob": null,
+            "currentTime": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [],
+        "blobs": [],
+        "current": null,
+        "repeat": null,
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": null,
+          "artist": null,
+          "playbackState": "none"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "",
+        "notices": []
+      }
+    }
+  ],
+  "errors": [
+    {
+      "kind": "terminal",
+      "message": "Unknown key: \"Control+A\""
+    }
+  ],
+  "network": [],
+  "inputActions": [
+    {
+      "action": "trusted mouse click",
+      "purpose": "open the music app"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus catalog search"
+    }
+  ],
+  "primarySongClicks": 0,
+  "sourceMenuClicks": 0,
+  "iframePlaybackClicks": 0,
+  "browserSecurityOverrides": false,
+  "backgroundThrottleOverrides": false,
+  "outputMuted": false,
+  "providerResponsesMocked": false,
+  "observationRpcCalls": 15,
+  "observationRpcWithGesture": 0,
+  "mediaFilesWritten": false,
+  "mediaUrlsPersisted": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterIndependentlyVerified": false,
+  "faultInjection": {
+    "youtubeNetworkFailure": true,
+    "heldFunkwhaleRequest": false,
+    "offlineForPreparedQueue": false
+  },
+  "target": {
+    "origin": "http://127.0.0.1:55944",
+    "path": "/pletina/",
+    "temporaryStaticQaPreview": true
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "finalState": {
+    "audio": [
+      {
+        "index": 0,
+        "sourceKind": "empty",
+        "blob": null,
+        "currentTime": 0,
+        "duration": null,
+        "paused": true,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "events": [],
+    "blobs": [],
+    "current": null,
+    "repeat": null,
+    "userQueue": [],
+    "hidden": false,
+    "online": true,
+    "codecs": {
+      "mp3": "probably",
+      "oggVorbis": "probably",
+      "oggOpus": "probably"
+    },
+    "videoIframeCount": 0,
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "mediaSession": {
+      "title": null,
+      "artist": null,
+      "playbackState": "none"
+    },
+    "nowPlayingOpen": false,
+    "searchValue": "",
+    "notices": []
+  },
+  "pass": false
+}

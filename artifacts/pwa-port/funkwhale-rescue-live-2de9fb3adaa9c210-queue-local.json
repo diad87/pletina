@@ -1,0 +1,2279 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T07:11:38.885Z",
+  "expectedBuild": "2de9fb3adaa9c210",
+  "build": "2de9fb3adaa9c210",
+  "caseName": "cylinder",
+  "scenario": "queue",
+  "expectedRecording": {
+    "id": 2934405891,
+    "title": "Cylinder Six",
+    "artist": "Chris Zabriskie",
+    "album": "Cylinders",
+    "isrc": "GBKPL1370800",
+    "duration": 105.64,
+    "bytes": 4441693,
+    "mime": "audio/mpeg",
+    "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35"
+  },
+  "secondRecording": {
+    "id": 2988892451,
+    "title": "Melted Wings",
+    "artist": "Kai Engel",
+    "album": "Written in Ink",
+    "isrc": "GBSMU2086183",
+    "duration": 133.333333,
+    "bytes": 5527791,
+    "mime": "audio/mpeg",
+    "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802"
+  },
+  "execution": {
+    "script": "scripts/tests/funkwhale-rescue-live.browser.mjs",
+    "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+    "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs"
+  },
+  "scope": "Smoke plus add a different canonical song through its real menu, prepare it, reach real ended hidden/offline and play the next blob.",
+  "limitations": [
+    "Desktop Chrome is not an Android/iPhone or screen-off test.",
+    "Chrome Ogg support cannot establish iOS compatibility.",
+    "Known file hashes verify bytes, while source identity evidence covers an official excerpt, not an independently verified whole master.",
+    "Cancellation checks stale-playback suppression; transport abort is observed separately, never inferred."
+  ],
+  "checks": [
+    {
+      "name": "expected compiled launcher opens through the normal control",
+      "pass": true,
+      "activationBeforeInput": {
+        "active": false,
+        "ever": false
+      },
+      "codecs": {
+        "mp3": "probably",
+        "oggVorbis": "probably",
+        "oggOpus": "probably"
+      }
+    },
+    {
+      "name": "exact canonical row is selected once through its title",
+      "pass": true,
+      "selected": {
+        "index": "0",
+        "title": "Cylinder Six",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders"
+      },
+      "primarySongClicks": 1
+    },
+    {
+      "name": "the single title click starts the exact checked Funkwhale bytes without video",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2.343,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "Cylinder Six Chris Zabriskie",
+        "searchRows": [
+          {
+            "title": "Cylinder Six",
+            "artist": "Chris Zabriskie",
+            "album": "Cylinders"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      },
+      "funkwhaleReached": true,
+      "noSecondPlaybackClick": true
+    },
+    {
+      "name": "visible seek reaches the middle of the same recording",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": true,
+        "searchValue": "Cylinder Six Chris Zabriskie",
+        "searchRows": [
+          {
+            "title": "Cylinder Six",
+            "artist": "Chris Zabriskie",
+            "album": "Cylinders"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      }
+    },
+    {
+      "name": "the same unmuted recording advances for ten seconds in a real hidden desktop tab",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 63.823,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 5136,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 5137,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 5138,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": true,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": true,
+        "searchValue": "Cylinder Six Chris Zabriskie",
+        "searchRows": [
+          {
+            "title": "Cylinder Six",
+            "artist": "Chris Zabriskie",
+            "album": "Cylinders"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      },
+      "hiddenWaitMs": 10500,
+      "mediaRequestsAdded": 0,
+      "phoneClaimed": false
+    },
+    {
+      "name": "album Back and Home preserve navigation and audio",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 65.117,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 5136,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 5137,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 5138,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": null,
+        "searchRows": [],
+        "searchStatus": null,
+        "notices": []
+      },
+      "hardwareBackClaimed": false
+    },
+    {
+      "name": "a different exact recording is added through its real queue menu",
+      "pass": true,
+      "selected": {
+        "index": "0",
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink"
+      },
+      "menuAction": "Reproducir a continuación",
+      "sourceMenuWasNotUsed": true
+    },
+    {
+      "name": "the next real recording is prepared while the first keeps playing",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 4.11,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 5136,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 5137,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 5138,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 17328,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 17329,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 17329,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          },
+          {
+            "key": 2,
+            "bytes": 5527791,
+            "mime": "audio/mpeg",
+            "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2934405891,
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "isrc": "GBKPL1370800"
+        },
+        "repeat": "off",
+        "userQueue": [
+          2988892451
+        ],
+        "hidden": false,
+        "online": true,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Cylinder Six",
+          "artist": "Chris Zabriskie",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": false,
+        "searchValue": "Melted Wings Kai Engel",
+        "searchRows": [
+          {
+            "title": "Melted Wings",
+            "artist": "Kai Engel",
+            "album": "Written in Ink"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      }
+    },
+    {
+      "name": "real ended starts the different prepared recording while hidden and offline",
+      "pass": true,
+      "state": {
+        "audio": [
+          {
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 2,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 7.748,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "loadstart",
+            "at": 2616,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 2633,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 2694,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 5136,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 5137,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 5138,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 53,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 17328,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 17329,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 17329,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 2,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 19543,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 19543,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 19544,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeking",
+            "at": 19544,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "seeked",
+            "at": 19545,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 19545,
+            "hidden": false,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 103,
+            "duration": 105.64,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "pause",
+            "at": 22279,
+            "hidden": true,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 105.64,
+            "duration": 105.64,
+            "paused": true,
+            "ended": true,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "ended",
+            "at": 22280,
+            "hidden": true,
+            "canonicalId": 2934405891,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 1,
+              "bytes": 4441693,
+              "mime": "audio/mpeg",
+              "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+              "revoked": false
+            },
+            "currentTime": 105.64,
+            "duration": 105.64,
+            "paused": true,
+            "ended": true,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadstart",
+            "at": 22285,
+            "hidden": true,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 2,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": null,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "at": 22298,
+            "hidden": true,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 2,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "at": 22316,
+            "hidden": true,
+            "canonicalId": 2988892451,
+            "index": 0,
+            "sourceKind": "blob",
+            "blob": {
+              "key": 2,
+              "bytes": 5527791,
+              "mime": "audio/mpeg",
+              "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+              "revoked": false
+            },
+            "currentTime": 0,
+            "duration": 133.333,
+            "paused": false,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "error": null
+          }
+        ],
+        "blobs": [
+          {
+            "key": 1,
+            "bytes": 4441693,
+            "mime": "audio/mpeg",
+            "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+            "revoked": false
+          },
+          {
+            "key": 2,
+            "bytes": 5527791,
+            "mime": "audio/mpeg",
+            "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+            "revoked": false
+          }
+        ],
+        "current": {
+          "id": 2988892451,
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "album": "Written in Ink",
+          "isrc": "GBSMU2086183"
+        },
+        "repeat": "off",
+        "userQueue": [],
+        "hidden": true,
+        "online": false,
+        "codecs": {
+          "mp3": "probably",
+          "oggVorbis": "probably",
+          "oggOpus": "probably"
+        },
+        "videoIframeCount": 0,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "mediaSession": {
+          "title": "Melted Wings",
+          "artist": "Kai Engel",
+          "playbackState": "playing"
+        },
+        "nowPlayingOpen": true,
+        "searchValue": "Melted Wings Kai Engel",
+        "searchRows": [
+          {
+            "title": "Melted Wings",
+            "artist": "Kai Engel",
+            "album": "Written in Ink"
+          }
+        ],
+        "searchStatus": null,
+        "notices": []
+      },
+      "preparationUsesRealProvider": true,
+      "phoneOrScreenOffClaimed": false
+    }
+  ],
+  "errors": [],
+  "network": [
+    {
+      "at": 1792739501054,
+      "host": "music.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739501066,
+      "host": "www.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739501319,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739501744,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739501977,
+      "host": "open.audio",
+      "kind": "media",
+      "status": 200,
+      "mime": "audio/mpeg"
+    },
+    {
+      "at": 1792739517854,
+      "host": "music.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739517872,
+      "host": "www.youtube.com",
+      "kind": "youtube",
+      "injectedFailure": "failed"
+    },
+    {
+      "at": 1792739518144,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739518488,
+      "host": "open.audio",
+      "kind": "metadata",
+      "status": 200,
+      "mime": "application/json"
+    },
+    {
+      "at": 1792739518685,
+      "host": "open.audio",
+      "kind": "media",
+      "status": 200,
+      "mime": "audio/mpeg"
+    }
+  ],
+  "inputActions": [
+    {
+      "action": "trusted mouse click",
+      "purpose": "open the music app"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus catalog search"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "play the exact recording with one title click"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Sonando ahora"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "seek through the visible progress bar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open the playing recording album"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "return through app Back"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "go to Inicio"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Sonando ahora"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "seek near the start before preparing a different queued recording"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "close Sonando ahora"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Buscar"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus catalog search"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open the different recording menu"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "Reproducir a continuación"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "open Sonando ahora"
+    },
+    {
+      "action": "trusted mouse click",
+      "purpose": "focus seek for real ended acceleration"
+    }
+  ],
+  "primarySongClicks": 1,
+  "sourceMenuClicks": 0,
+  "iframePlaybackClicks": 0,
+  "browserSecurityOverrides": false,
+  "backgroundThrottleOverrides": false,
+  "outputMuted": false,
+  "providerResponsesMocked": false,
+  "observationRpcCalls": 89,
+  "observationRpcWithGesture": 0,
+  "mediaFilesWritten": false,
+  "mediaUrlsPersisted": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "installedPwaVerified": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterIndependentlyVerified": false,
+  "faultInjection": {
+    "youtubeNetworkFailure": true,
+    "heldFunkwhaleRequest": false,
+    "offlineForPreparedQueue": true
+  },
+  "target": {
+    "origin": "http://127.0.0.1:61775",
+    "path": "/pletina/",
+    "temporaryStaticQaPreview": true
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "funkwhaleReached": true,
+  "finalState": {
+    "audio": [
+      {
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 2,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 7.764,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "events": [
+      {
+        "type": "loadstart",
+        "at": 2616,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": null,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "loadedmetadata",
+        "at": 2633,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 2694,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 5136,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 53,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeked",
+        "at": 5137,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 53,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 5138,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 53,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 17328,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 2,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeked",
+        "at": 17329,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 2,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 17329,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 2,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 19543,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 19543,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 19544,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeking",
+        "at": 19544,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "seeked",
+        "at": 19545,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 19545,
+        "hidden": false,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 103,
+        "duration": 105.64,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "pause",
+        "at": 22279,
+        "hidden": true,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 105.64,
+        "duration": 105.64,
+        "paused": true,
+        "ended": true,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "ended",
+        "at": 22280,
+        "hidden": true,
+        "canonicalId": 2934405891,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 1,
+          "bytes": 4441693,
+          "mime": "audio/mpeg",
+          "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+          "revoked": false
+        },
+        "currentTime": 105.64,
+        "duration": 105.64,
+        "paused": true,
+        "ended": true,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "loadstart",
+        "at": 22285,
+        "hidden": true,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 2,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": null,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "loadedmetadata",
+        "at": 22298,
+        "hidden": true,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 2,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      },
+      {
+        "type": "playing",
+        "at": 22316,
+        "hidden": true,
+        "canonicalId": 2988892451,
+        "index": 0,
+        "sourceKind": "blob",
+        "blob": {
+          "key": 2,
+          "bytes": 5527791,
+          "mime": "audio/mpeg",
+          "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+          "revoked": false
+        },
+        "currentTime": 0,
+        "duration": 133.333,
+        "paused": false,
+        "ended": false,
+        "muted": false,
+        "volume": 0.8,
+        "error": null
+      }
+    ],
+    "blobs": [
+      {
+        "key": 1,
+        "bytes": 4441693,
+        "mime": "audio/mpeg",
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "revoked": false
+      },
+      {
+        "key": 2,
+        "bytes": 5527791,
+        "mime": "audio/mpeg",
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "revoked": false
+      }
+    ],
+    "current": {
+      "id": 2988892451,
+      "title": "Melted Wings",
+      "artist": "Kai Engel",
+      "album": "Written in Ink",
+      "isrc": "GBSMU2086183"
+    },
+    "repeat": "off",
+    "userQueue": [],
+    "hidden": false,
+    "online": true,
+    "codecs": {
+      "mp3": "probably",
+      "oggVorbis": "probably",
+      "oggOpus": "probably"
+    },
+    "videoIframeCount": 0,
+    "tabs": [
+      "Inicio",
+      "Buscar",
+      "Podcasts",
+      "Tu biblioteca"
+    ],
+    "mediaSession": {
+      "title": "Melted Wings",
+      "artist": "Kai Engel",
+      "playbackState": "playing"
+    },
+    "nowPlayingOpen": true,
+    "searchValue": "Melted Wings Kai Engel",
+    "searchRows": [
+      {
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink"
+      }
+    ],
+    "searchStatus": null,
+    "notices": []
+  },
+  "pass": true
+}

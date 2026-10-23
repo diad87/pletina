@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T07:25:42.262Z",
+  "build": "2de9fb3adaa9c210",
+  "target": "https://diad87.github.io/pletina/",
+  "publishedCommitReportedByRoot": "6800f59c119acc97fb05d93c9182ad073f663c01",
+  "summary": {
+    "runs": 2,
+    "passedChecks": 15,
+    "errors": 0,
+    "smoke": true,
+    "differentSongQueue": true,
+    "realEndedHiddenOffline": true,
+    "exactCompleteFileHashes": true,
+    "singleAudio": true,
+    "iframePlayback": false
+  },
+  "runner": {
+    "path": "scripts/tests/funkwhale-rescue-live.browser.mjs",
+    "sha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+    "frozen": true
+  },
+  "reports": [
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cylinder-public.json",
+      "sha256": "caa979af0ceaa6b7cd834e836435e3a18d8b7eca06e9d2f260f97740e4ffbce1",
+      "pass": true,
+      "checks": 6,
+      "scenario": "smoke",
+      "errors": [],
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "primarySongClicks": 1,
+      "sourceMenuClicks": 0,
+      "iframePlaybackClicks": 0,
+      "observationRpcCalls": 56,
+      "observationRpcWithGesture": 0,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": false
+      }
+    },
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-queue-public.json",
+      "sha256": "c1b12f283982c20bb4a8076e91e552a334441c90ed0884d78247d9694deb1e6c",
+      "pass": true,
+      "checks": 9,
+      "scenario": "queue",
+      "errors": [],
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "primarySongClicks": 1,
+      "sourceMenuClicks": 0,
+      "iframePlaybackClicks": 0,
+      "observationRpcCalls": 90,
+      "observationRpcWithGesture": 0,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": true
+      }
+    }
+  ],
+  "localEvidence": {
+    "manifest": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-local-manifest.json",
+    "sha256": "440acb8848b5a89aecfd0edce777e78fa80af5bab23064c35074a56ec5cffc24",
+    "passedChecks": 32
+  },
+  "networkEvidence": "Only YouTube requests are deliberately failed to reach fallback. Catalog, Funkwhale metadata and complete audio bytes are real; no response body is mocked.",
+  "limits": [
+    "This verifies the published compiled PWA on desktop Chrome mobile layout, not a physical Android/iPhone.",
+    "Hidden desktop tab and offline prepared-queue playback do not prove phone screen-off/background policies.",
+    "Approved identity is an official-excerpt match, with complete-file hashes fixing the exact played bytes; not independent whole-master verification.",
+    "Only Cylinder Six and Melted Wings are exercised by this public pair; the NIN Ogg case was verified in local release QA.",
+    "The natural route may choose working YouTube first; these results do not claim a natural provider failure."
+  ],
+  "mediaFilesWritten": false,
+  "mediaUrlsPersisted": false,
+  "browsersAndTemporaryServersClosed": true,
+  "productChanged": false
+}

@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T07:13:02.497Z",
+  "build": "2de9fb3adaa9c210",
+  "scope": "Real compiled UI with actual catalog, Funkwhale bodies and complete-file hashes. Explicit YouTube network-failure injection reaches the fallback.",
+  "summary": {
+    "passedRuns": 5,
+    "passedChecks": 32,
+    "errors": 0,
+    "canonicalRecordings": 3,
+    "distinctArtists": 3,
+    "queueDifferentRecording": true,
+    "queueRealEndedHiddenOffline": true,
+    "staleRequestTransportAbortObserved": true,
+    "obsoleteBlobCreated": false,
+    "obsoleteAudioPlayed": false
+  },
+  "runner": {
+    "path": "scripts/tests/funkwhale-rescue-live.browser.mjs",
+    "sha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+    "frozen": true
+  },
+  "reports": [
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cylinder-local.json",
+      "sha256": "863eea368b9eeaafbfef62e4e2501a5d3e89c02c81d91b6c964f98a299e4a3c1",
+      "pass": true,
+      "checks": 6,
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "caseName": "cylinder",
+      "scenario": "smoke",
+      "primarySongClicks": 1,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": false
+      }
+    },
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-melted-local.json",
+      "sha256": "83d22fd9253dc3b5170c1708eb08a092c1dfffc26fe0c8cfcc1d8b297b14c04b",
+      "pass": true,
+      "checks": 6,
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "caseName": "melted",
+      "scenario": "smoke",
+      "primarySongClicks": 1,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": false
+      }
+    },
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-nin-local.json",
+      "sha256": "a16571634698c484f6437393201e434a99e546b584ed163e5ab64aab1b41bfb2",
+      "pass": true,
+      "checks": 6,
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "caseName": "nin",
+      "scenario": "smoke",
+      "primarySongClicks": 1,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": false
+      }
+    },
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-queue-local.json",
+      "sha256": "9f70bc739a65b94bdba2a19d7160f3453cbed4b092e20009b2339da57c62a0af",
+      "pass": true,
+      "checks": 9,
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "caseName": "cylinder",
+      "scenario": "queue",
+      "primarySongClicks": 1,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": false,
+        "offlineForPreparedQueue": true
+      }
+    },
+    {
+      "report": "artifacts/pwa-port/funkwhale-rescue-live-2de9fb3adaa9c210-cancel-local.json",
+      "sha256": "17defaa3f393c7e9b122220af7a4264ef0f3fce2d86d4bc68d9bf73656cc0f36",
+      "pass": true,
+      "checks": 5,
+      "scriptSha256": "4d8951156866c71b0c5bf24e30f3b65a1fcacf68e92d4bd899ab640ef1316906",
+      "sourceSnapshot": "artifacts/pwa-port/funkwhale-rescue-live-source-4d8951156866c71b.mjs",
+      "caseName": "cylinder",
+      "scenario": "cancel",
+      "primarySongClicks": 2,
+      "faultInjection": {
+        "youtubeNetworkFailure": true,
+        "heldFunkwhaleRequest": true,
+        "offlineForPreparedQueue": false
+      }
+    }
+  ],
+  "historicalBuilds": [
+    {
+      "build": "2e12fcf9cbbfb0b1",
+      "manifest": "artifacts/pwa-port/funkwhale-rescue-live-2e12fcf9cbbfb0b1-local-manifest.json",
+      "sha256": "d1f8d3c80c9575de43df766540262329ca32aac11fdf8aa63f79edfe0a29c2d3",
+      "notEvidenceOfLaterOperationRaceFixes": true
+    },
+    {
+      "build": "a9e9700e28b554f2",
+      "manifest": "artifacts/pwa-port/funkwhale-rescue-live-a9e9700e28b554f2-local-manifest.json",
+      "sha256": "3f0e68adb98f5cf28a2d02ca0bcdb7aebb6376e6c685ee30c826e6f6b2a5229f",
+      "notEvidenceOfLaterOperationRaceFixes": true
+    }
+  ],
+  "limitations": [
+    "Desktop Chrome mobile layout; no Android/iPhone physical, installed-PWA or screen-off claim.",
+    "YouTube outage is deliberate fault injection, not evidence that these three recordings fail YouTube naturally.",
+    "Provider/catalog responses and full audio bytes are real, never mocked.",
+    "Only one approved upload per recording currently exists in the index; best-compatible multi-encoding ordering is verified by separate synthetic unit tests.",
+    "Chrome plays the indexed NIN Vorbis file; unsupported iOS versions must reject it rather than invent an alternative.",
+    "Index identity is an official-excerpt match, not independent whole-master verification; every played file must still match its complete-file SHA.",
+    "No live full-audio URLs or music files are persisted by this QA runner.",
+    "Separate unit tests establish manual-source versus download operation priority; these browser scenarios do not create a simultaneous download/manual-choice race."
+  ],
+  "naturalControlRun": false,
+  "browsersAndTemporaryServersClosed": true,
+  "productEditedByThisAgent": false
+}
