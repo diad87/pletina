@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T19:11:52.243Z",
+  "build": "c2a70158ef06a3d5",
+  "sourceCommit": "cf0dd4487c58033301faf2bbcbbcd93782187f6f",
+  "distributionCommit": "23218057f9ec3612d5c710c6a47c2482ee70e19a",
+  "status": "published-real-verified-download-and-offline-playback-validated",
+  "scope": "Compiled PWA real provider download, complete cached bytes/hash/decode, offline reload and trusted native playback/seek. Desktop Chrome foreground only.",
+  "runner": {
+    "path": "scripts/tests/verified-download-live.browser.mjs",
+    "sha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295"
+  },
+  "runnerSnapshot": {
+    "path": "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs",
+    "sha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295"
+  },
+  "localManifest": {
+    "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local-manifest.json",
+    "sha256": "fc150d29d83db5d54b8479cbece159ac150b5d5fa46285475508d2b6a3195639"
+  },
+  "publicReport": {
+    "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.json",
+    "sha256": "c10191f3b626431c7b29d1ecde829445108f83bff3d10a8d9bedf5bcf1be4a52",
+    "passed": 2,
+    "failed": 0,
+    "browser": "Chrome/148.0.7778.97",
+    "runnerSha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295",
+    "faultInjection": {
+      "youtubeNetworkFailure": false,
+      "blockedYouTubeRequests": 0,
+      "otherProviderResponsesModified": false
+    },
+    "resourcesClosed": true,
+    "screenshot": {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.png",
+      "sha256": "77bacd31abf1a4337be1def3195daa687217b9fc2ef393e0d80f9eb31e4826fb"
+    }
+  },
+  "publishedFiles": {
+    "path": "artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json",
+    "sha256": "488347819438f7bc2ac8eddecf89c8cd75b24ddc08eee494fe23cb572a339b96",
+    "passed": 31,
+    "failed": 0,
+    "allHTTP200": true,
+    "allSha256Match": true
+  },
+  "evidence": {
+    "file": {
+      "id": 3250715431,
+      "title": "Iritsi da Eguna",
+      "provider": "verified",
+      "sourceId": "kantari-iritsi-da-eguna-2016",
+      "size": 4633634,
+      "byteLength": 4633634,
+      "sha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+      "status": 200,
+      "contentType": "audio/mpeg",
+      "decoded": {
+        "duration": 187.16839583333334,
+        "channels": 2,
+        "sampleRate": 48000
+      },
+      "startAt": 8.94,
+      "fileDuration": 187.1684126984127,
+      "expectedSha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+      "internalPointer": true,
+      "storedTemporaryUrl": false
+    },
+    "offlineInitial": {
+      "online": false,
+      "title": "Iritsi da Eguna",
+      "state": "playing",
+      "time": 10,
+      "duration": 187.180408,
+      "videoModal": false,
+      "iframeCount": 0
+    },
+    "offlineSeek": {
+      "online": false,
+      "title": "Iritsi da Eguna",
+      "state": "playing",
+      "time": 151,
+      "duration": 187.180408,
+      "videoModal": false,
+      "iframeCount": 0
+    },
+    "networkGates": {
+      "online": {
+        "blocked": false,
+        "status": 404
+      },
+      "beforeReload": {
+        "blocked": true
+      },
+      "afterReload": {
+        "blocked": true
+      }
+    },
+    "sameCompleteFileAfterStartupReconciliation": true
+  },
+  "counts": {
+    "localChecksPassed": 4,
+    "localChecksFailed": 0,
+    "publicChecksPassed": 2,
+    "publicChecksFailed": 0,
+    "uniqueRecordings": 2
+  },
+  "visualReview": "Public Downloads/navigation/title/artist/album/artwork and playback controls verified in screenshot; cached cover artwork loaded in this public Chrome148 run.",
+  "redaction": {
+    "reportsScanned": 1,
+    "stringsScanned": 78,
+    "findings": [],
+    "rawMediaUrlsSaved": false,
+    "audioBytesSaved": false
+  },
+  "limitations": [
+    "Desktop foreground only; no new physical mobile, screen-off or background claim.",
+    "Local Funkwhale coverage uses explicit YouTube-network failure. The public Iritsi canary is natural, without provider blocking.",
+    "No universal catalog or independently verified whole-master acoustic identity claim."
+  ]
+}

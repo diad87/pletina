@@ -49,7 +49,10 @@ export async function createWebKitNetworkTransport() {
         const resourceType = dest === 'audio' || dest === 'video' ? 'media' : 'fetch'
         const wrapped = { url: () => url.href, method: () => request.method, resourceType: () => resourceType,
           headers: () => headers, postDataJSON: () => ({}) }
-        const abort = async () => { if (!response.writableEnded) { response.writeHead(502); response.end() } }
+        // Playwright route.abort is a transport failure, not an HTTP502 body.
+        // no-cors fetch hides HTTP status, so returning502 would fabricate an
+        // opaque "successful" transfer when the fixture actually cut the net.
+        const abort = async () => { if (!response.destroyed) response.destroy() }
         await handler({ request: () => wrapped, abort, continue: abort,
           fulfill: async value => {
             if (response.writableEnded || response.destroyed) return

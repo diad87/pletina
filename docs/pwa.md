@@ -1,7 +1,15 @@
 # Pletina PWA: port de la APK 0.11.2
 
+<!-- offline-c2-summary:start -->
+**Actual: `c2a70158ef06a3d5`, publicada y verificada**, fuente `cf0dd4487c58033301faf2bbcbbcd93782187f6f`. La [cola offline y las descargas](pwa-offline-downloads.md) conservan las pendientes al cerrar, recuperan el orden sin duplicar gestores y limpian temporales interrumpidos. La reproducción offline busca la siguiente copia real disponible. Los archivos completos ya verificados de fuentes alternativas pueden guardarse; los streams P1 sin acceso legible al cuerpo íntegro siguen sin descarga. Los errores transitorios reciben reintentos de audio del mismo vídeo y no abren vídeo automáticamente. Todo PWA, sin servidor intermedio ni cuentas; mismo CSS y fuentes que la publicación 2e0.
+
+La [validación de esta versión](../artifacts/pwa-e2e/validation-c2a70158ef06a3d5.json) separa lógica, recorridos controlados, proveedores reales y límites de cada navegador. La distribución pública pasa [31/31 archivos HTTP/SHA](../artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json), workflow `40009299864` correcto. La nueva compilación todavía no tiene comprobación física de pantalla apagada ni descargas en móviles. **Ni, Ni, Ni! sigue sin resolverse en el último canario real del motor**; no se presenta como cobertura universal.
+<!-- offline-c2-summary:end -->
+
+## Historial anterior a c2a70158ef06a3d5
+
 <!-- spotify-link-summary:start -->
-**Actual: `2e0c7bb97cf8c898`, publicada y verificada**, fuente `56be347fea3b86ef10ee774f94780351d38d3914`. **Importar una playlist pública pegando su enlace ya funciona en la PWA, sin servidor ni inicio de sesión.** El [lector](../web-port/spotify.ts) obtiene una sesión anónima pública y consulta directamente las páginas de metadatos de Spotify. El token permanece en RAM, sin cookies, cuentas, proxy ni suscripciones. La consulta interna puede cambiar en Spotify; las listas privadas y los fallos del proveedor mantienen CSV como alternativa.
+**Anterior: `2e0c7bb97cf8c898`, publicada y verificada**, fuente `56be347fea3b86ef10ee774f94780351d38d3914`. **Importar una playlist pública pegando su enlace ya funciona en la PWA, sin servidor ni inicio de sesión.** El [lector](../web-port/spotify.ts) obtiene una sesión anónima pública y consulta directamente las páginas de metadatos de Spotify. El token permanece en RAM, sin cookies, cuentas, proxy ni suscripciones. La consulta interna puede cambiar en Spotify; las listas privadas y los fallos del proveedor mantienen CSV como alternativa.
 
 El [informe de validación](../artifacts/spotify-import-investigation/validation-2e0c7bb97cf8c898.json) registra **691/691 pruebas de lógica**, tipos **0 errores y 0 avisos**, **15/15 recorridos de importación con fixtures** en tres motores y **10/10 comprobaciones de actualización/persistencia** con el grafo de esta aplicación. La [paginación real](../artifacts/spotify-import-investigation/guest-playlist-pagination-browser.json) lee **502/502 entradas** en Chromium, Firefox y WebKit de escritorio. Se conservan orden y duplicados, se validan identidad y cursores y se limita a 10.000 entradas. Cancelar o salir aborta la lectura; los fallos no guardan una playlist parcial. La revisión y Guardar playlist siguen siendo pasos explícitos.
 

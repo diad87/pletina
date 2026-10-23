@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T18:24:32.606Z",
+  "build": "1662d64a013d4781",
+  "status": "two-local-verified-blob-download-paths-validated",
+  "scope": "Two actual complete files, real compiled UI and native offline playback/seek. Iritsi uses natural curated source; Funkwhale is isolated by aborting only YouTube transport. No product, provider response or SDK substitution.",
+  "previousNaturalCanaryManifest": {
+    "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local-manifest.json",
+    "sha256": "a6932a98292858902f23d8b61341f85f32f5b8578de8c94c74d757ab113c0824"
+  },
+  "currentRunner": {
+    "path": "scripts/tests/verified-download-live.browser.mjs",
+    "sha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295"
+  },
+  "currentRunnerSnapshot": {
+    "path": "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs",
+    "sha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295"
+  },
+  "funkwhaleDirected": {
+    "path": "artifacts/pwa-port/verified-download-funkwhale-1662d64a013d4781-local-youtube-blocked.json",
+    "sha256": "3e6f122ead2a2b015b123379a197b5a341055d3ae7d0b812eab7f849a7f09665",
+    "passed": 2,
+    "failed": 0,
+    "browser": "Chrome/153.0.8010.52",
+    "faultInjection": {
+      "youtubeNetworkFailure": true,
+      "blockedYouTubeRequests": 2,
+      "otherProviderResponsesModified": false
+    },
+    "file": {
+      "id": 2934405891,
+      "title": "Cylinder Six",
+      "provider": "funkwhale",
+      "sourceId": "51b06556-531b-43a9-b714-ab399c986f69",
+      "size": 4441693,
+      "byteLength": 4441693,
+      "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+      "status": 200,
+      "contentType": "audio/mpeg",
+      "decoded": {
+        "duration": 105.64,
+        "channels": 2,
+        "sampleRate": 48000
+      },
+      "startAt": 0,
+      "fileDuration": 105.64,
+      "expectedSha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+      "internalPointer": true,
+      "storedTemporaryUrl": false
+    },
+    "offlineInitial": {
+      "online": false,
+      "title": "Cylinder Six",
+      "state": "playing",
+      "time": 2,
+      "duration": 105.64,
+      "videoModal": false,
+      "iframeCount": 0
+    },
+    "offlineSeek": {
+      "online": false,
+      "title": "Cylinder Six",
+      "state": "playing",
+      "time": 85,
+      "duration": 105.64,
+      "videoModal": false,
+      "iframeCount": 0
+    },
+    "networkGates": {
+      "online": {
+        "blocked": false,
+        "status": 404
+      },
+      "beforeOfflineReload": {
+        "blocked": true
+      },
+      "afterOfflineReload": {
+        "blocked": true
+      }
+    },
+    "screenshot": {
+      "path": "artifacts/pwa-port/verified-download-funkwhale-1662d64a013d4781-local-youtube-blocked.png",
+      "sha256": "74814382acc58485a21ff38cf482f912a6d2d94893102bfdac6f7c82fdeff115"
+    }
+  },
+  "provenance": "Iritsi final2/2 remains bound to runner8efb3ee3, preserved source snapshot and report. Current runnerf524f806 adds an explicit optional YouTube-network failure only; earlier reports/snapshots were not overwritten or reassigned.",
+  "visualReview": "Funkwhale Downloads, navigation, loaded cover art, exact selected title/artist/album and active player remain correct offline. Iritsi Chrome148 screenshot separately records cover placeholders.",
+  "limitations": [
+    "No natural Funkwhale-fallback coverage claimed: its natural control chose a legacy opaque source.",
+    "No universal catalog availability, independently verified whole-master acoustic identity or physical mobile/background claim."
+  ],
+  "policy": {
+    "providerMocks": false,
+    "nodeBootstrap": false,
+    "productMethodsCalled": false,
+    "audioConstructorReplaced": false,
+    "securityOverrides": false,
+    "autoplayOverrides": false,
+    "rawMediaUrlsSaved": false,
+    "mediaBytesSaved": false,
+    "physicalPhone": false,
+    "backgroundVerified": false
+  }
+}

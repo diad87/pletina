@@ -1,0 +1,3750 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-23T19:05:53.258Z",
+  "build": "c2a70158ef06a3d5",
+  "suite": "media",
+  "selectedMediaScenarios": [
+    "media.selection-html-audio",
+    "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+    "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+    "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files"
+  ],
+  "profiles": [
+    {
+      "profile": "chromium-android-layout",
+      "engine": "chromium",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-23T19:05:53.854Z",
+          "status": "pass",
+          "build": "c2a70158ef06a3d5",
+          "applicationPath": "/pletina/application/index.ff3cb9864df3dcbd.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-23T19:05:54.630Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-23T19:05:54.632Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-23T19:05:55.999Z"
+        },
+        {
+          "name": "media.selection-html-audio",
+          "startedAt": "2026-10-23T19:05:56.006Z",
+          "status": "pass",
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "timeupdate",
+                "index": 0,
+                "time": 0.152633
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.16337,
+                "duration": 12,
+                "source": true,
+                "local": false,
+                "host": "fixture.googlevideo.com",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "media": "Real silent AAC/MP4; no song-content claim",
+          "finishedAt": "2026-10-23T19:05:57.473Z"
+        },
+        {
+          "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "startedAt": "2026-10-23T19:05:57.474Z",
+          "status": "pass",
+          "persistedIds": [
+            104,
+            105,
+            106
+          ],
+          "resumedIds": [
+            104,
+            105,
+            106
+          ],
+          "automaticOnlineResume": true,
+          "networkRecovery": "native-online-event",
+          "nativeOnlineEventLimitation": null,
+          "checkpointContainsOnlyCatalogMetadata": true,
+          "falseCompletedWhileOffline": false,
+          "database": {
+            "cacheEntries": 3,
+            "rows": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              }
+            ]
+          },
+          "networkMode": "browser-offline",
+          "physicalBackgroundDownloadClaimed": false,
+          "finishedAt": "2026-10-23T19:06:06.644Z"
+        },
+        {
+          "name": "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+          "startedAt": "2026-10-23T19:06:06.645Z",
+          "status": "pass",
+          "pages": 2,
+          "losingWindowDidNotOverwriteJobs": true,
+          "ownerContinuedAndCommittedIds": [
+            104
+          ],
+          "ownerTabClosed": true,
+          "resumedIds": [
+            105
+          ],
+          "explicitRetryAfterHandoff": true,
+          "database": {
+            "cacheEntries": 2,
+            "rows": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              }
+            ]
+          },
+          "additionalPageTransport": "Same Puppeteer HTTP fixture bridge as the primary page; no application module replacement",
+          "physicalMultiwindowClaimed": false,
+          "finishedAt": "2026-10-23T19:06:15.411Z"
+        },
+        {
+          "name": "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files",
+          "startedAt": "2026-10-23T19:06:15.413Z",
+          "status": "pass",
+          "explicitSeededOrphanStageRemoved": true,
+          "unrelatedKeyPreserved": true,
+          "committedPointerAndMetadataPreserved": true,
+          "realCommittedDownloadReplayed": true,
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "seeking",
+                "index": 0,
+                "time": 0.279985
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.279985,
+                "duration": 12,
+                "source": true,
+                "local": true,
+                "host": "127.0.0.1",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 1
+              }
+            ]
+          },
+          "physicalPhoneClaimed": false,
+          "finishedAt": "2026-10-23T19:06:22.451Z"
+        }
+      ],
+      "errors": [],
+      "build": "c2a70158ef06a3d5",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "puppeteerVersion": "25.14.0",
+      "browserVersion": "153.0.8010.52",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-23T19:05:53.751Z",
+      "networkTransport": "Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.",
+      "counts": {
+        "pass": 6,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-23T19:06:02.929Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": false,
+          "after": true,
+          "at": "2026-10-23T19:06:04.295Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:04.410Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:13.166Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:20.183Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:22.457Z"
+        }
+      ],
+      "durableDiagnostics": {
+        "beforeOnline": {
+          "phase": "restore-network",
+          "online": false,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "networkEvents": [
+              {
+                "type": "initial",
+                "online": false
+              }
+            ],
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "D8CF6596CDB187D073D3CD73D63EE42A",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782363967
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782363983
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364000
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364016
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364033
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364049
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364066
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364083
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364101
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364116
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364133
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364150
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364167
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364183
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364200
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364217
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364233
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364250
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364267
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364284
+            }
+          ]
+        },
+        "afterOnline": {
+          "phase": "restore-network",
+          "online": true,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "networkEvents": [
+              {
+                "type": "initial",
+                "online": false
+              },
+              {
+                "type": "online",
+                "online": true,
+                "trusted": true
+              }
+            ],
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 104,
+                "state": "downloading",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "D8CF6596CDB187D073D3CD73D63EE42A",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782363983
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364000
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364016
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364033
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364049
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364066
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364083
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364101
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364116
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364133
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364150
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364167
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364183
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364200
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364217
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364233
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364250
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364267
+            },
+            {
+              "host": "images.pletina.test",
+              "path": "/cover.svg",
+              "method": "GET",
+              "type": "image",
+              "injectedFailure": "offline",
+              "failureAt": 1792782364284
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS"
+            }
+          ]
+        }
+      },
+      "ownerDiagnostics": {
+        "initial": {
+          "locks": {
+            "held": [
+              {
+                "clientId": "D8CF6596CDB187D073D3CD73D63EE42A",
+                "mode": "exclusive",
+                "name": "pletina-download-owner:v1"
+              }
+            ],
+            "pending": []
+          },
+          "statuses": [
+            "3 descargas quitadas",
+            ""
+          ]
+        },
+        "afterDownloadClick": {
+          "locks": {
+            "held": [
+              {
+                "clientId": "C6178C493F8143F0F06A07A214E4187E",
+                "mode": "exclusive",
+                "name": "pletina-download-owner:v1"
+              }
+            ],
+            "pending": []
+          },
+          "pagehide": {
+            "persisted": false,
+            "at": 1792782367624
+          },
+          "statuses": [
+            "Descargando «Canción QA Cuatro»…",
+            ""
+          ],
+          "notices": [
+            "Descargando «Canción QA Cuatro»…"
+          ]
+        },
+        "firstGateReached": true,
+        "beforeRelease": {
+          "heldForMs": 3361,
+          "owner": {
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 104,
+                "state": "downloading",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "statuses": [
+              "Descargando «Canción QA Cinco»…",
+              ""
+            ]
+          }
+        },
+        "secondGateReached": true,
+        "ownerReallyClosed": true
+      },
+      "finalState": {
+        "path": "/pletina/application/index.ff3cb9864df3dcbd.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Descargas"
+        ],
+        "navigation": {
+          "index": 18,
+          "route": {
+            "name": "downloads"
+          },
+          "historyLength": 39
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [
+          "Descarga quitada"
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": true,
+              "time": 0.358156,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26186,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 26186,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 26189,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 26189,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 26189,
+              "time": 0.279985,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26200,
+              "time": 0.279985,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 26200,
+              "time": 0.279985,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26201,
+              "time": 0.279985,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26332,
+              "time": 0.358156,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 26333,
+              "time": 0.358156,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 3,
+          "api.deezer.com/chart/0/artists": 3,
+          "images.pletina.test/cover.svg": 97,
+          "api.deezer.com/search/artist": 7,
+          "api.deezer.com/search/album": 7,
+          "api.deezer.com/search/track": 7,
+          "music.youtube.com/youtubei/v1/search": 5,
+          "www.youtube.com/youtubei/v1/search": 6,
+          "www.youtube.com/youtubei/v1/player": 11,
+          "fixture.googlevideo.com/audio/qaAudio001a": 2,
+          "fixture.googlevideo.com/audio/qaAudio004d": 3,
+          "fixture.googlevideo.com/audio/qaAudio005e": 2,
+          "fixture.googlevideo.com/audio/qaAudio006f": 2
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS",
+            "playerGate": "delivered"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio004d",
+            "method": "GET",
+            "type": "fetch",
+            "injectedFailure": "offline",
+            "failureAt": 1792782362938
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782362978
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782362991
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363004
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363019
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363033
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363049
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363067
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363083
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363099
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363115
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363132
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363149
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363165
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363182
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363199
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363215
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363232
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363249
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363265
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363282
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363299
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363315
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363332
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363349
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363365
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363382
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363399
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363415
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363433
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363449
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363466
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363483
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363500
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363516
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363533
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363550
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363566
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363583
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363599
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363616
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363633
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363650
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363667
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363683
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363699
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363716
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363733
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363749
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363766
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363783
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363800
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363816
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363833
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363850
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363867
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363884
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363900
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363916
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363933
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363950
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363967
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782363983
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364000
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364016
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364033
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364049
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364066
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364083
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364101
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364116
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364133
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364150
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364167
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364183
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364200
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364217
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364233
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364250
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364267
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image",
+            "injectedFailure": "offline",
+            "failureAt": 1792782364284
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio004d",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio005e",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio006f",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio006f",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS",
+            "playerGate": "delivered"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio004d",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS",
+            "playerGate": "delivered"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio005e",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio006f",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-23T19:06:22.477Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true
+    },
+    {
+      "profile": "firefox-narrow",
+      "engine": "firefox",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-23T19:06:23.964Z",
+          "status": "pass",
+          "build": "c2a70158ef06a3d5",
+          "applicationPath": "/pletina/application/index.ff3cb9864df3dcbd.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-23T19:06:25.225Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-23T19:06:25.225Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-23T19:06:26.623Z"
+        },
+        {
+          "name": "media.selection-html-audio",
+          "startedAt": "2026-10-23T19:06:26.628Z",
+          "status": "pass",
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "timeupdate",
+                "index": 0,
+                "time": 0.02077
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.181678,
+                "duration": 12,
+                "source": true,
+                "local": false,
+                "host": "fixture.googlevideo.com",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "media": "Real silent AAC/MP4; no song-content claim",
+          "finishedAt": "2026-10-23T19:06:28.161Z"
+        },
+        {
+          "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "startedAt": "2026-10-23T19:06:28.162Z",
+          "status": "pass",
+          "persistedIds": [
+            104,
+            105,
+            106
+          ],
+          "resumedIds": [
+            104,
+            105,
+            106
+          ],
+          "automaticOnlineResume": false,
+          "networkRecovery": "real-online-document-reload",
+          "nativeOnlineEventLimitation": {
+            "evidence": "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+            "controlBrowserVersion": "153.0",
+            "reason": "This exact desktop Firefox protocol-offline host changes navigator.onLine after an offline reload without emitting the native online event, reproduced independently without Pletina and with/without the QA clock. A real online reload verifies retained FIFO recovery; automatic event-based resumption is not accredited on this host."
+          },
+          "checkpointContainsOnlyCatalogMetadata": true,
+          "falseCompletedWhileOffline": false,
+          "database": {
+            "cacheEntries": 3,
+            "rows": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              }
+            ]
+          },
+          "networkMode": "browser-offline",
+          "physicalBackgroundDownloadClaimed": false,
+          "finishedAt": "2026-10-23T19:06:39.055Z"
+        },
+        {
+          "name": "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+          "startedAt": "2026-10-23T19:06:39.056Z",
+          "status": "pass",
+          "pages": 2,
+          "losingWindowDidNotOverwriteJobs": true,
+          "ownerContinuedAndCommittedIds": [
+            104
+          ],
+          "ownerTabClosed": true,
+          "resumedIds": [
+            105
+          ],
+          "explicitRetryAfterHandoff": true,
+          "database": {
+            "cacheEntries": 2,
+            "rows": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              }
+            ]
+          },
+          "additionalPageTransport": "Playwright per-page HTTP provider fixtures; no application module replacement",
+          "physicalMultiwindowClaimed": false,
+          "finishedAt": "2026-10-23T19:06:48.783Z"
+        },
+        {
+          "name": "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files",
+          "startedAt": "2026-10-23T19:06:48.785Z",
+          "status": "pass",
+          "explicitSeededOrphanStageRemoved": true,
+          "unrelatedKeyPreserved": true,
+          "committedPointerAndMetadataPreserved": true,
+          "realCommittedDownloadReplayed": true,
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "seeking",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "timeupdate",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "timeupdate",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "seeked",
+                "index": 0,
+                "time": 0.302653
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0.302653
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.302653,
+                "duration": 12,
+                "source": true,
+                "local": true,
+                "host": "127.0.0.1",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "physicalPhoneClaimed": false,
+          "finishedAt": "2026-10-23T19:06:56.018Z"
+        }
+      ],
+      "errors": [],
+      "build": "c2a70158ef06a3d5",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "browserVersion": "153.0",
+      "kind": "desktop-browser-narrow",
+      "physical": false,
+      "startedAt": "2026-10-23T19:06:23.119Z",
+      "counts": {
+        "pass": 6,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-23T19:06:33.852Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": false,
+          "after": true,
+          "at": "2026-10-23T19:06:35.243Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:36.716Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:46.514Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:53.720Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:06:56.023Z"
+        }
+      ],
+      "durableDiagnostics": {
+        "beforeOnline": {
+          "phase": "restore-network",
+          "online": false,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "networkEvents": [
+              {
+                "type": "initial",
+                "online": false
+              }
+            ],
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "01cc938c-7055-4ffd-815a-b9b9a019b552",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio001a",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio002b",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS",
+              "playerGate": "aborted-before-delivery"
+            }
+          ]
+        },
+        "afterOnline": {
+          "phase": "restore-network",
+          "online": true,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "networkEvents": [
+              {
+                "type": "initial",
+                "online": false
+              }
+            ],
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "01cc938c-7055-4ffd-815a-b9b9a019b552",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio001a",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio002b",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS",
+              "playerGate": "aborted-before-delivery"
+            }
+          ]
+        }
+      },
+      "ownerDiagnostics": {
+        "initial": {
+          "locks": {
+            "held": [
+              {
+                "clientId": "e3d43e0c-4ba8-4440-8a81-9650ef5d67a4",
+                "mode": "exclusive",
+                "name": "pletina-download-owner:v1"
+              }
+            ],
+            "pending": []
+          },
+          "statuses": [
+            "3 descargas quitadas",
+            ""
+          ]
+        },
+        "afterDownloadClick": {
+          "locks": {
+            "held": [
+              {
+                "clientId": "19e95d78-53f3-4115-9b25-8ae4d2fea926",
+                "mode": "exclusive",
+                "name": "pletina-download-owner:v1"
+              }
+            ],
+            "pending": []
+          },
+          "pagehide": {
+            "persisted": false,
+            "at": 1792782400040
+          },
+          "statuses": [
+            "Descargando «Canción QA Cuatro»…",
+            ""
+          ],
+          "notices": [
+            "Descargando «Canción QA Cuatro»…"
+          ]
+        },
+        "firstGateReached": true,
+        "beforeRelease": {
+          "heldForMs": 3624,
+          "owner": {
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 104,
+                "state": "downloading",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "statuses": [
+              "Descargando «Canción QA Cinco»…",
+              ""
+            ]
+          }
+        },
+        "secondGateReached": true,
+        "ownerReallyClosed": true
+      },
+      "finalState": {
+        "path": "/pletina/application/index.ff3cb9864df3dcbd.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Descargas"
+        ],
+        "navigation": {
+          "index": 18,
+          "route": {
+            "name": "downloads"
+          },
+          "historyLength": 39
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [
+          "Descarga quitada"
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": true,
+              "time": 0.402766,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 29603,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 29603,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 29617,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 29617,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 29618,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 29620,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29620,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 29620,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29620,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 29621,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 29622,
+              "time": 0.302653,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29785,
+              "time": 0.402766,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 29785,
+              "time": 0.402766,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 3,
+          "api.deezer.com/chart/0/artists": 3,
+          "images.pletina.test/cover.svg": 20,
+          "api.deezer.com/search/artist": 7,
+          "api.deezer.com/search/album": 7,
+          "api.deezer.com/search/track": 7,
+          "music.youtube.com/youtubei/v1/search": 6,
+          "www.youtube.com/youtubei/v1/search": 6,
+          "www.youtube.com/youtubei/v1/player": 11,
+          "fixture.googlevideo.com/audio/qaAudio001a": 2,
+          "fixture.googlevideo.com/audio/qaAudio004d": 2,
+          "fixture.googlevideo.com/audio/qaAudio005e": 2,
+          "fixture.googlevideo.com/audio/qaAudio006f": 2
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS",
+            "playerGate": "aborted-before-delivery"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "qa-cancelled-route",
+            "handledExpected": true,
+            "reason": "the request frame is detached"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio004d",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio005e",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio006f",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio006f",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS",
+            "playerGate": "delivered"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio004d",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS",
+            "playerGate": "delivered"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio005e",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio005e",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio006f",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-23T19:06:56.045Z",
+      "browserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 12,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-23T19:06:56.394Z",
+  "browserFeatureChecksPassed": true
+}

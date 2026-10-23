@@ -1,0 +1,345 @@
+{
+  "build": "1662d64a013d4781",
+  "startedAt": "2026-10-23T18:28:17.071Z",
+  "host": {
+    "platform": "linux",
+    "node": "v24.22.0"
+  },
+  "scope": "Standalone native HTMLAudio on an explicit QA document; unmodified production SW plus seeded basic/opaque AAC caches. Desktop WebKit host diagnostic, not Pletina feature or physical mobile validation.",
+  "fixture": {
+    "bytes": 5002,
+    "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612",
+    "mime": "audio/mp4",
+    "duration": 12
+  },
+  "workerSha256": "538299268b7ca81cd130d6bde93a77a62c6439acf758530b9f9887bdb0c4f457",
+  "browserSecurityOverrides": false,
+  "cases": [
+    {
+      "mode": "online",
+      "cacheType": "basic-readable",
+      "fetch": {
+        "fulfilled": true,
+        "status": 200,
+        "type": "basic"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.263613,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.165084,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "mode": "online",
+      "cacheType": "opaque",
+      "fetch": {
+        "fulfilled": false,
+        "name": "TypeError"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.252582,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.171441,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "mode": "protocol-offline",
+      "cacheType": "basic-readable",
+      "fetch": {
+        "fulfilled": false,
+        "name": "TypeError"
+      },
+      "audio": {
+        "online": false,
+        "sourceLocal": true,
+        "advanced": false,
+        "time": 0,
+        "duration": null,
+        "error": 4,
+        "settled": "NotSupportedError",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": 4
+          },
+          {
+            "type": "error",
+            "time": 0,
+            "error": 4
+          }
+        ]
+      }
+    },
+    {
+      "mode": "protocol-offline",
+      "cacheType": "opaque",
+      "fetch": {
+        "fulfilled": false,
+        "name": "TypeError"
+      },
+      "audio": {
+        "online": false,
+        "sourceLocal": true,
+        "advanced": false,
+        "time": 0,
+        "duration": null,
+        "error": 4,
+        "settled": "NotSupportedError",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": 4
+          },
+          {
+            "type": "error",
+            "time": 0,
+            "error": 4
+          }
+        ]
+      }
+    },
+    {
+      "mode": "online-restored",
+      "cacheType": "basic-readable",
+      "fetch": {
+        "fulfilled": true,
+        "status": 200,
+        "type": "basic"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.259339,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.178751,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "mode": "online-restored",
+      "cacheType": "opaque",
+      "fetch": {
+        "fulfilled": false,
+        "name": "TypeError"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.262651,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.166565,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "mode": "origin-network-unavailable",
+      "cacheType": "basic-readable",
+      "fetch": {
+        "fulfilled": true,
+        "status": 200,
+        "type": "basic"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.255081,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.178401,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "mode": "origin-network-unavailable",
+      "cacheType": "opaque",
+      "fetch": {
+        "fulfilled": false,
+        "name": "TypeError"
+      },
+      "audio": {
+        "online": true,
+        "sourceLocal": true,
+        "advanced": true,
+        "time": 0.259897,
+        "duration": 12,
+        "error": null,
+        "settled": "fulfilled",
+        "events": [
+          {
+            "type": "loadstart",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "loadedmetadata",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "playing",
+            "time": 0,
+            "error": null
+          },
+          {
+            "type": "timeupdate",
+            "time": 0.17368,
+            "error": null
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "name": "Fetch API cannot load http",
+      "message": "/127.0.0.1:37551/silence.m4a due to access control checks."
+    },
+    {
+      "name": "Fetch API cannot load http",
+      "message": "/127.0.0.1:37551/silence.m4a due to access control checks."
+    },
+    {
+      "name": "Fetch API cannot load http",
+      "message": "/127.0.0.1:37551/silence.m4a due to access control checks."
+    }
+  ],
+  "seeded": [
+    {
+      "id": 101,
+      "type": "default"
+    },
+    {
+      "id": 102,
+      "type": "opaque"
+    }
+  ],
+  "hostProtocolLimitConfirmed": true,
+  "browserVersion": "26.5",
+  "workerUnchanged": true,
+  "contextClosed": true,
+  "browserClosed": true,
+  "serversClosed": true,
+  "completedAt": "2026-10-23T18:28:22.094Z"
+}

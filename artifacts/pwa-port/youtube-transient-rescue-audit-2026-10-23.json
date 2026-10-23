@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T18:03:10.729Z",
+  "scope": "Two real-provider UI probes of the unmodified compiled2e0 PWA, read-only failure audit, and isolated source correction in youtube.ts with unit regression. No build, deployment, source mapping, account, runtime backend, proxy or native changes.",
+  "baselineBuild": "2e0c7bb97cf8c898",
+  "baselineGitCommit": "24119ea261a7895c7aa68fa741c40a7ce7962d24",
+  "sourceAtAudit": [
+    {
+      "path": "web-port/youtube.ts",
+      "beforeSha256": "ff93282cc3fa0ae8fcfbbddd3f179d7ffcb9c9a7288d7c3cb061325549e9460e",
+      "afterSha256": "40501701ab5c724922ac209d968f8e7f6f61af80fc192ab02b3f9ebff1e94de3"
+    },
+    {
+      "path": "scripts/tests/web-p1-integration.test.mjs",
+      "beforeSha256": "fb908a6d7f00e20cfe2afd2a573a425329d74ab364cc4ab3d7013f8b0c4e10eb",
+      "afterSha256": "09e7b1d0f04014daa3ae9c454b2b08e10ce85a4aa3a85a5ffad907bb300f3172"
+    }
+  ],
+  "liveProbes": [
+    {
+      "report": "artifacts/pwa-port/p1-song-audit-2e0c7bb97cf8c898-ninini-local.json",
+      "outcome": "official-video-fallback",
+      "checks": [
+        {
+          "name": "normal song click plays native audio without a video modal",
+          "pass": false,
+          "outcome": "official-video-fallback"
+        }
+      ],
+      "errors": [],
+      "selected": {
+        "catalogId": 3266784871,
+        "title": "Ni, Ni, Ni!",
+        "titleVersion": "",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Zazpikoloroa",
+        "duration": 125,
+        "isrc": null
+      },
+      "videoId": "NGp3dh-hBe8",
+      "primaryStatus": "UNPLAYABLE",
+      "p1Status": "OK/exact ID/AAC140",
+      "p1Responses": 3,
+      "cdnHttp": [
+        {
+          "httpStatus": 403,
+          "itag": "140",
+          "urlSha256": "3cfbcf1210ea4850c798fd946abcd51b4aeb2ee5dea0224a97f9f24af15a24d2"
+        },
+        {
+          "httpStatus": 403,
+          "itag": "140",
+          "urlSha256": "8784127756e51e65da86657092ad4409ce7613bb4680e4a633dc7a1ce76b08fd"
+        },
+        {
+          "httpStatus": 403,
+          "itag": "140",
+          "urlSha256": "6233969297ddd527afff5e219cc463af86e42df09ad26ac349360be55695f9ee"
+        }
+      ],
+      "resourcesClosed": true
+    },
+    {
+      "report": "artifacts/pwa-port/p1-song-audit-2e0c7bb97cf8c898-mari-local.json",
+      "outcome": "native-audio",
+      "checks": [
+        {
+          "name": "normal song click plays native audio without a video modal",
+          "pass": true,
+          "outcome": "native-audio"
+        }
+      ],
+      "errors": [],
+      "selected": {
+        "catalogId": 3266404001,
+        "title": "Mari Kalanbre",
+        "titleVersion": "",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Ongi Etorri Pupu Eta Lore",
+        "duration": 221,
+        "isrc": null
+      },
+      "cdnStatuses": [
+        206,
+        206,
+        206
+      ],
+      "p1Videos": [
+        "DX7IXKWLCeI",
+        "NGp3dh-hBe8"
+      ],
+      "resourcesClosed": true
+    }
+  ],
+  "crossContextObservation": "Mari native Audio succeeded with HTTP206. Its timeline also contains a P1 request for the Ni video and a later different CDN206, consistent with prefetch success in another isolated context; the sanitized runner does not retain a direct mapping of each CDN URL to a video, so this is an inference, not proof of the cause of403.",
+  "findings": [
+    {
+      "id": "p1-transient-category",
+      "before": "All P1 failures were replaced by the original VISIONOS format/unavailable. Known P1 CDN network/timeout could therefore be presented as unavailable and authorize the official video after fresh retries.",
+      "after": "Known typed P1ProbeError network/timeout and P1EngineError timeout become YouTubeError transients. If no AAC succeeds, any known transient takes priority over a sibling duration/format failure. Invalid recipe/decoder/format still preserves the primary category."
+    },
+    {
+      "id": "primary-transport-fallback",
+      "before": "session() and the VISIONOS request were outside the fallback try, so network/timeout there could never use P1.",
+      "after": "Known primary network/timeout can attempt P1 for the exact same video with the existing anonymous static recipe. Restricted, malformed response and ID mismatch remain ineligible; successful VISIONOS imports no P1. Abort and cache guards remain."
+    }
+  ],
+  "regression": {
+    "before": {
+      "command": "node --test --test-name-pattern='P1 transient|transport failure' scripts/tests/web-p1-integration.test.mjs",
+      "pass": 0,
+      "fail": 7
+    },
+    "after": {
+      "command": "node --test scripts/tests/web-p1-integration.test.mjs scripts/tests/web-p1-engine.test.mjs scripts/tests/web-p1-probe.test.mjs scripts/tests/web-p1-parser.test.mjs",
+      "pass": 109,
+      "fail": 0,
+      "integrationTests": 47,
+      "types": {
+        "errors": 0,
+        "warnings": 0
+      }
+    },
+    "checks": [
+      "Session/primary POST network and timeout can recover same-ID P1 and only cache after metadata success.",
+      "All failed AAC probes remain transient; a later invalid duration cannot overwrite network.",
+      "Only trusted error class instances are remapped, not lookalike names/codes.",
+      "Wrong-ID P1, malformed session, restricted primary, invalid recipe and invalid format do not authorize audio.",
+      "Primary cancellation, lazy-load/request/probe/cleanup cancellation and failed refresh cannot cache late or stale sources.",
+      "Confirmed VISIONOS success avoids every P1 import."
+    ]
+  },
+  "contractEffects": [
+    "Extra P1 work can now occur on primary session/POST transport failures, within the caller existing45-second operation deadline.",
+    "Root separately owns audio.ts changes to preserve up to two same-final-ID refreshes for transients; this report does not claim that refactor is complete or verified.",
+    "No new route, headers, credentials, per-song mapping, recipe or provider permission is introduced."
+  ],
+  "limits": {
+    "physicalPhone": false,
+    "humanAudibleVerified": false,
+    "screenOffVerified": false,
+    "backgroundVerified": false,
+    "newCompiledBuildTested": false,
+    "all403Resolved": false,
+    "rootCauseOf403Established": false,
+    "fullMasterIdentity": false,
+    "signedUrlsPersisted": false,
+    "mediaBytesPersisted": false
+  },
+  "bindings": [
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-2e0c7bb97cf8c898-ninini-local.json",
+      "sha256": "28f9ca917ee8aa54326e2091644335a5091839116e4b9ba0f1e0e7ad7415def6",
+      "bytes": 13813
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-2e0c7bb97cf8c898-mari-local.json",
+      "sha256": "7e9ac433dfbfec8aa8fbc4846501217f8c144762ae171f5af2a9f59fc31db90d",
+      "bytes": 11449
+    },
+    {
+      "path": "web-port/youtube-p1.ts",
+      "sha256": "8c1b54efa10096f8f434de3fdb86504be75170042a140fb31dfdde964522e31d",
+      "bytes": 21742
+    },
+    {
+      "path": "web-port/youtube-p1-probe.ts",
+      "sha256": "fcd6ebca55aba27eea048b74d086db65e067d0726a47a09269e129e54f9af9aa",
+      "bytes": 11226
+    },
+    {
+      "path": "web-port/youtube.ts",
+      "sha256": "40501701ab5c724922ac209d968f8e7f6f61af80fc192ab02b3f9ebff1e94de3",
+      "bytes": 26429
+    },
+    {
+      "path": "scripts/tests/web-p1-integration.test.mjs",
+      "sha256": "09e7b1d0f04014daa3ae9c454b2b08e10ce85a4aa3a85a5ffad907bb300f3172",
+      "bytes": 29403
+    }
+  ]
+}

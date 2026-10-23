@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T18:20:02.262Z",
+  "build": "1662d64a013d4781",
+  "sourceCommit": "2afe568",
+  "state": "candidate-local-observation",
+  "bindings": [
+    {
+      "path": "scripts/tests/p1-song-ui-diagnostic.browser.mjs",
+      "bytes": 20594,
+      "sha256": "f94fa896a8ca12291af760d2adb17d47fa023018b8d7072658d46f0cf9571c9e"
+    },
+    {
+      "path": "scripts/tests/official-youtube.browser.mjs",
+      "bytes": 41537,
+      "sha256": "9b5abd7e4556833e60e38777e62dc1c6d1c8f04647e1890670be06bcc73d0627"
+    },
+    {
+      "path": "scripts/tests/e2e/media-scenarios.mjs",
+      "bytes": 130938,
+      "sha256": "96e2c92b5abcd0c14fbf20bdaee7c2fb1c22200cac2ec0c6c47a33fcbc023a17"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "bytes": 45697,
+      "sha256": "841f47029adceb8a21fe2d27dc78957df8052a1a7ee1043802d14823ecc25741"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-1662d64a013d4781-win-final/summary.json",
+      "bytes": 58950,
+      "sha256": "75e673573e76fc03723e3bbddd26a5a9f69f98d627ce7de4271f9a15f154625e"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-ninini-local.json",
+      "bytes": 17523,
+      "sha256": "f542c7cc337db85dc84fe00c7894968087f7df8dcc7f2dcbbc29c4fdc48ae3b6"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.json",
+      "bytes": 14533,
+      "sha256": "31f2f3914760161d3ba8e6211046e0cce5e7b8cdd5d2e7dfb3568d58cf458ea8"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.png",
+      "bytes": 232735,
+      "sha256": "690c4d22a38fe16b9e45387a1b9776d9e6be9f7d009978ba92726ac3ff51f7da"
+    }
+  ],
+  "official": {
+    "pass": 22,
+    "fail": 0,
+    "errors": 0,
+    "serverClosed": true,
+    "realYouTubePlayback": false
+  },
+  "canaries": [
+    {
+      "case": "ninini",
+      "status": "fail",
+      "requestedTitle": "Ni, Ni, Ni!",
+      "expectedVideoId": "NGp3dh-hBe8",
+      "selectedAfterFailure": {
+        "title": "Euri Tanta",
+        "catalogId": 3266421971
+      },
+      "observation": "Three same-ID VISIONOS UNPLAYABLE / P1 OK cycles produced three distinct CDN locator hashes with HTTP403. No official video opened. The player then advanced to another song. Runner rejected exact selected-title assertion; native-audio outcome alone is not a pass.",
+      "screenshot": null,
+      "screenshotLimit": "The frozen runner failed its exact-title assertion before its screenshot step; none exists for this attempt.",
+      "resourcesClosed": true
+    },
+    {
+      "case": "mari",
+      "status": "pass",
+      "requestedTitle": "Mari Kalanbre",
+      "catalogId": 3266404001,
+      "videoId": "DX7IXKWLCeI",
+      "observation": "Initial P1 AAC metadata CDN request returned403; one fresh same-ID resolution returned206, and native audio advanced without another Play click or visible video.",
+      "resourcesClosed": true
+    }
+  ],
+  "limits": [
+    "Desktop Chrome153 foreground; no physical phone, background, screen-off, whole-master identity or universal-playability claim.",
+    "Failure403 cause is unproven. Anonymous static snapshot and provider delivery remain variable.",
+    "New transient HTTP media scenarios were syntax-checked and frozen; their browser results belong to the separate cross-engine reports.",
+    "No raw media URLs, audio bytes or anonymous bootstrap values persisted; original old-build failures are preserved."
+  ]
+}

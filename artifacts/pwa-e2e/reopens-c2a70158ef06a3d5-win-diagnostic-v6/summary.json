@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-23T19:01:11.253Z",
+  "build": "c2a70158ef06a3d5",
+  "suite": "media",
+  "selectedMediaScenarios": [
+    "media.selection-html-audio",
+    "media.durable-download-queue-reopens-offline-and-resumes-fifo-online"
+  ],
+  "profiles": [
+    {
+      "profile": "firefox-narrow",
+      "engine": "firefox",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-23T19:01:12.997Z",
+          "status": "pass",
+          "build": "c2a70158ef06a3d5",
+          "applicationPath": "/pletina/application/index.ff3cb9864df3dcbd.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-23T19:01:14.321Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-23T19:01:14.323Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-23T19:01:15.819Z"
+        },
+        {
+          "name": "media.selection-html-audio",
+          "startedAt": "2026-10-23T19:01:15.832Z",
+          "status": "pass",
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "timeupdate",
+                "index": 0,
+                "time": 0.021541
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.18297,
+                "duration": 12,
+                "source": true,
+                "local": false,
+                "host": "fixture.googlevideo.com",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "media": "Real silent AAC/MP4; no song-content claim",
+          "finishedAt": "2026-10-23T19:01:17.648Z"
+        },
+        {
+          "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "startedAt": "2026-10-23T19:01:17.649Z",
+          "status": "fail",
+          "error": "page.waitForFunction: Timeout 25000ms exceeded.",
+          "state": {
+            "path": "/pletina/application/index.ff3cb9864df3dcbd.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "Descargas"
+            ],
+            "navigation": {
+              "index": 14,
+              "route": {
+                "name": "downloads"
+              },
+              "historyLength": 15
+            },
+            "tabs": [
+              "Inicio",
+              "Buscar",
+              "Podcasts",
+              "Tu biblioteca"
+            ],
+            "notices": [],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": false,
+                  "local": false,
+                  "time": 0,
+                  "duration": null,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 0,
+                  "error": null
+                }
+              ],
+              "events": [],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 393,
+              "height": 852,
+              "documentWidth": 393
+            }
+          },
+          "screenshot": "04-media-durable-download-queue-reopens-offline-and-resumes-fifo-online.png",
+          "finishedAt": "2026-10-23T19:01:52.010Z"
+        }
+      ],
+      "errors": [],
+      "build": "c2a70158ef06a3d5",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "browserVersion": "153.0",
+      "kind": "desktop-browser-narrow",
+      "physical": false,
+      "startedAt": "2026-10-23T19:01:11.826Z",
+      "counts": {
+        "pass": 3,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-23T19:01:23.496Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": false,
+          "after": true,
+          "at": "2026-10-23T19:01:24.926Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:01:49.971Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-23T19:01:52.016Z"
+        }
+      ],
+      "durableDiagnostics": {
+        "beforeOnline": {
+          "phase": "restore-network",
+          "online": false,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "21e50192-171c-4d67-b7b5-81d2e0be2e77",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio001a",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio002b",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS",
+              "playerGate": "aborted-before-delivery"
+            }
+          ]
+        },
+        "afterOnline": {
+          "phase": "restore-network",
+          "online": true,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "21e50192-171c-4d67-b7b5-81d2e0be2e77",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio001a",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio002b",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS",
+              "playerGate": "aborted-before-delivery"
+            }
+          ]
+        },
+        "failure": {
+          "phase": "terminal-104",
+          "online": true,
+          "checkpoint": {
+            "version": 1,
+            "tracks": [
+              {
+                "id": 104,
+                "title": "Canción QA Cuatro",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 11,
+                "albumTitle": "Disco QA Uno",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000003",
+                "titleVersion": ""
+              },
+              {
+                "id": 105,
+                "title": "Canción QA Cinco",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000004",
+                "titleVersion": ""
+              },
+              {
+                "id": 106,
+                "title": "Canción QA Seis",
+                "duration": 12,
+                "explicit": false,
+                "artistId": 7,
+                "artistName": "Artista QA Uno",
+                "albumId": 12,
+                "albumTitle": "Disco QA Dos",
+                "albumArtistId": 7,
+                "cover": "https://images.pletina.test/cover.svg",
+                "isrc": "QATEST000005",
+                "titleVersion": ""
+              }
+            ]
+          },
+          "database": {
+            "cacheEntries": 0,
+            "rows": []
+          },
+          "browser": {
+            "transfers": [
+              {
+                "id": 104,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 105,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              },
+              {
+                "id": 106,
+                "state": "queued",
+                "progress": 0,
+                "error": null
+              }
+            ],
+            "queue": [
+              "Canción QA Cuatro Artista QA Uno  En cola",
+              "Canción QA Cinco Artista QA Uno  En cola",
+              "Canción QA Seis Artista QA Uno  En cola"
+            ],
+            "statuses": [
+              "Sin conexión. Las descargas se retomarán cuando vuelva Internet.",
+              ""
+            ],
+            "locks": {
+              "held": [
+                {
+                  "clientId": "21e50192-171c-4d67-b7b5-81d2e0be2e77",
+                  "mode": "exclusive",
+                  "name": "pletina-download-owner:v1"
+                }
+              ],
+              "pending": []
+            }
+          },
+          "fixtureRequests": [
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio001a",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio002b",
+              "clientName": "VISIONOS"
+            },
+            {
+              "host": "www.youtube.com",
+              "path": "/youtubei/v1/player",
+              "method": "POST",
+              "type": "fetch",
+              "operation": "player",
+              "videoId": "qaAudio004d",
+              "clientName": "VISIONOS",
+              "playerGate": "aborted-before-delivery"
+            }
+          ]
+        }
+      },
+      "finalState": {
+        "path": "/pletina/application/index.ff3cb9864df3dcbd.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Descargas"
+        ],
+        "navigation": {
+          "index": 14,
+          "route": {
+            "name": "downloads"
+          },
+          "historyLength": 15
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": false,
+              "local": false,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 7,
+          "api.deezer.com/search/artist": 3,
+          "api.deezer.com/search/album": 3,
+          "api.deezer.com/search/track": 3,
+          "music.youtube.com/youtubei/v1/search": 3,
+          "www.youtube.com/youtubei/v1/search": 2,
+          "www.youtube.com/youtubei/v1/player": 3,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio004d",
+            "clientName": "VISIONOS",
+            "playerGate": "aborted-before-delivery"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "qa-cancelled-route",
+            "handledExpected": true,
+            "reason": "the request frame is detached"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-23T19:01:52.039Z",
+      "browserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 3,
+    "fail": 1,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-23T19:01:52.413Z",
+  "browserFeatureChecksPassed": false
+}

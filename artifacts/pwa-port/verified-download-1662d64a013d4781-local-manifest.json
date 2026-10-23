@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-23T18:23:04.985Z",
+  "build": "1662d64a013d4781",
+  "sourceCommitPrefix": "2afe568",
+  "status": "local-verified-blob-download-and-offline-playback-validated",
+  "scope": "Compiled PWA real provider download, complete cached bytes/hash/decode, offline reload and trusted native playback/seek. Desktop Chrome foreground only.",
+  "runner": {
+    "path": "scripts/tests/verified-download-live.browser.mjs",
+    "sha256": "8efb3ee3a7e9d1c8f68fdabbf738fe1d3b73556f3ed30dc0cd59698649038996"
+  },
+  "sourceSnapshot": {
+    "path": "artifacts/pwa-port/verified-download-live-source-8efb3ee3a7e9d1c8.mjs",
+    "sha256": "8efb3ee3a7e9d1c8f68fdabbf738fe1d3b73556f3ed30dc0cd59698649038996"
+  },
+  "finalReport": {
+    "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local-offline-network.json",
+    "sha256": "247e808cd6b5d97fd403b2e498b27d06c73d85bf5b886b8c45cee57ab4a48dc1",
+    "passed": 2,
+    "failed": 0,
+    "resourcesClosed": true,
+    "screenshot": {
+      "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local-offline-network.png",
+      "sha256": "13484be7195cb64ba44a92c1b2501949da9964b56442e0a028c0871d0656e26b"
+    }
+  },
+  "evidence": {
+    "catalogId": 3250715431,
+    "provider": "verified",
+    "bytes": 4633634,
+    "sha256": "35d6526ad255d903c0a2bfced09a7b3854f5ab6ff3404d37f19be4786564724f",
+    "decodedDuration": 187.16839583333334,
+    "startAt": 8.94,
+    "onlineNetworkProbe": {
+      "blocked": false,
+      "status": 404
+    },
+    "beforeReloadNetworkProbe": {
+      "blocked": true
+    },
+    "afterReloadNetworkProbe": {
+      "blocked": true
+    },
+    "offlineInitial": {
+      "online": false,
+      "title": "Iritsi da Eguna",
+      "state": "playing",
+      "time": 10,
+      "duration": 187.180408,
+      "videoModal": false,
+      "iframeCount": 0
+    },
+    "offlineSeek": {
+      "online": false,
+      "title": "Iritsi da Eguna",
+      "state": "playing",
+      "time": 151,
+      "duration": 187.180408,
+      "videoModal": false,
+      "iframeCount": 0
+    }
+  },
+  "visualReview": "Downloads, sidebar navigation, song title/artist/album, stored size and playback controls visible. Cover artwork uses a placeholder offline in this run; audio works. No product edits made for this review.",
+  "priorControls": [
+    {
+      "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local.json",
+      "sha256": "31ec6bb5acd05c6683738d3c319026844199db3091ee269e1f87e8d87821ed01",
+      "runnerSha256": "351b0db2b1211fc8b3a972ebd0df31adb66712b2c0afee933d5b0855a4bff26f",
+      "sourceSnapshot": "artifacts/pwa-port/verified-download-live-source-351b0db2b1211fc8.mjs",
+      "passedChecks": 1,
+      "errors": [
+        {
+          "category": "runner",
+          "message": "Offline application reload timed out"
+        }
+      ],
+      "interpretation": "Raw CDP traffic-offline call did not set navigator state on the reloaded document; complete real file check passed."
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local-offline-state.json",
+      "sha256": "a31f27049b1ab879c71022085fb128527186525e8c0488f5eacb00816f273b00",
+      "runnerSha256": "7448dc8fe06231d7ece76143427abac3cfd3a6fdb7e9226a1e45a8351af24633",
+      "sourceSnapshot": "artifacts/pwa-port/verified-download-live-source-7448dc8fe06231d7.mjs",
+      "passedChecks": 1,
+      "errors": [
+        {
+          "category": "runner",
+          "message": "Protocol error (Network.emulateNetworkConditionsByRule): Invalid parameters Failed to deserialize params.offline - BINDINGS: mandatory field missing at position 120"
+        }
+      ],
+      "interpretation": "Puppeteer25 ByRule protocol incompatible with Chrome148 mandatory offline parameter; complete real file check passed."
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-1662d64a013d4781-local-offline-protocol.json",
+      "sha256": "a4176d37d9ad7935de7ed638435cd3f4625669ca52a007d0080006ae0bf168a0",
+      "runnerSha256": "b4b295cede9ca7ef866e156c49eff3608d85c8c7b30f7048dc1559d11e1be12f",
+      "sourceSnapshot": "artifacts/pwa-port/verified-download-live-source-b4b295cede9ca7ef.mjs",
+      "passedChecks": 1,
+      "errors": [
+        {
+          "category": "runner",
+          "message": "Browser must remain offline after reload\n\ntrue !== false\n"
+        }
+      ],
+      "interpretation": "Traffic blocked before reload, but per-document navigator override reset; final runner adds an independent uncached-network gate."
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-funkwhale-1662d64a013d4781-local.json",
+      "sha256": "49b71d850ed71333b57eeafdf1aaf35dc9a0bf8f658ce73132989e570ae575df",
+      "runnerSha256": "8efb3ee3a7e9d1c8f68fdabbf738fe1d3b73556f3ed30dc0cd59698649038996",
+      "sourceSnapshot": "artifacts/pwa-port/verified-download-live-source-8efb3ee3a7e9d1c8.mjs",
+      "passedChecks": 0,
+      "errors": [
+        {
+          "category": "runner",
+          "message": "Error: Cached complete file is not readable\n    at <anonymous>:7:58"
+        }
+      ],
+      "interpretation": "Natural Chrome153 download returned an opaque legacy source before Funkwhale; cannot accredit the expected readable hash-bound Funkwhale copy. Not evidence that the Blob route failed."
+    }
+  ],
+  "limitations": [
+    "Desktop foreground Chrome only, no physical mobile/background claim.",
+    "The final offline gate uses real uncached network rejection before and after reload; CDP navigator override is then reapplied for the new document. No navigator/fetch implementation is replaced.",
+    "Funkwhale natural control did not isolate the new checked-Blob path; no success claim for it."
+  ],
+  "policy": {
+    "providerMocks": false,
+    "nodeBootstrap": false,
+    "productMethodsCalled": false,
+    "audioConstructorReplaced": false,
+    "securityOverrides": false,
+    "autoplayOverrides": false,
+    "rawMediaUrlsSaved": false,
+    "mediaBytesSaved": false,
+    "physicalPhone": false,
+    "backgroundVerified": false
+  }
+}

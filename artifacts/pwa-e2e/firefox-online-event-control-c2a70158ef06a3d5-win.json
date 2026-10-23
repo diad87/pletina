@@ -1,0 +1,135 @@
+{
+  "scope": "Standalone native Firefox network-event control. Minimal QA-only cache worker and event logger; no Pletina code, navigator/event overrides, dispatchEvent, external providers or physical-device claim.",
+  "startedAt": "2026-10-23T19:04:55.552Z",
+  "host": {
+    "platform": "win32",
+    "node": "v24.18.1"
+  },
+  "cases": [
+    {
+      "clock": false,
+      "phase": "same-document-offline",
+      "online": false,
+      "events": [
+        {
+          "type": "initial",
+          "online": true
+        },
+        {
+          "type": "offline",
+          "online": false,
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "clock": false,
+      "phase": "same-document-online",
+      "online": true,
+      "events": [
+        {
+          "type": "initial",
+          "online": true
+        },
+        {
+          "type": "offline",
+          "online": false,
+          "trusted": true
+        },
+        {
+          "type": "online",
+          "online": true,
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "clock": false,
+      "phase": "offline-reloaded",
+      "online": false,
+      "events": [
+        {
+          "type": "initial",
+          "online": false
+        }
+      ]
+    },
+    {
+      "clock": false,
+      "phase": "offline-reload-then-online",
+      "online": true,
+      "events": [
+        {
+          "type": "initial",
+          "online": false
+        }
+      ]
+    },
+    {
+      "clock": true,
+      "phase": "same-document-offline",
+      "online": false,
+      "events": [
+        {
+          "type": "initial",
+          "online": true
+        },
+        {
+          "type": "offline",
+          "online": false,
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "clock": true,
+      "phase": "same-document-online",
+      "online": true,
+      "events": [
+        {
+          "type": "initial",
+          "online": true
+        },
+        {
+          "type": "offline",
+          "online": false,
+          "trusted": true
+        },
+        {
+          "type": "online",
+          "online": true,
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "clock": true,
+      "phase": "offline-reloaded",
+      "online": false,
+      "events": [
+        {
+          "type": "initial",
+          "online": false
+        }
+      ]
+    },
+    {
+      "clock": true,
+      "phase": "offline-reload-then-online",
+      "online": true,
+      "events": [
+        {
+          "type": "initial",
+          "online": false
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "browserVersion": "153.0",
+  "nativeOnlineEventMissingAfterOfflineReload": true,
+  "documentUnreloadedControlsHaveTrustedOnline": true,
+  "browserClosed": true,
+  "serverClosed": true,
+  "finishedAt": "2026-10-23T19:04:59.602Z"
+}

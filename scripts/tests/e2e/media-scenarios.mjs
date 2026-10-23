@@ -6,6 +6,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
   'p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download',
+  'p1-primary-network-rescues-same-id-with-native-aac-without-video',
+  'p1-all-probes-transient-retries-same-id-and-stops-without-video',
   'youtube-unplayable-rescues-exact-audius-isrc-and-advances-with-same-audio',
   'audius-homonym-with-wrong-isrc-or-artist-never-starts-audio',
   'pause-seek-next-previous-one-audio', 'media-session-metadata-and-idempotent-actions',
@@ -32,6 +34,13 @@ export const mediaScenarioInventory = Object.freeze([
   'download-remove-all-cancel-preserves-files-and-reload-ui',
   'download-offline-reload-play-seek-from-local-service-worker', 'download-removal-clears-pointer-body-and-ui',
   'download-automatic-renewal-after-one-transfer-failure-and-offline-play',
+  'offline-mixed-queue-skips-four-remote-entries-at-ended-with-one-audio',
+  'offline-dj-missing-cache-repeat-all-stops-boundedly',
+  'durable-download-queue-reopens-offline-and-resumes-fifo-online',
+  'durable-download-cancellation-survives-reload-without-ghost-jobs',
+  'durable-download-owner-window-handoff-preserves-pending-fifo',
+  'download-startup-reconciles-orphan-stages-and-preserves-committed-files',
+  'audius-permitted-full-file-download-hash-and-offline-playback',
   'download-quotaFailure-rollback-and-no-false-done', 'download-storageFailure-rollback-and-no-false-done',
   'download-failMedia-rollback-and-no-false-done', 'download-retry-after-provider-failure-succeeds',
   'rss-podcast-direct-audio-progress-reload-and-resume', 'rss-completion-next-episode-and-relisten-from-zero',
@@ -51,6 +60,8 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   const transferObserver = () => {
     if (window.__e2eTransfers) return
     window.__e2eTransfers = []
+    window.__e2eNetworkEvents = [{type:'initial',online:navigator.onLine}]
+    for(const type of ['online','offline']) addEventListener(type,event=>window.__e2eNetworkEvents.push({type,online:navigator.onLine,trusted:event.isTrusted}))
     window.addEventListener('pletina:download', ({ detail }) => window.__e2eTransfers.push({
       id: detail.trackId, state: detail.state, progress: detail.progress,
       error: detail.error ? String(detail.error).replace(/https?:\/\/[^\s]+/g, '[URL]') : null,
@@ -192,6 +203,149 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   }
   async function reload() {
     await closeOverlays(); await page.reload({ waitUntil: 'load' }); await page.locator('.bottom-nav').waitFor(); await frame()
+  }
+
+  // These scenarios need the browser's actual offline signal to select local
+  // queue entries. Unlike an offline reload, WebKit can exercise the existing
+  // document with protocol-offline mode while its production worker stays put.
+  async function offlineInDocument() {
+    if (ctx.engine !== 'webkit') return ctx.goOffline(true)
+    await fixture.set({ offline: true })
+    await context.setOffline(true)
+    assert.equal(await page.evaluate(() => navigator.onLine), false, 'The offline queue must observe a browser-originated offline state')
+    return { mode: 'browser-offline-existing-document', navigatorOfflineExpected: true }
+  }
+  async function restoreNetwork() {
+    // ctx.goOffline uses an origin gate on WebKit. Restore protocol-offline too
+    // when a preceding scenario used it without navigation.
+    await context.setOffline(false)
+    await ctx.goOffline(false)
+  }
+  function observeProviderRequests() {
+    const attempts = [], rows = new Map()
+    const observe = request => {
+      const url = new URL(request.url())
+      if (/(?:^|\.)(?:youtube\.com|googlevideo\.com|audius\.co)$/.test(url.hostname))
+        {
+          const row = { host: url.hostname, path: url.pathname, type: request.resourceType(), failed: null, responseStatus: null, fromServiceWorker: null }
+          rows.set(request, row); attempts.push(row)
+        }
+    }
+    const failed = request => { const row = rows.get(request); if (row) row.failed = request.failure()?.errorText ?? 'failed' }
+    const response = value => { const row = rows.get(value.request()); if (row) { row.responseStatus = value.status(); row.fromServiceWorker = value.fromServiceWorker() } }
+    page.on('request', observe)
+    page.on('requestfailed', failed); page.on('response', response)
+    return { attempts, stop: () => { page.off('request', observe); page.off('requestfailed', failed); page.off('response', response) } }
+  }
+  function assertOfflineProviderDelivery(observer, mark, fixtureMark) {
+    const observed = observer.attempts.slice(mark)
+    assert.deepEqual(observed.filter(row => row.type !== 'media'), [], 'Offline queue navigation must not start remote API, source-resolution or fetch requests')
+    for (const row of observed) {
+      // Firefox reports the original URL of an opaque cached Response as a
+      // media request. The standalone native control proves its HTTP200 comes
+      // from the production SW, even with both servers physically unavailable.
+      assert.ok(row.failed && row.responseStatus === null || row.fromServiceWorker === true && [200, 206].includes(row.responseStatus),
+        'Every observed media alias must fail offline or be delivered by the service worker, never external network')
+    }
+    const delivered = fixture.requests.slice(fixtureMark).filter(row => /(?:^|\.)(?:youtube\.com|googlevideo\.com|audius\.co)$/.test(row.host))
+    assert.deepEqual(delivered, [], 'No provider request may reach the external HTTP fixture transport while offline')
+    return { appProviderRequests: 0, externalFixtureDeliveries: 0, nativeMediaObservations: observed }
+  }
+  async function offlineQueueHostLimitation() {
+    if (ctx.engine !== 'webkit' || process.platform !== 'linux') return null
+    const evidence = 'artifacts/pwa-e2e/webkit-offline-protocol-1662d64a013d4781-linux.json'
+    let control
+    try { control = JSON.parse(await readFile(new URL('../../../' + evidence, import.meta.url), 'utf8')) } catch { return null }
+    if (!control.hostProtocolLimitConfirmed || !control.workerUnchanged || control.host.platform !== process.platform ||
+      control.browserVersion !== ctx.browser.version()) return null
+    return { status: 'unsupported', reason: 'This exact desktop WebKit host rejects production-SW cached HTMLAudio with mediaError4 under protocol-offline mode. Independent native controls reproduce it with both readable and opaque known AAC, without the Pletina Player. Origin-gate cached playback passes but does not set navigator.onLine=false, so it cannot verify offline queue selection. Physical iPhone behavior remains unverified.',
+      evidence, controlBuild: control.build, controlBrowserVersion: control.browserVersion, physicalPhoneClaimed: false }
+  }
+  async function nativeOnlineEventHostLimitation() {
+    if (ctx.engine !== 'firefox') return null
+    const evidence = 'artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json'
+    let control
+    try { control = JSON.parse(await readFile(new URL('../../../' + evidence, import.meta.url), 'utf8')) } catch { return null }
+    if (control.host.platform !== process.platform || control.browserVersion !== ctx.browser.version() ||
+      control.nativeOnlineEventMissingAfterOfflineReload !== true || control.documentUnreloadedControlsHaveTrustedOnline !== true || control.errors.length) return null
+    return { evidence, controlBrowserVersion: control.browserVersion,
+      reason: 'This exact desktop Firefox protocol-offline host changes navigator.onLine after an offline reload without emitting the native online event, reproduced independently without Pletina and with/without the QA clock. A real online reload verifies retained FIFO recovery; automatic event-based resumption is not accredited on this host.' }
+  }
+  async function sourceChoiceSnapshot() {
+    return page.evaluate(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-library')
+        request.onupgradeneeded = () => request.transaction.abort()
+        request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+      })
+      try {
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction('sources').objectStore('sources').getAll()
+          request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+      } finally { db.close() }
+    })
+  }
+  function assertEarlierChoicesPreserved(before, after) {
+    const current = new Map(after.map(row => [row.trackId, row.choice]))
+    for (const row of before) assert.deepEqual(current.get(row.trackId), row.choice,
+      'Fresh fixture jobs must preserve earlier source choices, including the manually changed recording')
+  }
+  async function pendingDownloadCheckpoint() {
+    return page.evaluate(async () => {
+      if (!(await indexedDB.databases()).some(db => db.name === 'pletina-web-download-queue')) return null
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-download-queue')
+        request.onupgradeneeded = () => request.transaction.abort()
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(new Error('Pending download checkpoint unavailable'))
+      })
+      try {
+        return await new Promise((resolve, reject) => {
+          const request = db.transaction('state', 'readonly').objectStore('state').get('pending')
+          request.onsuccess = () => resolve(request.result ?? null)
+          request.onerror = () => reject(request.error)
+        })
+      } finally { db.close() }
+    })
+  }
+  function assertPendingCheckpoint(checkpoint, expectedIds) {
+    assert.equal(checkpoint?.version, 1)
+    assert.deepEqual(checkpoint.tracks.map(track => track.id), expectedIds)
+    const fields = new Set(['id', 'title', 'duration', 'explicit', 'artistId', 'artistName', 'albumId', 'albumTitle', 'albumArtistId', 'cover', 'isrc', 'titleVersion'])
+    for (const track of checkpoint.tracks) for (const key of Object.keys(track)) assert.ok(fields.has(key), `Unexpected durable job field ${key}`)
+    // Permanent cover artwork is catalog metadata. Media locators, Blob URLs,
+    // capabilities and expiring provider credentials must never be checkpointed.
+    assert.doesNotMatch(JSON.stringify(checkpoint), /blob:|googlevideo\.com|api\.audius\.co|signatureCipher|access_token|visitorData|[?&](?:expire|sig|token)=/i)
+  }
+  async function removeCachedBody(id) {
+    return page.evaluate(async id => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-downloads')
+        request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+      })
+      try {
+        const row = await new Promise((resolve, reject) => {
+          const request = db.transaction('files').objectStore('files').get(id)
+          request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+        if (!row) throw new Error('Eviction control requires an actual committed download')
+        return (await caches.open('pletina-audio-downloads:v1')).delete(row.cacheKey)
+      } finally { db.close() }
+    }, id)
+  }
+  async function downloadMusic(indices) {
+    for (const index of indices) {
+      const mark = await transferMark(), id = fixture.tracks[index].id
+      await menu(index, 'Descargar')
+      assert.equal((await terminal(mark, id)).state, 'done')
+    }
+  }
+  async function cleanDownloadScenario() {
+    await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause()
+    await downloadsView()
+    if (await visible('.page button.cancel')) await tap('.page button.cancel')
+    await clearDownloads()
   }
 
   // Windows WebKit's native media transport bypasses Playwright routes/proxy and service workers.
@@ -643,6 +797,88 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         scope: 'Controlled HTTP Music VISIONOS+P1 UNPLAYABLE / distinct WEB VISIONOS OK; P1 rejected before decoder/probe; real silent AAC, no live-provider or physical-phone claim.' }
     } finally {
       ctx.report.webRescue = { completed, requestedTrackId: rescue.track.id, attempts: attempts() }
+      await closeOverlays(); await pause(); await fixture.reset()
+    }
+  })
+
+  for (const [index, name] of ['p1-primary-network-rescues-same-id-with-native-aac-without-video',
+    'p1-all-probes-transient-retries-same-id-and-stops-without-video'].entries()) await run(name, async () => {
+    const track = media.p1Transient?.tracks[index]
+    assert.ok(track, 'Dedicated P1 transient HTTP fixture is required')
+    await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
+    const mark = fixture.requests.length, began = Date.now()
+    const trace = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'p1-transient')
+      .map(({ operation, videoId, clientName, cycle, playability, injectedFailure, responseStatus, itag, candidateIds }) => ({ operation,
+        ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(cycle ? { cycle } : {}),
+        ...(playability ? { playability } : {}), ...(injectedFailure ? { injectedFailure } : {}),
+        ...(responseStatus ? { responseStatus } : {}), ...(itag ? { itag } : {}), ...(candidateIds ? { candidateIds } : {}) }))
+    try {
+      await fixture.set({ p1Transient: true })
+      await ctx.fillSearch('Buscar', media.p1Transient.query(track))
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 1)
+      await page.evaluate(() => {
+        const observation = window.__p1TransientQA = { officialObserved: false, clicks: [], retries: [] }
+        const inspect = () => { if (document.querySelector('iframe[data-official-video],dialog[data-official-youtube][open]')) observation.officialObserved = true }
+        observation.observer = new MutationObserver(inspect)
+        observation.observer.observe(document.body, { subtree: true, childList: true, attributes: true })
+        observation.click = event => { if (event.target.closest?.('.tracks .name,.mini button[aria-label="Reproducir"]')) observation.clicks.push({ trusted: event.isTrusted }) }
+        observation.retry = event => observation.retries.push(event.detail)
+        document.addEventListener('click', observation.click, true)
+        window.addEventListener('pletina:audio-retry', observation.retry)
+      })
+      await tap(row(0) + ' .name')
+      if (index === 0) {
+        // No second Play gesture can mask a failure of automatic P1 recovery.
+        await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
+          window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > .2), track.title)
+        const audio = active(await state())
+        assert.ok(audio && !audio.muted && audio.volume > 0 && audio.duration >= 11 && audio.duration < 14)
+        const locator = await page.evaluate(index => {
+          const audio = window.__qaAudio.instances[index], url = new URL(audio.currentSrc || audio.src)
+          return { path: url.pathname, videoId: url.searchParams.get('qa_transient') }
+        }, audio.index)
+        assert.deepEqual(locator, { path: '/videoplayback', videoId: track.videoId })
+      } else {
+        await wait(() => [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('No se pudo reproducir')) &&
+          !document.querySelector('.mini[aria-busy="true"]') && window.__qaAudio.instances.every(audio => audio.paused), null, 35000)
+      }
+      const observed = await page.evaluate(() => {
+        const value = window.__p1TransientQA, queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return { officialObserved: value.officialObserved, clicks: value.clicks, retries: value.retries,
+          currentId: queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null, ids: queue?.queue?.map(item => item.track.id) ?? [] }
+      })
+      const cycles = index === 0 ? 1 : 3, attempts = trace(), players = attempts.filter(request => request.operation === 'player')
+      assert.deepEqual(players.map(({ videoId, clientName, cycle }) => ({ videoId, clientName, cycle })),
+        Array.from({ length: cycles }, (_, i) => ['VISIONOS', 'WEB_EMBEDDED_PLAYER'].map(clientName => ({ videoId: track.videoId, clientName, cycle: i + 1 }))).flat())
+      assert.ok(players.filter(request => request.clientName === 'WEB_EMBEDDED_PLAYER').every(request => request.playability === 'OK'))
+      if (index === 0) assert.equal(players[0].injectedFailure, 'primary-network')
+      else {
+        const probes = attempts.filter(request => request.operation === 'media')
+        assert.ok(probes.length >= 6 && probes.every(request => request.responseStatus === 403))
+        for (const cycle of [1, 2, 3]) assert.deepEqual([...new Set(probes.filter(request => request.cycle === cycle).map(request => request.itag))].sort(), [139, 140])
+      }
+      assert.deepEqual(attempts.filter(request => request.operation.endsWith('-search')).map(request => request.operation), ['music-search'], 'Transient failures cannot launch another text search')
+      assert.deepEqual(observed.retries, index === 0 ? [] : [1, 2].map(attempt => ({ trackId: track.id, attempt, total: 2 })))
+      assert.deepEqual(observed.clicks, [{ trusted: true }])
+      assert.equal(observed.officialObserved, false); assert.equal(observed.currentId, track.id); assert.deepEqual(observed.ids, [track.id])
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      const value = await state(); assert.equal(value.title, track.title); assert.equal(value.audios.length, 1)
+      const settledRequests = players.length
+      await page.waitForTimeout(250)
+      assert.equal(trace().filter(request => request.operation === 'player').length, settledRequests, 'Recovery must stop after success or bounded final transient failure')
+      return { sameId: track.videoId, elapsedMs: Date.now() - began, cycles, attempts, observed, audio: value,
+        scope: 'Synthetic HTTP network/CDN faults, real compiled resolver and native silent AAC. No live-provider or physical-phone claim.' }
+    } finally {
+      ctx.report.p1Transient ??= []
+      ctx.report.p1Transient.push({ trackId: track.id, attempts: trace() })
+      await page.evaluate(() => {
+        const value = window.__p1TransientQA
+        value?.observer?.disconnect()
+        if (value?.click) document.removeEventListener('click', value.click, true)
+        if (value?.retry) window.removeEventListener('pletina:audio-retry', value.retry)
+        delete window.__p1TransientQA
+      })
       await closeOverlays(); await pause(); await fixture.reset()
     }
   })
@@ -1295,6 +1531,310 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       }
     }
   })
+  await run('offline-mixed-queue-skips-four-remote-entries-at-ended-with-one-audio', async () => {
+    const hostLimitation = await offlineQueueHostLimitation(); if (hostLimitation) return hostLimitation
+    await fixture.reset(); await clearDownloads(); await music(); await downloadMusic([0, 5])
+    const { titles, state: before } = await start(0), index = active(before).index
+    const observer = observeProviderRequests()
+    try {
+      const offline = await offlineInDocument(), mark = observer.attempts.length, fixtureMark = fixture.requests.length
+      await seek(.91)
+      await wait(({ title, index }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        !window.__qaAudio.instances[index].paused && window.__qaAudio.instances[index].currentTime > .15,
+      { title: titles[5], index })
+      const after = await state()
+      assert.equal(after.audios.length, before.audios.length)
+      assert.equal(active(after).index, index); assert.equal(active(after).local, true)
+      assert.ok(after.events.filter(event => event.type === 'ended').length > before.events.filter(event => event.type === 'ended').length)
+      const delivery = assertOfflineProviderDelivery(observer, mark, fixtureMark)
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
+      assert.equal(saved.queue[saved.order[saved.pos]].track.id, fixture.tracks[5].id)
+      assert.equal(saved.queue.length, titles.length, 'Skipping does not erase the main queue')
+      return { skippedIds: fixture.tracks.slice(1, 5).map(track => track.id), automaticEnded: true,
+        extraPlayGesture: false, sameAudio: true, providerDelivery: delivery, audio: after,
+        networkMode: offline.mode, physicalScreenOffClaimed: false }
+    } finally { observer.stop(); await cleanDownloadScenario() }
+  })
+
+  await run('offline-dj-missing-cache-repeat-all-stops-boundedly', async () => {
+    const hostLimitation = await offlineQueueHostLimitation(); if (hostLimitation) return hostLimitation
+    await fixture.reset(); await clearDownloads(); await music(); await downloadMusic([0, 2, 5])
+    const { titles, state: before } = await start(0), index = active(before).index
+    await menu(2, 'Añadir a la cola'); await menu(5, 'Añadir a la cola')
+    await nowPlaying(); await tap('.np button[title="Repetir"]'); await closeOverlays()
+    assert.equal(await removeCachedBody(fixture.tracks[2].id), true, 'Explicit QA cache eviction leaves a stale downloaded marker for the real player to reconcile')
+    const observer = observeProviderRequests()
+    try {
+      const offline = await offlineInDocument(), mark = observer.attempts.length, fixtureMark = fixture.requests.length
+      await seek(.91)
+      await wait(({ title, index }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        !window.__qaAudio.instances[index].paused && window.__qaAudio.instances[index].currentTime > .15,
+      { title: titles[5], index })
+      const checkpoint = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
+      assert.equal(checkpoint.manual.track.id, fixture.tracks[5].id); assert.equal(checkpoint.userQueue.length, 0)
+      assert.equal(checkpoint.pos, 0, 'DJ playback keeps the main queue cursor')
+      assert.ok(!(await downloadState()).rows.some(row => row.id === fixture.tracks[2].id), 'A missing cache body must retire its stale download pointer')
+      await downloadsView(); await tap('.summary button:has-text("Quitar todas")'); await tap('.confirm button.danger')
+      await wait(() => document.querySelector('.empty-state strong')?.textContent.includes('Aún no has descargado'))
+      await seek(.91)
+      await wait(() => window.__qaAudio.instances.every(audio => audio.paused) &&
+        [...document.querySelectorAll('[role="status"]')].some(node => node.textContent.includes('Sin conexión') && node.textContent.includes('descargadas')))
+      const stopped = await state(), ended = stopped.events.filter(event => event.type === 'ended').length
+      await page.waitForTimeout(200)
+      const settled = await state()
+      assert.equal(settled.audios.length, before.audios.length)
+      assert.equal(settled.events.filter(event => event.type === 'ended').length, ended, 'Repeat-all with no local files must stop rather than circulate')
+      const delivery = assertOfflineProviderDelivery(observer, mark, fixtureMark)
+      assert.equal(await page.locator('dialog[data-official-youtube][open]').count(), 0)
+      return { evictedId: fixture.tracks[2].id, playedDjId: fixture.tracks[5].id, stalePointerRemoved: true,
+        exhaustedRepeatAllStopped: true, providerDelivery: delivery, audio: settled,
+        networkMode: offline.mode, physicalAirplaneModeClaimed: false }
+    } finally { observer.stop(); await cleanDownloadScenario() }
+  })
+
+  await run('durable-download-queue-reopens-offline-and-resumes-fifo-online', async () => {
+    await fixture.reset(); await clearDownloads(); await reload(); await music()
+    const indices = [3, 4, 5], ids = indices.map(index => fixture.tracks[index].id), earlierChoices = await sourceChoiceSnapshot()
+    // Earlier cases deliberately persist a manual source for track101. Use
+    // distinct untouched fixture recordings; never erase that product choice.
+    const gate = fixture.holdNextPlayer(fixture.tracks[indices[0]].videoId, { clientName: 'VISIONOS' })
+    let offline, phase = 'prepare', mark
+    const diagnose = async () => ({ phase, online: await page.evaluate(()=>navigator.onLine), checkpoint: await pendingDownloadCheckpoint(), database: await downloadState(), browser: await page.evaluate(async()=>({networkEvents:window.__e2eNetworkEvents,transfers:window.__e2eTransfers,queue:[...document.querySelectorAll('.page .queue li')].map(n=>n.textContent.trim()),statuses:[...document.querySelectorAll('[role="status"]')].map(n=>n.textContent.trim()),locks:await navigator.locks.query()})), fixtureRequests: fixture.requests.filter(r=>r.operation==='player'||r.injectedFailure).slice(-20) })
+    try {
+      await menu(indices[0], 'Descargar'); await gate.waitForRequest()
+      await menu(indices[1], 'Descargar'); await menu(indices[2], 'Descargar'); await downloadsView()
+      await wait(() => document.querySelectorAll('.page .queue li').length === 3)
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), ids)
+      assert.deepEqual((await downloadState()).rows, [], 'An unresolved source cannot already be a completed file')
+      offline = await ctx.goOffline(true); gate.release()
+      await reload(); await downloadsView()
+      await wait(() => document.querySelectorAll('.page .queue li').length === 3)
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), ids)
+      assert.deepEqual((await downloadState()).rows, [])
+      assert.equal((await downloadState()).cacheEntries, 0, 'Reopening offline cannot commit an empty or partial response')
+      assert.equal(await page.evaluate(() => window.__e2eTransfers.filter(event => event.state === 'done').length), 0)
+      mark = await transferMark(); phase = 'restore-network'
+      ctx.report.durableDiagnostics = { beforeOnline: await diagnose() }
+      await ctx.goOffline(false)
+      ctx.report.durableDiagnostics.afterOnline = await diagnose()
+      let automaticOnlineResume = true, nativeOnlineEventLimitation = null, networkRecovery = 'native-online-event'
+      if (!offline.navigatorOfflineExpected) {
+        // WebKit's origin/provider gate preserves navigator.onLine. It cannot
+        // prove a browser online event; exercise the visible retry action and
+        // report that narrower behavior rather than dispatching a fake event.
+        automaticOnlineResume = false; networkRecovery = 'visible-retry-after-origin-restored'
+        await page.getByRole('button', { name: 'Reintentar descargas', exact: true }).waitFor()
+        await tap(page.getByRole('button', { name: 'Reintentar descargas', exact: true }))
+      }
+      else if ((nativeOnlineEventLimitation = await nativeOnlineEventHostLimitation())) {
+        const observed = await page.evaluate(()=>({online:navigator.onLine,events:window.__e2eNetworkEvents}))
+        assert.equal(observed.online, true)
+        assert.equal(observed.events.filter(event=>event.type==='online').length, 0, 'Only the independently demonstrated absent native event permits the narrower host recovery')
+        automaticOnlineResume = false; networkRecovery = 'real-online-document-reload'; mark = 0
+        await reload(); await downloadsView()
+      }
+      for (const id of ids) { phase = 'terminal-' + id; assert.equal((await terminal(mark, id)).state, 'done') }
+      const completed = await page.evaluate(mark => window.__e2eTransfers.slice(mark).filter(event => event.state === 'done').map(event => event.id), mark)
+      assert.deepEqual(completed, ids, 'Resumption must preserve FIFO and complete every job exactly once')
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), [])
+      const files = await downloadState()
+      assert.equal(files.rows.length, 3); assert.equal(files.cacheEntries, 3)
+      assert.ok(files.rows.every(row => row.present))
+      assertEarlierChoicesPreserved(earlierChoices, await sourceChoiceSnapshot())
+      return { persistedIds: ids, resumedIds: completed, automaticOnlineResume, networkRecovery, nativeOnlineEventLimitation,
+        checkpointContainsOnlyCatalogMetadata: true, falseCompletedWhileOffline: false,
+        database: files, networkMode: offline.mode, physicalBackgroundDownloadClaimed: false }
+    } catch(error) { ctx.report.durableDiagnostics ??= {}; ctx.report.durableDiagnostics.failure = await diagnose(); throw error }
+    finally { gate.release(); await cleanDownloadScenario() }
+  })
+
+  await run('durable-download-cancellation-survives-reload-without-ghost-jobs', async () => {
+    await fixture.reset(); await clearDownloads(); await reload(); await music()
+    const ids = fixture.tracks.slice(0, 3).map(track => track.id)
+    try {
+      const offline = await offlineInDocument()
+      for (let index = 0; index < 3; index++) await menu(index, 'Descargar')
+      await downloadsView(); await wait(() => document.querySelectorAll('.page .queue li').length === 3)
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), ids)
+      await tap('.page button.cancel')
+      await wait(() => document.querySelectorAll('.page .queue li').length === 0)
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), [])
+      await restoreNetwork()
+      const observer = observeProviderRequests()
+      try {
+        await reload(); await downloadsView(); await frame()
+        assertPendingCheckpoint(await pendingDownloadCheckpoint(), [])
+        assert.deepEqual((await downloadState()).rows, [])
+        assert.equal((await downloadState()).cacheEntries, 0)
+        assert.equal(await page.locator('.page .queue li').count(), 0)
+        await page.waitForTimeout(200)
+        assert.deepEqual(observer.attempts, [], 'Cancelled durable jobs cannot restart a provider request after reload')
+        return { cancelledIds: ids, persistedPendingIds: [], noGhostTransfers: true, networkMode: offline.mode }
+      } finally { observer.stop() }
+    } finally { await cleanDownloadScenario() }
+  })
+
+  await run('durable-download-owner-window-handoff-preserves-pending-fifo', async () => {
+    await fixture.reset(); await clearDownloads(); await closeOverlays(); await pause()
+    const appURL = ctx.getappURL(), indices = [3, 4], ids = indices.map(index => fixture.tracks[index].id), earlierChoices = await sourceChoiceSnapshot()
+    let owner, gate, nextGate
+    try {
+      // Keep the harness Page object alive, while releasing its actual app
+      // document. The extra page can then become the first real queue owner.
+      ctx.report.ownerDiagnostics = { initial: await page.evaluate(async () => ({ locks: await navigator.locks.query(), statuses: [...document.querySelectorAll('[role="status"]')].map(n=>n.textContent.trim()) })) }
+      await page.evaluate(() => addEventListener('pagehide', e => localStorage.setItem('pletina:qa:owner-pagehide', JSON.stringify({persisted:e.persisted,at:Date.now()})), {once:true}))
+      await page.goto('about:blank')
+      owner = await context.newPage(); await fixture.attachPage(owner)
+      owner.setDefaultTimeout(15000)
+      await owner.addInitScript(transferObserver)
+      await owner.goto(appURL, { waitUntil: 'load' }); await owner.locator('.bottom-nav').waitFor()
+      await owner.locator('.bottom-nav button').filter({ hasText: /^\s*Buscar\s*$/ }).click()
+      await owner.locator('input[aria-label="Buscar música"]').fill(media.query)
+      await owner.waitForFunction(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, fixture.tracks[0].title)
+      const ownerDownload = async index => {
+        await owner.locator(row(index) + ' button.more').click()
+        await owner.getByRole('menuitem', { name: 'Descargar', exact: true }).click()
+      }
+      gate = fixture.holdNextPlayer(fixture.tracks[indices[0]].videoId, { clientName: 'VISIONOS' })
+      await ownerDownload(indices[0])
+      ctx.report.ownerDiagnostics.afterDownloadClick = await owner.evaluate(async () => ({ locks: await navigator.locks.query(), pagehide: JSON.parse(localStorage.getItem('pletina:qa:owner-pagehide')||'null'), statuses: [...document.querySelectorAll('[role="status"]')].map(n=>n.textContent.trim()), notices: [...document.querySelectorAll('.toast')].map(n=>n.textContent.trim()) }))
+      await gate.waitForRequest(); await ownerDownload(indices[1])
+      ctx.report.ownerDiagnostics.firstGateReached = true
+      const heldAt = Date.now()
+      nextGate = fixture.holdNextPlayer(fixture.tracks[indices[1]].videoId, { clientName: 'VISIONOS' })
+      await page.goto(appURL, { waitUntil: 'load' }); await page.bringToFront(); await page.locator('.bottom-nav').waitFor(); await frame()
+      await downloadsView()
+      await page.locator('.page [role="status"]').filter({ hasText: 'otra ventana' }).waitFor()
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), ids)
+      assert.deepEqual((await downloadState()).rows, [])
+      const mark = fixture.requests.length
+      await music(); await menu(2, 'Descargar')
+      await wait(() => [...document.querySelectorAll('[role="status"]')].some(node =>
+        node.textContent.includes('No se pudo empezar la descarga') && node.textContent.includes('otra ventana')))
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), ids)
+      assert.equal(fixture.requests.slice(mark).filter(request => request.operation === 'player' && request.videoId === fixture.tracks[2].videoId).length, 0,
+        'The losing window must fail before starting a new media operation')
+      assert.equal(gate.claimed, true)
+      ctx.report.ownerDiagnostics.beforeRelease = { heldForMs: Date.now()-heldAt, owner: await owner.evaluate(()=>({transfers:window.__e2eTransfers,statuses:[...document.querySelectorAll('[role="status"]')].map(n=>n.textContent.trim())})) }
+      gate.release()
+      try { await nextGate.waitForRequest() } catch(error) { ctx.report.ownerDiagnostics.gateFailure = await owner.evaluate(()=>({transfers:window.__e2eTransfers,statuses:[...document.querySelectorAll('[role="status"]')].map(n=>n.textContent.trim())})); throw error }
+      ctx.report.ownerDiagnostics.secondGateReached = true
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), [ids[1]])
+      assert.ok((await downloadState()).rows.find(row => row.id === ids[0])?.present,
+        'The owning window must continue and commit its first job while the other window is blocked')
+      await owner.close(); owner = null; nextGate.release()
+      ctx.report.ownerDiagnostics.ownerReallyClosed = true
+      await wait(async () => !(await navigator.locks.query()).held.some(lock => lock.name === 'pletina-download-owner:v1'))
+      await downloadsView()
+      const transferStart = await transferMark()
+      await tap(page.getByRole('button', { name: 'Reintentar descargas', exact: true }))
+      assert.equal((await terminal(transferStart, ids[1])).state, 'done')
+      const completed = await page.evaluate(mark => window.__e2eTransfers.slice(mark).filter(event => event.state === 'done').map(event => event.id), transferStart)
+      assert.deepEqual(completed, [ids[1]], 'The handoff resumes only the remaining FIFO, without downloading the committed first job again')
+      assertPendingCheckpoint(await pendingDownloadCheckpoint(), [])
+      const files = await downloadState()
+      assert.equal(files.rows.length, 2); assert.equal(files.cacheEntries, 2)
+      assert.ok(files.rows.every(row => row.present && ids.includes(row.id)))
+      assertEarlierChoicesPreserved(earlierChoices, await sourceChoiceSnapshot())
+      return { pages: 2, losingWindowDidNotOverwriteJobs: true, ownerContinuedAndCommittedIds: [ids[0]], ownerTabClosed: true, resumedIds: completed,
+        explicitRetryAfterHandoff: true, database: files,
+        additionalPageTransport: ctx.engine === 'chromium' ? 'Same Puppeteer HTTP fixture bridge as the primary page; no application module replacement' : 'Playwright per-page HTTP provider fixtures; no application module replacement', physicalMultiwindowClaimed: false }
+    } finally {
+      if (owner && !owner.isClosed()) await owner.close().catch(() => {})
+      if (!page.isClosed() && new URL(page.url()).protocol.startsWith('http')) await page.evaluate(() => localStorage.removeItem('pletina:qa:owner-pagehide')).catch(() => {})
+      gate?.release()
+      nextGate?.release()
+      if (!await visible('.app')) { await page.goto(appURL, { waitUntil: 'load' }); await page.locator('.bottom-nav').waitFor(); await frame() }
+      await cleanDownloadScenario()
+    }
+  })
+
+  await run('download-startup-reconciles-orphan-stages-and-preserves-committed-files', async () => {
+    await fixture.reset(); await clearDownloads(); await music(); await downloadMusic([0])
+    const track = fixture.tracks[0]
+    let seeded
+    try {
+      seeded = await page.evaluate(async ({ id, videoId }) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('pletina-web-downloads'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+        let saved
+        try { saved = await new Promise((resolve, reject) => { const request = db.transaction('files').objectStore('files').get(id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) }) }
+        finally { db.close() }
+        const cache = await caches.open('pletina-audio-downloads:v1')
+        if (!saved || !await cache.match(saved.cacheKey)) throw new Error('Orphan control requires a real committed download')
+        const orphan = new URL('../__audio__/998?stage=' + Date.now() + '-' + crypto.randomUUID(), location.href).href
+        const foreign = new URL('../qa-unrelated-cache-marker', location.href).href
+        const body = await fetch('https://fixture.googlevideo.com/audio/' + videoId, { mode: 'no-cors', credentials: 'omit' })
+        await cache.put(orphan, body)
+        await cache.put(foreign, new Response('Unrelated QA cache marker', { headers: { 'content-type': 'text/plain' } }))
+        return { saved, orphan, foreign }
+      }, { id: track.id, videoId: fixture.tracks[5].videoId })
+      assert.equal((await downloadState()).cacheEntries, 3)
+      await reload(); await downloadsView()
+      await wait(async orphan => !await (await caches.open('pletina-audio-downloads:v1')).match(orphan), seeded.orphan)
+      const reconciled = await page.evaluate(async seeded => {
+        const cache = await caches.open('pletina-audio-downloads:v1'), db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('pletina-web-downloads'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+        try {
+          const saved = await new Promise((resolve, reject) => { const request = db.transaction('files').objectStore('files').get(seeded.saved.id); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+          return { saved, committedPresent: Boolean(await cache.match(seeded.saved.cacheKey)), orphanPresent: Boolean(await cache.match(seeded.orphan)),
+            foreignValue: await (await cache.match(seeded.foreign))?.text(), cacheEntries: (await cache.keys()).length }
+        } finally { db.close() }
+      }, seeded)
+      assert.deepEqual(reconciled.saved, seeded.saved, 'Startup reconciliation cannot rewrite the committed metadata or pointer')
+      assert.equal(reconciled.committedPresent, true); assert.equal(reconciled.orphanPresent, false)
+      assert.equal(reconciled.foreignValue, 'Unrelated QA cache marker'); assert.equal(reconciled.cacheEntries, 2)
+      await tap(row(0) + ' .name'); const audio = await playing(track.title); assert.equal(active(audio).local, true)
+      await pause()
+      await page.evaluate(async foreign => { await (await caches.open('pletina-audio-downloads:v1')).delete(foreign) }, seeded.foreign)
+      return { explicitSeededOrphanStageRemoved: true, unrelatedKeyPreserved: true, committedPointerAndMetadataPreserved: true,
+        realCommittedDownloadReplayed: true, audio, physicalPhoneClaimed: false }
+    } finally {
+      if (seeded) await page.evaluate(async foreign => { await (await caches.open('pletina-audio-downloads:v1')).delete(foreign) }, seeded.foreign).catch(() => {})
+      await cleanDownloadScenario()
+    }
+  })
+
+  await run('audius-permitted-full-file-download-hash-and-offline-playback', async () => {
+    await fixture.reset(); await clearDownloads(); await reload()
+    await fixture.set({ audiusCatalogRescue: true, audiusDownloadAllowed: true })
+    const track = media.audiusRescue.track
+    try {
+      await ctx.fillSearch('Buscar', media.audiusRescue.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, track.title)
+      const mark = await transferMark(); await menu(0, 'Descargar')
+      assert.equal((await terminal(mark, track.id)).state, 'done')
+      const copy = await page.evaluate(async id => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open('pletina-web-downloads'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+        })
+        try {
+          const row = await new Promise((resolve, reject) => {
+            const request = db.transaction('files').objectStore('files').get(id)
+            request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error)
+          })
+          const response = await (await caches.open('pletina-audio-downloads:v1')).match(row.cacheKey)
+          if (!response || response.type === 'opaque') throw new Error('The CORS-permitted full-file fixture must remain readable for independent hashing')
+          const bytes = await response.arrayBuffer(), hash = await crypto.subtle.digest('SHA-256', bytes)
+          return { id: row.id, storedBytes: row.size, actualBytes: bytes.byteLength, type: response.headers.get('content-type'),
+            sha256: [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('') }
+        } finally { db.close() }
+      }, track.id)
+      assert.equal(copy.sha256, fixture.audioFile.sha256); assert.equal(copy.actualBytes, fixture.audioFile.bytes)
+      assert.equal(copy.storedBytes, fixture.audioFile.bytes); assert.equal(copy.type, fixture.audioFile.mime)
+      const offline = await ctx.goOffline(true)
+      await reload(); await downloadsView(); await tap(row(0) + ' .name'); await playing(track.title)
+      await seek(.5)
+      await wait(() => window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && audio.currentTime > audio.duration / 2 + .3))
+      const value = await state(); assert.equal(active(value).local, true)
+      return { fullFile: copy, downloadPermission: 'Controlled Audius metadata explicitly allows full download',
+        originalRecordingClaimed: false, verifiedBlobOffsetCoveredByUnitTestsOnly: true,
+        audio: value, networkMode: offline.mode, physicalPhoneClaimed: false }
+    } finally { await cleanDownloadScenario() }
+  })
+
   for (const failure of ['quotaFailure', 'storageFailure', 'failMedia']) await run('download-' + failure + '-rollback-and-no-false-done', async () => {
     await fixture.reset(); await clearDownloads(); await music()
     const result = await fixture.set({ [failure]: true })

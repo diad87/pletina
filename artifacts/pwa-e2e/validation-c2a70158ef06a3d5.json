@@ -1,0 +1,1115 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T19:14:28.583Z",
+  "build": "c2a70158ef06a3d5",
+  "sourceCommit": "cf0dd4487c58033301faf2bbcbbcd93782187f6f",
+  "distribution": {
+    "manifest": "artifacts/pwa-port/offline-download-distribution-c2a70158ef06a3d5.json",
+    "files": 31,
+    "totalBytes": 856836,
+    "initialBytes": 50993,
+    "onDemandBytes": 760270,
+    "sourceHash": "8cc0bcbc3df93a703c69f1780fe492f7d5d508aafd3910751a977a78986d1041"
+  },
+  "runtime": {
+    "purePwa": true,
+    "addedBackend": false,
+    "proxyAtRuntime": false,
+    "userAccountRequired": false,
+    "subscriptionRequired": false,
+    "qaTransport": "Synthetic HTTP fixtures and loopback test servers/proxy are isolated QA only, not shipped application infrastructure."
+  },
+  "logic": {
+    "command": "npm test",
+    "passed": 762,
+    "failed": 0,
+    "report": "artifacts/pwa-port/offline-download-logic-final2-2026-10-23.log"
+  },
+  "typecheck": {
+    "command": "npm run check",
+    "errors": 0,
+    "warnings": 0,
+    "report": "artifacts/pwa-port/offline-download-types-final2-2026-10-23.log"
+  },
+  "buildCheck": {
+    "command": "npm run build:pwa",
+    "build": "c2a70158ef06a3d5",
+    "report": "artifacts/pwa-port/offline-download-build-final2-2026-10-23.log"
+  },
+  "media": {
+    "consolidation": "Map each original C2 profile by exact check name. Replace only the three listed IDs with final v8 results; keep setup and selection once. Raw reports remain immutable and are not rewritten as passes.",
+    "replacedIds": [
+      "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+      "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+      "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files"
+    ],
+    "rawProfiles": [
+      {
+        "profile": "chromium-android-layout",
+        "report": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+        "counts": {
+          "pass": 13,
+          "fail": 2,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "rawUnmodified": true
+      },
+      {
+        "profile": "firefox-narrow",
+        "report": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+        "counts": {
+          "pass": 14,
+          "fail": 1,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "rawUnmodified": true
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "report": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json",
+        "counts": {
+          "pass": 13,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 2
+        },
+        "rawUnmodified": true
+      }
+    ],
+    "focusedRuns": [
+      {
+        "profile": "chromium-android-layout",
+        "report": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/chromium-android-layout/report.json",
+        "counts": {
+          "pass": 6,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "usedToReplaceIds": [
+          "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+          "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files"
+        ],
+        "duplicatedSetupAndSelectionNotAdded": true
+      },
+      {
+        "profile": "firefox-narrow",
+        "report": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/firefox-narrow/report.json",
+        "counts": {
+          "pass": 6,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "usedToReplaceIds": [
+          "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+          "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files"
+        ],
+        "duplicatedSetupAndSelectionNotAdded": true
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "report": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/webkit-iphone-layout/report.json",
+        "counts": {
+          "pass": 6,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "usedToReplaceIds": [
+          "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+          "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+          "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files"
+        ],
+        "duplicatedSetupAndSelectionNotAdded": true
+      }
+    ],
+    "effectiveProfiles": [
+      {
+        "profile": "chromium-android-layout",
+        "engine": "chromium",
+        "host": {
+          "platform": "win32",
+          "arch": "x64",
+          "node": "v24.18.1"
+        },
+        "browserVersion": "153.0.8010.52",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.download-automatic-renewal-after-one-transfer-failure-and-offline-play",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.offline-mixed-queue-skips-four-remote-entries-at-ended-with-one-audio",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.offline-dj-missing-cache-repeat-all-stops-boundedly",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/chromium-android-layout/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.durable-download-cancellation-survives-reload-without-ghost-jobs",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          },
+          {
+            "name": "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/chromium-android-layout/report.json",
+            "priorStatus": "fail",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/chromium-android-layout/report.json",
+            "priorStatus": "fail",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.audius-permitted-full-file-download-hash-and-offline-playback",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json"
+          }
+        ],
+        "counts": {
+          "pass": 15,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "scope": "Desktop browser/device layout only; no physical mobile evidence.",
+        "durableRecovery": {
+          "automaticOnlineResume": true,
+          "networkRecovery": "native-online-event",
+          "networkMode": "browser-offline",
+          "nativeOnlineEventLimitation": null
+        }
+      },
+      {
+        "profile": "firefox-narrow",
+        "engine": "firefox",
+        "host": {
+          "platform": "win32",
+          "arch": "x64",
+          "node": "v24.18.1"
+        },
+        "browserVersion": "153.0",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.download-automatic-renewal-after-one-transfer-failure-and-offline-play",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.offline-mixed-queue-skips-four-remote-entries-at-ended-with-one-audio",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.offline-dj-missing-cache-repeat-all-stops-boundedly",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/firefox-narrow/report.json",
+            "priorStatus": "fail",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.durable-download-cancellation-survives-reload-without-ghost-jobs",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          },
+          {
+            "name": "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/firefox-narrow/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/firefox-narrow/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.audius-permitted-full-file-download-hash-and-offline-playback",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json"
+          }
+        ],
+        "counts": {
+          "pass": 15,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "scope": "Desktop browser/device layout only; no physical mobile evidence.",
+        "durableRecovery": {
+          "automaticOnlineResume": false,
+          "networkRecovery": "real-online-document-reload",
+          "networkMode": "browser-offline",
+          "nativeOnlineEventLimitation": {
+            "evidence": "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+            "controlBrowserVersion": "153.0",
+            "reason": "This exact desktop Firefox protocol-offline host changes navigator.onLine after an offline reload without emitting the native online event, reproduced independently without Pletina and with/without the QA clock. A real online reload verifies retained FIFO recovery; automatic event-based resumption is not accredited on this host."
+          }
+        }
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "engine": "webkit",
+        "host": {
+          "platform": "linux",
+          "arch": "x64",
+          "node": "v24.22.0"
+        },
+        "browserVersion": "26.5",
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.p1-primary-network-rescues-same-id-with-native-aac-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.p1-all-probes-transient-retries-same-id-and-stops-without-video",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.download-automatic-renewal-after-one-transfer-failure-and-offline-play",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.offline-mixed-queue-skips-four-remote-entries-at-ended-with-one-audio",
+            "status": "unsupported",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.offline-dj-missing-cache-repeat-all-stops-boundedly",
+            "status": "unsupported",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/webkit-iphone-layout/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.durable-download-cancellation-survives-reload-without-ghost-jobs",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          },
+          {
+            "name": "media.durable-download-owner-window-handoff-preserves-pending-fifo",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/webkit-iphone-layout/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.download-startup-reconciles-orphan-stages-and-preserves-committed-files",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/webkit-iphone-layout/report.json",
+            "priorStatus": "pass",
+            "qaRevalidated": true
+          },
+          {
+            "name": "media.audius-permitted-full-file-download-hash-and-offline-playback",
+            "status": "pass",
+            "evidence": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json"
+          }
+        ],
+        "counts": {
+          "pass": 13,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 2
+        },
+        "scope": "Desktop browser/device layout only; no physical mobile evidence.",
+        "durableRecovery": {
+          "automaticOnlineResume": false,
+          "networkRecovery": "visible-retry-after-origin-restored",
+          "networkMode": "origin-and-provider-unavailable",
+          "nativeOnlineEventLimitation": null
+        }
+      }
+    ],
+    "effectiveCounts": {
+      "pass": 43,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 2
+    },
+    "effectiveCheckCount": 45,
+    "currentCoverage": "13 selected feature checks plus 2 setup checks per desktop profile, not a full rerun of every PWA feature on C2."
+  },
+  "official": {
+    "profiles": [
+      {
+        "profile": "chromium-android-layout",
+        "report": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+        "counts": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "scope": "Controlled official-player HTTP/IFrame contract; not live YouTube playability or background audio."
+      },
+      {
+        "profile": "firefox-narrow",
+        "report": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+        "counts": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "scope": "Controlled official-player HTTP/IFrame contract; not live YouTube playability or background audio."
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "report": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json",
+        "counts": {
+          "pass": 11,
+          "fail": 0,
+          "blocked": 0,
+          "unsupported": 0
+        },
+        "scope": "Controlled official-player HTTP/IFrame contract; not live YouTube playability or background audio."
+      }
+    ],
+    "counts": {
+      "pass": 33,
+      "fail": 0,
+      "blocked": 0,
+      "unsupported": 0
+    },
+    "scope": "11 controlled official-IFrame contract checks per engine; no claim of live YouTube background support."
+  },
+  "update": {
+    "report": "artifacts/pwa-port/update-e2e-c2a70158ef06a3d5.json",
+    "passed": 11,
+    "failed": 0,
+    "baseDistributionVersion": "c2a70158ef06a3d5",
+    "prototypeVersion": "2e0c7bb97cf8c898",
+    "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+    "productionDirectoriesMutated": false,
+    "downloadMigrationFixture": {
+      "bytes": 1644,
+      "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "providerDownloaded": false,
+      "playbackTested": false
+    },
+    "physicalShortcutInstallationVerified": false
+  },
+  "realLocalCanaries": {
+    "manifest": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local-manifest.json",
+    "passedChecks": 4,
+    "failedChecks": 0,
+    "uniqueRecordings": 2,
+    "cases": [
+      {
+        "type": "iritsi",
+        "report": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.json",
+        "passed": 2,
+        "failed": 0,
+        "faultInjection": {
+          "youtubeNetworkFailure": false,
+          "blockedYouTubeRequests": 0,
+          "otherProviderResponsesModified": false
+        },
+        "sourceStartAt": 8.94,
+        "startupReconciliationPreservedSameFullHash": true
+      },
+      {
+        "type": "funkwhale",
+        "report": "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.json",
+        "passed": 2,
+        "failed": 0,
+        "faultInjection": {
+          "youtubeNetworkFailure": true,
+          "blockedYouTubeRequests": 2,
+          "otherProviderResponsesModified": false
+        },
+        "sourceStartAt": 0,
+        "startupReconciliationPreservedSameFullHash": true
+      }
+    ],
+    "scope": "Final compiled PWA, actual verified full files, real UI download, new-document startup reconciliation under exclusive ownership, offline cached reload/playback/seek. Iritsi natural; Funkwhale isolated by YouTube-only transport failure. Desktop foreground only.",
+    "identityLimit": "A complete file hash binds the cached bytes; existing recording identity evidence remains excerpt-only and is not independently promoted to whole-master identity."
+  },
+  "publicDeployment": {
+    "status": "verified",
+    "url": "https://diad87.github.io/pletina/",
+    "distributionCommit": "23218057f9ec3612d5c710c6a47c2482ee70e19a",
+    "distributionTree": "598c21d6b6510e368d094f40ad049db30783876d",
+    "workflow": {
+      "id": "40009299864",
+      "conclusion": "success",
+      "url": "https://github.com/diad87/pletina/actions/runs/40009299864",
+      "evidenceSource": "Observed and supplied by the parent agent; no new workflow query executed by this consolidation task."
+    },
+    "files": {
+      "report": "artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json",
+      "passed": 31,
+      "failed": 0,
+      "allHTTP200": true,
+      "allSha256Match": true
+    },
+    "canary": {
+      "manifest": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public-manifest.json",
+      "report": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.json",
+      "passed": 2,
+      "failed": 0,
+      "title": "Iritsi da Eguna",
+      "scope": "Compiled PWA real provider download, complete cached bytes/hash/decode, offline reload and trusted native playback/seek. Desktop Chrome foreground only.",
+      "faultInjection": {
+        "youtubeNetworkFailure": false,
+        "blockedYouTubeRequests": 0,
+        "otherProviderResponsesModified": false
+      }
+    },
+    "physicalMobileVerified": false
+  },
+  "historicalRegression": [
+    {
+      "build": "1662d64a013d4781",
+      "report": "artifacts/pwa-e2e/offline-download-1662d64a013d4781-win/summary.json",
+      "counts": {
+        "pass": 107,
+        "fail": 6,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    },
+    {
+      "build": "1662d64a013d4781",
+      "report": "artifacts/pwa-e2e/media-1662d64a013d4781-linux-final/summary.json",
+      "counts": {
+        "pass": 52,
+        "fail": 4,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    },
+    {
+      "build": "3c878122104ad149",
+      "report": "artifacts/pwa-e2e/media-3c878122104ad149-linux-final/summary.json",
+      "counts": {
+        "pass": 10,
+        "fail": 2,
+        "blocked": 0,
+        "unsupported": 2
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    },
+    {
+      "build": "3c878122104ad149",
+      "report": "artifacts/pwa-e2e/media-3c878122104ad149-linux-durable-v3/summary.json",
+      "counts": {
+        "pass": 3,
+        "fail": 2,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    },
+    {
+      "build": "3c878122104ad149",
+      "report": "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-final/summary.json",
+      "counts": {
+        "pass": 24,
+        "fail": 4,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    },
+    {
+      "build": "3c878122104ad149",
+      "report": "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-durable-v3/summary.json",
+      "counts": {
+        "pass": 4,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "attributedToCurrentBuild": false,
+      "rawFailuresPreserved": true
+    }
+  ],
+  "historicalLiveFailure": {
+    "manifest": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-local-manifest.json",
+    "build": "1662d64a013d4781",
+    "case": "Ni, Ni, Ni!",
+    "status": "fail",
+    "observation": "Three same-ID VISIONOS UNPLAYABLE / P1 OK cycles produced three distinct CDN locator hashes with HTTP403. No official video opened. The player then advanced to another song. Runner rejected exact selected-title assertion; native-audio outcome alone is not a pass.",
+    "noCurrentBuildRecoveryClaim": true
+  },
+  "platformLimits": [
+    {
+      "id": "android-physical",
+      "status": "not-run-for-this-release",
+      "reason": "Earlier user observations are historical; no new physical-device run validates C2."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "not-run-for-this-release",
+      "reason": "Desktop WebKit/device layout is not an actual installed iPhone PWA."
+    },
+    {
+      "id": "firefox-native-online-after-offline-reload",
+      "status": "not-accredited-on-this-host",
+      "reason": "Independent Firefox153 control shows navigator.onLine changes without native online event after offline reload. Final durable recovery uses a real online reload, automaticOnlineResume=false.",
+      "evidence": "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json"
+    },
+    {
+      "id": "webkit-protocol-offline-media",
+      "status": "unsupported-on-this-desktop-host",
+      "reason": "The two offline queue checks remain unsupported; unmodified production-SW native controls reject both readable and opaque AAC under protocol-offline. Origin/provider-cut cached use is narrower evidence.",
+      "evidence": "artifacts/pwa-e2e/webkit-offline-protocol-1662d64a013d4781-linux.json"
+    },
+    {
+      "id": "physical-screen-off-or-background-downloads",
+      "status": "not-run",
+      "reason": "Foreground desktop and unit tests do not demonstrate physical screen-off audio, continued bulk downloads or suspended app execution."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported-in-current-static-pwa"
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported-in-current-static-pwa"
+    }
+  ],
+  "sourceAndEvidence": {
+    "frozenCopyManifest": "artifacts/pwa-e2e/webkit-c2a70158ef06a3d5-frozen-copy.json",
+    "qaRecoveryManifest": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-qa-recovery-final.json",
+    "qaFinalSnapshot": "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-final-v8/manifest.json",
+    "rawFailuresPreserved": true,
+    "noTestsRerunByConsolidation": true,
+    "noProductOrDistributionChangesByConsolidation": true
+  },
+  "evidenceBindings": [
+    {
+      "path": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/summary.json",
+      "bytes": 274250,
+      "sha256": "1f7d74bdf36cf1bc5bd48dc55041859a0097d00dd96b6f3c56101f98f8fe40e2"
+    },
+    {
+      "path": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/summary.json",
+      "bytes": 110018,
+      "sha256": "d4bb15b423b2b273c9decfd636a998620fd49c21d1e79e8d2753555fb2d632d1"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+      "bytes": 122758,
+      "sha256": "72f7b0cce5054d38243e41a291bc9040bbdf8ed2b04cc2b2639f054fdae790fd"
+    },
+    {
+      "path": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/chromium-android-layout/report.json",
+      "bytes": 57960,
+      "sha256": "c5b1bf8b37c66dac6211427e3eb705ecaa1fc56075b8e4601e19ce129784fb96"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+      "bytes": 111392,
+      "sha256": "9b671277060fb2e93e61f7c730dbe980b8f58226ec69fb2185f1945ac1679e5f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8/firefox-narrow/report.json",
+      "bytes": 35507,
+      "sha256": "d6174e8dacb3d16066e43294d40138a90bfe19848d75a9da679a1bb9dce5b8f5"
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/summary.json",
+      "bytes": 116246,
+      "sha256": "0fc28c974e94ee1c6c266e72173b73494e362a35f09addf150312735ed8f08d5"
+    },
+    {
+      "path": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/summary.json",
+      "bytes": 66562,
+      "sha256": "8f943c5ba5da5c6cba75e8dc76e49b707a824dee2bd591db129cf5f936489fa8"
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json",
+      "bytes": 98579,
+      "sha256": "a9e83079ebb2325b3182cf428f637b2225825384baaf3b9550e65a6ad73a786c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8/webkit-iphone-layout/report.json",
+      "bytes": 56053,
+      "sha256": "165b58a8cece19352ebf2cfb34fa3ebc3f023bd34a5e4fe491f0a40e33137a3f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/summary.json",
+      "bytes": 58952,
+      "sha256": "356f6196f925624433148c3a7b59c17e11f42f7a6bda09fbeb5db0a70fcd5a2f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+      "bytes": 24754,
+      "sha256": "2fa174983eab22cd695dd991c89b74c399fa354b7c99da806d105d077b4adbbe"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+      "bytes": 25336,
+      "sha256": "a0876e37c42ee71aaf7c30f9a2b7f8260355e20e564908d056796b6797c6ce17"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final/summary.json",
+      "bytes": 29597,
+      "sha256": "eee22fe7f5891bb292e02eb227268a00964ce254ba6ec4440b77b826a8414356"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json",
+      "bytes": 24844,
+      "sha256": "ae53b585d130ec742a25c0683813362c60544811dba904091731dde3ea9c5551"
+    },
+    {
+      "path": "artifacts/pwa-port/offline-download-distribution-c2a70158ef06a3d5.json",
+      "bytes": 5610,
+      "sha256": "589a420033f73145233d411b863ef03d690275090633b25c647d3c037c9b9200"
+    },
+    {
+      "path": "artifacts/pwa-port/offline-download-logic-final2-2026-10-23.log",
+      "bytes": 77939,
+      "sha256": "fd06c2e84823eed60f2da8fc2da2090338fb1ae2cc058d2352187f2570cf9059",
+      "lineEndings": "CRLF-preserve-raw"
+    },
+    {
+      "path": "artifacts/pwa-port/offline-download-types-final2-2026-10-23.log",
+      "bytes": 271,
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9",
+      "lineEndings": "CRLF-preserve-raw"
+    },
+    {
+      "path": "artifacts/pwa-port/offline-download-build-final2-2026-10-23.log",
+      "bytes": 1797,
+      "sha256": "78d2db0f7f3e1e24a3eaad6a4f3130358d2eb0cf17d01c70232118b535a0c36b",
+      "lineEndings": "CRLF-preserve-raw"
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-c2a70158ef06a3d5.json",
+      "bytes": 21992,
+      "sha256": "5367fb078ddae534b1669e4edc50ce705972f8a05d89c3a766ed05aa46966f9d"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local-manifest.json",
+      "bytes": 6096,
+      "sha256": "fc150d29d83db5d54b8479cbece159ac150b5d5fa46285475508d2b6a3195639"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs",
+      "bytes": 18970,
+      "sha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.json",
+      "bytes": 7021,
+      "sha256": "bfb46239428d1229eb8142d70177ad58b74516a1cbe71c1290115dcaba0652da"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.png",
+      "bytes": 137294,
+      "sha256": "0f043f6003505c1fdc32af392e9ca850795455fc8ed339ede1d176df89615527"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.json",
+      "bytes": 6872,
+      "sha256": "ca63c238ceb3f9cac6e17fb57c1f17708da4cfa28774e46951baab95d48ad3d4"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.png",
+      "bytes": 142383,
+      "sha256": "b7fe7aa007ed7ace72aa38443d5d8afd28cd0ce2b68bb11dc6aa43d7e1e4cb59"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public-manifest.json",
+      "bytes": 4249,
+      "sha256": "e5952ae6f778d2d3bee19e09ecc735e845b533cccb2b89e62ecb8984694dea40"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.json",
+      "bytes": 7250,
+      "sha256": "c10191f3b626431c7b29d1ecde829445108f83bff3d10a8d9bedf5bcf1be4a52"
+    },
+    {
+      "path": "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.png",
+      "bytes": 152358,
+      "sha256": "77bacd31abf1a4337be1def3195daa687217b9fc2ef393e0d80f9eb31e4826fb"
+    },
+    {
+      "path": "artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json",
+      "bytes": 10255,
+      "sha256": "488347819438f7bc2ac8eddecf89c8cd75b24ddc08eee494fe23cb572a339b96"
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-c2a70158ef06a3d5-frozen-copy.json",
+      "bytes": 19057,
+      "sha256": "08947096c0f67bb10c52095e814a20b15d667855a88b763b329b95e623b9fa9d"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-qa-recovery-final.json",
+      "bytes": 14205,
+      "sha256": "c1dc804cc5285b7205645fe32629d4f7c97d28800c56d1f5a5889c680237ec16"
+    },
+    {
+      "path": "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-final-v8/manifest.json",
+      "bytes": 1513,
+      "sha256": "b8b7e5fe5fff5658ffd9a1d39469a41f09f1759111468d41ab0aff7fd42e6e66"
+    },
+    {
+      "path": "artifacts/pwa-port/offline-download-publish-dry-run-c2a70158ef06a3d5.json",
+      "bytes": 1468,
+      "sha256": "57a3aef22154b9791fd9820ff23dc363938bb6cb6c2ecf3f57271e5364956f07",
+      "lineEndings": "CRLF-preserve-raw"
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-offline-protocol-1662d64a013d4781-linux.json",
+      "bytes": 7720,
+      "sha256": "4c6796a58a0c26af840cb0ac650dc3a066057a3795bfe46baaf73dd7f315dda9"
+    },
+    {
+      "path": "artifacts/pwa-e2e/firefox-offline-opaque-control-1662d64a013d4781-win.json",
+      "bytes": 8881,
+      "sha256": "57575e099398b58444fd2e0cbaefc5b241e77714fab27ac5591e9cef0a389464"
+    },
+    {
+      "path": "artifacts/pwa-e2e/webkit-transport-socket-abort-control-linux.json",
+      "bytes": 2129,
+      "sha256": "3ad0a9754adb1fd90b1bc474dbca80f93b98929dbf1e7fd4d1729c19f605ee7b"
+    },
+    {
+      "path": "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+      "bytes": 2781,
+      "sha256": "949ac1b2f579b0921e525c585e0bb5e66ba16c5fae84fc702bd919348837eb90"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-local-manifest.json",
+      "bytes": 3484,
+      "sha256": "1e061282c465ff8250b8b3917efe0147a495ef58eae00bd172ce47d2fe7c73f9"
+    },
+    {
+      "path": "artifacts/pwa-e2e/official-youtube-1662d64a013d4781-win-final/summary.json",
+      "bytes": 58950,
+      "sha256": "75e673573e76fc03723e3bbddd26a5a9f69f98d627ce7de4271f9a15f154625e"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-ninini-local.json",
+      "bytes": 17523,
+      "sha256": "f542c7cc337db85dc84fe00c7894968087f7df8dcc7f2dcbbc29c4fdc48ae3b6"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.json",
+      "bytes": 14533,
+      "sha256": "31f2f3914760161d3ba8e6211046e0cce5e7b8cdd5d2e7dfb3568d58cf458ea8"
+    },
+    {
+      "path": "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.png",
+      "bytes": 232735,
+      "sha256": "690c4d22a38fe16b9e45387a1b9776d9e6be9f7d009978ba92726ac3ff51f7da"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-1662d64a013d4781-win/summary.json",
+      "bytes": 630563,
+      "sha256": "0a47f873b4bb3ea303c07626c65528154400dfc46389d735e40525952d1a48d6"
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-1662d64a013d4781-linux-final/summary.json",
+      "bytes": 323281,
+      "sha256": "a04b3d8a88f8d5b97822d3bf347aa9db06a98509ec361208a878c3d01c55d6e2"
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-3c878122104ad149-linux-final/summary.json",
+      "bytes": 115375,
+      "sha256": "0eadd9cd2eb83926d50b73abfe64c805f23483fc8d5f6b16ac930609c97ca2dd"
+    },
+    {
+      "path": "artifacts/pwa-e2e/media-3c878122104ad149-linux-durable-v3/summary.json",
+      "bytes": 45775,
+      "sha256": "6ee2765d96c821dcb625996cccfe8444b0e48cef2e7202bc5a5c2f8da77c2fab"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-final/summary.json",
+      "bytes": 260825,
+      "sha256": "a77819efb7c5ec4fd23e4adaf9ba305ffdc7948c6fe577ccb3ea0361753babfc"
+    },
+    {
+      "path": "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-durable-v3/summary.json",
+      "bytes": 41696,
+      "sha256": "885cb553e94d2ef2ad474d2dfa97765c9be4a0cd9db6e2146189ead04878539e"
+    }
+  ],
+  "evidenceGitAdd": {
+    "pathList": "artifacts/pwa-e2e/validation-c2a70158ef06a3d5-git-add-paths.txt",
+    "ownedPaths": [
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8",
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8",
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-v5",
+      "artifacts/pwa-e2e/firefox-offline-opaque-control-1662d64a013d4781-win.json",
+      "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+      "artifacts/pwa-e2e/media-1662d64a013d4781-linux-final",
+      "artifacts/pwa-e2e/media-3c878122104ad149-linux-durable-v3",
+      "artifacts/pwa-e2e/media-3c878122104ad149-linux-final",
+      "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final",
+      "artifacts/pwa-e2e/official-youtube-1662d64a013d4781-linux-final",
+      "artifacts/pwa-e2e/official-youtube-3c878122104ad149-linux-final",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-qa-recovery-final.json",
+      "artifacts/pwa-e2e/owner-c2a70158ef06a3d5-win-diagnostic-v4",
+      "artifacts/pwa-e2e/owner-c2a70158ef06a3d5-win-diagnostic-v6",
+      "artifacts/pwa-e2e/owner-gc-c2a70158ef06a3d5-win-diagnostic-v7",
+      "artifacts/pwa-e2e/qa-snapshots-1662d64a013d4781-v1",
+      "artifacts/pwa-e2e/qa-snapshots-3c878122104ad149-v2",
+      "artifacts/pwa-e2e/qa-snapshots-3c878122104ad149-v3",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-diagnostic-v7",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-final-v8",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-final-v8/manifest.json",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-v4",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-v5",
+      "artifacts/pwa-e2e/reopens-c2a70158ef06a3d5-win-diagnostic-v6",
+      "artifacts/pwa-e2e/reopens-c2a70158ef06a3d5-win-diagnostic-v7",
+      "artifacts/pwa-e2e/validation-c2a70158ef06a3d5-git-add-paths.txt",
+      "artifacts/pwa-e2e/validation-c2a70158ef06a3d5.json",
+      "artifacts/pwa-e2e/webkit-1662d64a013d4781-initial-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-3c878122104ad149-initial-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-c2a70158ef06a3d5-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-offline-protocol-1662d64a013d4781-linux.json",
+      "artifacts/pwa-e2e/webkit-transport-socket-abort-control-linux.json"
+    ],
+    "collaboratorEvidenceRequired": [
+      "artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final/summary.json",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final/webkit-iphone-layout/report.json",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final/summary.json",
+      "artifacts/pwa-e2e/offline-download-1662d64a013d4781-win",
+      "artifacts/pwa-e2e/offline-download-1662d64a013d4781-win/summary.json",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-durable-v3",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-durable-v3/summary.json",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-final",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-final/summary.json",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-qa-recovery-final.json",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/chromium-android-layout/report.json",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/firefox-narrow/report.json",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final/summary.json",
+      "artifacts/pwa-port/offline-download-build-final2-2026-10-23.log",
+      "artifacts/pwa-port/offline-download-distribution-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/offline-download-logic-final2-2026-10-23.log",
+      "artifacts/pwa-port/offline-download-publish-dry-run-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/offline-download-types-final2-2026-10-23.log",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-local-manifest.json",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.json",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.png",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-ninini-local.json",
+      "artifacts/pwa-port/update-e2e-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local-manifest.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.png",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public-manifest.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.png",
+      "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.json",
+      "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.png",
+      "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs"
+    ],
+    "allTaskEvidencePaths": [
+      "artifacts/pwa-deploy/public-files-c2a70158ef06a3d5.json",
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-linux-final-v8",
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-final-v8",
+      "artifacts/pwa-e2e/durable-c2a70158ef06a3d5-win-v5",
+      "artifacts/pwa-e2e/firefox-offline-opaque-control-1662d64a013d4781-win.json",
+      "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+      "artifacts/pwa-e2e/media-1662d64a013d4781-linux-final",
+      "artifacts/pwa-e2e/media-3c878122104ad149-linux-durable-v3",
+      "artifacts/pwa-e2e/media-3c878122104ad149-linux-final",
+      "artifacts/pwa-e2e/media-c2a70158ef06a3d5-linux-final",
+      "artifacts/pwa-e2e/official-youtube-1662d64a013d4781-linux-final",
+      "artifacts/pwa-e2e/official-youtube-3c878122104ad149-linux-final",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-linux-final",
+      "artifacts/pwa-e2e/official-youtube-c2a70158ef06a3d5-win-final",
+      "artifacts/pwa-e2e/offline-download-1662d64a013d4781-win",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-durable-v3",
+      "artifacts/pwa-e2e/offline-download-3c878122104ad149-win-final",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-qa-recovery-final.json",
+      "artifacts/pwa-e2e/offline-download-c2a70158ef06a3d5-win-final",
+      "artifacts/pwa-e2e/owner-c2a70158ef06a3d5-win-diagnostic-v4",
+      "artifacts/pwa-e2e/owner-c2a70158ef06a3d5-win-diagnostic-v6",
+      "artifacts/pwa-e2e/owner-gc-c2a70158ef06a3d5-win-diagnostic-v7",
+      "artifacts/pwa-e2e/qa-snapshots-1662d64a013d4781-v1",
+      "artifacts/pwa-e2e/qa-snapshots-3c878122104ad149-v2",
+      "artifacts/pwa-e2e/qa-snapshots-3c878122104ad149-v3",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-diagnostic-v7",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-final-v8",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-v4",
+      "artifacts/pwa-e2e/qa-snapshots-c2a70158ef06a3d5-v5",
+      "artifacts/pwa-e2e/reopens-c2a70158ef06a3d5-win-diagnostic-v6",
+      "artifacts/pwa-e2e/reopens-c2a70158ef06a3d5-win-diagnostic-v7",
+      "artifacts/pwa-e2e/validation-c2a70158ef06a3d5-git-add-paths.txt",
+      "artifacts/pwa-e2e/validation-c2a70158ef06a3d5.json",
+      "artifacts/pwa-e2e/webkit-1662d64a013d4781-initial-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-3c878122104ad149-initial-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-c2a70158ef06a3d5-frozen-copy.json",
+      "artifacts/pwa-e2e/webkit-offline-protocol-1662d64a013d4781-linux.json",
+      "artifacts/pwa-e2e/webkit-transport-socket-abort-control-linux.json",
+      "artifacts/pwa-port/offline-download-build-final2-2026-10-23.log",
+      "artifacts/pwa-port/offline-download-distribution-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/offline-download-logic-final2-2026-10-23.log",
+      "artifacts/pwa-port/offline-download-publish-dry-run-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/offline-download-types-final2-2026-10-23.log",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-local-manifest.json",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.json",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-mari-local.png",
+      "artifacts/pwa-port/p1-song-audit-1662d64a013d4781-ninini-local.json",
+      "artifacts/pwa-port/update-e2e-c2a70158ef06a3d5.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local-manifest.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-local.png",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public-manifest.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.json",
+      "artifacts/pwa-port/verified-download-c2a70158ef06a3d5-public.png",
+      "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.json",
+      "artifacts/pwa-port/verified-download-funkwhale-c2a70158ef06a3d5-local.png",
+      "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs"
+    ],
+    "exclude": "Do not add latest.json, audio/media bytes, dist-pwa, unrelated task artifacts, or blanket artifact directories. PNG captures and raw failed JSON remain included.",
+    "lineEndings": "Raw CRLF evidence must be preserved with explicit -text attributes before git add; hashes here always cover the original raw bytes."
+  },
+  "artifactHygiene": {
+    "taskFilesReviewed": 157,
+    "jsonFilesScanned": 74,
+    "signedProviderUrlFindings": 0,
+    "persistedAudioOrVideoFiles": 0
+  }
+}

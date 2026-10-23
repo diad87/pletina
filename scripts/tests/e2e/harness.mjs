@@ -224,9 +224,11 @@ export async function createHarness({ browser, baseURL, profile, engine, directo
       // Restore interception while the browser remains offline: no request can
       // escape to a live provider during the handoff back to fixture routing.
       if (report.engine === 'firefox') await fixture.resumeRoutes()
-      await context.setOffline(false)
-      if (providerContext !== context && providerContext.setOffline) await providerContext.setOffline(false)
       await fixture.set({ offline: false })
+      if (providerContext !== context && providerContext.setOffline) await providerContext.setOffline(false)
+      // The real browser online event can synchronously resume persisted jobs.
+      // Its controlled provider must already be available when that happens.
+      await context.setOffline(false)
     }
     const after = await page.evaluate(() => navigator.onLine).catch(() => null)
     const result = { mode, navigatorOfflineExpected: value && !useOriginGate,

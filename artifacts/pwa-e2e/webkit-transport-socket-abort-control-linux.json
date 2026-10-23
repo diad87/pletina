@@ -1,0 +1,79 @@
+{
+  "startedAt": "2026-10-23T18:47:06.220Z",
+  "scope": "Desktop WebKit QA TLS-proxy transport control, not product playback or physical-mobile evidence.",
+  "transportSha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e",
+  "cases": [
+    {
+      "path": "/good",
+      "fulfilled": true,
+      "type": "opaque",
+      "status": 0
+    },
+    {
+      "path": "/http502",
+      "fulfilled": true,
+      "type": "opaque",
+      "status": 0
+    },
+    {
+      "path": "/abort",
+      "fulfilled": false,
+      "name": "TypeError"
+    }
+  ],
+  "errors": [],
+  "networkTransport": "Playwright HTTP interception plus loopback TLS proxy for eight allowlisted fixture hosts (media, RSS, images, Audius and Spotify); original URLs, response headers and production SW retained. No external upstream. Self-signed fixture certificate accepted only in this disposable QA context.",
+  "networkTransportHosts": [
+    "fixture.googlevideo.com",
+    "media.pletina.test",
+    "feeds.pletina.test",
+    "images.pletina.test",
+    "i.ytimg.com",
+    "api.audius.co",
+    "open.spotify.com",
+    "api-partner.spotify.com"
+  ],
+  "transport": {
+    "allowlistedHosts": [
+      "fixture.googlevideo.com",
+      "media.pletina.test",
+      "feeds.pletina.test",
+      "images.pletina.test",
+      "i.ytimg.com",
+      "api.audius.co",
+      "open.spotify.com",
+      "api-partner.spotify.com"
+    ],
+    "requests": [
+      {
+        "host": "media.pletina.test",
+        "path": "/good",
+        "method": "GET"
+      },
+      {
+        "host": "media.pletina.test",
+        "path": "/http502",
+        "method": "GET"
+      },
+      {
+        "host": "media.pletina.test",
+        "path": "/abort",
+        "method": "GET"
+      },
+      {
+        "host": "media.pletina.test",
+        "path": "/abort",
+        "method": "GET"
+      }
+    ],
+    "rejected": [],
+    "externalUpstreamConnections": 0
+  },
+  "socketAbortRejectsNoCors": true,
+  "http502IsOpaqueFulfilled": true,
+  "browserVersion": "26.5",
+  "contextClosed": true,
+  "browserClosed": true,
+  "transportClosed": true,
+  "completedAt": "2026-10-23T18:47:08.195Z"
+}

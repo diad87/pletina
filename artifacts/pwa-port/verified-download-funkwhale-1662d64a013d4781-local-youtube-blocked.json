@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "build": "1662d64a013d4781",
+  "testedAt": "2026-10-23T18:23:36.561Z",
+  "wanted": {
+    "query": "Chris Zabriskie Cylinder Six",
+    "title": "Cylinder Six",
+    "artist": "Chris Zabriskie",
+    "album": "Cylinders",
+    "catalogId": 2934405891,
+    "bytes": 4441693,
+    "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+    "duration": 105.64,
+    "startAt": 0
+  },
+  "runnerSha256": "f524f80680b9355b2b640ca7a491e95465179d0542456f08cf420643b7142295",
+  "sourceSnapshot": "artifacts/pwa-port/verified-download-live-source-f524f80680b9355b.mjs",
+  "checks": [
+    {
+      "name": "real checked provider file commits complete hash-bound bytes with stable metadata and offset",
+      "pass": true,
+      "file": {
+        "id": 2934405891,
+        "title": "Cylinder Six",
+        "provider": "funkwhale",
+        "sourceId": "51b06556-531b-43a9-b714-ab399c986f69",
+        "size": 4441693,
+        "byteLength": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "status": 200,
+        "contentType": "audio/mpeg",
+        "decoded": {
+          "duration": 105.64,
+          "channels": 2,
+          "sampleRate": 48000
+        },
+        "startAt": 0,
+        "fileDuration": 105.64,
+        "expectedSha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "internalPointer": true,
+        "storedTemporaryUrl": false
+      }
+    },
+    {
+      "name": "offline reload preserves full file, source offset, native title and working seek without provider access",
+      "pass": true,
+      "initial": {
+        "online": false,
+        "title": "Cylinder Six",
+        "state": "playing",
+        "time": 2,
+        "duration": 105.64,
+        "videoModal": false,
+        "iframeCount": 0
+      },
+      "afterSeek": {
+        "online": false,
+        "title": "Cylinder Six",
+        "state": "playing",
+        "time": 85,
+        "duration": 105.64,
+        "videoModal": false,
+        "iframeCount": 0
+      },
+      "file": {
+        "id": 2934405891,
+        "title": "Cylinder Six",
+        "provider": "funkwhale",
+        "sourceId": "51b06556-531b-43a9-b714-ab399c986f69",
+        "size": 4441693,
+        "byteLength": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "status": 200,
+        "contentType": "audio/mpeg",
+        "decoded": {
+          "duration": 105.64,
+          "channels": 2,
+          "sampleRate": 48000
+        },
+        "startAt": 0,
+        "fileDuration": 105.64,
+        "expectedSha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "internalPointer": true,
+        "storedTemporaryUrl": false
+      }
+    }
+  ],
+  "errors": [],
+  "inputActions": [
+    {
+      "kind": "trusted mouse click",
+      "purpose": "open compiled Pletina"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "focus normal music search"
+    },
+    {
+      "kind": "trusted keyboard typing",
+      "characters": 28
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "open selected song menu"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "download exact selected recording"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "open real Downloads view"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "open real Downloads view"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "single offline downloaded song title click"
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "trusted seek to eighty percent of downloaded file",
+      "fraction": 0.8
+    },
+    {
+      "kind": "trusted mouse click",
+      "purpose": "pause after offline observation"
+    }
+  ],
+  "localRequests": [
+    {
+      "path": "/__audio__/2934405891",
+      "type": "Media",
+      "method": "GET"
+    },
+    {
+      "path": "/__audio__/2934405891",
+      "type": "Media",
+      "method": "GET"
+    }
+  ],
+  "scope": "Compiled PWA real provider download, complete cached bytes/hash/decode, offline reload and trusted native playback/seek. Desktop Chrome foreground only.",
+  "policy": {
+    "providerMocks": false,
+    "nodeBootstrap": false,
+    "productMethodsCalled": false,
+    "audioConstructorReplaced": false,
+    "securityOverrides": false,
+    "autoplayOverrides": false,
+    "rawMediaUrlsSaved": false,
+    "mediaBytesSaved": false,
+    "physicalPhone": false,
+    "backgroundVerified": false
+  },
+  "observationRpcCalls": 62,
+  "observationRpcWithGesture": 0,
+  "faultInjection": {
+    "youtubeNetworkFailure": true,
+    "blockedYouTubeRequests": 2,
+    "otherProviderResponsesModified": false
+  },
+  "originKind": "ephemeral static QA serving unmodified dist-pwa",
+  "browser": "Chrome/153.0.8010.52",
+  "selectedRow": {
+    "index": "0",
+    "title": "Cylinder Six",
+    "artist": "Chris Zabriskie"
+  },
+  "downloadEvents": [
+    {
+      "trackId": 2934405891,
+      "state": "queued",
+      "progress": 0,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0.22132101430693207,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0.4721514971881217,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0.6934725114950538,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0.9443029943762434,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "downloading",
+      "progress": 0.99,
+      "error": null
+    },
+    {
+      "trackId": 2934405891,
+      "state": "done",
+      "progress": 1,
+      "error": null
+    }
+  ],
+  "onlineNetworkProbe": {
+    "blocked": false,
+    "status": 404
+  },
+  "beforeOfflineReload": {
+    "online": false,
+    "title": null,
+    "state": "none",
+    "time": 0,
+    "duration": 0,
+    "videoModal": false,
+    "iframeCount": 0
+  },
+  "beforeReloadNetworkProbe": {
+    "blocked": true
+  },
+  "afterOfflineReload": {
+    "online": false,
+    "title": null,
+    "state": "none",
+    "time": 0,
+    "duration": 0,
+    "videoModal": false,
+    "iframeCount": 0
+  },
+  "afterReloadNetworkProbe": {
+    "blocked": true
+  },
+  "afterReloadOfflineUi": {
+    "online": false,
+    "title": null,
+    "state": "none",
+    "time": 0,
+    "duration": 0,
+    "videoModal": false,
+    "iframeCount": 0
+  },
+  "screenshot": "verified-download-funkwhale-1662d64a013d4781-local-youtube-blocked.png",
+  "resourcesClosed": true
+}

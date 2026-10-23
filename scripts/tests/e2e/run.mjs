@@ -65,30 +65,37 @@ function executable(engine) {
 }
 async function chromiumBridge({ context, page, report }) {
   // Playwright attaches before opaque frames exist. Puppeteer owns only HTTP interception.
-  const marker = 'about:blank#pletina-e2e-' + crypto.randomUUID()
-  const targetReady = puppeteerBrowser.waitForTarget(target => target.type() === 'page' && target.url() === marker, { timeout: 15000 })
-  await page.goto(marker)
-  const puppeteerPage = await (await targetReady).page()
-  assert.ok(puppeteerPage, 'The disposable Playwright page must have a matching Puppeteer target')
-  await puppeteerPage.setRequestInterception(true)
-  report.networkTransport = 'Puppeteer HTTP interception + Playwright UI; unchanged provider fixtures and production service worker.'
+  let handler
+  async function connectPage(targetPage) {
+    const marker = 'about:blank#pletina-e2e-' + crypto.randomUUID()
+    const targetReady = puppeteerBrowser.waitForTarget(target => target.type() === 'page' && target.url() === marker, { timeout: 15000 })
+    await targetPage.goto(marker)
+    const puppeteerPage = await (await targetReady).page()
+    assert.ok(puppeteerPage, 'Each disposable Playwright page must have a matching Puppeteer target')
+    await puppeteerPage.setRequestInterception(true)
+    puppeteerPage.on('request', request => {
+      if (request.isInterceptResolutionHandled()) return
+      if (!handler) { void request.continue(); return }
+      const wrapped = { url: () => request.url(), method: () => request.method(), resourceType: () => request.resourceType(),
+        frame: () => request.frame(), failure: () => request.failure(),
+        headers: () => request.headers(), postDataJSON: () => JSON.parse(request.postData() || '{}') }
+      const route = { request: () => wrapped, continue: () => request.continue(), abort: (code = 'failed') => request.abort(code),
+        fulfill: value => request.respond({ status: value.status ?? 200, headers: value.headers, contentType: value.contentType, body: value.body }) }
+      Promise.resolve(handler(route)).catch(async error => {
+        if (targetPage.isClosed()) return
+        report.errors.push({ name: 'ProviderTransportError', message: scrub(error.message) })
+        if (!request.isInterceptResolutionHandled()) await request.abort('failed').catch(() => {})
+      })
+    })
+    return puppeteerPage
+  }
+  const primary = await connectPage(page)
+  report.networkTransport = 'Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.'
   return {
     pages: () => context.pages(),
-    setOffline: value => puppeteerPage.setOfflineMode(value),
-    route: async (_pattern, handler) => {
-      puppeteerPage.on('request', request => {
-        if (request.isInterceptResolutionHandled()) return
-        const wrapped = { url: () => request.url(), method: () => request.method(), resourceType: () => request.resourceType(),
-          headers: () => request.headers(), postDataJSON: () => JSON.parse(request.postData() || '{}') }
-        const route = { request: () => wrapped, continue: () => request.continue(), abort: (code = 'failed') => request.abort(code),
-          fulfill: value => request.respond({ status: value.status ?? 200, headers: value.headers, contentType: value.contentType, body: value.body }) }
-        Promise.resolve(handler(route)).catch(async error => {
-          if (page.isClosed()) return
-          report.errors.push({ name: 'ProviderTransportError', message: scrub(error.message) })
-          if (!request.isInterceptResolutionHandled()) await request.abort('failed').catch(() => {})
-        })
-      })
-    },
+    setOffline: value => primary.setOfflineMode(value),
+    route: async (_pattern, value) => { handler = value },
+    attachPage: connectPage,
   }
 }
 async function smoke(ctx) {
