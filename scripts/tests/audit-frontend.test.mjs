@@ -166,6 +166,16 @@ for (const [code, message] of [['queue-busy', /otra ventana/], ['queue-ownership
   })
 }
 
+test('PWA-DL: an accepted job clears a previous ownership warning without requiring manual recovery', async () => {
+  const h = downloadsHarness({ inPwa: true, pendingWebDownloads: async () => { throw Object.assign(new Error('busy'), { code: 'queue-busy' }) } })
+  await h.downloads.init([])
+  assert.match(h.downloads.queueIssue, /otra ventana/)
+  h.downloads.start([item(3)])
+  h.emit(3, 'queued')
+  assert.equal(h.downloads.queueIssue, null, 'A manager that emits queued has already acquired ownership and durably admitted the job')
+  assert.equal(h.downloads.active.has(3), true)
+})
+
 test('CORE-DL-007: completed/active/local/RSS are skipped, YouTube episodes are eligible', async () => {
   const h = downloadsHarness()
   await h.downloads.init([1])

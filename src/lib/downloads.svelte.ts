@@ -170,6 +170,7 @@ class Downloads {
     const id = p.trackId
     if (this.#terminal.has(id) || this.done.has(id)) return
     if (p.state === 'queued' || p.state === 'downloading') {
+      this.queueIssue = null
       this.active.set(id, p.progress)
       if (p.state === 'downloading') this.waitingForNetwork = false
       else if (p.error) this.waitingForNetwork = true
