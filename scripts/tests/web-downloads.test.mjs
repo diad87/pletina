@@ -29,7 +29,8 @@ function setup(t, options = {}) {
       rows.set(key, value); if (options.putError) throw options.putError
     },
     async match(key) { const value = rows.get(key); return value?.clone ? value.clone() : value },
-    async delete(key) { return rows.delete(key) },
+    async delete(key) { if (options.deleteError) throw options.deleteError; return rows.delete(typeof key === 'string' ? key : key.url) },
+    async keys() { return [...rows.keys()].map(key => new Request(key)) },
   }
   const caches = { async open(name) { assert.equal(name, DOWNLOAD_CACHE); return cache } }
   const factory = new IDBFactory(), name = 'download-test-' + crypto.randomUUID()
@@ -167,6 +168,71 @@ test('cache eviction removes stale metadata and download removal deletes both me
   await h.removeDownloads([2])
   assert.equal(h.rows.size, 0)
   assert.deepEqual(await h.listDownloads(), [])
+})
+
+test('cold owner startup removes only unreferenced valid stages in its scope and never invents a completed download', async t => {
+  const h = setup(t), referenced = stage(1), orphan = stage(2)
+  const unrelated = [scope + '__audio__/3', stage(3) + '&other=1', stage(3).replace('/pletina/', '/another-app/'),
+    stage(3).replace('app.example', 'another.example'), scope + 'cover.png']
+  h.rows.set(referenced, new Response('complete file')); h.rows.set(orphan, new Response('abandoned before pointer commit'))
+  for (const key of unrelated) h.rows.set(key, new Response('not owned by this sweep'))
+  await h.store.put({ id: 1, track: song(), size: 13, at: 1, cacheKey: referenced })
+  await h.store.close()
+  assert.deepEqual(await h.pendingDownloads(), [])
+  assert.equal(h.rows.has(orphan), false); assert.equal(h.rows.has(referenced), true)
+  for (const key of unrelated) assert.equal(h.rows.has(key), true, key)
+  assert.equal(await h.store.get(2), null); assert.deepEqual((await h.listDownloads()).map(row => row.track.id), [1])
+  assert.deepEqual(h.events, []); assert.deepEqual(h.sources, [])
+})
+
+test('startup reconciliation preserves a valid file pointer even when unrelated row metadata is corrupt', async t => {
+  const h = setup(t), key = stage(4)
+  h.rows.set(key, new Response('complete file with a damaged title row'))
+  const db = await new Promise((resolve, reject) => { const request = h.factory.open(h.name, 1)
+    request.onupgradeneeded = () => request.result.createObjectStore('files', { keyPath: 'id' })
+    request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error) })
+  await new Promise((resolve, reject) => { const tx = db.transaction('files', 'readwrite'); tx.objectStore('files').put({ id: 4, cacheKey: key, track: null })
+    tx.oncomplete = resolve; tx.onerror = tx.onabort = () => reject(tx.error) }); db.close()
+  await h.pendingDownloads()
+  assert.equal(h.rows.has(key), true); assert.equal(await h.store.get(4), null)
+  assert.deepEqual(h.events, [], 'a preserved corrupt reference is not a valid completed download')
+})
+
+test('resume and read during an active transfer never sweep its not-yet-committed stage', async t => {
+  const gate = deferred(), entered = deferred(), h = setup(t, { validate: async () => { entered.resolve(); await gate.promise } })
+  h.rows.set(stage(9), new Response('old abandoned stage'))
+  await h.enqueueDownloads([song()]); await entered.promise
+  assert.equal(h.rows.has(stage(9)), false)
+  assert.equal(h.rows.size, 1); assert.equal(await h.store.get(1), null)
+  const activeStage = [...h.rows.keys()][0]
+  assert.deepEqual((await h.pendingDownloads()).map(track => track.id), [1])
+  await h.resumeDownloads()
+  assert.equal(h.rows.has(activeStage), true, 'an active stage with no pointer is valid while the owner is still working')
+  gate.resolve(); await h.idle(); assert.equal((await h.store.get(1)).cacheKey, activeStage)
+})
+
+test('reconciliation failure keeps the durable FIFO untouched and does not start or announce a partial queue', async t => {
+  const options = { savedJobs: [song(1), song(2)], deleteError: new Error('Cache deletion unavailable') }, h = setup(t, options)
+  h.rows.set(stage(9), new Response('old orphan'))
+  await assert.rejects(h.pendingDownloads(), /Cache deletion unavailable/)
+  assert.deepEqual(h.readJournal().map(track => track.id), [1, 2]); assert.deepEqual(h.events, []); assert.deepEqual(h.sources, [])
+  options.deleteError = null
+  assert.deepEqual((await h.pendingDownloads()).map(track => track.id), [1, 2])
+  assert.equal(h.rows.has(stage(9)), false)
+  await h.resumeDownloads(); await h.idle()
+  assert.deepEqual(h.sources, [1, 2]); assert.deepEqual(h.readJournal(), [])
+})
+
+test('lost ownership after enumerating cache keys stops reconciliation before any deletion or FIFO mutation', async t => {
+  let owned = true
+  const ownership = { acquire: async () => {}, assertOwned() { if (!owned) throw Object.assign(Error('Retired owner'), { code: 'queue-ownership-released' }) } }
+  const gate = deferred(), entered = deferred(), h = setup(t, { ownership, savedJobs: [song()] })
+  h.rows.set(stage(9), new Response('orphan must remain for the actual owner'))
+  const cache = await h.caches.open(DOWNLOAD_CACHE), keys = cache.keys
+  cache.keys = async () => { entered.resolve(); await gate.promise; return keys() }
+  const pending = h.pendingDownloads(); await entered.promise; owned = false; gate.resolve()
+  await assert.rejects(pending, { code: 'queue-ownership-released' })
+  assert.equal(h.rows.has(stage(9)), true); assert.deepEqual(h.readJournal().map(track => track.id), [1]); assert.deepEqual(h.events, [])
 })
 
 test('a hung resolver times out, preserves its FIFO job and waits for explicit resume before the next song', async (t) => {

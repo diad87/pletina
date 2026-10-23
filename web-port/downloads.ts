@@ -104,6 +104,8 @@ export function createDownloadManager(options: Options = {}) {
     const saved = await journal.read(), seen = new Set<number>(), restored: LibTrack[] = []
     ownership.assertOwned()
     for (const value of saved) { const track = downloadTrack(value); if (!seen.has(track.id)) { seen.add(track.id); restored.push(track) } }
+    await store.reconcileStages(() => ownership.assertOwned())
+    ownership.assertOwned()
     for (const track of restored) { pending.add(track.id); queue.push(track) }
     loaded = true
   }

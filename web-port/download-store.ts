@@ -61,13 +61,23 @@ export function createDownloadStore(options: Options = {}) {
       resolve(connection)
     }
   })
+  function stageUrl(value: unknown, expectedId?: number): URL | null {
+    if (typeof value !== 'string') return null
+    try {
+      const url = new URL(value), prefix = new URL('__audio__/', scope), raw = url.pathname.slice(prefix.pathname.length)
+      if (url.origin !== prefix.origin || !url.pathname.startsWith(prefix.pathname) || !/^[1-9]\d{0,14}$/.test(raw)) return null
+      const id = downloadId(Number(raw))
+      if (expectedId !== undefined && id !== expectedId || url.pathname !== new URL(audioCacheUrl(id, scope)).pathname ||
+        url.username || url.password || url.hash || [...url.searchParams.keys()].some(key => key !== 'stage') ||
+        url.searchParams.getAll('stage').length !== 1 || !/^\d{1,16}-[a-f0-9-]{36}$/i.test(url.searchParams.get('stage') ?? '')) return null
+      return url
+    } catch { return null }
+  }
   function row(value: DownloadRecord): DownloadRecord {
     const id = downloadId(value.id), track = downloadTrack(value.track), size = integer(value.size), at = integer(value.at)
     if (id !== track.id || size > MAX_DOWNLOAD_BYTES || typeof value.cacheKey !== 'string') throw new Error('La descarga guardada no es válida.')
-    const url = new URL(value.cacheKey), stable = new URL(audioCacheUrl(id, scope))
-    if (url.origin !== stable.origin || url.pathname !== stable.pathname || url.username || url.password || url.hash ||
-      [...url.searchParams.keys()].some((key) => key !== 'stage') || url.searchParams.getAll('stage').length !== 1 ||
-      !/^\d{1,16}-[a-f0-9-]{36}$/i.test(url.searchParams.get('stage') ?? '')) throw new Error('La dirección de la copia guardada no es válida.')
+    const url = stageUrl(value.cacheKey, id)
+    if (!url) throw new Error('La dirección de la copia guardada no es válida.')
     let source: PlayableSource | undefined
     if (value.source !== undefined) {
       const original = value.source, file = original.download
@@ -82,8 +92,10 @@ export function createDownloadStore(options: Options = {}) {
     }
     return { id, track, size, at, cacheKey: url.href, ...(source ? { source } : {}) }
   }
-  async function request<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  async function request<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>, guard?: () => void): Promise<T> {
+    guard?.()
     const db = await open()
+    guard?.()
     return new Promise<T>((resolve, reject) => {
       const tx = db.transaction('files', mode)
       let result: T
@@ -104,6 +116,36 @@ export function createDownloadStore(options: Options = {}) {
   }
   const put = async (value: DownloadRecord): Promise<void> => { const normalized = row(value); await request('readwrite', (store) => store.put(normalized)) }
   const remove = async (id: number): Promise<void> => { await request('readwrite', (store) => store.delete(downloadId(id))) }
+  /** Run only once, before the exclusive download owner starts its worker.
+   * Staging bodies from a dead context have no IDB pointer. A current context's
+   * in-flight stage must never be swept: subsequent resume calls skip this load.
+   */
+  async function reconcileStages(assertOwned: () => void): Promise<number> {
+    assertOwned()
+    const values = await request<unknown[]>('readonly', store => store.getAll(), assertOwned)
+    assertOwned()
+    // Preserve a valid pointer even if its other metadata is corrupt. Collection
+    // is not a repair/migration and must not discard a possibly complete file.
+    const references = new Set(values.flatMap(value => {
+      const url = value && typeof value === 'object' && 'cacheKey' in value ? stageUrl(value.cacheKey) : null
+      return url ? [url.href] : []
+    }))
+    assertOwned()
+    const cache = await cacheStorage.open(DOWNLOAD_CACHE)
+    assertOwned()
+    const keys = await cache.keys()
+    assertOwned()
+    let deleted = 0
+    for (const key of keys) {
+      const url = key.method === 'GET' ? stageUrl(key.url) : null
+      if (!url || references.has(url.href)) continue
+      assertOwned()
+      const removed = await cache.delete(key)
+      assertOwned()
+      if (removed) deleted++
+    }
+    return deleted
+  }
   async function trackMetadata(saved: DownloadRecord): Promise<LibTrack> {
     if (saved.id < 250_000_000_000_000 || saved.id >= 500_000_000_000_000) return saved.track
     const readTrack = options.readTrack ?? metadataReader
@@ -139,7 +181,7 @@ export function createDownloadStore(options: Options = {}) {
     return values
   }
   async function close() { await opening?.catch(() => {}); connection?.close(); connection = undefined; opening = undefined }
-  return { scope, get, list, put, remove, close, listDownloads, readDownloadedPlayable, removeDownloadedTrack }
+  return { scope, get, list, put, remove, close, reconcileStages, listDownloads, readDownloadedPlayable, removeDownloadedTrack }
 }
 export type DownloadStore = ReturnType<typeof createDownloadStore>
 let instance: DownloadStore | undefined
