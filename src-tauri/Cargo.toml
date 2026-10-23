@@ -70,3 +70,7 @@ opt-level = 2
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
+
+# Exact upstream crate with the documented Windows clang-cl dispatch/build patch.
+[patch.crates-io]
+rquickjs-sys = { path = "vendor/rquickjs-sys" }

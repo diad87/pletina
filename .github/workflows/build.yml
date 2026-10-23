@@ -62,6 +62,20 @@ jobs:
           npm run check
           npm run build:youtube-decoder -- --check
 
+      - name: Compilador de QuickJS en Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & ./src-tauri/vendor/rquickjs-sys/Verify-Upstream.ps1
+          $clang = Join-Path $env:ProgramFiles 'LLVM\bin\clang-cl.exe'
+          $archiver = Join-Path $env:ProgramFiles 'LLVM\bin\llvm-lib.exe'
+          if (!(Test-Path -LiteralPath $clang) -or !(Test-Path -LiteralPath $archiver)) {
+            throw 'Falta el LLVM preinstalado de la imagen Windows.'
+          }
+          & $clang --version
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo verificar clang-cl.' }
+          "MUSIFY_QUICKJS_CLANG_CL=$clang" >> $env:GITHUB_ENV
+
       - name: Pruebas Rust en Windows
         if: runner.os == 'Windows'
         run: cargo test --manifest-path src-tauri/Cargo.toml
