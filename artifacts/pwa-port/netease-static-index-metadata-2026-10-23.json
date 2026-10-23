@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-10-23T06:03:43.800Z",
+  "hypothesis": "An offline/static metadata index could discover provider IDs through public HTTP even if the runtime cannot read search JSON via CORS. This is a Node metadata diagnostic only; no account, cookies, secret, proxy or encrypted/protected endpoint.",
+  "rows": [
+    {
+      "query": "Epoitaitaye",
+      "status": 200,
+      "contentType": "text/plain;charset=UTF-8",
+      "validSongArray": false,
+      "code": 200,
+      "count": null,
+      "returned": null,
+      "songs": []
+    },
+    {
+      "query": "Iritsi da Eguna",
+      "status": 200,
+      "contentType": "text/plain;charset=UTF-8",
+      "validSongArray": false,
+      "code": 200,
+      "count": null,
+      "returned": null,
+      "songs": []
+    },
+    {
+      "query": "Let The Future In",
+      "status": 200,
+      "contentType": "text/plain;charset=UTF-8",
+      "validSongArray": false,
+      "code": 200,
+      "count": null,
+      "returned": null,
+      "songs": []
+    }
+  ],
+  "productChanged": false,
+  "mediaPersisted": false,
+  "followupControlShape": {
+    "query": "Let The Future In",
+    "httpStatus": 200,
+    "topLevelKeys": [
+      "result",
+      "code",
+      "abroad"
+    ],
+    "resultType": "string",
+    "abroad": true,
+    "interpretation": "The provider returned an encoded result rather than a readable song array. No empty-catalog claim, audio request, decryption or account/region workaround was attempted."
+  },
+  "conclusion": "The public HTTP metadata route does not yet yield usable plain catalog metadata in this environment, even for the control. Static-index discovery is unproven for this provider; no playback/background claim is made."
+}

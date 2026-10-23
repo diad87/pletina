@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T06:15:06.222Z",
+  "input": {
+    "title": "36 Ghosts IV",
+    "artist": "Nine Inch Nails",
+    "album": "Ghosts I-IV",
+    "titleVersion": ""
+  },
+  "scope": "Real public Funkwhale library through the Pages origin, selected via title/artist/album then official catalog detail and excerpt acoustic comparison. Browser-only native audio, seek and hidden tab.",
+  "providerResponsesMocked": false,
+  "noRuntimeBackend": true,
+  "noAccountsSubscriptionsOrKeys": true,
+  "credentials": "omit",
+  "productChanged": false,
+  "mediaOrSignedUrlsPersisted": false,
+  "physicalDevice": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterVerified": false,
+  "execution": {
+    "scriptSha256": "780bd06f59db95f29479aa07234349fa134b1228ce5dc27745305e8d8e4fbf4e",
+    "helperSha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+  },
+  "checks": [
+    {
+      "name": "Canonical public-library identity and complete-file cross-origin access",
+      "status": "verified-excerpt-match",
+      "library": {
+        "anonymousCanListen": true,
+        "metadataTracks": 148018,
+        "softwareVersion": "2.0.12.dev0+f10a9e72"
+      },
+      "canonicalSelection": {
+        "id": 57428851,
+        "title": "36 Ghosts IV",
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "duration": 139,
+        "titleVersion": ""
+      },
+      "canonical": {
+        "id": 57428851,
+        "title": "36 Ghosts IV",
+        "titleVersion": "",
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "duration": 139,
+        "isrc": "USTC40852265"
+      },
+      "canonicalIdentityChecks": {
+        "sameTrackId": true,
+        "sameArtistId": true,
+        "sameAlbumId": true,
+        "sameTitleArtistAlbum": true,
+        "sameDuration": true,
+        "sameTitleVersion": true,
+        "requestedVersionEqual": true,
+        "isrcFormatValid": true
+      },
+      "negative": {
+        "id": 57428501,
+        "title": "01 Ghosts I",
+        "titleVersion": ""
+      },
+      "rejected": [],
+      "metadata": {
+        "status": 200,
+        "type": "cors",
+        "count": 1
+      },
+      "referenceAudio": {
+        "bytes": 479827,
+        "sha256": "65d85d966f975afea5b6fde2ea2d419ac5ae117e076ddb7d5feea211631e424f",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "negativeAudio": {
+        "bytes": 479827,
+        "sha256": "e518f6f620c9f93c64b3a4d3577063ab4747f35fb2c1de60f8645ed0be668c24",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "open.audio",
+        "id": 49885,
+        "uploadId": "ab913fc8-bfeb-4fd0-bce7-f4aa42140031",
+        "localUpload": true,
+        "declaredLicense": null,
+        "bytes": 1740870,
+        "sha256": "00c641b9102dcfbd1b1c2f12f7b99ad6fee7af0bf0a3c947359cd07547d7caf7",
+        "status": 200,
+        "type": "cors",
+        "contentType": "audio/ogg",
+        "duration": 139.04390022675736,
+        "sampleRate": 22050,
+        "channels": 2,
+        "delivery": {
+          "redirected": true,
+          "host": "s3.eu-central-2.wasabisys.com",
+          "signedQueryFieldsPresent": true,
+          "declaredValiditySeconds": 3600,
+          "fullUrlPersisted": false
+        },
+        "identityMetadata": {
+          "trackMbid": null,
+          "trackIsrc": null,
+          "uploadMbid": null,
+          "uploadIsrc": null,
+          "trackIdentityFields": [
+            "mbid"
+          ],
+          "uploadIdentityFields": [],
+          "id3": {
+            "tagVersion": null,
+            "inspectedFrames": [],
+            "isrc": [],
+            "recordingMbids": []
+          },
+          "vorbis": {
+            "inspectedBytes": 262144,
+            "isrc": [],
+            "recordingMbids": []
+          }
+        }
+      },
+      "waveform": {
+        "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+        "full": {
+          "correlation": 0.9954507572179648,
+          "offsetSeconds": 47.961678004535145,
+          "referenceSeconds": 29.988208616780046
+        },
+        "windows": [
+          {
+            "referenceStartSeconds": 0,
+            "correlation": 0.9903583918711802,
+            "offsetSeconds": 47.961678004535145,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          },
+          {
+            "referenceStartSeconds": 10,
+            "correlation": 0.9971532898418375,
+            "offsetSeconds": 57.961678004535145,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          },
+          {
+            "referenceStartSeconds": 20,
+            "correlation": 0.9971540089218954,
+            "offsetSeconds": 67.96167800453514,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          }
+        ],
+        "alignmentSpreadSeconds": 0,
+        "selfControl": {
+          "correlation": 1.0000000000050229,
+          "offsetSeconds": 39.99977324263038,
+          "referenceSeconds": 8
+        },
+        "negativeControl": {
+          "correlation": 0.03726430856832136,
+          "offsetSeconds": 56.47233560090703,
+          "referenceSeconds": 29.988208616780046
+        },
+        "matched": true,
+        "thresholds": {
+          "full": 0.8,
+          "eachWindow": 0.8,
+          "maximumAlignmentSpreadSeconds": 0.03,
+          "selfControl": 0.99,
+          "maximumNegativeControl": 0.4
+        },
+        "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+      }
+    },
+    {
+      "name": "One trusted click, native audio/seek and hidden-tab progression",
+      "initial": {
+        "time": 2.016384,
+        "duration": 139.046825,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "afterSeek": {
+        "time": 70.775454,
+        "duration": 139.046825,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "hiddenBefore": {
+        "time": 70.823515,
+        "duration": 139.046825,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      },
+      "hiddenAfter": {
+        "time": 80.833615,
+        "duration": 139.046825,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      }
+    }
+  ],
+  "errors": [],
+  "pass": true
+}

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-23",
+  "scope": "Read-only provider research and isolated browser QA. No product adapter, dist edit, build, release, native bridge, extension, credentials, account or runtime proxy added.",
+  "finding": "Funkwhale public libraries provide a real additional music catalog with new exact canonical-reference matches across three artists. This is a coverage gain beyond generic transport controls, but not a solution for every unavailable commercial recording.",
+  "funkwhale": {
+    "pod": "open.audio",
+    "operator": "The Funkwhale Collective, according to its public NodeInfo description.",
+    "anonymousSettingsChecked": true,
+    "observedAnonymousCanListen": true,
+    "nodeInfoMetadataTracks": 148018,
+    "metadataCountIsNotPlayableTrackCount": true,
+    "softwareVersion": "2.0.12.dev0+f10a9e72",
+    "search": "/api/v2/tracks/?q={title}&page_size=10",
+    "stableMediaLocator": "The selected public local upload's /api/v2/listen/{track-UUID}/?upload={upload-UUID}; metadata and permission checks precede media access.",
+    "v1Observation": "The tested pod's v1 tracks route returned non-JSON; v2 tracks worked. Official API overview still describes v2 as work in progress, so a future adapter needs explicit version detection/validation rather than assuming a fixed stable schema.",
+    "discoveryChecks": [
+      "Canonical catalog selected by title, artist, album and requested title_version, then hydrated from the same track ID.",
+      "Hydrated artist ID, album ID, normalized title/artist/album, exact numeric duration and title_version equal the selected row; canonical ISRC format validated.",
+      "Funkwhale candidate title, credited artist and album must match; require is_playable, content_category music, local public upload and duration within 3 seconds.",
+      "Do not treat metadata-only/private records with no accessible uploads, podcast matches or same-title other albums as playable replacements.",
+      "Construct/validate the pod-owned listen route from provider data; no arbitrary media URL or third-party extraction service.",
+      "Complete file fetched CORS with omitted credentials and checked against metadata byte length, bounded to 8 MiB per candidate.",
+      "SHA-256 of candidate, canonical preview and distinct negative preview computed before decoding; three-window acoustic comparison uses unchanged shared thresholds and consistent alignment.",
+      "Native Audio receives the exact fetched candidate bytes in a RAM-only Blob; one trusted click, seek and hidden-tab progression are recorded."
+    ],
+    "finalManifest": "funkwhale-canonical-final-manifest-2026-10-23.json",
+    "finalSourceSnapshot": "funkwhale-canonical-source-final-2026-10-23.mjs",
+    "finalSourceSha256": "780bd06f59db95f29479aa07234349fa134b1228ce5dc27745305e8d8e4fbf4e",
+    "finalCases": [
+      {"report": "funkwhale-canonical-2026-10-23T06-15-06-183Z.json", "title": "Cylinder Six", "artist": "Chris Zabriskie", "album": "Cylinders", "catalogId": 2934405891, "isrc": "GBKPL1370800", "podTrackId": 432473, "bytes": 4441693, "durationSeconds": 105, "checksPassed": 2},
+      {"report": "funkwhale-canonical-2026-10-23T06-15-06-191Z.json", "title": "Melted Wings", "artist": "Kai Engel", "album": "Written in Ink", "catalogId": 2988892451, "podTrackId": 38938, "bytes": 5527791, "durationSeconds": 133, "checksPassed": 2},
+      {"report": "funkwhale-canonical-2026-10-23T06-15-06-222Z.json", "title": "36 Ghosts IV", "artist": "Nine Inch Nails", "album": "Ghosts I-IV", "catalogId": 57428851, "isrc": "USTC40852265", "podTrackId": 49885, "bytes": 1740870, "durationSeconds": 139, "checksPassed": 2}
+    ],
+    "counts": {"recordings": 3, "artists": 3, "checksPerRecording": 2, "totalChecks": 6, "passed": 6},
+    "strictNegativeRetained": "Kai Engel Collateral has a high full correlation but its first separated window is 0.765 below 0.8; it is rejected, and no threshold was relaxed. Historical report funkwhale-canonical-2026-10-23T06-07-34-865Z.json is preserved.",
+    "identityMetadata": {
+      "trackMbidNullInAllFinalCases": true,
+      "trackIsrcAbsentInAllFinalCases": true,
+      "uploadIsrcOrMbidAbsentInAllFinalCases": true,
+      "mp3Id3": "Bounded ID3v2.4 frame inspection for the Chris/Kai files finds no TSRC, recording MusicBrainz UFID/TXXX identifier or usable ISRC.",
+      "oggComments": "A bounded first-256-KiB ASCII-key scan of the NIN OGG finds no ISRC= or MUSICBRAINZ_TRACKID=. It is not an exhaustive parser for every possible container/tag encoding.",
+      "musicbrainzBridge": "Technically plausible when a real source recording MBID exists: query the public recording's ISRCs and compare to the canonical ISRC. That identity path is not established for these three sources, whose identifiers are missing; do not replace acoustic verification by title matching.",
+      "musicbrainzReadProbe": "One anonymous Pages-origin lookup of /ws/2/isrc/GBKPL1370800?fmt=json returns readable CORS HTTP404 Not Found; this proves only a readable request and missing indexed identifier, not a valid MBID-to-ISRC bridge control.",
+      "recordingVersusMaster": "MusicBrainz documentation defines a recording before final mastering; recording MBID alone does not identify one exact final master."
+    },
+    "delivery": {
+      "chrisAndKai": "Observed complete files are served directly by open.audio without a signed query or declared validity period. No permanent-availability guarantee is inferred.",
+      "nin": "The listen endpoint redirects to the pod's Wasabi storage using a signed URL with declared 3600-second validity; only host/expiry flags are recorded, never the signed URL. Re-resolve the stable listen locator when needed.",
+      "codec": "The tested NIN upload is OGG, while Chris/Kai are MP3. Desktop Chrome playback does not establish iPhone codec/background compatibility.",
+      "transcodeToMp3Tested": false
+    },
+    "targetCorpus": "Node-only bounded public queries for Epoitaitaye and Pirritx returned valid empty results on this one pod. No claim that the song is absent everywhere, no Epoitaitaye recovery claimed.",
+    "sources": [
+      "https://docs.funkwhale.audio/user/index.html",
+      "https://docs.funkwhale.audio/administrator/configuration/instance-settings.html",
+      "https://docs.funkwhale.audio/developer/api/index.html",
+      "https://docs.funkwhale.audio/developer/api/v2-overview.html",
+      "https://docs.funkwhale.audio/swagger/",
+      "https://network.funkwhale.audio/",
+      "https://musicbrainz.org/doc/Recording"
+    ]
+  },
+  "otherProviderChecks": {
+    "navidrome": {
+      "freshPrimaryDocumentationChecked": true,
+      "finding": "Owners may create public track/album/artist/playlist shares that listeners can use without accounts, but this is not a global anonymous library-search API. Subsonic access still authenticates users. A voluntarily published public share could be a future input if its owner makes catalog metadata and CORS access available; no such broad canonical source was verified here.",
+      "sources": ["https://www.navidrome.org/docs/usage/features/sharing/", "https://navidrome.org/docs/getting-started/extauth-quickstart/"]
+    },
+    "audiomack": {
+      "freshPrimaryDocumentationChecked": true,
+      "finding": "Official documentation still uses OAuth 1.0a; its non-user-authenticated read example requires both the application's consumer key and consumer secret. No new safe secretless static playback path was found. No borrowed web/mobile application credentials were used.",
+      "source": "https://audiomack.com/data-api/docs"
+    },
+    "bandcamp": {
+      "newProbePerformed": false,
+      "finding": "The previous public-search challenge and authenticated purchased-collection Subsonic review remain the evidence; this round does not claim that every public Bandcamp stream is impossible or reclassify those prior probes as fresh successes.",
+      "priorReports": ["iritsi-bandcamp-public-search-2026-10-22.json", "mainstream-catalog-api-primary-review-2026-10-22.json"]
+    }
+  },
+  "nextTechnicalStep": "A separate design/implementation gate is warranted for a generic public-Funkwhale adapter with canonical identity verification, version/anonymous-setting checks, bounded processing and stable locators. The current three sources lack identifiers, so a fast metadata-only identity adapter is not yet justified. A mobile-safe excerpt verifier or a separately verified identity cache is still needed; no production code is enabled by this QA report.",
+  "remainingLimits": [
+    "Only approximately 30-second official excerpts are acoustically compared, not the unreferenced remainder of every master.",
+    "No real corpus of covers/remixes/medleys has calibrated this waveform verifier; the existing distinct-song negative and withheld-window rejection are useful but insufficient by themselves for arbitrary catalogs.",
+    "The diagnostic uses desktop page decoding/FFT work, not a mobile memory-budgeted worker pipeline or globally enforced runtime deadline.",
+    "Physical Android/iPhone screen-off, background analysis, next-track preparation and codec behavior remain unverified for this new provider.",
+    "Do not infer offline download permission from anonymous playback or from a metadata license field alone.",
+    "The new positive coverage does not establish universal commercial-catalog availability."
+  ]
+}

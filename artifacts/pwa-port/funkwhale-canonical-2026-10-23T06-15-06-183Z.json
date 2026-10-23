@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T06:15:06.183Z",
+  "input": {
+    "title": "Cylinder Six",
+    "artist": "Chris Zabriskie",
+    "album": "Cylinders",
+    "titleVersion": ""
+  },
+  "scope": "Real public Funkwhale library through the Pages origin, selected via title/artist/album then official catalog detail and excerpt acoustic comparison. Browser-only native audio, seek and hidden tab.",
+  "providerResponsesMocked": false,
+  "noRuntimeBackend": true,
+  "noAccountsSubscriptionsOrKeys": true,
+  "credentials": "omit",
+  "productChanged": false,
+  "mediaOrSignedUrlsPersisted": false,
+  "physicalDevice": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterVerified": false,
+  "execution": {
+    "scriptSha256": "780bd06f59db95f29479aa07234349fa134b1228ce5dc27745305e8d8e4fbf4e",
+    "helperSha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+  },
+  "checks": [
+    {
+      "name": "Canonical public-library identity and complete-file cross-origin access",
+      "status": "verified-excerpt-match",
+      "library": {
+        "anonymousCanListen": true,
+        "metadataTracks": 148018,
+        "softwareVersion": "2.0.12.dev0+f10a9e72"
+      },
+      "canonicalSelection": {
+        "id": 2934405891,
+        "title": "Cylinder Six",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders",
+        "duration": 105,
+        "titleVersion": ""
+      },
+      "canonical": {
+        "id": 2934405891,
+        "title": "Cylinder Six",
+        "titleVersion": "",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders",
+        "duration": 105,
+        "isrc": "GBKPL1370800"
+      },
+      "canonicalIdentityChecks": {
+        "sameTrackId": true,
+        "sameArtistId": true,
+        "sameAlbumId": true,
+        "sameTitleArtistAlbum": true,
+        "sameDuration": true,
+        "sameTitleVersion": true,
+        "requestedVersionEqual": true,
+        "isrcFormatValid": true
+      },
+      "negative": {
+        "id": 2934405841,
+        "title": "Cylinder One",
+        "titleVersion": ""
+      },
+      "rejected": [
+        {
+          "id": 434723,
+          "title": "Cylinder Six",
+          "artists": [
+            "Chris Zabriskie"
+          ],
+          "album": "2009 - 2014",
+          "playable": false,
+          "local": true,
+          "eligibleIdentity": false,
+          "eligibleUpload": false
+        },
+        {
+          "id": 361093,
+          "title": "Cylinder Six",
+          "artists": [
+            "Chris Zabriskie"
+          ],
+          "album": "Cylinders",
+          "playable": false,
+          "local": false,
+          "eligibleIdentity": true,
+          "eligibleUpload": false
+        },
+        {
+          "id": 9997,
+          "title": "Cylinder Six",
+          "artists": [
+            "Chris Zabriskie"
+          ],
+          "album": "Cylinders",
+          "playable": false,
+          "local": true,
+          "eligibleIdentity": true,
+          "eligibleUpload": false
+        },
+        {
+          "id": 3439,
+          "title": "Cylinder Six",
+          "artists": [
+            "Chris Zabriskie"
+          ],
+          "album": "2009 - 2014",
+          "playable": false,
+          "local": true,
+          "eligibleIdentity": false,
+          "eligibleUpload": false
+        }
+      ],
+      "metadata": {
+        "status": 200,
+        "type": "cors",
+        "count": 5
+      },
+      "referenceAudio": {
+        "bytes": 479827,
+        "sha256": "4de77e6bd9467bfc0c6de4780971e7354f08c0d6f3ef0535de4bd69a13c568d3",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "negativeAudio": {
+        "bytes": 479827,
+        "sha256": "a8b081db30dd870339647c31e2e5e4ef86aa213970b307ddf1b034a6b85836c4",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "open.audio",
+        "id": 432473,
+        "uploadId": "51b06556-531b-43a9-b714-ab399c986f69",
+        "localUpload": true,
+        "declaredLicense": "cc-by-4.0",
+        "bytes": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "status": 200,
+        "type": "cors",
+        "contentType": "audio/mpeg",
+        "duration": 105.64,
+        "sampleRate": 22050,
+        "channels": 2,
+        "delivery": {
+          "redirected": false,
+          "host": "open.audio",
+          "signedQueryFieldsPresent": false,
+          "declaredValiditySeconds": null,
+          "fullUrlPersisted": false
+        },
+        "identityMetadata": {
+          "trackMbid": null,
+          "trackIsrc": null,
+          "uploadMbid": null,
+          "uploadIsrc": null,
+          "trackIdentityFields": [
+            "mbid"
+          ],
+          "uploadIdentityFields": [],
+          "id3": {
+            "tagVersion": 4,
+            "inspectedFrames": [
+              "TIT2",
+              "TPE1",
+              "TRCK",
+              "TALB",
+              "TDRC",
+              "TCON",
+              "TCOP",
+              "TDAT",
+              "APIC",
+              "COMM",
+              "TPE2"
+            ],
+            "isrc": [],
+            "recordingMbids": []
+          },
+          "vorbis": null
+        }
+      },
+      "waveform": {
+        "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+        "full": {
+          "correlation": 0.9978596993841152,
+          "offsetSeconds": 47.961678004535145,
+          "referenceSeconds": 29.988208616780046
+        },
+        "windows": [
+          {
+            "referenceStartSeconds": 0,
+            "correlation": 0.9968985855959145,
+            "offsetSeconds": 47.961678004535145,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          },
+          {
+            "referenceStartSeconds": 10,
+            "correlation": 0.9985931681472535,
+            "offsetSeconds": 57.961678004535145,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          },
+          {
+            "referenceStartSeconds": 20,
+            "correlation": 0.9980412997207672,
+            "offsetSeconds": 67.96167800453514,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+          }
+        ],
+        "alignmentSpreadSeconds": 0,
+        "selfControl": {
+          "correlation": 0.9999999999972486,
+          "offsetSeconds": 39.99977324263038,
+          "referenceSeconds": 8
+        },
+        "negativeControl": {
+          "correlation": 0.08331202486716577,
+          "offsetSeconds": 37.768027210884355,
+          "referenceSeconds": 29.988208616780046
+        },
+        "matched": true,
+        "thresholds": {
+          "full": 0.8,
+          "eachWindow": 0.8,
+          "maximumAlignmentSpreadSeconds": 0.03,
+          "selfControl": 0.99,
+          "maximumNegativeControl": 0.4
+        },
+        "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+      }
+    },
+    {
+      "name": "One trusted click, native audio/seek and hidden-tab progression",
+      "initial": {
+        "time": 2.260617,
+        "duration": 105.64,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "afterSeek": {
+        "time": 54.085235,
+        "duration": 105.64,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "hiddenBefore": {
+        "time": 54.123211,
+        "duration": 105.64,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      },
+      "hiddenAfter": {
+        "time": 64.122068,
+        "duration": 105.64,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      }
+    }
+  ],
+  "errors": [],
+  "pass": true
+}

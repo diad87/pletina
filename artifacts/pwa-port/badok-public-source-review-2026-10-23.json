@@ -1,0 +1,94 @@
+{
+  "recordedAt": "2026-10-23T06:19:27.816Z",
+  "scope": "Bounded Badok public catalog/player review; title/artist discovery, normal PWA CORS, JSONP and one provider-UI song click. No MP3 URL or song ID hardcoded into the diagnostic.",
+  "artifacts": [
+    {
+      "path": "scripts/tests/badok-public-discovery.browser.mjs",
+      "sha256": "1c91a90be5f32dd30a52606bd4f06d016e74667de794eae9d8c399a251e208c2"
+    },
+    {
+      "path": "artifacts/pwa-port/badok-public-discovery-2026-10-23.json",
+      "sha256": "d9d13926d9eec110ca4a7e16454c1920db8c0a1dd78b9b1e96b6b043ada01552"
+    },
+    {
+      "path": "artifacts/pwa-port/badok-public-discovery-before-consent-2026-10-23.json",
+      "sha256": "c15318356d8549cee74a945e13ae4be60954b92439ed7f0a20f8a6d1136627cd"
+    },
+    {
+      "path": "artifacts/pwa-port/badok-public-discovery-source-before-consent-2026-10-23.mjs",
+      "sha256": "0fdbeac297c4464bd879715b3d85dc1319f44a49fe29720998ef02100b15f84d"
+    }
+  ],
+  "primarySourceSnapshots": [
+    {
+      "url": "https://www.badok.eus/wp-content/themes/badok-dynamic/js/main.js",
+      "status": 200,
+      "bytes": 12576,
+      "sha256": "f901bc5ab58d3ee68e93ffa4c5ebff1de2625f3376b94c19e8ee97510e7725e0"
+    },
+    {
+      "url": "https://www.badok.eus/wp-content/themes/badok-dynamic/js/player/pjaxy.js",
+      "status": 200,
+      "bytes": 2980,
+      "sha256": "6c18faeef0eea0c8c69a77c191457ec2495e3e691669c78d4570370abc695246"
+    },
+    {
+      "url": "https://www.badok.eus/wp-content/themes/badok-dynamic/js/player/jquery.jplayer.min.js",
+      "status": 200,
+      "bytes": 54355,
+      "sha256": "493db6d1ec51719b44e204d0594b5bcbdc81ce173a64d3e90513a468cecbd383"
+    }
+  ],
+  "documentedPublicSearch": {
+    "endpoint": "https://www.badok.eus/wp-content/plugins/badok/server_processing.php",
+    "parameter": "menu",
+    "discoveredFrom": "Public theme main.js jQuery.getJSON call",
+    "requiresAccount": false,
+    "topLevelProviderControlReadable": true
+  },
+  "actualCandidate": {
+    "izena": "Olentzero (Izaro)",
+    "url": "https://www.badok.eus/euskal-musika/izaro/Olentzero-Izaro"
+  },
+  "actualTrackIdDiscovered": "43201",
+  "findings": [
+    {
+      "stage": "Provider catalog",
+      "result": "The provider-origin public query Olentzero returns the exact Izaro song/album entry; Epoitaitaye returns zero songs in that valid response. The positive entry carries a data-mp3 marker, not a media URL."
+    },
+    {
+      "stage": "Pure PWA discovery",
+      "result": "Normal Pages-origin JSON, HTML and WP REST-index requests, plus opaque-frame JSON, fail MissingAllowOriginHeader. Conventional callback JSONP does not call back and is blocked by ORB."
+    },
+    {
+      "stage": "Provider UI control",
+      "result": "After declining optional cookies in a disposable browser, a normal unobstructed song click changes the hash to the discovered numeric track ID. The player object stays null, its audio element has no source, and no media address/request is observed after5.5seconds. This observation is limited to that UI/session; it does not prove that all Badok recordings are unavailable."
+    },
+    {
+      "stage": "Public player sources",
+      "result": "The loaded navigation/player assets inspected do not expose a current MP3-resolution handler for that link. No guessed endpoint enumeration or private backend route was attempted."
+    }
+  ],
+  "evidence": {
+    "pwaSearchReadable": false,
+    "jsonpCallbackWorked": false,
+    "publicProviderSongSelectionAvailable": true,
+    "providerMediaObserved": false,
+    "genericPwaFullAudioVerified": false
+  },
+  "unverified": [
+    "Current full MP3 URL for the candidate",
+    "Full-song audio playback",
+    "Recording identity against official preview",
+    "PWA generic search/resolution",
+    "Hidden-tab or physical screen-off behavior"
+  ],
+  "sameOriginProviderControlNotPwaSolution": true,
+  "noMediaDownloaded": true,
+  "noAudioFingerprintClaimed": true,
+  "noPermissionInferredFromMp3Marker": true,
+  "productChanged": false,
+  "published": false,
+  "browsersClosed": true,
+  "conclusion": "Keep Badok as a metadata lead, not a verified audio source. No general pure-PWA audio route was established by this bounded probe."
+}

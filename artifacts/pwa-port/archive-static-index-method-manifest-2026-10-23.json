@@ -1,0 +1,148 @@
+{
+  "createdAt": "2026-10-23T06:10:39.819Z",
+  "verdict": "One new generic discovery candidate (Tame Impala) is excerpt-compatible and directly playable through ordinary opaque HTMLAudio even though readable browser fetch is blocked. Existing Egiozu control passes; Queen candidate fails identity/duration and is not indexed or played.",
+  "scope": "Experimental QA and metadata-only index generation; no product module, build, publication or curated registry change.",
+  "artifacts": [
+    {
+      "path": "scripts/tests/archive-static-index.probe.mjs",
+      "bytes": 17300,
+      "sha256": "fb83c61dd1712fed0770db913cec453d9cb00b17baaa44f36747d246e7e9bb3c"
+    },
+    {
+      "path": "scripts/tests/archive-discovery-identity.browser.mjs",
+      "bytes": 23333,
+      "sha256": "4a8669ebbb8062ea6636841395e7408bd7aef3eb2764850e6c85623802127be1"
+    },
+    {
+      "path": "scripts/tests/helpers/recording-waveform.mjs",
+      "bytes": 5404,
+      "sha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+    },
+    {
+      "path": "artifacts/pwa-port/archive-discovery-identity-corpus-2026-10-23-final.json",
+      "bytes": 32890,
+      "sha256": "59679286bec6c82ef7295664436a681f2071ca6d913c0388eda265dc8de0fad9"
+    },
+    {
+      "path": "artifacts/pwa-port/archive-static-index-method-2026-10-23-initial.json",
+      "bytes": 32620,
+      "sha256": "beba03328b5f4adebe85992b389e6eb92ca2ec5ce6bb6d4c26f25ec04c9d4b7b"
+    },
+    {
+      "path": "artifacts/pwa-port/archive-static-index-method-2026-10-23-initial-index.json",
+      "bytes": 6942,
+      "sha256": "630181ff7739e9f30c2afeec2b54c0a4b3fcc826c6042d86ebc95a274d441db8"
+    }
+  ],
+  "results": [
+    {
+      "key": "tame",
+      "status": "index-excerpt-verified-and-opaque-playback-pass",
+      "catalog": {
+        "id": 103052662,
+        "title": "The Less I Know The Better",
+        "titleVersion": "",
+        "artist": "Tame Impala",
+        "album": "Currents",
+        "duration": 217,
+        "isrc": "AUUM71500303"
+      },
+      "correlation": 0.998155151949469,
+      "durationCompatible": true,
+      "fullAudioHttpStatus": 200,
+      "fullAudioMime": "application/octet-stream",
+      "runtimeCorsReadable": false,
+      "runtimeCrossOrigin": null,
+      "runtimeDurationSeconds": 217.408435,
+      "hiddenDesktopAdvanceSeconds": 30.005271000000008,
+      "trustedPlayClicks": 1
+    },
+    {
+      "key": "egiozu",
+      "status": "index-excerpt-verified-and-opaque-playback-pass",
+      "catalog": {
+        "id": 3266797141,
+        "title": "Egiozu Euskaraz",
+        "titleVersion": "",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Irrien Lagunak",
+        "duration": 126,
+        "isrc": "QM6N21489808"
+      },
+      "correlation": 0.9898591208792412,
+      "durationCompatible": true,
+      "fullAudioHttpStatus": 200,
+      "fullAudioMime": "audio/mpeg",
+      "runtimeCorsReadable": true,
+      "runtimeCrossOrigin": null,
+      "runtimeDurationSeconds": 126.8325,
+      "hiddenDesktopAdvanceSeconds": 30.00889199999999,
+      "trustedPlayClicks": 1
+    },
+    {
+      "key": "queen",
+      "status": "index-rejected-excerpt-or-duration",
+      "catalog": {
+        "id": 4091937401,
+        "title": "Bohemian Rhapsody",
+        "titleVersion": "",
+        "artist": "Queen",
+        "album": "A Night At The Opera",
+        "duration": 354,
+        "isrc": "GBUM71029604"
+      },
+      "correlation": 0.1562806614355751,
+      "durationCompatible": false,
+      "fullAudioHttpStatus": 200,
+      "fullAudioMime": "audio/mpeg",
+      "runtimeCorsReadable": null,
+      "runtimeCrossOrigin": null,
+      "runtimeDurationSeconds": null,
+      "hiddenDesktopAdvanceSeconds": null,
+      "trustedPlayClicks": 0
+    }
+  ],
+  "commands": [
+    "node scripts/tests/archive-discovery-identity.browser.mjs --report archive-discovery-identity-corpus-NEW.json",
+    "node scripts/tests/archive-static-index.probe.mjs --discovery artifacts/pwa-port/archive-discovery-identity-corpus-NEW.json --keys tame,egiozu,queen --report archive-static-index-method-NEW.json",
+    "node --test scripts/tests/recording-waveform.test.mjs"
+  ],
+  "method": [
+    "The same algorithm selects the first candidate from the generic discovery result for every requested catalog recording. No Archive item ID or media URL is handcoded in the index probe.",
+    "At generation time, direct HTTPS outside browser CORS retrieves fresh official catalog detail by selected ID, checks title/artist/album/version/ISRC/duration continuity, retrieves a different official same-artist negative reference, and fetches one full candidate within the compressed-byte budget.",
+    "Candidate bytes must match current Archive MD5/SHA1 and length; SHA256 is calculated. Decoding and comparison run in RAM. The official approximately 30-second excerpt plus three separated windows must match the fixed thresholds; candidate duration must agree within three seconds. Negative control must fail.",
+    "Only IDs, file name, metadata, hashes and the comparison report enter the generated JSON. No media bytes or temporary signed/CDN URL enter the index.",
+    "At runtime, browser CORS fetches Archive metadata and checks file name, length, MD5 and SHA1 against the generated index. Ordinary HTMLAudio then receives the canonical Archive download URL with no crossorigin attribute, preserving normal browser security.",
+    "One trusted Play click starts the QA audio. Seek is a separate trusted click. All observation RPCs explicitly use userGesture:false. After seeking, the playing tab remains hidden for thirty seconds without another Play call."
+  ],
+  "limitations": [
+    "This is one new positive transport/identity experiment, not a general coverage guarantee. Epoitaitaye had zero Archive candidates in the linked generic corpus and is not recovered by this method.",
+    "Only an approximately thirty-second official excerpt is compared. Same excerpt embedded in an altered full file can pass; full master identity is not proved. Covers/live/karaoke/medley corpus calibration is still required before a general automatic product gate.",
+    "Opaque audio bytes cannot be read or hashed by PWA JavaScript. Runtime trusts Archive metadata-to-media binding, including a metadata/media time-of-check/time-of-use gap. This is weaker than the existing curated byte-hashed Blob path.",
+    "The build-time code receives public media bytes by ordinary HTTPS outside browser CORS. This is local generation, not a mobile security bypass or a runtime extraction/proxy service.",
+    "The thirty-second hidden-tab observation is desktop Chrome 153 only, with default background timer bypass arguments removed. It does not prove locked-screen, installed Android PWA or iOS behavior, natural queue advance or the production app UI.",
+    "The candidate is full-duration and seeking works, but this run does not listen to or compare every second and does not run uninterrupted until natural ended.",
+    "Compressed response reads are bounded at eight MiB per track, with per-request timeout thirty seconds. Decoded PCM allocations, aggregate pipeline time, browser buffering and wire transfer are not hard bounded; generation remains desktop QA only.",
+    "The static index is finite and must be regenerated to include new candidates or changed provider files. Missing index entry, unreadable/changed metadata or failed playback requires fail-closed continuation to other supported sources.",
+    "Public availability or checksum matches do not establish redistribution or offline-download permission. Download remains disabled; no media is stored in the report/index.",
+    "No product activation or publication occurred. Any later integration needs catalog ID/ISRC/version matching, immutable index provenance, bounded cancellation, same-audio queue tests and physical mobile checks."
+  ],
+  "primarySources": [
+    {
+      "url": "https://html.spec.whatwg.org/multipage/media.html#attr-media-crossorigin",
+      "supports": "The media element crossorigin setting controls its CORS behavior; ordinary media playback and readable fetch have different requirements."
+    },
+    {
+      "url": "https://www.w3.org/TR/webaudio-1.1/#MediaElementAudioSourceNode-security",
+      "supports": "Cross-origin HTMLMediaElement playback is permitted, while Web Audio inspection of a CORS-cross-origin media source must output silence."
+    },
+    {
+      "url": "https://archive.org/developers/md-read.html",
+      "supports": "Archive metadata API returns file name, size and checksum fields used by the static index guard."
+    },
+    {
+      "url": "https://archive.org/developers/items.html#archival-urls",
+      "supports": "Canonical download item/file URLs are stable entry points; redirected storage-server URLs are not permalinks."
+    }
+  ]
+}

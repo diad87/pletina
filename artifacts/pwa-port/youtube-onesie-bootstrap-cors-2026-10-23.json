@@ -1,0 +1,57 @@
+{
+  "testedAt": "2026-10-23T06:08:02.180Z",
+  "scope": "Normal Pages-origin and opaque-frame GET of the public TV configuration used by the current GoogleVideo Onesie example.",
+  "source": "https://raw.githubusercontent.com/LuanRT/googlevideo/main/examples/onesie-request/main.ts",
+  "hypothesis": "A distinct public bootstrap could expose the provider-issued Onesie transport configuration without a proxy. Test CORS before considering implementation.",
+  "results": [
+    {
+      "origin": "https://diad87.github.io",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    },
+    {
+      "origin": "opaque-null",
+      "readable": false,
+      "error": "TypeError",
+      "message": "Failed to fetch"
+    }
+  ],
+  "transport": [
+    {
+      "kind": "http-status",
+      "status": 200
+    },
+    {
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "kind": "http-status",
+      "status": 200
+    },
+    {
+      "kind": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    }
+  ],
+  "errors": [],
+  "productChanged": false,
+  "mediaRequested": false,
+  "keysExtracted": false,
+  "credentialsOrTokensUsed": false,
+  "remoteProviderJavascriptExecuted": false,
+  "browserSecurityOverrides": false,
+  "observerUserGesture": false,
+  "outputMuted": false,
+  "protectedAuthenticationOrDrmAttempted": false,
+  "conclusion": "The tested bootstrap is not readable from the normal PWA or opaque frame; stopped before configuration keys, transport encryption or Onesie playback. No generic audio solution established."
+}

@@ -1,0 +1,75 @@
+{
+  "checkedAt": "2026-10-23T06:09:52.132222+00:00",
+  "scope": "Bounded Node HTTP inspection of the provider public catalog and its own HTML/scripts. Not actual Pages browser CORS/playback proof.",
+  "primaryProvider": "https://www.badok.eus/",
+  "discoveredSearchForm": "https://www.badok.eus/bilatzaile?search=",
+  "searches": [
+    {
+      "query": "Pirritx",
+      "httpStatus": 200,
+      "responseBytes": 53117,
+      "selectedMusicResult": {
+        "title": "Olentzero (feat. Pirritx, Porrotx eta Marimotots)",
+        "artist": "Izaro",
+        "albumPage": "https://www.badok.eus/euskal-musika/izaro/Olentzero-Izaro"
+      }
+    },
+    {
+      "query": "Epoitaitaye",
+      "httpStatus": 200,
+      "responseBytes": 37711,
+      "selectedMusicResults": [],
+      "limit": "Only this valid bounded title query; no general absence claim."
+    },
+    {
+      "query": "Txoria Txori",
+      "httpStatus": 200,
+      "responseBytes": 65960,
+      "multiplePerformersAndAlbumsReturned": true
+    },
+    {
+      "query": "Lau Teilatu",
+      "httpStatus": 200,
+      "responseBytes": 55339,
+      "multiplePerformersAndAlbumsReturned": true
+    },
+    {
+      "query": "Zaindu maite duzun hori",
+      "httpStatus": 200,
+      "responseBytes": 51704,
+      "multiplePerformersAndAlbumsReturned": true
+    }
+  ],
+  "albumInspections": [
+    {
+      "page": "https://www.badok.eus/euskal-musika/izaro/Olentzero-Izaro",
+      "httpStatus": 200,
+      "responseBytes": 73831,
+      "track": {
+        "titleAttribute": "Olentzero",
+        "artistAttribute": "Izaro",
+        "trackIdAttribute": "43201",
+        "mp3Attribute": "mp3"
+      },
+      "finding": "A first-party MP3 player marker is present, but the media endpoint and complete recording are not yet verified."
+    },
+    {
+      "page": "https://www.badok.eus/euskal-musika/itoiz/itoiz",
+      "httpStatus": 200,
+      "responseBytes": 79938,
+      "finding": "Inspected rows provide Spotify/Deezer IDs and some YouTube links, without a first-party MP3 source."
+    },
+    {
+      "page": "https://www.badok.eus/euskal-musika/ruper-ordorika/hamar-terdietan",
+      "httpStatus": 200,
+      "responseBytes": 106307,
+      "finding": "Inspected rows provide Deezer/Spotify/YouTube choices, without a first-party MP3 source."
+    }
+  ],
+  "negativeControl": "The home-page MP3 for Monsieur LeCrepe is a podcast interview, not a verified music track; it is not counted as a complete-song control.",
+  "productChanged": false,
+  "publicationChanged": false,
+  "accountOrKeyUsed": false,
+  "runtimeBackendAdded": false,
+  "physicalPhoneBackgroundVerified": false
+}

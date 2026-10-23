@@ -1,0 +1,121 @@
+{
+  "recordedAt": "2026-10-23T06:09:29.225Z",
+  "scope": "Independent review of additional direct-audio methods after the 22 October tests; no product build, proxy, login, native code, browser security override or protected authentication workaround.",
+  "artifacts": [
+    {
+      "path": "scripts/tests/youtube-public-client-hypotheses.browser.mjs",
+      "sha256": "e60a7a5e1f3c115f988b90bc1c2fd28e9b0f8df91a67e2dd713a1526d31c0a32"
+    },
+    {
+      "path": "scripts/tests/youtube-onesie-bootstrap-cors.browser.mjs",
+      "sha256": "36d440a376d96c3f955124cab7a8d476c6761f0a9ff15b6b4d2bd917aadaa3be"
+    },
+    {
+      "path": "artifacts/pwa-port/youtube-public-client-hypotheses-2026-10-23.json",
+      "sha256": "36d062637a00ba98635194c84f14964205438b31392e23dfb6da81345edc5dca"
+    },
+    {
+      "path": "artifacts/pwa-port/youtube-onesie-bootstrap-cors-2026-10-23.json",
+      "sha256": "09c4a798b9658e86a1eabd5c6c71ee5e2ea6aa594ab00f914c1d2712d2fd32a5"
+    }
+  ],
+  "primarySourceSnapshots": [
+    {
+      "url": "https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/yt_dlp/extractor/youtube/_base.py",
+      "status": 200,
+      "bytes": 57894,
+      "sha256": "8461458c34377c3fe3af4fa9a5c457bbcce9b7295c42931d079741fce9aa8ff3"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/LuanRT/YouTube.js/main/src/utils/Constants.ts",
+      "status": 200,
+      "bytes": 4673,
+      "sha256": "37887c7149395dc2f8c1d1014976fc3cfdafa8e66f0acf130ac98818b52d663f"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/LuanRT/Kira/main/README.md",
+      "status": 200,
+      "bytes": 5978,
+      "sha256": "1d181ff017caa06891bd49db54fe74de8824a96afc92b04d80eaf88e5a75da39"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/LuanRT/googlevideo/main/examples/onesie-request/main.ts",
+      "status": 200,
+      "bytes": 9662,
+      "sha256": "032e0c457237c1691a1c276b47bfc1300c6ebe594d93c183e8fa8baf01e53c04"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/LuanRT/googlevideo/main/examples/sabr-shaka-example/src/main.ts",
+      "status": 200,
+      "bytes": 9835,
+      "sha256": "82f7676e37b826728b7957ef4b3d0602dd30607fffe33dd4b7477831f89aa4fd"
+    }
+  ],
+  "newCase": {
+    "catalogId": 3279314641,
+    "isrc": "QM6N21489743",
+    "title": "Epoitaitaye",
+    "album": "Piratak",
+    "selectedYouTubeVideo": {
+      "videoId": "DJzjkMBMook",
+      "title": "Epoitaitaye",
+      "artists": [
+        "PIrritx Porrotx eta MariMotots"
+      ],
+      "album": "Piratak",
+      "duration": 210
+    }
+  },
+  "boundedRound": {
+    "playerMetadataRequests": 10,
+    "newClients": [
+      "MWEB",
+      "TVHTML5_SIMPLY_EMBEDDED_PLAYER"
+    ],
+    "additionalControls": [
+      "Known playable VISIONOS source",
+      "Unavailable public video ID"
+    ],
+    "bootstrapRequests": 2
+  },
+  "findings": [
+    {
+      "hypothesis": "MWEB ultralow/HLS availability for difficult tracks",
+      "result": "All three valid-song requests return UNPLAYABLE with refresh-page reason, including the independently playable control. No direct/HLS/DASH URL returned. This request variant is not a usable route; it is not evidence of absent songs or of every possible MWEB request."
+    },
+    {
+      "hypothesis": "Distinct embedded TV client",
+      "result": "All requests return device/client no longer supported, without usable formats. No CORS bypass/custom headers attempted."
+    },
+    {
+      "hypothesis": "VISIONOS blocks a Made-for-kids category",
+      "result": "Current primary client table documents that limitation, but these actual responses expose no Made-for-kids flag. Category is only a possible explanation, not established cause."
+    },
+    {
+      "hypothesis": "SABR pure-JS parser avoids network limits",
+      "result": "Current Kira and the minimal GoogleVideo/Shaka example explicitly depend on an extension/proxy for browser requests. Their codec/parser support does not invalidate the earlier normal-origin SABR CORS failure; no unchanged SABR POST was replayed."
+    },
+    {
+      "hypothesis": "Onesie uses a distinct public bootstrap",
+      "result": "Provider TV configuration responds HTTP200 but normal Pages and opaque origins both fail MissingAllowOriginHeader. Stopped before extracting client keys, encryption, trusted-proxy assertions, Onesie requests or media."
+    }
+  ],
+  "actualPlayback": [
+    {
+      "kind": "known-positive",
+      "videoId": "gpfVjKXVnDc",
+      "client": "VISIONOS_BASELINE",
+      "advanced": true,
+      "trustedPlayClicks": 1,
+      "unmuted": true,
+      "proofScope": "Desktop beginning-only progress; not full transfer, phone, background or screen-off proof"
+    }
+  ],
+  "newGeneralMethodEstablished": false,
+  "exactDifficultSongsRecoveredByTheseMethods": false,
+  "productChanged": false,
+  "published": false,
+  "physicalPhoneVerified": false,
+  "mediaOrSignedUrlsPersisted": false,
+  "conclusion": "No tested new direct method solves the difficult songs under the pure-PWA/no-account/no-proxy constraints. Keep these request variants and prerequisites as bounded negative evidence; prioritize other provider approaches rather than rebranding a native/proxied client as a PWA solution."
+}

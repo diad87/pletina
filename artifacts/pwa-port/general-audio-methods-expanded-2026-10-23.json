@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T06:25:00.558Z",
+  "scope": "Second bounded general-source research round on 23 October. Experimental probes and a metadata-only static-index prototype; no production module, source registry, build, deployment, account, extension or runtime backend changed.",
+  "releasedProduct": {
+    "build": "fc56a244ebcc9e6e",
+    "sourceCommit": "ebd11100ec0958a02dac3b51d9653d94a8bd1352",
+    "distributionCommit": "609b0e3730067bb56f4b0dbc1e35668e1901dade",
+    "changedByThisRound": false,
+    "productionValidationRerun": false
+  },
+  "summary": {
+    "newDistinctCanonicalReferenceCompatibleRecordings": 4,
+    "newDistinctArtists": 4,
+    "generalMethodsWithNewPositiveEvidence": 2,
+    "existingEgiozuControlCountedAsNew": false,
+    "physicalPhoneChecks": 0,
+    "wholeMastersIndependentlyVerified": 0,
+    "epoitaitayeRecovered": false,
+    "universalCoverageEstablished": false,
+    "automaticProductFallbackImplemented": false
+  },
+  "previousRound": {
+    "report": "artifacts/pwa-port/generic-open-source-resolver-research-2026-10-23.json",
+    "corpus": "artifacts/pwa-port/archive-discovery-identity-corpus-2026-10-23-canonical.json",
+    "interpretation": "The earlier browser-readable Archive corpus still has six canonical recordings, one already-known Egiozu excerpt match and zero new matches. This round adds a different static-generation/opaque-media transport method and a new provider. Earlier negatives and scoped counts are retained."
+  },
+  "methods": [
+    {
+      "key": "static-verified-index-and-ordinary-opaque-audio",
+      "manifest": "artifacts/pwa-port/archive-static-index-method-manifest-2026-10-23.json",
+      "newRecordingCount": 1,
+      "existingControl": "Egiozu Euskaraz / Irrien Lagunak",
+      "rejectedCandidate": "Queen / Bohemian Rhapsody: low correlation and incompatible duration; not indexed or played.",
+      "discovery": "The same algorithm consumes generic title/album/artist Archive search candidates; no provider item ID or media URL is hardcoded into the probe.",
+      "generation": "A local/build-time HTTPS job rehydrates canonical catalog identity, reads public provider metadata and the bounded full candidate, verifies length/MD5/SHA1, computes SHA256 and compares the official excerpt and a distinct negative. Only metadata and proof enter a static JSON index; media stays in RAM.",
+      "runtime": "From the actual Pages origin, read public Archive file metadata via CORS, match file name/length/MD5/SHA1 to the index, and set ordinary HTMLAudio with no crossorigin attribute to the canonical provider download URL. JavaScript still cannot inspect the opaque media bytes. No proxy or browser-security override.",
+      "observation": "One trusted Play click, separate seek, unmuted desktop Chrome 153 tab hidden for 30 seconds; observation RPCs declare userGesture:false.",
+      "trustLimit": "Runtime checks provider metadata, not actual opaque audio bytes. Metadata/media binding and a time-of-check/time-of-use gap remain; weaker than byte-verified Blob playback.",
+      "coverageLimit": "Finite generated index; new/changed provider files require regeneration. Missing/changed proof must reject the candidate and continue to another source."
+    },
+    {
+      "key": "anonymous-funkwhale-public-catalog",
+      "manifest": "artifacts/pwa-port/funkwhale-canonical-final-manifest-2026-10-23.json",
+      "newRecordingCount": 3,
+      "pod": "open.audio",
+      "discovery": "Generic title/artist/album queries select playable music records with public local uploads; private or metadata-only records are excluded. No song IDs or media addresses are hardcoded in the probe.",
+      "verification": "Selected/hydrated canonical IDs, artist, album, title_version and duration remain consistent. Fetch the whole candidate via normal CORS with omitted credentials and a compressed-byte bound, compute candidate/reference/negative SHA256, and compare the official excerpt. Play the same candidate bytes as a RAM-only Blob.",
+      "observation": "Three recordings by three artists; two checks each, six checks total, not six distinct songs. Trusted click, seek and 10-second hidden desktop playback pass in final frozen runs.",
+      "identityLimit": "The three source records/files supply no usable ISRC or recording MBID. Acoustic verification cannot be replaced by text metadata. A product adapter must also explicitly reject any declared conflicting ISRC/version/recording MBID; the current positive probes only encounter missing identifiers.",
+      "deliveryLimit": "Development v2 API on this pod; version/anonymous-setting detection is needed. The NIN OGG file redirects to a signed storage URL with a declared 3600-second lifetime. Keep stable provider upload identifiers and re-resolve; do not persist temporary signed URLs. OGG support on physical iPhone is not established.",
+      "withheldCase": "Kai Engel / Collateral fails one separated window despite a high aggregate correlation. Thresholds were not relaxed. Rejection is not proof of a different master."
+    }
+  ],
+  "newCanonicalReferenceMatches": [
+    {
+      "provider": "archive-static-index",
+      "catalog": {
+        "id": 103052662,
+        "title": "The Less I Know The Better",
+        "titleVersion": "",
+        "artist": "Tame Impala",
+        "album": "Currents",
+        "duration": 217,
+        "isrc": "AUUM71500303"
+      },
+      "fullAudioHttpStatus": 200,
+      "candidateDurationSeconds": 217.408435,
+      "officialExcerptCorrelation": 0.998155151949469,
+      "runtimeCorsReadable": false,
+      "desktopHiddenAdvanceSeconds": 30.005271000000008,
+      "proof": "artifacts/pwa-port/archive-static-index-method-2026-10-23-initial.json"
+    },
+    {
+      "provider": "funkwhale/open.audio",
+      "catalog": {
+        "id": 2934405891,
+        "title": "Cylinder Six",
+        "titleVersion": "",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders",
+        "duration": 105,
+        "isrc": "GBKPL1370800"
+      },
+      "fullAudioBytes": 4441693,
+      "fullAudioSha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+      "candidateDurationSeconds": 105.64,
+      "officialExcerptCorrelation": 0.9978596993841152,
+      "runtimeCorsReadable": true,
+      "desktopHiddenAdvanceSeconds": 9.998857000000001,
+      "proof": "artifacts/pwa-port/funkwhale-canonical-2026-10-23T06-15-06-183Z.json"
+    },
+    {
+      "provider": "funkwhale/open.audio",
+      "catalog": {
+        "id": 2988892451,
+        "title": "Melted Wings",
+        "titleVersion": "",
+        "artist": "Kai Engel",
+        "album": "Written in Ink",
+        "duration": 133,
+        "isrc": "GBSMU2086183"
+      },
+      "fullAudioBytes": 5527791,
+      "fullAudioSha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+      "candidateDurationSeconds": 133.33333333333334,
+      "officialExcerptCorrelation": 0.9969852671922512,
+      "runtimeCorsReadable": true,
+      "desktopHiddenAdvanceSeconds": 10.000037000000006,
+      "proof": "artifacts/pwa-port/funkwhale-canonical-2026-10-23T06-15-06-191Z.json"
+    },
+    {
+      "provider": "funkwhale/open.audio",
+      "catalog": {
+        "id": 57428851,
+        "title": "36 Ghosts IV",
+        "titleVersion": "",
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "duration": 139,
+        "isrc": "USTC40852265"
+      },
+      "fullAudioBytes": 1740870,
+      "fullAudioSha256": "00c641b9102dcfbd1b1c2f12f7b99ad6fee7af0bf0a3c947359cd07547d7caf7",
+      "candidateDurationSeconds": 139.04390022675736,
+      "officialExcerptCorrelation": 0.9954507572179648,
+      "runtimeCorsReadable": true,
+      "desktopHiddenAdvanceSeconds": 10.010099999999994,
+      "proof": "artifacts/pwa-port/funkwhale-canonical-2026-10-23T06-15-06-222Z.json"
+    }
+  ],
+  "additionalBoundedInvestigations": [
+    {
+      "method": "Additional YouTube MWEB / embedded TV clients and Onesie bootstrap",
+      "report": "artifacts/pwa-port/youtube-generic-direct-methods-review-2026-10-23.json",
+      "result": "No new usable direct audio. MWEB and TV variants fail including playable controls; bootstrap is unreadable via normal CORS. Parser libraries requiring proxy/extension do not satisfy pure-PWA constraints. No protected keys, requests or signed media are retained."
+    },
+    {
+      "method": "Badok regional public music catalog",
+      "report": "artifacts/pwa-port/badok-public-source-review-2026-10-23.json",
+      "result": "Public title search discovers Izaro / Olentzero and a track marker. Pages search fails CORS/JSONP; one normal click in the provider UI supplies no audio request. Metadata lead only, no full-audio or identity/background success."
+    },
+    {
+      "method": "NetEase static-index metadata discovery",
+      "report": "artifacts/pwa-port/netease-static-index-metadata-2026-10-23.json",
+      "result": "Node-only public HTTP responses include encoded results rather than a readable song array, including a control. No empty-catalog, audio or browser-transport claim; no decryption, account or regional workaround."
+    },
+    {
+      "method": "Navidrome and Audiomack public integration documentation",
+      "report": "artifacts/pwa-port/anonymous-catalog-new-provider-review-2026-10-23.json",
+      "result": "Owner-created public shares are not a global anonymous catalog. Official Audiomack reads still require an application consumer secret. No account or borrowed credential added."
+    }
+  ],
+  "limits": [
+    "Whole candidate files were obtained/decoded, with compatible durations, but identity comparison covers only the official approximately 30-second excerpt and three separated windows. Unreferenced audio is not independently authenticated; this does not prove an entire master.",
+    "Distinct-song negatives and synthetic controls do not calibrate arbitrary covers, near-identical remasters, remixes, live recordings, medleys or edited files. Real version-conflict corpus tests are still required for automatic substitution.",
+    "All new hidden-tab observations are desktop browser probes, not the installed app, actual Android/iPhone screen-off, OS backgrounding, natural ended or queue continuity.",
+    "Compressed file reads are bounded; decoded PCM, FFT memory and total pipeline deadline are not yet a mobile-safe bounded worker design. Do not move the desktop diagnostic wholesale into the phone.",
+    "Anonymous listening or a declared license field does not by itself enable offline downloads or redistribution; this round adds neither.",
+    "No source was established for the difficult Epoitaitaye recording (catalog 3279314641, ISRC QM6N21489743). Limited empty queries do not prove global absence.",
+    "Four new positives demonstrate useful coverage gain and two reusable methods, not a universal no-account commercial music service."
+  ],
+  "recommendedIntegration": [
+    "Prioritize a generic automatically generated static identity index, beginning with public Funkwhale and verified Archive candidates; no per-song product if/else registry.",
+    "Bind index entries to canonical track ID, ISRC, title_version, artist, album and duration. Freeze provenance, fail on conflicting source identity, and reject missing or changed verification.",
+    "For CORS-readable media, verify the fetched whole file SHA256 and play those same bytes as a Blob in the existing single Audio pipeline. Treat opaque streaming as a separately explicit weaker metadata-trust mode, not as byte verification.",
+    "Keep existing manual choices, local audio and podcast priorities. Re-resolve expiring provider locators; bound cancellation, memory, requests and overall deadlines.",
+    "Before release, test source cancellation, selected-track continuity, seeks, retry, repeat, natural next-track and app updates. Then physically verify installed Xiaomi and iPhone playback/background/lock for the new provider and codec paths."
+  ],
+  "localVerification": {
+    "waveformSyntheticTests": {
+      "passed": 6,
+      "total": 6,
+      "command": "node --test scripts/tests/recording-waveform.test.mjs"
+    },
+    "productionSuiteRerun": false,
+    "noReleaseTestCountsAdded": true,
+    "syntaxChecks": {
+      "passed": 7,
+      "scope": "Five new QA probes and two preserved source snapshots; node --check."
+    },
+    "reportIntegrity": {
+      "parsedNewJsonFiles": 23,
+      "aggregateArtifactDigestsVerified": 7,
+      "aggregateLocalReferencesVerified": 19,
+      "newDocLinksVerified": 12
+    },
+    "independentReview": {
+      "manifestArtifactHashesAndLengthsVerified": 18,
+      "consistencyChecksPassed": 23,
+      "aggregateAndFourNewDocBlocksReviewed": true,
+      "materialIssuesFound": 0
+    },
+    "persistedMediaAndTemporaryAddressScan": {
+      "detected": 0,
+      "scope": "All new JSON artifacts, new-file media extensions, independent review of nested strings/URLs. No media/base64, credentials or signed playback URL retained."
+    }
+  },
+  "artifacts": [
+    {
+      "path": "artifacts/pwa-port/archive-static-index-method-manifest-2026-10-23.json",
+      "bytes": 8825,
+      "sha256": "7ba00804298874e3b12938813dec4ea11c1a41a099b4ad24c5d54b2ca9b0028c"
+    },
+    {
+      "path": "artifacts/pwa-port/funkwhale-canonical-final-manifest-2026-10-23.json",
+      "bytes": 13119,
+      "sha256": "cb1d52650ea80d95f1f8267a34ed95ed01174896961c87752c78c7d79a792fb9"
+    },
+    {
+      "path": "artifacts/pwa-port/anonymous-catalog-new-provider-review-2026-10-23.json",
+      "bytes": 9431,
+      "sha256": "1909b4279c0fc326f685f764c41ee286167df0ea11b546bb7cde266565d69119"
+    },
+    {
+      "path": "artifacts/pwa-port/youtube-generic-direct-methods-review-2026-10-23.json",
+      "bytes": 5191,
+      "sha256": "60ef3c14c2a791c3d6bcf1d741253fce16018b7b05999eb4562c4f1648ff3de5"
+    },
+    {
+      "path": "artifacts/pwa-port/badok-public-source-review-2026-10-23.json",
+      "bytes": 4224,
+      "sha256": "6e4eb53e758de7c83d3b4a60a8a015344a0ee5c2aa1b252edd9e61cf2e15c7db"
+    },
+    {
+      "path": "artifacts/pwa-port/badok-public-catalog-metadata-2026-10-23.json",
+      "bytes": 2624,
+      "sha256": "d932adef54382649b7f2c832017ce21bcf81d4e61dab970faad50f40bf7427a6"
+    },
+    {
+      "path": "artifacts/pwa-port/netease-static-index-metadata-2026-10-23.json",
+      "bytes": 1706,
+      "sha256": "1f79e5b128adaaf3c74b99af505501f91e79e45e6315b8a5700fdc40a907c9c3"
+    }
+  ],
+  "primarySources": [
+    "https://docs.funkwhale.audio/swagger/",
+    "https://docs.funkwhale.audio/developer/api/index.html",
+    "https://network.funkwhale.audio/",
+    "https://open.audio/",
+    "https://html.spec.whatwg.org/multipage/media.html#attr-media-crossorigin",
+    "https://www.w3.org/TR/webaudio-1.1/#MediaElementAudioSourceNode-security",
+    "https://archive.org/developers/md-read.html",
+    "https://archive.org/developers/items.html#archival-urls",
+    "https://www.badok.eus/"
+  ]
+}

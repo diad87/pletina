@@ -1,0 +1,573 @@
+{
+  "testedAt": "2026-10-23T06:05:32.067Z",
+  "scope": "Real Pages-origin opaque-frame public player metadata and any available plain audio URLs; no intermediary server, accounts, supplied tokens, DRM or protected authentication.",
+  "sourceSha256": "005142040a63b456d1d51ee18dd83ac2a3d0fb5bc05ccea8d1f9559cae782328",
+  "hypotheses": [
+    {
+      "client": "MWEB",
+      "basis": "Untested mobile-web client has documented ultralow formats/HLS policy; check actual VOD responses, not infer availability from client name."
+    },
+    {
+      "client": "TVHTML5_SIMPLY_EMBEDDED_PLAYER",
+      "basis": "Public embedded TV client differs from the already-failed WEB_EMBEDDED and TVHTML5 requests; check bounded metadata without custom headers."
+    }
+  ],
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "signedUrlsPersisted": false,
+    "mediaPersisted": false,
+    "observerUserGesture": false,
+    "browserSecurityOverrides": false,
+    "outputMuted": false,
+    "physicalAndroidVerified": false,
+    "physicalIPhoneVerified": false,
+    "screenOffVerified": false,
+    "hiddenVideoUsed": false,
+    "proxyUsed": false,
+    "authenticationOrDrmBypassed": false
+  },
+  "sources": [
+    "https://raw.githubusercontent.com/yt-dlp/yt-dlp/master/yt_dlp/extractor/youtube/_base.py",
+    "https://raw.githubusercontent.com/LuanRT/YouTube.js/main/src/utils/Constants.ts",
+    "https://raw.githubusercontent.com/LuanRT/Kira/main/README.md"
+  ],
+  "findingsFromSources": [
+    "VISIONOS and ANDROID_VR document an unsupported Made-for-kids category; the artist/title alone does not establish this classification.",
+    "Current yt-dlp documents ANDROID_VR HTTP403 enforcement, so that previously-untried label is not treated as a promising route.",
+    "Kira implements SABR but explicitly needs a proxy or browser extension on mobile; protocol parsing does not remove the separately observed CORS obstacle."
+  ],
+  "metadata": [
+    {
+      "kind": "difficult-new",
+      "videoId": "DJzjkMBMook",
+      "client": "MWEB",
+      "status": "UNPLAYABLE",
+      "reason": "Es necesario volver a cargar la página.",
+      "details": {
+        "id": "DJzjkMBMook",
+        "title": "Epoitaitaye",
+        "author": "PIrritx Porrotx eta MariMotots - Topic",
+        "duration": 209,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "difficult-new",
+      "videoId": "DJzjkMBMook",
+      "client": "TV_EMBEDDED",
+      "status": "ERROR",
+      "reason": "YouTube ya no es compatible con esta aplicación o dispositivo.",
+      "details": {
+        "id": null,
+        "title": null,
+        "author": null,
+        "duration": null,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "difficult-new",
+      "videoId": "DJzjkMBMook",
+      "client": "VISIONOS_BASELINE",
+      "status": "UNPLAYABLE",
+      "reason": "Este vídeo no está disponible",
+      "details": {
+        "id": "DJzjkMBMook",
+        "title": "Epoitaitaye",
+        "author": "PIrritx Porrotx eta MariMotots - Topic",
+        "duration": 209,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "difficult-existing",
+      "videoId": "fV-IUsecSsU",
+      "client": "MWEB",
+      "status": "UNPLAYABLE",
+      "reason": "Es necesario volver a cargar la página.",
+      "details": {
+        "id": "fV-IUsecSsU",
+        "title": "Iritsi da Eguna",
+        "author": "Pirritx eta Porrotx - Topic",
+        "duration": 170,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "difficult-existing",
+      "videoId": "fV-IUsecSsU",
+      "client": "TV_EMBEDDED",
+      "status": "ERROR",
+      "reason": "YouTube ya no es compatible con esta aplicación o dispositivo.",
+      "details": {
+        "id": null,
+        "title": null,
+        "author": null,
+        "duration": null,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "known-positive",
+      "videoId": "gpfVjKXVnDc",
+      "client": "MWEB",
+      "status": "UNPLAYABLE",
+      "reason": "Es necesario volver a cargar la página.",
+      "details": {
+        "id": "gpfVjKXVnDc",
+        "title": "A Solas Con un RItmo Lírico",
+        "author": "Violadores Del Verso - Topic",
+        "duration": 117,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "known-positive",
+      "videoId": "gpfVjKXVnDc",
+      "client": "TV_EMBEDDED",
+      "status": "ERROR",
+      "reason": "YouTube ya no es compatible con esta aplicación o dispositivo.",
+      "details": {
+        "id": null,
+        "title": null,
+        "author": null,
+        "duration": null,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "known-positive",
+      "videoId": "gpfVjKXVnDc",
+      "client": "VISIONOS_BASELINE",
+      "status": "OK",
+      "reason": null,
+      "details": {
+        "id": "gpfVjKXVnDc",
+        "title": "A Solas Con un RItmo Lírico",
+        "author": "Violadores Del Verso - Topic",
+        "duration": 117,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [
+        {
+          "itag": 139,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.5\"",
+          "direct": true,
+          "cipher": false,
+          "drm": false,
+          "drc": false
+        },
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "direct": true,
+          "cipher": false,
+          "drm": false,
+          "drc": false
+        },
+        {
+          "itag": 249,
+          "mimeType": "audio/webm; codecs=\"opus\"",
+          "direct": true,
+          "cipher": false,
+          "drm": false,
+          "drc": false
+        },
+        {
+          "itag": 250,
+          "mimeType": "audio/webm; codecs=\"opus\"",
+          "direct": true,
+          "cipher": false,
+          "drm": false,
+          "drc": false
+        },
+        {
+          "itag": 251,
+          "mimeType": "audio/webm; codecs=\"opus\"",
+          "direct": true,
+          "cipher": false,
+          "drm": false,
+          "drc": false
+        }
+      ],
+      "adaptiveCount": 23,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": true,
+      "dashManifestAvailable": false,
+      "sabrAvailable": true,
+      "directAudioCandidate": {
+        "key": "gpfVjKXVnDc:VISIONOS_BASELINE",
+        "itag": 140,
+        "mimeType": "audio/mp4; codecs=\"mp4a.40.2\""
+      }
+    },
+    {
+      "kind": "unavailable-negative",
+      "videoId": "___________",
+      "client": "MWEB",
+      "status": "ERROR",
+      "reason": "Este vídeo no está disponible",
+      "details": {
+        "id": null,
+        "title": null,
+        "author": null,
+        "duration": null,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    },
+    {
+      "kind": "unavailable-negative",
+      "videoId": "___________",
+      "client": "TV_EMBEDDED",
+      "status": "ERROR",
+      "reason": "YouTube ya no es compatible con esta aplicación o dispositivo.",
+      "details": {
+        "id": null,
+        "title": null,
+        "author": null,
+        "duration": null,
+        "madeForKidsFlag": null
+      },
+      "audioFormats": [],
+      "adaptiveCount": 0,
+      "progressiveCount": 0,
+      "hlsManifestAvailable": false,
+      "dashManifestAvailable": false,
+      "sabrAvailable": false,
+      "directAudioCandidate": null
+    }
+  ],
+  "playback": [
+    {
+      "videoId": "gpfVjKXVnDc",
+      "kind": "known-positive",
+      "client": "VISIONOS_BASELINE",
+      "actualTrustedPlayClicks": 1,
+      "samples": [
+        {
+          "time": 0,
+          "duration": null,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": []
+        },
+        {
+          "time": 0,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 0,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 0.115743,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 0.514425,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 0.920265,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 1.281544,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 1.641218,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        },
+        {
+          "time": 2.035183,
+          "duration": 117.413333,
+          "paused": false,
+          "muted": false,
+          "error": null,
+          "playError": null,
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            },
+            {
+              "type": "playing",
+              "time": 0,
+              "duration": 117.413333,
+              "error": null
+            }
+          ]
+        }
+      ],
+      "advanced": true,
+      "extraAutoplayRescueClicks": 0,
+      "completeSongOrPhoneBackgroundClaimed": false
+    }
+  ],
+  "networkFailures": [],
+  "errors": [],
+  "origin": "https://diad87.github.io",
+  "discovery": {
+    "candidates": [
+      {
+        "videoId": "DJzjkMBMook",
+        "title": "Epoitaitaye",
+        "artists": [
+          "PIrritx Porrotx eta MariMotots"
+        ],
+        "album": "Piratak",
+        "duration": 210
+      },
+      {
+        "videoId": "M1Y_l35r66s",
+        "title": "Epoitaitaye",
+        "artists": [
+          "PIrritx Porrotx eta MariMotots"
+        ],
+        "album": "Kuikui",
+        "duration": 211
+      },
+      {
+        "videoId": "0_ga9ABuvY4",
+        "title": "Epo itai tai ye",
+        "artists": [
+          "Takolo, Pirritx eta Porrotx"
+        ],
+        "album": "Baserrian",
+        "duration": 89
+      },
+      {
+        "videoId": "jvZ76LPc8og",
+        "title": "Ipuintxoa - Epoitaitaye",
+        "artists": [
+          "PIrritx Porrotx eta MariMotots"
+        ],
+        "album": "Piratak",
+        "duration": 33
+      },
+      {
+        "videoId": "LmvQ4XbQcTA",
+        "title": "Baratzea Dantzan",
+        "artists": [
+          "PIrritx Porrotx eta MariMotots"
+        ],
+        "album": "Amalur",
+        "duration": 173
+      },
+      {
+        "videoId": "dI4VdZKTauY",
+        "title": "Pirritx, Porrotx Eta MariMotots (Sinfonikoa)",
+        "artists": [
+          "PIrritx Porrotx eta MariMotots"
+        ],
+        "album": "Sentitu, Pentsatu, Ekin! (Sinfonikoa)",
+        "duration": 207
+      }
+    ],
+    "selected": {
+      "videoId": "DJzjkMBMook",
+      "title": "Epoitaitaye",
+      "artists": [
+        "PIrritx Porrotx eta MariMotots"
+      ],
+      "album": "Piratak",
+      "duration": 210
+    },
+    "sessionAvailable": true
+  },
+  "summary": {
+    "metadataRequests": 10,
+    "playableDirectCandidates": [
+      {
+        "kind": "known-positive",
+        "client": "VISIONOS_BASELINE",
+        "videoId": "gpfVjKXVnDc"
+      }
+    ],
+    "newDifficultDirectPlayback": false,
+    "noSabrReplayPerformed": true,
+    "unprovidedManifestsNotTested": true
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T06:15:06.191Z",
+  "input": {
+    "title": "Melted Wings",
+    "artist": "Kai Engel",
+    "album": "Written in Ink",
+    "titleVersion": ""
+  },
+  "scope": "Real public Funkwhale library through the Pages origin, selected via title/artist/album then official catalog detail and excerpt acoustic comparison. Browser-only native audio, seek and hidden tab.",
+  "providerResponsesMocked": false,
+  "noRuntimeBackend": true,
+  "noAccountsSubscriptionsOrKeys": true,
+  "credentials": "omit",
+  "productChanged": false,
+  "mediaOrSignedUrlsPersisted": false,
+  "physicalDevice": false,
+  "phoneScreenOffVerified": false,
+  "wholeMasterVerified": false,
+  "execution": {
+    "scriptSha256": "780bd06f59db95f29479aa07234349fa134b1228ce5dc27745305e8d8e4fbf4e",
+    "helperSha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+  },
+  "checks": [
+    {
+      "name": "Canonical public-library identity and complete-file cross-origin access",
+      "status": "verified-excerpt-match",
+      "library": {
+        "anonymousCanListen": true,
+        "metadataTracks": 148018,
+        "softwareVersion": "2.0.12.dev0+f10a9e72"
+      },
+      "canonicalSelection": {
+        "id": 2988892451,
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink",
+        "duration": 133,
+        "titleVersion": ""
+      },
+      "canonical": {
+        "id": 2988892451,
+        "title": "Melted Wings",
+        "titleVersion": "",
+        "artist": "Kai Engel",
+        "album": "Written in Ink",
+        "duration": 133,
+        "isrc": "GBSMU2086183"
+      },
+      "canonicalIdentityChecks": {
+        "sameTrackId": true,
+        "sameArtistId": true,
+        "sameAlbumId": true,
+        "sameTitleArtistAlbum": true,
+        "sameDuration": true,
+        "sameTitleVersion": true,
+        "requestedVersionEqual": true,
+        "isrcFormatValid": true
+      },
+      "negative": {
+        "id": 2988892401,
+        "title": "Written in Ink",
+        "titleVersion": ""
+      },
+      "rejected": [],
+      "metadata": {
+        "status": 200,
+        "type": "cors",
+        "count": 1
+      },
+      "referenceAudio": {
+        "bytes": 479827,
+        "sha256": "98d918b143094463c531836bda1c3dfb58ba6f52291c18b2795823e4499930e8",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "negativeAudio": {
+        "bytes": 479827,
+        "sha256": "befabdec42dbcff5b2767463e96ac33d257f8728c7dd25a866dd42e48c2c8668",
+        "status": 200,
+        "type": "cors",
+        "duration": 29.98857142857143
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "open.audio",
+        "id": 38938,
+        "uploadId": "eac2bd93-8b7c-4d50-94bf-9e285cc5a19f",
+        "localUpload": true,
+        "declaredLicense": null,
+        "bytes": 5527791,
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "status": 200,
+        "type": "cors",
+        "contentType": "audio/mpeg",
+        "duration": 133.33333333333334,
+        "sampleRate": 22050,
+        "channels": 2,
+        "delivery": {
+          "redirected": false,
+          "host": "open.audio",
+          "signedQueryFieldsPresent": false,
+          "declaredValiditySeconds": null,
+          "fullUrlPersisted": false
+        },
+        "identityMetadata": {
+          "trackMbid": null,
+          "trackIsrc": null,
+          "uploadMbid": null,
+          "uploadIsrc": null,
+          "trackIdentityFields": [
+            "mbid"
+          ],
+          "uploadIdentityFields": [],
+          "id3": {
+            "tagVersion": 4,
+            "inspectedFrames": [
+              "TIT2",
+              "TPE1",
+              "TRCK",
+              "TALB",
+              "TDRC",
+              "TCON",
+              "TDAT",
+              "APIC",
+              "COMM",
+              "TPE2"
+            ],
+            "isrc": [],
+            "recordingMbids": []
+          },
+          "vorbis": null
+        }
+      },
+      "waveform": {
+        "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+        "full": {
+          "correlation": 0.9969852671922512,
+          "offsetSeconds": -0.02517006802721089,
+          "referenceSeconds": 29.988208616780046
+        },
+        "windows": [
+          {
+            "referenceStartSeconds": 0,
+            "correlation": 0.9961770515882092,
+            "offsetSeconds": -0.02517006802721089,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": -0.02517006802721089
+          },
+          {
+            "referenceStartSeconds": 10,
+            "correlation": 0.9742883891272641,
+            "offsetSeconds": 9.974829931972788,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": -0.025170068027211556
+          },
+          {
+            "referenceStartSeconds": 20,
+            "correlation": 0.9979203498063015,
+            "offsetSeconds": 19.97482993197279,
+            "referenceSeconds": 8,
+            "inferredPreviewStartInCandidateSeconds": -0.025170068027211556
+          }
+        ],
+        "alignmentSpreadSeconds": 6.661338147750939e-16,
+        "selfControl": {
+          "correlation": 1.0000000000052505,
+          "offsetSeconds": 39.99977324263038,
+          "referenceSeconds": 8
+        },
+        "negativeControl": {
+          "correlation": 0.021356930759548573,
+          "offsetSeconds": 38.266439909297056,
+          "referenceSeconds": 29.988208616780046
+        },
+        "matched": true,
+        "thresholds": {
+          "full": 0.8,
+          "eachWindow": 0.8,
+          "maximumAlignmentSpreadSeconds": 0.03,
+          "selfControl": 0.99,
+          "maximumNegativeControl": 0.4
+        },
+        "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+      }
+    },
+    {
+      "name": "One trusted click, native audio/seek and hidden-tab progression",
+      "initial": {
+        "time": 2.259577,
+        "duration": 133.333356,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "afterSeek": {
+        "time": 67.9274,
+        "duration": 133.333356,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "visible"
+      },
+      "hiddenBefore": {
+        "time": 67.961974,
+        "duration": 133.333356,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      },
+      "hiddenAfter": {
+        "time": 77.962011,
+        "duration": 133.333356,
+        "paused": false,
+        "muted": false,
+        "error": null,
+        "playError": null,
+        "trustedClick": true,
+        "visibility": "hidden"
+      }
+    }
+  ],
+  "errors": [],
+  "pass": true
+}
