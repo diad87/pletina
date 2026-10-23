@@ -530,3 +530,42 @@ async fn real_anonymous_web_direct_three_videos() {
         })
     );
 }
+
+/// Diagnóstico explícito del catálogo infantil y un control. Conserva la
+/// selección, identidad y sonda reales; no acredita reproducción cuando falla.
+/// No imprime razones remotas, visitantes, formatos completos ni URLs firmadas.
+#[tokio::test]
+#[ignore]
+async fn real_anonymous_kids_before() {
+    let videos = ["DJzjkMBMook", "lQC3iSUGPEg", "M1Y_l35r66s", "jNY_wLukVW0"];
+    for video_id in videos {
+        for mode in ["propio", "web"] {
+            let started = Instant::now();
+            let result = if mode == "propio" {
+                tokio::time::timeout(Duration::from_secs(35), resolve(video_id, true)).await
+            } else {
+                tokio::time::timeout(Duration::from_secs(6), auto_direct(video_id)).await
+            };
+            let elapsed_ms = started.elapsed().as_secs_f64() * 1000.0;
+            let diagnostic = match result {
+                Ok(Ok(direct)) => {
+                    assert!(direct_audio_url(&direct.url), "invalid direct audio origin");
+                    assert!(
+                        direct.itag > 0 && direct.mime.starts_with("audio/"),
+                        "invalid audio metadata"
+                    );
+                    json!({"videoId":video_id,"mode":mode,"success":true,
+                        "elapsedMs":elapsed_ms,"client":direct.client,"itag":direct.itag,
+                        "identityAndProbe":true})
+                }
+                Ok(Err(error)) => json!({"videoId":video_id,"mode":mode,"success":false,
+                    "elapsedMs":elapsed_ms,"code":reference_code("player", &error.to_string(),
+                        matches!(error, Error::Gone(_)))}),
+                Err(_) => json!({"videoId":video_id,"mode":mode,"success":false,
+                    "elapsedMs":elapsed_ms,"code":"measurement-timeout"}),
+            };
+            println!("kids-native-live {diagnostic}");
+        }
+    }
+    println!("kids-native-live measurementCompleted=true");
+}

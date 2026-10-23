@@ -861,6 +861,97 @@ mod tests {
         assert!(server.requests().is_empty());
     }
 
+    /// Manual anonymous search diagnostic. It never resolves audio and prints
+    /// only public catalogue metadata, candidate IDs and matching scores.
+    #[tokio::test]
+    #[ignore]
+    async fn real_kids_search_diagnostic() {
+        let ytm = YouTubeMusic::new();
+        let queries = [
+            TrackQuery {
+                id: 3_279_314_641,
+                title: "Epoitaitaye".into(),
+                artist: "PIrritx Porrotx eta MariMotots".into(),
+                album: "Piratak".into(),
+                duration: 209,
+            },
+            TrackQuery {
+                id: 3_250_716_431,
+                title: "Maite Zaitut!".into(),
+                artist: "Pirritx eta Porrotx".into(),
+                album: "Maite Zaitut".into(),
+                duration: 141,
+            },
+            TrackQuery {
+                id: 3_266_403_921,
+                title: "Pupu Eta Lore".into(),
+                artist: "PIrritx Porrotx eta MariMotots".into(),
+                album: "Ongi Etorri Pupu Eta Lore".into(),
+                duration: 163,
+            },
+        ];
+        let mut failures = 0;
+        for q in queries {
+            let query = q.search_text();
+            let result = match ytm.search_songs(&query).await {
+                Ok(candidates) => {
+                    let count = candidates.len();
+                    // Match the production search's first ten candidates and
+                    // retain the original rank used by its scoring function.
+                    let mut ranked: Vec<_> = candidates
+                        .into_iter()
+                        .take(10)
+                        .enumerate()
+                        .map(|(rank, candidate)| (score(&q, &candidate, rank), rank, candidate))
+                        .collect();
+                    ranked.sort_by_key(|(score, _, _)| std::cmp::Reverse(*score));
+                    let selected = ranked
+                        .first()
+                        .filter(|(score, _, _)| *score >= MIN_SCORE)
+                        .map(|(_, _, candidate)| candidate.video_id.clone());
+                    let candidates: Vec<_> = ranked
+                        .into_iter()
+                        .map(|(score, rank, candidate)| {
+                            json!({
+                                "videoId": candidate.video_id,
+                                "title": candidate.title,
+                                "artists": candidate.artists,
+                                "album": candidate.album,
+                                "duration": candidate.duration,
+                                "rank": rank,
+                                "score": score,
+                            })
+                        })
+                        .collect();
+                    json!({
+                        "status": "searched",
+                        "candidateCount": count,
+                        "musicSelectedVideoId": selected,
+                        "candidates": candidates,
+                    })
+                }
+                Err(_) => {
+                    failures += 1;
+                    // Transport errors may contain URLs or session details.
+                    json!({ "status": "search-unavailable" })
+                }
+            };
+            println!(
+                "kids-search {}",
+                json!({
+                    "trackId": q.id,
+                    "title": q.title,
+                    "artist": q.artist,
+                    "album": q.album,
+                    "duration": q.duration,
+                    "query": query,
+                    "result": result,
+                })
+            );
+        }
+        assert_eq!(failures, 0, "One or more public searches were unavailable");
+    }
+
     fn query() -> TrackQuery {
         TrackQuery {
             id: 1,
