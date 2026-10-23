@@ -75,6 +75,8 @@ export interface PlayerApi {
   readonly hasNext: boolean
   readonly upcoming: { pos: number; item: QueueItem }[]
   status: Status
+  /** Reintento automático de audio de la PWA (1–2); 0 o ausente fuera de una carga. */
+  readonly audioRetry?: number
   time: number
   duration: number
   volume: number

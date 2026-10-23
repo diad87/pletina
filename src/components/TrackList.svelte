@@ -58,6 +58,7 @@
   const multiDisc = $derived(variant === 'album' && items.some((_, i) => disc(i) !== disc(0)))
   const reorderable = $derived(playlistId != null && entryIds != null && !filtering)
   const hasPodcasts = $derived(items.some((item) => isPodcast(item.track.id)))
+  const audioRetry = $derived(player.audioRetry === 1 || player.audioRetry === 2 ? player.audioRetry : 0)
 
   function play(i: number) {
     if (isCurrent(items[i], i)) player.toggle()
@@ -231,7 +232,7 @@
                 {/if}
               </span>
             {/if}
-            {#if loading}<span class="loading-text"><span class="spinner" aria-hidden="true"></span>Preparando audio…</span>{/if}
+            {#if loading}<span class="loading-text"><span class="spinner" aria-hidden="true"></span>{audioRetry ? `Reintentando audio (${audioRetry}/2)…` : 'Preparando audio…'}</span>{/if}
           </span>
         </span>
 

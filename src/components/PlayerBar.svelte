@@ -13,6 +13,7 @@
 
   const current = $derived(player.current)
   const loading = $derived(player.status === 'loading')
+  const audioRetry = $derived(loading && (player.audioRetry === 1 || player.audioRetry === 2) ? player.audioRetry : 0)
   let slow = $state(false)
   $effect(() => {
     const id = current?.track.id
@@ -21,7 +22,7 @@
     const timer = setTimeout(() => (slow = true), 6000)
     return () => clearTimeout(timer)
   })
-  const loadingMessage = $derived(slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
+  const loadingMessage = $derived(audioRetry ? `Reintentando audio (${audioRetry}/2)…` : slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
   const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
@@ -56,7 +57,7 @@
           >{current.track.artist.name}</button
         >
         {/if}
-        {#if loading}<span class="hint" class:loading-wait={slow}>{loadingMessage}</span>{/if}
+        {#if loading}<span class="hint" class:loading-wait={slow && !audioRetry}>{loadingMessage}</span>{/if}
       </div>
       <button
         class="icon heart"

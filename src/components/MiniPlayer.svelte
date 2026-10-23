@@ -9,6 +9,7 @@
 
   const current = $derived(player.current)
   const loading = $derived(player.status === 'loading')
+  const audioRetry = $derived(loading && (player.audioRetry === 1 || player.audioRetry === 2) ? player.audioRetry : 0)
   let slow = $state(false)
   $effect(() => {
     const id = current?.track.id
@@ -17,7 +18,7 @@
     const timer = setTimeout(() => (slow = true), 6000)
     return () => clearTimeout(timer)
   })
-  const loadingMessage = $derived(slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
+  const loadingMessage = $derived(audioRetry ? `Reintentando audio (${audioRetry}/2)…` : slow ? 'Está tardando… Puedes elegir otra canción' : 'Preparando audio…')
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
   const progress = $derived(player.duration ? Math.min(1, player.time / player.duration) : 0)
 
@@ -37,7 +38,7 @@
       <span class="thumb"><Cover src={current.cover} /></span>
       <span class="text">
         <span class="title">{current.track.title}</span>
-        <span class="artist" class:loading-wait={loading && slow}>{loading ? loadingMessage : current.track.artist.name}</span>
+        <span class="artist" class:loading-wait={loading && slow && !audioRetry}>{loading ? loadingMessage : current.track.artist.name}</span>
       </span>
     </button>
     <button class="icon" class:on={liked} onclick={() => library.toggleLike(current)} aria-label="Me gusta">

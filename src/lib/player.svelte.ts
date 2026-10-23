@@ -85,6 +85,7 @@ class Player implements PlayerApi {
   /** Canción de tu cola que suena ahora (null = suena la de `queue`). */
   manual = $state<QueueItem | null>(null)
   status = $state<Status>('idle')
+  audioRetry = $state(0)
   time = $state(0)
   duration = $state(0)
   volume = $state(load('musify:volume', 0.8, (v) => typeof v === 'number' && v > 0 && v <= 1))
@@ -135,6 +136,17 @@ class Player implements PlayerApi {
 
   constructor() {
     if (api.inPwa) {
+      window.addEventListener('pletina:audio-retry', (event) => {
+        if (this.status !== 'loading' || !this.#wantsPlay) return
+        const detail: unknown = (event as CustomEvent).detail
+        if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return
+        const { trackId, attempt, total } = detail as Record<string, unknown>
+        if (!Number.isSafeInteger(trackId) || trackId !== this.current?.track.id || total !== 2 ||
+          (attempt !== 1 && attempt !== 2)) return
+        // El emisor comprueba su AbortSignal antes de notificar. Aquí sólo se
+        // acepta la carga visible; una notificación repetida no retrocede el texto.
+        if (attempt > this.audioRetry) this.audioRetry = attempt
+      })
       try {
         const audioNavigator = navigator as Navigator & { audioSession?: { type: string } }
         if (audioNavigator.audioSession) audioNavigator.audioSession.type = 'playback'
@@ -314,6 +326,7 @@ class Player implements PlayerApi {
       return
     }
     if (a.paused || a.error) return
+    this.audioRetry = 0
     this.status = 'playing'
     this.#requestedSeek = null
     this.#failures = 0
@@ -453,6 +466,7 @@ class Player implements PlayerApi {
   }
 
   #pause() {
+    this.audioRetry = 0
     if (!this.current) return
     const cancelLoading = api.inPwa && this.status === 'loading'
     this.#wantsPlay = false
@@ -477,6 +491,7 @@ class Player implements PlayerApi {
     const item = this.current
     if (!item || this.#wantsPlay && this.status === 'loading') return
     if (this.#checkSleepTimer()) return
+    this.audioRetry = 0
     this.#wantsPlay = true
     this.#repaired = false
     if (api.inPwa && this.#playable && !this.#playable.local && !isPodcast(item.track.id) &&
@@ -520,6 +535,7 @@ class Player implements PlayerApi {
       this.#activeItem = null
       this.#positionKnown = false
       if (this.status === 'loading') {
+        this.audioRetry = 0
         this.#wantsPlay = false
         ++this.#token
         this.#resetAudio()
@@ -674,6 +690,7 @@ class Player implements PlayerApi {
     }
 
     const token = ++this.#token
+    this.audioRetry = 0
     this.#wantsPlay = true
     this.#repaired = false
     this.status = 'loading'
@@ -702,6 +719,7 @@ class Player implements PlayerApi {
     } catch (e) {
       if (token === this.#token) {
         ++this.#token
+        this.audioRetry = 0
         this.#wantsPlay = false
         this.#resetAudio()
         this.status = 'idle'
@@ -743,6 +761,7 @@ class Player implements PlayerApi {
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
+    this.audioRetry = 0
     const prepared = api.inPwa && !refresh && startAt === 0 && this.#preparedNext?.id === item.track.id &&
       this.#preparedNext.expiresAt > Date.now() ? this.#preparedNext : null
     const sameEpisode = this.#activeItem?.track.id === item.track.id
@@ -905,6 +924,7 @@ class Player implements PlayerApi {
         if (a !== this.#audio || token !== this.#token) return
         // Conserva la fuente preparada: el siguiente toque puede iniciar el audio.
         this.#wantsPlay = false
+        this.audioRetry = 0
         this.status = 'paused'
         toast.show('Audio preparado. Pulsa Reproducir para escucharlo.')
         return
@@ -949,6 +969,7 @@ class Player implements PlayerApi {
       return
     }
     this.#repaired = true
+    this.audioRetry = 0
     this.#saveProgress(true)
     const token = ++this.#token
     this.time = at
@@ -1092,6 +1113,7 @@ class Player implements PlayerApi {
 
   #fail(item: QueueItem, reason: string, token: number, advance = true) {
     if (token !== this.#token) return
+    this.audioRetry = 0
     if (this.#checkSleepTimer()) return
     if (this.sleepTimer.mode === 'end') {
       toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)

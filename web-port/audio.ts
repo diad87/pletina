@@ -79,7 +79,27 @@ export interface OfficialFallback {
 
 const unavailableAudio = (error: unknown): error is YouTubeError & { code: OfficialFallbackReason } =>
   error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')
+const retryableAudio = (error: unknown): error is YouTubeError => error instanceof YouTubeError &&
+  ['unavailable', 'format', 'network', 'timeout'].includes(error.code)
 const karaoke = (title: string) => /(?:^|[^\p{L}\p{N}])karaoke(?:a)?(?:$|[^\p{L}\p{N}])/iu.test(title)
+
+function retryBackoff(ms: number, signal: AbortSignal): Promise<void> {
+  checkAbort(signal)
+  return new Promise((resolve, reject) => {
+    let finished = false, timer: ReturnType<typeof setTimeout>
+    const finish = (error?: Error) => {
+      if (finished) return
+      finished = true
+      clearTimeout(timer)
+      signal.removeEventListener('abort', cancel)
+      error ? reject(error) : resolve()
+    }
+    const cancel = () => finish(abortReason(signal))
+    signal.addEventListener('abort', cancel, { once: true })
+    timer = setTimeout(() => finish(signal.aborted ? abortReason(signal) : undefined), ms)
+    if (signal.aborted) cancel()
+  })
+}
 
 /** Only metadata can cross into the visible player; signed audio URLs stay in the resolver. */
 function officialSource(track: TrackQuery, source: Alternative): Alternative | null {
@@ -198,6 +218,44 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       if (downloaded) return downloaded
     }
     if (isPodcast(track)) return resolvePodcastTrack(track, refresh, signal)
+    const finalAudio = async (error: YouTubeError & { code: OfficialFallbackReason }, source: Alternative, persist = false): Promise<Playable> => {
+      const fallback = new OfficialFallbackError(error, track, source)
+      const selected = fallback.fallback.source
+      // Downloads retain their own transfer/retry policy. Only the already
+      // selected final recording gets two fresh playback attempts: no new
+      // searches, no per-candidate multiplication, and no new 45-second budget.
+      if (!includeDownloaded) throw fallback
+      let lastError: YouTubeError = error
+      for (const [index, delay] of [250, 750].entries()) {
+        checkAbort(signal)
+        await retryBackoff(delay, signal)
+        checkAbort(signal)
+        if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('pletina:audio-retry', {
+          detail: { trackId: track.id, attempt: index + 1, total: 2 },
+        }))
+        // A UI event listener may itself cancel or replace this operation.
+        checkAbort(signal)
+        let info: StreamInfo
+        try { info = await stream(selected.videoId, true, signal) }
+        catch (next) {
+          checkAbort(signal)
+          if (!retryableAudio(next)) throw next
+          lastError = next
+          continue
+        }
+        checkAbort(signal)
+        if (persist) {
+          await saveSourceChoice(track.id, { videoId: selected.videoId, title: selected.title, channel: selected.artists,
+            duration: selected.duration, score: selected.score, verified: false })
+          checkAbort(signal)
+        }
+        return playable(info, selected.title, selected.artists)
+      }
+      // A new network failure is not evidence that the source needs a visible
+      // video. Keep that category instead of presenting it as unavailable audio.
+      if (!unavailableAudio(lastError)) throw lastError
+      throw fallback
+    }
     if (isDirect(track)) {
       const videoId = await readYouTubeVideo(track.id)
       checkAbort(signal)
@@ -205,7 +263,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       try { return playable(await stream(videoId, refresh, signal), track.title, track.artist) }
       catch (error) {
         checkAbort(signal)
-        if (unavailableAudio(error)) throw new OfficialFallbackError(error, track, { videoId, title: track.title,
+        if (unavailableAudio(error)) return finalAudio(error, { videoId, title: track.title,
           artists: track.artist, album: track.album || null, duration: track.duration || null, score: 100, origin: 'youtube', current: true })
         throw error
       }
@@ -230,7 +288,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
           const source = officialSource(track, { videoId: saved.videoId, title: saved.title, artists: saved.channel,
             album: null, duration: saved.duration, score: saved.score, origin: 'youtube', current: saved.verified })
           if (saved.verified) {
-            if (source) throw new OfficialFallbackError(error, track, source)
+            if (source) return finalAudio(error, source)
             throw error
           }
           if (source) rejected.push({ source, error, manual: saved.verified })
@@ -330,7 +388,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
     if (sourceRejected && !transientFailure) {
       rejected.sort((a, b) => Number(b.manual) - Number(a.manual) || b.source.score - a.source.score)
       const fallback = rejected[0]
-      if (fallback) throw new OfficialFallbackError(unavailableAudio(lastError) ? lastError : fallback.error, track, fallback.source)
+      if (fallback) return finalAudio(unavailableAudio(lastError) ? lastError : fallback.error, fallback.source, !fallback.manual)
     }
     throw lastError
   })

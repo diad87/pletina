@@ -146,6 +146,142 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
   }
 }
 
+function emitAudioRetry(harness, detail) {
+  const event = new Event('pletina:audio-retry')
+  Object.defineProperty(event, 'detail', { value: detail })
+  harness.events.dispatchEvent(event)
+}
+
+test('PWA audio retry reports only valid advancing attempts for the active loading song and clears on playing', async () => {
+  const pending = deferred()
+  const h = pwaHarness({ resolve: () => pending.promise })
+  assert.equal(h.player.audioRetry, 0)
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 1)
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 2)
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 2, 'a repeated older notification cannot move the displayed attempt backwards')
+  pending.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 0, 'a loading notification cannot alter an already playing song')
+})
+
+test('PWA audio retry ignores malformed payloads and notifications for another song', async () => {
+  const h = pwaHarness({ resolve: () => deferred().promise })
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 0, 'idle has no active loading operation')
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  for (const detail of [
+    undefined, null, [], 'retry',
+    { trackId: '1', attempt: 1, total: 2 },
+    { trackId: 1.5, attempt: 1, total: 2 },
+    { trackId: 2, attempt: 1, total: 2 },
+    { trackId: 1, attempt: '1', total: 2 },
+    { trackId: 1, attempt: 0, total: 2 },
+    { trackId: 1, attempt: 3, total: 2 },
+    { trackId: 1, attempt: NaN, total: 2 },
+    { trackId: 1, attempt: Infinity, total: 2 },
+    { trackId: 1, attempt: 1, total: '2' },
+    { trackId: 1, attempt: 1, total: 3 },
+  ]) {
+    emitAudioRetry(h, detail)
+    assert.equal(h.player.audioRetry, 0)
+  }
+  h.player.toggle()
+})
+
+test('PWA audio retry clears on replacement and cancel, ignoring late notifications for discarded loading work', async () => {
+  const first = deferred(), second = deferred()
+  const h = pwaHarness({ resolve: track => track.id === 1 ? first.promise : second.promise })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 1)
+  h.player.playAt(1)
+  assert.equal(h.player.audioRetry, 0, 'a new selection starts without the old retry label')
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 2, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 1)
+  h.player.toggle()
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 2, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 0)
+  first.resolve(playable(1))
+  second.resolve(playable(2))
+  await flush()
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.player.audioRetry, 0)
+  assert.deepEqual(h.sources, [])
+})
+
+test('PWA audio retry clears when resolution fails and an explicit retry starts clean', async () => {
+  const failed = deferred(), replacement = deferred()
+  let attempts = 0
+  const h = pwaHarness({ resolve: () => ++attempts === 1 ? failed.promise : replacement.promise })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 2)
+  failed.reject(new Error('No compatible audio'))
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 0)
+  h.player.toggle()
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 1)
+  replacement.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.audioRetry, 0)
+})
+
+test('PWA audio retry clears when play resolves without a playing event', async () => {
+  const pending = deferred()
+  const h = pwaHarness({
+    resolve: () => pending.promise,
+    play: audio => { audio.paused = false; return Promise.resolve() },
+  })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  assert.equal(h.player.audioRetry, 2)
+  pending.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.player.audioRetry, 0, 'the fulfilled-play confirmation resets the label even without playing')
+})
+
+test('PWA audio retry clears when the sleep deadline cancels a pending load', async () => {
+  const pending = deferred()
+  const h = pwaHarness({ resolve: () => pending.promise })
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(await h.player.setSleepTimer(1), true)
+  emitAudioRetry(h, { trackId: 1, attempt: 1, total: 2 })
+  assert.equal(h.player.audioRetry, 1)
+  await h.advance(60_000)
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.player.audioRetry, 0)
+  emitAudioRetry(h, { trackId: 1, attempt: 2, total: 2 })
+  pending.resolve(playable(1))
+  await flush()
+  assert.equal(h.player.audioRetry, 0)
+  assert.deepEqual(h.sources, [])
+})
+
 test('PWA reselecting a song cancelled by another selection starts a fresh resolution before old cleanup finishes', async () => {
   const obsolete = deferred(), fresh = deferred(), retained = []
   let attempts = 0, firstCancelled = false

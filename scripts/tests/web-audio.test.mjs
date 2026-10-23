@@ -10,6 +10,28 @@ const compile = async (name) => ts.transpileModule(await readFile(new URL(`../..
 const [youtubeCode, audioCode, podcastCode] = await Promise.all([compile('youtube'), compile('audio'), compile('podcast-audio')])
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
+function retryClock() {
+  const timers = new Map()
+  let now = 0, sequence = 0
+  return {
+    setTimeout(fn, delay) { const id = ++sequence; timers.set(id, { at: now + delay, fn }); return id },
+    clearTimeout: id => timers.delete(id),
+    get size() { return timers.size },
+    async advance(ms) {
+      await flush()
+      const until = now + ms
+      for (;;) {
+        const next = [...timers].sort((a, b) => a[1].at - b[1].at)[0]
+        if (!next || next[1].at > until) break
+        now = Math.max(now, next[1].at)
+        timers.delete(next[0]); next[1].fn()
+        await flush()
+      }
+      now = until
+      await flush()
+    },
+  }
+}
 const id = 'aqz-KE-bpKQ', second = '9RfVp-GhKfs', third = 'aaaaaaaaaaa', fourth = 'bbbbbbbbbbb'
 const query = { id: 1, title: 'Airbag', artist: 'Radiohead', album: 'OK Computer', duration: 287 }
 const candidate = (videoId = id, extra = {}) => ({ videoId, title: 'Airbag', artists: ['Radiohead'], album: 'OK Computer', duration: 287, ...extra })
@@ -36,9 +58,18 @@ function browserTransport() {
   return { ...exports, frames, args, send }
 }
 
-function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpisode = null, downloaded = null) {
+function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpisode = null, downloaded = null, clock = {}) {
   const youtube = browserTransport()
-  const calls = [], writes = [], removedDownloads = []
+  const calls = [], writes = [], removedDownloads = [], retryEvents = [], timerDelays = []
+  const window = new EventTarget()
+  window.addEventListener('pletina:audio-retry', event => retryEvents.push(event.detail))
+  // Preserve asynchronous backoff without adding a real second to every legacy
+  // fallback test. Directed deadline tests supply a fully controlled clock.
+  const schedule = (fn, delay) => {
+    timerDelays.push(delay)
+    return clock.setTimeout ? clock.setTimeout(fn, delay) : setTimeout(fn, delay === 250 || delay === 750 ? 0 : delay)
+  }
+  const unschedule = clock.clearTimeout ?? clearTimeout
   const mocks = {
     ...youtube,
     searchMusic: async () => { calls.push('music'); return [candidate()] },
@@ -65,8 +96,10 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
   const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
   new Function('exports', 'require', podcastCode)(podcasts, dependency)
   const exports = {}
-  new Function('exports', 'require', audioCode)(exports, (path) => ['./catalog-sources', './verified-audio', './funkwhale-audio'].includes(path) ? mocks : path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
-  return { ...exports, youtube, calls, writes, podcasts, removedDownloads }
+  new Function('exports', 'require', 'window', 'setTimeout', 'clearTimeout', audioCode)(exports,
+    (path) => ['./catalog-sources', './verified-audio', './funkwhale-audio'].includes(path) ? mocks : path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path),
+    window, schedule, unschedule)
+  return { ...exports, youtube, calls, writes, podcasts, removedDownloads, retryEvents, timerDelays, window }
 }
 
 const musicFixture = (items) => ({ contents: { tabbedSearchResultsRenderer: { tabs: [{ tabRenderer: { content: { sectionListRenderer: { contents: [{ musicShelfRenderer: { contents: items } }] } } } }] } } })
@@ -81,6 +114,210 @@ const song = (videoId = id) => ({ musicResponsiveListItemRenderer: { playlistIte
 const video = (videoId = id, extra = {}) => ({ videoRenderer: { videoId, title: { runs: [{ text: 'Radiohead - ' }, { text: 'Airbag' }] },
   ownerText: { runs: [{ text: 'Radiohead' }] }, lengthText: { simpleText: '4:47' }, ...extra } })
 const videoFixture = (items) => ({ contents: { twoColumnSearchResultsRenderer: { primaryContents: { sectionListRenderer: { contents: [{ itemSectionRenderer: { contents: items } }] } } } } })
+
+test('final audio fallback retries the same selected video twice with fresh streams before recovering', async () => {
+  const streams = []
+  let audio
+  audio = engine({ stream: async (videoId, refresh, signal) => {
+    streams.push({ videoId, refresh, signal })
+    if (streams.length < 3) throw new audio.youtube.YouTubeError('No direct audio yet', 'format')
+    return info(videoId)
+  } })
+  const result = await audio.resolveTrack(query)
+  assert.equal(result.videoId, id)
+  assert.deepEqual(streams.map(({ videoId, refresh }) => ({ videoId, refresh })), [
+    { videoId: id, refresh: false }, { videoId: id, refresh: true }, { videoId: id, refresh: true },
+  ])
+  assert.ok(streams.every(attempt => attempt.signal === streams[0].signal), 'all attempts share the original operation cancellation and deadline')
+  assert.deepEqual(audio.calls, ['music', 'youtube'], 'retries do not repeat searches or switch recording')
+  assert.deepEqual(audio.retryEvents, [{ trackId: query.id, attempt: 1, total: 2 }, { trackId: query.id, attempt: 2, total: 2 }])
+  assert.deepEqual(audio.timerDelays, [45000, 250, 750])
+  assert.equal(audio.writes.length, 1)
+  assert.equal(audio.writes[0].choice.videoId, id)
+  assert.equal(audio.writes[0].choice.verified, false)
+  assert.equal(Object.hasOwn(audio.writes[0].choice, 'url'), false)
+})
+
+test('a final manual or added source retries only its exact video without changing the stored selection', async () => {
+  for (const direct of [false, true]) {
+    const streams = []
+    let audio
+    audio = engine({ stream: async (videoId, refresh) => {
+      streams.push([videoId, refresh])
+      if (streams.length < 3) throw new audio.youtube.YouTubeError('Direct audio unavailable', 'unavailable')
+      return info(videoId)
+    } }, direct ? null : { videoId: second, title: 'Manual source', channel: 'Radiohead', duration: 287, score: 100, verified: true }, second)
+    const track = direct ? { ...query, id: 250_000_000_000_001 } : query
+    assert.equal((await audio.resolveTrack(track)).videoId, second)
+    assert.deepEqual(streams, [[second, false], [second, true], [second, true]])
+    assert.deepEqual(audio.calls, [])
+    assert.deepEqual(audio.writes, [], 'an explicit association is never rewritten as an automatic one')
+    assert.deepEqual(audio.retryEvents.map(event => event.trackId), [track.id, track.id])
+  }
+})
+
+test('downloads and explicit source changes do not inherit the automatic playback retry policy', async () => {
+  const streams = []
+  let audio
+  audio = engine({ stream: async (videoId, refresh) => {
+    streams.push([videoId, refresh])
+    throw new audio.youtube.YouTubeError('Direct audio unavailable', 'unavailable')
+  } })
+  await assert.rejects(audio.resolveRemoteTrack(query), error => error instanceof audio.OfficialFallbackError)
+  assert.deepEqual(streams, [[id, false]])
+  streams.length = 0
+  await assert.rejects(audio.chooseSource(query, second), error => error.code === 'unavailable' && !(error instanceof audio.OfficialFallbackError))
+  assert.deepEqual(streams, [[second, false]])
+  assert.deepEqual(audio.retryEvents, [])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('a first fresh retry success avoids the second retry and preserves listening-only capabilities', async () => {
+  let attempts = 0, audio
+  const primary = { ...info(), transport: 'p1' }
+  audio = engine({ stream: async () => {
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Initial source unavailable', 'unavailable')
+    return primary
+  } })
+  const result = await audio.resolveTrack(query)
+  assert.equal(attempts, 2)
+  assert.deepEqual(result.source, { provider: 'youtube-p1', id, expiresAt: primary.expiresAt, download: { allowed: false } })
+  assert.deepEqual(audio.retryEvents, [{ trackId: query.id, attempt: 1, total: 2 }])
+  assert.deepEqual(audio.timerDelays, [45000, 250])
+})
+
+test('two definitive fresh failures expose only the original matched fallback and persist nothing', async () => {
+  let attempts = 0, audio, original
+  audio = engine({ stream: async () => {
+    const error = new audio.youtube.YouTubeError(++attempts === 1 ? 'Original refusal' : 'Fresh refusal', attempts === 2 ? 'format' : 'unavailable')
+    if (attempts === 1) original = error
+    throw error
+  } })
+  await assert.rejects(audio.resolveTrack(query), error => {
+    assert.ok(error instanceof audio.OfficialFallbackError)
+    assert.equal(error.originalError, original)
+    assert.equal(error.code, original.code)
+    assert.equal(error.message, original.message)
+    assert.equal(error.fallback.source.videoId, id)
+    return true
+  })
+  assert.equal(attempts, 3)
+  assert.equal(audio.retryEvents.length, 2)
+  assert.deepEqual(audio.writes, [])
+  assert.doesNotMatch(JSON.stringify(audio.retryEvents), /https|videoId|url/)
+})
+
+for (const code of ['network', 'timeout']) test(`a final ${code} error stays transient after both fresh retries and cannot offer a video`, async () => {
+  let attempts = 0, audio, last
+  audio = engine({ stream: async () => {
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Original refusal', 'format')
+    last = new audio.youtube.YouTubeError('Transient retry failure', code)
+    throw last
+  } })
+  await assert.rejects(audio.resolveTrack(query), error => error === last && error.code === code && !(error instanceof audio.OfficialFallbackError))
+  assert.equal(attempts, 3)
+  assert.deepEqual(audio.writes, [])
+  assert.equal(audio.retryEvents.length, 2)
+})
+
+for (const code of ['restricted', 'response']) test(`a fresh ${code} failure stops retries immediately without offering the old fallback`, async () => {
+  let attempts = 0, audio, terminal
+  audio = engine({ stream: async () => {
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Original refusal', 'unavailable')
+    terminal = new audio.youtube.YouTubeError('Terminal fresh response', code)
+    throw terminal
+  } })
+  await assert.rejects(audio.resolveTrack(query), error => error === terminal && !(error instanceof audio.OfficialFallbackError))
+  assert.equal(attempts, 2)
+  assert.deepEqual(audio.timerDelays, [45000, 250])
+  assert.equal(audio.retryEvents.length, 1)
+  assert.deepEqual(audio.writes, [])
+})
+
+test('cancelling the final backoff prevents fresh requests, retry events, and later source writes', async () => {
+  const clock = retryClock()
+  let attempts = 0, audio
+  audio = engine({ stream: async () => { attempts++; throw new audio.youtube.YouTubeError('Original refusal', 'format') } }, null, id, null, null, clock)
+  const pending = audio.resolveTrack(query)
+  const rejected = assert.rejects(pending, { name: 'AbortError' })
+  await flush()
+  assert.deepEqual(audio.timerDelays, [45000, 250])
+  audio.retainAudioRequests([])
+  await rejected; await clock.advance(1000)
+  assert.equal(attempts, 1)
+  assert.deepEqual(audio.retryEvents, [])
+  assert.deepEqual(audio.writes, [])
+  assert.equal(clock.size, 0)
+})
+
+test('cancellation from the retry notification cannot start a request after the selection changes', async () => {
+  const clock = retryClock()
+  let attempts = 0, audio
+  audio = engine({ stream: async () => { attempts++; throw new audio.youtube.YouTubeError('Original refusal', 'format') } }, null, id, null, null, clock)
+  audio.window.addEventListener('pletina:audio-retry', () => audio.retainAudioRequests([]))
+  const pending = audio.resolveTrack(query), rejected = assert.rejects(pending, { name: 'AbortError' })
+  await clock.advance(250); await rejected
+  assert.equal(attempts, 1)
+  assert.deepEqual(audio.retryEvents, [{ trackId: query.id, attempt: 1, total: 2 }])
+  assert.deepEqual(audio.writes, [])
+  assert.equal(clock.size, 0)
+})
+
+test('an aborted in-progress fresh stream cannot return late audio or write its automatic source', async () => {
+  const clock = retryClock(), gate = deferred()
+  let attempts = 0, audio
+  audio = engine({ stream: async () => {
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Original refusal', 'unavailable')
+    return gate.promise
+  } }, null, id, null, null, clock)
+  const pending = audio.resolveTrack(query), rejected = assert.rejects(pending, { name: 'AbortError' })
+  await clock.advance(250)
+  assert.equal(attempts, 2)
+  audio.retainAudioRequests([])
+  gate.resolve(info())
+  await rejected; await clock.advance(1000)
+  assert.equal(attempts, 2)
+  assert.equal(audio.retryEvents.length, 1)
+  assert.deepEqual(audio.writes, [])
+  assert.equal(clock.size, 0)
+})
+
+test('the original operation deadline bounds a pending retry and never becomes another fallback', async () => {
+  const clock = retryClock()
+  let attempts = 0, audio
+  audio = engine({ stream: async (_videoId, _refresh, signal) => {
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Original refusal', 'format')
+    return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }))
+  } }, null, id, null, null, clock)
+  const pending = audio.resolveTrack(query), rejected = assert.rejects(pending,
+    error => error.code === 'timeout' && !(error instanceof audio.OfficialFallbackError))
+  await clock.advance(250)
+  assert.equal(attempts, 2)
+  await clock.advance(44750); await rejected
+  assert.deepEqual(audio.timerDelays, [45000, 250], 'a retry cannot create a new operation deadline')
+  assert.equal(audio.retryEvents.length, 1)
+  assert.deepEqual(audio.writes, [])
+  assert.equal(clock.size, 0)
+})
+
+test('a manual choice supersedes a pending final retry without a late automatic association', async () => {
+  const clock = retryClock(), gate = deferred()
+  let attempts = 0, audio
+  audio = engine({ stream: async (videoId) => {
+    if (videoId === second) return info(second)
+    if (++attempts === 1) throw new audio.youtube.YouTubeError('Original refusal', 'unavailable')
+    return gate.promise
+  } }, null, id, null, null, clock)
+  const pending = audio.resolveTrack(query), rejected = assert.rejects(pending, { name: 'AbortError' })
+  await clock.advance(250)
+  assert.equal((await audio.chooseSource(query, second)).videoId, second)
+  gate.resolve(info())
+  await rejected; await clock.advance(1000)
+  assert.equal(attempts, 2)
+  assert.equal(audio.retryEvents.length, 1)
+  assert.deepEqual(audio.writes.map(write => [write.choice.videoId, write.choice.verified]), [[second, true]])
+  assert.equal(clock.size, 0)
+})
 
 test('P1 keeps the same music and episode identity without offering unverified offline downloads', async () => {
   const primary = { ...info(), transport: 'p1' }
@@ -295,7 +532,7 @@ test('una fuente guardada rechazada no se reintenta aunque aparezca sola en Musi
   }
 })
 
-test('el presupuesto permite tres intentos Music y tres WEB distintos dentro de la misma operación', async () => {
+test('el presupuesto permite tres candidatos Music y tres WEB más dos reintentos de la única alternativa final', async () => {
   const attempts = [], phases = [], signals = []
   const webIds = ['ccccccccccc', 'ddddddddddd', 'eeeeeeeeeee', 'fffffffffff']
   const audio = engine({
@@ -311,7 +548,7 @@ test('el presupuesto permite tres intentos Music y tres WEB distintos dentro de 
   })
   await assert.rejects(() => audio.resolveTrack(query), (error) => error.code === 'format')
   assert.deepEqual(phases, ['music', 'web'])
-  assert.deepEqual(attempts, [id, second, third, ...webIds.slice(0, 3)])
+  assert.deepEqual(attempts, [id, second, third, ...webIds.slice(0, 3), id, id])
   assert.equal(new Set(attempts).size, 6)
   assert.ok(signals[0] instanceof AbortSignal)
   assert.ok(signals.every((signal) => signal === signals[0]), 'fallback phases must share cancellation and the existing 45-second operation deadline')
@@ -354,7 +591,7 @@ test('network, timeout y restricted no amplían WEB ni sustituyen una elección 
   }
 })
 
-test('el rechazo de audio ofrece la mejor coincidencia ya obtenida sin búsquedas, URLs ni escrituras adicionales', async () => {
+test('el rechazo final de audio reintenta la mejor coincidencia sin repetir búsquedas, exponer URLs ni escribir asociaciones', async () => {
   for (const code of ['unavailable', 'format']) {
     const events = [], failures = new Map()
     const audio = engine({
@@ -378,7 +615,7 @@ test('el rechazo de audio ofrece la mejor coincidencia ya obtenida sin búsqueda
       assert.equal(error.cause, error.originalError)
       return true
     })
-    assert.deepEqual(events, ['music', id, 'web', second])
+    assert.deepEqual(events, ['music', id, 'web', second, id, id])
     const source = audio.getOfficialFallback(query, failure)
     assert.equal(source.videoId, id)
     assert.equal(source.score, 112)
@@ -412,7 +649,7 @@ test('la alternativa conserva la fuente manual exacta aunque otra coincidencia t
     assert.equal(source.score, 100)
     return true
   })
-  assert.deepEqual(events, [fourth], 'an explicit source is never silently replaced by another video or catalog')
+  assert.deepEqual(events, [fourth, fourth, fourth], 'all three attempts keep the explicit source without another video or catalog')
   assert.deepEqual(audio.writes, [])
 })
 
@@ -572,7 +809,7 @@ test('un YouTube añadido no busca sustitutos ni cambia su ID tras rechazo y ref
   } })
   await assert.rejects(() => audio.resolveTrack(direct), (error) => error.code === 'unavailable')
   await assert.rejects(() => audio.resolveTrack(direct, true), (error) => error.code === 'unavailable')
-  assert.deepEqual(attempts, [[id, false], [id, true]])
+  assert.deepEqual(attempts, [[id, false], [id, true], [id, true], [id, true], [id, true], [id, true]])
   assert.deepEqual(audio.calls, [], 'direct-video failures cannot enter either catalog search')
   assert.deepEqual(audio.writes, [])
 })
