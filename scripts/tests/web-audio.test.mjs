@@ -788,6 +788,20 @@ test('changing tracks aborts obsolete acquisitions while retaining the current a
   assert.deepEqual(await current,catalogAudio)
 })
 
+test('player changes do not cancel downloads or share their resolution with downloaded playback of the same ID', async () => {
+  const gate=deferred();let remoteSignal
+  const local={...catalogAudio,local:true,url:'https://pwa.example/__audio__/1'}
+  const audio=engine({searchMusic:async(_text,signal)=>{remoteSignal=signal;await gate.promise;return[candidate()]}},null,id,null,local)
+  const download=audio.resolveRemoteTrack(query)
+  await flush()
+  assert.equal((await audio.resolveTrack(query)).url,local.url,'playback must not join a remote-download operation')
+  audio.retainAudioRequests([2,3])
+  assert.equal(remoteSignal.aborted,false,'unrelated player changes must not abort a download')
+  gate.resolve()
+  assert.equal((await download).videoId,id)
+  assert.equal(remoteSignal.aborted,false)
+})
+
 test('cancelling a delayed external source prevents its completion and disposes checked blobs', async () => {
   const gate = deferred(); let disposed = 0, signal
   const audio = engine({ searchMusic: async () => [], searchVideos: async () => [],

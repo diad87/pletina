@@ -54,8 +54,8 @@ export function scoreCandidate(track: TrackQuery, candidate: Candidate, rank: nu
 }
 
 interface Scored extends Candidate { score: number; origin: 'music' | 'youtube' }
-interface Operation { controller: AbortController; promise: Promise<Playable>; kind: 'resolve' | 'choose' }
-const operations = new Map<number, Operation>()
+interface Operation { controller: AbortController; promise: Promise<Playable>; kind: 'resolve' | 'choose' | 'download'; trackId: number }
+const operations = new Map<string, Operation>()
 
 function validTrack(track: TrackQuery): void {
   if (!Number.isSafeInteger(track.id) || track.id <= 0 || !track.title?.trim() || !track.artist?.trim()) throw new Error('La canción no tiene metadatos válidos.')
@@ -111,17 +111,18 @@ export function getOfficialFallback(track: TrackQuery, error: unknown): Alternat
 }
 
 function operation(track: TrackQuery, kind: Operation['kind'], refresh: boolean, work: (signal: AbortSignal) => Promise<Playable>): Promise<Playable> {
-  const previous = operations.get(track.id)
-  if (kind === 'resolve' && previous && (!refresh || previous.kind === 'choose')) return previous.promise
+  const key = `${kind === 'download' ? 'download' : 'play'}:${track.id}`
+  const previous = operations.get(key)
+  if (kind !== 'choose' && previous && (!refresh || previous.kind === 'choose')) return previous.promise
   previous?.controller.abort(new DOMException('Operación sustituida.', 'AbortError'))
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(new YouTubeError('La búsqueda de audio tardó demasiado. Vuelve a intentarlo.', 'timeout')), 45000)
-  const job: Operation = { controller, kind, promise: Promise.resolve(null as unknown as Playable) }
+  const job: Operation = { controller, kind, trackId: track.id, promise: Promise.resolve(null as unknown as Playable) }
   job.promise = Promise.resolve().then(() => work(controller.signal)).finally(() => {
     clearTimeout(timeout)
-    if (operations.get(track.id) === job) operations.delete(track.id)
+    if (operations.get(key) === job) operations.delete(key)
   })
-  operations.set(track.id, job)
+  operations.set(key, job)
   return job.promise
 }
 
@@ -176,7 +177,7 @@ export async function resolveRemoteTrack(track: TrackQuery, refresh = false): Pr
 
 async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: boolean): Promise<Playable> {
   validTrack(track)
-  return operation(track, 'resolve', refresh, async (signal) => {
+  return operation(track, includeDownloaded ? 'resolve' : 'download', refresh, async (signal) => {
     if (includeDownloaded) {
       const downloaded = await readDownloadedPlayable(track.id)
       checkAbort(signal)
@@ -363,10 +364,10 @@ export async function previewYouTube(url: string): Promise<YouTubeTrackPreview> 
 /** Keep only the current/next resolutions when the user changes the queue. */
 export function retainAudioRequests(trackIds: readonly number[]): void {
   const retained = new Set(trackIds)
-  for (const [id, value] of operations) {
-    if (retained.has(id)) continue
+  for (const [key, value] of operations) {
+    if (value.kind === 'download' || retained.has(value.trackId)) continue
     value.controller.abort(new DOMException('La canción ha cambiado.', 'AbortError'))
-    operations.delete(id)
+    operations.delete(key)
   }
 }
 
