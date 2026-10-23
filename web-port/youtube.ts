@@ -362,13 +362,21 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
       (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0))
   let url: string | undefined
   let selected: Row | undefined
+  let expiresAt = 0, expired = false
   for (const format of formats) {
-    try { url = audioUrl(format.url); selected = format; break } catch { /* No aceptar otro origen como alternativa. */ }
+    let candidate: string
+    try { candidate = audioUrl(format.url) } catch { continue /* No aceptar otro origen como alternativa. */ }
+    const expiration = Number(new URL(candidate).searchParams.get('expire')) * 1000
+    if (expiration > 0 && expiration <= now + 60_000) { expired = true; continue }
+    url = candidate
+    selected = format
+    expiresAt = Math.min(now + 20 * 60_000, Number.isFinite(expiration) && expiration > 0 ? expiration - 60_000 : now + 5 * 60_000)
+    break
   }
-  if (!url) throw new YouTubeError(allowOpus ? 'Este vídeo no ofrece audio compatible.' : 'Este vídeo no ofrece audio MP4 compatible.', 'format')
-  const expiration = Number(new URL(url).searchParams.get('expire')) * 1000
-  if (expiration > 0 && expiration <= now + 60_000) throw new YouTubeError('La dirección de audio ha caducado. Vuelve a intentarlo.', 'response')
-  const expiresAt = Math.min(now + 20 * 60_000, Number.isFinite(expiration) && expiration > 0 ? expiration - 60_000 : now + 5 * 60_000)
+  if (!url) {
+    if (expired) throw new YouTubeError('La dirección de audio ha caducado. Vuelve a intentarlo.', 'response')
+    throw new YouTubeError(allowOpus ? 'Este vídeo no ofrece audio compatible.' : 'Este vídeo no ofrece audio MP4 compatible.', 'format')
+  }
   const seconds = Number(details.lengthSeconds)
   const size = (value: unknown): number | undefined => {
     if (typeof value !== 'number' && (typeof value !== 'string' || !/^\d{1,10}$/.test(value))) return
@@ -459,36 +467,54 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   return { ...selected, transport: 'p1' }
 }
 
-export async function stream(videoId: string, refresh = false, signal?: AbortSignal): Promise<StreamInfo> {
+export async function stream(videoId: string, refresh = false, signal?: AbortSignal, recoverPrimary = false): Promise<StreamInfo> {
   if (!validVideoId(videoId)) throw new Error('El vídeo de YouTube no es válido.')
   checkAbort(signal)
   const saved = streams.get(videoId)
   if (!refresh && saved && saved.expiresAt > Date.now()) return saved
   streams.delete(videoId)
-  let result: StreamInfo
-  try {
-    const visitorData = await session(videoId, signal)
-    checkAbort(signal)
-    const response = await requestJson('youtube', 'player', {
-      context: { client: { clientName: 'VISIONOS', clientVersion: '1.02', visitorData,
-        deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', osName: 'visionOS', osVersion: '26.5.23O471', platform: 'MOBILE' } },
-      videoId, contentCheckOk: true, racyCheckOk: true,
-    }, signal)
-    checkAbort(signal)
-    result = parsePlayer(response, videoId)
-  }
-  catch (error) {
-    checkAbort(signal)
-    if (error instanceof YouTubeError && error.code === 'restricted') visitor = null
-    if (!(error instanceof YouTubeError) || !['format', 'unavailable', 'network', 'timeout'].includes(error.code)) throw error
+  let result: StreamInfo | undefined
+  let repairFailure: { error: unknown } | undefined
+  // An explicit refresh of an unexpired primary locator can follow a CDN error
+  // from the actual Audio. Repeating only its JSON client could return another
+  // unusable locator forever. Try the same-ID, metadata-probed P1 path first;
+  // ordinary expiry, cold requests and healthy cache hits keep their fast path.
+  // Playback opts in explicitly; download renewal never changes client order.
+  if (recoverPrimary && refresh && saved && saved.transport !== 'p1' && saved.expiresAt > Date.now()) {
     try { result = await p1Stream(videoId, signal) }
-    catch (p1Error) {
+    catch (error) { checkAbort(signal); repairFailure = { error } }
+  }
+  if (!result) {
+    try {
+      const visitorData = await session(videoId, signal)
       checkAbort(signal)
-      if (p1Error instanceof YouTubeError && (p1Error.code === 'network' || p1Error.code === 'timeout')) throw p1Error
-      // Preserve the original category for verified providers and the existing
-      // visible fallback if P1 itself is invalid. A stale recipe or decoder is
-      // not a different diagnosis of the original request.
-      throw error
+      const response = await requestJson('youtube', 'player', {
+        context: { client: { clientName: 'VISIONOS', clientVersion: '1.02', visitorData,
+          deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', osName: 'visionOS', osVersion: '26.5.23O471', platform: 'MOBILE' } },
+        videoId, contentCheckOk: true, racyCheckOk: true,
+      }, signal)
+      checkAbort(signal)
+      result = parsePlayer(response, videoId)
+    }
+    catch (error) {
+      checkAbort(signal)
+      if (error instanceof YouTubeError && error.code === 'restricted') visitor = null
+      if (!(error instanceof YouTubeError) || !['format', 'unavailable', 'network', 'timeout'].includes(error.code)) throw error
+      try {
+        // A failed repair already spent this request's P1 budget. A fresh primary
+        // may still work, but never repeat P1 or replace its transport failure
+        // with an unavailable category that could authorize visible video.
+        if (repairFailure) throw repairFailure.error
+        result = await p1Stream(videoId, signal)
+      }
+      catch (p1Error) {
+        checkAbort(signal)
+        if (p1Error instanceof YouTubeError && (p1Error.code === 'network' || p1Error.code === 'timeout')) throw p1Error
+        // Preserve the original category for verified providers and the existing
+        // visible fallback if P1 itself is invalid. A stale recipe or decoder is
+        // not a different diagnosis of the original request.
+        throw error
+      }
     }
   }
   checkAbort(signal)

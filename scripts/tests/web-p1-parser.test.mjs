@@ -62,6 +62,41 @@ test('wholly untagged MP4 responses preserve the existing highest-bitrate compat
   assert.equal(result.duration, 209)
 })
 
+test('an expired preferred AAC cannot hide a fresh lower-bitrate encoding of the same video', () => {
+  const expired = format('expired-high', { bitrate: 256000, url: `https://r1.googlevideo.com/expired-high?expire=${now / 1000 - 1}`, contentLength: '99999' })
+  const fresh = format('fresh-lower', { bitrate: 96000, contentLength: '12345' })
+  const selected = select([expired, fresh])
+  assert.equal(selected.videoId, id)
+  assert.equal(selected.url, fresh.url)
+  assert.equal(selected.contentLength, 12345)
+  assert.equal(selected.expiresAt, now + 20 * 60_000)
+})
+
+test('all eligible expired or nearly expired encodings retain the expiration response error', () => {
+  const formats = [-1, 0, 60].map((seconds, index) => format('expired-' + index, {
+    url: `https://r1.googlevideo.com/expired-${index}?expire=${now / 1000 + seconds}`, bitrate: 256000 - index * 1000,
+  }))
+  assert.throws(() => select(formats), error => error.code === 'response' && error.message === 'La dirección de audio ha caducado. Vuelve a intentarlo.')
+})
+
+test('a preferred AAC still wins while its locator exceeds the existing one-minute safety window', () => {
+  const high = format('fresh-high', { bitrate: 256000, url: `https://r1.googlevideo.com/fresh-high?expire=${now / 1000 + 90}` })
+  const lower = format('fresh-lower', { bitrate: 96000 })
+  const selected = select([lower, high])
+  assert.equal(selected.url, high.url)
+  assert.equal(selected.expiresAt, now + 30_000)
+})
+
+test('skipping expired encodings never relaxes response-wide original-audio requirements', () => {
+  const expired = format('expired-original', { bitrate: 999999, xtags: tags([['acont', 'original']]),
+    url: `https://r1.googlevideo.com/expired-original?expire=${now / 1000 - 1}` })
+  const dubbed = format('fresh-dubbed', { bitrate: 500000, xtags: tags([['acont', 'dubbed-auto']]) })
+  const untagged = format('fresh-unconfirmed', { bitrate: 300000 })
+  const original = format('fresh-original', { bitrate: 96000, xtags: tags([['acont', 'original']]) })
+  assert.equal(select([expired, dubbed, untagged, original]).url, original.url)
+  assert.throws(() => select([expired, dubbed, untagged]), error => error.code === 'response')
+})
+
 test('WebM Opus is opt-in and a healthy AAC still wins over higher-bitrate Opus', () => {
   const opus = format('opus', { mimeType: 'audio/webm; codecs="opus"', bitrate: 256000 })
   rejected(player([opus]))

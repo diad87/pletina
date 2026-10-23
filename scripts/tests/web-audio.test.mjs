@@ -115,6 +115,21 @@ const video = (videoId = id, extra = {}) => ({ videoRenderer: { videoId, title: 
   ownerText: { runs: [{ text: 'Radiohead' }] }, lengthText: { simpleText: '4:47' }, ...extra } })
 const videoFixture = (items) => ({ contents: { twoColumnSearchResultsRenderer: { primaryContents: { sectionListRenderer: { contents: [{ itemSectionRenderer: { contents: items } }] } } } } })
 
+for (const playback of [true, false]) test(`${playback ? 'playback repair enables' : 'download renewal excludes'} early P1 recovery for a previously resolved primary`, async () => {
+  const attempts = []
+  const saved = { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: false }
+  const audio = engine({ stream: async (videoId, refresh, signal, recoverPrimary) => {
+    attempts.push({ videoId, refresh, signal, recoverPrimary })
+    return info(videoId)
+  } }, saved)
+  const value = await (playback ? audio.resolveTrack(query, true) : audio.resolveRemoteTrack(query, true))
+  assert.equal(value.videoId, id)
+  assert.equal(attempts.length, 1)
+  assert.equal(attempts[0].refresh, true)
+  assert.equal(attempts[0].recoverPrimary, playback)
+  assert.equal(attempts[0].signal.aborted, false)
+})
+
 test('a transient final source gets two fresh same-ID playback attempts without repeating searches', async () => {
   const streams = []
   let audio
@@ -1089,11 +1104,13 @@ test('an empty YouTube search may recover a strict catalog recording; provider f
   await assert.rejects(failed.resolveTrack(query), error => failed.getOfficialFallback(query, error)?.videoId === id)
 })
 
-test('temporary network failures and manual sources do not trigger an alternate catalog', async () => {
-  for (const code of ['network', 'timeout', 'restricted']) {
+test('restrictions, malformed responses and manual sources do not trigger an alternate catalog', async () => {
+  for (const code of ['restricted', 'response']) {
+    let catalogCalls = 0
     const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('Retry later', code) },
-      resolveCatalogSource: async () => assert.fail('network is not an absent recording') })
+      resolveCatalogSource: async () => { catalogCalls++; return catalogAudio } })
     await assert.rejects(audio.resolveTrack(query), error => error.code === code)
+    assert.equal(catalogCalls, 0)
   }
   const saved = { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: true }
   const manual = engine({ stream: async () => { throw new manual.youtube.YouTubeError('Unavailable', 'format') },
@@ -1101,6 +1118,89 @@ test('temporary network failures and manual sources do not trigger an alternate 
     resolveCatalogSource: async () => assert.fail('manual choice has priority') }, saved)
   await assert.rejects(manual.resolveTrack(query), error => manual.getOfficialFallback(query, error)?.videoId === id)
   assert.deepEqual(manual.writes, [])
+})
+
+for (const phase of ['search', 'stream', 'saved']) test(`exact catalog rescue survives an automatic YouTube ${phase} transport failure without changing identity`, async () => {
+  for (const code of ['network', 'timeout']) {
+    const target = { ...query, isrc: 'GBAYE9701376', titleVersion: null }, seen = [], events = []
+    const saved = phase === 'saved' ? { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: false } : null
+    let failure, audio
+    audio = engine({
+      searchMusic: async () => { events.push('music'); if (phase === 'search') throw failure; return [candidate()] },
+      searchVideos: async () => { events.push('web'); if (phase === 'search') throw failure; return [] },
+      stream: async videoId => { events.push(videoId); throw failure },
+      resolveCatalogSource: async (track, signal) => { seen.push({ track, signal }); return catalogAudio },
+    }, saved)
+    failure = new audio.youtube.YouTubeError('Synthetic YouTube transport failure', code)
+    assert.deepEqual(await audio.resolveTrack(target), catalogAudio)
+    assert.equal(seen.length, 1); assert.equal(seen[0].track, target); assert.ok(seen[0].signal instanceof AbortSignal)
+    assert.equal(seen[0].signal.aborted, false)
+    assert.deepEqual(events, phase === 'saved' ? [id] : phase === 'search' ? ['music', 'web'] : ['music', id])
+    assert.deepEqual(audio.retryEvents, []); assert.deepEqual(audio.writes, [])
+    assert.deepEqual(audio.removedDownloads, [])
+  }
+})
+
+test('an absent or failed transient catalog rescue retains the exact YouTube error without a video or association', async () => {
+  for (const phase of ['search', 'stream', 'saved']) for (const outcome of ['absent', 'failed']) {
+    let failure, audio, catalogCalls = 0
+    const saved = phase === 'saved' ? { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: false } : null
+    audio = engine({
+      searchMusic: async () => { if (phase === 'search') throw failure; return [candidate()] },
+      searchVideos: async () => { if (phase === 'search') throw failure; return [] },
+      stream: async () => { throw failure },
+      resolveCatalogSource: async () => { catalogCalls++; if (outcome === 'failed') throw new Error('Synthetic alternate-provider failure'); return null },
+    }, saved)
+    failure = new audio.youtube.YouTubeError('Keep the YouTube transport category', 'network')
+    await assert.rejects(audio.resolveTrack(query), error => error === failure && audio.getOfficialFallback(query, error) === null)
+    assert.equal(catalogCalls, 1); assert.deepEqual(audio.writes, [])
+    assert.equal(audio.retryEvents.length, phase === 'search' ? 0 : 2)
+  }
+})
+
+test('cancellation or the existing deadline prevents a late transient catalog rescue from returning or writing', async () => {
+  for (const stop of ['cancel', 'deadline']) {
+    const clock = retryClock(), gate = deferred(); let seenSignal, calls = 0, audio
+    audio = engine({
+      searchMusic: async () => { throw new audio.youtube.YouTubeError('YouTube unavailable over this connection', 'network') },
+      searchVideos: async () => { throw new audio.youtube.YouTubeError('YouTube unavailable over this connection', 'network') },
+      resolveCatalogSource: async (_track, signal) => { calls++; seenSignal = signal; return gate.promise },
+    }, null, id, null, null, clock)
+    const pending = audio.resolveTrack(query).then(value => ({ value }), error => ({ error }))
+    try {
+      await flush(); assert.equal(calls, 1); assert.ok(seenSignal instanceof AbortSignal)
+      if (stop === 'cancel') audio.retainAudioRequests([])
+      else await clock.advance(45000)
+      assert.equal(seenSignal.aborted, true)
+      gate.resolve(catalogAudio)
+      const result = await pending
+      assert.ok(result.error)
+      assert.equal(stop === 'cancel' ? result.error.name : result.error.code, stop === 'cancel' ? 'AbortError' : 'timeout')
+      assert.equal(audio.getOfficialFallback(query, result.error), null)
+      assert.deepEqual(audio.writes, []); assert.deepEqual(audio.retryEvents, [])
+      assert.deepEqual(audio.timerDelays, [45000], 'independent provider rescue cannot create another operation budget')
+    } finally { audio.cancelAudioRequests(); gate.resolve(catalogAudio); await pending }
+  }
+})
+
+test('transient catalog rescue never replaces manual, added-video, podcast or download requests', async () => {
+  for (const mode of ['manual', 'direct', 'podcast', 'download', 'download-search', 'download-saved', 'download-manual']) {
+    let failure, audio, calls = 0
+    const download = mode.startsWith('download')
+    const saved = ['manual', 'download-manual', 'download-saved'].includes(mode)
+      ? { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: mode !== 'download-saved' } : null
+    const track = { ...query, id: mode === 'direct' ? 250_000_000_000_001 : mode === 'podcast' ? 750_000_000_000_001 : query.id }
+    const episode = mode === 'podcast' ? { id: track.id, audioUrl: 'youtube:' + id } : null
+    audio = engine({
+      searchMusic: async () => { if (mode === 'download-search') throw failure; return [candidate()] },
+      searchVideos: async () => { if (mode === 'download-search') throw failure; return [] },
+      stream: async () => { throw failure },
+      resolveCatalogSource: async () => { calls++; return catalogAudio },
+    }, saved, id, episode)
+    failure = new audio.youtube.YouTubeError('Synthetic transport interruption', 'network')
+    await assert.rejects(download ? audio.resolveRemoteTrack(track) : audio.resolveTrack(track), error => error === failure)
+    assert.equal(calls, 0, mode); assert.deepEqual(audio.writes, [])
+  }
 })
 
 test('downloaded songs, podcasts and directly added videos never enter catalog rescue', async () => {

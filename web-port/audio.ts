@@ -79,6 +79,8 @@ export interface OfficialFallback {
 
 const unavailableAudio = (error: unknown): error is YouTubeError & { code: OfficialFallbackReason } =>
   error instanceof YouTubeError && (error.code === 'unavailable' || error.code === 'format')
+const transientAudio = (error: unknown): error is YouTubeError =>
+  error instanceof YouTubeError && (error.code === 'network' || error.code === 'timeout')
 const retryableAudio = (error: unknown): error is YouTubeError => error instanceof YouTubeError &&
   ['unavailable', 'format', 'network', 'timeout'].includes(error.code)
 const karaoke = (title: string) => /(?:^|[^\p{L}\p{N}])karaoke(?:a)?(?:$|[^\p{L}\p{N}])/iu.test(title)
@@ -266,7 +268,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         // A UI event listener may itself cancel or replace this operation.
         checkAbort(signal)
         let info: StreamInfo
-        try { info = await stream(selected.videoId, true, signal) }
+        try { info = await stream(selected.videoId, true, signal, includeDownloaded) }
         catch (next) {
           checkAbort(signal)
           if (!retryableAudio(next)) throw next
@@ -290,7 +292,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       const videoId = await readYouTubeVideo(track.id)
       checkAbort(signal)
       if (!validVideoId(videoId)) throw new Error('No se encuentra el vídeo de esta canción de YouTube.')
-      try { return playable(await stream(videoId, refresh, signal), track.title, track.artist) }
+      try { return playable(await stream(videoId, refresh, signal, includeDownloaded), track.title, track.artist) }
       catch (error) {
         checkAbort(signal)
         if (retryableAudio(error)) return finalAudio(error, { videoId, title: track.title,
@@ -299,13 +301,19 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       }
     }
     const recoverFunkwhale = () => exactSource('funkwhale')
+    // A transport failure does not establish absence. Playback may nevertheless
+    // try an independent, exact-identity provider, without rewriting its source
+    // choice or changing the original failure if that provider cannot recover.
+    // Downloads retain their interruption/retry policy and explicit sources.
+    const recoverTransientCatalog = (error: unknown): Promise<Playable | null> =>
+      includeDownloaded && !manualSource && transientAudio(error) ? exactSource('catalog') : Promise.resolve(null)
     const saved = await readSourceChoice(track.id)
     checkAbort(signal)
     manualSource = saved?.verified === true
     let missing: string | null = null
     const rejected: { source: Alternative; error: YouTubeError; manual: boolean }[] = []
     if (saved && validVideoId(saved.videoId)) {
-      try { return await finishSource(playable(await stream(saved.videoId, refresh, signal), saved.title, saved.channel)) }
+      try { return await finishSource(playable(await stream(saved.videoId, refresh, signal, includeDownloaded), saved.title, saved.channel)) }
       catch (error) {
         checkAbort(signal)
         if (retryableAudio(error)) {
@@ -320,6 +328,8 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
             if (verified) return finishSource(verified)
             const recovered = await recoverFunkwhale()
             if (recovered) return finishSource(recovered)
+            const external = await recoverTransientCatalog(error)
+            if (external) return finishSource(external)
             if (source) return finalAudio(error, source)
             throw error
           }
@@ -351,6 +361,8 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       checkAbort(signal)
       const recovered = await recoverFunkwhale()
       if (recovered) return finishSource(recovered)
+      const external = await recoverTransientCatalog(error)
+      if (external) return finishSource(external)
       throw error
     }
     const attempted = new Set<string>(missing ? [missing] : [])
@@ -367,7 +379,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         checkAbort(signal)
         let info: StreamInfo
         try {
-          info = await stream(candidate.videoId, refresh, signal)
+          info = await stream(candidate.videoId, refresh, signal, includeDownloaded)
         } catch (error) {
           checkAbort(signal)
           lastError = error instanceof Error ? error : new Error('No se pudo cargar el audio.')
@@ -414,7 +426,9 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
     if (funkwhale) return finishSource(funkwhale)
     // Un catálogo alternativo sólo puede rescatar una identidad verificada. No cambia
     // la fuente escogida explícitamente por el usuario ni interpreta mala red como ausencia.
-    if (!transientFailure && !rejected.some((entry) => entry.manual)) {
+    const transientCatalogPlayback = includeDownloaded && !manualSource && !terminalFailure &&
+      (transientAudio(lastError) || rejected.some((entry) => transientAudio(entry.error)))
+    if ((!transientFailure || transientCatalogPlayback) && !rejected.some((entry) => entry.manual)) {
       try {
         const external = await exactSource('catalog')
         checkAbort(signal)

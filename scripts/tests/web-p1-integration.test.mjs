@@ -82,9 +82,9 @@ function engine(t, options = {}) {
     if (value instanceof Error) throw value
     return value
   })
-  const stream = (videoId = id, refresh = false, signal) => {
+  const stream = (videoId = id, refresh = false, signal, recoverPrimary = false) => {
     const controller = new AbortController(); controllers.push(controller)
-    const operation = api.stream(videoId, refresh, signal ? AbortSignal.any([controller.signal, signal]) : controller.signal)
+    const operation = api.stream(videoId, refresh, signal ? AbortSignal.any([controller.signal, signal]) : controller.signal, recoverPrimary)
     operation.catch(() => {}) // Assertions attach after the manually driven transport.
     return operation
   }
@@ -407,6 +407,110 @@ test('VISIONOS success avoids all P1 imports and reuses only the in-memory strea
   assert.equal(yt.history.length, requests)
   assert.deepEqual(yt.imports, [])
   assert.deepEqual(yt.storageAccess, [])
+})
+
+async function primaryStream(yt, label = 'primary-before-repair') {
+  const initial = await visionos(yt)
+  yt.result(player(label))
+  return initial.pending
+}
+
+test('refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client', async t => {
+  const yt = engine(t), before = await primaryStream(yt)
+  const pending = yt.stream(id, true, undefined, true)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  await completeP1(yt, 'repair-same-video')
+  const after = await pending
+  assert.equal(after.videoId, before.videoId)
+  assert.equal(after.transport, 'p1')
+  assert.notEqual(after.url, before.url)
+  assert.equal(await yt.stream(), after)
+  assert.deepEqual(yt.history.filter(row => row.config.body?.videoId).map(row => row.config.body.context.client.clientName), ['VISIONOS', 'WEB_EMBEDDED_PLAYER'])
+  assert.deepEqual(yt.storageAccess, [])
+})
+
+test('a failed P1 repair still allows one freshly resolved primary locator', async t => {
+  const yt = engine(t), before = await primaryStream(yt)
+  const pending = yt.stream(id, true, undefined, true)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  yt.error('network'); await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'VISIONOS')
+  yt.result(player('fresh-primary-after-p1-failure'))
+  const after = await pending
+  assert.notEqual(after.url, before.url)
+  assert.equal(after.transport, undefined)
+  assert.equal(after.videoId, id)
+  assert.equal(await yt.stream(), after)
+})
+
+test('a failed P1 repair is not repeated after the fresh primary also fails and its transport category survives', async t => {
+  const yt = engine(t); await primaryStream(yt)
+  const pending = yt.stream(id, true, undefined, true)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  yt.error('network'); await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'VISIONOS')
+  yt.result(unavailable())
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'network')
+  assert.equal(yt.history.filter(row => row.config.body?.context?.client?.clientName === 'WEB_EMBEDDED_PLAYER').length, 1)
+  const retry = await visionos(yt)
+  yt.result(player('after-failed-repair'))
+  assert.equal((await retry.pending).url, audioUrl('after-failed-repair'))
+})
+
+test('cancelling primary repair cannot start a fresh primary request or cache late P1 audio', async t => {
+  const yt = engine(t); await primaryStream(yt)
+  const controller = new AbortController(), pending = yt.stream(id, true, controller.signal, true)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  const stale = yt.frames[0], requests = yt.history.length
+  controller.abort()
+  yt.result(player('cancelled-repair'), stale)
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.history.length, requests)
+  const retry = await visionos(yt)
+  yt.result(player('after-cancelled-repair'))
+  assert.equal((await retry.pending).url, audioUrl('after-cancelled-repair'))
+})
+
+test('a P1 repair with another video ID is rejected before fresh primary recovery', async t => {
+  const yt = engine(t); await primaryStream(yt)
+  const pending = yt.stream(id, true, undefined, true)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  yt.result(player('wrong-repair-recording', other)); await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'VISIONOS')
+  yt.result(player('same-recording-after-mismatch'))
+  const after = await pending
+  assert.equal(after.videoId, id)
+  assert.equal(after.url, audioUrl('same-recording-after-mismatch'))
+  assert.equal(yt.history.some(row => row.config.message === 'pletina-youtube-p1-metadata'), false)
+})
+
+test('an expired primary locator renews through the normal client order', async t => {
+  const yt = engine(t), before = await primaryStream(yt)
+  t.mock.timers.enable({ apis: ['Date'], now: before.expiresAt + 1 })
+  const renewal = await visionos(yt, true)
+  yt.result(player('expired-primary-renewed'))
+  assert.equal((await renewal.pending).url, audioUrl('expired-primary-renewed'))
+  assert.deepEqual(yt.imports, [])
+})
+
+test('refresh without an earlier primary locator keeps the initial fast path', async t => {
+  const yt = engine(t), renewal = await visionos(yt, true)
+  yt.result(player('no-prior-locator'))
+  assert.equal((await renewal.pending).url, audioUrl('no-prior-locator'))
+  assert.deepEqual(yt.imports, [])
+})
+
+test('a refresh without playback repair permission preserves the primary download path', async t => {
+  const yt = engine(t); await primaryStream(yt)
+  const renewal = await visionos(yt, true)
+  yt.result(player('download-renewed-primary'))
+  assert.equal((await renewal.pending).url, audioUrl('download-renewed-primary'))
+  assert.deepEqual(yt.imports, [])
 })
 
 for (const category of ['unavailable', 'format']) test(`${category} invokes P1 and validates metadata before caching`, async t => {
