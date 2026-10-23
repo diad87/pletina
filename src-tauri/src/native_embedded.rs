@@ -93,6 +93,295 @@ fn trace_time() -> f64 {
     EPOCH.elapsed().as_secs_f64() * 1000.0
 }
 
+// Correlation is process-local only. Never log request bodies, remote status text,
+// URLs, visitors, experiment values or decoded/ciphered parameters.
+tokio::task_local! {
+    static RESOLVE_TRACE: u64;
+}
+static NEXT_RESOLVE_TRACE: AtomicU64 = AtomicU64::new(1);
+static NEXT_REQUEST_TRACE: AtomicU64 = AtomicU64::new(1);
+
+fn diagnostic_enabled() -> bool {
+    let enabled = std::env::var_os("MUSIFY_BENCH").is_some();
+    #[cfg(test)]
+    let enabled = enabled || TRACE_FIXTURES.load(Ordering::Relaxed);
+    enabled
+}
+
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum PostOrigin {
+    Preview,
+    Direct,
+}
+
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum PostPhase {
+    Started,
+    Finished,
+    PreviewKept,
+    PreviewDiscarded,
+    Consumed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum PostCode {
+    Ok,
+    SabrOnly,
+    Transport,
+    Http400,
+    Http401,
+    Http403,
+    HttpStatus,
+    Size,
+    Utf8,
+    Json,
+    IdentityOrStatus,
+    Cooldown,
+    RefreshBinding,
+    Other,
+}
+
+fn post_code(error: Option<&Error>) -> PostCode {
+    match error {
+        None => PostCode::Ok,
+        Some(Error::Failed(code)) => match code.as_str() {
+            "NATIVE_EMBEDDED_SABR_ONLY" => PostCode::SabrOnly,
+            "NATIVE_EMBEDDED_TRANSPORT" => PostCode::Transport,
+            "NATIVE_EMBEDDED_PLAYER_HTTP_400" => PostCode::Http400,
+            "NATIVE_EMBEDDED_PLAYER_HTTP_401" => PostCode::Http401,
+            "NATIVE_EMBEDDED_PLAYER_HTTP_403" => PostCode::Http403,
+            "NATIVE_EMBEDDED_HTTP_STATUS" => PostCode::HttpStatus,
+            "NATIVE_EMBEDDED_SIZE" => PostCode::Size,
+            "NATIVE_EMBEDDED_UTF8" => PostCode::Utf8,
+            "NATIVE_EMBEDDED_PLAYER_JSON" => PostCode::Json,
+            "NATIVE_EMBEDDED_PLAYER_IDENTITY_OR_STATUS" => PostCode::IdentityOrStatus,
+            "NATIVE_EMBEDDED_DISCOVERY_COOLDOWN" => PostCode::Cooldown,
+            "NATIVE_EMBEDDED_REFRESH_BINDING" => PostCode::RefreshBinding,
+            _ => PostCode::Other,
+        },
+        Some(_) => PostCode::Other,
+    }
+}
+
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PostTrace {
+    resolve_id: u64,
+    request_id: u64,
+    origin: PostOrigin,
+}
+
+fn post_trace(origin: PostOrigin) -> Option<PostTrace> {
+    diagnostic_enabled().then(|| PostTrace {
+        resolve_id: RESOLVE_TRACE.try_with(|id| *id).unwrap_or(0),
+        request_id: NEXT_REQUEST_TRACE.fetch_add(1, Ordering::Relaxed),
+        origin,
+    })
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PlayerSummary {
+    identity_matches: bool,
+    status_ok: bool,
+    formats_present: bool,
+    audio: usize,
+    eligible: usize,
+    urls: usize,
+    ciphers: usize,
+    missing: usize,
+    invalid: usize,
+    requires_signature: usize,
+    requires_n: usize,
+    direct_without_transform: usize,
+    sabr_present: bool,
+}
+
+fn player_summary(value: &Value, id: &str) -> PlayerSummary {
+    let formats = value
+        .pointer("/streamingData/adaptiveFormats")
+        .and_then(Value::as_array);
+    let candidates = audio_candidates(formats.map(Vec::as_slice).unwrap_or_default());
+    let mut summary = PlayerSummary {
+        identity_matches: value
+            .pointer("/videoDetails/videoId")
+            .and_then(Value::as_str)
+            == Some(id),
+        status_ok: value
+            .pointer("/playabilityStatus/status")
+            .and_then(Value::as_str)
+            == Some("OK"),
+        formats_present: formats.is_some(),
+        audio: formats
+            .into_iter()
+            .flatten()
+            .filter(|f| {
+                f["mimeType"]
+                    .as_str()
+                    .is_some_and(|s| s.starts_with("audio/"))
+            })
+            .count(),
+        eligible: candidates.len(),
+        urls: 0,
+        ciphers: 0,
+        missing: 0,
+        invalid: 0,
+        requires_signature: 0,
+        requires_n: 0,
+        direct_without_transform: 0,
+        sabr_present: value
+            .pointer("/streamingData/serverAbrStreamingUrl")
+            .and_then(Value::as_str)
+            .is_some_and(direct_audio_url),
+    };
+    for format in candidates {
+        summary.urls += usize::from(format["url"].as_str().is_some_and(|s| !s.is_empty()));
+        summary.ciphers += usize::from(
+            format["signatureCipher"]
+                .as_str()
+                .is_some_and(|s| !s.is_empty()),
+        );
+        if ["url", "signatureCipher"]
+            .iter()
+            .all(|key| format.get(*key).is_none_or(Value::is_null))
+        {
+            summary.missing += 1;
+        }
+        match cipher(&format) {
+            Ok(input) => {
+                summary.requires_signature += usize::from(input.sig.is_some());
+                summary.requires_n += usize::from(input.n.is_some());
+                summary.direct_without_transform +=
+                    usize::from(input.sig.is_none() && input.n.is_none());
+            }
+            Err(_) => summary.invalid += 1,
+        }
+    }
+    summary
+}
+
+fn public_version(config: &Config) -> Option<&str> {
+    let version = config.version.as_str();
+    (!version.is_empty()
+        && version.len() <= 64
+        && version.contains('.')
+        && version.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
+    .then_some(version)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PostDiagnostic<'a> {
+    #[serde(flatten)]
+    trace: PostTrace,
+    id: Option<&'a str>,
+    phase: PostPhase,
+    at_ms: f64,
+    client_version: Option<&'a str>,
+    signature_timestamp: u32,
+    verified_timestamp: Option<u32>,
+    http_status: Option<u16>,
+    code: Option<PostCode>,
+    summary: Option<PlayerSummary>,
+}
+
+fn post_diagnostic(
+    trace: Option<PostTrace>,
+    id: &str,
+    config: &Config,
+    sts: u32,
+    phase: PostPhase,
+    verified_timestamp: Option<u32>,
+    http_status: Option<u16>,
+    code: Option<PostCode>,
+    summary: Option<PlayerSummary>,
+) {
+    if let Some(trace) = trace {
+        eprintln!(
+            "[native-player-attempt] {}",
+            serde_json::to_string(&PostDiagnostic {
+                trace,
+                id: valid_id(id).then_some(id),
+                phase,
+                at_ms: trace_time(),
+                client_version: public_version(config),
+                signature_timestamp: sts,
+                verified_timestamp,
+                http_status,
+                code,
+                summary,
+            })
+            .unwrap_or_default()
+        );
+    }
+}
+
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RequestChanges {
+    version: bool,
+    visitor: bool,
+    flags: bool,
+    client_context: bool,
+    player: bool,
+    signature_timestamp: bool,
+    effective_request: bool,
+}
+
+fn request_changes(previous: &Ready, next: &Ready, id: &str) -> RequestChanges {
+    RequestChanges {
+        version: previous.config.version != next.config.version,
+        visitor: previous.config.visitor != next.config.visitor,
+        flags: previous.config.flags != next.config.flags,
+        client_context: previous.config.client_extra != next.config.client_extra,
+        player: previous.config.player != next.config.player,
+        signature_timestamp: previous.decoder.signature_timestamp
+            != next.decoder.signature_timestamp,
+        effective_request: body(&previous.config, id, previous.decoder.signature_timestamp)
+            != body(&next.config, id, next.decoder.signature_timestamp),
+    }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RefreshDiagnostic<'a> {
+    resolve_id: u64,
+    id: Option<&'a str>,
+    at_ms: f64,
+    code: PostCode,
+    changes: Option<RequestChanges>,
+    reused_cached: Option<bool>,
+    client_version: Option<&'a str>,
+    signature_timestamp: Option<u32>,
+}
+
+fn refresh_diagnostic(
+    id: &str,
+    code: PostCode,
+    compared: Option<(&Ready, &Ready)>,
+    reused_cached: Option<bool>,
+) {
+    if diagnostic_enabled() {
+        eprintln!(
+            "[native-player-refresh] {}",
+            serde_json::to_string(&RefreshDiagnostic {
+                resolve_id: RESOLVE_TRACE.try_with(|id| *id).unwrap_or(0),
+                id: valid_id(id).then_some(id),
+                at_ms: trace_time(),
+                code,
+                changes: compared.map(|(previous, next)| request_changes(previous, next, id)),
+                reused_cached,
+                client_version: compared.and_then(|(_, next)| public_version(&next.config)),
+                signature_timestamp: compared.map(|(_, next)| next.decoder.signature_timestamp),
+            })
+            .unwrap_or_default()
+        );
+    }
+}
+
 fn fail(code: &str) -> Error {
     Error::Failed(format!("NATIVE_EMBEDDED_{code}"))
 }
@@ -521,7 +810,12 @@ async fn invalidate_decoder(url: &reqwest::Url, used: &Arc<PreparedDecoder>) {
 
 struct Preparation {
     decoder: Arc<PreparedDecoder>,
-    response: Option<Result<Value, Error>>,
+    response: Option<Preview>,
+}
+
+struct Preview {
+    response: Result<Value, Error>,
+    trace: Option<PostTrace>,
 }
 
 // A speculative request may start the server's readiness clock while the AST
@@ -582,7 +876,15 @@ where
     R: Future<Output = Result<Value, Error>>,
 {
     if let Some(gate) = gate {
-        gate.await.map_err(|_| fail("ADMISSION"))?;
+        // A public metadata POST may overlap watch discovery. Its Result (even
+        // an error) stays quarantined until admission; rejecting/dropping the
+        // gate cancels a pending request. No CDN or refresh runs in this helper.
+        // A rejected watch can therefore cost up to one already-sent POST.
+        let (_, response) =
+            tokio::try_join!(async { gate.await.map_err(|_| fail("ADMISSION")) }, async {
+                Ok::<_, Error>(request.await)
+            },)?;
+        return response;
     }
     request.await
 }
@@ -665,14 +967,33 @@ async fn prepare_request(
         let hint = id.and_then(|_| timestamp_hint(&source));
         let analyze_started = Instant::now();
         let decoder = if let (Some(id), Some(hint)) = (id, hint) {
+            let trace = post_trace(PostOrigin::Preview);
             let (decoder, speculative) = analyze_preview(
                 youtube_decoder::prepare(source.clone()),
-                admitted_request(admission, player_response(http, PLAYER, config, id, hint)),
+                admitted_request(
+                    admission,
+                    player_response_traced(http, PLAYER, config, id, hint, trace),
+                ),
                 hint,
             )
             .await?;
             preview = speculative.is_some();
-            response = speculative;
+            post_diagnostic(
+                trace,
+                id,
+                config,
+                hint,
+                if preview {
+                    PostPhase::PreviewKept
+                } else {
+                    PostPhase::PreviewDiscarded
+                },
+                Some(decoder.signature_timestamp),
+                None,
+                None,
+                None,
+            );
+            response = speculative.map(|response| Preview { response, trace });
             decoder
         } else {
             youtube_decoder::prepare(source.clone())
@@ -742,6 +1063,7 @@ where
     }
     // Every variable request header (version/visitor) is also in this body.
     // A changed player URL alone cannot justify repeating an identical POST.
+    refresh_diagnostic(id, PostCode::Ok, Some((previous, &next)), Some(newer.is_some()));
     if body(&previous.config, id, previous.decoder.signature_timestamp)
         == body(&next.config, id, next.decoder.signature_timestamp)
     {
@@ -789,7 +1111,11 @@ where
     if TRACE_FIXTURES.load(Ordering::Relaxed) {
         eprintln!("embedded-refresh id={id} phase=sabr-only");
     }
-    let Some(next) = refresh_ready(cache, id, &first, fetch).await? else {
+    let refreshed = refresh_ready(cache, id, &first, fetch).await;
+    if let Err(error) = &refreshed {
+        refresh_diagnostic(id, post_code(Some(error)), None, None);
+    }
+    let Some(next) = refreshed? else {
         #[cfg(test)]
         if TRACE_FIXTURES.load(Ordering::Relaxed) {
             eprintln!("embedded-refresh id={id} phase=unchanged-request");
@@ -807,6 +1133,7 @@ where
     result
 }
 
+#[cfg(test)]
 async fn player_response(
     http: &reqwest::Client,
     endpoint: &str,
@@ -814,67 +1141,118 @@ async fn player_response(
     id: &str,
     sts: u32,
 ) -> Result<Value, Error> {
+    player_response_traced(
+        http,
+        endpoint,
+        config,
+        id,
+        sts,
+        post_trace(PostOrigin::Direct),
+    )
+    .await
+}
+
+async fn player_response_traced(
+    http: &reqwest::Client,
+    endpoint: &str,
+    config: &Config,
+    id: &str,
+    sts: u32,
+    trace: Option<PostTrace>,
+) -> Result<Value, Error> {
     let started = Instant::now();
-    let response = http
-        .post(endpoint)
-        .header("Content-Type", "application/json")
-        .header("User-Agent", UA)
-        .header("Origin", "https://www.youtube.com")
-        .header("X-Youtube-Client-Name", "56")
-        .header("X-Youtube-Client-Version", &config.version)
-        .header("X-Goog-Visitor-Id", &config.visitor)
-        .body(body(config, id, sts).to_string())
-        .send()
-        .await
-        .map_err(|_| fail("TRANSPORT"))?;
-    match response.status().as_u16() {
-        400 => return Err(fail("PLAYER_HTTP_400")),
-        401 => return Err(fail("PLAYER_HTTP_401")),
-        403 => return Err(fail("PLAYER_HTTP_403")),
-        _ => {}
-    }
-    let value: Value =
-        serde_json::from_str(&text_response(response).await?).map_err(|_| fail("PLAYER_JSON"))?;
-    stage_timing(id, "player-response", started);
-    #[cfg(test)]
-    save_private_fixture(
-        Some(id),
-        "player-response.json.local",
-        value.to_string().as_bytes(),
+    post_diagnostic(
+        trace,
+        id,
+        config,
+        sts,
+        PostPhase::Started,
+        None,
+        None,
+        None,
+        None,
     );
-    if value
-        .pointer("/playabilityStatus/status")
-        .and_then(Value::as_str)
-        != Some("OK")
-        || value
-            .pointer("/videoDetails/videoId")
+    let mut http_status = None;
+    let mut summary = None;
+    let result = async {
+        let response = http
+            .post(endpoint)
+            .header("Content-Type", "application/json")
+            .header("User-Agent", UA)
+            .header("Origin", "https://www.youtube.com")
+            .header("X-Youtube-Client-Name", "56")
+            .header("X-Youtube-Client-Version", &config.version)
+            .header("X-Goog-Visitor-Id", &config.visitor)
+            .body(body(config, id, sts).to_string())
+            .send()
+            .await
+            .map_err(|_| fail("TRANSPORT"))?;
+        http_status = Some(response.status().as_u16());
+        match response.status().as_u16() {
+            400 => return Err(fail("PLAYER_HTTP_400")),
+            401 => return Err(fail("PLAYER_HTTP_401")),
+            403 => return Err(fail("PLAYER_HTTP_403")),
+            _ => {}
+        }
+        let value: Value = serde_json::from_str(&text_response(response).await?)
+            .map_err(|_| fail("PLAYER_JSON"))?;
+        if trace.is_some() {
+            summary = Some(player_summary(&value, id));
+        }
+        stage_timing(id, "player-response", started);
+        #[cfg(test)]
+        save_private_fixture(
+            Some(id),
+            "player-response.json.local",
+            value.to_string().as_bytes(),
+        );
+        if value
+            .pointer("/playabilityStatus/status")
             .and_then(Value::as_str)
-            != Some(id)
-        || !value
-            .pointer("/streamingData/adaptiveFormats")
-            .is_some_and(Value::is_array)
-    {
-        return Err(fail("PLAYER_IDENTITY_OR_STATUS"));
+            != Some("OK")
+            || value
+                .pointer("/videoDetails/videoId")
+                .and_then(Value::as_str)
+                != Some(id)
+            || !value
+                .pointer("/streamingData/adaptiveFormats")
+                .is_some_and(Value::is_array)
+        {
+            return Err(fail("PLAYER_IDENTITY_OR_STATUS"));
+        }
+        let candidates = audio_candidates(
+            value["streamingData"]["adaptiveFormats"]
+                .as_array()
+                .unwrap(),
+        );
+        if !candidates.is_empty()
+            && candidates.iter().all(|format| {
+                ["url", "signatureCipher"]
+                    .iter()
+                    .all(|key| format.get(*key).is_none_or(Value::is_null))
+            })
+            && value
+                .pointer("/streamingData/serverAbrStreamingUrl")
+                .and_then(Value::as_str)
+                .is_some_and(direct_audio_url)
+        {
+            return Err(fail("SABR_ONLY"));
+        }
+        Ok(value)
     }
-    let candidates = audio_candidates(
-        value["streamingData"]["adaptiveFormats"]
-            .as_array()
-            .unwrap(),
+    .await;
+    post_diagnostic(
+        trace,
+        id,
+        config,
+        sts,
+        PostPhase::Finished,
+        None,
+        http_status,
+        Some(post_code(result.as_ref().err())),
+        summary,
     );
-    if !candidates.is_empty()
-        && candidates.iter().all(|format| {
-            ["url", "signatureCipher"]
-                .iter()
-                .all(|key| format.get(*key).is_none_or(Value::is_null))
-        })
-        && value
-            .pointer("/streamingData/serverAbrStreamingUrl")
-            .and_then(Value::as_str)
-            .is_some_and(direct_audio_url)
-    {
-        return Err(fail("SABR_ONLY"));
-    }
-    Ok(value)
+    result
 }
 
 struct Cipher {
@@ -1171,6 +1549,14 @@ fn audio_candidates(formats: &[Value]) -> Vec<Value> {
 
 /// Only reached after the direct fast clients failed. The caller supplies the total deadline.
 pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
+    if !diagnostic_enabled() {
+        return resolve_inner(video_id).await;
+    }
+    let trace = NEXT_RESOLVE_TRACE.fetch_add(1, Ordering::Relaxed);
+    RESOLVE_TRACE.scope(trace, resolve_inner(video_id)).await
+}
+
+async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
     if !valid_id(video_id) {
         return Err(fail("ID"));
     }
@@ -1189,8 +1575,9 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
             let result = watch_player(&watch, video_id).map(|_| ());
             stage_timing(video_id, "watch-identity", started);
             result?;
-            // Only local public-source analysis may overlap this check. A
-            // speculative player POST remains gated by the explicit MFK proof.
+            // Public metadata and local analysis may overlap this check, but
+            // neither its response nor an error can leave quarantine without
+            // this proof and the analyzer's independent timestamp match.
             let _ = admit.send(());
             Ok::<_, Error>(())
         },
@@ -1245,14 +1632,38 @@ async fn resolve_config(
     config: &Config,
     video_id: &str,
     decoder: Arc<PreparedDecoder>,
-    response: Option<Result<Value, Error>>,
+    response: Option<Preview>,
 ) -> Result<Direct, Error> {
-    let mut response = match response {
-        Some(response) => response?,
+    let Preview { response, trace } = match response {
+        Some(response) => response,
         None => {
-            player_response(http, PLAYER, config, video_id, decoder.signature_timestamp).await?
+            let trace = post_trace(PostOrigin::Direct);
+            Preview {
+                trace,
+                response: player_response_traced(
+                    http,
+                    PLAYER,
+                    config,
+                    video_id,
+                    decoder.signature_timestamp,
+                    trace,
+                )
+                .await,
+            }
         }
     };
+    post_diagnostic(
+        trace,
+        video_id,
+        config,
+        decoder.signature_timestamp,
+        PostPhase::Consumed,
+        Some(decoder.signature_timestamp),
+        None,
+        Some(post_code(response.as_ref().err())),
+        None,
+    );
+    let mut response = response?;
     #[cfg(test)]
     {
         save_private_fixture(
@@ -1493,6 +1904,142 @@ mod tests {
         json!({"signatureCipher":wrapped.query().unwrap()})
     }
 
+    #[test]
+    fn player_diagnostic_counts_use_original_candidates_and_never_serialize_remote_fields() {
+        let mut value = watch_value();
+        let direct = AUDIO.replace("&n=input_n", "");
+        let audio = |extra: Value| {
+            let mut format =
+                json!({"itag":251,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000});
+            format
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            format
+        };
+        let signed = cipher_value(&format!("{direct}&n=PRIVATE_N"));
+        value["streamingData"] = json!({
+            "adaptiveFormats":[
+                audio(json!({"url":direct})),
+                audio(json!({"url":format!("{direct}&n=PRIVATE_N")})),
+                audio(signed),
+                audio(json!({})),
+                audio(json!({"url":"https://private.invalid/PRIVATE_URL"})),
+                audio(json!({"audioTrack":{"displayName":"Dubbed","audioIsDefault":true},"url":AUDIO})),
+                {"mimeType":"video/mp4","url":"PRIVATE_VIDEO"}
+            ],
+            "serverAbrStreamingUrl":"https://r1.googlevideo.com/videoplayback?private=PRIVATE_SABR"
+        });
+        // Tagged track metadata makes unproven variants ineligible, just as selection does.
+        assert_eq!(player_summary(&value, ID).eligible, 0);
+        value["streamingData"]["adaptiveFormats"]
+            .as_array_mut()
+            .unwrap()
+            .remove(5);
+        let summary = player_summary(&value, ID);
+        assert_eq!((summary.audio, summary.eligible), (5, 5));
+        assert_eq!(
+            (
+                summary.urls,
+                summary.ciphers,
+                summary.missing,
+                summary.invalid
+            ),
+            (3, 1, 1, 2)
+        );
+        assert_eq!(
+            (
+                summary.requires_signature,
+                summary.requires_n,
+                summary.direct_without_transform
+            ),
+            (1, 2, 1)
+        );
+        assert!(summary.identity_matches && summary.status_ok && summary.sabr_present);
+        let serialized = serde_json::to_string(&summary).unwrap();
+        assert!(
+            !serialized.contains("PRIVATE")
+                && !serialized.contains("http")
+                && !serialized.contains("googlevideo")
+        );
+        value["videoDetails"]["videoId"] = json!("OTHER_PRIVATE_ID");
+        value["playabilityStatus"]["status"] = json!("REMOTE_STATUS_PRIVATE");
+        let summary = player_summary(&value, ID);
+        assert!(!summary.identity_matches && !summary.status_ok);
+        assert!(!serde_json::to_string(&summary).unwrap().contains("PRIVATE"));
+    }
+
+    #[test]
+    fn diagnostic_request_changes_report_booleans_without_values() {
+        let first = ready(Arc::new(cfg()), 20700);
+        let mut changed = (*first.config).clone();
+        changed.player = player_url("/s/player/12345678/player_es6.vflset/en_US/base.js").unwrap();
+        let next = ready(Arc::new(changed.clone()), 20700);
+        let diff = request_changes(&first, &next, ID);
+        assert!(diff.player && !diff.effective_request);
+        changed.visitor = "PRIVATE_VISITOR".into();
+        changed.flags = "PRIVATE_FLAGS".into();
+        changed
+            .client_extra
+            .insert("rolloutToken".into(), json!("PRIVATE_ROLLOUT"));
+        let next = ready(Arc::new(changed), 20701);
+        let diff = request_changes(&first, &next, ID);
+        assert!(
+            diff.visitor
+                && diff.flags
+                && diff.client_context
+                && diff.signature_timestamp
+                && diff.effective_request
+        );
+        let json = serde_json::to_value(diff).unwrap();
+        assert!(json.as_object().unwrap().values().all(Value::is_boolean));
+        assert!(!json.to_string().contains("PRIVATE"));
+    }
+
+    #[test]
+    fn diagnostic_dto_uses_closed_codes_and_preserves_preview_correlation() {
+        assert_eq!(post_code(Some(&fail("SABR_ONLY"))), PostCode::SabrOnly);
+        assert_eq!(post_code(Some(&fail("PLAYER_HTTP_403"))), PostCode::Http403);
+        assert_eq!(
+            post_code(Some(&fail("REMOTE https://private.invalid/?token=PRIVATE"))),
+            PostCode::Other
+        );
+        let trace = PostTrace {
+            resolve_id: 7,
+            request_id: 11,
+            origin: PostOrigin::Preview,
+        };
+        let mut config = cfg();
+        config.version = "https://private.invalid/PRIVATE".into();
+        for phase in [
+            PostPhase::Started,
+            PostPhase::Finished,
+            PostPhase::PreviewKept,
+            PostPhase::Consumed,
+        ] {
+            let dto = PostDiagnostic {
+                trace,
+                id: None,
+                phase,
+                at_ms: 1.0,
+                client_version: public_version(&config),
+                signature_timestamp: 20700,
+                verified_timestamp: Some(20700),
+                http_status: Some(200),
+                code: Some(PostCode::SabrOnly),
+                summary: None,
+            };
+            let value = serde_json::to_value(dto).unwrap();
+            assert_eq!(value["resolveId"], 7);
+            assert_eq!(value["requestId"], 11);
+            assert_eq!(value["origin"], "preview");
+            assert_eq!(value["code"], "sabr-only");
+            assert!(value["clientVersion"].is_null());
+            assert!(!value.to_string().contains("PRIVATE"));
+        }
+        assert!(public_version(&cfg()).is_some());
+    }
+
     #[tokio::test]
     async fn compressed_public_text_is_bounded_after_decompression() {
         for (compressed, expected) in [
@@ -1546,33 +2093,248 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn player_request_requires_admission_and_never_runs_after_rejection() {
-        let calls = AtomicU64::new(0);
+    async fn metadata_post_runs_early_but_cannot_leave_quarantine_before_watch() {
+        let mut value = watch_value();
+        value["streamingData"] = json!({"adaptiveFormats":[]});
+        let (url, server) = local(response(200, "", value.to_string().as_bytes()));
+        let http = local_http();
+        let config = cfg();
         let (admit, admission) = tokio::sync::oneshot::channel();
+        let (received, response_received) = tokio::sync::oneshot::channel();
         let waiting = admitted_request(Some(admission), async {
-            calls.fetch_add(1, Ordering::Relaxed);
-            Ok(json!({"admitted":true}))
+            let result = player_response(&http, &url, &config, ID, 20746).await;
+            received.send(()).unwrap();
+            result
         });
         tokio::pin!(waiting);
+        tokio::time::timeout(Duration::from_secs(1), async {
+            tokio::select! {
+                result = &mut waiting => panic!("response escaped before watch: {}", result.is_ok()),
+                received = response_received => received.unwrap(),
+            }
+        }).await.unwrap();
         assert!(
             tokio::time::timeout(Duration::from_millis(10), &mut waiting)
                 .await
                 .is_err()
         );
-        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        let request = server.join().unwrap();
+        assert!(request.starts_with("POST "));
+        let posted: Value =
+            serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(posted["videoId"], ID);
+        eligible(&value, ID).unwrap();
         admit.send(()).unwrap();
-        assert_eq!(waiting.await.unwrap(), json!({"admitted":true}));
-        let (reject, admission) = tokio::sync::oneshot::channel();
-        drop(reject);
-        assert!(
-            admitted_request(Some(admission), async {
-                calls.fetch_add(1, Ordering::Relaxed);
-                Ok(json!({"unreachable":true}))
-            })
-            .await
-            .is_err()
+        assert_eq!(waiting.await.unwrap(), value);
+    }
+
+    #[tokio::test]
+    async fn watch_rejection_discards_early_success_and_sabr_without_retry_or_consumption() {
+        for response in [
+            Ok(json!({"url":"must-not-be-consumed"})),
+            Err(fail("SABR_ONLY")),
+        ] {
+            let calls = AtomicU64::new(0);
+            let consumed = AtomicU64::new(0);
+            let (reject, admission) = tokio::sync::oneshot::channel();
+            let waiting = async {
+                let response = admitted_request(Some(admission), async {
+                    calls.fetch_add(1, Ordering::Relaxed);
+                    response
+                })
+                .await?;
+                // Models the only route to selection/CDN/refresh after admission.
+                consumed.fetch_add(1, Ordering::Relaxed);
+                Ok::<_, Error>(response)
+            };
+            tokio::pin!(waiting);
+            assert!(
+                tokio::time::timeout(Duration::from_millis(10), &mut waiting)
+                    .await
+                    .is_err()
+            );
+            assert_eq!(calls.load(Ordering::Relaxed), 1);
+            assert_eq!(consumed.load(Ordering::Relaxed), 0);
+            drop(reject);
+            assert!(
+                matches!(waiting.await, Err(Error::Failed(code)) if code=="NATIVE_EMBEDDED_ADMISSION")
+            );
+            assert_eq!(calls.load(Ordering::Relaxed), 1);
+            assert_eq!(consumed.load(Ordering::Relaxed), 0);
+        }
+        // Cache-hit/no-preview callers keep the existing ungated behavior.
+        assert_eq!(
+            admitted_request(None, async { Ok(json!({"unchanged":true})) })
+                .await
+                .unwrap(),
+            json!({"unchanged":true})
         );
-        assert_eq!(calls.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn rejecting_admission_cancels_a_pending_post_body() {
+        struct Dropped(Arc<std::sync::atomic::AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Relaxed);
+            }
+        }
+        let dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (reject, admission) = tokio::sync::oneshot::channel();
+        let (started, request_started) = tokio::sync::oneshot::channel();
+        let waiting = admitted_request(Some(admission), async {
+            let _drop = Dropped(dropped.clone());
+            started.send(()).unwrap();
+            std::future::pending::<Result<Value, Error>>().await
+        });
+        tokio::pin!(waiting);
+        tokio::select! {
+            _ = &mut waiting => panic!("pending body unexpectedly returned"),
+            started = request_started => started.unwrap(),
+        }
+        drop(reject);
+        let result = tokio::time::timeout(Duration::from_secs(1), waiting)
+            .await
+            .unwrap();
+        assert!(matches!(result, Err(Error::Failed(code)) if code=="NATIVE_EMBEDDED_ADMISSION"));
+        assert!(dropped.load(Ordering::Relaxed));
+    }
+
+    #[tokio::test]
+    async fn rejected_watch_and_outer_cancellation_drop_pending_metadata_and_analysis() {
+        struct Dropped(Arc<std::sync::atomic::AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Relaxed);
+            }
+        }
+        let mut rejected = Vec::new();
+        let mut not_kids = watch_value();
+        *not_kids.pointer_mut(NOTICE_PATH).unwrap() = json!("another notice");
+        rejected.push(not_kids);
+        for (path, value) in [
+            ("/videoDetails/videoId", json!("jNY_wLukVW0")),
+            ("/playabilityStatus/status", json!("UNPLAYABLE")),
+            ("/playabilityStatus/playableInEmbed", json!(false)),
+        ] {
+            let mut watch = watch_value();
+            *watch.pointer_mut(path).unwrap() = value;
+            rejected.push(watch);
+        }
+        for watch in rejected {
+            let request_dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let analysis_dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+            let (admit, admission) = tokio::sync::oneshot::channel();
+            let (request_started, request_started_rx) = tokio::sync::oneshot::channel();
+            let (analysis_started, analysis_started_rx) = tokio::sync::oneshot::channel();
+            let pipeline = async {
+                let (_, preview) = tokio::try_join!(
+                    async {
+                        request_started_rx.await.unwrap();
+                        analysis_started_rx.await.unwrap();
+                        eligible(&watch, ID)?;
+                        let _ = admit.send(());
+                        Ok::<_, Error>(())
+                    },
+                    analyze_preview(
+                        async {
+                            let _drop = Dropped(analysis_dropped.clone());
+                            analysis_started.send(()).unwrap();
+                            std::future::pending::<Result<PreparedDecoder, String>>().await
+                        },
+                        admitted_request(Some(admission), async {
+                            let _drop = Dropped(request_dropped.clone());
+                            request_started.send(()).unwrap();
+                            std::future::pending::<Result<Value, Error>>().await
+                        }),
+                        20746,
+                    )
+                )?;
+                Ok::<_, Error>(preview)
+            };
+            assert!(tokio::time::timeout(Duration::from_secs(1), pipeline)
+                .await
+                .unwrap()
+                .is_err());
+            assert!(request_dropped.load(Ordering::Relaxed));
+            assert!(analysis_dropped.load(Ordering::Relaxed));
+        }
+        let request_dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let analysis_dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (_admit, admission) = tokio::sync::oneshot::channel();
+        let pipeline = analyze_preview(
+            async {
+                let _drop = Dropped(analysis_dropped.clone());
+                std::future::pending::<Result<PreparedDecoder, String>>().await
+            },
+            admitted_request(Some(admission), async {
+                let _drop = Dropped(request_dropped.clone());
+                std::future::pending::<Result<Value, Error>>().await
+            }),
+            20746,
+        );
+        assert!(tokio::time::timeout(Duration::from_millis(10), pipeline)
+            .await
+            .is_err());
+        assert!(request_dropped.load(Ordering::Relaxed));
+        assert!(analysis_dropped.load(Ordering::Relaxed));
+    }
+
+    #[tokio::test]
+    async fn preview_requires_both_watch_and_verified_timestamp_in_either_completion_order() {
+        for analysis_first in [false, true] {
+            for sts in [20746, 20747] {
+                let (admit, admission) = tokio::sync::oneshot::channel();
+                let (analyzed, analysis) = tokio::sync::oneshot::channel();
+                let calls = AtomicU64::new(0);
+                let waiting = analyze_preview(
+                    async {
+                        analysis.await.unwrap();
+                        Ok(PreparedDecoder {
+                            script: "verified".into(),
+                            signature_timestamp: sts,
+                        })
+                    },
+                    admitted_request(Some(admission), async {
+                        calls.fetch_add(1, Ordering::Relaxed);
+                        Err(fail("SABR_ONLY"))
+                    }),
+                    20746,
+                );
+                tokio::pin!(waiting);
+                assert!(
+                    tokio::time::timeout(Duration::from_millis(10), &mut waiting)
+                        .await
+                        .is_err()
+                );
+                let last = if analysis_first {
+                    analyzed.send(()).unwrap();
+                    admit
+                } else {
+                    admit.send(()).unwrap();
+                    analyzed
+                };
+                assert!(
+                    tokio::time::timeout(Duration::from_millis(10), &mut waiting)
+                        .await
+                        .is_err()
+                );
+                assert_eq!(calls.load(Ordering::Relaxed), 1);
+                last.send(()).unwrap();
+                let (_, preview) = waiting.await.unwrap();
+                if sts == 20746 {
+                    assert!(
+                        matches!(preview, Some(Err(Error::Failed(code))) if code=="NATIVE_EMBEDDED_SABR_ONLY")
+                    );
+                } else {
+                    assert!(
+                        preview.is_none(),
+                        "unverified SABR cannot trigger a refresh"
+                    );
+                }
+                assert_eq!(calls.load(Ordering::Relaxed), 1);
+            }
+        }
     }
 
     #[tokio::test]
