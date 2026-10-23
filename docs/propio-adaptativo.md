@@ -31,6 +31,13 @@ datos de configuración, conservando la rapidez y las comprobaciones del audio.
   sólo se ejecutan las funciones y dependencias extraídas. La configuración y
   las funciones preparadas tienen caché acotada en memoria: hasta cuatro scripts
   preparados, como máximo 8 MiB, sin conservar sus runtimes temporales.
+  Desde `8983e26`, una caché separada en datos locales de la app permite
+  reutilizarlas tras reiniciar: cuatro entradas, 8 MiB y seis horas. Exige
+  descargar de nuevo la fuente y comprobar URL, SHA y versión del analizador;
+  un fallo vuelve al análisis. No conserva URLs de audio ni cookies, y sus
+  checksums detectan corrupción, no modificaciones maliciosas de un usuario local.
+  El POST puede adelantarse con un ST provisional, pero sólo se reutiliza
+  si el análisis completo confirma ese ST y se cumplen las guardas habituales.
   Si cualquier formato de audio aporta metadatos de pista, idioma o `xtags`,
   todos los candidatos deben identificar expresamente audio original. Una
   respuesta enteramente sin esas etiquetas conserva la compatibilidad de sus
@@ -169,3 +176,16 @@ instalar el motor, éste descubre el reproductor publicado y sus funciones sin
 una receta nueva mientras el analizador comprenda su estructura. La renovación
 retiene el mutex global de configuración durante la preparación; queda pendiente
 medir y mejorar ese coste cuando hay resoluciones concurrentes.
+
+## Continuación: arranque frío
+
+El [informe del 23 de octubre](informe-arranque-frio-2026-10-23.md) recoge
+`8983e26`, la comparación consecutiva con el binario anterior y los hashes.
+QuickJS C O2 reduce la mediana offline de preparación de 7804 a 6604 ms;
+el bundle, los límites y el aislamiento no cambian. Debug ya usaba O2.
+En la app, el decoder persistente cargó en 115–141 ms tras reiniciar, incluida
+descarga de la fuente, pero el arranque total siguió condicionado por CDN.
+Las seis búsquedas infantiles usaron Native sin Legacy y todas superaron
+300 ms. La regresión de 30 conservó Native sin respaldo, con mediana 587,55 ms.
+Los tres archivos completos siguen coincidiendo con las referencias; no se
+acreditan escucha completa en la app, publicidad vista/saltada ni rendimiento Android nuevo.

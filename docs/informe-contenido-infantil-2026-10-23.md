@@ -206,3 +206,8 @@ acreditan anuncios vistos/saltados: sólo archivos originales coincidentes en
 estos tres casos. La progresiva Oficial conserva sus criterios pendientes.
 Las comprobaciones positivas no autorizan declarar compatibilidad total ni
 ausencia universal de anuncios; se conserva el historial de intentos fallidos.
+
+Continuación: el [informe de arranque frío](informe-arranque-frio-2026-10-23.md)
+documenta `8983e26`, la preparación optimizada y la caché persistente, con un
+control consecutivo del binario anterior. Conserva separados el primer análisis,
+el reinicio y la espera CDN; no reemplaza los resultados e intentos de este informe.

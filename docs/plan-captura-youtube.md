@@ -44,6 +44,14 @@ canciones de regresión conservaron audio Native sin respaldo (mediana 592 ms).
 Esta mejora requiere actualizar la app: no modifica la receta, `youtubei.ts`,
 `capture.js` ni su protocolo, y no promueve la captura progresiva.
 
+La continuación `8983e26` reduce el coste de preparación en frío y conserva
+decoders verificados entre reinicios, sin alterar los límites de QuickJS.
+El [informe de arranque frío](informe-arranque-frio-2026-10-23.md) compara el
+binario anterior, FreshDecoder y el reinicio: las seis búsquedas infantiles
+usan Native sin Legacy, pero siguen fuera de 300 ms. La regresión de 30 conserva
+Native sin respaldo y mediana 587,55 ms. La caché no elimina la espera CDN ni
+acredita anuncios, escucha continua o una nueva aprobación de captura.
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
