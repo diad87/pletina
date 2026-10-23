@@ -4,6 +4,7 @@ import { resolvePodcastTrack } from './podcast-audio'
 import { readDownloadedPlayable, removeDownloadedTrack } from './download-store'
 import { resolveCatalogSource } from './catalog-sources'
 import { disposeVerifiedAudio, resolveVerifiedAudio } from './verified-audio'
+import { disposeFunkwhaleAudio, resolveFunkwhaleAudio } from './funkwhale-audio'
 import { abortReason, checkAbort, parseVideoId, searchMusic, searchVideos, stream, validVideoId, YouTubeError, type Candidate, type StreamInfo } from './youtube'
 
 // Mismos umbrales y comparación que src-tauri/src/youtube.rs y player.rs.
@@ -194,6 +195,13 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         throw error
       }
     }
+    const recoverFunkwhale = async (): Promise<Playable | null> => {
+      try {
+        const source = await resolveFunkwhaleAudio(track, signal)
+        checkAbort(signal)
+        return source
+      } catch { checkAbort(signal); return null }
+    }
     const saved = await readSourceChoice(track.id)
     checkAbort(signal)
     let missing: string | null = null
@@ -212,7 +220,13 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
           }
           if (source) rejected.push({ source, error, manual: saved.verified })
         }
-        else throw error
+        else {
+          if (!saved.verified) {
+            const recovered = await recoverFunkwhale()
+            if (recovered) return recovered
+          }
+          throw error
+        }
       }
     }
     // Una asociación revisada no busca por texto: comprueba identidad y los bytes
@@ -222,7 +236,17 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       checkAbort(signal)
       if (verified) return verified
     } catch { checkAbort(signal) }
-    const result = await search(track, false, signal)
+    // Un fallo temporal de YouTube tampoco impide probar bytes de otra fuente
+    // ya identificada. No se guarda ese fallo como ausencia ni se cambia la
+    // elección explícita del usuario.
+    let result: Awaited<ReturnType<typeof search>>
+    try { result = await search(track, false, signal) }
+    catch (error) {
+      checkAbort(signal)
+      const recovered = await recoverFunkwhale()
+      if (recovered) return recovered
+      throw error
+    }
     const attempted = new Set<string>(missing ? [missing] : [])
     let sourceRejected = missing !== null
     let transientFailure = false
@@ -262,11 +286,19 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
     // Una buena coincidencia de Music puede estar retirada o no ofrecer MP4.
     // Ampliar una sola vez, sin repetir vídeos ni sustituir por fallos de red.
     if (!result.webSearched && sourceRejected && !transientFailure) {
-      const fallback = await searchWeb(track, signal)
-      fallback.sort((a, b) => b.score - a.score)
-      const recovered = await attempt(fallback)
-      if (recovered) return recovered
+      try {
+        const fallback = await searchWeb(track, signal)
+        fallback.sort((a, b) => b.score - a.score)
+        const recovered = await attempt(fallback)
+        if (recovered) return recovered
+      } catch (error) {
+        checkAbort(signal)
+        transientFailure = true
+        lastError = error instanceof Error ? error : lastError
+      }
     }
+    const funkwhale = await recoverFunkwhale()
+    if (funkwhale) return funkwhale
     // Un catálogo alternativo sólo puede rescatar una identidad verificada. No cambia
     // la fuente escogida explícitamente por el usuario ni interpreta mala red como ausencia.
     if (!transientFailure && !rejected.some((entry) => entry.manual)) {
@@ -328,9 +360,20 @@ export async function previewYouTube(url: string): Promise<YouTubeTrackPreview> 
     cover: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }
 }
 
+/** Keep only the current/next resolutions when the user changes the queue. */
+export function retainAudioRequests(trackIds: readonly number[]): void {
+  const retained = new Set(trackIds)
+  for (const [id, value] of operations) {
+    if (retained.has(id)) continue
+    value.controller.abort(new DOMException('La canción ha cambiado.', 'AbortError'))
+    operations.delete(id)
+  }
+}
+
 /** Para el desmontaje del port: la navegación entre pantallas no lo llama. */
 export function cancelAudioRequests(): void {
   for (const value of operations.values()) value.controller.abort(abortReason())
   operations.clear()
   disposeVerifiedAudio()
+  disposeFunkwhaleAudio()
 }

@@ -1,6 +1,7 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { webInvoke } from '../../web-port/invoke'
-import { getOfficialFallback } from '../../web-port/audio'
+import { getOfficialFallback, retainAudioRequests } from '../../web-port/audio'
+import { retainFunkwhaleAudio } from '../../web-port/funkwhale-audio'
 import { openAutomaticOfficialYouTube } from '../../web-port/official-youtube.svelte'
 import type {
   AlbumDetail,
@@ -32,6 +33,14 @@ import type {
 /** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
 export const inPwa = import.meta.env.MODE === 'pwa'
 export const inTauri = !inPwa && '__TAURI_INTERNALS__' in window
+
+/** Conserva sólo las reservas de audio web activas al limitar la caché en RAM. */
+export function retainWebAudioSources(urls: string[]): void {
+  if (inPwa) retainFunkwhaleAudio(urls)
+}
+export function retainWebAudioRequests(ids: number[]): void {
+  if (inPwa) retainAudioRequests(ids)
+}
 
 /**
  * La comunicación con Rust, lista. En Android, lo que se pide en los primeros instantes de arrancar

@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-23T06:51:40.397Z",
+  "generator": {
+    "script": "scripts/build-funkwhale-identity-index.mjs",
+    "sha256": "3b51f9f99fd1e18f474a99ab8f1d3aaff058926cbfc4204f2ff39d95006e3a68",
+    "helperSha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+  },
+  "policy": {
+    "identityScope": "official-excerpt-only",
+    "fullMasterVerified": false,
+    "downloadAllowed": false,
+    "mediaPersisted": false
+  },
+  "limits": {
+    "candidateBytes": 33554432,
+    "totalAudioBytes": 67108864,
+    "previewBytes": 1048576,
+    "metadataBytes": 2097152,
+    "candidatesPerRecording": 4,
+    "requestMilliseconds": 22000,
+    "verificationMilliseconds": 60000,
+    "maximumDurationSeconds": 900
+  },
+  "inputs": [
+    {
+      "labels": {
+        "title": "Cylinder Six",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders",
+        "titleVersion": ""
+      },
+      "status": "indexed",
+      "candidates": 1,
+      "indexed": 1,
+      "rejected": []
+    },
+    {
+      "labels": {
+        "title": "Melted Wings",
+        "artist": "Kai Engel",
+        "album": "Written in Ink",
+        "titleVersion": ""
+      },
+      "status": "indexed",
+      "candidates": 1,
+      "indexed": 1,
+      "rejected": []
+    },
+    {
+      "labels": {
+        "title": "36 Ghosts IV",
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "titleVersion": ""
+      },
+      "status": "indexed",
+      "candidates": 1,
+      "indexed": 1,
+      "rejected": []
+    }
+  ],
+  "entries": [
+    {
+      "catalog": {
+        "id": 2934405891,
+        "isrc": "GBKPL1370800",
+        "title": "Cylinder Six",
+        "titleVersion": "",
+        "artist": "Chris Zabriskie",
+        "album": "Cylinders",
+        "duration": 105,
+        "artistId": 1449213,
+        "albumId": 625290251
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "https://open.audio",
+        "apiVersion": "v2",
+        "trackId": 432473,
+        "trackUuid": "1cee2898-d5f2-4ce8-9bf3-7f64c6587421",
+        "uploadUuid": "51b06556-531b-43a9-b714-ab399c986f69",
+        "contentLength": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "mime": "audio/mpeg",
+        "extension": "mp3",
+        "codec": "mp3",
+        "bitrate": 320000,
+        "lossless": false,
+        "duration": 105,
+        "isrc": null,
+        "recordingMbid": null,
+        "declaredLicense": "cc-by-4.0"
+      },
+      "file": {
+        "bytes": 4441693,
+        "sha256": "95d4d22ad284ffd07c3df0d80a92afb699da3d98d9c1202d4006ba50cff67e35",
+        "mime": "audio/mpeg",
+        "durationSeconds": 105.64
+      },
+      "proof": {
+        "generatedAt": "2026-10-23T06:51:44.081Z",
+        "identityScope": "official-excerpt-only",
+        "fullMasterVerified": false,
+        "physicalBackgroundVerified": false,
+        "candidateAudio": {
+          "duration": 105.64,
+          "sampleRate": 22050,
+          "channels": 2
+        },
+        "reference": {
+          "catalogId": 2934405891,
+          "isrc": "GBKPL1370800",
+          "bytes": 479827,
+          "sha256": "4de77e6bd9467bfc0c6de4780971e7354f08c0d6f3ef0535de4bd69a13c568d3",
+          "duration": 29.98857142857143
+        },
+        "negative": {
+          "catalogId": 2934405841,
+          "isrc": "GBKPL1370795",
+          "title": "Cylinder One",
+          "artist": "Chris Zabriskie",
+          "album": "Cylinders",
+          "bytes": 479827,
+          "sha256": "a8b081db30dd870339647c31e2e5e4ef86aa213970b307ddf1b034a6b85836c4",
+          "duration": 29.98857142857143
+        },
+        "comparison": {
+          "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+          "full": {
+            "correlation": 0.9978596993841152,
+            "offsetSeconds": 47.961678004535145,
+            "referenceSeconds": 29.988208616780046
+          },
+          "windows": [
+            {
+              "referenceStartSeconds": 0,
+              "correlation": 0.9968985855959145,
+              "offsetSeconds": 47.961678004535145,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            },
+            {
+              "referenceStartSeconds": 10,
+              "correlation": 0.9985931681472535,
+              "offsetSeconds": 57.961678004535145,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            },
+            {
+              "referenceStartSeconds": 20,
+              "correlation": 0.9980412997207672,
+              "offsetSeconds": 67.96167800453514,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            }
+          ],
+          "alignmentSpreadSeconds": 0,
+          "selfControl": {
+            "correlation": 0.9999999999972486,
+            "offsetSeconds": 39.99977324263038,
+            "referenceSeconds": 8
+          },
+          "negativeControl": {
+            "correlation": 0.08331202486716577,
+            "offsetSeconds": 37.768027210884355,
+            "referenceSeconds": 29.988208616780046
+          },
+          "matched": true,
+          "thresholds": {
+            "full": 0.8,
+            "eachWindow": 0.8,
+            "maximumAlignmentSpreadSeconds": 0.03,
+            "selfControl": 0.99,
+            "maximumNegativeControl": 0.4
+          },
+          "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+        }
+      },
+      "downloadAllowed": false
+    },
+    {
+      "catalog": {
+        "id": 2988892451,
+        "isrc": "GBSMU2086183",
+        "title": "Melted Wings",
+        "titleVersion": "",
+        "artist": "Kai Engel",
+        "album": "Written in Ink",
+        "duration": 133,
+        "artistId": 4703843,
+        "albumId": 641539631
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "https://open.audio",
+        "apiVersion": "v2",
+        "trackId": 38938,
+        "trackUuid": "b39e004f-0dc5-421f-95f0-3117bf05f42d",
+        "uploadUuid": "eac2bd93-8b7c-4d50-94bf-9e285cc5a19f",
+        "contentLength": 5527791,
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "mime": "audio/mpeg",
+        "extension": "mp3",
+        "codec": "mp3",
+        "bitrate": 320000,
+        "lossless": false,
+        "duration": 133,
+        "isrc": null,
+        "recordingMbid": null,
+        "declaredLicense": null
+      },
+      "file": {
+        "bytes": 5527791,
+        "sha256": "decbd6a2fd02f3d9bb48f35e02df8c0642155bf095fb1bda1b4159157ec7f802",
+        "mime": "audio/mpeg",
+        "durationSeconds": 133.33333333333334
+      },
+      "proof": {
+        "generatedAt": "2026-10-23T06:51:47.352Z",
+        "identityScope": "official-excerpt-only",
+        "fullMasterVerified": false,
+        "physicalBackgroundVerified": false,
+        "candidateAudio": {
+          "duration": 133.33333333333334,
+          "sampleRate": 22050,
+          "channels": 2
+        },
+        "reference": {
+          "catalogId": 2988892451,
+          "isrc": "GBSMU2086183",
+          "bytes": 479827,
+          "sha256": "98d918b143094463c531836bda1c3dfb58ba6f52291c18b2795823e4499930e8",
+          "duration": 29.98857142857143
+        },
+        "negative": {
+          "catalogId": 2988892401,
+          "isrc": "GBSMU2086178",
+          "title": "Written in Ink",
+          "artist": "Kai Engel",
+          "album": "Written in Ink",
+          "bytes": 479827,
+          "sha256": "befabdec42dbcff5b2767463e96ac33d257f8728c7dd25a866dd42e48c2c8668",
+          "duration": 29.98857142857143
+        },
+        "comparison": {
+          "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+          "full": {
+            "correlation": 0.9969852671922512,
+            "offsetSeconds": -0.02517006802721089,
+            "referenceSeconds": 29.988208616780046
+          },
+          "windows": [
+            {
+              "referenceStartSeconds": 0,
+              "correlation": 0.9961770515882092,
+              "offsetSeconds": -0.02517006802721089,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": -0.02517006802721089
+            },
+            {
+              "referenceStartSeconds": 10,
+              "correlation": 0.9742883891272641,
+              "offsetSeconds": 9.974829931972788,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": -0.025170068027211556
+            },
+            {
+              "referenceStartSeconds": 20,
+              "correlation": 0.9979203498063015,
+              "offsetSeconds": 19.97482993197279,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": -0.025170068027211556
+            }
+          ],
+          "alignmentSpreadSeconds": 6.661338147750939e-16,
+          "selfControl": {
+            "correlation": 1.0000000000052505,
+            "offsetSeconds": 39.99977324263038,
+            "referenceSeconds": 8
+          },
+          "negativeControl": {
+            "correlation": 0.021356930759548573,
+            "offsetSeconds": 38.266439909297056,
+            "referenceSeconds": 29.988208616780046
+          },
+          "matched": true,
+          "thresholds": {
+            "full": 0.8,
+            "eachWindow": 0.8,
+            "maximumAlignmentSpreadSeconds": 0.03,
+            "selfControl": 0.99,
+            "maximumNegativeControl": 0.4
+          },
+          "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+        }
+      },
+      "downloadAllowed": false
+    },
+    {
+      "catalog": {
+        "id": 57428851,
+        "isrc": "USTC40852265",
+        "title": "36 Ghosts IV",
+        "titleVersion": "",
+        "artist": "Nine Inch Nails",
+        "album": "Ghosts I-IV",
+        "duration": 139,
+        "artistId": 407,
+        "albumId": 5604291
+      },
+      "source": {
+        "provider": "funkwhale",
+        "pod": "https://open.audio",
+        "apiVersion": "v2",
+        "trackId": 49885,
+        "trackUuid": "0dd55660-5016-4a11-908d-8e7337378a89",
+        "uploadUuid": "ab913fc8-bfeb-4fd0-bce7-f4aa42140031",
+        "contentLength": 1740870,
+        "sha256": "00c641b9102dcfbd1b1c2f12f7b99ad6fee7af0bf0a3c947359cd07547d7caf7",
+        "mime": "audio/ogg",
+        "extension": "ogg",
+        "codec": "vorbis",
+        "bitrate": 112000,
+        "lossless": false,
+        "duration": 139,
+        "isrc": null,
+        "recordingMbid": null,
+        "declaredLicense": null
+      },
+      "file": {
+        "bytes": 1740870,
+        "sha256": "00c641b9102dcfbd1b1c2f12f7b99ad6fee7af0bf0a3c947359cd07547d7caf7",
+        "mime": "audio/ogg",
+        "durationSeconds": 139.04390022675736
+      },
+      "proof": {
+        "generatedAt": "2026-10-23T06:51:51.136Z",
+        "identityScope": "official-excerpt-only",
+        "fullMasterVerified": false,
+        "physicalBackgroundVerified": false,
+        "candidateAudio": {
+          "duration": 139.04390022675736,
+          "sampleRate": 22050,
+          "channels": 2
+        },
+        "reference": {
+          "catalogId": 57428851,
+          "isrc": "USTC40852265",
+          "bytes": 479827,
+          "sha256": "65d85d966f975afea5b6fde2ea2d419ac5ae117e076ddb7d5feea211631e424f",
+          "duration": 29.98857142857143
+        },
+        "negative": {
+          "catalogId": 57428501,
+          "isrc": "USTC40852229",
+          "title": "01 Ghosts I",
+          "artist": "Nine Inch Nails",
+          "album": "Ghosts I-IV",
+          "bytes": 479827,
+          "sha256": "e518f6f620c9f93c64b3a4d3577063ab4747f35fb2c1de60f8645ed0be668c24",
+          "duration": 29.98857142857143
+        },
+        "comparison": {
+          "algorithm": "Mean-removed normalized waveform cross-correlation, FFT, mono 2205 Hz, +/-500ms mathematical padding, 3 separated windows; no tempo/pitch transforms.",
+          "full": {
+            "correlation": 0.9954507572179648,
+            "offsetSeconds": 47.961678004535145,
+            "referenceSeconds": 29.988208616780046
+          },
+          "windows": [
+            {
+              "referenceStartSeconds": 0,
+              "correlation": 0.9903583918711802,
+              "offsetSeconds": 47.961678004535145,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            },
+            {
+              "referenceStartSeconds": 10,
+              "correlation": 0.9971532898418375,
+              "offsetSeconds": 57.961678004535145,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            },
+            {
+              "referenceStartSeconds": 20,
+              "correlation": 0.9971540089218954,
+              "offsetSeconds": 67.96167800453514,
+              "referenceSeconds": 8,
+              "inferredPreviewStartInCandidateSeconds": 47.961678004535145
+            }
+          ],
+          "alignmentSpreadSeconds": 0,
+          "selfControl": {
+            "correlation": 1.0000000000050229,
+            "offsetSeconds": 39.99977324263038,
+            "referenceSeconds": 8
+          },
+          "negativeControl": {
+            "correlation": 0.03726430856832136,
+            "offsetSeconds": 56.47233560090703,
+            "referenceSeconds": 29.988208616780046
+          },
+          "matched": true,
+          "thresholds": {
+            "full": 0.8,
+            "eachWindow": 0.8,
+            "maximumAlignmentSpreadSeconds": 0.03,
+            "selfControl": 0.99,
+            "maximumNegativeControl": 0.4
+          },
+          "coverageLimit": "Only the official approximately 30-second excerpt and its separated windows are compared; not a proof of every second of the full recording."
+        }
+      },
+      "downloadAllowed": false
+    }
+  ],
+  "provider": {
+    "pod": "https://open.audio",
+    "apiVersion": "v2",
+    "softwareVersion": "2.0.12.dev0+f10a9e72"
+  }
+}

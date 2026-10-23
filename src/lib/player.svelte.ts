@@ -339,6 +339,7 @@ class Player implements PlayerApi {
     previous.pause()
     previous.removeAttribute('src')
     previous.load()
+    this.#retainWebAudio()
     this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
   }
 
@@ -480,6 +481,7 @@ class Player implements PlayerApi {
       return
     }
     const token = ++this.#token
+    this.#retainWebRequests()
     const at = this.time
     this.status = 'loading'
     try {
@@ -746,6 +748,7 @@ class Player implements PlayerApi {
       this.#positionKnown = false
     }
     const token = ++this.#token
+    this.#retainWebRequests()
     this.#wantsPlay = true
     if (!refresh) this.#repaired = false
     // Recargar la misma canción (URL caducada) no cuenta como otra escucha.
@@ -822,6 +825,7 @@ class Player implements PlayerApi {
     this.time = this.#resumeAt
     this.#sourceLocal = playable.local
     this.#playable = playable
+    this.#retainWebAudio()
     setAudioSource(a, audioSrc(playable))
     await this.#playElement(a)
   }
@@ -965,6 +969,17 @@ class Player implements PlayerApi {
     this.#preparedNext = null
     this.#preparingNext = null
     this.#prepareRetry = null
+    this.#retainWebAudio()
+  }
+
+  #retainWebAudio() {
+    if (api.inPwa) api.retainWebAudioSources?.([this.#playable?.url, this.#preparedNext?.playable.url]
+      .filter((url): url is string => typeof url === 'string'))
+  }
+
+  #retainWebRequests() {
+    if (api.inPwa) api.retainWebAudioRequests?.([this.current?.track.id, this.#following()?.track.id]
+      .filter((id): id is number => typeof id === 'number'))
   }
 
   #preparedExpiry(source: Playable, id: number): number {
@@ -991,6 +1006,7 @@ class Player implements PlayerApi {
   /** Mientras suena una canción, se prepara la siguiente para que no haya espera. */
   #prefetchNext() {
     const following = this.#following()
+    this.#retainWebRequests()
     if (!api.inPwa) {
       if (following && following !== this.current) this.#resolve(following, false).catch(() => {})
       return
@@ -1003,7 +1019,10 @@ class Player implements PlayerApi {
     const previous = this.#preparedNext?.id === id ? this.#preparedNext : null
     this.#clearPrepared()
     // Una renovación de red fallida no inutiliza una fuente que todavía no ha caducado.
-    if (previous && previous.expiresAt > now) this.#preparedNext = previous
+    if (previous && previous.expiresAt > now) {
+      this.#preparedNext = previous
+      this.#retainWebAudio()
+    }
     const preparation = this.#preparation
     this.#preparingNext = { id, preparation }
     // Una aparición duplicada de la canción actual puede reutilizar su fuente vigente.
@@ -1014,7 +1033,10 @@ class Player implements PlayerApi {
     Promise.all([pending, position]).then(([playable, position]) => {
       if (preparation !== this.#preparation || this.#following()?.track.id !== id) return
       const expiresAt = this.#preparedExpiry(playable, id)
-      if (expiresAt > Date.now()) this.#preparedNext = { id, playable, expiresAt, position }
+      if (expiresAt > Date.now()) {
+        this.#preparedNext = { id, playable, expiresAt, position }
+        this.#retainWebAudio()
+      }
       else this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
     }).catch(() => {
       if (preparation === this.#preparation) this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }

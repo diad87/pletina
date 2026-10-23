@@ -34,6 +34,7 @@ function harness() {
   const requireAudio = path => path === './youtube' ? youtube : path === './storage' ? storage :
     path === './catalog-sources' ? { resolveCatalogSource: forbidden('alternate catalog resolver') } :
     path === './verified-audio' ? { resolveVerifiedAudio: forbidden('verified audio resolver'), disposeVerifiedAudio: forbidden('verified audio disposal') } :
+    path === './funkwhale-audio' ? { resolveFunkwhaleAudio: forbidden('Funkwhale resolver'), disposeFunkwhaleAudio: forbidden('Funkwhale disposal') } :
     path === './podcast-audio' ? { resolvePodcastTrack: forbidden('podcast resolver') } :
       path === './download-store' ? { readDownloadedPlayable: forbidden('download read'), removeDownloadedTrack: forbidden('download removal') } :
         assert.fail('Unexpected audio import ' + path)

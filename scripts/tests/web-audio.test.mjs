@@ -47,6 +47,8 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
     resolveCatalogSource: async () => null,
     resolveVerifiedAudio: async () => null,
     disposeVerifiedAudio() {},
+    resolveFunkwhaleAudio: async () => null,
+    disposeFunkwhaleAudio() {},
     ...overrides,
   }
   const storage = {
@@ -63,7 +65,7 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
   const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
   new Function('exports', 'require', podcastCode)(podcasts, dependency)
   const exports = {}
-  new Function('exports', 'require', audioCode)(exports, (path) => ['./catalog-sources', './verified-audio'].includes(path) ? mocks : path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
+  new Function('exports', 'require', audioCode)(exports, (path) => ['./catalog-sources', './verified-audio', './funkwhale-audio'].includes(path) ? mocks : path === './download-store' ? downloads : path === './podcast-audio' ? podcasts : dependency(path))
   return { ...exports, youtube, calls, writes, podcasts, removedDownloads }
 }
 
@@ -702,12 +704,88 @@ test('temporary network failures and manual sources do not trigger an alternate 
 })
 
 test('downloaded songs, podcasts and directly added videos never enter catalog rescue', async () => {
-  const skip = { resolveVerifiedAudio: async () => assert.fail('not a catalog track'), resolveCatalogSource: async () => assert.fail('not a catalog track') }
+  const skip = { resolveFunkwhaleAudio: async () => assert.fail('not a catalog track'), resolveVerifiedAudio: async () => assert.fail('not a catalog track'), resolveCatalogSource: async () => assert.fail('not a catalog track') }
   const local = { ...catalogAudio, local: true, url: 'https://app.example/pletina/__audio__/1' }
   assert.deepEqual(await engine(skip, null, id, null, local).resolveTrack(query), local)
   assert.equal((await engine(skip).resolveTrack({ ...query, id: 250_000_000_000_001 })).videoId, id)
   const episode = { id: 750_000_000_000_001, audioUrl: 'https://podcast.example/episode.mp3' }
   assert.equal((await engine(skip, null, id, episode).resolveTrack({ ...query, id: episode.id })).url, episode.audioUrl)
+})
+
+test('Funkwhale follows exhausted YouTube sources before Audius or a visible video and keeps catalog identity', async () => {
+  const seen = [], target = { ...query, isrc: 'GBAYE9701376', titleVersion: 'Original' }
+  const source = { ...catalogAudio, source: { provider: 'funkwhale', id: 'public-upload', download: { allowed: false } } }
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('No direct audio', 'format') },
+    resolveFunkwhaleAudio: async (track, signal) => { seen.push({track, signal}); return source },
+    resolveCatalogSource: async () => assert.fail('Funkwhale already recovered the recording') })
+  assert.deepEqual(await audio.resolveTrack(target), source)
+  assert.deepEqual(audio.calls, ['music', 'youtube'])
+  assert.deepEqual(audio.writes, [])
+  assert.equal(seen[0].track, target)
+  assert.ok(seen[0].signal instanceof AbortSignal)
+})
+
+test('verified Funkwhale rescue can survive YouTube search or stream network failure without persisting absence', async () => {
+  for (const phase of ['search', 'stream', 'cached']) {
+    const saved = phase === 'cached' ? { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 90, verified: false } : null
+    const audio = engine({ searchMusic: async () => { if (phase === 'search') throw new Error('offline'); return [candidate()] },
+      searchVideos: async () => { if (phase === 'search') throw new Error('offline'); return [] },
+      stream: async () => { throw new audio.youtube.YouTubeError('YouTube down', 'network') },
+      resolveFunkwhaleAudio: async () => catalogAudio }, saved)
+    assert.deepEqual(await audio.resolveTrack(query), catalogAudio, phase)
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('Funkwhale does not replace working YouTube or an explicitly selected source', async () => {
+  assert.equal((await engine({resolveFunkwhaleAudio: async () => assert.fail('working YouTube has priority')}).resolveTrack(query)).videoId, id)
+  const saved = { videoId: id, title: query.title, channel: query.artist, duration: query.duration, score: 100, verified: true }
+  for (const code of ['format', 'network']) {
+    const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('No audio', code) },
+      resolveFunkwhaleAudio: async () => assert.fail('manual selection has priority') }, saved)
+    await assert.rejects(audio.resolveTrack(query), error => code === 'format' ? audio.getOfficialFallback(query,error)?.videoId === id : error.code === code)
+  }
+})
+
+test('a failed Funkwhale attempt preserves the original YouTube error or existing Audius rescue', async () => {
+  const audio = engine({ stream: async () => { throw new audio.youtube.YouTubeError('No audio', 'unavailable') },
+    resolveFunkwhaleAudio: async () => { throw new Error('Provider unavailable') }, resolveCatalogSource: async () => catalogAudio })
+  assert.deepEqual(await audio.resolveTrack(query), catalogAudio)
+  const offline = engine({ searchMusic: async () => { throw new Error('Original search failure') }, searchVideos: async () => [],
+    resolveFunkwhaleAudio: async () => { throw new Error('Funkwhale failure') } })
+  await assert.rejects(offline.resolveTrack(query), /Original search failure/)
+})
+
+test('cancellation during Funkwhale cannot return late audio and disposes its cache', async () => {
+  const gate = deferred(); let signal, disposed = 0
+  const audio = engine({ searchMusic: async () => [], searchVideos: async () => [],
+    resolveFunkwhaleAudio: async (_track, current) => { signal = current; return gate.promise }, disposeFunkwhaleAudio: () => disposed++ })
+  const pending = audio.resolveTrack(query), rejected = assert.rejects(pending, {name:'AbortError'})
+  await flush()
+  audio.cancelAudioRequests()
+  gate.resolve(catalogAudio)
+  await rejected
+  assert.ok(signal.aborted)
+  assert.equal(disposed, 1)
+  assert.deepEqual(audio.writes, [])
+})
+
+test('changing tracks aborts obsolete acquisitions while retaining the current and prepared track', async () => {
+  const gates = new Map([1,2,3].map(id=>[id,deferred()])), signals = new Map()
+  const audio=engine({searchMusic:async()=>[],searchVideos:async()=>[],
+    resolveFunkwhaleAudio:async(track,signal)=>{signals.set(track.id,signal);await gates.get(track.id).promise;return catalogAudio}})
+  const old=audio.resolveTrack({...query,id:1}),prepared=audio.resolveTrack({...query,id:2})
+  const rejected=assert.rejects(old,{name:'AbortError'})
+  await flush()
+  audio.retainAudioRequests([2,3])
+  assert.ok(signals.get(1).aborted)
+  assert.equal(signals.get(2).aborted,false)
+  const current=audio.resolveTrack({...query,id:3})
+  await flush()
+  for(const gate of gates.values())gate.resolve()
+  await rejected
+  assert.deepEqual(await prepared,catalogAudio)
+  assert.deepEqual(await current,catalogAudio)
 })
 
 test('cancelling a delayed external source prevents its completion and disposes checked blobs', async () => {

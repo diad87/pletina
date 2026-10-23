@@ -33,7 +33,7 @@ const fullTitle = (track: Pick<TrackQuery, 'title' | 'titleVersion'>): string =>
   return version && !` ${title} `.includes(` ${normalize(version)} `) ? normalize(`${track.title} ${version}`) : title
 }
 
-async function recordingQuery(track: TrackQuery, signal?: AbortSignal): Promise<TrackQuery | null> {
+export async function recordingQuery(track: TrackQuery, signal?: AbortSignal): Promise<TrackQuery | null> {
   if (normalizeIsrc(track.isrc)) return track
   // Search and album rows can lack ISRC. Obtain it from this numeric catalog ID,
   // then cross-check identity rather than replacing the requested recording.
