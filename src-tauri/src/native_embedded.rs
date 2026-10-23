@@ -2844,6 +2844,12 @@ async fn resolve_config(
         // Some otherwise valid responses have a temporary CDN availability gate.
         // Neither its presence nor a successful retry proves an ad was played/skipped.
         let retry = std::mem::replace(&mut retry_available, false);
+        if retry {
+            let queued = crate::extractor::preconnect_cdn(&direct.url);
+            if std::env::var_os("MUSIFY_BENCH").is_some() {
+                eprintln!("[native-cdn-preconnect] {}", json!({"id":video_id,"atMs":trace_time(),"queued":queued}));
+            }
+        }
         let slots: &[CdnProbeSlot] = if retry {
             &CDN_RETRY_SLOTS
         } else {

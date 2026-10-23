@@ -60,6 +60,59 @@ pub fn init(app: AppHandle) {
     });
 }
 
+// The desktop audio element has its own connection pool, separate from reqwest.
+// Hint only an admitted audio origin while its strict CDN check is still pending.
+// No URL path, signed query, bytes, playback, or remote script reaches this hint.
+#[cfg(any(not(mobile), test))]
+const CDN_PRECONNECT_SCRIPT: &str = r#"
+    const head = document.head;
+    if (!head) return;
+    const now = performance.now();
+    const links = [...head.querySelectorAll('link[data-pletina-cdn-preconnect]')];
+    for (const link of links) {
+        if (now - Number(link.dataset.pletinaCdnPreconnect) >= 30000) link.remove();
+        else if (link.href === origin + '/') return;
+    }
+    const active = [...head.querySelectorAll('link[data-pletina-cdn-preconnect]')];
+    if (active.length >= 2) return;
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    link.dataset.pletinaCdnPreconnect = String(now);
+    head.append(link);
+"#;
+
+#[cfg(any(not(mobile), test))]
+fn cdn_preconnect_script(url: &str) -> Option<String> {
+    if url.len() > 16 * 1024 { return None; }
+    let parsed = reqwest::Url::parse(url).ok()?;
+    let host = parsed.host_str()?;
+    if parsed.scheme() != "https" || parsed.port_or_known_default() != Some(443)
+        || !parsed.username().is_empty() || parsed.password().is_some()
+        || parsed.fragment().is_some() || parsed.path() != "/videoplayback"
+        || host.len() > 253 || !host.ends_with(".googlevideo.com")
+        || !host.bytes().all(|b| b.is_ascii_alphanumeric() || b".-".contains(&b))
+    {
+        return None;
+    }
+    let origin = serde_json::to_string(&parsed.origin().ascii_serialization()).ok()?;
+    Some(format!("((origin) => {{ {CDN_PRECONNECT_SCRIPT} }})({origin});"))
+}
+
+pub(crate) fn preconnect_cdn(url: &str) -> bool {
+    #[cfg(mobile)]
+    { let _ = url; false }
+    #[cfg(not(mobile))]
+    {
+        use tauri::Manager;
+        let Some(script) = cdn_preconnect_script(url) else { return false; };
+        let Some(bridge) = BRIDGE.get() else { return false; };
+        let Some(window) = bridge.app.get_webview_window("main") else { return false; };
+        // eval queues local code; success does not prove the browser opened a socket.
+        window.eval(&script).is_ok()
+    }
+}
+
 /// Audio de un vídeo con el motor elegido.
 pub async fn stream_with_priority(ytdlp: &YtDlp, video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
     stream_with_admission(ytdlp, video_id, refresh, foreground, ticket, None).await
@@ -354,6 +407,28 @@ pub async fn bench_probe(url: String) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cdn_preconnect_keeps_only_the_validated_https_audio_origin() {
+        let script = cdn_preconnect_script("https://rr3---sn-abc.googlevideo.com/videoplayback?sig=private&n=secret").unwrap();
+        assert!(script.ends_with("})(\"https://rr3---sn-abc.googlevideo.com\");"));
+        for excluded in ["videoplayback", "private", "secret", "?sig", "fetch(", "Audio(", "crossOrigin"] {
+            assert!(!script.contains(excluded), "{excluded}");
+        }
+        for rejected in [
+            "http://r1.googlevideo.com/videoplayback",
+            "https://googlevideo.com/videoplayback",
+            "https://evilgooglevideo.com/videoplayback",
+            "https://r1.googlevideo.com.evil.invalid/videoplayback",
+            "https://r1.googlevideo.com:8443/videoplayback",
+            "https://user:secret@r1.googlevideo.com/videoplayback",
+            "https://r1.googlevideo.com/videoplayback#fragment",
+            "https://r1.googlevideo.com/other",
+        ] {
+            assert!(cdn_preconnect_script(rejected).is_none(), "{rejected}");
+        }
+        assert!(cdn_preconnect_script(&format!("https://r1.googlevideo.com/videoplayback?q={}", "x".repeat(16 * 1024))).is_none());
+    }
 
     #[test]
     fn only_youtube_hosts() {
