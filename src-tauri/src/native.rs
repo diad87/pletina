@@ -1,7 +1,8 @@
-//! Motor propio, nivel rápido: una sola petición a la API interna de YouTube desde Rust, sin
-//! programas ni librerías externas. Qué cliente de YouTube se imita y con qué datos va en una
+//! Motor propio, nivel rápido: petición a la API interna de YouTube desde Rust.
+//! Qué cliente de YouTube se imita y con qué datos va en una
 //! receta (`recipe/youtube.json`) queda como reparación excepcional. Si las rutas rápidas
-//! fallan, se prueba el cliente web descubierto de YouTube, con renovación acotada y URL
+//! fallan, el contenido infantil dispone de un cliente incrustado descubierto y un
+//! descifrador JS acotado; después se prueba WEB, con renovación acotada y URL
 //! verificada. El último respaldo sigue siendo la captura histórica (`capture_legacy.rs`).
 
 use crate::ytdlp::{now, query_param};
@@ -12,6 +13,9 @@ use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex, RwLock};
 use std::time::{Duration, Instant};
+
+#[path = "native_embedded.rs"]
+mod embedded;
 
 /// La sesión de visitante vale horas; se pide otra antes por si acaso.
 const VISITOR_TTL: Duration = Duration::from_secs(3 * 3600);
@@ -305,6 +309,45 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
                         break;
                     }
                 }
+            }
+        }
+    }
+    // Los clientes nativos actuales no admiten contenido infantil. Sólo si la
+    // página pública confirma ese caso, la ruta incrustada descubre su cliente
+    // y calcula firma/n con funciones del reproductor oficial en un motor aislado.
+    // Conserva el mismo vídeo y exige audio original y rangos CDN verificados.
+    match tokio::time::timeout(Duration::from_secs(30), embedded::resolve(video_id)).await {
+        Ok(Ok(d)) => {
+            if std::env::var_os("MUSIFY_BENCH").is_some() {
+                eprintln!(
+                    "[native-embedded] {}",
+                    json!({"success":true,"client":d.client,"itag":d.itag,
+                        "failures":resolution_failures(&attempts)})
+                );
+            }
+            STATS.resolved.fetch_add(1, Ordering::Relaxed);
+            CACHE
+                .lock()
+                .unwrap()
+                .insert(video_id.to_string(), d.clone());
+            return Ok(d);
+        }
+        outcome => {
+            if std::env::var_os("MUSIFY_BENCH").is_some() {
+                let code = match &outcome {
+                    Err(_) => "embedded-timeout",
+                    Ok(Err(Error::Failed(code)))
+                        if code.len() <= 96
+                            && code.starts_with("NATIVE_EMBEDDED_")
+                            && code.bytes().all(|b| {
+                                b.is_ascii_uppercase() || b == b'_' || b.is_ascii_digit()
+                            }) =>
+                    {
+                        code
+                    }
+                    _ => "embedded-unavailable",
+                };
+                eprintln!("[native-embedded] {}", json!({"success":false,"code":code}));
             }
         }
     }
@@ -733,6 +776,144 @@ fn direct_audio_url(url: &str) -> bool {
     reqwest::Url::parse(url).is_ok_and(|url| trusted_url_family(&url) == Some("googlevideo.com"))
 }
 
+// FormatXTags is a bounded protobuf message of repeated key/value pairs, also
+// used by youtubei.js. An explicit dub/secondary track is never the original
+// merely because the server selected it as the default for this locale.
+fn original_audio(format: &Value) -> bool {
+    if format["isDrc"].as_bool() == Some(true) {
+        return false;
+    }
+    let mut content = None;
+    if let Some(encoded) = format.get("xtags").filter(|v| !v.is_null()) {
+        let Some(tags) = encoded.as_str().and_then(audio_tags) else {
+            return false;
+        };
+        for (key, value) in tags {
+            match key.as_str() {
+                "drc" if value == "1" => return false,
+                "acont" => {
+                    if content.as_ref().is_some_and(|previous| previous != &value) {
+                        return false;
+                    }
+                    content = Some(value);
+                }
+                _ => {}
+            }
+        }
+    }
+    if content.as_deref().is_some_and(|value| value != "original") {
+        return false;
+    }
+    let name = format["audioTrack"]["displayName"]
+        .as_str()
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    if ["dubbed", "descriptive", "audio description", "secondary"]
+        .iter()
+        .any(|marker| name.contains(marker))
+    {
+        return false;
+    }
+    content.as_deref() == Some("original")
+        || name.contains("original")
+        || format["audioTrack"]["audioIsDefault"]
+            .as_bool()
+            .unwrap_or(true)
+}
+
+fn audio_tags(encoded: &str) -> Option<Vec<(String, String)>> {
+    use base64::Engine;
+    if encoded.is_empty()
+        || encoded.len() > 4096
+        || !encoded
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-_+=/%".contains(&b))
+    {
+        return None;
+    }
+    let parsed = reqwest::Url::parse(&format!("https://www.youtube.com/?tags={encoded}")).ok()?;
+    let decoded = parsed.query_pairs().find(|(key, _)| key == "tags")?.1;
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(decoded.as_bytes())
+        .or_else(|_| base64::engine::general_purpose::URL_SAFE.decode(decoded.as_bytes()))
+        .or_else(|_| base64::engine::general_purpose::STANDARD.decode(decoded.as_bytes()))
+        .ok()?;
+    let mut tags = Vec::new();
+    for (field, data) in protobuf_fields(&bytes)? {
+        if field != 1 {
+            continue;
+        }
+        let mut pair = [None, None];
+        for (key, value) in protobuf_fields(data?)? {
+            if !(1..=2).contains(&key) {
+                continue;
+            }
+            let target = &mut pair[key as usize - 1];
+            if target.is_some() {
+                return None;
+            }
+            let text = std::str::from_utf8(value?).ok()?;
+            if text.is_empty() || text.len() > 128 {
+                return None;
+            }
+            *target = Some(text.to_owned());
+        }
+        tags.push((pair[0].take()?, pair[1].take()?));
+    }
+    Some(tags)
+}
+
+fn protobuf_fields(mut bytes: &[u8]) -> Option<Vec<(u64, Option<&[u8]>)>> {
+    fn varint(bytes: &mut &[u8]) -> Option<u64> {
+        let mut value = 0u64;
+        for index in 0..10 {
+            let byte = *bytes.first()?;
+            *bytes = &bytes[1..];
+            if index == 9 && byte > 1 {
+                return None;
+            }
+            value |= ((byte & 127) as u64) << (index * 7);
+            if byte < 128 {
+                return Some(value);
+            }
+        }
+        None
+    }
+    let mut fields = Vec::new();
+    while !bytes.is_empty() {
+        if fields.len() >= 64 {
+            return None;
+        }
+        let tag = varint(&mut bytes)?;
+        if tag >> 3 == 0 {
+            return None;
+        }
+        let data = match tag & 7 {
+            0 => {
+                varint(&mut bytes)?;
+                None
+            }
+            1 => {
+                bytes = bytes.get(8..)?;
+                None
+            }
+            2 => {
+                let length = usize::try_from(varint(&mut bytes)?).ok()?;
+                let value = bytes.get(..length)?;
+                bytes = bytes.get(length..)?;
+                Some(value)
+            }
+            5 => {
+                bytes = bytes.get(4..)?;
+                None
+            }
+            _ => return None,
+        };
+        fields.push((tag >> 3, data));
+    }
+    Some(fields)
+}
+
 /// Elige el audio de la respuesta de YouTube: solo audio, con URL directa, sin compresión de rango
 /// dinámico, en la pista de idioma por defecto, y del tipo preferido con más calidad.
 #[cfg(test)]
@@ -771,8 +952,7 @@ fn pick_with_preference(
             let mime = f["mimeType"].as_str().unwrap_or("");
             rank(mime).is_some()
                 && f["url"].as_str().is_some_and(direct_audio_url)
-                && !f["isDrc"].as_bool().unwrap_or(false)
-                && f["audioTrack"]["audioIsDefault"].as_bool().unwrap_or(true)
+                && original_audio(f)
                 && wanted_itag.is_none_or(|itag| f["itag"].as_u64() == Some(itag))
                 && wanted_mime.is_none_or(|wanted| mime_family(mime) == mime_family(wanted))
         })
@@ -920,6 +1100,60 @@ mod adaptive_tests;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn original_audio_tags_override_default_dubs_and_reject_corrupt_metadata() {
+        use base64::Engine;
+        let tags = |pairs: &[(&str, &str)]| {
+            let mut bytes = Vec::new();
+            for (key, value) in pairs {
+                let mut pair = vec![10, key.len() as u8];
+                pair.extend_from_slice(key.as_bytes());
+                pair.extend_from_slice(&[18, value.len() as u8]);
+                pair.extend_from_slice(value.as_bytes());
+                bytes.extend_from_slice(&[10, pair.len() as u8]);
+                bytes.extend(pair);
+            }
+            base64::engine::general_purpose::URL_SAFE.encode(bytes)
+        };
+        let original = json!({"audioTrack":{"audioIsDefault":false,"displayName":"Basque (original)"},
+            "xtags":tags(&[("lang","eu"),("acont","original")])});
+        assert!(original_audio(&original));
+        for content in [
+            "dubbed",
+            "dubbed-auto",
+            "descriptive",
+            "secondary",
+            "unknown",
+        ] {
+            assert!(!original_audio(
+                &json!({"audioTrack":{"audioIsDefault":true},
+                "xtags":tags(&[("acont",content)])})
+            ));
+        }
+        assert!(!original_audio(
+            &json!({"xtags":tags(&[("acont","original"),("drc","1")])})
+        ));
+        assert!(!original_audio(
+            &json!({"xtags":tags(&[("acont","original"),("acont","dubbed")])})
+        ));
+        assert!(!original_audio(
+            &json!({"audioTrack":{"audioIsDefault":true,"displayName":"English (auto-dubbed)"}})
+        ));
+        for invalid in ["%%%", "Cg==", "&tags=", "", "CgMKAWs="] {
+            assert!(
+                !original_audio(&json!({"xtags":invalid})),
+                "corrupt track metadata accepted"
+            );
+        }
+        assert!(original_audio(&json!({})));
+        assert!(!original_audio(
+            &json!({"audioTrack":{"audioIsDefault":false}})
+        ));
+        let mut drc = original;
+        drc["isDrc"] = json!(true);
+        assert!(!original_audio(&drc));
+    }
 
     #[test]
     fn bundled_recipe_parses() {

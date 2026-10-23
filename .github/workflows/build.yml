@@ -60,6 +60,7 @@ jobs:
         run: |
           npm test
           npm run check
+          npm run build:youtube-decoder -- --check
 
       - name: Pruebas Rust en Windows
         if: runner.os == 'Windows'
@@ -130,6 +131,14 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;27.3.13750724" > /dev/null
           echo "NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
 
+      - name: Bindings del motor JavaScript para Android
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+          ndk_toolchain="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          ndk_resource_dir="$("$ndk_toolchain/bin/clang" -print-resource-dir)"
+          echo "BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android=--target=aarch64-linux-android24 --sysroot=$ndk_toolchain/sysroot -resource-dir=$ndk_resource_dir" >> "$GITHUB_ENV"
+
       - name: Clave de firma
         env:
           ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
@@ -142,6 +151,8 @@ jobs:
           echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/android.jks" >> "$GITHUB_ENV"
 
       - run: npm ci
+
+      - run: npm run build:youtube-decoder -- --check
 
       - name: Compilar y firmar
         run: npm run tauri android build -- --apk --target aarch64

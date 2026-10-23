@@ -24,6 +24,20 @@ HTTP locales ejercitan renovación de cliente e identidad/sondas inválidas;
 los límites y las mediciones se recogen en [Propio adaptativo](propio-adaptativo.md)
 y en el [informe del 8 de octubre](informe-captura-youtube-2026-10-08.md).
 
+El 23 de octubre se añadió una alternativa nativa para contenido infantil,
+motivada por Pirritx eta Porrotx. La búsqueda ya encontraba las canciones; los
+clientes rápidos rechazaban sus formatos. Tras comprobar el aviso infantil y
+la identidad en la página pública, se descubre el cliente incrustado y se
+extraen las funciones del reproductor actual para calcular firma y `n` en un
+motor JavaScript acotado. No se evalúa el reproductor completo. La ruta exige
+audio original y una sonda 206 exacta al 80 %. Un rechazo CDN temporal permite
+hasta cinco intentos de la misma URL en ocho segundos; no cambia de canción,
+no entrega anuncios ni acredita que se haya pulsado «Saltar anuncio».
+El [informe infantil](informe-contenido-infantil-2026-10-23.md) distingue las
+mediciones del corpus de tres canciones de la compatibilidad general.
+Esta mejora requiere actualizar la app: no modifica la receta, `youtubei.ts`,
+`capture.js` ni su protocolo, y no promueve la captura progresiva.
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.

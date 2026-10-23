@@ -29,6 +29,7 @@ mod podcasts;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
+mod youtube_decoder;
 mod youtube_session;
 mod youtube_podcasts;
 mod ytdlp;

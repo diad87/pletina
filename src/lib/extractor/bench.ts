@@ -411,16 +411,16 @@ async function playCheck(url: string, capture = false, beforeStop?: () => Promis
     if (capture) {
       // done nativo sólo sella el productor; el lector aún puede estar haciendo appendBuffer.
       result.coverageEnd = await captureCoverage(a, duration)
-      const tailStarted = performance.now()
-      a.pause()
-      const tailSeeked = until(a, 'seeked', 15000, controller.signal)
-      a.currentTime = Math.max(0, Math.min(duration, result.coverageEnd) - 0.5)
-      await tailSeeked
-      await Promise.all([until(a, 'ended', 10000, controller.signal), a.play()])
-      if (a.currentTime < duration - CAPTURE_EDGE_TOLERANCE)
-        throw new Error(`audio terminado antes del final: ${a.currentTime.toFixed(3)} / ${duration.toFixed(3)} s`)
-      result.tailMs = Math.round(performance.now() - tailStarted)
     }
+    const tailStarted = performance.now()
+    a.pause()
+    const tailSeeked = until(a, 'seeked', 15000, controller.signal)
+    a.currentTime = Math.max(0, Math.min(duration, result.coverageEnd ?? duration) - 0.5)
+    await tailSeeked
+    await Promise.all([until(a, 'ended', 10000, controller.signal), a.play()])
+    if (a.currentTime < duration - CAPTURE_EDGE_TOLERANCE)
+      throw new Error(`audio terminado antes del final: ${a.currentTime.toFixed(3)} / ${duration.toFixed(3)} s`)
+    result.tailMs = Math.round(performance.now() - tailStarted)
     return { ...result, ok: true }
   } catch (e) {
     return { ...result, ok: false, error: String(e) }

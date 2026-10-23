@@ -569,3 +569,62 @@ async fn real_anonymous_kids_before() {
     }
     println!("kids-native-live measurementCompleted=true");
 }
+
+/// Explicit full-file check for the reported songs. Only anonymous audio bytes
+/// and safe metadata are written to the ignored benchmark folder, never URLs.
+#[tokio::test]
+#[ignore = "downloads three public original audio files for independent comparison"]
+async fn real_kids_complete_files() {
+    use sha2::{Digest, Sha256};
+    let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../capture-bench.local/kids-native-files.local");
+    std::fs::create_dir_all(&directory).unwrap();
+    let reference_http = reqwest::Client::builder()
+        .no_gzip()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap();
+    let mut failures = 0;
+    for video_id in ["DJzjkMBMook", "WtTRMAoN2Fw", "kcUgLakr7bU"] {
+        let started = Instant::now();
+        let result = async {
+            let direct = tokio::time::timeout(Duration::from_secs(30), resolve(video_id, true))
+                .await
+                .map_err(|_| "resolution-timeout".to_owned())?
+                .map_err(|_| "resolution-failed".to_owned())?;
+            let length = query_param(&direct.url, "clen")
+                .and_then(|value| value.parse::<usize>().ok())
+                .ok_or_else(|| "missing-length".to_owned())?;
+            let bytes = crate::capture_reference::download(&reference_http, &direct.url, length).await?;
+            let extension = if direct.mime.starts_with("audio/webm") {
+                "webm"
+            } else {
+                "m4a"
+            };
+            let file = directory.join(format!("{video_id}-{}.{}", direct.itag, extension));
+            std::fs::write(&file, &bytes).map_err(|_| "file-write".to_owned())?;
+            Ok::<_, String>(
+                json!({"videoId":video_id,"success":true,"client":direct.client,
+                "itag":direct.itag,"mime":direct.mime,"bytes":bytes.len(),
+                "sha256":format!("{:x}", Sha256::digest(&bytes)),
+                "elapsedMs":started.elapsed().as_secs_f64()*1000.0}),
+            )
+        }
+        .await;
+        match result {
+            Ok(metadata) => println!("kids-full-file {metadata}"),
+            Err(code) => {
+                failures += 1;
+                println!(
+                    "kids-full-file {}",
+                    json!({"videoId":video_id,"success":false,"code":code,
+                    "elapsedMs":started.elapsed().as_secs_f64()*1000.0})
+                );
+            }
+        }
+    }
+    assert_eq!(
+        failures, 0,
+        "not all original audio files were verified and downloaded"
+    );
+}

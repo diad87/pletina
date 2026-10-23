@@ -6,7 +6,7 @@ param(
     [ValidateRange(15, 1200)]
     [int]$CaseTimeoutSeconds = 120,
     [switch]$MseOnly,
-    [ValidateSet('smoke', 'catalog', 'album', 'switch', 'latency', 'native-search', 'ad-transitions', 'profile-login')]
+    [ValidateSet('smoke', 'catalog', 'album', 'switch', 'latency', 'native-search', 'native-direct', 'ad-transitions', 'profile-login')]
     [string]$Suite = 'smoke',
     [ValidateSet('oficial', 'propio')]
     [string]$Engine = 'oficial',
@@ -55,7 +55,7 @@ $config = @{
 [IO.File]::WriteAllText($configPath, $config, [Text.UTF8Encoding]::new($false))
 $mseFixtures = Get-Content (Join-Path $projectDir 'tests/fixtures/mse-audio.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 $suitePlan = @{ mode = $Suite; timeoutSeconds = $CaseTimeoutSeconds; engine = $Engine; profileMode = $ProfileMode; auditAllAudio = [bool]$AuditAllAudio }
-if ($Suite -eq 'native-search') { $Engine = 'propio'; $suitePlan.engine = $Engine }
+if ($Suite -in @('native-search', 'native-direct')) { $Engine = 'propio'; $suitePlan.engine = $Engine }
 if ($Suite -eq 'profile-login') { $ProfileMode = 'premium-manual'; $suitePlan.profileMode = $ProfileMode }
 if ($Suite -eq 'ad-transitions') { $suitePlan.maxAdAttempts = $AdAttempts; $suitePlan.minimumAdTransitions = 50; $suitePlan.verifyComplete = $false; $suitePlan.seek = $false }
 if ($VerifiedOnly) { $suitePlan.experimental = $false; $suitePlan.seek = $false }
@@ -73,9 +73,22 @@ if ($CorpusPath) {
 } elseif ($Suite -eq 'smoke' -or ($Suite -eq 'latency' -and $PSBoundParameters.ContainsKey('VideoId'))) {
     $suitePlan.videos = @($VideoId | ForEach-Object { @{ id = $_; label = $_; duration = 0 } })
 }
+$nativeVideos = @()
+if ($Suite -eq 'native-direct' -and !$MseOnly) {
+    $nativeVideos = @(if ($CorpusPath) {
+        @($corpus.albums | ForEach-Object { $_.rows } | ForEach-Object {
+            if ($_.id -notmatch '^[A-Za-z0-9_-]{11}$') { throw 'El corpus directo contiene un ID no válido.' }
+            @{ id = $_.id; label = $_.label; duration = $_.duration }
+        })
+    } else { @($VideoId | ForEach-Object { @{ id = $_; label = $_; duration = 0 } }) })
+    if (!$nativeVideos.Count) { throw 'El banco directo necesita al menos un vídeo.' }
+}
 $plan = if ($MseOnly) {
     $mseFixtures | Add-Member -NotePropertyName rates -NotePropertyValue $true -Force
     $mseFixtures | ConvertTo-Json -Depth 8
+} elseif ($Suite -eq 'native-direct') {
+    # Reutiliza el banco nativo existente: extracción, rangos, reproducción, seek al 80 % y final.
+    @{ videos = $nativeVideos; tier1 = $true; audio = $true } | ConvertTo-Json -Depth 8
 } else { @{
     videos = @()
     captureSuite = $suitePlan
@@ -135,6 +148,7 @@ try {
         captureSurface = $Surface
         holdbackSeconds = $HoldbackSeconds
         rawAudioProbe = [bool]$AuditAllAudio
+        nativeAudioAndSeek = $Suite -eq 'native-direct' -and !$MseOnly
         limits = @{ maxSessions = $MaxSessions; trackMemoryMb = $TrackMemoryMb; cacheMemoryMb = $CacheMemoryMb }
         progressiveExperiment = !$VerifiedOnly
         seekExperiment = !$VerifiedOnly -and !$NoSeek -and $Suite -ne 'ad-transitions'
@@ -157,8 +171,12 @@ try {
     Write-Output ($report | Select-Object ok, fatal, startedAt | ConvertTo-Json)
     if ($report.captureSuite) {
         Write-Output ($report.captureSuite.rows | Select-Object label, ok, firstSoundMs, nextTrackMs, seekMs, adsSeen, adsDelivered, failures | ConvertTo-Json -Depth 5)
+    } elseif ($Suite -eq 'native-direct') {
+        Write-Output ($report.tier1 | Select-Object label, ok, extractionOk, ms, client, itag, probeOk, audio, error | ConvertTo-Json -Depth 5)
     }
-    $expected = if ($MseOnly) { @($report.mse).Count -eq @($mseFixtures.mse).Count } else { $report.captureSuite -and !$report.captureSuite.running }
+    $expected = if ($MseOnly) { @($report.mse).Count -eq @($mseFixtures.mse).Count } elseif ($Suite -eq 'native-direct') {
+        @($report.tier1).Count -eq $nativeVideos.Count
+    } else { $report.captureSuite -and !$report.captureSuite.running }
     if ($report.fatal -or !$report.ok -or !$expected) {
         throw "La captura no superó la prueba. Informe: $resultPath"
     }
