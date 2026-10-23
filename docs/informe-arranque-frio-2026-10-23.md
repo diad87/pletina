@@ -1,14 +1,17 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 5: renovación temprana implementada y comprobada; sin ganancia estable demostrada.**
-El usuario acepta unos **600 ms como base provisional del camino habitual**;
-la última tanda tiene mediana 703,1 ms. Los 24 controles infantiles independientes
-reproducen correctamente, con medianas nuevas de 4,52/4,54/5,09 s. Una prueba
-separada ejercitó la cancelación real de un análisis innecesario, pero no permite
-cuantificar el ahorro. La búsqueda infantil de Epo necesitó Legacy por un fallo
-de configuración. Los 3,5 s infantiles y la fiabilidad nativa siguen pendientes.
-Se conserva el historial de cada ronda; no se presenta 1,25 s como requisito logrado. Continúa el
-[informe infantil](informe-contenido-infantil-2026-10-23.md), sin sustituir su historial.
+**Ronda 6: Epo por Native en 3,36–3,41 s; los 3,5 s consistentes siguen pendientes.**
+La última comparación usa dos intentos por canción/binario, búsqueda incluida,
+procesos nuevos y perfil anónimo. Epo y Pupu cumplen 3,5 s en sus cuatro
+intentos candidatos; Maite tarda 4,39–5,48 s por sus solicitudes CDN rechazadas
+al principio. Los doce intentos usan Native con el ID esperado, sin Legacy.
+Clang y el parser reducen trabajo de preparación en controles aislados;
+la variación de red impide atribuir todo el ahorro de la app a esos cambios.
+Las 30 habituales conservan Native e identidad correcta, mediana 699,95 ms,
+con un outlier de 3523,6 ms. Los tres archivos infantiles completos coinciden
+con referencias y decodifican sin errores. No se promueve Oficial ni se
+acreditan anuncios o escucha continua con pruebas de inicio.
+Se conserva el historial de cada ronda y del [informe infantil](informe-contenido-infantil-2026-10-23.md).
 
 ## Ronda 1: cambios y límites
 
@@ -680,3 +683,278 @@ huellas de informes, errores, metadata, procedencias, fuentes y verificaciones.
 Se verificaron las **185 huellas** del manifiesto sin discrepancias. Incluye los
 dos ejecutables inmutables y su procedencia; los documentos quedan fuera para
 evitar hashes circulares. Sólo se suben código y resúmenes, en `p1-oficial`.
+
+## Ronda 6: Clang, parser y configuraciones canary
+
+Las fases A/B siguientes conservan sus controles y fallos. Las fases C/D/E documentan después la precarga y el ejecutable final; la meta no se declara cumplida para todas las canciones. No se ha publicado una versión ni actualizado la aplicación instalada.
+
+### Cambios y procedencia
+
+| Commit | Cambio | Alcance acreditado aquí |
+|---|---|---|
+| `093bb35` | Diagnóstico cerrado de configuración y una redescarga acotada ante documento inválido | Pruebas locales de campos, renovación, plazos y transporte |
+| `fb4f3d5` | QuickJS con Clang y dispatch directo en Windows | Comparación aislada y 24 intentos en aplicación release, fase A |
+| `b666871` | Conservación completa de versiones oficiales con sufijo canary | POST de metadatos fallido por `SABR_ONLY`, conservado; una reproducción canary posterior en la fase B sí funciona |
+| `1028f0f` | Menos objetos de posición y recorridos AST innecesarios | Diferenciales, perfil aislado, fase B release y regresión de búsqueda 30 |
+
+Se conserva íntegra la distribución `rquickjs-sys 0.14.0`: 306 archivos originales, inventario, licencias y parches trazables. El archivo `.crate` original tiene SHA-256 `cee271d0eeba64f0915b846cb7ae02e16faf3dfdffdca91731101d9d30fe3423`. Sólo cambian los archivos upstream `build.rs` y `quickjs/quickjs.c`. El dispatch directo usa saltos calculados dentro del intérprete: no introduce JIT, ejecución completa del player ni E/S en la VM.
+
+El compilador se selecciona exclusivamente para QuickJS y el destino Windows/MSVC. La adaptación de `stdatomic.h` para el Clang del NDK copia sin modificar la cabecera instalada de Visual Studio a `OUT_DIR`; no distribuye esa cabecera ni modifica el SDK. Se mantienen assertions, atomics, O2, un único worker, preparación de 192 MiB/12 s, decodificación de 32 MiB/1 s y pila de 512 KiB.
+
+La medición local usa NDK clang-cl 18.0.4; el workflow usa el LLVM ya instalado en Windows CI, que puede ser la versión 20. No se ha ejecutado esa CI como parte de esta evidencia: compatibilidad y rendimiento allí siguen sin acreditarse. Linux, macOS y Android no usan este selector de compilador de Windows. La modificación requiere reconstruir la aplicación; una receta del extractor no sustituye el código C.
+
+En el harness aislado, MSVC/switch promedió 3620,55 ms, Clang/switch 3675,5 ms y Clang/dispatch directo 2816,6 ms. Cada motor pasó siete pruebas de aislamiento; el directo conservó las salidas de cuatro fixtures y cuatro formatos por fixture. Estos tiempos no son tiempos de arranque de la aplicación. Se excluyó un primer control Clang/switch que reutilizaba por error el binario directo.
+
+### Fase A: 24 intentos release, sin sesión
+
+Dos intentos por canción y binario, orden alternado, proceso nuevo y `FreshDecoder` en cada intento. Esa opción omite lecturas de la caché de decoder en disco; no borra cachés del sistema operativo o de red ni elimina la memoria usada dentro de un proceso. Las variables experimentales de política estaban ausentes. Ambos binarios corresponden a `fb4f3d574dda419c55828541fdb62aeb92588214`.
+
+La tabla muestra medianas de `firstSoundMs`, desde el inicio de la operación hasta `playing` en un Audio silenciado. Es una observación de reproducción, no una medida acústica. «Con búsqueda» incluye buscar y resolver; «ID directo» empieza con el vídeo conocido y no sustituye esa prueba.
+
+| Modalidad | Canción | MSVC/switch, ms | Clang/directo, ms | Reproducciones control → candidato |
+|---|---|---:|---:|---:|
+| Con búsqueda | Epoitaitaye (`DJzjkMBMook`) | 5490,50 | 4613,00 | 2/2 → 2/2 |
+| Con búsqueda | Maite Zaitut! (`WtTRMAoN2Fw`) | 5410,45 | 5053,80 | 2/2 → 2/2 |
+| Con búsqueda | Pupu Eta Lore (`kcUgLakr7bU`) | 4833,05 | 3999,35 | 2/2 → 2/2 |
+| ID directo | Epoitaitaye | 4625,00 | 5565,00¹ | 2/2 → 1/2 |
+| ID directo | Maite Zaitut! | 4679,00 | 4781,00 | 2/2 → 2/2 |
+| ID directo | Pupu Eta Lore | 4585,50 | 3818,00 | 2/2 → 2/2 |
+
+¹ Un único tiempo medido; el otro intento falló. No es una mediana de dos éxitos ni permite omitir el fallo.
+
+Con búsqueda, la mediana de los seis intentos pasa de 5064,55 a 4585,30 ms (−9,46 %); los doce eligieron el ID esperado y utilizaron Native, sin Legacy. El criterio histórico de 300 ms sigue fallando en todos y se conserva separado del objetivo actual de 3500 ms. En ID directo hubo seis éxitos del control y cinco del candidato: sus medianas entre éxitos son 4604,50 y 4384 ms, respectivamente, con distinta completitud y disponibilidad de red. Los 403 observados no permiten atribuir toda la diferencia a CPU ni a publicidad.
+
+Los once ID directos que reprodujeron usaron `WEB_EMBEDDED_PLAYER`, formato 251, sondas 206 al comienzo y al 80 %, reproducción, salto y comprobación breve de la cola correctos. No hubo escucha continua completa. Las búsquedas no registraron cortes ni esperas después de `playing` en su breve ventana inicial; eso no acredita cero cortes durante la canción ni EOF. No se midieron anuncios vistos, saltados o entregados, ni se usó Premium.
+
+### Fallo de configuración y corrección canary
+
+El segundo Epoitaitaye directo del candidato falló con `CONFIG_VERSION_FORMAT` dos veces, a 198,31 y 321,94 ms. Consumió la renovación y terminó sin POST de player, análisis, descifrado, sonda CDN ni audio. Otro intento del control, Maite, sí recuperó una primera configuración rechazada y reprodujo; ambas situaciones quedan en el histórico.
+
+La versión concreta del fallo histórico no se guardó. Una reproducción pública posterior mostró un token oficial con sufijo `canary_control` que la gramática anterior rechazaba. `b666871` admite tokens ASCII acotados y conserva íntegro el valor en cuerpo y cabecera, manteniendo la igualdad de campos, identidad del vídeo, comprobación MFK, ST del análisis completo, selección original y sondas estrictas. No se atribuye el rechazo a gzip.
+
+La prueba real de metadatos aceptó esa configuración y devolvió HTTP 200 con el ID correcto y ST 20746, pero terminó **FAILED / `SABR_ONLY`**: cuatro candidatos originales sin URL ni cipher. No hubo sonda CDN ni reproducción ni prueba de Legacy. Demuestra la corrección de admisión del token, no recuperación universal del audio. La reproducción canary posterior de la fase B es otro intento y no borra este fallo.
+
+### Parser combinado: evidencia aislada
+
+`1028f0f` conserva el parser completo y sus límites. Especializa snapshots de posición, nodos hoja y un filtro negativo previo al matcher de timestamp; las coincidencias posibles, escapes Unicode y rangos inválidos siguen por el matcher original. Versión, hash de Meriyah, opciones y puntos de transformación están fijados; `currentLocation`, posiciones UTF-16 y diagnósticos se conservan.
+
+Un perfil alternado de dos controles y dos candidatos dio 2415 → 2080 ms de preparación interna: −335 ms, −13,87 %. Excluye la evaluación inicial del bundle y usa un asset de perfil, por lo que no es una mejora medida del arranque de la aplicación final. El diferencial conserva 889 casos de sintaxis/errores (650 rechazos), 38 casos específicos y cuatro fixtures con cuatro formatos exactos por fixture en Node; el perfil QuickJS conserva script y ST. El bundle productivo generado tiene 300436 bytes y SHA-256 `a982864f70e47700d48f89a01132e3c8b9b6643ee7616596a6e1218aacfb9b31`.
+
+### Fase B: aplicación intermedia con búsqueda y regresión 30
+
+El índice `round6-cold-search-20261023-170034-44e65ca0` compara el Clang de la fase A (`3527396c…`, `fb4f3d5`) con el release final (`019577f7…`, `1028f0f`). Hay dos intentos por canción y binario, doce procesos distintos, perfil anónimo, `FreshDecoder`, primera preparación `analyzed` y ninguna variable experimental de política. Los doce hashes de informes y doce de stderr coinciden con el índice; las métricas y metadatos coinciden con los informes originales.
+
+| Canción, búsqueda incluida | Clang anterior: mediana [dos intentos], ms | Final: mediana [dos intentos], ms | Native / IDs correctos | ≤3500 ms |
+|---|---:|---:|---:|---:|
+| Epoitaitaye | 5525,75 [6032,2; 5019,3] | 4670,80 [5765,1; 3576,5] | 4/4 | 0/4 |
+| Maite Zaitut! | 5463,75 [4984,2; 5943,3] | 5071,85 [5572,9; 4570,8] | 4/4 | 0/4 |
+| Pupu Eta Lore | 4039,10 [4052,9; 4025,3] | 3633,45 [3566,8; 3700,1] | 4/4 | 0/4 |
+
+La mediana de los seis controles es 5001,75 ms y la de los seis candidatos 4135,45 ms (−866,30 ms; −17,32 %). El candidato oscila entre 3566,8 y 5765,1 ms. Son muestras pequeñas con disponibilidad CDN variable y dos cambios entre versiones, no una atribución exclusiva al parser. No hubo Legacy ni fallos de extracción; todos conservan el fallo histórico de 300 ms y fallan el objetivo de 3500 ms. Los doce registran cero cortes y esperas después de empezar en la ventana breve, con `completeNotExercised=true`; no se acredita EOF ni escucha completa.
+
+La fila 9, Maite candidata, usa la versión pública con sufijo `canary_experiment`, obtiene cuatro ciphers válidos y conserva el preview sólo después de comprobar ST 20746 mediante el análisis completo. Reproduce por Native a 4570,8 ms con el ID esperado. Ésta sí acredita un arranque canary concreto; no transforma el ensayo anterior `SABR_ONLY` en éxito ni demuestra compatibilidad universal.
+
+La regresión `result-20261023-170430-f3e039dc.json`, del mismo binario final y perfil anónimo, tiene **30 Native, 0 Legacy, 0 fallos de extracción y 30/30 IDs exactamente iguales al corpus** `tests/fixtures/real-albums.capture.json`. Inicio con búsqueda: mínimo 437,1, mediana 693,4 y máximo 1559,7 ms. Los treinta conservan únicamente el fallo histórico de 300 ms; `gaps=0` cubre sólo el inicio breve y `completeNotExercised=true` en todos. Es una tanda en un proceso, no treinta primeros arranques aislados. No acredita anuncios, transiciones naturales, archivos completos ni cero cortes durante treinta canciones.
+
+### Ensayos descartados y comprobaciones cerradas
+
+| Ensayo | Resultado aislado | Decisión |
+|---|---|---|
+| Clang O3 frente a O2, dos pares | 3055,7 → 3017,4 ms, −1,25 %, con deriva temporal | No se adopta; no hay ganancia robusta |
+| `RustAllocator` limitado al Runtime frente al CRT | 2853,75 → 2993,3 ms, +4,89 % | No se adopta; sin cambio de allocator global |
+| AOT del parser WASM | Sólo estudio; no hay compilador AOT probado con fuel, cancelación y pila acreditados | No implementado ni medido; no se relajan límites |
+
+Las pruebas cerradas pasan: 434 JS, 233 Rust y 28 Rust ignoradas; tipos sin errores ni avisos; regeneración del bundle idéntica. El log Rust anterior de 231/27 queda conservado y no se confunde con el posterior de 233/28. Estos checks no sustituyen la validación final en aplicación.
+
+El cierre de archivos completos, Android, precarga y procedencia aparece después de las fases C/D/E.
+
+### Evidencia local de esta fase
+
+Los informes y logs originales permanecen ignorados, sin publicar URLs firmadas ni datos de sesión. SHA-256 completos:
+
+| Archivo bajo `capture-bench.local/` | SHA-256 |
+|---|---|
+| `round6-release-config-analysis.json.local` | `7bf8c14df8b6af67f6bae8596d5eab6cc4c5eeaccc0c14aabaf137e72b3f757f` |
+| `round6-cold-search-20261023-163104-5cfa5f43-index.json.local` | `1262d3719c9b2e25ff6fc3552ddd1fff9a2bae06218c9dbc3eba715ef1acbc0f` |
+| `cold-paired-20261023-163221-50fcc93d-index.json.local` | `64f8b059670c5dc6e85016c73aa4201432c7dcc46b4a69c2da8036a4032aad88` |
+| `quickjs-direct-dispatch-closed.json.local` | `3f883b0f8db12a9d651c72df98e8a2e5c3d789006bc8449cfb09b09414e99cb8` |
+| `canary-fix-summary.json.local` | `4000ff4949c6704a8763675110cad00d36f5362fcd62f45e270dfcfa47d62fe5` |
+| `combined-parser.local/20261023-164803-quickjs.json.local` | `813158a5defcc893bd0bfbb36c8aedaea79e76481fe1a13e397db2c6c7c38f80` |
+| `round6-discarded-frontend-experiments.json.local` | `e1a62266452748496bd1cf8da8d469ec6b8dab3a66c828ff5c79dbdb9ad95b34` |
+| `round6-final-all-js-tests.log.local` | `022f32bacfb4c6f4819ab5763215177eaf285c21c4579b534eb9af4e9a1df1e9` |
+| `round6-canary-parser-rust-tests.log.local` | `fefd3e8f3ba6c9061ec38af8bf95b7ece30f52eef8b75d4e9446a1bcc5c63ad3` |
+| `round6-final-bundle-check.log.local` | `5844581fed0659c73551a7e4cab0a5e0b657473736bc8a1f3e7b102c47aa89b1` |
+| `round6-typecheck.log.local` | `bb0271dc4ee6c27a9d576ab9eabf4e62d672c8a9152df5e7013bce452cdb916c` |
+| `round6-final-search-analysis.json.local` | `e99f3eb31bead6e51630870c1a9cef75c2cc92516aaf1c6bfa0d1679319cb0e2` |
+| `round6-cold-search-20261023-170034-44e65ca0-index.json.local` | `11373e12da126133763add0be02ef2eca0a6e9fee539a7e14b77c419c3df4525` |
+| `result-round6-cold-search-20261023-170034-44e65ca0-9.json.local` | `f6062c8a52c3983a1250a48cdba8d8f0d57685355757fed0095ad5e77b15cb0f` |
+| `stderr-round6-cold-search-20261023-170034-44e65ca0-9.log.local` | `541d69e5bf4d1ea664d1d53728234b68ba9bd5970d0a646a97998b4c4f7c048f` |
+| `result-20261023-170430-f3e039dc.json` | `3f83d37f953dff8baedeae439d7232c8ab1f1f377b5e2f15679aa784286aedb0` |
+| `metadata-20261023-170430-f3e039dc.json` | `5322c7a50a0209fb5ce4e728bba19d4d891f7ceeb7c043845a69c979db88b4a3` |
+
+Los índices verifican los hashes de los 24 informes y sus 24 stderr. Los metadatos declaran proceso frío, perfil anónimo, omisión de caché de decoder y ausencia de variables experimentales; sus hashes registrados no son una segunda atestación independiente. Binario control: `d25139ada3b495279d7fae8af4a6a01d3d5e3465dabb3473ac0f314e3105aed8`. Candidato fase A: `3527396c2caca582b407bd73262bb05ff57e6a9f6ae54ec156e184abae2ea2ec`. No corresponden al binario final de la fase B.
+
+La fase B verifica por separado otros doce informes y doce stderr. Binario final: `019577f7b058e9edfcd5d42ac014a6fb45aa6c50f6f28d6b2d22f6e58ad0bbbb`, commit `1028f0faaaed05efaf3437ac71f7e497272eb85f`, release NDK clang-cl 18.0.4. Corpus usado para contrastar los 30 IDs: SHA-256 `6756d46eb38be94261e9d56bdb2a88db8ac8a345e3f6965fc3db9a92ca2fd9dd`.
+
+### Precarga inicial acotada: fases C y D
+
+`3439ee5` adelanta únicamente los GET públicos watch/embed de la primera
+resolución foreground sin caché del proceso. No adelanta AST, POST, admisión de
+configuración, consumo o descifrado. `7ba7f01` reduce la demora de 100 a 25 ms;
+`ab50207` elimina la demora intencional. Cada resultado pertenece al ID y a la
+resolución que lo solicitó; se adopta una sola vez y sigue todas las guardas.
+Son dos documentos de hasta 4 MiB cada uno, no una cota de RSS. Cada GET dispone
+de cuatro segundos desde su despacho; adoptar no reinicia el transporte. El
+plazo de admisión/configuración empieza al adoptar y no es una cota única de
+cuatro segundos desde la reserva. Drop aborta tareas pendientes, pero no desenvía
+una petición; invalidar un ticket no equivale por sí solo a destruir el futuro
+Native. El coste posible es de dos GET adicionales en el primer camino rápido
+del proceso, aunque finalmente no necesite el respaldo incrustado.
+
+Dos intentos por canción y binario en cada fase; búsqueda incluida y un proceso
+anónimo nuevo con FreshDecoder por intento. Control C/D: `019577f7…`, sin esta
+precarga. Candidato C: `56227e70…` (100 ms); D: `b22edb24…` (25 ms).
+
+| Fase / canción | Control: dos intentos, ms | Candidato: dos intentos, ms |
+|---|---:|---:|
+| C / Epoitaitaye | 5757,8; 6623,2 | 5593,1; 3459,8 |
+| C / Maite Zaitut! | 5608,4; 4634,0 | 4974,2; 5400,8 |
+| C / Pupu Eta Lore | 3549,7; 3603,0 | 3605,8; 3509,3 |
+| D / Epoitaitaye | 3569,4; 5574,6 | 3504,4; 4466,0 |
+| D / Maite Zaitut! | 4658,6; 5511,0 | 5442,8; 6394,8 |
+| D / Pupu Eta Lore | 3579,8; 3524,3 | 3496,1; 3422,2 |
+
+Las 24 filas reproducen por Native con el ID esperado, sin Legacy. C pasa de
+mediana 5121,2 a 4290 ms y de 0/6 a 1/6 dentro de 3500 ms. Sin embargo, cinco de
+los seis candidatos adoptan antes de cumplirse los 100 ms: sólo uno obtiene
+unos 17,7 ms reales de adelanto de GET. El control registra doce 403 y el
+candidato siete; no se atribuye la diferencia de 831,2 ms al hedge.
+
+D pasa de mediana 4119,2 a 3985,2 ms y de 0/6 a 2/6 dentro de 3500 ms.
+**Epo a 3504,4 ms sigue siendo un incumplimiento.** Los seis candidatos sí
+despachan ambos GET antes de adoptar, con 53,94–93,57 ms de adelanto. Ambos
+grupos registran ocho 403; Maite empeora y uno de sus intentos tarda 6394,8 ms,
+con SABR_ONLY recuperado mediante POST2 y tres 403. No se borran estos resultados
+por las medidas posteriores. Los relojes de diagnóstico pueden empezar antes
+por la reserva nueva: se comparan duraciones de etapa y firstSoundMs, nunca
+atMs entre distintos binarios.
+
+La regresión habitual de D (`20261023-173925-99d78677`) conserva 30 Native,
+cero Legacy y 30 IDs exactos, mínimo 538,9 / mediana 775 / máximo 1066,9 ms.
+Sólo observa el comienzo, sin acreditar EOF ni escucha completa.
+
+### Fase E: versión final sin espera intencional
+
+Comparación fija de 25 frente a 0 ms, dos intentos por canción/binario, orden
+alternado, doce procesos independientes, perfil anónimo y FreshDecoder.
+Índice `round6-cold-search-20261023-175143-43d118f5-index.json.local`.
+Las doce filas usan Native con el ID esperado, sin Legacy; sus hashes de
+informe/stderr y metadatos se contrastan con el índice y los dos binarios.
+El ejecutable candidato corresponde al árbol limpio `ab50207`, release,
+NDK clang-cl 18.0.4; SHA-256
+`e24d090f3fb029b73335d358b9abd9bf07990f4560bbb3ceae4c0433c8326cb9`.
+
+| Canción | 25 ms: dos intentos, ms | Final 0 ms: dos intentos, ms | Final ≤3500 ms |
+|---|---:|---:|---:|
+| Epoitaitaye | 3986,1; 5515,2 | 3410,7; 3360,1 | 2/2 |
+| Maite Zaitut! | 4610,7; 5477,2 | 5484,9; 4390,4 | 0/2 |
+| Pupu Eta Lore | 3434,1; 4082,9 | 3328,3; 3466,9 | 2/2 |
+
+Epo y Pupu cumplen en sus cuatro intentos candidatos. Maite reproduce por
+Native, pero los dos intentos incumplen. Sus primeros sondeos CDN devuelven
+403: acepta el cuarto a unos dos segundos del primero en la fila de 5484,9 ms,
+y el tercero a unos un segundo en la de 4390,4 ms. Es un diagnóstico de esas
+solicitudes, no una prueba publicitaria ni de la causa del rechazo.
+
+La mediana de los seis controles es 4346,8 ms y la de los seis candidatos
+3438,8 ms; el objetivo pasa de 1/6 a 4/6. El cambio de temporización sólo
+elimina 25 ms intencionales: **no se atribuyen los 908 ms de diferencia al
+ajuste**, dada la variación de CDN y red. Las comparaciones aisladas anteriores
+son la evidencia de la mejora de CPU. No se sigue repitiendo la tanda para
+escoger intentos mejores. La meta de 3,5 s consistente en las tres canciones
+continúa pendiente.
+
+La regresión final `20261023-175250-7ecfa231` tiene 30 Native, cero Legacy,
+ningún fallo de extracción y 30 IDs esperados: mínimo 499, mediana 699,95 y
+máximo 3523,6 ms. El máximo es MALAMENTE (`mw2XM-PSqXY`): búsqueda 428,675 ms,
+resolución Native 3050,102 ms y player 3041,140 ms; validación 6,243 ms.
+No usa la alternativa incrustada; no se atribuye al hedge sin un control.
+Se conservan el outlier y los treinta fallos del umbral histórico de 300 ms.
+Los gaps/stalls observados sólo cubren el inicio breve; las treinta filas
+mantienen completeNotExercised. No son treinta primeros arranques independientes.
+
+### Archivos completos, validación y pendientes
+
+La única ejecución nueva de `real_kids_complete_files`, sobre `7ba7f01`,
+termina correctamente con tres archivos 251 frescos. El verificador exige los
+tres IDs, hashes/longitudes del stdout y mtime posterior al comienzo; vuelve
+a calcular las referencias independientes de yt-dlp. Los tres coinciden byte
+a byte y FFmpeg 8.1 `-xerror` termina con salida 0.
+
+| Canción | Bytes completos | Referencia idéntica | FFmpeg |
+|---|---:|---|---:|
+| Epoitaitaye | 3592710 | Sí | 0 |
+| Maite Zaitut! | 2393910 | Sí | 0 |
+| Pupu Eta Lore | 2646193 | Sí | 0 |
+
+El ajuste posterior de 25 a 0 ms afecta al adelanto foreground; este test usa
+la entrada nativa sin esa prioridad. No se presenta la comprobación de archivos
+como escucha continua en la app, prueba acústica o campaña de anuncios.
+
+- 434 pruebas JavaScript, tipos sin errores ni avisos y bundle regenerado idéntico.
+- 241 pruebas Rust aprobadas/28 ignoradas en la variante de 100 ms; la variante
+  final de 0 ms pasa sus 60 pruebas dirigidas/2 ignoradas, incluidos ocho casos
+  de precarga, configuración, límites, renovación y plazos.
+- Android arm64/x86_64: `cargo check --tests --offline --locked` correcto en
+  `ab50207`, sin avisos nuevos; metadata `android-clang-vendor-checks-20261023-174816.json.local`.
+  Son checks de compilación, sin nueva prueba de APK, JNI, ExoPlayer o rendimiento móvil.
+- Se descartan O3, otro allocator, el sondeo de prefijo y gzip del bootstrap
+  sin ganancia material demostrada. El control previo de AAC140 y Opus251 falla
+  y pasa en los mismos puntos muestreados; no justifica cambiar la preferencia
+  de calidad o añadir más sondeos. No prueba disponibilidad simultánea exacta
+  ni excluye una mejora futura. La revisión detecta que ocho es la cota de
+  intentos del primer candidato: los siguientes admiten uno cada uno dentro
+  del mismo plazo CDN de ocho segundos. No es un contador global de ocho
+  peticiones; una política intercalada necesitaría definirlo explícitamente.
+
+| Perfil | Evidencia de esta ronda | Anuncios vistos / saltados / entregados |
+|---|---|---|
+| Sin sesión | A/B/C/D/E, corpus habitual y tres archivos completos | No medidos en esta ronda |
+| Premium | No repetido; referencias históricas separadas | No medidos en esta ronda |
+
+Epo ya no necesita Legacy en las pruebas finales: sigue la ruta Native y
+conserva identidad, audio original y sondas estrictas. El respaldo Legacy se
+mantiene para otros fallos; no se garantiza todo el catálogo. Quedan pendientes
+los 3,5 s consistentes, la recuperación uniforme de SABR, la integración de
+`origin/main`/youtubei.js 18.3, CI con su LLVM concreto y rendimiento móvil real.
+No cambia la aprobación de Oficial/progresiva ni sus límites. yt-dlp continúa
+predeterminado y Propio recomendado. No cambian UI, db.rs, downloads.rs,
+capture.js, receta, youtubei.ts ni API de extractores; sí cambia el bundle
+privado compilado. Requiere una app nueva; no actualiza la PWA ni se entrega
+publicando sólo un extractor. Sin etiquetas, releases, publicación de
+extractores ni cambios en main; sólo push de p1-oficial para revisión.
+
+### Procedencia final y commits
+
+Además de los commits de configuración, Clang y parser de la tabla inicial:
+
+| Commit | Cambio |
+|---|---|
+| `3439ee5` | GET públicos iniciales acotados en paralelo, 100 ms |
+| `7ba7f01` | Demora de 25 ms |
+| `ab50207` | Sin espera intencional, tests dirigidos finales |
+
+El manifiesto local `round6-final-manifest.json.local` registra **867 archivos**,
+verificados en dos pasadas sobre el árbol limpio `ab50207`; SHA-256
+`f9987f1a21b83a21608843b3dbeeb5da416c8dea9b10f92d4b58d2c29c1558ce`.
+Incluye fuentes, inventario/licencias vendor, ejecutables inmutables,
+procedencias, índices, todos los resultados y stderr de comparación, audio,
+referencias y verificadores. Los documentos quedan fuera para evitar hashes
+circulares. Hay 616 referencias excluidas: 88 de compilación y 528 externas
+(principalmente Cargo registry). Las 42 nominales sin resolver son 39 bins de
+documentación vendor no instalados y tres alias cuyos archivos sí están
+incluidos por rutas completas. Ningún informe medido falta. No equivalen a
+fallos de los hashes incluidos. Los archivos
+de perfil, cuentas, dependencias instaladas y artefactos target no se recorren.
+Sólo código y resúmenes se suben a la rama; los raws y audios permanecen en
+carpetas locales ignoradas.
