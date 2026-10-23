@@ -111,6 +111,17 @@ export function getOfficialFallback(track: TrackQuery, error: unknown): Alternat
 }
 
 function operation(track: TrackQuery, kind: Operation['kind'], refresh: boolean, work: (signal: AbortSignal) => Promise<Playable>): Promise<Playable> {
+  // Selecting a source is an explicit change of recording for this ID. A
+  // download must wait for that choice, and an older download cannot later
+  // overwrite it with an automatically found YouTube association.
+  if (kind === 'download') {
+    const selection = operations.get(`play:${track.id}`)
+    if (selection?.kind === 'choose') return selection.promise
+  } else if (kind === 'choose') {
+    const downloadKey = `download:${track.id}`
+    operations.get(downloadKey)?.controller.abort(new DOMException('La fuente ha cambiado.', 'AbortError'))
+    operations.delete(downloadKey)
+  }
   const key = `${kind === 'download' ? 'download' : 'play'}:${track.id}`
   const previous = operations.get(key)
   if (kind !== 'choose' && previous && (!refresh || previous.kind === 'choose')) return previous.promise

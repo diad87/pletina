@@ -802,6 +802,26 @@ test('player changes do not cancel downloads or share their resolution with down
   assert.equal(remoteSignal.aborted,false)
 })
 
+test('a manual source cancels an older download and a new download waits for the pending manual choice',async()=>{
+  const searchGate=deferred()
+  const audio=engine({searchMusic:async()=>{await searchGate.promise;return[candidate()]}})
+  const old=audio.resolveRemoteTrack(query),rejected=assert.rejects(old,{name:'AbortError'})
+  await flush()
+  assert.equal((await audio.chooseSource(query,second)).videoId,second)
+  searchGate.resolve()
+  await rejected
+  assert.deepEqual(audio.writes.map(w=>[w.choice.videoId,w.choice.verified]),[[second,true]],'old download cannot overwrite the explicit association')
+  const choiceGate=deferred()
+  const waiting=engine({stream:async videoId=>{await choiceGate.promise;return info(videoId)},searchMusic:async()=>assert.fail('download must wait for explicit selection')})
+  const selected=waiting.chooseSource(query,second)
+  await flush()
+  const download=waiting.resolveRemoteTrack(query)
+  choiceGate.resolve()
+  assert.equal((await selected).videoId,second)
+  assert.equal((await download).videoId,second)
+  assert.deepEqual(waiting.writes.map(w=>[w.choice.videoId,w.choice.verified]),[[second,true]])
+})
+
 test('cancelling a delayed external source prevents its completion and disposes checked blobs', async () => {
   const gate = deferred(); let disposed = 0, signal
   const audio = engine({ searchMusic: async () => [], searchVideos: async () => [],
