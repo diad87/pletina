@@ -75,6 +75,9 @@ fn core() -> Result<&'static Core, String> {
     let dir = DATA_DIR.get().ok_or("el núcleo no tiene carpeta de datos")?;
     let db = Db::open(&dir.join("musify.db")).map_err(|e| e.to_string())?;
     crate::extractors::load_saved(&dir.join("extractors"));
+    if let Err(error) = crate::youtube_decoder_cache::initialize(dir) {
+        eprintln!("[youtube-decoder-cache] {error}");
+    }
     // Sin la app no se ha elegido motor: en el móvil siempre es el propio.
     let _ = crate::extractor::set_stream_engine("propio".into());
     let _ = CORE.set(Core { db, ytm: YouTubeMusic::new(), ytdlp: YtDlp::new(dir.join("bin")) });

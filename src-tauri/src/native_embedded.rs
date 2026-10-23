@@ -467,7 +467,105 @@ fn invalidate_compiled(
     true
 }
 
+async fn invalidate_decoder(url: &reqwest::Url, used: &Arc<PreparedDecoder>) {
+    let sha = {
+        let mut cache = COMPILED.lock().await;
+        let sha = cache
+            .entries
+            .iter()
+            .find(|entry| &entry.url == url && Arc::ptr_eq(&entry.decoder, used))
+            .map(|entry| entry.sha);
+        invalidate_compiled(&mut cache, url, used);
+        sha
+    };
+    if let Some(sha) = sha {
+        let _ = crate::youtube_decoder_cache::invalidate(url.as_str(), sha).await;
+    }
+}
+
+struct Preparation {
+    decoder: Arc<PreparedDecoder>,
+    response: Option<Result<Value, Error>>,
+}
+
+// A speculative request may start the server's readiness clock while the AST
+// is analyzed. This literal is only a hint: no response is used unless the
+// complete analyzer independently returns exactly the same timestamp.
+fn timestamp_hint(source: &str) -> Option<u32> {
+    if source.len() > LIMIT {
+        return None;
+    }
+    let mut found = None;
+    for (start, _) in source.match_indices("signatureTimestamp") {
+        if start > 0 && source.as_bytes()[start - 1].is_ascii_alphanumeric()
+            || start > 0 && b"_$".contains(&source.as_bytes()[start - 1])
+        {
+            continue;
+        }
+        let suffix = source[start + "signatureTimestamp".len()..].trim_start();
+        let Some(suffix) = suffix.strip_prefix(':') else {
+            continue;
+        };
+        let suffix = suffix.trim_start();
+        let end = suffix.bytes().take_while(u8::is_ascii_digit).count();
+        if end == 0
+            || end > 10
+            || suffix.starts_with('0')
+            || !suffix[end..].trim_start().starts_with([',', '}'])
+        {
+            continue;
+        }
+        let value = suffix[..end].parse::<u32>().ok()?;
+        if found.replace(value).is_some() {
+            return None;
+        }
+    }
+    found
+}
+
+async fn analyze_preview<P, R>(
+    prepare: P,
+    request: R,
+    hint: u32,
+) -> Result<(PreparedDecoder, Option<Result<Value, Error>>), Error>
+where
+    P: Future<Output = Result<PreparedDecoder, String>>,
+    R: Future<Output = Result<Value, Error>>,
+{
+    let (decoder, response) = tokio::join!(prepare, request);
+    let decoder = decoder.map_err(|_| fail("DECODER_PREPARE"))?;
+    let response = (decoder.signature_timestamp == hint).then_some(response);
+    Ok((decoder, response))
+}
+
+fn prepared_measurement(
+    id: Option<&str>,
+    mode: &str,
+    started: Instant,
+    download_ms: f64,
+    analyze_ms: f64,
+    preview: bool,
+) {
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!(
+            "[native-prepare] {}",
+            json!({"id":id,"mode":mode,
+            "downloadMs":download_ms,"analysisAndPreviewMs":analyze_ms,"preview":preview,
+            "totalMs":started.elapsed().as_secs_f64()*1000.0})
+        );
+    }
+}
+
 async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<PreparedDecoder>, Error> {
+    Ok(prepare_request(http, config, None).await?.decoder)
+}
+
+async fn prepare_request(
+    http: &reqwest::Client,
+    config: &Config,
+    id: Option<&str>,
+) -> Result<Preparation, Error> {
+    let started = Instant::now();
     let mut cache = COMPILED.lock().await;
     cache.entries.retain(|entry| entry.at.elapsed() < TTL);
     if let Some(entry) = cache
@@ -475,10 +573,16 @@ async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<Prepare
         .iter()
         .find(|entry| entry.url == config.player)
     {
-        return Ok(entry.decoder.clone());
+        prepared_measurement(id, "memory", started, 0.0, 0.0, false);
+        return Ok(Preparation {
+            decoder: entry.decoder.clone(),
+            response: None,
+        });
     }
     failure_cache(&mut cache.failed, config.player.as_str())?;
+    let download_started = Instant::now();
     let source = get(http, config.player.clone()).await?;
+    let download_ms = download_started.elapsed().as_secs_f64() * 1000.0;
     #[cfg(test)]
     save_private_fixture(
         None,
@@ -489,14 +593,46 @@ async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<Prepare
         source.as_bytes(),
     );
     let sha: [u8; 32] = Sha256::digest(source.as_bytes()).into();
+    let mut response = None;
+    let mut analyze_ms = 0.0;
+    let mut preview = false;
+    let mut mode = "memory-sha";
+    // Controlled cold benchmarks bypass only persistent reads, never safety checks.
+    let fresh = std::env::var_os("MUSIFY_BENCH").is_some()
+        && std::env::var_os("MUSIFY_BENCH_FRESH_DECODER").is_some();
+    let saved = if fresh {
+        None
+    } else {
+        crate::youtube_decoder_cache::load(config.player.as_str(), &source).await
+    };
     let decoder = if let Some(entry) = cache.entries.iter().find(|entry| entry.sha == sha) {
         entry.decoder.clone()
+    } else if let Some(decoder) = saved {
+        mode = "disk";
+        decoder
     } else {
-        Arc::new(
-            youtube_decoder::prepare(source)
+        mode = "analyzed";
+        let hint = id.and_then(|_| timestamp_hint(&source));
+        let analyze_started = Instant::now();
+        let decoder = if let (Some(id), Some(hint)) = (id, hint) {
+            let (decoder, speculative) = analyze_preview(
+                youtube_decoder::prepare(source.clone()),
+                player_response(http, PLAYER, config, id, hint),
+                hint,
+            )
+            .await?;
+            preview = speculative.is_some();
+            response = speculative;
+            decoder
+        } else {
+            youtube_decoder::prepare(source.clone())
                 .await
-                .map_err(|_| fail("DECODER_PREPARE"))?,
-        )
+                .map_err(|_| fail("DECODER_PREPARE"))?
+        };
+        analyze_ms = analyze_started.elapsed().as_secs_f64() * 1000.0;
+        let _ =
+            crate::youtube_decoder_cache::store(config.player.as_str(), &source, &decoder).await;
+        Arc::new(decoder)
     };
     if cache.entries.len() >= MAX_DECODERS {
         cache.entries.remove(0);
@@ -508,7 +644,8 @@ async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<Prepare
         at: Instant::now(),
     });
     cache.failed.remove(config.player.as_str());
-    Ok(decoder)
+    prepared_measurement(id, mode, started, download_ms, analyze_ms, preview);
+    Ok(Preparation { decoder, response })
 }
 
 fn body(config: &Config, id: &str, sts: u32) -> Value {
@@ -977,14 +1114,22 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
         return Err(fail("ID"));
     }
     let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
-    let watch = get(
-        http,
-        reqwest::Url::parse(&format!("https://www.youtube.com/watch?v={video_id}&hl=en")).unwrap(),
-    )
-    .await?;
-    watch_player(&watch, video_id)?;
-    let initial_config = configuration(http, video_id).await?;
-    let decoder = prepared(http, &initial_config).await?;
+    let (_, initial_config) = tokio::try_join!(
+        async {
+            let watch = get(
+                http,
+                reqwest::Url::parse(&format!("https://www.youtube.com/watch?v={video_id}&hl=en"))
+                    .unwrap(),
+            )
+            .await?;
+            watch_player(&watch, video_id).map(|_| ())
+        },
+        configuration(http, video_id)
+    )?;
+    let Preparation {
+        decoder,
+        mut response,
+    } = prepare_request(http, &initial_config, Some(video_id)).await?;
     resolve_ready(
         &CONFIGS,
         video_id,
@@ -992,7 +1137,10 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
             config: initial_config,
             decoder,
         },
-        |ready| async move { resolve_config(http, &ready.config, video_id, ready.decoder).await },
+        |ready| {
+            let response = response.take();
+            async move { resolve_config(http, &ready.config, video_id, ready.decoder, response).await }
+        },
         |current| async move {
             let config = if let Some(current) = current {
                 current
@@ -1021,9 +1169,14 @@ async fn resolve_config(
     config: &Config,
     video_id: &str,
     decoder: Arc<PreparedDecoder>,
+    response: Option<Result<Value, Error>>,
 ) -> Result<Direct, Error> {
-    let mut response =
-        player_response(http, PLAYER, config, video_id, decoder.signature_timestamp).await?;
+    let mut response = match response {
+        Some(response) => response?,
+        None => {
+            player_response(http, PLAYER, config, video_id, decoder.signature_timestamp).await?
+        }
+    };
     #[cfg(test)]
     {
         save_private_fixture(
@@ -1098,7 +1251,7 @@ async fn resolve_config(
             Ok(v) => v,
             Err(error) => {
                 if invalid_decoder(&error) {
-                    invalidate_compiled(&mut *COMPILED.lock().await, &config.player, &decoder);
+                    invalidate_decoder(&config.player, &decoder).await;
                 }
                 last = fail("DECODER_RUN");
                 continue;
@@ -1118,7 +1271,7 @@ async fn resolve_config(
         let url = match apply_decoded(input, decoded.sig, decoded.n) {
             Ok(v) => v,
             Err(error) => {
-                invalidate_compiled(&mut *COMPILED.lock().await, &config.player, &decoder);
+                invalidate_decoder(&config.player, &decoder).await;
                 last = error;
                 continue;
             }
@@ -1235,6 +1388,99 @@ mod tests {
             .append_pair("s", "input_sig")
             .append_pair("sp", "sig");
         json!({"signatureCipher":wrapped.query().unwrap()})
+    }
+
+    #[test]
+    fn speculative_timestamp_requires_one_bounded_literal() {
+        assert_eq!(
+            timestamp_hint("x={signatureTimestamp:20746,other:1}"),
+            Some(20746)
+        );
+        assert_eq!(timestamp_hint("signatureTimestamp : 20746 }"), Some(20746));
+        for source in [
+            "xsignatureTimestamp:20746}",
+            "_signatureTimestamp:20746}",
+            "signatureTimestamp:0}",
+            "signatureTimestamp:4294967296}",
+            "signatureTimestamp:20746+1}",
+            "signatureTimestamp:foo}",
+            "signatureTimestamp:20746,signatureTimestamp:20746}",
+        ] {
+            assert_eq!(timestamp_hint(source), None, "{source}");
+        }
+    }
+
+    #[tokio::test]
+    async fn preview_runs_concurrently_but_waits_for_matching_analyzer() {
+        let barrier = Arc::new(tokio::sync::Barrier::new(2));
+        let analysis = barrier.clone();
+        let request = barrier.clone();
+        let result = tokio::time::timeout(
+            Duration::from_secs(1),
+            analyze_preview(
+                async move {
+                    analysis.wait().await;
+                    Ok(PreparedDecoder {
+                        script: "verified".into(),
+                        signature_timestamp: 20746,
+                    })
+                },
+                async move {
+                    request.wait().await;
+                    Ok(json!({"verifiedRequest":true}))
+                },
+                20746,
+            ),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(result.0.script, "verified");
+        assert_eq!(result.1.unwrap().unwrap(), json!({"verifiedRequest":true}));
+    }
+
+    #[tokio::test]
+    async fn preview_drops_success_and_error_when_timestamp_is_not_verified() {
+        for response in [Ok(json!({"wrongHint":true})), Err(fail("SABR_ONLY"))] {
+            let result = analyze_preview(
+                async {
+                    Ok(PreparedDecoder {
+                        script: "verified".into(),
+                        signature_timestamp: 20747,
+                    })
+                },
+                async { response },
+                20746,
+            )
+            .await
+            .unwrap();
+            assert_eq!(result.0.signature_timestamp, 20747);
+            assert!(result.1.is_none());
+        }
+        assert!(
+            analyze_preview(
+                async { Err("bad analysis".into()) },
+                async { Ok(json!({"mustNotEscape":true})) },
+                20746
+            )
+            .await
+            .is_err()
+        );
+        let result = analyze_preview(
+            async {
+                Ok(PreparedDecoder {
+                    script: "verified".into(),
+                    signature_timestamp: 20746,
+                })
+            },
+            async { Err(fail("SABR_ONLY")) },
+            20746,
+        )
+        .await
+        .unwrap();
+        assert!(
+            matches!(result.1.unwrap(), Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_SABR_ONLY")
+        );
     }
 
     #[test]
@@ -1829,6 +2075,9 @@ mod tests {
                         _ => return requests,
                     }
                 };
+                // Winsock may retain the listener's nonblocking mode on accept.
+                // Reading an as-yet-unwritten request must wait for the timeout.
+                socket.set_nonblocking(false).unwrap();
                 socket
                     .set_read_timeout(Some(Duration::from_secs(2)))
                     .unwrap();

@@ -30,6 +30,7 @@ mod podcasts;
 mod updater;
 mod youtube;
 mod youtube_decoder;
+mod youtube_decoder_cache;
 mod youtube_session;
 mod youtube_podcasts;
 mod ytdlp;
@@ -250,6 +251,9 @@ pub fn run() {
         .setup(move |app| {
             let dir = app.path().app_local_data_dir()?;
             std::fs::create_dir_all(&dir)?;
+            if let Err(error) = youtube_decoder_cache::initialize(&dir) {
+                eprintln!("[youtube-decoder-cache] {error}");
+            }
             let path = if isolated_bench {
                 dir.join(format!("musify-bench-{}.db", std::process::id()))
             } else {

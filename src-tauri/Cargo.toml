@@ -63,5 +63,10 @@ strip = true
 [profile.dev.package.rquickjs-sys]
 opt-level = 2
 
+# Keep the bounded interpreter fast in release too. Size-oriented C builds add
+# about 1.2 s to the real cold-player fixture; the rest of the app stays at "s".
+[profile.release.package.rquickjs-sys]
+opt-level = 2
+
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }

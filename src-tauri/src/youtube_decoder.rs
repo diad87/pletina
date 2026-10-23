@@ -484,6 +484,70 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "Profiles a local trusted diagnostic bundle; no network or remote values printed"]
+    async fn real_player_phase_profile() {
+        let directory = std::env::var_os("MUSIFY_DECODER_FIXTURE_DIR")
+            .map(std::path::PathBuf::from)
+            .expect("explicit local fixture directory required");
+        let source = std::fs::read_to_string(directory.join("player.js.local")).unwrap();
+        assert!(!source.is_empty() && source.len() <= MAX_SOURCE);
+        let profile_path = std::env::var_os("MUSIFY_DECODER_PROFILE_BUNDLE")
+            .expect("explicit trusted diagnostic bundle required");
+        let diagnostic = std::fs::read_to_string(profile_path).unwrap();
+        assert!(diagnostic.len() <= MAX_SCRIPT);
+        let expected: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(directory.join("decoder-output-hashes.json.local")).unwrap(),
+        )
+        .unwrap();
+        let hash = |value: &str| format!("{:x}", Sha256::digest(value.as_bytes()));
+        assert_eq!(expected["playerSha256"], hash(&source));
+        let diagnostic_hash = hash(&diagnostic);
+        let (prepared, measurements) = execute(gate(), PREPARE, move |ctx, _api| {
+            // This is trusted, locally generated instrumentation, never the
+            // source player. It runs after the normal sandbox is hardened and
+            // needs no Function constructor or host callback to analyze data.
+            ctx.eval::<(), _>(diagnostic).map_err(|e| js_failure(&ctx, e))?;
+            let function: Function = ctx.globals().get("__musifyDecoderProfile").map_err(js_error)?;
+            ctx.eval::<(), _>(
+                "delete globalThis.__musifyDecoderProfile; delete globalThis.__musifyYouTubeDecoder;",
+            ).map_err(js_error)?;
+            let value: Value = function.call((source.as_str(),)).map_err(|e| js_failure(&ctx, e))?;
+            let result = object(value.clone())?;
+            let profile: Object = result.get("profile").map_err(js_error)?;
+            let mut measurements = serde_json::Map::new();
+            for key in ["totalMs", "parseConstructorMs"] {
+                if key != "totalMs" && profile.get::<_, Value>(key).map_err(js_error)?.is_undefined() {
+                    continue;
+                }
+                let n: f64 = profile.get(key).map_err(js_error)?;
+                if !n.is_finite() || n < 0.0 { return Err(error("OUTPUT")); }
+                measurements.insert(key.into(), serde_json::json!(n));
+            }
+            for group in ["phases", "counters"] {
+                let values: Object = profile.get(group).map_err(js_error)?;
+                let mut selected = serde_json::Map::new();
+                for key in [
+                    "analyzeAst", "findDependencies", "onMatch", "refreshExtractionState",
+                    "buildScript", "renderNode", "timestampMatcher", "nsigMatcher",
+                    "walkAst:findDependencies", "walkAst:timestampMatcher", "walkAst:nsigMatcher",
+                    "walkAst:analyzeAst", "walkAst:other",
+                ] {
+                    let value: Value = values.get(key).map_err(js_error)?;
+                    if value.is_undefined() { continue; }
+                    let n = value.as_number().filter(|n| n.is_finite() && *n >= 0.0)
+                        .ok_or_else(|| error("OUTPUT"))?;
+                    selected.insert(key.into(), serde_json::json!(n));
+                }
+                measurements.insert(group.into(), serde_json::Value::Object(selected));
+            }
+            Ok((read_prepared(value)?, serde_json::Value::Object(measurements)))
+        }).await.expect("profile respects production budgets");
+        assert_eq!(expected["signatureTimestamp"], prepared.signature_timestamp);
+        assert_eq!(expected["scriptSha256"], hash(&prepared.script));
+        eprintln!("decoder phase profile bundle_sha256={diagnostic_hash} {measurements}");
+    }
+
+    #[tokio::test]
     #[ignore = "Reads the local anonymous prototype fixture; no network or remote values printed"]
     async fn real_player_fixture() {
         // An Android test executable runs in its own /data/local/tmp directory;

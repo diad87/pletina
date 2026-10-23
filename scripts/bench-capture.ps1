@@ -29,7 +29,8 @@ param(
     [switch]$VerifiedOnly,
     [switch]$NoSeek,
     [switch]$CachedSeekReturn,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$FreshDecoder
 )
 
 # Perfil y base de datos propios. No toca la biblioteca ni la instalación del usuario.
@@ -95,7 +96,7 @@ $plan = if ($MseOnly) {
 } | ConvertTo-Json -Depth 20 }
 [IO.File]::WriteAllText($planPath, $plan, [Text.UTF8Encoding]::new($false))
 
-$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE', 'MUSIFY_BENCH_PROFILE_MODE', 'MUSIFY_BENCH_SURFACE', 'MUSIFY_BENCH_HOLDBACK_SECONDS', 'MUSIFY_CAPTURE_MAX_SESSIONS', 'MUSIFY_CAPTURE_TRACK_MB', 'MUSIFY_CAPTURE_CACHE_MB', 'MUSIFY_BENCH_AUDIT_ALL_AUDIO')
+$envKeys = @('PATH', 'MUSIFY_BENCH', 'MUSIFY_BENCH_PROGRESSIVE', 'MUSIFY_BENCH_OUT', 'MUSIFY_BENCH_EXIT', 'MUSIFY_ENGINE', 'MUSIFY_BENCH_PROFILE_MODE', 'MUSIFY_BENCH_SURFACE', 'MUSIFY_BENCH_HOLDBACK_SECONDS', 'MUSIFY_CAPTURE_MAX_SESSIONS', 'MUSIFY_CAPTURE_TRACK_MB', 'MUSIFY_CAPTURE_CACHE_MB', 'MUSIFY_BENCH_AUDIT_ALL_AUDIO', 'MUSIFY_BENCH_FRESH_DECODER')
 $savedEnv = @{}
 foreach ($key in $envKeys) { $savedEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process') }
 $testProcess = $null
@@ -122,6 +123,7 @@ try {
     $binaryPath = $snapshotBinaryPath
     $binaryProvenance = if (Test-Path -LiteralPath $buildMetadataPath) { Get-Content -LiteralPath $buildMetadataPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
     $env:MUSIFY_BENCH = $planPath
+    $env:MUSIFY_BENCH_FRESH_DECODER = if ($FreshDecoder) { '1' } else { $null }
     # Experimento explícito: el marcador tardío de anuncios impide promoverlo a producción.
     $env:MUSIFY_BENCH_PROGRESSIVE = if ($VerifiedOnly) { $null } else { '1' }
     $env:MUSIFY_BENCH_OUT = $resultPath
@@ -148,6 +150,7 @@ try {
         captureSurface = $Surface
         holdbackSeconds = $HoldbackSeconds
         rawAudioProbe = [bool]$AuditAllAudio
+        freshDecoder = [bool]$FreshDecoder
         nativeAudioAndSeek = $Suite -eq 'native-direct' -and !$MseOnly
         limits = @{ maxSessions = $MaxSessions; trackMemoryMb = $TrackMemoryMb; cacheMemoryMb = $CacheMemoryMb }
         progressiveExperiment = !$VerifiedOnly
