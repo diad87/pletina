@@ -780,6 +780,14 @@ fn direct_audio_url(url: &str) -> bool {
 // used by youtubei.js. An explicit dub/secondary track is never the original
 // merely because the server selected it as the default for this locale.
 fn original_audio(format: &Value) -> bool {
+    original_audio_with_policy(format, true)
+}
+
+fn original_audio_explicit(format: &Value) -> bool {
+    original_audio_with_policy(format, false)
+}
+
+fn original_audio_with_policy(format: &Value, allow_implicit: bool) -> bool {
     if format["isDrc"].as_bool() == Some(true) {
         return false;
     }
@@ -816,9 +824,10 @@ fn original_audio(format: &Value) -> bool {
     }
     content.as_deref() == Some("original")
         || name.contains("original")
-        || format["audioTrack"]["audioIsDefault"]
-            .as_bool()
-            .unwrap_or(true)
+        || (allow_implicit
+            && format["audioTrack"]["audioIsDefault"]
+                .as_bool()
+                .unwrap_or(true))
 }
 
 fn audio_tags(encoded: &str) -> Option<Vec<(String, String)>> {
@@ -1119,6 +1128,7 @@ mod tests {
         let original = json!({"audioTrack":{"audioIsDefault":false,"displayName":"Basque (original)"},
             "xtags":tags(&[("lang","eu"),("acont","original")])});
         assert!(original_audio(&original));
+        assert!(original_audio_explicit(&original));
         for content in [
             "dubbed",
             "dubbed-auto",
@@ -1147,6 +1157,11 @@ mod tests {
             );
         }
         assert!(original_audio(&json!({})));
+        assert!(!original_audio_explicit(&json!({})));
+        let localized_default =
+            json!({"audioTrack":{"audioIsDefault":true,"displayName":"Spanish"}});
+        assert!(original_audio(&localized_default));
+        assert!(!original_audio_explicit(&localized_default));
         assert!(!original_audio(
             &json!({"audioTrack":{"audioIsDefault":false}})
         ));

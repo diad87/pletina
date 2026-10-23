@@ -760,18 +760,50 @@ where
         .unwrap_or_else(|_| Err(fail("CDN_TIMEOUT")))
 }
 
-fn candidate_audio(format: &Value) -> bool {
+fn candidate_audio(format: &Value, require_explicit: bool) -> bool {
     format["mimeType"].as_str().is_some_and(|mime| {
         BUNDLED
             .audio
             .iter()
             .any(|allowed| mime.starts_with(allowed))
-    }) && original_audio(format)
-        && format
-            .get("drmFamilies")
-            .is_none_or(|v| v.as_array().is_some_and(Vec::is_empty))
+    }) && (if require_explicit {
+        original_audio_explicit(format)
+    } else {
+        original_audio(format)
+    }) && format
+        .get("drmFamilies")
+        .is_none_or(|v| v.as_array().is_some_and(Vec::is_empty))
         && format.get("licenseInfos").is_none()
         && format.get("drmTrackType").is_none()
+}
+
+fn audio_candidates(formats: &[Value]) -> Vec<Value> {
+    // Keep compatibility with codec/bitrate variants in wholly untagged responses.
+    // Once any audio format exposes track metadata, default alone cannot establish
+    // originality, including for other formats whose metadata is missing.
+    let require_explicit = formats.iter().any(|format| {
+        format["mimeType"]
+            .as_str()
+            .is_some_and(|mime| mime.starts_with("audio/"))
+            && ["audioTrack", "xtags", "language", "languageCode"]
+                .iter()
+                .any(|key| format.get(*key).is_some_and(|value| !value.is_null()))
+    });
+    let mut candidates: Vec<_> = formats
+        .iter()
+        .filter(|format| candidate_audio(format, require_explicit))
+        .cloned()
+        .collect();
+    candidates.sort_by_key(|format| {
+        (
+            BUNDLED
+                .audio
+                .iter()
+                .position(|mime| format["mimeType"].as_str().unwrap_or("").starts_with(mime)),
+            std::cmp::Reverse(format["bitrate"].as_u64().unwrap_or(0)),
+        )
+    });
+    candidates
 }
 
 /// Only reached after the direct fast clients failed. The caller supplies the total deadline.
@@ -835,22 +867,11 @@ async fn resolve_config(
             let _ = std::fs::copy(from, to);
         }
     }
-    let mut formats: Vec<Value> = response["streamingData"]["adaptiveFormats"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .filter(|f| candidate_audio(f))
-        .cloned()
-        .collect();
-    formats.sort_by_key(|f| {
-        (
-            BUNDLED
-                .audio
-                .iter()
-                .position(|mime| f["mimeType"].as_str().unwrap_or("").starts_with(mime)),
-            std::cmp::Reverse(f["bitrate"].as_u64().unwrap_or(0)),
-        )
-    });
+    let formats = audio_candidates(
+        response["streamingData"]["adaptiveFormats"]
+            .as_array()
+            .unwrap(),
+    );
     let client = Client {
         name: "WEB_EMBEDDED_PLAYER".into(),
         id: 56,
@@ -1439,8 +1460,8 @@ mod tests {
     fn original_nondefault_survives_shared_selection_but_dubbed_and_drm_do_not() {
         let original = json!({"itag":251,"url":AUDIO,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000,"audioTrack":{"audioIsDefault":false,"displayName":"Basque (original)","id":"eu.0"}});
         let dubbed = json!({"itag":250,"url":AUDIO,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":256000,"audioTrack":{"audioIsDefault":true,"displayName":"English (auto-dubbed)","id":"en.1"}});
-        assert!(candidate_audio(&original));
-        assert!(!candidate_audio(&dubbed));
+        assert!(candidate_audio(&original, true));
+        assert!(!candidate_audio(&dubbed, true));
         for (field, value) in [
             ("drmFamilies", json!(["WIDEVINE"])),
             ("drmFamilies", json!(false)),
@@ -1449,7 +1470,7 @@ mod tests {
         ] {
             let mut changed = original.clone();
             changed[field] = value;
-            assert!(!candidate_audio(&changed));
+            assert!(!candidate_audio(&changed, true));
         }
         let mut response = watch_value();
         response["streamingData"] = json!({"adaptiveFormats":[dubbed,original]});
@@ -1463,6 +1484,48 @@ mod tests {
         };
         let selected = pick_identified(&BUNDLED, &client, &response, ID, None, None).unwrap();
         assert_eq!(selected.itag, 251);
+    }
+
+    #[test]
+    fn tagged_response_never_prefers_an_unverified_localized_default() {
+        let original = json!({"itag":251,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000,
+            "audioTrack":{"audioIsDefault":false,"displayName":"Basque (original)","id":"eu.0"}});
+        let localized_default = json!({"itag":250,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":256000,
+            "audioTrack":{"audioIsDefault":true,"displayName":"Spanish","id":"es.1"}});
+        let untagged =
+            json!({"itag":249,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":320000});
+        let candidates = audio_candidates(&[localized_default, untagged, original]);
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0]["itag"], 251);
+    }
+
+    #[test]
+    fn wholly_untagged_audio_variants_remain_compatible() {
+        let formats = [
+            json!({"itag":140,"mimeType":"audio/mp4; codecs=\"mp4a.40.2\"","bitrate":128000}),
+            json!({"itag":249,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":48000}),
+            json!({"itag":250,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":64000}),
+            json!({"itag":251,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000}),
+        ];
+        let candidates = audio_candidates(&formats);
+        assert_eq!(candidates.len(), 4);
+        assert_eq!(candidates[0]["itag"], 251);
+        assert_eq!(audio_candidates(&formats[3..]).len(), 1);
+    }
+
+    #[test]
+    fn language_metadata_without_original_evidence_is_not_an_untagged_response() {
+        for field in ["audioTrack", "xtags", "language", "languageCode"] {
+            let untagged = json!({"itag":251,"mimeType":"audio/webm; codecs=\"opus\""});
+            let mut tagged = untagged.clone();
+            tagged["itag"] = json!(250);
+            tagged[field] = if field == "audioTrack" {
+                json!({"audioIsDefault":true,"id":"es.1"})
+            } else {
+                json!("es")
+            };
+            assert!(audio_candidates(&[untagged, tagged]).is_empty(), "{field}");
+        }
     }
 
     fn local(response: Vec<u8>) -> (String, thread::JoinHandle<String>) {
