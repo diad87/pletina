@@ -1,0 +1,1 @@
+import{t as e}from"./updates.svelte-d2-IJVos.js";export{e as applyWebUpdate};
