@@ -1,0 +1,339 @@
+{
+  "recordedAt": "2026-10-23T05:48:30.633Z",
+  "finalExecution": {
+    "report": "archive-discovery-identity-corpus-2026-10-23-final.json",
+    "sha256": "59679286bec6c82ef7295664436a681f2071ca6d913c0388eda265dc8de0fad9",
+    "script": {
+      "path": "scripts/tests/archive-discovery-identity.browser.mjs",
+      "sha256": "206e07e22442da58d5dc064f3b87c99f5dddcd71e8b85793a255177a78d51204"
+    },
+    "helper": {
+      "path": "scripts/tests/helpers/recording-waveform.mjs",
+      "sha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+    },
+    "filtersActuallyExecuted": [
+      "Catalog title search followed by strict artist/album/version identity",
+      "Archive free title plus album and normalized artist-token search",
+      "At most five metadata items and two candidate audio endpoint attempts per track",
+      "Eight MiB total audio bytes including official preview/control",
+      "Audio filename extension OR declared format, including extensionless MP3",
+      "Normal provider download endpoint then one provider CDN endpoint only after transport failure",
+      "No curated IDs/URLs/registry; normalized PCM fixed thresholds and negative/self controls"
+    ]
+  },
+  "earlierReports": [
+    {
+      "name": "archive-discovery-identity-corpus-2026-10-23-initial.json",
+      "sha256": "7406fd9eb97b3e868c270c8b4d98b9e302f02f8eae7b665cec2825ac9773d838",
+      "sourceHashKnown": false,
+      "stage": "Advanced Deezer query returned empty controls; not catalog absence proof"
+    },
+    {
+      "name": "archive-discovery-identity-corpus-2026-10-23-title-search.json",
+      "sha256": "5e8d5ea3a999b8ad56967c12f219921ab2d875f70a03b076e11ed7edf8c9f700",
+      "sourceHashKnown": false,
+      "stage": "Plain-title catalog search and extension filter; before format-field discovery correction"
+    },
+    {
+      "name": "archive-discovery-identity-tame-file-diagnostic-2026-10-23.json",
+      "sha256": "5d56438c51c9ddd6914f062fd4d62d99bdeec1147ada5a0723e7469767c1aa5e",
+      "sourceHashKnown": false,
+      "stage": "Same five Tame items; file extension inspection before format-field correction"
+    },
+    {
+      "name": "archive-discovery-identity-tame-extensionless-2026-10-23.json",
+      "sha256": "595d44061e1728e05f323073dd70c56ab76b23db67d6dcfb19a0b086f284b609",
+      "sourceHashKnown": false,
+      "stage": "Extensionless format recognized; download CORS error before provider-CDN attempt"
+    }
+  ],
+  "summary": {
+    "tracks": 6,
+    "excerptMatches": 1,
+    "newExcerptMatches": [],
+    "baselinesMatched": [
+      "egiozu"
+    ],
+    "outcomes": {
+      "epoitaitaye": "no-candidates",
+      "egiozu": "verified-excerpt-match",
+      "iritsi": "no-candidates",
+      "queen": "no-verified-match",
+      "violadores": "no-candidates",
+      "tame": "probe-error"
+    }
+  },
+  "classifications": [
+    {
+      "track": "epoitaitaye",
+      "status": "no-candidates",
+      "archiveItemsInspected": 0,
+      "audioAttempts": 0,
+      "audioBytesRead": 0,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 0
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 0
+        }
+      ],
+      "excludedFileDiagnostics": [],
+      "comparisons": []
+    },
+    {
+      "track": "egiozu",
+      "status": "verified-excerpt-match",
+      "archiveItemsInspected": 1,
+      "audioAttempts": 2,
+      "audioBytesRead": 4577286,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 1
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 0
+        }
+      ],
+      "excludedFileDiagnostics": [],
+      "comparisons": [
+        {
+          "item": "EgiozuEuskarazPirritxPorrotxEtaMarimotots",
+          "status": "verified-excerpt-match",
+          "error": null,
+          "correlation": 0.9898591208792412
+        },
+        {
+          "item": "EgiozuEuskarazPirritxPorrotxEtaMarimotots",
+          "status": "verified-excerpt-match",
+          "error": null,
+          "correlation": 0.9880752580668761
+        }
+      ]
+    },
+    {
+      "track": "iritsi",
+      "status": "no-candidates",
+      "archiveItemsInspected": 0,
+      "audioAttempts": 0,
+      "audioBytesRead": 0,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 0
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 0
+        }
+      ],
+      "excludedFileDiagnostics": [],
+      "comparisons": []
+    },
+    {
+      "track": "queen",
+      "status": "no-verified-match",
+      "archiveItemsInspected": 5,
+      "audioAttempts": 1,
+      "audioBytesRead": 3995272,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 727
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 57
+        }
+      ],
+      "excludedFileDiagnostics": [
+        {
+          "item": "ngy8xyyes5mymlbklycymrvj97ivy9dxii3xjbx0",
+          "fileName": "wyiy4iantx9tmhp-Episode_274.mp3",
+          "bytes": 149113240,
+          "reason": "restricted-item"
+        },
+        {
+          "item": "yzrzkdf7amcncuesfwdp5jjliyrhr3yi7vkrncwt",
+          "fileName": "4zxtvj1z4h5vhar-https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%2F2021-02-23%2Fd990c0352803cbf9467da03e086dc7c3.m4a",
+          "bytes": 36067756,
+          "reason": "restricted-item"
+        },
+        {
+          "item": "QueenVINYLLPRIPANightAtTheOperaSide2HOTSTAMPERORIGGERMAN",
+          "fileName": "Queen LP RIP A Night At The Opera SIDE 1 VINYL HOT STAMPER GERMAN ORIG 1975.mp3",
+          "bytes": 29576462,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "QueenVINYLLPRIPANightAtTheOperaSide2HOTSTAMPERORIGGERMAN",
+          "fileName": "Queen LP RIP A Night At The Opera SIDE 1 VINYL HOT STAMPER GERMAN ORIG 1975.ogg",
+          "bytes": 14011014,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "QueenVINYLLPRIPANightAtTheOperaSide2HOTSTAMPERORIGGERMAN",
+          "fileName": "Queen VINYL LP RIP A Night At The Opera Side 2 HOT STAMPER ORIG GERMAN .mp3",
+          "bytes": 32494862,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "QueenVINYLLPRIPANightAtTheOperaSide2HOTSTAMPERORIGGERMAN",
+          "fileName": "Queen VINYL LP RIP A Night At The Opera Side 2 HOT STAMPER ORIG GERMAN .ogg",
+          "bytes": 15503063,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "4ibprfvmfam8nf14ii1jlpbgj6vonit0s6dur7uh",
+          "fileName": "2m8bz2wpz9rqppw-https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fproduction%2F2020-4-17%2F74067180-48000-2-ad1623627a8f4.mp3",
+          "bytes": 255939926,
+          "reason": "restricted-item"
+        }
+      ],
+      "comparisons": [
+        {
+          "item": "queen_bohemian-rhapsody_202605",
+          "status": "rejected-waveform",
+          "error": null,
+          "correlation": 0.1562806614355751
+        }
+      ]
+    },
+    {
+      "track": "violadores",
+      "status": "no-candidates",
+      "archiveItemsInspected": 1,
+      "audioAttempts": 0,
+      "audioBytesRead": 0,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 0
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 1
+        }
+      ],
+      "excludedFileDiagnostics": [
+        {
+          "item": "discola-175-victor-papanek",
+          "fileName": "Díscola 175 Victor Papanek.mp3",
+          "bytes": 61611566,
+          "reason": "over-byte-budget"
+        }
+      ],
+      "comparisons": []
+    },
+    {
+      "track": "tame",
+      "status": "probe-error",
+      "archiveItemsInspected": 5,
+      "audioAttempts": 2,
+      "audioBytesRead": 959654,
+      "searches": [
+        {
+          "kind": "title",
+          "numFound": 38
+        },
+        {
+          "kind": "album-and-artist",
+          "numFound": 37
+        }
+      ],
+      "excludedFileDiagnostics": [
+        {
+          "item": "1LIVE-Moving-Mixes-20.09.2025",
+          "fileName": "1LIVE Moving Mix 1 (20.09.2025).mp3",
+          "bytes": 20261421,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "1LIVE-Moving-Mixes-20.09.2025",
+          "fileName": "1LIVE Moving Mix 2 (20.09.2025).mp3",
+          "bytes": 20172333,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "1LIVE-Moving-Mixes-20.09.2025",
+          "fileName": "1LIVE Moving Mix 3 (20.09.2025).mp3",
+          "bytes": 19966509,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "20150912V02E15",
+          "fileName": "2015_09_12_V02E15.mp3",
+          "bytes": 145144953,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "20150912V02E15",
+          "fileName": "2015_09_12_V02E15.ogg",
+          "bytes": 60262890,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "1LIVE-Moving-04.10.2025",
+          "fileName": "1LIVE Moving (04.10.2025).mp3",
+          "bytes": 216911277,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "outoftenpodcastepisode133",
+          "fileName": "Out Of Ten Podcast - Episode 133.mp3",
+          "bytes": 37051946,
+          "reason": "over-byte-budget"
+        },
+        {
+          "item": "outoftenpodcastepisode133",
+          "fileName": "Out Of Ten Podcast - Episode 133.ogg",
+          "bytes": 22690768,
+          "reason": "over-byte-budget"
+        }
+      ],
+      "comparisons": [
+        {
+          "item": "tame-impala-the-less-i-know-the-better-audio",
+          "status": "probe-error",
+          "error": "Failed to fetch",
+          "correlation": null
+        },
+        {
+          "item": "tame-impala-the-less-i-know-the-better-audio",
+          "status": "probe-error",
+          "error": "Failed to fetch",
+          "correlation": null
+        }
+      ]
+    }
+  ],
+  "transport": [
+    {
+      "track": "tame",
+      "host": "archive.org",
+      "errorText": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      },
+      "blockedReason": null
+    },
+    {
+      "track": "tame",
+      "host": "ia902809.us.archive.org",
+      "errorText": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      },
+      "blockedReason": null
+    }
+  ],
+  "conclusion": "No new verified excerpt matches in the bounded corpus. Egiozu is rediscovered without a registry; Epoitaitaye remains without an Archive candidate. Tame has a plausible full-length candidate but both standard/provider-CDN fetches are CORS blocked; this is not acoustic rejection or catalog absence. No general automatic resolver or deployment is justified by these results.",
+  "musicPersisted": false,
+  "productChanged": false
+}

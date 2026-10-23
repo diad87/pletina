@@ -1,0 +1,301 @@
+{
+  "recordedAt": "2026-10-23T05:56:12.021Z",
+  "finalExecution": {
+    "report": "archive-discovery-identity-corpus-2026-10-23-canonical.json",
+    "sha256": "428c24537c7fa2e575e53446a5552cfbf90262eb5fec481769e1dfbd6e62fada",
+    "script": {
+      "path": "scripts/tests/archive-discovery-identity.browser.mjs",
+      "sha256": "4a8669ebbb8062ea6636841395e7408bd7aef3eb2764850e6c85623802127be1",
+      "immutableSnapshot": "artifacts/pwa-port/archive-discovery-identity-source-canonical.mjs"
+    },
+    "helper": {
+      "path": "scripts/tests/helpers/recording-waveform.mjs",
+      "sha256": "5ed20d9b66751fe3564b2de8a4eccf2fcb6956ae0619c8f76b2490c17139e23c"
+    },
+    "canonicalChecks": [
+      "Requested album requires normalized equality, never substring matching",
+      "Hydrated detail must match selected track ID, artist ID and album ID",
+      "Normalized title/artist/version/album and numeric duration must equal the selected search result",
+      "ISRC country/registrant/year/designation format must match /^[A-Z]{2}[A-Z0-9]{3}\\d{7}$/",
+      "All six actual hydrated details passed these checks before fetching references"
+    ],
+    "streamChecks": [
+      "Rejected status/opaque/missing body cancels a readable response body",
+      "Oversized Content-Length cancels response body before creating its reader",
+      "Body-reader failure cancels its reader",
+      "Partial search/metadata errors are marked incomplete/probe-error, even after another HTTP200"
+    ],
+    "cli": {
+      "customArguments": [
+        "--title",
+        "--artist",
+        "--album (optional)"
+      ],
+      "sharedPipeline": "probeTrack",
+      "configurationOnlyCheck": "--title Epoitaitaye --artist \"Pirritx Porrotx eta Marimotots\" --album Piratak --describe",
+      "customCaseNetworkTested": false
+    }
+  },
+  "preservedHistory": {
+    "previousManifest": {
+      "name": "archive-discovery-identity-manifest-2026-10-23.json",
+      "sha256": "2af703c56c12b9b7de3094104a570f61921fcd178329cc640bffd8c889a2a0d4",
+      "unchanged": true
+    },
+    "previousFinalReport": {
+      "name": "archive-discovery-identity-corpus-2026-10-23-final.json",
+      "sha256": "59679286bec6c82ef7295664436a681f2071ca6d913c0388eda265dc8de0fad9",
+      "unchanged": true
+    },
+    "previousExecutionSourceSnapshot": {
+      "name": "archive-discovery-identity-source-206e07e2.mjs",
+      "sha256": "206e07e22442da58d5dc064f3b87c99f5dddcd71e8b85793a255177a78d51204",
+      "matchesPreviousManifest": true
+    },
+    "intermediateCanonicalRounds": [
+      {
+        "report": "archive-discovery-identity-corpus-2026-10-23-canonical-before-stream-fix.json",
+        "reportSha256": "6a5796cd9e6925c0ca6d5dd9660c5cfc2a2326bf995a7f8b9bf05c299a8116e5",
+        "sourceSnapshot": "archive-discovery-identity-source-canonical-before-stream-fix.mjs",
+        "sourceSha256": "a031a3b9420eaa0961ad60d99220e5e7399aec724dc1d25f6f62439dccc9c2fd"
+      },
+      {
+        "report": "archive-discovery-identity-corpus-2026-10-23-canonical-before-custom-cli.json",
+        "reportSha256": "a32b0e734fcd4cf9751a7284a091f9eb82c13320b2f83d8e2ba2ea779848940f",
+        "sourceSnapshot": "archive-discovery-identity-source-canonical-before-custom-cli.mjs",
+        "sourceSha256": "534154c96396a9f7574691149c1da4bf8c4fb7093fd01f896c27ac67d9923166"
+      }
+    ]
+  },
+  "summary": {
+    "tracks": 6,
+    "excerptMatches": 1,
+    "newExcerptMatches": [],
+    "baselinesMatched": [
+      "egiozu"
+    ],
+    "outcomes": {
+      "epoitaitaye": "no-candidates",
+      "egiozu": "verified-excerpt-match",
+      "iritsi": "no-candidates",
+      "queen": "no-verified-match",
+      "violadores": "no-candidates",
+      "tame": "probe-error"
+    }
+  },
+  "canonicalHydration": [
+    {
+      "track": "epoitaitaye",
+      "selectedId": 3279314641,
+      "detailId": 3279314641,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": false,
+      "selected": {
+        "id": 3279314641,
+        "title": "Epoitaitaye",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Piratak",
+        "duration": 209,
+        "isrc": "QM6N21489743",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 3279314641,
+        "title": "Epoitaitaye",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Piratak",
+        "duration": 209,
+        "isrc": "QM6N21489743",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    },
+    {
+      "track": "egiozu",
+      "selectedId": 3266797141,
+      "detailId": 3266797141,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": true,
+      "selected": {
+        "id": 3266797141,
+        "title": "Egiozu Euskaraz",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Irrien Lagunak",
+        "duration": 126,
+        "isrc": "QM6N21489808",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 3266797141,
+        "title": "Egiozu Euskaraz",
+        "artist": "PIrritx Porrotx eta MariMotots",
+        "album": "Irrien Lagunak",
+        "duration": 126,
+        "isrc": "QM6N21489808",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    },
+    {
+      "track": "iritsi",
+      "selectedId": 3250715431,
+      "detailId": 3250715431,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": true,
+      "selected": {
+        "id": 3250715431,
+        "title": "Iritsi da Eguna",
+        "artist": "Pirritx eta Porrotx",
+        "album": "Eskerrik Asko!",
+        "duration": 169,
+        "isrc": "QM6N21424821",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 3250715431,
+        "title": "Iritsi da Eguna",
+        "artist": "Pirritx eta Porrotx",
+        "album": "Eskerrik Asko!",
+        "duration": 169,
+        "isrc": "QM6N21424821",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    },
+    {
+      "track": "queen",
+      "selectedId": 4091937401,
+      "detailId": 4091937401,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": true,
+      "selected": {
+        "id": 4091937401,
+        "title": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "A Night At The Opera",
+        "duration": 354,
+        "isrc": "GBUM71029604",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 4091937401,
+        "title": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "A Night At The Opera",
+        "duration": 354,
+        "isrc": "GBUM71029604",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    },
+    {
+      "track": "violadores",
+      "selectedId": 3240252511,
+      "detailId": 3240252511,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": false,
+      "selected": {
+        "id": 3240252511,
+        "title": "A Solas Con un RItmo Lírico",
+        "artist": "Violadores del Verso",
+        "album": "Genios",
+        "duration": 117,
+        "isrc": "ES6080141514",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 3240252511,
+        "title": "A Solas Con un RItmo Lírico",
+        "artist": "Violadores del Verso",
+        "album": "Genios",
+        "duration": 117,
+        "isrc": "ES6080141514",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    },
+    {
+      "track": "tame",
+      "selectedId": 103052662,
+      "detailId": 103052662,
+      "sameArtistId": true,
+      "sameAlbumId": true,
+      "canonicalIdentityChecked": true,
+      "requestedAlbumEqualityRequired": true,
+      "selected": {
+        "id": 103052662,
+        "title": "The Less I Know The Better",
+        "artist": "Tame Impala",
+        "album": "Currents",
+        "duration": 217,
+        "isrc": "AUUM71500303",
+        "previewAvailable": true,
+        "titleVersion": ""
+      },
+      "hydrated": {
+        "id": 103052662,
+        "title": "The Less I Know The Better",
+        "artist": "Tame Impala",
+        "album": "Currents",
+        "duration": 217,
+        "isrc": "AUUM71500303",
+        "previewAvailable": true,
+        "titleVersion": ""
+      }
+    }
+  ],
+  "desktopDiagnosticLimits": {
+    "byteBudgetScope": "Compressed response bytes read by JavaScript; rejected response bodies are cancelled. This is not a strict bound on bytes already buffered by the browser or transferred on the wire.",
+    "decodedPcmMemoryBounded": false,
+    "decodeSampleRate": 44100,
+    "dedicatedWorkerUsed": false,
+    "globalPerTrackDeadlineEnforced": false,
+    "scope": "Desktop QA only. Full-file decode and waveform work run in the browser page without a PCM allocation limit, dedicated worker or global pipeline deadline; not a deployable mobile runtime."
+  },
+  "transport": [
+    {
+      "track": "tame",
+      "host": "archive.org",
+      "errorText": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      },
+      "blockedReason": null
+    },
+    {
+      "track": "tame",
+      "host": "ia902809.us.archive.org",
+      "errorText": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      },
+      "blockedReason": null
+    }
+  ],
+  "qualifications": [
+    "Verified-excerpt-match means only the approximately 30-second reference excerpt; it does not prove unreferenced audio or a complete original master",
+    "No source entry or generic automatic product resolver is enabled by this investigation",
+    "This compressed-byte budget is not a decoded PCM allocation limit or a mobile/background guarantee",
+    "Restricted items, oversized files, absent metadata, transport errors and acoustic rejection remain distinct evidence"
+  ],
+  "productChanged": false,
+  "published": false,
+  "musicPersisted": false
+}

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-23",
+  "scope": "Research and bounded browser transport controls only. No product adapter activated, no build/dist mutation, no publication.",
+  "question": "Can alternative sources recover arbitrary difficult songs automatically, with strict recording identity, in an anonymous static PWA?",
+  "currentProductFinding": {
+    "audius": "Already generic by ISRC, with identity/duration/version/access checks and live canonical controls. Its catalog is not the complete commercial music catalog; rejecting label-account names as artist names also limits coverage when provider metadata lacks explicit recording artists.",
+    "archiveAndAlea": "Currently narrowly registered exact recordings, with whole-file SHA verification. These associations do not constitute generic Archive search or coverage of another song such as Epoitaitaye.",
+    "existingAcousticResearch": "The prior diagnostic code can compare an official reference excerpt with candidate audio entirely in browser RAM. It has not yet been converted into a general product verifier."
+  },
+  "concreteGeneralizablePath": [
+    "Hydrate the same canonical catalog ID and retain ISRC, title/version, artist, album, duration and an available official reference excerpt.",
+    "Run bounded provider discovery: Audius ISRC first; Archive artist/title plus artist/album item searches, then inspect per-file metadata. HearThis or other public providers can supply candidates through the same interface.",
+    "Metadata filters exclude another title/artist, a conflicting ISRC, live/remix/karaoke/instrumental variants, long mixes, previews and duration mismatch before downloading or decoding candidates.",
+    "Where ISRC is absent, use local multi-window acoustic comparison against the canonical reference, with consistent alignment across separated windows. Do not approve a candidate merely because a title or artist text matches.",
+    "Only after a confident reference match, compute the complete candidate-file hash, play those same checked bytes and cache the catalog ID/ISRC -> provider item/file/hash association locally. Signed media URLs remain in RAM and are re-resolved from stable provider IDs.",
+    "Reject unavailable, unreadable, ambiguous or reference-less candidates; report the actual reason instead of treating network failures as absent recordings. This removes per-song code exceptions while preserving strict failure behavior."
+  ],
+  "importantLimits": [
+    "A universal search/verification mechanism does not imply universal availability. None of the tested anonymous providers demonstrably supplies every requested commercial recording.",
+    "A 30-second official preview confirms only matching excerpts, not the entire master. Duration, version metadata and separated acoustic windows reduce false matches but do not independently compare the unreferenced remainder.",
+    "An ISRC is useful provider metadata, not proof that an uploader's bytes are truthful. Acoustic checks can strengthen it.",
+    "No official reference excerpt means no safe automatic no-ISRC approval under strict recording identity; missing coverage must remain visible.",
+    "Candidate downloads/decodes must be bounded and processed serially or in a worker, with abort and memory cleanup. Mobile background analysis/prefetch and next-track transitions still need physical-device testing.",
+    "Direct API/media CORS is required for local verification. A service worker cannot make a forbidden cross-origin response readable, and a third-party extraction/proxy service would violate the no-intermediary-backend constraint.",
+    "Public playback availability does not automatically authorize an offline download feature; keep each provider's explicit download policy separate."
+  ],
+  "additionalTransportProviders": [
+    {
+      "provider": "PeerTube via a public global search index and the selected instance REST API",
+      "liveAnonymousSearchAndDetails": true,
+      "liveCompleteCorsMediaAndNativeAudio": true,
+      "finding": "The actual SepiaSearch API returns public indexed videos. A discovered instance exposes progressive MP4 files directly through its public video detail API. Full-file bytes are readable by the Pages origin and native Audio can play the MP4 audio, seek and continue in a hidden desktop tab without an official iframe.",
+      "coverageLimit": "The verified control is a piano performance, not a demonstrated match to a commercial catalog master. Public instances differ in CORS, accessible formats and available material; global indexing is not completeness. HLS-only or authenticated videos were not tested and must not be assumed equivalent.",
+      "newProductAdapterEnabled": false,
+      "sources": [
+        "https://docs.joinpeertube.org/api/rest-getting-started",
+        "https://docs.joinpeertube.org/use/search",
+        "https://docs.joinpeertube.org/api-rest-reference.html"
+      ]
+    },
+    {
+      "provider": "Wikimedia Commons",
+      "liveAnonymousSearchAndDetails": true,
+      "liveCompleteCorsMediaAndNativeAudio": true,
+      "finding": "The documented anonymous API origin=* route yields searchable audio file URLs, MIME, size and performer metadata. upload.wikimedia.org returns readable audio and byte ranges. The complete OGG control plays/seeks through native Audio and continues in a hidden desktop tab.",
+      "coverageLimit": "The control is the Fulda Symphonic Orchestra performance conducted by Simon Schindler. A composer or composition title does not identify a catalog recording. Classical/public-domain repertoire and other open uploads cannot be substituted for an unrelated album/master. Safari/mobile codec/background behavior was not physically verified.",
+      "newProductAdapterEnabled": false,
+      "sources": [
+        "https://www.mediawiki.org/wiki/API:Cross-site_requests",
+        "https://www.mediawiki.org/wiki/API:Imageinfo"
+      ]
+    },
+    {
+      "provider": "Jamendo",
+      "potential": "Its official read API returns full audio/download URLs and supports title, artist, album and duration filters. Read-only use requires an own application client_id, not a login by each listener. It is a potential independent-music catalog, not established coverage for Epoitaitaye or the full commercial catalog.",
+      "freshPlaybackTestPerformed": false,
+      "ownApplicationRegistered": false,
+      "sources": [
+        "https://developer.jamendo.com/v3.0/authentication",
+        "https://developer.jamendo.com/v3.0/tracks"
+      ]
+    }
+  ],
+  "newBrowserTransportGate": {
+    "script": "scripts/tests/open-audio-catalog-transports.browser.mjs",
+    "report": "open-audio-catalog-transports-2026-10-23T05-38-04-547Z.json",
+    "pass": true,
+    "checks": 3,
+    "mediaControlDiscovery": "Provider search results, no hardcoded media file URLs or recording IDs in the diagnostic.",
+    "completeFilesReadInRam": true,
+    "nativePlaybackOneTrustedClick": true,
+    "nativeMediaElementMuted": false,
+    "middleSeekVerified": true,
+    "hiddenDesktopTabVerified": true,
+    "physicalPhoneOrScreenOffVerified": false,
+    "canonicalCommercialRecordingVerified": false,
+    "epoitaitayeAvailabilityClaimed": false
+  },
+  "recommendation": "Prioritize a measured generic Archive/HearThis candidate + local reference-verification pipeline, retaining Audius ISRC lookup. Consider PeerTube and Commons as additional input adapters only after useful exact canonical-recording matches are proven. Do not sell transport controls or a wider search as a universal playback guarantee.",
+  "productChanged": false,
+  "newBuildOrPublication": false,
+  "runtimeBackendAdded": false,
+  "apkNativeWrapperAdbOrExtensionUsed": false,
+  "reportedUserCase": "epoitaitaye-pwa-video-user-report-2026-10-23.json",
+  "researchStatus": "Generic discovery/verification prototype only; no generic runtime adapter enabled.",
+  "syntheticWaveformChecks": {
+    "script": "scripts/tests/recording-waveform.test.mjs",
+    "command": "node --test scripts/tests/recording-waveform.test.mjs",
+    "pass": 6,
+    "fail": 0,
+    "scope": "Known synthetic alignment/gain/DC control, unrelated audio, single short sample rejection, silence rejection, missing negative control, and explicit excerpt-only information limit. Not a calibrated corpus of real covers/remixes/medleys.",
+    "wholeMasterInferencePermitted": false
+  },
+  "productionReadiness": {
+    "genericRuntimeAdapterReady": false,
+    "newVerifiedCommercialRecordingMatchesRequiredBeforeActivation": true,
+    "realNearVersionNegativesStillRequired": true,
+    "mobileDecoderMemoryAndTimeStillUnmeasured": true,
+    "physicalAndroidAndIphoneBackgroundStillPending": true,
+    "publishedBuildUnchanged": "fc56a244ebcc9e6e"
+  },
+  "genericDiscoveryCorpusGate": {
+    "script": "scripts/tests/archive-discovery-identity.browser.mjs",
+    "report": "archive-discovery-identity-corpus-2026-10-23-canonical.json",
+    "manifest": "archive-discovery-identity-corpus-2026-10-23-canonical-manifest.json",
+    "tracks": 6,
+    "knownExcerptMatches": 1,
+    "newExcerptMatches": 0,
+    "knownPositive": "Egiozu rediscovers its source with generic discovery; two encodings match the exact official reference excerpt.",
+    "epoitaitaye": "Two valid bounded Archive queries returned no candidates; no broader catalog absence is inferred.",
+    "otherOutcomes": {
+      "iritsi": "No candidates in these bounded queries.",
+      "queen": "One candidate read and acoustically rejected.",
+      "violadores": "Only an irrelevant podcast item with audio outside the transfer budget.",
+      "tame": "Plausible full file is discovered, but its standard and provider-CDN requests fail CORS; no acoustic result."
+    },
+    "canonicalDetailRevalidated": true,
+    "arbitraryTitleArtistCliAvailable": true,
+    "mobileReady": false,
+    "fullMasterVerified": false,
+    "newRuntimeAdapterJustifiedByThisGate": false
+  },
+  "freshAudiusMetadataDiagnostic": {
+    "report": "audius-difficult-catalog-metadata-2026-10-23.json",
+    "scope": "Node HTTP metadata diagnostic, not browser CORS or playback proof.",
+    "epoitaitayeIsrcAndTitleQueries": "Valid HTTP200 data arrays were empty; positive control returned data."
+  },
+  "researchConclusion": "The generic prototype removes per-song code exceptions, but this bounded corpus produces no new verified excerpt matches. It does not meet the requested universal playback outcome. No new production integration or release is justified yet; current Audius ISRC lookup and the previously published curated associations remain unchanged."
+}
