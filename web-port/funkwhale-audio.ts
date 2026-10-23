@@ -37,7 +37,10 @@ export function createFunkwhaleAudioResolver(options: Options = {}) {
   const playable = (track: TrackQuery, value: CachedAudio): Playable => ({
     videoId: '', title: track.title, channel: track.artist, url: value.url, local: false,
     source: { provider: 'funkwhale', id: value.entry.source.uploadUuid,
-      download: { allowed: false, contentLength: value.entry.file.bytes, sha256: value.entry.file.sha256, duration: value.entry.file.durationSeconds } },
+      // This capability copies the same complete hash-checked listening bytes.
+      // It does not upgrade the index's excerpt-only identity proof, historical
+      // downloadAllowed policy, fullMasterVerified claim or declared licence.
+      download: { allowed: true, contentLength: value.entry.file.bytes, sha256: value.entry.file.sha256, duration: value.entry.file.durationSeconds, mime: value.entry.file.mime } },
   })
   function reserve(bytes: number): void {
     let occupied = [...cache.values()].reduce((total, value) => total + value.entry.file.bytes, 0)

@@ -3,6 +3,8 @@ import { webInvoke } from '../../web-port/invoke'
 import { readSpotifyPlaylist as readWebSpotifyPlaylist } from '../../web-port/imports'
 import { getOfficialFallback, retainAudioRequests } from '../../web-port/audio'
 import { retainFunkwhaleAudio } from '../../web-port/funkwhale-audio'
+import { readDownloadedPlayable } from '../../web-port/download-store'
+import { pendingDownloads, resumeDownloads } from '../../web-port/downloads'
 import { openAutomaticOfficialYouTube } from '../../web-port/official-youtube.svelte'
 import type {
   AlbumDetail,
@@ -41,6 +43,16 @@ export function retainWebAudioSources(urls: string[]): void {
 }
 export function retainWebAudioRequests(ids: number[]): void {
   if (inPwa) retainAudioRequests(ids)
+}
+/** Sólo la copia guardada: no consulta proveedores ni renueva URLs cuando no hay red. */
+export function readWebDownloadedPlayable(id: number): Promise<Playable | null> {
+  return inPwa ? readDownloadedPlayable(id) : Promise.resolve(null)
+}
+export function pendingWebDownloads(): Promise<LibTrack[]> {
+  return inPwa ? pendingDownloads() : Promise.resolve([])
+}
+export function resumeWebDownloads(): Promise<void> {
+  return inPwa ? resumeDownloads() : Promise.resolve()
 }
 
 /**

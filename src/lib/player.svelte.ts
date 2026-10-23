@@ -100,7 +100,10 @@ class Player implements PlayerApi {
   /** Cada carga tiene un número; si llega una respuesta de una carga anterior, se ignora. */
   #token = 0
   /** Búsquedas en curso por canción, para no repetirlas (p. ej. precarga + clic). */
-  #inFlight = new Map<number, Promise<Playable>>()
+  #inFlight = new Map<number, { promise: Promise<Playable>; offline: boolean }>()
+  /** Copias ausentes o que han fallado en esta sesión sin red; no dar vueltas en repeat-all. */
+  #offlineUnavailable = new Set<number>()
+  #offlineDirection: 1 | -1 = 1
   /** Una sola fuente siguiente, solo en RAM: ended no tiene que volver a abrir IndexedDB. */
   #preparedNext: { id: number; playable: Playable; expiresAt: number; position: number } | null = null
   #preparation = 0
@@ -146,6 +149,28 @@ class Player implements PlayerApi {
         // El emisor comprueba su AbortSignal antes de notificar. Aquí sólo se
         // acepta la carga visible; una notificación repetida no retrocede el texto.
         if (attempt > this.audioRetry) this.audioRetry = attempt
+      })
+      window.addEventListener('offline', () => {
+        this.#clearPrepared()
+        this.#inFlight.clear()
+        api.retainWebAudioRequests?.([])
+        // Una respuesta remota pendiente ya no puede ocupar la selección al
+        // volver: la misma canción se comprueba de nuevo sólo en la caché local.
+        if (this.#wantsPlay && this.current) {
+          if (this.status === 'loading') this.#start(this.current, false, this.time, true)
+          else this.#prefetchNext()
+        }
+      })
+      window.addEventListener('online', () => {
+        this.#offlineUnavailable.clear()
+        this.#clearPrepared()
+        if (this.#wantsPlay && this.current) {
+          // No esperar una lectura local pendiente para después saltar una
+          // canción que ya puede resolverse al recuperar la conexión.
+          if (this.status === 'loading' && this.#inFlight.get(this.current.track.id)?.offline)
+            this.#start(this.current, false, this.time, true)
+          else this.#prefetchNext()
+        }
       })
       try {
         const audioNavigator = navigator as Navigator & { audioSession?: { type: string } }
@@ -494,6 +519,10 @@ class Player implements PlayerApi {
     this.audioRetry = 0
     this.#wantsPlay = true
     this.#repaired = false
+    if (this.#offline() && !this.#playable?.local) {
+      this.#start(item, false, this.time, true)
+      return
+    }
     if (api.inPwa && this.#playable && !this.#playable.local && !isPodcast(item.track.id) &&
       this.#preparedExpiry(this.#playable, item.track.id) <= Date.now()) {
       this.#start(item, true, this.time, true)
@@ -518,6 +547,7 @@ class Player implements PlayerApi {
   }
 
   next() {
+    if (this.#offline()) { this.#advanceOffline(); return }
     // Primero tu cola; luego se sigue con el disco o la playlist donde iba.
     if (this.userQueue.length) {
       const [first, ...rest] = this.userQueue
@@ -553,6 +583,7 @@ class Player implements PlayerApi {
 
   prev() {
     if (this.time > 3) this.seek(0)
+    else if (this.#offline() && (this.manual || this.pos > 0)) this.#previousOffline()
     // Desde una canción de tu cola se vuelve a la del disco o playlist donde iba.
     else if (this.manual && this.queue[this.order[this.pos]]) this.#load(this.pos)
     else if (this.pos <= 0) this.seek(0)
@@ -744,11 +775,12 @@ class Player implements PlayerApi {
   }
 
   /** Pone una canción del disco o playlist de fondo (por su posición en el orden). */
-  #load(pos: number, refresh = false, startAt = 0) {
+  #load(pos: number, refresh = false, startAt = 0, offlineDirection: 1 | -1 = 1) {
     const item = this.queue[this.order[pos]]
     if (!item) return
     if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = null
+    this.#offlineDirection = offlineDirection
     this.pos = pos
     this.#start(item, refresh, startAt)
   }
@@ -757,13 +789,18 @@ class Player implements PlayerApi {
   #loadManual(item: QueueItem, refresh = false, startAt = 0) {
     if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = item
+    this.#offlineDirection = 1
     this.#start(item, refresh, startAt)
   }
 
   async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
     this.audioRetry = 0
     const prepared = api.inPwa && !refresh && startAt === 0 && this.#preparedNext?.id === item.track.id &&
-      this.#preparedNext.expiresAt > Date.now() ? this.#preparedNext : null
+      this.#preparedNext.expiresAt > Date.now() && (!this.#offline() || this.#preparedNext.playable.local)
+      ? this.#preparedNext : null
+    // Una selección explícita permite volver a probar una copia reparada. Los
+    // saltos automáticos nunca seleccionan IDs marcados como no disponibles.
+    this.#offlineUnavailable.delete(item.track.id)
     const sameEpisode = this.#activeItem?.track.id === item.track.id
     const previousPosition = this.#completed ? 0 : this.time
     if (api.inPwa) this.#clearPrepared()
@@ -810,6 +847,7 @@ class Player implements PlayerApi {
             }) : Promise.resolve(startAt),
       ])
       if (token !== this.#token) return
+      if (this.#offline() && !playable.local) throw new Error('La canción no tiene una copia descargada disponible')
       await this.#playAudio(playable, savedAt)
       if (token !== this.#token) return
       this.#prefetchNext()
@@ -817,6 +855,7 @@ class Player implements PlayerApi {
       // Un AbortError de esta carga también es un fallo; solo se ignoran las cargas sustituidas.
       if (token !== this.#token) return
       if (this.#checkSleepTimer()) return
+      if (this.#offline()) { this.#fail(item, String(e), token); return }
       if (this.#canRefreshSource()) {
         this.#start(item, true, this.#requestedSeek ?? this.time)
         return
@@ -858,7 +897,7 @@ class Player implements PlayerApi {
   }
 
   #sourceStart(playable: Playable, duration = this.current?.track.duration ?? 0): number {
-    if (!api.inPwa || playable.local || !this.current || isPodcast(this.current.track.id)) return 0
+    if (!api.inPwa || !this.current || isPodcast(this.current.track.id)) return 0
     const start = playable.source?.startAt
     return typeof start === 'number' && Number.isFinite(start) && start > 0 && start <= MAX_SOURCE_START &&
       (!Number.isFinite(duration) || duration <= 0 || start < duration) ? start : 0
@@ -988,7 +1027,73 @@ class Player implements PlayerApi {
     }
   }
 
+  #offline(): boolean {
+    return api.inPwa && navigator.onLine === false
+  }
+
+  #availableOffline(item: QueueItem | undefined): item is QueueItem {
+    return !!item && downloads.done.has(item.track.id) && !this.#offlineUnavailable.has(item.track.id)
+  }
+
+  /** Sólo un recorrido del orden actual. La caché real se comprueba al preparar/cargar. */
+  #offlineFollowing(afterFailure = false): { item: QueueItem; dj: number | null; pos: number } | undefined {
+    const dj = this.userQueue.findIndex(({ item }) => this.#availableOffline(item))
+    if (dj !== -1) return { item: this.userQueue[dj].item, dj, pos: this.pos }
+    for (let pos = this.pos + 1; pos < this.order.length; pos++) {
+      const item = this.queue[this.order[pos]]
+      if (this.#availableOffline(item)) return { item, dj: null, pos }
+    }
+    // Una repetición de una copia rota no debe encerrar al usuario en ella.
+    if (this.repeat === 'all' || afterFailure && this.repeat === 'one') {
+      for (let pos = 0; pos <= this.pos && pos < this.order.length; pos++) {
+        const item = this.queue[this.order[pos]]
+        if (this.#availableOffline(item)) return { item, dj: null, pos }
+      }
+    }
+    return undefined
+  }
+
+  #advanceOffline(afterFailure = false) {
+    const next = this.#offlineFollowing(afterFailure)
+    if (!next) { this.#stopOffline(); return }
+    if (next.dj !== null) {
+      this.userQueue = this.userQueue.slice(next.dj + 1)
+      this.#loadManual(next.item)
+    } else {
+      // Las peticiones DJ no disponibles ya se han saltado; no reaparecen
+      // delante del siguiente disco cada vez que termina una canción.
+      this.userQueue = []
+      this.#load(next.pos)
+    }
+  }
+
+  #previousOffline() {
+    const start = this.manual ? this.pos : this.pos - 1
+    for (let pos = start; pos >= 0; pos--) {
+      if (this.#availableOffline(this.queue[this.order[pos]])) { this.#load(pos, false, 0, -1); return }
+    }
+    if (this.repeat === 'all') {
+      for (let pos = this.order.length - 1; pos > this.pos; pos--) {
+        if (this.#availableOffline(this.queue[this.order[pos]])) { this.#load(pos, false, 0, -1); return }
+      }
+    }
+    this.#stopOffline()
+  }
+
+  #stopOffline() {
+    this.#pause()
+    this.#clearPrepared()
+    this.#inFlight.clear()
+    api.retainWebAudioRequests?.([])
+    this.#activeItem = null
+    this.#resetAudio()
+    this.status = 'idle'
+    this.#saveQueue()
+    toast.show('Sin conexión: no quedan canciones descargadas disponibles en esta cola.')
+  }
+
   #following(): QueueItem | undefined {
+    if (this.#offline()) return this.#offlineFollowing()?.item
     const nextPos = this.pos + 1 < this.order.length ? this.pos + 1 : this.repeat === 'all' ? 0 : -1
     return this.userQueue[0]?.item ?? this.queue[this.order[nextPos]]
   }
@@ -1061,7 +1166,7 @@ class Player implements PlayerApi {
     const preparation = this.#preparation
     this.#preparingNext = { id, preparation }
     // Una aparición duplicada de la canción actual puede reutilizar su fuente vigente.
-    const currentSource = !previous && id === this.current?.track.id ? this.#playable : null
+    const currentSource = !previous && id === this.current?.track.id && (!this.#offline() || this.#playable?.local) ? this.#playable : null
     const pending = currentSource && this.#preparedExpiry(currentSource, id) > now
       ? Promise.resolve(currentSource) : this.#resolve(following, !!previous || !!currentSource)
     const position = isPodcast(id) && id !== this.current?.track.id ? episodeProgress.position(id) : Promise.resolve(0)
@@ -1074,7 +1179,11 @@ class Player implements PlayerApi {
       }
       else this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
     }).catch(() => {
-      if (preparation === this.#preparation) this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
+      if (preparation !== this.#preparation) return
+      if (this.#offline()) {
+        this.#offlineUnavailable.add(id)
+        this.#prefetchNext()
+      } else this.#prepareRetry = { id, at: Date.now() + PREPARE_RETRY }
     }).finally(() => {
       if (this.#preparingNext?.preparation === preparation) this.#preparingNext = null
     })
@@ -1082,20 +1191,29 @@ class Player implements PlayerApi {
 
   #resolve(item: QueueItem, refresh: boolean): Promise<Playable> {
     const id = item.track.id
+    const offline = this.#offline()
     let pending = this.#inFlight.get(id)
-    if (!pending || refresh) {
-      pending = withTimeout(api.resolve(toQuery(item), refresh), RESOLVE_TIMEOUT,
-        'No se pudo preparar el audio a tiempo. Vuelve a intentarlo')
+    if (!pending || refresh || pending.offline !== offline) {
+      const source = offline ? api.readWebDownloadedPlayable(id).then(playable => {
+        if (!playable?.local) {
+          if (!playable && this.#inFlight.get(id) === pending) downloads.done.delete(id)
+          throw new Error('La canción no tiene una copia descargada disponible')
+        }
+        if (this.#inFlight.get(id) === pending) downloads.done.add(id)
+        return playable
+      }) : api.resolve(toQuery(item), refresh)
+      pending = { offline, promise: withTimeout(source, RESOLVE_TIMEOUT,
+        'No se pudo preparar el audio a tiempo. Vuelve a intentarlo') }
       this.#inFlight.set(id, pending)
-      pending.finally(() => this.#inFlight.get(id) === pending && this.#inFlight.delete(id)).catch(() => {})
+      pending.promise.finally(() => this.#inFlight.get(id) === pending && this.#inFlight.delete(id)).catch(() => {})
     }
-    return pending
+    return pending.promise
   }
 
   /** Una URL remota caducada puede aparecer como error de red o de fuente no compatible. */
   #canRefreshSource() {
     const code = this.#audio.error?.code
-    return !this.#retried && !this.#sourceLocal && (code === 2 || code === 4)
+    return !this.#offline() && !this.#retried && !this.#sourceLocal && (code === 2 || code === 4)
   }
 
   /** El audio falló a mitad: si la URL pudo caducar, se pide otra una vez y se sigue donde iba. */
@@ -1120,6 +1238,14 @@ class Player implements PlayerApi {
       this.#finishSleep()
       this.#activeItem = null
       this.#resetAudio()
+      return
+    }
+    if (this.#offline()) {
+      this.#offlineUnavailable.add(item.track.id)
+      this.#inFlight.delete(item.track.id)
+      if (!advance) this.#stopOffline()
+      else if (this.#offlineDirection === -1) this.#previousOffline()
+      else this.#advanceOffline(true)
       return
     }
     this.#saveProgress(true)

@@ -382,12 +382,19 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
 
 async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamInfo> {
   checkAbort(signal)
-  const [{ requestP1Player }, { probeP1Audio }, { p1Recipe }] = await Promise.all([
+  const [{ requestP1Player, P1EngineError }, { probeP1Audio, P1ProbeError }, { p1Recipe }] = await Promise.all([
     import('./youtube-p1'), import('./youtube-p1-probe'), import('./p1-recipe.generated'),
   ])
   checkAbort(signal)
-  const response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal,
-    (format, available) => originalAudio(format, !explicitOriginalRequired(available)))
+  let response: unknown
+  try {
+    response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal,
+      (format, available) => originalAudio(format, !explicitOriginalRequired(available)))
+  } catch (error) {
+    checkAbort(signal)
+    if (error instanceof P1EngineError && error.code === 'timeout') throw new YouTubeError(error.message, 'timeout')
+    throw error
+  }
   checkAbort(signal)
   const available = list(at(response, 'streamingData', 'adaptiveFormats')).map(object)
   const candidates: StreamInfo[] = [], seen = new Set<string>()
@@ -417,14 +424,20 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   const attempts = candidates.map(info => probeP1Audio(info.url, info.duration, controller.signal)
     .then(() => ({ info }), error => ({ error })))
   let selected: StreamInfo | undefined
+  let transient: YouTubeError | undefined
   try {
     for (const attempt of attempts) {
       const result = await attempt
       checkAbort(signal)
       if ('info' in result) { selected = result.info; break }
       lastError = result.error
+      if (result.error instanceof P1ProbeError && (result.error.code === 'network' || result.error.code === 'timeout')) {
+        transient ??= new YouTubeError(result.error.message, result.error.code)
+      }
     }
-    if (!selected) throw lastError
+    // A rejected sibling cannot turn a known CDN transport failure into proof
+    // that audio is unavailable. Successful original encodings still win.
+    if (!selected) throw transient ?? lastError
   } finally {
     controller.abort()
     signal?.removeEventListener('abort', cancel)
@@ -440,24 +453,29 @@ export async function stream(videoId: string, refresh = false, signal?: AbortSig
   const saved = streams.get(videoId)
   if (!refresh && saved && saved.expiresAt > Date.now()) return saved
   streams.delete(videoId)
-  const visitorData = await session(videoId, signal)
-  checkAbort(signal)
-  const response = await requestJson('youtube', 'player', {
-    context: { client: { clientName: 'VISIONOS', clientVersion: '1.02', visitorData,
-      deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', osName: 'visionOS', osVersion: '26.5.23O471', platform: 'MOBILE' } },
-    videoId, contentCheckOk: true, racyCheckOk: true,
-  }, signal)
-  checkAbort(signal)
   let result: StreamInfo
-  try { result = parsePlayer(response, videoId) }
+  try {
+    const visitorData = await session(videoId, signal)
+    checkAbort(signal)
+    const response = await requestJson('youtube', 'player', {
+      context: { client: { clientName: 'VISIONOS', clientVersion: '1.02', visitorData,
+        deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', osName: 'visionOS', osVersion: '26.5.23O471', platform: 'MOBILE' } },
+      videoId, contentCheckOk: true, racyCheckOk: true,
+    }, signal)
+    checkAbort(signal)
+    result = parsePlayer(response, videoId)
+  }
   catch (error) {
+    checkAbort(signal)
     if (error instanceof YouTubeError && error.code === 'restricted') visitor = null
-    if (!(error instanceof YouTubeError) || !['format', 'unavailable'].includes(error.code)) throw error
+    if (!(error instanceof YouTubeError) || !['format', 'unavailable', 'network', 'timeout'].includes(error.code)) throw error
     try { result = await p1Stream(videoId, signal) }
-    catch {
+    catch (p1Error) {
       checkAbort(signal)
+      if (p1Error instanceof YouTubeError && (p1Error.code === 'network' || p1Error.code === 'timeout')) throw p1Error
       // Preserve the original category for verified providers and the existing
-      // visible fallback. A stale static recipe must not replace those paths.
+      // visible fallback if P1 itself is invalid. A stale recipe or decoder is
+      // not a different diagnosis of the original request.
       throw error
     }
   }

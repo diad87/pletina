@@ -1,7 +1,7 @@
 import { listen } from './events'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
-import { toLib } from './library.svelte'
+import { fromLib, toLib } from './library.svelte'
 import { isLocal, isPodcast } from './media'
 import { isAndroid } from './player-android.svelte'
 import { youtubeEpisodes } from './podcasts'
@@ -19,15 +19,75 @@ class Downloads {
   queued = new SvelteMap<number, QueueItem>()
   /** Sube al terminar o quitar descargas; la vista de descargas lo lee para recargarse. */
   version = $state(0)
+  online = $state(true)
+  waitingForNetwork = $state(false)
+  queueIssue = $state<string | null>(null)
+  restoring = $state(false)
 
   #finishedInBatch = 0
   /** Ignora eventos tardíos de una transferencia que ya terminó. start abre un intento nuevo. */
   #terminal = new Set<number>()
   #attempts = new Map<number, number>()
+  #changes = new Map<number, number>()
+  #ready = false
+  #initializing: Promise<void> | undefined
+  #restoring: Promise<void> | undefined
+
+  constructor() {
+    if (!api.inPwa) return
+    this.online = navigator.onLine !== false
+    window.addEventListener('offline', () => { this.online = false })
+    window.addEventListener('online', () => {
+      this.online = true
+      if (this.#ready) void this.resume()
+    })
+  }
 
   async init(downloadedIds: number[]) {
     for (const id of downloadedIds) this.done.add(id)
-    if (api.inTauri || api.inPwa) await listen<DownloadProgress>('download', (e) => this.#onProgress(e.payload))
+    this.#initializing ??= (async () => {
+      if (api.inTauri || api.inPwa) await listen<DownloadProgress>('download', (e) => this.#onProgress(e.payload))
+      this.#ready = true
+      if (api.inPwa) await this.resume()
+    })()
+    await this.#initializing
+  }
+
+  /** Rebuild visible pending rows before resuming persisted work. This resumes
+   * whole verified files, never a saved temporary URL or an unchecked fragment. */
+  async resume() {
+    if (!api.inPwa || !this.#ready) return
+    if (this.#restoring) return this.#restoring
+    this.restoring = true
+    this.queueIssue = null
+    const changes = new Map(this.#changes)
+    const pending = (async () => {
+      try {
+        const tracks = await api.pendingWebDownloads()
+        for (const track of tracks) {
+          const id = track.id
+          if (this.done.has(id) || this.active.has(id) || this.#changes.get(id) !== changes.get(id)) continue
+          this.#terminal.delete(id)
+          this.active.set(id, 0)
+          this.queued.set(id, fromLib(track))
+        }
+        this.waitingForNetwork = false
+        await api.resumeWebDownloads()
+      } catch (error) {
+        const code = error && typeof error === 'object' && 'code' in error ? error.code : null
+        this.queueIssue = code === 'queue-busy'
+          ? 'Las descargas están abiertas en otra ventana de Pletina. Ciérrala y pulsa Reintentar.'
+          : code === 'queue-ownership-unavailable'
+            ? 'Actualiza el navegador para gestionar las descargas de forma segura.'
+            : 'No se pudieron recuperar las descargas pendientes. Pulsa Reintentar.'
+        toast.show(this.queueIssue)
+      } finally {
+        this.restoring = false
+        this.#restoring = undefined
+      }
+    })()
+    this.#restoring = pending
+    return pending
   }
 
   /** Descarga las canciones que falten (las ya descargadas o en cola se saltan). */
@@ -42,6 +102,7 @@ class Downloads {
     })
     if (!todo.length) return
     for (const item of todo) {
+      this.#change(item.track.id)
       this.#terminal.delete(item.track.id)
       this.#attempts.set(item.track.id, (this.#attempts.get(item.track.id) ?? 0) + 1)
       this.active.set(item.track.id, 0)
@@ -77,6 +138,7 @@ class Downloads {
         if (this.#attempts.get(id) !== attempts.get(id)) continue
         this.done.delete(id)
         this.#terminal.add(id)
+        this.#change(id)
       }
       this.version++
       toast.show(ids.length === 1 ? 'Descarga quitada' : `${ids.length} descargas quitadas`)
@@ -109,6 +171,8 @@ class Downloads {
     if (this.#terminal.has(id) || this.done.has(id)) return
     if (p.state === 'queued' || p.state === 'downloading') {
       this.active.set(id, p.progress)
+      if (p.state === 'downloading') this.waitingForNetwork = false
+      else if (p.error) this.waitingForNetwork = true
       return
     }
     this.#terminal.add(id)
@@ -128,9 +192,12 @@ class Downloads {
   }
 
   #forget(id: number) {
+    this.#change(id)
     this.active.delete(id)
     this.queued.delete(id)
   }
+
+  #change(id: number) { this.#changes.set(id, (this.#changes.get(id) ?? 0) + 1) }
 }
 
 export const downloads = new Downloads()

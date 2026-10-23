@@ -1,7 +1,9 @@
-import type { DownloadEntry, DownloadProgress, LibTrack, Playable, TrackQuery } from '../src/lib/types'
+import type { DownloadEntry, DownloadProgress, LibTrack, Playable, PlayableSource, TrackQuery } from '../src/lib/types'
 import { resolveRemoteTrack } from './audio'
 import { stream, type StreamInfo } from './youtube'
 import { audioCacheUrl, defaultDownloadStore, DOWNLOAD_CACHE, downloadId, downloadRevision, downloadTrack, MAX_DOWNLOAD_BYTES, type DownloadStore } from './download-store'
+import { defaultDownloadQueueJournal, type DownloadQueueJournal } from './download-queue'
+import { defaultDownloadOwnership, type DownloadOwnership } from './download-ownership'
 
 interface Options {
   store?: DownloadStore
@@ -14,6 +16,9 @@ interface Options {
   storage?: Pick<StorageManager, 'estimate' | 'persist'>
   timeout?: number
   retryDelay?: number
+  journal?: DownloadQueueJournal
+  online?: () => boolean
+  ownership?: DownloadOwnership
 }
 const cancelled = () => new DOMException('Descarga descartada.', 'AbortError')
 export function validateDownloadedAudio(url: string, signal: AbortSignal, expectedDuration?: number): Promise<void> {
@@ -49,9 +54,24 @@ export function validateDownloadedAudio(url: string, signal: AbortSignal, expect
   })
 }
 
-function externalDownload(source: Playable, track: LibTrack): { url: string; size: number; duration: number; sha256?: string } {
+const AUDIO_MIME = /^audio\/(?:mpeg|mp3|mp4|aac|ogg|flac|wav|wave|webm|x-(?:mpeg|m4a|flac|wav))$/
+function externalDownload(source: Playable, track: LibTrack, scope: URL): { url: string; size: number; duration: number; sha256?: string; mime?: string; identity?: PlayableSource } {
   const identity = source.source, permission = identity?.download
   if (permission?.allowed !== true) throw new Error('Esta fuente permite escuchar la canción, pero no descargarla para usarla sin conexión.')
+  if (identity && ['verified', 'archive', 'funkwhale'].includes(identity.provider)) {
+    let url: URL
+    try { url = new URL(source.url) } catch { throw new Error('La dirección del archivo verificado no es válida.') }
+    const size = permission.contentLength, duration = permission.duration, startAt = identity.startAt ?? 0
+    if (url.protocol !== 'blob:' || url.origin !== scope.origin || !/^[A-Za-z0-9_-]{1,200}$/.test(identity.id) ||
+      !Number.isSafeInteger(size) || size! <= 0 || size! > MAX_DOWNLOAD_BYTES || !/^[a-f0-9]{64}$/.test(permission.sha256 ?? '') ||
+      !AUDIO_MIME.test(permission.mime ?? '') || !Number.isFinite(duration) || duration! <= 0 || duration! > 86400 ||
+      !Number.isFinite(startAt) || startAt < 0 || startAt >= duration!) throw new Error('No se puede comprobar el archivo completo de esta fuente.')
+    // This URL already names the exact full bytes verified by the resolver. The
+    // copy is hashed again before commit; no provider URL or Blob URL persists.
+    return { url: url.href, size: size!, duration: duration!, sha256: permission.sha256, mime: permission.mime,
+      identity: { provider: identity.provider, id: identity.id, startAt,
+        download: { allowed: true, contentLength: size!, sha256: permission.sha256, duration: duration!, mime: permission.mime } } }
+  }
   if (identity?.provider !== 'audius' || !/^[A-Za-z0-9]{1,30}$/.test(identity.id) ||
     source.url !== `https://api.audius.co/v1/tracks/${identity.id}/stream`) throw new Error('Esta fuente todavía no permite descargas verificadas en Pletina.')
   const size = permission.contentLength ?? 0, duration = permission.duration ?? track.duration
@@ -66,13 +86,32 @@ export function createDownloadManager(options: Options = {}) {
   const request = options.fetch ?? globalThis.fetch, resolve = options.resolve ?? resolveRemoteTrack, info = options.stream ?? stream
   const validate = options.validate ?? validateDownloadedAudio
   const storage = options.storage ?? globalThis.navigator?.storage
+  const journal = options.journal ?? defaultDownloadQueueJournal()
+  const online = options.online ?? (() => globalThis.navigator?.onLine !== false)
+  const ownership = options.ownership ?? defaultDownloadOwnership()
   const emit = options.emit ?? ((detail: DownloadProgress) => window.dispatchEvent(new CustomEvent('pletina:download', { detail })))
   const pending = new Set<number>(), queue: LibTrack[] = [], failed = new Set<number>()
-  let running: Promise<void> | null = null
+  let running: Promise<void> | null = null, current: LibTrack | null = null, loaded = false, suspended = false
+  let mutations: Promise<unknown> = Promise.resolve()
+  const serial = <T>(work: () => Promise<T>): Promise<T> => {
+    const result = mutations.then(async () => { await ownership.acquire(); ownership.assertOwned(); return work() })
+    mutations = result.catch(() => {})
+    return result
+  }
+  const jobs = () => [...(current && pending.has(current.id) ? [current] : []), ...queue]
+  const load = async () => {
+    if (loaded) return
+    const saved = await journal.read(), seen = new Set<number>(), restored: LibTrack[] = []
+    ownership.assertOwned()
+    for (const value of saved) { const track = downloadTrack(value); if (!seen.has(track.id)) { seen.add(track.id); restored.push(track) } }
+    for (const track of restored) { pending.add(track.id); queue.push(track) }
+    loaded = true
+  }
   const send = (trackId: number, state: DownloadProgress['state'], progress = 0, error: string | null = null) => emit({ trackId, state, progress, error })
   async function download(track: LibTrack) {
     const id = track.id, revision = downloadRevision(id), controller = new AbortController()
     const check = () => {
+      ownership.assertOwned()
       if (controller.signal.aborted) throw controller.signal.reason instanceof Error ? controller.signal.reason : cancelled()
       if (revision !== downloadRevision(id)) throw cancelled()
     }
@@ -89,7 +128,7 @@ export function createDownloadManager(options: Options = {}) {
       cache = await wait(cacheStorage.open(DOWNLOAD_CACHE))
       const existing = await wait(store.readDownloadedPlayable(id))
       check()
-      if (existing) { send(id, 'done', 1); return }
+      if (existing) return
       for (let attempt = 0; attempt < 2; attempt++) {
         const refresh = failed.has(id) || attempt > 0
         const source = await wait(resolve({ id, title: track.title, artist: track.artistName, album: track.albumTitle, duration: track.duration,
@@ -98,7 +137,7 @@ export function createDownloadManager(options: Options = {}) {
         if (source.local || !source.videoId && !source.source) throw new Error('Los episodios RSS usan su audio original y todavía no se descargan como vídeos.')
         // resolve(refresh) ya renueva el stream; se consulta aquí esa misma selección y tamaño.
         const external = Boolean(source.source)
-        const details = external ? externalDownload(source, track) : await wait(info(source.videoId))
+        const details = external ? externalDownload(source, track, store.scope) : await wait(info(source.videoId))
         check()
         let size = 'size' in details ? details.size : details.contentLength ?? 0
         if (!Number.isSafeInteger(size) || size < 0 || size > MAX_DOWNLOAD_BYTES) throw new Error('Este audio supera el límite de 256 MiB por descarga.')
@@ -119,9 +158,10 @@ export function createDownloadManager(options: Options = {}) {
             const rejectBody = (message: string): never => { void response.body?.cancel().catch(() => {}); throw new Error(message) }
             const contentType = response.headers.get('content-type')?.split(';')[0].trim().toLowerCase() ?? '', body = response.body
             if (response.type === 'opaque' || response.status !== 200 || response.headers.has('content-range') ||
-              !/^audio\/(?:mpeg|mp3|mp4|aac|ogg|flac|wav|wave|webm|x-(?:mpeg|m4a|flac|wav))$/.test(contentType) || !body) {
+              !AUDIO_MIME.test(contentType) || !body) {
               rejectBody('La fuente no entregó un archivo de audio completo que se pueda descargar.')
             }
+            if ('mime' in details && details.mime && contentType !== details.mime) rejectBody('El formato descargado no coincide con el archivo verificado.')
             const declared = response.headers.get('content-length')
             if (declared !== null) {
               if (!/^\d+$/.test(declared) || !Number.isSafeInteger(Number(declared)) || Number(declared) <= 0 || Number(declared) > MAX_DOWNLOAD_BYTES) {
@@ -188,12 +228,12 @@ export function createDownloadManager(options: Options = {}) {
         }
         const old = await wait(store.get(id))
         check()
-        await wait(store.put({ id, track, size, at: Math.floor(Date.now() / 1000), cacheKey: attemptStage }))
+        await wait(store.put({ id, track, size, at: Math.floor(Date.now() / 1000), cacheKey: attemptStage,
+          ...('identity' in details && details.identity ? { source: details.identity } : {}) }))
         check()
         committed = true
         if (old && old.cacheKey !== attemptStage) await cache.delete(old.cacheKey).catch(() => false)
         failed.delete(id)
-        send(id, 'done', 1)
         break
       }
     } finally {
@@ -206,11 +246,45 @@ export function createDownloadManager(options: Options = {}) {
     }
   }
   async function drain() {
-    while (queue.length) {
-      const track = queue.shift()!
+    while (!suspended && online()) {
+      const track = await serial(async () => { await load(); if (!queue.length || suspended || !online()) return null; current = queue.shift()!; return current })
+      if (!track) return
       send(track.id, 'downloading')
+      let failure: unknown
       try { await download(track) }
-      catch (error) {
+      catch (error) { failure = error }
+      const code = failure && typeof failure === 'object' && 'code' in failure ? failure.code : null
+      const interrupted = failure && (!online() || failure instanceof TypeError || ['network', 'timeout'].includes(String(code)) ||
+        failure instanceof DOMException && ['NetworkError', 'TimeoutError'].includes(failure.name))
+      if (interrupted) {
+        failed.add(track.id)
+        await serial(async () => {
+          if (pending.has(track.id)) queue.unshift(track)
+          current = null; suspended = true
+        })
+        if (pending.has(track.id)) send(track.id, 'queued', 0, 'La conexión se ha interrumpido. Reintenta para continuar.')
+        return
+      }
+      let retired = false
+      try {
+        await serial(async () => {
+          retired = !pending.has(track.id)
+          const remaining = jobs().filter(value => value.id !== track.id)
+          await journal.write(remaining)
+          ownership.assertOwned()
+          pending.delete(track.id); current = null
+        })
+      } catch (error) {
+        // The verified file may already exist. Keep the journal entry so reopen
+        // can reconcile it against that file; never lose the remaining FIFO.
+        await serial(async () => { if (pending.has(track.id)) queue.unshift(track); current = null; suspended = true })
+        send(track.id, 'error', 0, 'No se pudo guardar el estado de la cola. Vuelve a abrir Pletina o reintenta.')
+        return
+      }
+      if (retired) continue
+      if (!failure) { send(track.id, 'done', 1); continue }
+      const error = failure
+      {
         failed.add(track.id)
         const abort = error instanceof DOMException && error.name === 'AbortError'
         const message = error instanceof DOMException && error.name === 'QuotaExceededError'
@@ -218,36 +292,67 @@ export function createDownloadManager(options: Options = {}) {
           : error instanceof Error && !(error instanceof TypeError) && !/https?:\/\//i.test(error.message)
             ? error.message : 'No se pudo guardar el audio para escuchar sin conexión. Vuelve a intentarlo.'
         send(track.id, abort ? 'cancelled' : 'error', 0, abort ? null : message)
-      } finally { pending.delete(track.id) }
+      }
     }
+  }
+  function launch(): void {
+    if (running || suspended || !online() || !queue.length) return
+    running = drain().catch(error => {
+      suspended = true
+      if (current) send(current.id, 'error', 0, error instanceof Error && !/https?:\/\//i.test(error.message) ? error.message : 'No se pudo continuar la cola de descargas.')
+    }).finally(() => { running = null; if (queue.length && !suspended && online()) launch() })
   }
   async function enqueueDownloads(values: LibTrack[]): Promise<void> {
     if (!Array.isArray(values) || values.length > 10000) throw new Error('La lista de descargas no es válida.')
     const normalized = values.map(downloadTrack)
-    for (const track of normalized) {
-      if (pending.has(track.id)) continue
-      pending.add(track.id); queue.push(track); send(track.id, 'queued')
-    }
-    if (!running) running = drain().finally(() => { running = null; if (queue.length) void enqueueDownloads([]) })
+    await serial(async () => {
+      await load()
+      const seen = new Set(pending), additions = normalized.filter(track => { if (seen.has(track.id)) return false; seen.add(track.id); return true })
+      await journal.write([...jobs(), ...additions])
+      ownership.assertOwned()
+      for (const track of additions) { pending.add(track.id); queue.push(track); send(track.id, 'queued') }
+      suspended = false
+    })
+    launch()
   }
-  function cancelDownloads(): void {
-    for (const track of queue.splice(0)) { pending.delete(track.id); send(track.id, 'cancelled') }
+  async function pendingDownloads(): Promise<LibTrack[]> {
+    return serial(async () => { await load(); return jobs().map(downloadTrack) })
+  }
+  async function resumeDownloads(): Promise<void> {
+    await serial(async () => { await load(); suspended = false; for (const track of queue) send(track.id, 'queued') })
+    launch()
+  }
+  async function cancelDownloads(): Promise<void> {
+    await serial(async () => {
+      await load()
+      await journal.write(current && pending.has(current.id) ? [current] : [])
+      ownership.assertOwned()
+      for (const track of queue.splice(0)) { pending.delete(track.id); send(track.id, 'cancelled') }
+    })
   }
   async function removeDownloads(ids: number[]): Promise<void> {
     if (!Array.isArray(ids)) throw new Error('La lista de descargas no es válida.')
     const unique = new Set(ids.map(downloadId))
-    for (const id of unique) {
-      const queued = queue.findIndex((track) => track.id === id)
-      if (queued >= 0) { queue.splice(queued, 1); pending.delete(id); send(id, 'cancelled') }
-      await store.removeDownloadedTrack(id)
-    }
+    await serial(async () => {
+      await load()
+      await journal.write(jobs().filter(track => !unique.has(track.id)))
+      ownership.assertOwned()
+      for (const id of unique) {
+        const queued = queue.findIndex((track) => track.id === id)
+        if (queued >= 0) queue.splice(queued, 1)
+        if (pending.delete(id)) send(id, 'cancelled')
+        await store.removeDownloadedTrack(id)
+      }
+    })
   }
-  return { enqueueDownloads, cancelDownloads, removeDownloads, listDownloads: store.listDownloads,
+  return { enqueueDownloads, cancelDownloads, removeDownloads, pendingDownloads, resumeDownloads, listDownloads: store.listDownloads,
     async idle() { while (running) await running } }
 }
 let manager: ReturnType<typeof createDownloadManager> | undefined
 const downloads = () => manager ??= createDownloadManager()
 export const listDownloads = (): Promise<DownloadEntry[]> => downloads().listDownloads()
 export const enqueueDownloads = (tracks: LibTrack[]): Promise<void> => downloads().enqueueDownloads(tracks)
-export const cancelDownloads = (): void => downloads().cancelDownloads()
+export const cancelDownloads = (): Promise<void> => downloads().cancelDownloads()
 export const removeDownloads = (ids: number[]): Promise<void> => downloads().removeDownloads(ids)
+export const pendingDownloads = (): Promise<LibTrack[]> => downloads().pendingDownloads()
+export const resumeDownloads = (): Promise<void> => downloads().resumeDownloads()

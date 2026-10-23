@@ -22,18 +22,20 @@ new Function('exports', commonJs(await readFile(new URL('../../src/lib/queue.ts'
 // El harness compartido no permite inyectar inPwa. Este adaptador local conserva su contrato
 // sin cambiarlo y modela el reinicio de error/metadatos al sustituir la fuente de un Audio real.
 function pwaHarness({ resolve = async (track) => playable(track.id), play, progress = new Map(), progressPosition,
-  duration = () => 180, storage, metadata = true,
+  duration = () => 180, storage, metadata = true, online = true, downloaded = new Set(),
+  readDownloaded = async () => null,
   location = 'https://app.example/pletina/application/app.html',
   automaticYouTubeSource = () => null, openAutomaticYouTubePlayer = () => true,
   retainWebAudioRequests = () => {},
   chooseSource = async (track, videoId) => ({ ...playable(track.id), videoId }) } = {}) {
   const audios = [], sources = [], resolutions = [], messages = [], records = [], audioOperations = [], sourceChoices = []
-  const progressReads = [], progressWrites = [], officialOpens = []
+  const progressReads = [], progressWrites = [], officialOpens = [], offlineReads = []
   const events = new EventTarget()
   events.location = { href: location }
   events.localStorage = storage
   const timers = new Map()
   const audioSession = { type: 'auto' }
+  const browserNavigator = { audioSession, onLine: online }
   let now = 0, timerId = 0, wallOffset = 0
   class Clock extends Date { static now() { return Date.now() + wallOffset } }
   class Audio extends EventTarget {
@@ -87,6 +89,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
       inPwa: true,
       inTauri: false,
       retainWebAudioRequests,
+      readWebDownloadedPlayable(id) { offlineReads.push(id); return readDownloaded(id) },
       resolve(track, refresh) { resolutions.push([track.id, refresh]); return resolve(track, refresh) },
       automaticYouTubeSource,
       openAutomaticYouTubePlayer(track, source, at) {
@@ -96,7 +99,7 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
       chooseSource(track, videoId) { sourceChoices.push([track.id, videoId]); return chooseSource(track, videoId) },
       recordPlay: async (value) => { records.push(value.track.id) },
     },
-    './downloads.svelte': { downloads: { done: new Set(), start() {} } },
+    './downloads.svelte': { downloads: { done: downloaded, start() {} } },
     './extractor/capture': {
       stopCapture() {},
       setAudioSource(audio, url) { audio.src = url; audio.load(); sources.push(url) },
@@ -121,12 +124,13 @@ function pwaHarness({ resolve = async (track) => playable(track.id), play, progr
   const exports = {}
   new Function('require', 'exports', 'Audio', 'navigator', 'MediaMetadata', 'setTimeout', 'clearTimeout', 'window', 'document', 'performance', 'Date', compiled)(
     (name) => { assert.ok(name in modules, `Unmocked PWA dependency: ${name}`); return modules[name] },
-    exports, Audio, { audioSession }, undefined,
+    exports, Audio, browserNavigator, undefined,
     (fn, delay) => { const id = ++timerId; timers.set(id, { at: now + delay, fn }); return id },
     (id) => timers.delete(id), events, events, { now: () => now }, Clock,
   )
   return {
-    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites, officialOpens, events,
+    player: exports.player, audios, sources, resolutions, messages, records, audioSession, audioOperations, sourceChoices, progressReads, progressWrites, officialOpens, events, offlineReads,
+    setOnline(value) { browserNavigator.onLine = value; events.dispatchEvent(new Event(value ? 'online' : 'offline')) },
     get audio() { return audios.at(-1) },
     jumpWall(ms) { wallOffset += ms },
     async advance(ms) {
@@ -1010,7 +1014,7 @@ test('PWA los metadatos tardíos no sustituyen un seek explícito por el inicio 
   assert.equal(h.audio.plays, 1)
 })
 
-test('PWA rechaza offsets inválidos o fuera del audio y no aplica el salto a podcasts ni archivos locales', async () => {
+test('PWA rechaza offsets inválidos o fuera del audio y no aplica el salto a podcasts ni copias sin metadatos verificados', async () => {
   for (const startAt of [-1, NaN, Infinity, Number.MAX_SAFE_INTEGER, 61, '8.94']) {
     const h = pwaHarness({ resolve: async () => verified(1, { startAt }) })
     h.player.playQueue([item(1)], 0)
@@ -1025,7 +1029,7 @@ test('PWA rechaza offsets inválidos o fuera del audio y no aplica el salto a po
   assert.equal(short.audio.currentTime, 0)
   assert.equal(short.player.time, 0, 'short media invalidates an otherwise bounded source offset')
   for (const [id, source] of [
-    [1, { ...verified(), local: true, url: 'https://app.example/pletina/__audio__/1' }],
+    [1, { ...playable(1), local: true, url: 'https://app.example/pletina/__audio__/1' }],
     [750_000_000_000_001, verified()],
   ]) {
     const h = pwaHarness({ resolve: async () => source })
@@ -1328,4 +1332,268 @@ test('PWA rejected official launch returns to the bounded normal failure path', 
   assert.equal(h.player.current.track.id, 2)
   assert.equal(h.player.status, 'playing')
   assert.equal(h.messages.length, 1)
+})
+
+const localAudio = id => ({ ...playable(id), local: true, url: `https://app.example/pletina/__audio__/${id}` })
+
+test('PWA offline cold selection skips more than three unavailable songs without resolving remote sources', async () => {
+  const h = pwaHarness({ online: false, downloaded: new Set([6]), readDownloaded: async id => id === 6 ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4, 5, 6].map(id => item(id)), 0)
+  await flush()
+  assert.equal(h.player.current.track.id, 6)
+  assert.equal(h.player.status, 'playing')
+  assert.deepEqual(h.resolutions, [], 'being offline must never invoke a source extractor, including prefetch')
+  assert.deepEqual(h.sources, [localAudio(6).url])
+  assert.ok(h.offlineReads.every(id => id === 1 || id === 6))
+  assert.equal(h.audios.length, 1)
+})
+
+test('PWA offline ended skips unavailable entries and starts the verified local reserve synchronously', async () => {
+  const h = pwaHarness({ online: false, downloaded: new Set([1, 6]), readDownloaded: async id => [1, 6].includes(id) ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4, 5, 6].map(id => item(id)), 0)
+  await flush()
+  const audio = h.audio, plays = audio.plays, reads = [...h.offlineReads]
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  assert.equal(audio.plays, plays + 1, 'local storage must be read during preparation, not between ended and play')
+  assert.equal(audio.src, localAudio(6).url)
+  assert.deepEqual(h.offlineReads, reads)
+  await flush()
+  assert.equal(h.player.current.track.id, 6)
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audios.length, 1)
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA offline DJ order validates stale download markers and resumes the main queue after available requests', async () => {
+  const downloaded = new Set([1, 4, 91, 92, 93])
+  const h = pwaHarness({ online: false, downloaded, readDownloaded: async id => id !== 91 && downloaded.has(id) ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4].map(id => item(id)), 0)
+  await flush()
+  h.player.addToQueue([90, 91, 92, 93].map(id => item(id)))
+  await flush()
+  assert.ok(!downloaded.has(91), 'missing cache reconciles a stale downloaded marker')
+  for (const expected of [92, 93, 4]) {
+    h.audio.paused = true
+    h.audio.dispatchEvent(new Event('ended'))
+    await flush()
+    assert.equal(h.player.current.track.id, expected)
+    assert.equal(h.player.status, 'playing')
+  }
+  assert.deepEqual(h.player.userQueue, [])
+  assert.equal(h.player.pos, 3)
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA offline repeat-all follows the existing shuffled order and wraps without retrying skipped positions', async () => {
+  const available = new Set([2, 4])
+  const h = pwaHarness({ online: false, downloaded: available, readDownloaded: async id => available.has(id) ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4, 5].map(id => item(id)), 3)
+  await flush()
+  h.player.shuffle = true
+  h.player.order = [3, 0, 4, 2, 1]
+  h.player.pos = 0
+  h.player.cycleRepeat()
+  await flush()
+  h.player.next()
+  await flush()
+  assert.equal(h.player.current.track.id, 2)
+  assert.equal(h.player.pos, 4)
+  h.player.next()
+  await flush()
+  assert.equal(h.player.current.track.id, 4)
+  assert.equal(h.player.pos, 0)
+  assert.deepEqual(h.player.order, [3, 0, 4, 2, 1])
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA offline corrupt local copies cannot loop through repeat-all or stop before a later valid download', async () => {
+  const available = new Set([1, 2, 3, 4, 5])
+  const h = pwaHarness({ online: false, downloaded: available, readDownloaded: async id => localAudio(id),
+    play: audio => {
+      if (!audio.src.endsWith('/5')) { audio.error = { code: 3 }; return Promise.reject(new Error('Corrupt cached bytes')) }
+      return audio.begin()
+    } })
+  h.player.cycleRepeat()
+  h.player.playQueue([1, 2, 3, 4, 5].map(id => item(id)), 0)
+  // Five independent storage + play rejection chains, not a real timer/backoff.
+  for (let pass = 0; pass < 6; pass++) await flush()
+  assert.equal(h.player.current.track.id, 5)
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audio.plays, 5, 'each failed cache is attempted at most once despite repeat-all')
+  assert.deepEqual(h.resolutions, [])
+  h.audio.fail(3)
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.equal(h.audio.plays, 5, 'exhausted repeat-all must stop, not replay known broken downloads')
+  assert.ok(h.messages.some(message => message.includes('Sin conexión') && message.includes('descargad')))
+})
+
+test('PWA offline absence of downloads stops explicitly without showing the official video fallback', async () => {
+  const h = pwaHarness({ online: false, automaticYouTubeSource: () => officialSource })
+  h.player.cycleRepeat()
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  assert.equal(h.player.status, 'idle')
+  assert.equal(h.audio.plays, 0)
+  assert.deepEqual(h.resolutions, [])
+  assert.deepEqual(h.officialOpens, [])
+  assert.ok(h.messages.some(message => message.includes('Sin conexión') && message.includes('descargad')))
+})
+
+test('PWA offline previous scans backward for a local copy instead of bouncing forward or opening a remote source', async () => {
+  const available = new Set([1, 5])
+  const h = pwaHarness({ online: false, downloaded: available, readDownloaded: async id => available.has(id) ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4, 5].map(id => item(id)), 4)
+  await flush()
+  h.player.prev()
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.pos, 0)
+  assert.equal(h.player.status, 'playing')
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA switching offline retires pending network work and late results cannot replace the downloaded selection', async () => {
+  const remote = deferred()
+  const h = pwaHarness({ resolve: () => remote.promise, downloaded: new Set([4]), readDownloaded: async id => id === 4 ? localAudio(id) : null })
+  h.player.playQueue([1, 2, 3, 4].map(id => item(id)), 0)
+  await flush()
+  h.setOnline(false)
+  await flush()
+  assert.equal(h.player.current.track.id, 4)
+  assert.equal(h.player.status, 'playing')
+  remote.resolve(playable(1))
+  await flush()
+  assert.deepEqual(h.sources, [localAudio(4).url])
+  assert.equal(h.audios.length, 1)
+})
+
+test('PWA cancelled or replaced offline reads cannot autoplay or advance the newest selection', async () => {
+  for (const action of ['pause', 'replace']) {
+    const old = deferred()
+    const h = pwaHarness({ online: false, downloaded: new Set([1, 2]), readDownloaded: id => id === 1 ? old.promise : Promise.resolve(localAudio(id)) })
+    h.player.playQueue([item(1), item(2)], 0)
+    await flush()
+    if (action === 'pause') h.player.toggle()
+    else h.player.playAt(1)
+    await flush()
+    old.resolve(null)
+    await flush()
+    assert.equal(h.player.current.track.id, action === 'pause' ? 1 : 2)
+    assert.equal(h.player.status, action === 'pause' ? 'paused' : 'playing')
+    assert.deepEqual(h.sources, action === 'pause' ? [] : [localAudio(2).url])
+    assert.deepEqual(h.resolutions, [])
+  }
+})
+
+test('PWA offline repeat-one repeats a playable copy but escapes a broken one to another downloaded song', async () => {
+  const available = new Set([1, 4])
+  const h = pwaHarness({ online: false, downloaded: available, readDownloaded: async id => available.has(id) ? localAudio(id) : null })
+  h.player.cycleRepeat(); h.player.cycleRepeat()
+  h.player.playQueue([1, 2, 3, 4].map(id => item(id)), 0)
+  await flush()
+  const audio = h.audio, plays = audio.plays
+  audio.paused = true
+  audio.dispatchEvent(new Event('ended'))
+  assert.equal(audio.plays, plays + 1)
+  assert.equal(h.player.current.track.id, 1)
+  await flush()
+  audio.fail(4)
+  await flush()
+  assert.equal(h.player.current.track.id, 4)
+  assert.equal(h.player.repeat, 'one')
+  assert.equal(h.player.status, 'playing')
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA offline restored queue resolves the stored copy at its saved position without autoplay on reopening', async () => {
+  const values = new Map(), storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) }
+  const options = { online: false, storage, downloaded: new Set([1, 3]), readDownloaded: async id => [1, 3].includes(id) ? localAudio(id) : null }
+  const previous = pwaHarness(options)
+  previous.player.playQueue([item(1), item(2), item(3)], 0, 'Lista sin conexión')
+  await flush()
+  previous.audio.currentTime = 47
+  previous.audio.dispatchEvent(new Event('timeupdate'))
+  previous.player.toggle()
+  await flush()
+  const h = pwaHarness(options)
+  assert.equal(h.player.status, 'paused')
+  assert.equal(h.player.current.track.id, 1)
+  assert.equal(h.player.time, 47)
+  assert.equal(h.audio.plays, 0)
+  assert.deepEqual(h.offlineReads, [])
+  h.player.toggle()
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audio.currentTime, 47)
+  assert.equal(h.player.context, 'Lista sin conexión')
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA offline downloaded verified offsets survive startup and repeat while explicit seek-zero stays available', async () => {
+  const local = { ...localAudio(1), source: { provider: 'verified', id: 'bounded-source', startAt: 8.94 } }
+  const h = pwaHarness({ online: false, downloaded: new Set([1]), readDownloaded: async () => local })
+  h.player.cycleRepeat(); h.player.cycleRepeat()
+  h.player.playQueue([item(1)], 0)
+  await flush()
+  assert.equal(h.audio.currentTime, 8.94)
+  assert.equal(h.player.duration, 180, 'the UI keeps the actual file duration')
+  h.player.seek(0)
+  assert.equal(h.audio.currentTime, 0)
+  h.audio.paused = true
+  h.audio.dispatchEvent(new Event('ended'))
+  await flush()
+  assert.equal(h.audio.currentTime, 8.94)
+  assert.equal(h.audios.length, 1)
+  for (const startAt of [-1, NaN, Infinity, 61, 180]) {
+    const invalid = pwaHarness({ online: false, downloaded: new Set([1]), readDownloaded: async () => ({ ...local, source: { ...local.source, startAt } }) })
+    invalid.player.playQueue([item(1)], 0)
+    await flush()
+    assert.equal(invalid.audio.currentTime, 0, `reject unbounded offset ${startAt}`)
+  }
+})
+
+test('PWA offline never accepts a remote value from the local-copy facade or reuses an earlier remote preparation', async () => {
+  const h = pwaHarness({ downloaded: new Set([1, 2, 3]), readDownloaded: async id => id === 3 ? localAudio(3) : playable(id) })
+  h.player.playQueue([item(1), item(2), item(3)], 0)
+  await flush()
+  assert.ok(h.resolutions.some(([id]) => id === 2), 'the old next source really was prepared online')
+  h.setOnline(false)
+  await flush()
+  h.audio.paused = true
+  h.audio.dispatchEvent(new Event('ended'))
+  await flush()
+  assert.equal(h.player.current.track.id, 3)
+  assert.equal(h.audio.src, localAudio(3).url)
+  assert.deepEqual(h.sources, ['https://audio.test/1', localAudio(3).url])
+  assert.deepEqual(h.officialOpens, [])
+})
+
+test('PWA offline explicit selection validates an existing copy even when its downloaded hint has not caught up', async () => {
+  const downloaded = new Set()
+  const h = pwaHarness({ online: false, downloaded, readDownloaded: async id => localAudio(id) })
+  h.player.playQueue([item(9)], 0)
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.audio.src, localAudio(9).url)
+  assert.ok(downloaded.has(9))
+  assert.deepEqual(h.resolutions, [])
+})
+
+test('PWA reconnection during a pending local read retries the same selection online and ignores its late missing-cache result', async () => {
+  const local = deferred(), downloaded = new Set([1, 2])
+  const h = pwaHarness({ online: false, downloaded, readDownloaded: () => local.promise })
+  h.player.playQueue([item(1), item(2)], 0)
+  await flush()
+  assert.equal(h.player.status, 'loading')
+  h.setOnline(true)
+  await flush()
+  assert.equal(h.player.status, 'playing')
+  assert.equal(h.player.current.track.id, 1)
+  local.resolve(null)
+  await flush()
+  assert.equal(h.player.current.track.id, 1)
+  assert.ok(downloaded.has(1), 'an obsolete local read must not remove a newer downloaded hint')
+  assert.deepEqual(h.sources, ['https://audio.test/1'])
 })

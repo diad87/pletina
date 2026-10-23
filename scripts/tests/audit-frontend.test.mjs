@@ -45,12 +45,15 @@ function load(code, modules, globals = {}) {
 const item = (id = 1) => ({ track: { id, title: `Fixture ${id}` }, cover: null, albumId: 1 })
 function downloadsHarness(overrides = {}) {
   const calls = [], messages = [], callbacks = []
+  const window = new EventTarget(), navigator = { onLine: true }
   const api = {
     inTauri: true,
     download: async (tracks) => { calls.push(['download', tracks.map((t) => t.id)]) },
     removeDownloads: async (ids) => { calls.push(['remove', ids]) },
     downloadsList: async () => { throw new Error('Library unavailable') },
     cancelDownloads: async () => { calls.push(['cancel']) },
+    pendingWebDownloads: async () => [],
+    resumeWebDownloads: async () => { calls.push(['resume']) },
     ...overrides,
   }
   const yt = new Set([500_000_000_000_002])
@@ -59,14 +62,14 @@ function downloadsHarness(overrides = {}) {
     'svelte/reactivity': { SvelteMap, SvelteSet },
     './api': api,
     './events': { listen: async (_event, callback) => { callbacks.push(callback); return () => {} } },
-    './library.svelte': { toLib: (value) => value.track },
+    './library.svelte': { toLib: (value) => value.track, fromLib: (value) => ({ track: value, cover: null, albumId: null }) },
     './media': { isLocal: (id) => id >= 1_000_000_000_000_000, isPodcast: (id) => id >= 500_000_000_000_000 && id < 1_000_000_000_000_000 },
     './player-android.svelte': { isAndroid: false },
     './podcasts': { youtubeEpisodes: yt },
     './toast.svelte': { toast: { show: (message) => messages.push(message) } },
   }
-  const { downloads } = load(downloadCode, modules, { Image: class { src = '' } })
-  return { downloads, api, calls, messages, emit: (trackId, state, progress = 0, error = null) => callbacks.forEach((cb) => cb({ payload: { trackId, state, progress, error } })) }
+  const { downloads } = load(downloadCode, modules, { Image: class { src = '' }, window, navigator })
+  return { downloads, api, calls, messages, window, navigator, emit: (trackId, state, progress = 0, error = null) => callbacks.forEach((cb) => cb({ payload: { trackId, state, progress, error } })) }
 }
 
 test('CORE-DL-010: initial persisted downloads remain available offline', async () => {
@@ -76,6 +79,92 @@ test('CORE-DL-010: initial persisted downloads remain available offline', async 
   assert.equal(h.downloads.active.size, 0)
   assert.equal(h.calls.length, 0)
 })
+
+test('PWA-DL: startup restores pending rows before progress and attaches its listener only once', async () => {
+  const rows = [{ id: 3, title: 'Pending three' }, { id: 4, title: 'Already downloaded' }]
+  const h = downloadsHarness({ inPwa: true, pendingWebDownloads: async () => rows })
+  h.api.resumeWebDownloads = async () => {
+    assert.deepEqual([...h.downloads.queued.keys()], [3])
+    h.emit(3, 'downloading', 0.5)
+    h.calls.push(['resume'])
+  }
+  h.window.dispatchEvent(new Event('online'))
+  await flush()
+  assert.equal(h.calls.length, 0, 'network events must not start jobs before listeners and library are ready')
+  await Promise.all([h.downloads.init([4]), h.downloads.init([4])])
+  assert.equal(h.downloads.active.get(3), 0.5)
+  assert.equal(h.downloads.queued.get(3).track.title, 'Pending three')
+  assert.deepEqual(h.calls, [['resume']])
+  h.emit(3, 'done', 1)
+  assert.equal(h.downloads.version, 1, 'one terminal event is observed once')
+})
+
+test('PWA-DL: offline rows survive and reconnect/manual retry share one recovery operation', async () => {
+  const h = downloadsHarness({ inPwa: true, pendingWebDownloads: async () => [{ id: 3, title: 'Pending three' }] })
+  await h.downloads.init([])
+  h.navigator.onLine = false
+  h.window.dispatchEvent(new Event('offline'))
+  h.emit(3, 'queued', 0, 'La conexión se ha interrumpido.')
+  assert.equal(h.downloads.online, false)
+  assert.equal(h.downloads.waitingForNetwork, true)
+  assert.equal(h.downloads.queued.size, 1)
+  const pending = deferred()
+  h.api.pendingWebDownloads = () => pending.promise
+  h.navigator.onLine = true
+  h.window.dispatchEvent(new Event('online'))
+  const duplicate = h.downloads.resume()
+  assert.equal(h.downloads.restoring, true)
+  pending.resolve([{ id: 3, title: 'Pending three' }])
+  await duplicate
+  assert.equal(h.downloads.online, true)
+  assert.equal(h.downloads.restoring, false)
+  assert.equal(h.downloads.waitingForNetwork, false)
+  assert.equal(h.calls.filter(([call]) => call === 'resume').length, 2)
+})
+
+for (const terminal of ['done', 'cancelled']) {
+  test(`PWA-DL: late recovery does not revive a row that became ${terminal}`, async () => {
+    const h = downloadsHarness({ inPwa: true })
+    await h.downloads.init([])
+    h.downloads.start([item(3)])
+    const pending = deferred()
+    h.api.pendingWebDownloads = () => pending.promise
+    const recovery = h.downloads.resume()
+    h.emit(3, terminal, terminal === 'done' ? 1 : 0)
+    pending.resolve([{ id: 3, title: 'Stale three' }])
+    await recovery
+    assert.equal(h.downloads.active.has(3), false)
+    assert.equal(h.downloads.queued.has(3), false)
+    assert.equal(h.downloads.done.has(3), terminal === 'done')
+  })
+}
+
+test('PWA-DL: recovery failure is visible and can be retried without losing pending rows', async () => {
+  const h = downloadsHarness({ inPwa: true })
+  await h.downloads.init([])
+  h.downloads.start([item(3)])
+  h.api.pendingWebDownloads = async () => { throw new Error('IDB temporarily blocked') }
+  await h.downloads.resume()
+  assert.match(h.downloads.queueIssue, /No se pudieron recuperar/)
+  assert.equal(h.downloads.restoring, false)
+  assert.equal(h.downloads.queued.size, 1)
+  h.api.pendingWebDownloads = async () => [{ id: 3, title: 'Pending three' }]
+  await h.downloads.resume()
+  assert.equal(h.downloads.queueIssue, null)
+  assert.equal(h.downloads.queued.size, 1)
+})
+
+for (const [code, message] of [['queue-busy', /otra ventana/], ['queue-ownership-unavailable', /Actualiza el navegador/]]) {
+  test(`PWA-DL: ${code} has an actionable message and is not reported as a network interruption`, async () => {
+    const h = downloadsHarness({ inPwa: true, pendingWebDownloads: async () => { throw Object.assign(new Error('internal details'), { code }) } })
+    await h.downloads.init([])
+    assert.match(h.downloads.queueIssue, message)
+    assert.equal(h.downloads.waitingForNetwork, false)
+    assert.equal(h.downloads.restoring, false)
+    assert.equal(h.calls.length, 0)
+    assert.equal(h.messages.some(value => /internal details/.test(value)), false)
+  })
+}
 
 test('CORE-DL-007: completed/active/local/RSS are skipped, YouTube episodes are eligible', async () => {
   const h = downloadsHarness()

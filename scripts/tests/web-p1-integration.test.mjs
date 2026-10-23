@@ -193,16 +193,46 @@ test('many dubbed AAC encodings cannot use the four-candidate budget before the 
   assert.equal((await pending).url, audioUrl('original'))
 })
 
-test('all AAC probes failing preserves the original error and caches none', async t => {
+for (const code of ['network', 'timeout']) test(`P1 transient ${code} from all AAC probes stays transient and caches none`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)
   await p1Request(yt); yt.result(multipleAac()); await flush()
   const frames = [...yt.frames]
-  for (const frame of frames) yt.send({ error: 'network' }, frame)
-  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'unavailable')
+  for (const frame of frames) yt.send({ error: code }, frame)
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === code)
   assert.equal(yt.frames.length, 0)
   const retry = await visionos(yt)
   yt.result(player('retry-all-failed'))
   assert.equal((await retry.pending).url, audioUrl('retry-all-failed'))
+})
+
+test('P1 transient failure is not hidden by a later AAC duration rejection', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  const [best, lower] = [...yt.frames]
+  yt.send({ error: 'network' }, best)
+  yt.send({ duration: 120 }, lower)
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'network')
+  assert.equal(yt.frames.length, 0)
+})
+
+test('only a typed P1 probe failure can replace the original error category', async t => {
+  const module = {}, yt = engine(t, { modules: { './youtube-p1-probe': module } })
+  Object.assign(module, yt.realProbe, { async probeP1Audio() {
+    throw Object.assign(new Error('Synthetic lookalike'), { name: 'P1ProbeError', code: 'network' })
+  } })
+  const { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(player('untrusted-error-shape'))
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'unavailable')
+  assert.equal(yt.frames.length, 0)
+})
+
+test('a typed P1 engine timeout remains transient instead of authorizing a visible fallback', async t => {
+  const module = {}, yt = engine(t, { modules: { './youtube-p1': module } })
+  Object.assign(module, yt.realP1, { async requestP1Player() { throw new yt.realP1.P1EngineError('Synthetic bounded timeout', 'timeout') } })
+  const { pending } = await visionos(yt)
+  yt.result(unavailable())
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'timeout')
+  assert.equal(yt.frames.length, 0)
 })
 
 test('abort cancels all simultaneous probes and late metadata cannot enter the cache', async t => {
@@ -304,7 +334,7 @@ test('failed refresh evicts the previously usable P1 URL and a retry resolves an
   const before = await first.pending, renewal = await visionos(yt, true)
   await p1Request(yt)
   yt.error('network')
-  await assert.rejects(renewal.pending, error => error instanceof yt.YouTubeError && error.code === 'unavailable')
+  await assert.rejects(renewal.pending, error => error instanceof yt.YouTubeError && error.code === 'network')
   const retry = await visionos(yt)
   yt.result(player('new-normal'))
   assert.notEqual((await retry.pending).url, before.url)
@@ -313,8 +343,6 @@ test('failed refresh evicts the previously usable P1 URL and a retry resolves an
 for (const [name, reply, code] of [
   ['login restriction', { result: { playabilityStatus: { status: 'LOGIN_REQUIRED' } } }, 'restricted'],
   ['identity mismatch', { result: player('wrong', other) }, 'response'],
-  ['network failure', { error: 'network' }, 'network'],
-  ['timeout', { error: 'timeout' }, 'timeout'],
 ]) test(`${name} never activates the format/unavailable rescue`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)
   yt.send(reply)
@@ -323,21 +351,76 @@ for (const [name, reply, code] of [
   assert.equal(yt.frames.length, 0)
 })
 
-test('anonymous session failure never attempts either player or P1', async t => {
+for (const code of ['network', 'timeout']) test(`anonymous session ${code} transport failure can use the same-ID P1 recipe without a VISIONOS request`, async t => {
   const yt = engine(t), pending = yt.stream()
-  yt.error('network')
-  await assert.rejects(pending, error => error.code === 'network')
-  assert.equal(yt.history.length, 1)
+  yt.error(code)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  assert.equal(yt.args().body.videoId, id)
+  await completeP1(yt, 'session-recovery')
+  const value = await pending
+  assert.equal(value.videoId, id)
+  assert.equal(value.transport, 'p1')
+  assert.equal(yt.history.filter(row => row.config.body?.context?.client?.clientName === 'VISIONOS').length, 0)
+  const before = yt.history.length
+  assert.equal(await yt.stream(), value)
+  assert.equal(yt.history.length, before)
+})
+
+for (const code of ['network', 'timeout']) test(`VISIONOS ${code} transport failure can recover the same ID with probed P1 audio`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  yt.error(code)
+  await flush()
+  assert.equal(yt.args().body.context.client.clientName, 'WEB_EMBEDDED_PLAYER')
+  assert.equal(yt.args().body.videoId, id)
+  await completeP1(yt, 'transport-recovery')
+  const value = await pending
+  assert.equal(value.videoId, id)
+  assert.equal(value.transport, 'p1')
+})
+
+test('an anonymous session malformed response does not activate P1', async t => {
+  const yt = engine(t), pending = yt.stream()
+  yt.result({ responseContext: {} })
+  await assert.rejects(pending, error => error.code === 'response')
   assert.deepEqual(yt.imports, [])
 })
 
-for (const category of ['format', 'unavailable']) test(`P1 failure preserves original ${category} for later providers`, async t => {
+for (const code of ['network', 'timeout']) test(`P1 request ${code} remains transient after a primary format rejection`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt, noFormat())
+  yt.error(code)
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === code)
+  assert.equal(yt.frames.length, 0)
+})
+
+test('transport recovery still rejects a P1 identity mismatch without caching it', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  yt.error('network'); await flush()
+  yt.result(player('wrong-transport-recovery', other))
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'network')
+  assert.equal(yt.frames.length, 0)
+  const retry = await visionos(yt)
+  yt.result(player('fresh-after-wrong-id'))
+  assert.equal((await retry.pending).url, audioUrl('fresh-after-wrong-id'))
+})
+
+test('invalid anonymous recipe does not replace a primary transport category or reach a P1 request', async t => {
+  const invalid = recipe(); invalid.playerSHA = 'not-a-player-hash'
+  const yt = engine(t, { recipe: invalid }), { pending } = await visionos(yt)
+  yt.error('network')
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'network')
+  assert.equal(yt.history.length, 2, 'only anonymous session and VISIONOS transports were used')
+  assert.equal(yt.frames.length, 0)
+})
+
+for (const category of ['format', 'unavailable']) test(`P1 invalid format preserves original ${category} for later providers`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)
   const originalReply = category === 'format' ? noFormat() : unavailable()
   let original
   try { yt.parsePlayer(originalReply, id) } catch (error) { original = error }
   await p1Request(yt, originalReply)
-  yt.error('timeout')
+  yt.result(noFormat())
   await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === category && error.message === original.message)
   assert.equal(yt.frames.length, 0)
   const retry = await visionos(yt)
@@ -374,6 +457,18 @@ test('abort before starting creates no frames, imports or cached stream', async 
   await assert.rejects(yt.stream(id, false, controller.signal), { name: 'AbortError' })
   assert.equal(yt.history.length, 0)
   assert.deepEqual(yt.imports, [])
+})
+
+for (const phase of ['session', 'VISIONOS']) test(`abort during primary ${phase} transport never activates P1 recovery`, async t => {
+  const yt = engine(t), controller = new AbortController()
+  const pending = phase === 'session' ? yt.stream(id, false, controller.signal) : (await visionos(yt, false, controller.signal)).pending
+  const obsolete = yt.frames[0]
+  controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' })
+  yt.error('network', obsolete)
+  await flush()
+  assert.deepEqual(yt.imports, [])
+  assert.equal(yt.frames.length, 0)
 })
 
 test('abort during lazy loading does not invoke the loaded P1 engine', async t => {

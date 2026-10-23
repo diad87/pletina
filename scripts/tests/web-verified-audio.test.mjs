@@ -48,7 +48,8 @@ test('the exact full checked bytes become the playback Blob, with no second medi
   assert.equal(h.requests[0].options.redirect, 'error')
   assert.deepEqual(new Uint8Array(await h.blobs[0].arrayBuffer()), h.bytes)
   assert.equal(playable.source.provider, 'verified')
-  assert.equal(playable.source.download.allowed, false)
+  assert.equal(playable.source.download.allowed, true)
+  assert.equal(playable.source.download.mime, h.source.file.mime)
   assert.equal(playable.source.startAt, 8.94)
   assert.ok(!('url' in playable.source) && !('url' in playable.source.download))
   assert.equal((await h.resolve(query)).url, playable.url)
@@ -149,7 +150,7 @@ test('curated Archive association accepts the checked recording and rejects the 
   }
 })
 
-test('Archive uses only the curated item URL and checked complete bytes, returns provider archive at zero and disables downloads', async () => {
+test('Archive uses only the curated item URL and checked complete bytes, returns provider archive at zero and allows the checked Blob copy', async () => {
   const bytes = new TextEncoder().encode('Synthetic complete Archive integrity bytes, not music.')
   const sha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join('')
   const registration = { ...archive, file: { ...archive.file, bytes: bytes.length, sha256 } }
@@ -166,7 +167,8 @@ test('Archive uses only the curated item URL and checked complete bytes, returns
   const source = await h.resolve(archiveQuery)
   assert.equal(fetched, 1)
   assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes)
-  assert.equal(source.source.provider, 'archive'); assert.equal(source.source.startAt, 0); assert.equal(source.source.download.allowed, false)
+  assert.equal(source.source.provider, 'archive'); assert.equal(source.source.startAt, 0); assert.equal(source.source.download.allowed, true)
+  assert.equal(source.source.download.mime, registration.file.mime)
   assert.equal((await h.resolve(archiveQuery)).url, source.url); assert.equal(fetched, 1)
   h.dispose()
 })

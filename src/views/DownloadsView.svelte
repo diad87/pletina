@@ -81,7 +81,11 @@
   {/if}
 
   {#if pending.length}
-    <h2 class="section-title">Descargando · {pending.length}</h2>
+    <h2 class="section-title">{api.inPwa && (!downloads.online || downloads.waitingForNetwork || downloads.queueIssue) ? 'Descargas pendientes' : 'Descargando'} · {pending.length}</h2>
+    {#if api.inPwa && (!downloads.online || downloads.waitingForNetwork || downloads.queueIssue)}
+      <p class="storage-note" role="status">{downloads.queueIssue ?? (!downloads.online ? 'Sin conexión. Las descargas se retomarán cuando vuelva Internet.' : 'La conexión se ha interrumpido. Puedes reintentar sin perder la lista.')}</p>
+      {#if downloads.online}<button class="ghost" disabled={downloads.restoring} onclick={() => downloads.resume()}>Reintentar descargas</button>{/if}
+    {/if}
     <ul class="queue">
       {#each pending as item (item.track.id)}
         {@const p = downloads.active.get(item.track.id) ?? 0}
@@ -97,6 +101,11 @@
       {/each}
     </ul>
     <button class="ghost cancel" onclick={() => downloads.cancel()}>Cancelar las que no han empezado</button>
+  {/if}
+
+  {#if api.inPwa && !pending.length && (downloads.waitingForNetwork || downloads.queueIssue)}
+    <p class="storage-note" role="status">{downloads.queueIssue ?? 'No se pudieron recuperar las descargas pendientes.'}</p>
+    <button class="ghost" disabled={downloads.restoring} onclick={() => downloads.resume()}>Reintentar descargas</button>
   {/if}
 
   {#if error}

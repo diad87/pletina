@@ -115,6 +115,145 @@ const video = (videoId = id, extra = {}) => ({ videoRenderer: { videoId, title: 
   ownerText: { runs: [{ text: 'Radiohead' }] }, lengthText: { simpleText: '4:47' }, ...extra } })
 const videoFixture = (items) => ({ contents: { twoColumnSearchResultsRenderer: { primaryContents: { sectionListRenderer: { contents: [{ itemSectionRenderer: { contents: items } }] } } } } })
 
+test('a transient final source gets two fresh same-ID playback attempts without repeating searches', async () => {
+  const streams = []
+  let audio
+  audio = engine({ stream: async (videoId, refresh, signal) => {
+    streams.push({ videoId, refresh, signal })
+    if (streams.length < 3) throw new audio.youtube.YouTubeError('Temporary CDN failure', 'network')
+    return info(videoId)
+  } })
+  assert.equal((await audio.resolveTrack(query)).videoId, id)
+  assert.deepEqual(streams.map(({ videoId, refresh }) => [videoId, refresh]), [[id, false], [id, true], [id, true]])
+  assert.ok(streams.every(row => row.signal === streams[0].signal))
+  assert.deepEqual(audio.calls, ['music'])
+  assert.deepEqual(audio.timerDelays, [45000, 250, 750])
+  assert.equal(audio.writes.length, 1)
+})
+
+test('an automatic listening-only download tries an exact allowed recording before returning and writes no YouTube association', async () => {
+  const attempts = [], permitted = { videoId: '', url: 'blob:exact-download', title: query.title, channel: query.artist, local: false,
+    source: { provider: 'funkwhale', id: 'exact-recording', download: { allowed: true } } }
+  const audio = engine({
+    stream: async () => { attempts.push('youtube'); return { ...info(), transport: 'p1' } },
+    resolveVerifiedAudio: async () => { attempts.push('verified'); return null },
+    resolveFunkwhaleAudio: async () => { attempts.push('funkwhale'); return permitted },
+    resolveCatalogSource: async () => assert.fail('an exact allowed source already succeeded'),
+  })
+  assert.deepEqual(await audio.resolveRemoteTrack(query), permitted)
+  assert.deepEqual(attempts, ['verified', 'youtube', 'funkwhale'])
+  assert.deepEqual(audio.writes, [])
+  assert.deepEqual(audio.retryEvents, [])
+})
+
+for (const code of ['network', 'timeout']) test(`a cached automatic ${code} failure refreshes its same video before doing any new search`, async () => {
+  const streams = [], providers = []
+  const saved = { videoId: second, title: query.title, channel: query.artist, duration: 287, score: 90, verified: false }
+  let audio
+  audio = engine({
+    stream: async (videoId, refresh) => { streams.push([videoId, refresh]); if (streams.length < 3) throw new audio.youtube.YouTubeError('Transient saved source', code); return info(videoId) },
+    searchMusic: async () => assert.fail('a cached transport failure must not trigger a new search'),
+    resolveVerifiedAudio: async () => { providers.push('verified'); return null },
+    resolveFunkwhaleAudio: async () => { providers.push('funkwhale'); return null },
+  }, saved)
+  assert.equal((await audio.resolveTrack(query)).videoId, second)
+  assert.deepEqual(streams, [[second, false], [second, true], [second, true]])
+  assert.deepEqual(providers, ['verified', 'funkwhale'])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('a transient initial manual or added source offers video only after the final definitive same-ID refusal', async () => {
+  for (const direct of [false, true]) {
+    const streams = []
+    let audio, last
+    audio = engine({ stream: async (videoId, refresh) => {
+      streams.push([videoId, refresh])
+      last = new audio.youtube.YouTubeError(streams.length < 3 ? 'Temporary delivery' : 'Final refusal', streams.length < 3 ? 'network' : 'unavailable')
+      throw last
+    } }, direct ? null : { videoId: second, title: query.title, channel: query.artist, duration: 287, score: 100, verified: true }, second)
+    const track = direct ? { ...query, id: 250_000_000_000_001 } : query
+    await assert.rejects(audio.resolveTrack(track), error => error.originalError === last && audio.getOfficialFallback(track, error)?.videoId === second)
+    assert.deepEqual(streams, [[second, false], [second, true], [second, true]])
+    assert.deepEqual(audio.calls, [])
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('downloads do not gain automatic retries when their selected stream fails transiently', async () => {
+  const streams = []
+  let audio
+  audio = engine({ stream: async (videoId, refresh) => { streams.push([videoId, refresh]); throw new audio.youtube.YouTubeError('Temporary download source failure', 'network') } })
+  await assert.rejects(audio.resolveRemoteTrack(query), error => error.code === 'network' && !audio.getOfficialFallback(query, error))
+  assert.deepEqual(streams, [[id, false]])
+  assert.deepEqual(audio.retryEvents, [])
+})
+
+const exactDownload = (provider, allowed) => ({ videoId: '', url: `blob:exact-${provider}`, title: query.title, channel: query.artist, local: false,
+  source: { provider, id: 'exact-catalog-recording', download: { allowed } } })
+
+test('download rescue tries each exact provider once and skips every listening-only alternative', async () => {
+  const seen = [], original = exactDownload('verified', false), allowed = exactDownload('audius', true)
+  const audio = engine({
+    resolveVerifiedAudio: async () => { seen.push('verified'); return original },
+    resolveFunkwhaleAudio: async () => { seen.push('funkwhale'); return exactDownload('funkwhale', false) },
+    resolveCatalogSource: async () => { seen.push('catalog'); return allowed },
+  })
+  assert.deepEqual(await audio.resolveRemoteTrack(query), allowed)
+  assert.deepEqual(seen, ['verified', 'funkwhale', 'catalog'])
+  assert.deepEqual(audio.calls, [])
+  assert.deepEqual(audio.writes, [])
+})
+
+test('a prohibited original remains prohibited when every exact download source is absent, denied or fails', async () => {
+  for (const failure of [false, true]) {
+    const seen = []
+    const audio = engine({
+      stream: async () => ({ ...info(), transport: 'p1' }),
+      resolveVerifiedAudio: async () => { seen.push('verified'); return null },
+      resolveFunkwhaleAudio: async () => { seen.push('funkwhale'); if (failure) throw new Error('Provider unavailable'); return exactDownload('funkwhale', false) },
+      resolveCatalogSource: async () => { seen.push('catalog'); return exactDownload('audius', false) },
+    })
+    const result = await audio.resolveRemoteTrack(query)
+    assert.equal(result.source.provider, 'youtube-p1')
+    assert.equal(result.source.download.allowed, false)
+    assert.deepEqual(seen, ['verified', 'funkwhale', 'catalog'])
+    assert.equal(audio.writes.length, 1, 'without an alternate, the original metadata association retains prior semantics')
+  }
+})
+
+test('cached automatic listening-only downloads may use exact allowed audio without replacing manual or added sources', async () => {
+  for (const mode of ['automatic', 'manual', 'direct']) {
+    let providers = 0
+    const source = exactDownload('funkwhale', true)
+    const audio = engine({ stream: async videoId => ({ ...info(videoId), transport: 'p1' }),
+      resolveVerifiedAudio: async () => { providers++; return source },
+    }, mode === 'direct' ? null : { videoId: second, title: query.title, channel: query.artist, duration: 287, score: 100, verified: mode === 'manual' }, second)
+    const track = mode === 'direct' ? { ...query, id: 250_000_000_000_001 } : query
+    const result = await audio.resolveRemoteTrack(track)
+    assert.equal(result.source.provider, mode === 'automatic' ? 'funkwhale' : 'youtube-p1')
+    assert.equal(providers, mode === 'automatic' ? 1 : 0)
+    assert.deepEqual(audio.calls, [])
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('cancelling exact download discovery rejects late allowed audio without writing a YouTube choice', async () => {
+  const gate = deferred()
+  let signal
+  const audio = engine({ stream: async () => ({ ...info(), transport: 'p1' }),
+    resolveFunkwhaleAudio: async (_track, current) => { signal = current; return gate.promise },
+  })
+  const pending = audio.resolveRemoteTrack(query), rejected = assert.rejects(pending, { name: 'AbortError' })
+  await flush()
+  assert.ok(signal instanceof AbortSignal)
+  audio.cancelAudioRequests()
+  gate.resolve(exactDownload('funkwhale', true))
+  await rejected
+  assert.equal(signal.aborted, true)
+  assert.deepEqual(audio.writes, [])
+  assert.deepEqual(audio.retryEvents, [])
+})
+
 test('final audio fallback retries the same selected video twice with fresh streams before recovering', async () => {
   const streams = []
   let audio
@@ -186,18 +325,20 @@ test('a first fresh retry success avoids the second retry and preserves listenin
   assert.deepEqual(audio.timerDelays, [45000, 250])
 })
 
-test('two definitive fresh failures expose only the original matched fallback and persist nothing', async () => {
-  let attempts = 0, audio, original
+test('two definitive fresh failures expose the last matched refusal and persist nothing', async () => {
+  let attempts = 0, audio, original, latest
   audio = engine({ stream: async () => {
     const error = new audio.youtube.YouTubeError(++attempts === 1 ? 'Original refusal' : 'Fresh refusal', attempts === 2 ? 'format' : 'unavailable')
     if (attempts === 1) original = error
+    latest = error
     throw error
   } })
   await assert.rejects(audio.resolveTrack(query), error => {
     assert.ok(error instanceof audio.OfficialFallbackError)
-    assert.equal(error.originalError, original)
-    assert.equal(error.code, original.code)
-    assert.equal(error.message, original.message)
+    assert.equal(error.originalError, latest)
+    assert.notEqual(error.originalError, original)
+    assert.equal(error.code, latest.code)
+    assert.equal(error.message, latest.message)
     assert.equal(error.fallback.source.videoId, id)
     return true
   })
@@ -585,7 +726,7 @@ test('network, timeout y restricted no amplían WEB ni sustituyen una elección 
         stream: async (videoId) => { events.push(videoId); failure = new audio.youtube.YouTubeError('Fallo transitorio o restricción', code); throw failure },
       }, saved)
       await assert.rejects(() => audio.resolveTrack(query), (error) => error === failure)
-      assert.deepEqual(events, hasSaved ? [id] : ['music', id], `${code}, saved=${hasSaved}`)
+      assert.deepEqual(events, hasSaved ? Array(code === 'restricted' ? 1 : 3).fill(id) : ['music', ...Array(code === 'restricted' ? 1 : 3).fill(id)], `${code}, saved=${hasSaved}`)
       assert.deepEqual(audio.writes, [])
     }
   }
@@ -611,7 +752,7 @@ test('el rechazo final de audio reintenta la mejor coincidencia sin repetir bús
       assert.ok(error instanceof audio.youtube.YouTubeError)
       assert.equal(error.code, code)
       assert.equal(error.toString(), 'Audio no permitido')
-      assert.equal(error.originalError, failures.get(second))
+      assert.equal(error.originalError, failures.get(id))
       assert.equal(error.cause, error.originalError)
       return true
     })
@@ -653,27 +794,27 @@ test('la alternativa conserva la fuente manual exacta aunque otra coincidencia t
   assert.deepEqual(audio.writes, [])
 })
 
-test('elegir los metadatos de la mejor alternativa conserva el último mensaje y clasificación del resolver', async () => {
+test('la mejor alternativa conserva el último mensaje y clasificación de sus propios reintentos', async () => {
   let final
   const audio = engine({
     searchVideos: async () => [candidate(second, { album: null })],
     stream: async videoId => {
       const error = new audio.youtube.YouTubeError(videoId === id ? 'Retirada' : 'Sin MP4', videoId === id ? 'unavailable' : 'format')
-      if (videoId === second) final = error
+      if (videoId === id) final = error
       throw error
     },
   })
   await assert.rejects(audio.resolveTrack(query), error => {
     assert.equal(error.originalError, final)
-    assert.equal(error.code, 'format')
-    assert.equal(error.toString(), 'Sin MP4')
-    assert.equal(error.fallback.reason, 'format')
+    assert.equal(error.code, 'unavailable')
+    assert.equal(error.toString(), 'Retirada')
+    assert.equal(error.fallback.reason, 'unavailable')
     assert.equal(audio.getOfficialFallback(query, error).videoId, id)
     return true
   })
 })
 
-test('un fallo transitorio entre rechazos de formato impide la alternativa automática y conserva el error original', async () => {
+test('fallos mixtos reintentan una única alternativa y las restricciones o respuestas impiden vídeo', async () => {
   for (const code of ['network', 'timeout', 'restricted', 'response']) {
     let final
     const audio = engine({
@@ -681,13 +822,20 @@ test('un fallo transitorio entre rechazos de formato impide la alternativa autom
       searchVideos: async () => assert.fail('A mixed failure must not add a WEB search'),
       stream: async videoId => {
         const error = new audio.youtube.YouTubeError('Fallo ' + videoId, videoId === second ? code : 'format')
-        if (videoId === third) final = error
+        if (videoId === second) final = error
         throw error
       },
     })
     await assert.rejects(audio.resolveTrack(query), error => {
-      assert.equal(error, final)
-      assert.equal(audio.getOfficialFallback(query, error), null)
+      if (code === 'restricted' || code === 'response') {
+        assert.equal(error, final)
+        assert.equal(audio.getOfficialFallback(query, error), null)
+        assert.equal(audio.retryEvents.length, 0)
+      } else {
+        assert.equal(audio.getOfficialFallback(query, error)?.videoId, id)
+        assert.equal(error.originalError.code, 'format')
+        assert.equal(audio.retryEvents.length, 2)
+      }
       return true
     })
     assert.deepEqual(audio.writes, [])

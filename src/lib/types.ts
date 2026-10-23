@@ -165,6 +165,8 @@ export interface PlayableSource {
     sha256?: string
     /** Duración del archivo completo, en segundos. */
     duration?: number
+    /** MIME del archivo completo cuyos bytes se han verificado. */
+    mime?: string
   }
 }
 

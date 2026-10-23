@@ -9,6 +9,10 @@ const code = ts.transpileModule(await readFile(new URL('../../web-port/downloads
   compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
 }).outputText
 const storeModule = await import('../../web-port/download-store.ts')
+const ownershipApi = {}
+new Function('exports', ts.transpileModule(await readFile(new URL('../../web-port/download-ownership.ts', import.meta.url), 'utf8'), {
+  compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
+}).outputText)(ownershipApi)
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve() }
 const song = (id = 1, extra = {}) => ({ id, title: `Canción ${id}`, duration: 120, explicit: false,
@@ -17,12 +21,14 @@ const scope = 'https://app.example/pletina/'
 const stage = (id = 1) => `${scope}__audio__/${id}?stage=1234567890-11111111-1111-4111-8111-111111111111`
 function setup(t, options = {}) {
   const rows = new Map(), events = [], sources = [], validations = []
+  let savedJobs = structuredClone(options.savedJobs ?? [])
+  const journal = options.journal ?? { read: async () => structuredClone(savedJobs), write: async values => { savedJobs = structuredClone(values) } }
   const cache = {
     async put(key, value) {
       if (options.consumeBody) value = new Response(await value.arrayBuffer(), { status: value.status, headers: value.headers })
       rows.set(key, value); if (options.putError) throw options.putError
     },
-    async match(key) { return rows.get(key) },
+    async match(key) { const value = rows.get(key); return value?.clone ? value.clone() : value },
     async delete(key) { return rows.delete(key) },
   }
   const caches = { async open(name) { assert.equal(name, DOWNLOAD_CACHE); return cache } }
@@ -32,16 +38,19 @@ function setup(t, options = {}) {
   const exports = {}
   new Function('exports', 'require', 'Audio', code)(exports, (path) => path === './download-store' ? storeModule
     : path === './audio' ? { resolveRemoteTrack() { assert.fail('uninjected resolver') } }
+    : path === './download-queue' ? { defaultDownloadQueueJournal: () => journal }
+    : path === './download-ownership' ? { defaultDownloadOwnership: () => ({ acquire: async () => {}, assertOwned() {} }) }
     : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path), options.Audio ?? globalThis.Audio)
   const manager = exports.createDownloadManager({
-    store, caches, emit: (value) => events.push(value), timeout: options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
+    store, caches, journal, online: options.online ?? (() => true), emit: (value) => events.push(value), timeout: options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
+    ...(options.ownership ? { ownership: options.ownership } : {}),
     resolve: options.resolve ?? (async (query) => { sources.push(query.id); return { videoId: '9RfVp-GhKfs', local: false, url: 'https://r1.googlevideo.com/audio?signature=SECRET' } }),
     stream: options.stream ?? (async () => ({ videoId: '9RfVp-GhKfs', url: 'https://r1.googlevideo.com/audio?signature=SECRET', contentLength: options.size ?? 1234 })),
     fetch: options.fetch ?? (async (_url, init) => { assert.equal(init.mode, 'no-cors'); assert.equal(init.credentials, 'omit'); return new Response('opaque fixture bytes') }),
     validate: options.validate ?? (async (url) => { validations.push(url) }),
     storage: { estimate: async () => options.quota ?? { quota: 1024 ** 3, usage: 0 }, persist: async () => false },
   })
-  return { ...manager, rows, events, sources, validations, store, factory, name, caches, exports }
+  return { ...manager, rows, events, sources, validations, store, factory, name, caches, exports, journal, readJournal: () => structuredClone(savedJobs) }
 }
 
 test('download metadata survives reopening and contains only library fields and an internal cache key', async (t) => {
@@ -92,7 +101,7 @@ test('cancel discards only pending jobs while the active transfer finishes', asy
   const h = setup(t, { validate: async () => { started.resolve(); await gate.promise } })
   await h.enqueueDownloads([song(1), song(2), song(3)])
   await started.promise
-  h.cancelDownloads()
+  await h.cancelDownloads()
   gate.resolve()
   await h.idle()
   assert.deepEqual(h.sources, [1])
@@ -160,15 +169,18 @@ test('cache eviction removes stale metadata and download removal deletes both me
   assert.deepEqual(await h.listDownloads(), [])
 })
 
-test('a hung resolver times out without committing or blocking the next queued transfer', async (t) => {
+test('a hung resolver times out, preserves its FIFO job and waits for explicit resume before the next song', async (t) => {
   const never = deferred()
   const h = setup(t, { timeout: 30, resolve: async (query) => query.id === 1 ? never.promise : { videoId: '9RfVp-GhKfs', local: false } })
   await h.enqueueDownloads([song(1), song(2)]); await h.idle()
-  assert.ok(h.events.some((value) => value.trackId === 1 && value.state === 'error'))
-  assert.ok(h.events.some((value) => value.trackId === 2 && value.state === 'done'))
+  assert.deepEqual((await h.pendingDownloads()).map(track => track.id), [1, 2])
+  assert.ok(!h.events.some((value) => value.state === 'done' || value.state === 'error'))
   never.resolve({ videoId: '9RfVp-GhKfs', local: false })
   await flush()
   assert.equal(await h.store.get(1), null)
+  await h.resumeDownloads(); await h.idle()
+  assert.deepEqual(h.events.filter(value => value.state === 'done').map(value => value.trackId), [1, 2])
+  assert.deepEqual(h.readJournal(), [])
 })
 
 test('an interrupted transfer renews its source once and completes without exposing a failed attempt', async (t) => {
@@ -220,24 +232,30 @@ test('a rejected cached audio is removed before retrying a fresh complete copy',
   assert.deepEqual(h.events.map((value) => value.state), ['queued', 'downloading', 'done'])
 })
 
-test('a persistent transfer failure is bounded to two attempts and does not hold the next queued song', async (t) => {
+test('two failed transfers pause the persisted FIFO without spinning and resume refreshes the interrupted source', async (t) => {
   const resolutions = []
-  let current = 0, transfers = 0
+  let current = 0, transfers = 0, failing = true
   const h = setup(t, {
     resolve: async (query, refresh) => { current = query.id; resolutions.push([query.id, refresh]); return { videoId: '9RfVp-GhKfs', local: false } },
     fetch: async () => {
       transfers++
-      if (current === 1) throw new TypeError('Network request failed')
+      if (current === 1 && failing) throw new TypeError('Network request failed')
       return new Response('second song')
     },
   })
   await h.enqueueDownloads([song(1), song(2)]); await h.idle()
-  assert.deepEqual(resolutions, [[1, false], [1, true], [2, false]])
-  assert.equal(transfers, 3)
-  assert.deepEqual(h.events.filter((value) => value.state === 'error').map((value) => value.trackId), [1])
-  assert.deepEqual(h.events.filter((value) => value.state === 'done').map((value) => value.trackId), [2])
+  assert.deepEqual(resolutions, [[1, false], [1, true]])
+  assert.equal(transfers, 2)
+  assert.deepEqual(h.events.filter((value) => ['error', 'done'].includes(value.state)), [])
+  assert.deepEqual(h.readJournal().map(track => track.id), [1, 2])
   assert.equal(await h.store.get(1), null)
-  assert.equal(h.rows.size, 1)
+  assert.equal(h.rows.size, 0)
+  await new Promise(resolve => setTimeout(resolve, 10)); assert.equal(transfers, 2)
+  failing = false; await h.resumeDownloads(); await h.idle()
+  assert.deepEqual(resolutions, [[1, false], [1, true], [1, true], [2, false]])
+  assert.equal(transfers, 4)
+  assert.deepEqual(h.events.filter(value => value.state === 'done').map(value => value.trackId), [1, 2])
+  assert.deepEqual(h.readJournal(), [])
 })
 
 test('quota, abort, timeout and metadata write errors do not trigger another download attempt', async (t) => {
@@ -296,7 +314,7 @@ test('cancelling the queued songs during source renewal still lets the active re
   })
   await h.enqueueDownloads([song(1), song(2), song(3)])
   await refreshing.promise
-  h.cancelDownloads()
+  await h.cancelDownloads()
   renewed.resolve({ videoId: '9RfVp-GhKfs', local: false })
   await h.idle()
   assert.deepEqual(resolutions, [[1, false], [1, true]])
@@ -304,7 +322,7 @@ test('cancelling the queued songs during source renewal still lets the active re
   assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [1])
 })
 
-test('the original transfer deadline also bounds retry waiting and the next queued download can still finish', async (t) => {
+test('the original transfer deadline bounds renewal waiting and preserves the pending FIFO without an automatic retry loop', async (t) => {
   const resolutions = []
   let current = 0, transfers = 0
   const h = setup(t, {
@@ -313,11 +331,11 @@ test('the original transfer deadline also bounds retry waiting and the next queu
     fetch: async () => { transfers++; if (current === 1) throw new TypeError('Network request failed'); return new Response('next song') },
   })
   await h.enqueueDownloads([song(1), song(2)]); await h.idle()
-  assert.deepEqual(resolutions, [[1, false], [2, false]], 'an expired global deadline cannot start a renewed request')
-  assert.equal(transfers, 2)
-  assert.deepEqual(h.events.filter((value) => value.state === 'error').map((value) => value.trackId), [1])
-  assert.deepEqual(h.events.filter((value) => value.state === 'done').map((value) => value.trackId), [2])
-  assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [2])
+  assert.deepEqual(resolutions, [[1, false]], 'an expired global deadline cannot start a renewed request or the next FIFO job')
+  assert.equal(transfers, 1)
+  assert.deepEqual(h.events.filter((value) => ['error', 'done'].includes(value.state)), [])
+  assert.deepEqual((await h.listDownloads()).map((value) => value.track.id), [])
+  assert.deepEqual(h.readJournal().map(track => track.id), [1, 2])
 })
 
 const externalPlayable = (download = {}, identity = {}, extra = {}) => ({ videoId: '', local: false,
@@ -345,13 +363,186 @@ test('external permitted audio uses CORS, preserves ISRC/version and never asks 
   assert.equal((await h.store.readDownloadedPlayable(1)).local, true)
 })
 
-test('listening-only sources such as ALEA refuse downloads before media requests', async t => {
+test('sources without a full-file download capability refuse before media requests', async t => {
   for (const provider of ['audius', 'verified']) {
     const h = setup(t, { resolve: async () => externalPlayable({ allowed: false }, { provider }),
       fetch: async () => assert.fail('not allowed to download'), stream: async () => assert.fail('must not switch to YouTube') })
     await h.enqueueDownloads([song()]); await h.idle()
     assert.match(h.events.find(event => event.state === 'error').error, /permite escuchar.*pero no descargar/)
     assert.deepEqual(await h.store.list(), []); assert.equal(h.rows.size, 0)
+  }
+})
+
+const checkedBlobPlayable = async (bytes, provider = 'verified', extra = {}) => ({ videoId: '', local: false,
+  url: 'blob:https://app.example/checked-file', title: 'Canción 1', channel: 'Artista',
+  source: { provider, id: 'checked-file', startAt: 8.94, download: { allowed: true, contentLength: bytes.byteLength,
+    sha256: [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(n => n.toString(16).padStart(2, '0')).join(''),
+    duration: 187.168, mime: 'audio/mpeg' } }, ...extra })
+
+test('complete verified Blob copies retain bytes, integrity, file duration and start offset across reopening without provider requests', async t => {
+  const bytes = new TextEncoder().encode('Complete synthetic verified audio, not a music recording.')
+  for (const provider of ['verified', 'archive', 'funkwhale']) {
+    const playable = await checkedBlobPlayable(bytes, provider)
+    let fetched = 0, validatedDuration
+    const h = setup(t, { consumeBody: true, resolve: async () => playable,
+      stream: async () => assert.fail('a checked Blob copy must not ask YouTube for another source'),
+      fetch: async (url, init) => { fetched++; assert.equal(url, playable.url); assert.equal(init.credentials, 'omit'); assert.equal(init.mode, 'cors')
+        return audioResponse(bytes, { 'content-length': String(bytes.length) }) },
+      validate: async (_url, _signal, duration) => { validatedDuration = duration },
+    })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(fetched, 1); assert.equal(validatedDuration, playable.source.download.duration)
+    const saved = await h.store.get(1)
+    assert.equal(saved.size, bytes.byteLength); assert.deepEqual(saved.source, playable.source)
+    assert.deepEqual(new Uint8Array(await (await h.rows.get(saved.cacheKey).clone()).arrayBuffer()), bytes)
+    assert.doesNotMatch(JSON.stringify(saved), /blob:|\/stream|googlevideo|expire|token/)
+    await h.store.close()
+    const reopened = createDownloadStore({ indexedDB: h.factory, name: h.name, scope, caches: h.caches })
+    t.after(() => reopened.close())
+    const local = await reopened.readDownloadedPlayable(1)
+    assert.equal(local.local, true); assert.equal(local.url, scope + '__audio__/1'); assert.equal(local.source.startAt, 8.94)
+    assert.equal(local.source.download.duration, 187.168); assert.equal(local.source.download.sha256, playable.source.download.sha256)
+    assert.equal(h.events.at(-1).state, 'done')
+  }
+})
+
+test('durable enqueue commits before queued events or transport and a journal write failure cannot announce work', async t => {
+  const gate = deferred(), entered = deferred(); let saved = []
+  const h = setup(t, { journal: { read: async () => [], write: async tracks => { entered.resolve(); await gate.promise; saved = structuredClone(tracks) } } })
+  const enqueue = h.enqueueDownloads([song()]); await entered.promise
+  assert.deepEqual(h.events, []); assert.deepEqual(h.sources, [])
+  gate.resolve(); await enqueue; await h.idle()
+  assert.equal(h.events.at(-1).state, 'done'); assert.deepEqual(saved, [])
+  const rejected = setup(t, { journal: { read: async () => [], write: async () => { throw Error('Journal unavailable') } } })
+  await assert.rejects(rejected.enqueueDownloads([song()]), /Journal unavailable/)
+  assert.deepEqual(rejected.events, []); assert.deepEqual(rejected.sources, []); assert.deepEqual(await rejected.pendingDownloads(), [])
+})
+
+test('offline persisted jobs restore in order, deduplicate and start only on resume while online', async t => {
+  let online = false
+  const first = setup(t, { online: () => online })
+  await first.enqueueDownloads([song(1), song(2), song(1)])
+  assert.deepEqual(first.sources, []); assert.deepEqual(first.readJournal().map(track => track.id), [1, 2])
+  const reopened = setup(t, { journal: first.journal, online: () => online })
+  assert.deepEqual((await reopened.pendingDownloads()).map(track => track.id), [1, 2])
+  await reopened.resumeDownloads(); await reopened.idle(); assert.deepEqual(reopened.sources, [])
+  online = true; await reopened.resumeDownloads(); await reopened.idle()
+  assert.deepEqual(reopened.sources, [1, 2]); assert.deepEqual(first.readJournal(), [])
+})
+
+test('typed provider network failures retain the interrupted job while permanent capability errors retire it', async t => {
+  for (const code of ['network', 'timeout']) {
+    const error = Object.assign(new Error('Provider temporarily unavailable'), { code })
+    const h = setup(t, { resolve: async () => { throw error } })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.deepEqual(h.readJournal().map(track => track.id), [1])
+    assert.ok(!h.events.some(event => ['done', 'error'].includes(event.state)))
+    assert.equal(h.events.at(-1).error, 'La conexión se ha interrumpido. Reintenta para continuar.')
+  }
+  const bad = await checkedBlobPlayable(new Uint8Array([1]), 'verified', { url: 'not a URL' })
+  const h = setup(t, { resolve: async () => bad })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.deepEqual(h.readJournal(), []); assert.equal(h.events.at(-1).state, 'error')
+})
+
+test('a failed post-file journal checkpoint is reconciled from the complete local file without a second media acquisition', async t => {
+  let saved = [], writes = 0, fetched = 0
+  const journal = { read: async () => structuredClone(saved), write: async tracks => {
+    if (++writes === 2) throw Error('Checkpoint unavailable')
+    saved = structuredClone(tracks)
+  } }
+  const h = setup(t, { journal, fetch: async () => { fetched++; return new Response('complete local file') } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal(fetched, 1); assert.ok(await h.store.readDownloadedPlayable(1))
+  assert.deepEqual(saved.map(track => track.id), [1]); assert.equal(h.events.at(-1).state, 'error')
+  assert.ok(!h.events.some(event => event.state === 'done'))
+  await h.resumeDownloads(); await h.idle()
+  assert.equal(fetched, 1); assert.deepEqual(saved, []); assert.equal(h.events.at(-1).state, 'done')
+})
+
+test('queued cancellation and removal persist before reopen and cannot resurrect a removed active job', async t => {
+  const h = setup(t, { online: () => false })
+  await h.enqueueDownloads([song(1), song(2)]); await h.removeDownloads([1])
+  assert.deepEqual(h.readJournal().map(track => track.id), [2])
+  await h.cancelDownloads(); assert.deepEqual(h.readJournal(), [])
+  const reopened = setup(t, { journal: h.journal })
+  await reopened.resumeDownloads(); await reopened.idle(); assert.deepEqual(reopened.sources, [])
+  const gate = deferred(), started = deferred()
+  const active = setup(t, { validate: async () => { started.resolve(); await gate.promise } })
+  await active.enqueueDownloads([song(1), song(2)]); await started.promise
+  assert.deepEqual(active.readJournal().map(track => track.id), [1, 2], 'the active job remains checkpointed until complete commit')
+  await active.removeDownloads([1]); assert.deepEqual(active.readJournal().map(track => track.id), [2])
+  gate.resolve(); await active.idle()
+  assert.equal(await active.store.get(1), null); assert.deepEqual(active.readJournal(), [])
+  assert.deepEqual(active.events.filter(event => event.state === 'done').map(event => event.trackId), [2])
+})
+
+test('two managers cannot overwrite, cancel or drain the same journal; closing its owner permits safe recovery', async t => {
+  let held = false, saved = [], reads = 0, writes = 0
+  const locks = { async request(_name, _options, callback) { await Promise.resolve(); if (held) return callback(null); held = true
+    try { return await callback({}) } finally { held = false } } }
+  const firstOwner = ownershipApi.createDownloadOwnership({ locks }), secondOwner = ownershipApi.createDownloadOwnership({ locks })
+  t.after(() => { firstOwner.dispose(); secondOwner.dispose() })
+  const journal = { read: async () => { reads++; return structuredClone(saved) }, write: async rows => { writes++; saved = structuredClone(rows) } }
+  const first = setup(t, { ownership: firstOwner, journal, online: () => false })
+  const second = setup(t, { ownership: secondOwner, journal })
+  assert.deepEqual(await first.pendingDownloads(), [])
+  await first.enqueueDownloads([song(1), song(2)])
+  const before = { reads, writes }
+  for (const action of [() => second.pendingDownloads(), () => second.enqueueDownloads([song(3)]), () => second.resumeDownloads(),
+    () => second.cancelDownloads(), () => second.removeDownloads([1])]) await assert.rejects(action(), { code: 'queue-busy' })
+  assert.deepEqual({ reads, writes }, before, 'loser has no journal IO at all')
+  assert.deepEqual(saved.map(track => track.id), [1, 2]); assert.deepEqual(second.sources, []); assert.deepEqual(second.events, [])
+  firstOwner.dispose(); await new Promise(resolve => setTimeout(resolve, 0))
+  await second.resumeDownloads(); await second.idle()
+  assert.deepEqual(second.sources, [1, 2]); assert.deepEqual(saved, [])
+  assert.deepEqual(second.events.filter(event => event.state === 'done').map(event => event.trackId), [1, 2])
+  await assert.rejects(first.resumeDownloads(), { code: 'queue-ownership-released' })
+})
+
+test('an invalidated owner cannot commit its late active file after the successor resumes the saved FIFO', async t => {
+  let held = false, saved = []
+  const locks = { async request(_name, _options, callback) { await Promise.resolve(); if (held) return callback(null); held = true
+    try { return await callback({}) } finally { held = false } } }
+  const journal = { read: async () => structuredClone(saved), write: async rows => { saved = structuredClone(rows) } }
+  const firstOwner = ownershipApi.createDownloadOwnership({ locks }), secondOwner = ownershipApi.createDownloadOwnership({ locks })
+  t.after(() => { firstOwner.dispose(); secondOwner.dispose() })
+  const gate = deferred(), entered = deferred()
+  const first = setup(t, { ownership: firstOwner, journal, validate: async () => { entered.resolve(); await gate.promise } })
+  const second = setup(t, { ownership: secondOwner, journal })
+  await first.enqueueDownloads([song(1), song(2)]); await entered.promise
+  assert.deepEqual(saved.map(track => track.id), [1, 2])
+  await assert.rejects(second.resumeDownloads(), { code: 'queue-busy' })
+  firstOwner.dispose(); await new Promise(resolve => setTimeout(resolve, 0))
+  await second.resumeDownloads(); await second.idle()
+  gate.resolve(); await first.idle()
+  assert.equal(await first.store.get(1), null); assert.ok(!first.events.some(event => event.state === 'done'))
+  assert.deepEqual(second.sources, [1, 2]); assert.deepEqual(saved, [])
+})
+
+test('verified Blob capability cannot admit another origin, network URL, missing proof or invalid offsets', async t => {
+  const bytes = new TextEncoder().encode('Checked fixture'), good = await checkedBlobPlayable(bytes)
+  const changed = [
+    { ...good, url: 'https://app.example/checked.mp3' }, { ...good, url: 'blob:https://other.example/file' },
+    ...[{ startAt: -1 }, { startAt: 188 }, { startAt: NaN }, { id: '../file' },
+      { download: { ...good.source.download, sha256: undefined } }, { download: { ...good.source.download, contentLength: 0 } },
+      { download: { ...good.source.download, mime: 'text/html' } }].map(patch => ({ ...good, source: { ...good.source, ...patch } })),
+    { ...good, source: { ...good.source, provider: 'youtube-p1' } },
+  ]
+  for (const value of changed) {
+    const h = setup(t, { resolve: async () => value, fetch: async () => assert.fail('Unverified capability must not fetch') })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(await h.store.get(1), null); assert.ok(!h.events.some(event => event.state === 'done'))
+  }
+})
+
+test('changed, truncated, wrong-MIME and partial verified Blob bodies roll back before completion', async t => {
+  const bytes = new TextEncoder().encode('Checked complete fixture'), source = await checkedBlobPlayable(bytes)
+  for (const response of [audioResponse(new Uint8Array(bytes.length)), audioResponse(bytes.slice(0, -1)),
+    new Response(bytes, { headers: { 'content-type': 'audio/ogg' } }), new Response(bytes, { status: 206, headers: { 'content-type': 'audio/mpeg' } })]) {
+    const h = setup(t, { consumeBody: true, resolve: async () => source, fetch: async () => response.clone() })
+    await h.enqueueDownloads([song()]); await h.idle()
+    assert.equal(await h.store.get(1), null); assert.equal(h.rows.size, 0); assert.ok(!h.events.some(event => event.state === 'done'))
   }
 })
 

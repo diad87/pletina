@@ -50,7 +50,7 @@ export function createVerifiedAudioResolver(registrations: readonly Registration
   const playable = (track: TrackQuery, source: Registration, url: string): Playable => ({ videoId: '', url,
     title: track.title, channel: track.artist, local: false,
     source: { provider: source.provider === 'archive' ? 'archive' : 'verified', id: source.id, startAt: source.file.proposedStartOffsetSeconds,
-      download: { allowed: false, contentLength: source.file.bytes, sha256: source.file.sha256, duration: source.file.durationSeconds } } })
+      download: { allowed: true, contentLength: source.file.bytes, sha256: source.file.sha256, duration: source.file.durationSeconds, mime: source.file.mime } } })
 
   async function resolve(track: TrackQuery, signal?: AbortSignal): Promise<Playable | null> {
     check(signal)

@@ -218,13 +218,43 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       if (downloaded) return downloaded
     }
     if (isPodcast(track)) return resolvePodcastTrack(track, refresh, signal)
-    const finalAudio = async (error: YouTubeError & { code: OfficialFallbackReason }, source: Alternative, persist = false): Promise<Playable> => {
-      const fallback = new OfficialFallbackError(error, track, source)
-      const selected = fallback.fallback.source
+    let manualSource = false
+    const exactLoaders = { verified: resolveVerifiedAudio, funkwhale: resolveFunkwhaleAudio, catalog: resolveCatalogSource }
+    const exactAttempts = new Map<keyof typeof exactLoaders, Promise<Playable | null>>()
+    const exactSource = (provider: keyof typeof exactLoaders): Promise<Playable | null> => {
+      checkAbort(signal)
+      let pending = exactAttempts.get(provider)
+      if (!pending) {
+        pending = (async () => {
+          try { const value = await exactLoaders[provider](track, signal); checkAbort(signal); return value }
+          catch { checkAbort(signal); return null }
+        })()
+        exactAttempts.set(provider, pending)
+      }
+      return pending
+    }
+    const finishSource = async (original: Playable): Promise<Playable> => {
+      checkAbort(signal)
+      if (includeDownloaded || manualSource || isDirect(track) || original.source?.download?.allowed !== false) return original
+      // These providers already verify exact catalog identity. Download rescue
+      // never performs another YouTube search or rewrites its source choice.
+      for (const provider of ['verified', 'funkwhale', 'catalog'] as const) {
+        const source = await exactSource(provider)
+        checkAbort(signal)
+        if (source?.source?.download?.allowed === true) return source
+      }
+      return original
+    }
+    const finalAudio = async (error: YouTubeError, source: Alternative, persist = false): Promise<Playable> => {
+      const selected = officialSource(track, source)
+      if (!selected || !retryableAudio(error)) throw error
       // Downloads retain their own transfer/retry policy. Only the already
       // selected final recording gets two fresh playback attempts: no new
       // searches, no per-candidate multiplication, and no new 45-second budget.
-      if (!includeDownloaded) throw fallback
+      if (!includeDownloaded) {
+        if (unavailableAudio(error)) throw new OfficialFallbackError(error, track, selected)
+        throw error
+      }
       let lastError: YouTubeError = error
       for (const [index, delay] of [250, 750].entries()) {
         checkAbort(signal)
@@ -254,7 +284,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       // A new network failure is not evidence that the source needs a visible
       // video. Keep that category instead of presenting it as unavailable audio.
       if (!unavailableAudio(lastError)) throw lastError
-      throw fallback
+      throw new OfficialFallbackError(lastError, track, selected)
     }
     if (isDirect(track)) {
       const videoId = await readYouTubeVideo(track.id)
@@ -263,40 +293,43 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       try { return playable(await stream(videoId, refresh, signal), track.title, track.artist) }
       catch (error) {
         checkAbort(signal)
-        if (unavailableAudio(error)) return finalAudio(error, { videoId, title: track.title,
+        if (retryableAudio(error)) return finalAudio(error, { videoId, title: track.title,
           artists: track.artist, album: track.album || null, duration: track.duration || null, score: 100, origin: 'youtube', current: true })
         throw error
       }
     }
-    const recoverFunkwhale = async (): Promise<Playable | null> => {
-      try {
-        const source = await resolveFunkwhaleAudio(track, signal)
-        checkAbort(signal)
-        return source
-      } catch { checkAbort(signal); return null }
-    }
+    const recoverFunkwhale = () => exactSource('funkwhale')
     const saved = await readSourceChoice(track.id)
     checkAbort(signal)
+    manualSource = saved?.verified === true
     let missing: string | null = null
-    const rejected: { source: Alternative; error: YouTubeError & { code: OfficialFallbackReason }; manual: boolean }[] = []
+    const rejected: { source: Alternative; error: YouTubeError; manual: boolean }[] = []
     if (saved && validVideoId(saved.videoId)) {
-      try { return playable(await stream(saved.videoId, refresh, signal), saved.title, saved.channel) }
+      try { return await finishSource(playable(await stream(saved.videoId, refresh, signal), saved.title, saved.channel)) }
       catch (error) {
         checkAbort(signal)
-        if (unavailableAudio(error)) {
-          missing = saved.videoId
+        if (retryableAudio(error)) {
           const source = officialSource(track, { videoId: saved.videoId, title: saved.title, artists: saved.channel,
             album: null, duration: saved.duration, score: saved.score, origin: 'youtube', current: saved.verified })
           if (saved.verified) {
             if (source) return finalAudio(error, source)
             throw error
           }
-          if (source) rejected.push({ source, error, manual: saved.verified })
+          if (!unavailableAudio(error)) {
+            const verified = await exactSource('verified')
+            if (verified) return finishSource(verified)
+            const recovered = await recoverFunkwhale()
+            if (recovered) return finishSource(recovered)
+            if (source) return finalAudio(error, source)
+            throw error
+          }
+          missing = saved.videoId
+          if (source) rejected.push({ source, error, manual: false })
         }
         else {
           if (!saved.verified) {
             const recovered = await recoverFunkwhale()
-            if (recovered) return recovered
+            if (recovered) return finishSource(recovered)
           }
           throw error
         }
@@ -305,9 +338,9 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
     // Una asociación revisada no busca por texto: comprueba identidad y los bytes
     // completos antes de entregar un Blob local al mismo reproductor de audio.
     try {
-      const verified = await resolveVerifiedAudio(track, signal)
+      const verified = await exactSource('verified')
       checkAbort(signal)
-      if (verified) return verified
+      if (verified) return finishSource(verified)
     } catch { checkAbort(signal) }
     // Un fallo temporal de YouTube tampoco impide probar bytes de otra fuente
     // ya identificada. No se guarda ese fallo como ausencia ni se cambia la
@@ -317,12 +350,13 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
     catch (error) {
       checkAbort(signal)
       const recovered = await recoverFunkwhale()
-      if (recovered) return recovered
+      if (recovered) return finishSource(recovered)
       throw error
     }
     const attempted = new Set<string>(missing ? [missing] : [])
     let sourceRejected = missing !== null
     let transientFailure = false
+    let terminalFailure: Error | undefined
     let lastError: Error = new Error('No se ha encontrado una grabación compatible en YouTube. Prueba «¿No es esta canción?».')
     const attempt = async (candidates: Scored[]): Promise<Playable | null> => {
       let count = 0
@@ -337,20 +371,25 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         } catch (error) {
           checkAbort(signal)
           lastError = error instanceof Error ? error : new Error('No se pudo cargar el audio.')
-          if (unavailableAudio(error)) {
-            sourceRejected = true
+          if (unavailableAudio(error)) sourceRejected = true
+          else transientFailure = true
+          if (!retryableAudio(error)) terminalFailure = lastError
+          if (retryableAudio(error)) {
             const source = officialSource(track, { videoId: candidate.videoId, title: candidate.title,
               artists: candidate.artists.join(', '), album: candidate.album, duration: candidate.duration,
               score: candidate.score, origin: candidate.origin, current: false })
             if (source) rejected.push({ source, error, manual: false })
           }
-          else transientFailure = true
           continue
         }
         checkAbort(signal)
+        const original = playable(info, candidate.title, candidate.artists.join(', '))
+        const selected = await finishSource(original)
+        checkAbort(signal)
+        if (selected !== original) return selected
         await saveSourceChoice(track.id, choice(candidate, candidate.score, false))
         checkAbort(signal)
-        return playable(info, candidate.title, candidate.artists.join(', '))
+        return original
       }
       return null
     }
@@ -368,27 +407,29 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
         checkAbort(signal)
         transientFailure = true
         lastError = error instanceof Error ? error : lastError
+        if (!retryableAudio(lastError)) terminalFailure = lastError
       }
     }
     const funkwhale = await recoverFunkwhale()
-    if (funkwhale) return funkwhale
+    if (funkwhale) return finishSource(funkwhale)
     // Un catálogo alternativo sólo puede rescatar una identidad verificada. No cambia
     // la fuente escogida explícitamente por el usuario ni interpreta mala red como ausencia.
     if (!transientFailure && !rejected.some((entry) => entry.manual)) {
       try {
-        const external = await resolveCatalogSource(track, signal)
+        const external = await exactSource('catalog')
         checkAbort(signal)
-        if (external) return external
+        if (external) return finishSource(external)
       } catch {
         // Un proveedor adicional caído no elimina el recurso que ya ofrecía YouTube.
         // La cancelación y el plazo global siguen siendo vinculantes.
         checkAbort(signal)
       }
     }
-    if (sourceRejected && !transientFailure) {
+    if (terminalFailure) throw terminalFailure
+    if (rejected.length) {
       rejected.sort((a, b) => Number(b.manual) - Number(a.manual) || b.source.score - a.source.score)
       const fallback = rejected[0]
-      if (fallback) return finalAudio(unavailableAudio(lastError) ? lastError : fallback.error, fallback.source, !fallback.manual)
+      if (fallback) return finalAudio(fallback.error, fallback.source, !fallback.manual)
     }
     throw lastError
   })

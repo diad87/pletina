@@ -1,9 +1,9 @@
-import type { DownloadEntry, LibTrack, Playable } from '../src/lib/types'
+import type { DownloadEntry, LibTrack, Playable, PlayableSource } from '../src/lib/types'
 
 export const DOWNLOAD_DATABASE = 'pletina-web-downloads'
 export const DOWNLOAD_CACHE = 'pletina-audio-downloads:v1'
 export const MAX_DOWNLOAD_BYTES = 256 * 1024 ** 2
-export interface DownloadRecord { id: number; track: LibTrack; size: number; at: number; cacheKey: string }
+export interface DownloadRecord { id: number; track: LibTrack; size: number; at: number; cacheKey: string; source?: PlayableSource }
 export type DownloadMetadataReader = (trackId: number) => Promise<LibTrack | null>
 interface Options { indexedDB?: IDBFactory; name?: string; scope?: string | URL; caches?: CacheStorage; readTrack?: DownloadMetadataReader }
 let metadataReader: DownloadMetadataReader | undefined
@@ -68,7 +68,19 @@ export function createDownloadStore(options: Options = {}) {
     if (url.origin !== stable.origin || url.pathname !== stable.pathname || url.username || url.password || url.hash ||
       [...url.searchParams.keys()].some((key) => key !== 'stage') || url.searchParams.getAll('stage').length !== 1 ||
       !/^\d{1,16}-[a-f0-9-]{36}$/i.test(url.searchParams.get('stage') ?? '')) throw new Error('La dirección de la copia guardada no es válida.')
-    return { id, track, size, at, cacheKey: url.href }
+    let source: PlayableSource | undefined
+    if (value.source !== undefined) {
+      const original = value.source, file = original.download
+      if (!['verified', 'archive', 'funkwhale'].includes(original.provider) || !/^[A-Za-z0-9_-]{1,200}$/.test(original.id) ||
+        !file || file.allowed !== true || file.contentLength !== size || !/^[a-f0-9]{64}$/.test(file.sha256 ?? '') ||
+        !/^audio\/[a-z0-9.+-]+$/.test(file.mime ?? '') || !Number.isFinite(file.duration) || file.duration! <= 0 || file.duration! > 86400 ||
+        !Number.isFinite(original.startAt ?? 0) || (original.startAt ?? 0) < 0 || (original.startAt ?? 0) >= file.duration!) {
+        throw new Error('La identidad del archivo descargado no es válida.')
+      }
+      source = { provider: original.provider, id: original.id, startAt: original.startAt ?? 0,
+        download: { allowed: true, contentLength: size, sha256: file.sha256, mime: file.mime, duration: file.duration } }
+    }
+    return { id, track, size, at, cacheKey: url.href, ...(source ? { source } : {}) }
   }
   async function request<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
     const db = await open()
@@ -115,7 +127,8 @@ export function createDownloadStore(options: Options = {}) {
     const response = await (await cacheStorage.open(DOWNLOAD_CACHE)).match(saved.cacheKey)
     if (!response) { await remove(id); return null }
     const track = await trackMetadata(saved)
-    return { videoId: '', url: audioCacheUrl(id, scope), title: track.title, channel: track.artistName, local: true }
+    return { videoId: '', url: audioCacheUrl(id, scope), title: track.title, channel: track.artistName, local: true,
+      ...(saved.source ? { source: saved.source } : {}) }
   }
   async function listDownloads(): Promise<DownloadEntry[]> {
     const cache = await cacheStorage.open(DOWNLOAD_CACHE), values: DownloadEntry[] = []
