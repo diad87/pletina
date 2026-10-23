@@ -1,17 +1,17 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 6: Epo por Native en 3,36–3,41 s; los 3,5 s consistentes siguen pendientes.**
-La última comparación usa dos intentos por canción/binario, búsqueda incluida,
-procesos nuevos y perfil anónimo. Epo y Pupu cumplen 3,5 s en sus cuatro
-intentos candidatos; Maite tarda 4,39–5,48 s por sus solicitudes CDN rechazadas
-al principio. Los doce intentos usan Native con el ID esperado, sin Legacy.
-Clang y el parser reducen trabajo de preparación en controles aislados;
-la variación de red impide atribuir todo el ahorro de la app a esos cambios.
-Las 30 habituales conservan Native e identidad correcta, mediana 699,95 ms,
-con un outlier de 3523,6 ms. Los tres archivos infantiles completos coinciden
-con referencias y decodifican sin errores. No se promueve Oficial ni se
-acreditan anuncios o escucha continua con pruebas de inicio.
-Se conserva el historial de cada ronda y del [informe infantil](informe-contenido-infantil-2026-10-23.md).
+**Ronda 7: búsqueda y descifrado más rápidos; el arranque total no mejora de forma estable.**
+En seis pares fríos de la app, la búsqueda baja de mediana 617 a 503 ms y el
+descifrado de 41 a 24 ms. Sin embargo, el total pasa de 3972,7 a 5428,4 ms:
+el CDN rechaza más sondas del candidato y añade esperas de hasta unos dos
+segundos. Sólo 1/6 cumple 3500 ms en cada brazo. Epo sigue por Native sin
+Legacy, pero tarda 5,40–5,46 s en esta tanda; sus 3,36–3,41 s de R6 quedan
+como resultados de aquella tanda. No se eligen réplicas favorables ni se
+declara conseguida la meta estable. Las 30 habituales conservan Native e IDs
+correctos, mediana 737,45 ms. Los tres audios infantiles completos vuelven
+a ser idénticos y decodificables sin errores. Todo lo nuevo se mide sin sesión;
+no hay nueva campaña Premium o publicitaria ni promoción de Oficial.
+Se conserva el historial y el [informe infantil](informe-contenido-infantil-2026-10-23.md).
 
 ## Ronda 1: cambios y límites
 
@@ -958,3 +958,129 @@ fallos de los hashes incluidos. Los archivos
 de perfil, cuentas, dependencias instaladas y artefactos target no se recorren.
 Sólo código y resúmenes se suben a la rama; los raws y audios permanecen en
 carpetas locales ignoradas.
+
+## Ronda 7: decodificador mínimo y transporte compartido de Music
+
+Código guardado en `98f964b` (asset mínimo) y `a32092b` (transporte Music). Se conservan los controles aislados y después la única tanda final de aplicación. Pasan 245 pruebas Rust/30 ignoradas, 436 JavaScript, tipos, ambos assets reproducibles y checks Android; esos controles no equivalen a lograr 3,5 s estables.
+
+La VM desechable que calcula firma/n carga ahora sólo el asset de ejecución (3.398 bytes), sin volver a cargar el analizador completo (300.534 bytes). El mismo ejecutable Clang 18 y la misma creación de runtime compararon ambos assets en orden ABBA, con 32 llamadas por brazo. La media de la llamada completa pasó de 39,94 a 24,19 ms: unos 15,76 ms menos. Incluye cola, validación, creación, evaluación, hardening, ejecución y destrucción; no es el tiempo de análisis AST ni de arranque de la app. Cuatro fixtures por cuatro formatos conservaron script, ST, firma y n exactos frente al golden independiente y al asset completo. La VM sigue acotada dentro del proceso, con un trabajador y límites de preparación de 192 MiB/12 s, ejecución de 32 MiB/1 s y pila de 512 KiB; no constituye una frontera de aislamiento del sistema operativo. No se introduce caché de VM.
+
+El bootstrap público y la búsqueda Music comparten transporte HTTP conservando sus políticas y cabeceras por petición. Una tanda anónima S→C→C→S, en cuatro procesos nuevos de depuración, dio dos respuestas válidas por brazo y 20 candidatos por respuesta. Las medianas fueron 789,05 ms con transportes separados y 678,19 ms con transporte compartido. Es una observación con n=2 por brazo, sin medida de sonido ni atribución causal universal. Ambos brazos usaron el mismo logger basado en JSON Value; las respuestas remotas no fueron byte-idénticas. Después se serializó el diagnóstico antes de escribirlo, validando en prueba sintética que los bytes del log permanecen iguales; no se repitió la red para seleccionar otro resultado. El tiempo no asignado entre fases incluye logging y otros trabajos, no sólo conexión o parseo.
+
+Se descartó cambiar la cabecera `Range` por el parámetro `range=`. Una única tanda de tres POST y nueve GET comparó A–B–A sobre la misma URL validada por canción: A usa cabecera y B usa query, sin cambiar UA, Origin ni Referer. Epo y Maite devolvieron 403/403/403; Pupu devolvió 206/200/206. El 200 declaraba 1.024 bytes pero carecía de Content-Range y se rechazó. Los seis 403 no incluían Retry-After. No hubo SABR ni 429 en esta tanda, ni reproducción, Legacy o prueba de EOF. La muestra sólo cubre los primeros instantes de esas respuestas; un 403 no identifica anuncios. Incluso una mejora de la sonda query no demostraría que la URL original usada por HTMLAudio esté lista para reproducir y buscar. No se cambia Range ni el calendario: los registros no aportan una señal que prediga disponibilidad, y redistribuir los mismos ocho intentos desplazaría la espera entre ventanas. Permanecen la validación 206/rango/longitud/encoding exactos, el plazo CDN compartido de 8 s, la detención ante 429 y la omisión de slots vencidos. El límite de ocho corresponde al formato preferido; los candidatos posteriores conservan su política ya documentada bajo el mismo plazo.
+
+Procedencia compacta (artefactos privados ignorados, sin URLs firmadas en este documento):
+
+| Evidencia | Archivo bajo `capture-bench.local` | SHA256 |
+|---|---|---|
+| Miniasset, medidas completas | `decoder-minimal.local/result.json.local` | `1dbb818adef203bb5b84367adc8e73ee0caf504a16018265c06278e421f60c9b` |
+| Miniasset, cuatro fixtures exactos | `decoder-minimal.local/golden.json.local` | `02159c867f8f349042878c9263d4710428d68df1a6bfed288f7cbbc5a06e2e24` |
+| Transporte, cuatro intentos y límites | `music-transport-20261023-192950-analysis.json.local` | `162ca5c741ef5194d8264c39070f8df2a731ce7c7363f78e9a21719ac8784ea5` |
+| Range A–B–A, manifiesto de 12 artefactos | `range-query-probe-1792776496688.local/manifest.json.local` | `94c6d2298e9348292c5fe2579c1e698ec9f6ba61ca4f956c4bbcf115218a6250` |
+
+### Comparación final en la app: una tanda fija, sin sesión
+
+Release, dos intentos por canción y binario, orden alternado, proceso nuevo y
+FreshDecoder en cada intento. Incluye búsqueda hasta `playing` de Audio silenciado,
+sin borrar cachés del sistema operativo o de red ni acreditar medida acústica.
+Control: `e24d090f…`, fuente `ab50207`. Candidato: `500457c7…`, fuente limpia
+`a32092b`; Clang18/O2, mismo código C y calendario CDN. El índice es
+`round7-cold-search-20261023-194012-b8e4b651-index.json.local`.
+
+| Canción | Control: dos intentos, ms | Candidato: dos intentos, ms | Candidato ≤3500 ms |
+|---|---:|---:|---:|
+| Epoitaitaye | 4121,8; 3482,0 | 5456,8; 5400,0 | 0/2 |
+| Maite Zaitut! | 5747,3; 4533,7 | 5729,1; 5464,6 | 0/2 |
+| Pupu Eta Lore | 3823,6; 3621,3 | 3660,3; 3413,6 | 1/2 |
+
+Los doce informes, stderr, metadatos y dos ejecutables se contrastaron con sus
+huellas. Hay doce Native, cero Legacy y doce IDs esperados. **El total no mejora:**
+mediana de seis intentos 3972,7 → 5428,4 ms; sólo 1/6 cumple 3500 ms en cada brazo.
+Los doce incumplimientos históricos de 300 ms permanecen en los datos. No se
+repitió la tanda para escoger resultados más favorables ni se sustituyen los
+intentos rápidos de R6: los resultados de ambas rondas siguen separados.
+
+| Etapa observada, mediana de seis por brazo | Control, ms | Candidato, ms |
+|---|---:|---:|
+| Búsqueda | 617,118 | 502,588 |
+| Preparación completa | 2686,883 | 2637,758 |
+| Descifrado | 41,0115 | 24,2492 |
+
+La búsqueda y el descifrado mejoran en los seis pares: la primera ahorra
+42,7–209,5 ms y el segundo unos 16,76 ms de mediana. La preparación no muestra
+una regresión sistemática. Esto acredita mejoras de esas etapas, **no del
+arranque total ni un máximo estable**. Los loggers antiguos de Native siguen
+idénticos en ambos ejecutables; las nuevas líneas Music se serializan antes de
+escribir para no añadir la fragmentación del diagnóstico preliminar.
+
+Epo candidato registra tres 403 antes del 206 en ambos intentos: ventanas CDN
+de unos 2027/2039 ms frente a 425/17 ms del control, que no registra 403.
+El segundo Maite candidato espera unos 2027 ms y tres 403 frente a 1028 ms y
+dos 403 en su control. Esas esperas explican los totales observados más altos;
+no demuestran que compartir el pool provoque el rechazo ni que sea publicidad.
+El primer Pupu candidato recupera SABR_ONLY con preview2 válido antes de verificar
+ST; se consume esa segunda respuesta y arranca en 3660,3 ms. No se oculta el
+incumplimiento ni se atribuye la recuperación al nuevo asset.
+
+### Corpus habitual y archivos completos
+
+La tanda final `20261023-194208-d35cce0a` mantiene **30 Native, cero Legacy,
+cero fallos de extracción y 30 IDs exactamente iguales al corpus**. Inicio con
+búsqueda: mínimo 507, mediana 737,45 y máximo 2020,6 ms. La mediana anterior de
+R6 fue 699,95 ms; tampoco se acredita una mejora del corpus habitual en esta tanda.
+El máximo es Airbag (`jNY_wLukVW0`): búsqueda 598,353 ms, Native 1000,547 ms
+(validación 881,341; player 79,760), con unos 401,3 ms entre inicio del observador
+Audio y `playing`. No se atribuye ese conjunto a CPU o al pool sin un control.
+Las treinta filas conservan el fallo de 300 ms y completeNotExercised; gaps/stalls
+0/0 sólo cubren el prefijo, no EOF, la canción completa o transiciones naturales.
+
+Se repitió una sola vez el test de los tres archivos completos con el ejecutable
+de tests de `a32092b`, cuya copia inmutable y hash se registran en
+`round7-complete-audio-test.json.local`. Los tres archivos 251 son nuevos de esa
+ejecución, coinciden byte a byte con las referencias de yt-dlp y FFmpeg 8.1
+`-xerror` termina con 0 para cada uno. El verificador no admite archivos antiguos
+para cubrir fallos; resultado **3/3**, SHA-256 del informe
+`8a3a47f57762d9ade154e058a19be6fedbbe33d31c0629cff640cf77ea9e504a`.
+Se conservan copias de los archivos anteriores en una carpeta local ignorada.
+Esta prueba acredita esos archivos, no escucha continua en la app ni una
+campaña de transiciones publicitarias.
+
+Los checks Android arm64 y x86_64 pasan sobre `a32092b`, sin avisos nuevos y
+con ambos assets registrados: metadata `android-clang-vendor-checks-20261023-193446.json.local`.
+No se midió APK, JNI, ExoPlayer ni rendimiento Android. Las 245 pruebas Rust
+(30 ignoradas), 436 JavaScript, tipos y regeneración de ambos assets pasan
+en este snapshot. La prueba nueva de formato del logger forma parte de las 245.
+
+### Alcance y pendientes
+
+Se conservan ambos cambios por su mejora medida de búsqueda/descifrado, sin
+promoverlos como logro de los 3,5 s ni como mejora estable del total. Epo sigue
+funcionando por Native sin Legacy en esta tanda, pero sus dos tiempos actuales
+son mayores que los de R6. Queda pendiente reducir la espera CDN y volver a
+acreditar el objetivo total; no se cambia el calendario sin una señal útil.
+
+Todas las medidas nuevas son sin sesión. Premium y anuncios vistos/saltados/
+entregados no se midieron de nuevo. No cambia Oficial, su aprobación progresiva,
+sus límites ni el respaldo Legacy de Propio. yt-dlp sigue predeterminado.
+No se modifica UI, db.rs, downloads.rs, capture.js, receta, youtubei.ts ni API
+de extractores. El ABI de caché incluye ambos assets y exige una app reconstruida;
+la mejora no llega por publicar un extractor ni cambia la PWA. No hay etiquetas,
+release, publicación de extractores, merge ni push a main; sólo la rama p1-oficial.
+
+### Procedencia final
+
+Ejecutable release candidato: SHA-256
+`500457c7529fe68df18ec53e5a4ba7729837fcb93a37c38b5ab15adca0f9a132`.
+Asset completo: `d8ab279061005efb04bf43a79794e7aeec2b0dff47a2d3e522f82f3a1d9b2f30`;
+ejecución mínima: `dc4418c255b34dce1667f26d2279b1def32016d195ba51aca93bb0a53bf54ac8`.
+El manifiesto local `round7-final-manifest.json.local` contiene **507 archivos**,
+verificados en dos pasadas sobre `a32092b`, base `0045015`; SHA-256
+`68cbeeb76fab838105b15031d688b5c1687fc7d80ea5c7e970c65d7b19ff083c`.
+Incluye ambos ejecutables y procedencias, todas las filas de la comparación,
+errores, metadatos, fuentes, pruebas, referencias y verificadores de audio.
+Los documentos quedan fuera para evitar hashes circulares. Las 307 referencias
+excluidas son 43 rutas target y 264 fuentes Cargo externas; las 39 nominales sin
+resolver son nombres de binarios npm del lockfile de documentación upstream.
+Ninguna evidencia medida falta. Estos casos no se confunden con fallos de las
+huellas de archivos incluidos. Sólo se suben
+código y resúmenes; raws, medios y perfiles permanecen fuera de Git.
