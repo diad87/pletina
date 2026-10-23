@@ -166,6 +166,12 @@ La segunda ronda también repitió los tres archivos completos, idénticos a las
 
 **Arranque frío, décima ronda:** A (`06823dc`) se retiró con `91c1d44`; B (`114df0b`) se conserva como mejora acotada de espera: en 4/12 candidatos, la respuesta 206 se completó 467–475 ms antes del antiguo turno de 2 s. La media observada de ventana CDN baja 1117→944 y 856→606 ms entre procesos; no demuestra menor total: 8/12 pares empeoran. Pasan 247 Rust/30 ignoradas y compilan Android arm64/x86_64; sin nueva evidencia de rendimiento móvil, EOF, anuncios o Premium. Requiere app reconstruida; OTA y PWA siguen iguales. Rige el criterio incremental sin relajar garantías; Oficial sigue experimental. [Informe R10](docs/informe-arranque-frio-2026-10-23.md#ronda-10-oportunidad-adicional-durante-la-espera-del-cdn).
 
+**Arranque frío, undécima ronda:** el diagnóstico (`ef6c194`) acompaña la preconexión (`506986a`), retenida por un ahorro acotado observado de DNS de ≈1,97 ms en 12/12 pares; ninguna de las 24 primeras respuestas del reproductor registra reutilización TCP/TLS.
+El total mejora en 7 pares y empeora en 5: mediana pareada −28,1 ms y agregada 4382,45→3980 ms, sin mejora consistente entre cohortes (C1 mejora, C2 empeora).
+Los 24 casos conservan Native e ID correcto, sin Legacy; pasan 254 Rust/30 ignoradas y ambos checks Android, sin medir rendimiento móvil.
+Se aceptan avances pequeños medibles y repetibles sin relajar garantías; 3,5 s sigue como referencia y Oficial permanece experimental.
+Requiere app reconstruida; PWA y OTA siguen iguales. [Informe R11 y límites](docs/informe-arranque-frio-2026-10-24.md).
+
 La descripción y las mediciones siguientes corresponden al prototipo histórico; «nivel garantizado» era su denominación, no una garantía frente a cualquier cambio de plataforma. Sus tiempos no describen la nueva captura experimental a velocidad normal.
 
 #### Motor propio
