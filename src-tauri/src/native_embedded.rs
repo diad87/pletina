@@ -2238,6 +2238,19 @@ fn config_rejected(error: &Error) -> bool {
         "NATIVE_EMBEDDED_PLAYER_HTTP_400" | "NATIVE_EMBEDDED_PLAYER_HTTP_401" | "NATIVE_EMBEDDED_PLAYER_HTTP_403"))
 }
 
+// Spend one of the first format's eight probes between 1 s and 2 s. Its first retry moves to
+// 1 s; the shared deadline and the remaining opportunities through 6 s stay put.
+const CDN_RETRY_OFFSETS: [Duration; 8] = [
+    Duration::ZERO,
+    Duration::from_secs(1),
+    Duration::from_millis(1500),
+    Duration::from_secs(2),
+    Duration::from_secs(3),
+    Duration::from_secs(4),
+    Duration::from_secs(5),
+    Duration::from_secs(6),
+];
+
 async fn bounded_cdn_probe<F, Fut>(
     mut probe: F,
     offsets: &[Duration],
@@ -2676,16 +2689,7 @@ async fn resolve_config(
         // Neither its presence nor a successful retry proves an ad was played/skipped.
         let retry = std::mem::replace(&mut retry_available, false);
         let offsets: &[Duration] = if retry {
-            &[
-                Duration::ZERO,
-                Duration::from_millis(250),
-                Duration::from_secs(1),
-                Duration::from_secs(2),
-                Duration::from_secs(3),
-                Duration::from_secs(4),
-                Duration::from_secs(5),
-                Duration::from_secs(6),
-            ]
+            &CDN_RETRY_OFFSETS
         } else {
             &[Duration::ZERO]
         };
@@ -4069,6 +4073,30 @@ mod tests {
             .is_err()
         );
         assert_eq!(calls.load(Ordering::Relaxed), 8);
+    }
+
+    #[tokio::test]
+    async fn cdn_retry_recovers_within_the_one_to_two_second_window() {
+        let started = Instant::now();
+        let calls = AtomicU64::new(0);
+        bounded_cdn_probe(
+            || {
+                calls.fetch_add(1, Ordering::Relaxed);
+                let available = started.elapsed() >= Duration::from_millis(1250);
+                async move {
+                    if available {
+                        Ok(())
+                    } else {
+                        Err(fail("CDN_HTTP_403"))
+                    }
+                }
+            },
+            &CDN_RETRY_OFFSETS,
+            Duration::from_millis(1850),
+        )
+        .await
+        .unwrap();
+        assert!(calls.load(Ordering::Relaxed) <= 3);
     }
 
     #[tokio::test]
