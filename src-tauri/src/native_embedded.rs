@@ -9,7 +9,7 @@ use std::sync::atomic::AtomicBool;
 const LIMIT: usize = 4 * 1024 * 1024;
 const TTL: Duration = Duration::from_secs(6 * 3600);
 const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(4);
-const PREFETCH_DELAY: Duration = Duration::from_millis(100);
+const PREFETCH_DELAY: Duration = Duration::from_millis(25);
 static PREFETCH_CLAIMED: AtomicBool = AtomicBool::new(false);
 // Different embed experiments can publish different players for the same album.
 // Keep four prepared scripts (at most 8 MiB), never their temporary JS runtimes.
@@ -2793,14 +2793,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn raw_prefetch_fast_success_or_wrong_id_before_delay_starts_no_get() {
-        assert_eq!(PREFETCH_DELAY, Duration::from_millis(100));
+    async fn raw_prefetch_drop_or_wrong_id_before_first_poll_starts_no_get() {
+        assert_eq!(PREFETCH_DELAY, Duration::from_millis(25));
         let calls = Arc::new(AtomicU64::new(0));
         let fetch = || {
             let calls = calls.clone();
             async move { calls.fetch_add(1, Ordering::Relaxed); Ok("unused raw text".into()) }
         };
-        // A fast success drops ownership before the timer, without polling GET.
+        // This current-thread test drops ownership before either task is polled.
+        // In production, another worker may already have dispatched its GET.
         drop(RawPrefetch::spawn(ID, fetch(), fetch()));
         let wrong = RawPrefetch::spawn(ID, fetch(), fetch());
         assert!(matches!(wrong.adopt("WtTRMAoN2Fw"), Err(Error::Failed(code))
