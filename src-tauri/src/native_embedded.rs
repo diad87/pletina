@@ -2238,30 +2238,98 @@ fn config_rejected(error: &Error) -> bool {
         "NATIVE_EMBEDDED_PLAYER_HTTP_400" | "NATIVE_EMBEDDED_PLAYER_HTTP_401" | "NATIVE_EMBEDDED_PLAYER_HTTP_403"))
 }
 
+#[derive(Clone, Copy)]
+struct CdnProbeSlot {
+    at: Duration,
+    // An opportunistic probe must release the next original slot, including its body.
+    until: Option<Duration>,
+}
+
+impl CdnProbeSlot {
+    const fn regular(at: Duration) -> Self {
+        Self { at, until: None }
+    }
+}
+
+// Preserve every original opportunity. The additional probe only owns the idle
+// interval before 2 s, never another two-second request window.
+const CDN_RETRY_SLOTS: [CdnProbeSlot; 9] = [
+    CdnProbeSlot::regular(Duration::ZERO),
+    CdnProbeSlot::regular(Duration::from_millis(250)),
+    CdnProbeSlot::regular(Duration::from_secs(1)),
+    CdnProbeSlot { at: Duration::from_millis(1500), until: Some(Duration::from_secs(2)) },
+    CdnProbeSlot::regular(Duration::from_secs(2)),
+    CdnProbeSlot::regular(Duration::from_secs(3)),
+    CdnProbeSlot::regular(Duration::from_secs(4)),
+    CdnProbeSlot::regular(Duration::from_secs(5)),
+    CdnProbeSlot::regular(Duration::from_secs(6)),
+];
+
+struct CdnProbeBudget {
+    started: Instant,
+    duration: Duration,
+    dispatched: u8,
+}
+
+impl CdnProbeBudget {
+    fn new(duration: Duration) -> Self {
+        Self { started: Instant::now(), duration, dispatched: 0 }
+    }
+
+    fn remaining(&self) -> Option<Duration> {
+        self.duration.checked_sub(self.started.elapsed()).filter(|v| !v.is_zero())
+    }
+
+    fn dispatch(&mut self) -> bool {
+        if self.dispatched >= 10 || self.remaining().is_none() {
+            return false;
+        }
+        self.dispatched += 1;
+        true
+    }
+}
+
 async fn bounded_cdn_probe<F, Fut>(
     mut probe: F,
-    offsets: &[Duration],
-    budget: Duration,
+    slots: &[CdnProbeSlot],
+    budget: &mut CdnProbeBudget,
 ) -> Result<(), Error>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
+    let remaining = budget.remaining().ok_or_else(|| fail("CDN_TIMEOUT"))?;
     let attempts = async {
         let started = Instant::now();
         let mut last = fail("CDN_TIMEOUT");
-        for offset in offsets.iter().take(8) {
+        for slot in slots.iter().take(9) {
             // A slow request can cross several slots. Do not replay expired
             // positive slots as a burst; allow normal scheduler jitter.
-            if !offset.is_zero() && started.elapsed() > *offset + Duration::from_millis(50) {
+            if !slot.at.is_zero() && started.elapsed() > slot.at + Duration::from_millis(50) {
                 continue;
             }
-            if let Some(wait) = offset.checked_sub(started.elapsed()) {
+            if let Some(wait) = slot.at.checked_sub(started.elapsed()) {
                 tokio::time::sleep(wait).await;
             }
-            last = match tokio::time::timeout(Duration::from_secs(2), probe()).await {
+            let request_deadline = if let Some(until) = slot.until {
+                if started.elapsed() >= until {
+                    continue;
+                }
+                tokio::time::Instant::from_std(started + until)
+                    .min(tokio::time::Instant::now() + Duration::from_secs(2))
+            } else {
+                tokio::time::Instant::now() + Duration::from_secs(2)
+            };
+            // Count dispatches, including subsequently aborted probes, across formats.
+            // A slot already expired above never consumes a token.
+            if !budget.dispatch() {
+                return Err(fail("CDN_TIMEOUT"));
+            }
+            last = match tokio::time::timeout_at(request_deadline, probe()).await {
                 Ok(Ok(())) => return Ok(()),
                 Ok(Err(error)) => error,
+                // Drop the optional request before polling the next original slot.
+                Err(_) if slot.until.is_some() => continue,
                 Err(_) => fail("CDN_TIMEOUT"),
             };
             if !transient_cdn(&last) {
@@ -2275,7 +2343,7 @@ where
         }
         Err(last)
     };
-    tokio::time::timeout(budget, attempts)
+    tokio::time::timeout(remaining, attempts)
         .await
         .unwrap_or_else(|_| Err(fail("CDN_TIMEOUT")))
 }
@@ -2589,7 +2657,7 @@ async fn resolve_config(
     };
     let mut last = fail("NO_AUDIO");
     let mut retry_available = true;
-    let mut cdn_started: Option<Instant> = None;
+    let mut cdn_budget: Option<CdnProbeBudget> = None;
     for mut format in formats.into_iter().take(3) {
         let input = match cipher(&format) {
             Ok(v) => v,
@@ -2602,8 +2670,8 @@ async fn resolve_config(
         let decode = youtube_decoder::decode(decoder.clone(), input.sig.clone(), input.n.clone());
         // Trying another format after a permanent CDN error still shares the
         // first candidate's overall validation deadline, including its decoder.
-        let decoded_result = if let Some(started) = cdn_started {
-            let Some(remaining) = Duration::from_secs(8).checked_sub(started.elapsed()) else {
+        let decoded_result = if let Some(budget) = &cdn_budget {
+            let Some(remaining) = budget.remaining().filter(|_| budget.dispatched < 10) else {
                 return Err(fail("CDN_TIMEOUT"));
             };
             match tokio::time::timeout(remaining, decode).await {
@@ -2675,26 +2743,14 @@ async fn resolve_config(
         // Some otherwise valid responses have a temporary CDN availability gate.
         // Neither its presence nor a successful retry proves an ad was played/skipped.
         let retry = std::mem::replace(&mut retry_available, false);
-        let offsets: &[Duration] = if retry {
-            &[
-                Duration::ZERO,
-                Duration::from_millis(250),
-                Duration::from_secs(1),
-                Duration::from_secs(2),
-                Duration::from_secs(3),
-                Duration::from_secs(4),
-                Duration::from_secs(5),
-                Duration::from_secs(6),
-            ]
+        let slots: &[CdnProbeSlot] = if retry {
+            &CDN_RETRY_SLOTS
         } else {
-            &[Duration::ZERO]
+            &[CdnProbeSlot::regular(Duration::ZERO)]
         };
         let http = CDN.as_ref().map_err(|_| fail("HTTP"))?;
-        let started = cdn_started.get_or_insert_with(Instant::now);
-        let Some(remaining) = Duration::from_secs(8).checked_sub(started.elapsed()) else {
-            return Err(fail("CDN_TIMEOUT"));
-        };
-        let probe_epoch = *started;
+        let budget = cdn_budget.get_or_insert_with(|| CdnProbeBudget::new(Duration::from_secs(8)));
+        let probe_epoch = budget.started;
         let mut attempt = 0_u32;
         let result = bounded_cdn_probe(
             || {
@@ -2718,8 +2774,8 @@ async fn resolve_config(
                     result
                 }
             },
-            offsets,
-            remaining.min(Duration::from_secs(if retry { 8 } else { 2 })),
+            slots,
+            budget,
         )
         .await;
         match result {
@@ -4034,7 +4090,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn retries_stop_on_permanent_errors_and_never_exceed_eight_attempts() {
+    async fn retries_stop_on_permanent_errors_and_share_ten_dispatches_across_formats() {
         for code in [
             "CDN_RANGE",
             "CDN_MIME",
@@ -4048,27 +4104,105 @@ mod tests {
                     calls.fetch_add(1, Ordering::Relaxed);
                     async { Err(fail(code)) }
                 },
-                &[Duration::ZERO; 5],
-                Duration::from_secs(1),
+                &[CdnProbeSlot::regular(Duration::ZERO); 5],
+                &mut CdnProbeBudget::new(Duration::from_secs(1)),
             )
             .await;
             assert!(result.is_err());
             assert_eq!(calls.load(Ordering::Relaxed), 1);
         }
         let calls = AtomicU64::new(0);
+        let mut budget = CdnProbeBudget::new(Duration::from_secs(1));
         assert!(
             bounded_cdn_probe(
                 || {
                     calls.fetch_add(1, Ordering::Relaxed);
                     async { Err(fail("CDN_HTTP_403")) }
                 },
-                &[Duration::ZERO; 9],
-                Duration::from_secs(1)
+                &[CdnProbeSlot::regular(Duration::ZERO); 12],
+                &mut budget
             )
             .await
             .is_err()
         );
-        assert_eq!(calls.load(Ordering::Relaxed), 8);
+        assert_eq!(calls.load(Ordering::Relaxed), 9);
+        for _ in 0..2 {
+            assert!(bounded_cdn_probe(
+                || {
+                    calls.fetch_add(1, Ordering::Relaxed);
+                    async { Err(fail("CDN_RANGE")) }
+                },
+                &[CdnProbeSlot::regular(Duration::ZERO)],
+                &mut budget,
+            ).await.is_err());
+        }
+        assert_eq!(calls.load(Ordering::Relaxed), 10);
+        assert_eq!(budget.dispatched, 10);
+    }
+
+    #[tokio::test]
+    async fn optional_probe_is_dropped_before_next_slot_and_still_uses_its_token() {
+        struct Dropped(Arc<AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) { self.0.store(true, Ordering::Relaxed); }
+        }
+        let dropped = Arc::new(AtomicBool::new(false));
+        let calls = AtomicU64::new(0);
+        let mut budget = CdnProbeBudget::new(Duration::from_secs(1));
+        // Compress the optional window; test ownership/order, not scheduler speed.
+        bounded_cdn_probe(
+            || {
+                let call = calls.fetch_add(1, Ordering::Relaxed);
+                let dropped = dropped.clone();
+                async move {
+                    if call == 0 {
+                        let _guard = Dropped(dropped);
+                        std::future::pending::<Result<(), Error>>().await
+                    } else {
+                        assert!(dropped.load(Ordering::Relaxed));
+                        Ok(())
+                    }
+                }
+            },
+            &[
+                CdnProbeSlot { at: Duration::ZERO, until: Some(Duration::from_millis(10)) },
+                CdnProbeSlot::regular(Duration::ZERO),
+            ],
+            &mut budget,
+        ).await.unwrap();
+        assert_eq!(calls.load(Ordering::Relaxed), 2);
+        assert_eq!(budget.dispatched, 2);
+        let optional = CDN_RETRY_SLOTS.iter().position(|slot| slot.until.is_some()).unwrap();
+        assert_eq!(CDN_RETRY_SLOTS[optional].until, Some(CDN_RETRY_SLOTS[optional + 1].at));
+    }
+
+    #[tokio::test]
+    async fn expired_optional_slot_uses_no_token_and_terminal_errors_do_not_continue() {
+        let calls = AtomicU64::new(0);
+        let mut budget = CdnProbeBudget::new(Duration::from_secs(1));
+        bounded_cdn_probe(
+            || { calls.fetch_add(1, Ordering::Relaxed); async { Ok(()) } },
+            &[
+                CdnProbeSlot { at: Duration::ZERO, until: Some(Duration::ZERO) },
+                CdnProbeSlot::regular(Duration::ZERO),
+            ],
+            &mut budget,
+        ).await.unwrap();
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
+        assert_eq!(budget.dispatched, 1);
+        for until in [None, Some(Duration::from_secs(1))] {
+            for code in ["CDN_HTTP_429", "CDN_HTTP_200", "CDN_RANGE", "CDN_MIME", "CDN_ENCODING", "CDN_TRUNCATED"] {
+                let calls = AtomicU64::new(0);
+                let mut budget = CdnProbeBudget::new(Duration::from_secs(2));
+                let result = bounded_cdn_probe(
+                    || { calls.fetch_add(1, Ordering::Relaxed); async { Err(fail(code)) } },
+                    &[CdnProbeSlot { at: Duration::ZERO, until }, CdnProbeSlot::regular(Duration::ZERO)],
+                    &mut budget,
+                ).await;
+                assert!(matches!(result, Err(Error::Failed(actual)) if actual == format!("NATIVE_EMBEDDED_{code}")));
+                assert_eq!(calls.load(Ordering::Relaxed), 1);
+            }
+        }
     }
 
     #[tokio::test]
@@ -4087,12 +4221,12 @@ mod tests {
                 }
             },
             &[
-                Duration::ZERO,
-                Duration::from_millis(1),
-                Duration::from_millis(2),
-                Duration::from_millis(250),
+                CdnProbeSlot::regular(Duration::ZERO),
+                CdnProbeSlot::regular(Duration::from_millis(1)),
+                CdnProbeSlot::regular(Duration::from_millis(2)),
+                CdnProbeSlot::regular(Duration::from_millis(250)),
             ],
-            Duration::from_secs(1),
+            &mut CdnProbeBudget::new(Duration::from_secs(1)),
         )
         .await
         .unwrap();
@@ -4103,8 +4237,8 @@ mod tests {
                 calls.fetch_add(1, Ordering::Relaxed);
                 async { Err(fail("CDN_HTTP_429")) }
             },
-            &[Duration::ZERO; 8],
-            Duration::from_secs(1),
+            &[CdnProbeSlot::regular(Duration::ZERO); 9],
+            &mut CdnProbeBudget::new(Duration::from_secs(1)),
         )
         .await;
         assert!(result.is_err());
@@ -4123,6 +4257,8 @@ mod tests {
             let dropped = Arc::new(std::sync::atomic::AtomicBool::new(false));
             let calls = AtomicU64::new(0);
             let started = Instant::now();
+            let mut budget = CdnProbeBudget::new(Duration::from_millis(if cancel { 1000 } else { 10 }));
+            let slots = [CdnProbeSlot::regular(Duration::ZERO); 5];
             let operation = bounded_cdn_probe(
                 || {
                     calls.fetch_add(1, Ordering::Relaxed);
@@ -4132,8 +4268,8 @@ mod tests {
                         std::future::pending::<Result<(), Error>>().await
                     }
                 },
-                &[Duration::ZERO; 5],
-                Duration::from_millis(if cancel { 1000 } else { 10 }),
+                &slots,
+                &mut budget,
             );
             if cancel {
                 assert!(
@@ -5465,8 +5601,8 @@ mod tests {
                     calls.fetch_add(1, Ordering::Relaxed);
                     strict_probe(&http, &url, 8192)
                 },
-                &[Duration::ZERO; 5],
-                Duration::from_secs(1),
+                &[CdnProbeSlot::regular(Duration::ZERO); 5],
+                &mut CdnProbeBudget::new(Duration::from_secs(1)),
             )
             .await;
             assert!(matches!(result,Err(Error::Failed(actual)) if actual == code));
@@ -5511,8 +5647,8 @@ mod tests {
         let http = local_http();
         bounded_cdn_probe(
             || strict_probe(&http, &url, 8192),
-            &[Duration::ZERO, Duration::from_millis(5)],
-            Duration::from_secs(1),
+            &[CdnProbeSlot::regular(Duration::ZERO), CdnProbeSlot::regular(Duration::from_millis(5))],
+            &mut CdnProbeBudget::new(Duration::from_secs(1)),
         )
         .await
         .unwrap();
