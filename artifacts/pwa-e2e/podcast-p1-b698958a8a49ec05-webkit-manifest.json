@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-10-23T21:46:10.232Z",
+  "build": "b698958a8a49ec05",
+  "sourceCommit": "f3e890ce8a7b99ce3803d14c9df5be168431e63c",
+  "scope": "Frozen compiled PWA on desktop WebKit Linux, webkit-iphone-layout390x844 with emulated UA/touch. Controlled HTTP providers and real native silent AAC decoder, IndexedDB, CacheStorage and production service worker. Not a physical iPhone, live-provider, audible sound, long-episode or background-download test.",
+  "counts": {
+    "pass": 9,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "effectiveChecks": {
+    "features": 6,
+    "preparations": 3,
+    "totalUnique": 9
+  },
+  "consolidation": "Eight previously passing unique v1 IDs plus the affected v3 episode-download scenario. Repeated setup/selection preparations in v2/v3 are not added. Both earlier failures and exact source snapshots remain intact.",
+  "qaCorrection": {
+    "productChanged": false,
+    "compiledDistributionChanged": false,
+    "reason": "The prior fixture classified a lawful YouTube WEB visitor/session bootstrap as musical text search. V2 permits only exact known episode video IDs on www.youtube.com, WEB client, with params absent. V3 permits only failed POST music.youtube.com/youtubei/v1/browse for the exact show MPSPqapodcast, WEB_REMIX client, absent continuation and null response status. Actual musical search and remote stream resolution remain rejected.",
+    "mediaScenarioSha256": "5238078d9d3bfe92396bc112aef1efc5aad601a6382e507a2775518901044078",
+    "providerFixtureSha256": "99c3e579d9e995c3db36368fa6f8f1e69130056ba90398dec3066b9da2e7066f",
+    "observedExactIdSessionBootstraps": [
+      {
+        "operation": "session-bootstrap",
+        "videoId": "qaCast0001a",
+        "clientName": "WEB",
+        "host": "www.youtube.com",
+        "queryIsExactId": true,
+        "searchParamsAbsent": true
+      }
+    ],
+    "unexpectedMusicSearches": []
+  },
+  "browserVersion": "26.5",
+  "errors": 0,
+  "uniqueChecks": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.selection-html-audio",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.p1-primary-json-ok-cdn403-repairs-same-id-without-extra-click-or-video",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.rss-podcast-direct-audio-progress-reload-and-resume",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.rss-completion-next-episode-and-relisten-from-zero",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.youtube-podcast-keeps-episode-namespace-and-progress",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume",
+      "status": "pass",
+      "from": "v3"
+    }
+  ],
+  "frozenDistributionInventorySha256": "c6be57495a2c5f60cb2900188ed5119faeb5da9f47818735007440b18c3c61cf",
+  "allSourcesAndDistributionUnchangedBeforeAfterEachRun": true,
+  "episodeDownload": {
+    "networkMode": "origin-and-provider-unavailable",
+    "navigatorOfflineExpected": false,
+    "physicalAirplaneModeClaimed": false,
+    "opaqueBodyHashVerifiedByProduct": false,
+    "sizeIsDeclared": true,
+    "episodeIds": [
+      750000000000001,
+      750000000000002
+    ],
+    "videoIds": [
+      "qaCast0001a",
+      "qaCast0002b"
+    ],
+    "checkpoint": {
+      "id": 750000000000001,
+      "position": 45.727419,
+      "duration": 90,
+      "completed": false,
+      "updatedAt": 1792791947
+    },
+    "resumed": {
+      "title": "Episodio QA YouTube Uno",
+      "metadata": {
+        "title": "Episodio QA YouTube Uno",
+        "artist": "Autor QA"
+      },
+      "handlers": [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto"
+      ],
+      "online": true,
+      "events": [
+        {
+          "type": "waiting",
+          "index": 0,
+          "time": 0
+        },
+        {
+          "type": "loadstart",
+          "index": 0,
+          "time": 0
+        },
+        {
+          "type": "durationchange",
+          "index": 0,
+          "time": 0
+        },
+        {
+          "type": "loadedmetadata",
+          "index": 0,
+          "time": 0
+        },
+        {
+          "type": "playing",
+          "index": 0,
+          "time": 45.727419
+        },
+        {
+          "type": "seeking",
+          "index": 0,
+          "time": 45.727419
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "time": 45.727419
+        },
+        {
+          "type": "seeked",
+          "index": 0,
+          "time": 45.727419
+        }
+      ],
+      "audios": [
+        {
+          "index": 0,
+          "playing": true,
+          "paused": false,
+          "time": 45.727419,
+          "duration": 90,
+          "source": true,
+          "local": true,
+          "host": "127.0.0.1",
+          "error": null,
+          "muted": false,
+          "volume": 0.7999907732009888,
+          "readyState": 4
+        }
+      ]
+    },
+    "persistedFields": [
+      "id",
+      "track",
+      "size",
+      "at",
+      "cacheKey"
+    ],
+    "database": {
+      "cacheEntries": 1,
+      "rows": [
+        {
+          "id": 750000000000001,
+          "title": "Episodio QA YouTube Uno",
+          "size": 32095,
+          "present": true,
+          "type": "opaque"
+        }
+      ]
+    },
+    "serialOrderAnd403Rollback": true,
+    "nativeAudioLocalOfflineResume": true,
+    "blockedProgramMetadataRequests": [
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/browse",
+        "type": "fetch",
+        "failed": "Blocked by Web Inspector",
+        "responseStatus": null,
+        "fromServiceWorker": null,
+        "metadataBrowse": {
+          "method": "POST",
+          "browseId": "MPSPqapodcast",
+          "continuation": null,
+          "clientName": "WEB_REMIX"
+        }
+      }
+    ],
+    "nativeMediaObservations": [
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/browse",
+        "type": "fetch",
+        "failed": "Blocked by Web Inspector",
+        "responseStatus": null,
+        "fromServiceWorker": null,
+        "metadataBrowse": {
+          "method": "POST",
+          "browseId": "MPSPqapodcast",
+          "continuation": null,
+          "clientName": "WEB_REMIX"
+        }
+      }
+    ]
+  },
+  "resources": {
+    "v1": {
+      "browserClosed": true,
+      "fixtureNetworkTransportClosed": true,
+      "previewServerClosed": true
+    },
+    "v2": {
+      "browserClosed": true,
+      "fixtureNetworkTransportClosed": true,
+      "previewServerClosed": true
+    },
+    "v3": {
+      "browserClosed": true,
+      "fixtureNetworkTransportClosed": true,
+      "previewServerClosed": true
+    }
+  },
+  "physicalAndroid": false,
+  "physicalIPhone": false,
+  "backgroundDownloadsVerified": false,
+  "longEpisodeVerified": false,
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-frozen-copy.json",
+      "bytes": 20333,
+      "sha256": "e6740348833dc085abb39ccd7e32f7a00ce1ae9ebf40353525a906edf100f6ba"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-offline-final-frozen-copy.json",
+      "bytes": 23299,
+      "sha256": "eb5f6a7e68b4fd41ff666f354fcf14d54fa2a46ce643833d68db5ad5573a384d"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-session-final-frozen-copy.json",
+      "bytes": 19701,
+      "sha256": "f47b34736de65fb5a363585794266e0f1c11597de6b0f5dc66863be7df7d806a"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit/summary.json",
+      "bytes": 82945,
+      "sha256": "3c70f0495dc1299ae3b44198e09d7c15a43df0a4e235d5ad8670cac54ee7b02e"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit/webkit-iphone-layout/report.json",
+      "bytes": 70182,
+      "sha256": "46d8539881d27bfc18a14b3a665b32e43e1b1fd197a8c534623c862c09078c36"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-session-final/summary.json",
+      "bytes": 60939,
+      "sha256": "da7e26a129653a052222e09e87cdebafb8afbd4ef7334d03ba44ed45c41a71ec"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-session-final/webkit-iphone-layout/report.json",
+      "bytes": 51488,
+      "sha256": "e9985d6bc3fe7f23674ac0b4b0d7d31427332a6e5513ccae9aef2446c9aaae2c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-offline-final/summary.json",
+      "bytes": 65329,
+      "sha256": "dbddfb577f78aa0fbfc5acebd81031a220244e0b23f9f5387dab2fc6c90812b3"
+    },
+    {
+      "path": "artifacts/pwa-e2e/podcast-p1-b698958a8a49ec05-webkit-offline-final/webkit-iphone-layout/report.json",
+      "bytes": 55351,
+      "sha256": "c6f5264910b4ffde324db3a104eb2dc4ab76a2cc521009b2aaba8b179eedf86e"
+    },
+    {
+      "path": "artifacts/pwa-port/podcast-p1-b698958a8a49ec05-webkit.log",
+      "bytes": 2194,
+      "sha256": "1262b09fe132cf542940dfc928abea356f5e5b1bbc68a41475ed774527dc1e07"
+    },
+    {
+      "path": "artifacts/pwa-port/podcast-p1-b698958a8a49ec05-webkit-session-final.log",
+      "bytes": 1238,
+      "sha256": "30bb6ade216f975e96aad5c7218c73e81eb4449e618d50695242245e6d97c84f"
+    },
+    {
+      "path": "artifacts/pwa-port/podcast-p1-b698958a8a49ec05-webkit-offline-final.log",
+      "bytes": 1237,
+      "sha256": "e5d5beae257d243ba05e35e4c6b2f50b938e4448e3a10876fe342a9941a3ef2e"
+    }
+  ]
+}

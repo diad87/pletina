@@ -231,13 +231,19 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     await context.setOffline(false)
     await ctx.goOffline(false)
   }
-  function observeProviderRequests() {
+  function observeProviderRequests({ captureBrowseIdentity = false } = {}) {
     const attempts = [], rows = new Map()
     const observe = request => {
       const url = new URL(request.url())
       if (/(?:^|\.)(?:youtube\.com|googlevideo\.com|audius\.co)$/.test(url.hostname))
         {
           const row = { host: url.hostname, path: url.pathname, type: request.resourceType(), failed: null, responseStatus: null, fromServiceWorker: null }
+          if (captureBrowseIdentity && url.hostname === 'music.youtube.com' && url.pathname === '/youtubei/v1/browse') {
+            let body
+            try { body = request.postDataJSON() } catch { body = null }
+            row.metadataBrowse = { method: request.method(), browseId: body?.browseId ?? null,
+              continuation: body?.continuation ?? null, clientName: body?.context?.client?.clientName ?? null }
+          }
           rows.set(request, row); attempts.push(row)
         }
     }
@@ -2218,12 +2224,18 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       const secondStart = events.findIndex(event => event.id === ids[1] && event.state === 'downloading')
       assert.ok(firstDone >= 0 && secondStart > firstDone, 'The podcast button must use the existing serial queue')
       const attempts = fixture.requests.slice(requestMark).filter(request => request.fixtureCase === 'p1-podcast-download')
-        .map(({ operation, videoId, clientName, playability, transfer, fetchMode, responseStatus, responseMime, bodySha256, injectedFailure }) => ({ operation,
+        .map(({ operation, host, videoId, clientName, queryIsExactId, searchParamsAbsent, playability, transfer, fetchMode, responseStatus, responseMime, bodySha256, injectedFailure }) => ({ operation,
           ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}),
+          ...(operation === 'session-bootstrap' ? { host, queryIsExactId, searchParamsAbsent } : {}),
           ...(transfer !== undefined ? { transfer } : {}), ...(fetchMode !== undefined ? { fetchMode, fetchModeObserved: fetchMode !== null } : {}),
           ...(responseStatus ? { responseStatus } : {}), ...(responseMime ? { responseMime } : {}),
           ...(bodySha256 ? { bodySha256 } : {}), ...(injectedFailure ? { injectedFailure } : {}) }))
       assert.deepEqual(attempts.filter(request => request.operation === 'unexpected-music-search'), [], 'An episode cannot be replaced by musical text matching')
+      for (const bootstrap of attempts.filter(request => request.operation === 'session-bootstrap')) {
+        assert.equal(bootstrap.host, 'www.youtube.com'); assert.equal(bootstrap.clientName, 'WEB')
+        assert.ok(episodes.some(episode => episode.videoId === bootstrap.videoId))
+        assert.equal(bootstrap.queryIsExactId, true); assert.equal(bootstrap.searchParamsAbsent, true)
+      }
       for (const [index, episode] of episodes.entries()) {
         const players = attempts.filter(request => request.operation === 'player' && request.videoId === episode.videoId)
         assert.ok(players.some(request => request.clientName === 'VISIONOS' && request.playability === 'UNPLAYABLE'))
@@ -2251,7 +2263,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       assert.doesNotMatch(JSON.stringify(record), /googlevideo|youtube-p1|signature|sha256|[?&](?:expire|sig)=/i)
       assert.deepEqual(await sourceChoiceSnapshot(), choicesBefore, 'Podcast resolution must not create or change music source associations')
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
-      networkObserver = observeProviderRequests()
+      networkObserver = observeProviderRequests({ captureBrowseIdentity: true })
       offline = await ctx.goOffline(true)
       const fixtureMark = fixture.requests.length, observedMark = networkObserver.attempts.length
       await reload()
@@ -2273,13 +2285,24 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       await tap('.mini button[aria-label="Reproducir"]'); value = await playing(episodes[0].title)
       assert.equal(active(value).local, true); assert.ok(active(value).time >= checkpoint.position - .5)
       const observations = networkObserver.attempts.slice(observedMark)
-      assert.deepEqual(observations.filter(request => request.type !== 'media'), [], 'Offline playback and checkpoint restoration cannot resolve remote sources')
+      // Restoring PodcastView refreshes that program's metadata before falling
+      // back to its saved detail. This is separate from resolving audio.
+      const metadataRequests = observations.filter(request => request.host === 'music.youtube.com' && request.path === '/youtubei/v1/browse' &&
+        request.type === 'fetch' && request.metadataBrowse?.method === 'POST' && request.metadataBrowse.browseId === media.youtubePodcast.browseId &&
+        request.metadataBrowse.continuation === null && request.metadataBrowse.clientName === 'WEB_REMIX')
+      assert.deepEqual(observations.filter(request => request.type !== 'media' && !metadataRequests.includes(request)), [],
+        'Offline audio must not search or request a player; only the exact restored program may attempt a metadata refresh')
+      for (const request of metadataRequests) assert.ok(request.failed && request.responseStatus === null,
+        'A metadata refresh must fail during the actual provider outage, without delivering a response')
+      for (const request of observations.filter(request => request.type === 'media')) assert.ok(
+        request.failed && request.responseStatus === null || request.fromServiceWorker === true && [200, 206].includes(request.responseStatus),
+        'Media aliases must fail offline or come from the local service worker')
       const delivered = fixture.requests.slice(fixtureMark).filter(request => /(?:^|\.)(?:youtube\.com|googlevideo\.com|audius\.co)$/.test(request.host) && !request.injectedFailure)
       assert.deepEqual(delivered, [], 'No provider body may arrive after the actual outage')
       assert.deepEqual(await sourceChoiceSnapshot(), choicesBefore)
       assert.deepEqual(await downloadState(), saved, 'Reload and checkpoint restoration must retain the validated copy without resurrecting the failed episode')
       return { episodeIds: ids, videoIds: episodes.map(episode => episode.videoId), events, attempts, database: saved,
-        persistedFields: Object.keys(record), checkpoint, resumed: value, nativeMediaObservations: observations,
+        persistedFields: Object.keys(record), checkpoint, resumed: value, nativeMediaObservations: observations, blockedProgramMetadataRequests: metadataRequests,
         networkMode: offline.mode, navigatorOfflineExpected: offline.navigatorOfflineExpected, physicalAirplaneModeClaimed: false,
         scope: 'Actual podcast DownloadButton and serial product queue; native ninety-second silent AAC decoder, CacheStorage, IDB, local reload/seek/checkpoint resume, controlled second transfer403 HTML rollback. Opaque size is declared; no product body SHA, musical identity, live-provider, long-episode, physical-phone or background-download claim.' }
     } finally {

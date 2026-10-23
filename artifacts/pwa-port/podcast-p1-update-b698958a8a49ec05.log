@@ -1,0 +1,13 @@
+Immutable source snapshot ready: b698958a8a49ec05
+cold installer A waits for B without ever requesting or caching the application ... passed
+cold primary open prepares waiting B and a failed preparation preserves A with a visible retry ... passed
+cold primary retry prepares all of B before activation, opens it automatically and reloads offline ... passed
+full A installs without application downloads; app opens on demand ... passed
+UI-created playlist and duplicate entries persist in real IndexedDB before update ... passed
+v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update ... passed
+B waits behind the real update banner without replacing A or eagerly caching its app ... passed
+a failed application preparation keeps A active and the playlist intact ... passed
+retry waits for the complete application before PREPARE_APPLICATION permits activation ... passed
+updated B reopens offline with playlist, podcast progress and identical downloaded/cache-route bytes ... passed
+existing cold full distribution migrates through explicit legacy update and the same scope ... passed
+Report: artifacts/pwa-port/update-e2e-b698958a8a49ec05.json; PASS

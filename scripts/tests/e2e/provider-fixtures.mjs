@@ -58,7 +58,7 @@ const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
 const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, p1Codecs, p1PrimaryRepair, p1Downloads, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
-  youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno',
+  youtubePodcast: { query: 'QA Podcast', browseId: 'MPSPqapodcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno',
     episodes: castVideos.map((videoId, i) => ({ videoId, title: 'Episodio QA YouTube ' + titles[i], duration: 90 })) } }
 const spotifyId = '0123456789ABCDEFGHIJKL'
 const spotify = { id: spotifyId, uri: 'spotify:playlist:' + spotifyId,
@@ -455,7 +455,13 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/browse')) return json(podcastDetail)
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
-        if (flags.p1PodcastDownloads) Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: 'unexpected-music-search' })
+        if (flags.p1PodcastDownloads) {
+          const sessionVideo = media.youtubePodcast.episodes.find(episode => episode.videoId === body.query)
+          const sessionBootstrap = url.hostname === 'www.youtube.com' && body.context?.client?.clientName === 'WEB' &&
+            !Object.hasOwn(body, 'params') && Boolean(sessionVideo)
+          Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: sessionBootstrap ? 'session-bootstrap' : 'unexpected-music-search',
+            ...(sessionBootstrap ? { videoId: sessionVideo.videoId, clientName: 'WEB', queryIsExactId: true, searchParamsAbsent: true } : {}) })
+        }
         let selectedTracks = selected(body.query || '')
         if (flags.p1Downloads && selectedTracks.length === 1 && p1DownloadTracks.some(track => track.id === selectedTracks[0].id)) {
           Object.assign(row, { fixtureCase: 'p1-download', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',

@@ -1,0 +1,142 @@
+✖ podcast P1 enables only the selected original video format for offline validation (9.7161ms)
+✔ podcast P1 rejects missing or invalid size and duration using the music policy (15.0783ms)
+✖ podcast P1 permits the exact size and duration boundaries shared with music (0.697ms)
+✖ podcast P1 refuses a different resolved video before playback or download (0.612ms)
+✖ podcast playback repair enables early P1 recovery for its exact video (0.6249ms)
+✖ podcast download renewal excludes early P1 recovery for its exact video (0.3689ms)
+✖ podcast downloaded playback skips extraction but a new download resolves only its original video (0.4969ms)
+✔ podcast P1 cancellation during extraction never returns late downloadable media (0.8261ms)
+✔ podcast RSS download resolution stays direct and never becomes P1 or catalog audio (0.5571ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 3
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 505.5617
+
+✖ failing tests:
+
+test at scripts\tests\web-audio.test.mjs:506:1
+✖ podcast P1 enables only the selected original video format for offline validation (9.7161ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      channel: 'El programa',
+      local: false,
+      source: {
+        download: {
+  +       allowed: false
+  -       allowed: true,
+  -       contentLength: 345678,
+  -       duration: 3599
+        },
+        expiresAt: 1792791502854,
+        id: '9RfVp-GhKfs',
+        provider: 'youtube-p1'
+      },
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:519:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { videoId: '9RfVp-GhKfs', url: 'https://example.googlevideo.com/audio/9RfVp-GhKfs', title: 'El episodio', channel: 'El programa', local: false, source: { provider: 'youtube-p1', id: '9RfVp-GhKfs', expiresAt: 1792791502854, download: [Object] } },
+    expected: { videoId: '9RfVp-GhKfs', url: 'https://example.googlevideo.com/audio/9RfVp-GhKfs', title: 'El episodio', channel: 'El programa', local: false, source: { provider: 'youtube-p1', id: '9RfVp-GhKfs', expiresAt: 1792791502854, download: [Object] } },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-audio.test.mjs:544:1
+✖ podcast P1 permits the exact size and duration boundaries shared with music (0.697ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   allowed: false
+  -   allowed: true,
+  -   contentLength: 1,
+  -   duration: 0.5
+    }
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:550:12)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { allowed: false },
+    expected: { allowed: true, contentLength: 1, duration: 0.5 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-audio.test.mjs:554:1
+✖ podcast P1 refuses a different resolved video before playback or download (0.612ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection.
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:559:5)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /vídeo.*episodio|episodio.*vídeo/i,
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-audio.test.mjs:565:39
+✖ podcast playback repair enables early P1 recovery for its exact video (0.6249ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:574:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-audio.test.mjs:565:39
+✖ podcast download renewal excludes early P1 recovery for its exact video (0.3689ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - false
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:574:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-audio.test.mjs:578:1
+✖ podcast downloaded playback skips extraction but a new download resolves only its original video (0.4969ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-audio.test.mjs:590:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
