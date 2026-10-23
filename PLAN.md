@@ -110,7 +110,7 @@ yt-dlp es un programa de escritorio en Python: no funciona en Android ni en iOS.
 
 #### Plan de evolución del motor propio
 
-La prioridad acordada es que **Propio siga como camino recomendado**, con el nivel rápido Rust sin sesión ni anuncios y la captura oficial como respaldo frente a cambios de la API. yt-dlp sigue predeterminado. El [plan de captura oficial](docs/plan-captura-youtube.md) recoge las decisiones y criterios nuevos, todos medidos sin Premium; Premium se usa sólo como referencia en un perfil separado y con acceso manual del usuario.
+La prioridad acordada es que **Propio siga como camino recomendado**, con el nivel rápido Rust sin sesión y la captura oficial como respaldo frente a cambios de la API, conservando el objetivo de no entregar anuncios. yt-dlp sigue predeterminado. El [plan de captura oficial](docs/plan-captura-youtube.md) recoge las decisiones y criterios nuevos, todos medidos sin Premium; Premium se usa sólo como referencia en un perfil separado y con acceso manual del usuario.
 
 La app puede publicarse con Oficial experimental antes de cumplir las metas de promoción; la progresiva nueva continúa limitada al banco y Propio conserva Legacy. El empaquetado local v25/API4 se comprobó sin firmar ni publicar. La integración con `origin/main` conserva Pletina 0.9.1, el canal `diad87/pletina-releases`, Spotify, podcasts, Android y SHA256SUMS/procedencia. Adapta la coordinación P1 a la cola y reproducción móvil de main; en móvil la captura oficial responde explícitamente que no está disponible. Publicar sólo el script no lleva la mejora Rust/lector a una app API1. Los [detalles](docs/informe-captura-youtube-2026-10-08.md) separan esta integración de la promoción y de un instalador listo para distribuir.
 

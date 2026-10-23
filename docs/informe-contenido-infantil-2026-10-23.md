@@ -137,6 +137,16 @@ La última revisión del banco detectó un contrato anterior roto al exigir el
 final a todas las URLs. Se corrigió con `nativeTail` explícito sólo en
 `native-direct`: los otros bancos conservan su conducta. Tres regresiones
 comprueban cola correcta, corrupta y prematura sin exigir buffer completo.
+La suite completa de `540521e` había quedado en 383/384 por ese contrato;
+`44f75e3` la cerró en 387/387, sin cambios en el código Rust del motor.
+
+El control posterior `20261023-101655-cd4f0059`, compilación limpia de
+`44f75e33aaf87981eb939b076b6729c926bd8486`, confirmó el plan con `nativeTail`
+real dentro de la app: 3/3 Native/251, sondas 206, saltos al 80 % y finales
+correctos. Resoluciones: 13834 / 13852 / 1316 ms; arranques de Audio posteriores:
+101 / 34 / 32 ms; salto más avance: 620 / 620 / 607 ms; colas: 523 / 542 / 522 ms.
+No repite búsqueda ni cambia los resultados de ese banco en `540521e`.
+Binario SHA-256 `288364beb3df04b2e35a8d9a2c3e22cab782b6defe3f8cd123006399e9c5941e`.
 
 Un harness del mismo `youtube_decoder.rs` y bundle pasó 6/6 pruebas de
 aislamiento y el fixture real en el AVD `musify-prueba`: Android 15/API 35,
@@ -166,6 +176,7 @@ no un sandbox del sistema operativo. Los datos en bruto permanecen en `.local`.
 | `20261023-100330-55014111` | `026ff64c985a81026dae3ca490014baf6a19f205f8b9c3f629c1982c1fc07187` |
 | `20261023-100445-6c00317a` | `17a548c74214e54524d4c1d10c607b78f5b4f722a8391f921a5ae3876ab06cf4` |
 | `20261023-100639-60b2875c` | `c21382afed7ef76c27408f07e95bb7789e580c332b8303374a713802a1c81431` |
+| `20261023-101655-cd4f0059` | `cdb904d717e033d73a0b7f04071a68c37034f2d569a5523cb40028b03c9d36ba` |
 
 Harness Android: ELF `753a2912e4509f87e659cd75724f943f89ae49b7ad0a6ed074df53eb02fad0b6`;
 fuente decoder `797f8e90db3026fb16ef654a4c33fb335960c9c5bd9a4552436e1375baf8b97a`;
@@ -177,7 +188,8 @@ habrá que integrar y validar esa base antes de preparar una publicación.
 
 Commits de código: `9098acb` (reproducción del fallo), `3a5f724` (decoder y ruta
 infantil), `d426c50` (original explícito en pistas etiquetadas), `540521e`
-(renovación SABR). Las evidencias completas permanecen ignoradas, fuera de Git.
+(renovación SABR), `44f75e3` (banco de cola nativa y validación). Las evidencias
+completas permanecen ignoradas, fuera de Git.
 Sin cambios en db.rs, downloads.rs, interfaz visual ni versiones/protocolo OTA.
 
 La mejora requiere una versión nueva de la app: receta/scripts no sustituyen
