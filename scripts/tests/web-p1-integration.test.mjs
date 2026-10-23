@@ -117,6 +117,144 @@ async function completeP1(yt, label = 'p1') {
   await flush()
 }
 
+function multipleAac() {
+  const response = player('best'), best = response.streamingData.adaptiveFormats[0]
+  response.streamingData.adaptiveFormats.push({ ...best, itag: 139, bitrate: 48000,
+    url: audioUrl('lower').replace('itag=140', 'itag=139') })
+  return response
+}
+
+for (const failure of ['network', 'timeout', 'duration']) test(`P1 tries another original AAC when the best metadata probe fails with ${failure}`, async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = multipleAac()
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 2, 'bounded metadata probes share one time window')
+  const [best, lower] = [...yt.frames]
+  assert.equal(yt.args(best).url, audioUrl('best'))
+  assert.equal(yt.args(lower).url, response.streamingData.adaptiveFormats[1].url)
+  yt.send({ duration: 209.16 }, lower)
+  await flush()
+  if (failure === 'duration') yt.send({ duration: 120 }, best)
+  else yt.send({ error: failure }, best)
+  const value = await pending
+  assert.equal(value.url, response.streamingData.adaptiveFormats[1].url)
+  assert.equal(value.videoId, id)
+  assert.equal(value.transport, 'p1')
+  assert.equal(yt.frames.length, 0, 'all probes unload before handing the locator to the player')
+  const requests = yt.history.length
+  assert.equal(await yt.stream(), value)
+  assert.equal(yt.history.length, requests, 'only the successful lower-quality locator enters the cache')
+})
+
+test('a valid higher-quality AAC wins and cancels a still-pending lower probe', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  assert.equal(yt.frames.length, 2)
+  yt.send({ duration: 209.16 }, yt.frames[0])
+  assert.equal((await pending).url, audioUrl('best'))
+  assert.equal(yt.frames.length, 0)
+})
+
+test('a lower AAC success waits for the preferred candidate instead of silently lowering quality', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  let settled = false; pending.finally(() => { settled = true }).catch(() => {})
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  const [best, lower] = [...yt.frames]
+  yt.send({ duration: 209.16 }, lower); await flush()
+  assert.equal(settled, false)
+  yt.send({ duration: 209.16 }, best)
+  assert.equal((await pending).url, audioUrl('best'))
+})
+
+test('an invalid AAC locator does not hide a healthy original AAC', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = multipleAac()
+  response.streamingData.adaptiveFormats[0].url = 'https://invalid.example/videoplayback'
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
+})
+
+test('many dubbed AAC encodings cannot use the four-candidate budget before the original', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = player('original'), original = response.streamingData.adaptiveFormats[0]
+  original.audioTrack = { displayName: 'Original', audioIsDefault: true }
+  response.streamingData.adaptiveFormats = [...Array.from({ length: 6 }, (_, index) => ({ ...original,
+    url: audioUrl('dub' + index), bitrate: 200000 + index, audioTrack: { displayName: 'English dubbed', audioIsDefault: true } })), original]
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().url, audioUrl('original'))
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, audioUrl('original'))
+})
+
+test('all AAC probes failing preserves the original error and caches none', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  const frames = [...yt.frames]
+  for (const frame of frames) yt.send({ error: 'network' }, frame)
+  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'unavailable')
+  assert.equal(yt.frames.length, 0)
+  const retry = await visionos(yt)
+  yt.result(player('retry-all-failed'))
+  assert.equal((await retry.pending).url, audioUrl('retry-all-failed'))
+})
+
+test('abort cancels all simultaneous probes and late metadata cannot enter the cache', async t => {
+  const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  const obsolete = [...yt.frames]
+  assert.equal(obsolete.length, 2)
+  controller.abort()
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  for (const frame of obsolete) yt.send({ duration: 209.16 }, frame)
+  const retry = await visionos(yt)
+  yt.result(player('after-multi-abort'))
+  assert.equal((await retry.pending).url, audioUrl('after-multi-abort'))
+})
+
+test('abort while unloading an unused probe prevents the chosen locator from being cached', async t => {
+  const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
+  await p1Request(yt); yt.result(multipleAac()); await flush()
+  const [best, lower] = [...yt.frames], postMessage = lower.contentWindow.postMessage
+  lower.contentWindow.postMessage = data => { controller.abort(); postMessage(data) }
+  yt.send({ duration: 209.16 }, best)
+  await assert.rejects(pending, { name: 'AbortError' })
+  assert.equal(yt.frames.length, 0)
+  const retry = await visionos(yt)
+  yt.result(player('after-cleanup-abort'))
+  assert.equal((await retry.pending).url, audioUrl('after-cleanup-abort'))
+})
+
+test('duplicate AAC URLs use only one metadata probe', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = multipleAac()
+  response.streamingData.adaptiveFormats[1].url = response.streamingData.adaptiveFormats[0].url
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1)
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, audioUrl('best'))
+})
+
+test('an expired highest-quality locator does not hide another fresh original AAC', async t => {
+  const yt = engine(t), { pending } = await visionos(yt)
+  await p1Request(yt)
+  const response = multipleAac()
+  response.streamingData.adaptiveFormats[0].url = audioUrl('expired').replace('expire=9999999999', 'expire=1')
+  yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
+  yt.send({ duration: 209.16 })
+  assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
+})
+
 test('VISIONOS success avoids all P1 imports and reuses only the in-memory stream', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
   yt.result(player())

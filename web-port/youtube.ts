@@ -332,6 +332,14 @@ function originalAudio(format: Row, allowImplicit: boolean): boolean {
   return content === 'original' || name.includes('original') || allowImplicit && (typeof track.audioIsDefault === 'boolean' ? track.audioIsDefault : true)
 }
 
+function explicitOriginalRequired(available: readonly unknown[]): boolean {
+  return available.some(value => {
+    const format = object(value)
+    return string(format.mimeType).startsWith('audio/') &&
+      ['audioTrack', 'xtags', 'language', 'languageCode'].some(key => format[key] != null)
+  })
+}
+
 export function parsePlayer(response: unknown, videoId: string, now = Date.now()): StreamInfo {
   const status = string(at(response, 'playabilityStatus', 'status'))
   if (status !== 'OK') {
@@ -344,8 +352,7 @@ export function parsePlayer(response: unknown, videoId: string, now = Date.now()
   const available = list(at(response, 'streamingData', 'adaptiveFormats')).map(object)
   // If any audio carries language/track metadata, default alone cannot establish
   // originality for the other encodings. Wholly untagged responses stay valid.
-  const requireExplicit = available.some(format => string(format.mimeType).startsWith('audio/') &&
-    ['audioTrack', 'xtags', 'language', 'languageCode'].some(key => format[key] != null))
+  const requireExplicit = explicitOriginalRequired(available)
   const formats = available
     .filter(format => string(format.mimeType).startsWith('audio/mp4') && typeof format.url === 'string' && originalAudio(format, !requireExplicit) &&
       (!Object.hasOwn(format, 'drmFamilies') || Array.isArray(format.drmFamilies) && format.drmFamilies.length === 0) &&
@@ -379,12 +386,52 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
     import('./youtube-p1'), import('./youtube-p1-probe'), import('./p1-recipe.generated'),
   ])
   checkAbort(signal)
-  const response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal)
+  const response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal,
+    (format, available) => originalAudio(format, !explicitOriginalRequired(available)))
   checkAbort(signal)
-  const info = parsePlayer(response, videoId)
-  await probeP1Audio(info.url, info.duration, signal)
+  const available = list(at(response, 'streamingData', 'adaptiveFormats')).map(object)
+  const candidates: StreamInfo[] = [], seen = new Set<string>()
+  let lastError: unknown
+  for (const format of available.filter(format => typeof format.url === 'string')
+    .sort((a, b) => (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0)).slice(0, 4)) {
+    // Keep every format's language/track metadata when testing one locator, so
+    // an excluded encoding can never turn an untagged track into the original.
+    const formats = available.map(value => {
+      const copy = { ...value }
+      if (value !== format) delete copy.url
+      return copy
+    })
+    try {
+      const info = parsePlayer({ ...object(response), streamingData: { ...object(at(response, 'streamingData')), adaptiveFormats: formats } }, videoId)
+      if (!seen.has(info.url)) { seen.add(info.url); candidates.push(info) }
+    } catch (error) { lastError = error }
+  }
+  if (!candidates.length) throw lastError ?? new YouTubeError('Este vídeo no ofrece audio MP4 compatible.', 'format')
+
+  // All bounded metadata probes share the same eight-second window. Await in
+  // quality order: a healthy best encoding starts immediately, while a failed
+  // encoding does not prevent another original AAC from being used.
+  const controller = new AbortController(), cancel = () => controller.abort(abortReason(signal))
+  signal?.addEventListener('abort', cancel, { once: true })
+  if (signal?.aborted) cancel()
+  const attempts = candidates.map(info => probeP1Audio(info.url, info.duration, controller.signal)
+    .then(() => ({ info }), error => ({ error })))
+  let selected: StreamInfo | undefined
+  try {
+    for (const attempt of attempts) {
+      const result = await attempt
+      checkAbort(signal)
+      if ('info' in result) { selected = result.info; break }
+      lastError = result.error
+    }
+    if (!selected) throw lastError
+  } finally {
+    controller.abort()
+    signal?.removeEventListener('abort', cancel)
+    await Promise.all(attempts)
+  }
   checkAbort(signal)
-  return { ...info, transport: 'p1' }
+  return { ...selected, transport: 'p1' }
 }
 
 export async function stream(videoId: string, refresh = false, signal?: AbortSignal): Promise<StreamInfo> {

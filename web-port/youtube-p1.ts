@@ -167,12 +167,18 @@ function decoderWorker() {
     scope.onmessage = null
     try {
       const { source, values } = event.data
+      if (!Array.isArray(values) || !values.length || values.length > 4) throw new Error('Invalid P1 decoder batch')
       const transform = compile('sig', 'n', source)
       for (const fn of [function () {}, async function () {}, function* () {}, async function* () {}])
         Object.defineProperty(Object.getPrototypeOf(fn), 'constructor', { value: undefined, writable: false, configurable: false })
       for (const name of ['eval', 'Function', 'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'Worker', 'SharedWorker', 'importScripts', 'indexedDB', 'caches', 'navigator', 'BroadcastChannel', 'MessageChannel', 'postMessage', 'close', 'setTimeout', 'setInterval', 'queueMicrotask', 'SharedArrayBuffer', 'Atomics', 'WebAssembly'])
         Object.defineProperty(scope, name, { value: undefined, writable: false, configurable: false })
-      const result = values.map((value: { signature: string | null; n: string | null }) => transform(value.signature, value.n))
+      // A provider transformation may reject one cipher while another encoding
+      // of the same recording is valid. Never reflect its error text or inputs.
+      const result = values.map((value: { signature: string | null; n: string | null }) => {
+        try { return { ok: true, value: transform(value.signature, value.n) } }
+        catch { return { ok: false } }
+      })
       send({ result })
     } catch { send({ error: true }) }
   }
@@ -240,7 +246,8 @@ function decode(script: string, values: P1Cipher[], signal: AbortSignal): Promis
 }
 
 /** Resolve a public P1 response using a caller-supplied ordinary browser POST. */
-export async function requestP1Player(videoId: string, request: (body: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>, recipe: P1Recipe, signal?: AbortSignal): Promise<unknown> {
+export async function requestP1Player(videoId: string, request: (body: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>, recipe: P1Recipe, signal?: AbortSignal,
+  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean): Promise<unknown> {
   checkAbort(signal)
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return fail('response', 'Invalid P1 video ID')
   const { context, playbackContext } = validateRecipe(recipe)
@@ -266,21 +273,44 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
     if (!record(response.streamingData) || hasDrm(response.streamingData) || !Array.isArray(response.streamingData.adaptiveFormats) || response.streamingData.adaptiveFormats.length > 128)
       return fail('format', 'P1 response has no unencrypted audio')
     const available: unknown[] = response.streamingData.adaptiveFormats
-    const formats = available.filter(value => record(value) && typeof value.mimeType === 'string' && /^audio\/mp4(?:\s*;|$)/i.test(value.mimeType))
-    if (!formats.length || formats.length > 4) return fail('format', 'P1 AAC candidate count is unsupported')
-    const parsed = formats.map(inspectP1Format), needDecode = parsed.filter(value => value.signature !== null || value.n !== null)
-    const results = needDecode.length ? await decode(recipe.script, needDecode, controller.signal) : []
+    const candidates: { format: Record<string, unknown>; cipher: P1Cipher }[] = []
+    // Global bounds stay strict, but one bad/dubbed/incompatible AAC must not
+    // invalidate another encoding. The caller's originality policy sees every
+    // format, including rejected and non-AAC language metadata.
+    for (const format of available) {
+      checkAbort(controller.signal)
+      if (!record(format) || typeof format.mimeType !== 'string' || !/^audio\/mp4(?:\s*;|$)/i.test(format.mimeType)) continue
+      try {
+        const cipher = inspectP1Format(format)
+        if (acceptFormat && acceptFormat(format, available) !== true) continue
+        candidates.push({ format, cipher })
+      } catch { checkAbort(controller.signal) }
+    }
+    const bitrate = (value: unknown) => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 0
+    const selected = candidates.sort((a, b) => bitrate(b.format.bitrate) - bitrate(a.format.bitrate)).slice(0, 4)
+    if (!selected.length) return fail('format', 'P1 response has no compatible AAC candidate')
+    const needDecode = selected.filter(({ cipher }) => cipher.signature !== null || cipher.n !== null)
+    const results = needDecode.length ? await decode(recipe.script, needDecode.map(({ cipher }) => cipher), controller.signal) : []
     checkAbort(controller.signal)
+    const approved = new Map<Record<string, unknown>, string>()
     let index = 0
-    let position = 0
+    for (const { format, cipher } of selected) {
+      if (cipher.signature === null && cipher.n === null) { approved.set(format, cipher.url); continue }
+      const decoded = results[index++]
+      // The worker's per-candidate envelope is not trusted. Invalid shapes and
+      // outputs reject only that candidate; no raw failure details are exposed.
+      if (!record(decoded) || decoded.ok !== true || !Object.hasOwn(decoded, 'value') ||
+          Object.keys(decoded).some(key => key !== 'ok' && key !== 'value')) continue
+      try { approved.set(format, applyP1Decoded(cipher, decoded.value)) }
+      catch { checkAbort(controller.signal) }
+    }
+    if (!approved.size) return fail('decoder', 'P1 decoder rejected every AAC candidate')
     response.streamingData.adaptiveFormats = available.map(format => {
       if (!record(format)) return format
       const result: Record<string, unknown> = { ...format }
-      if (formats.includes(format)) {
-        const cipher = parsed[position++]
-        result.url = cipher.signature !== null || cipher.n !== null ? applyP1Decoded(cipher, results[index++]) : cipher.url
-      } else delete result.url
-      delete result.signatureCipher; delete result.cipher
+      delete result.url; delete result.signatureCipher; delete result.cipher
+      const url = approved.get(format)
+      if (url) result.url = url
       return result
     })
     // Do not allow an unprocessed muxed/cipher format to bypass this AAC path.
