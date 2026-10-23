@@ -9,6 +9,8 @@ API4/captura v25, todavía sin aprobar la promoción; el
 
 ## Decisiones vigentes
 
+**Criterio vigente del usuario:** los 3,5 s son una referencia para el arranque frío; se acepta cualquier avance pequeño que sea medible y repetible, sin relajar las garantías de identidad, audio original, aislamiento ni límites. Cada mejora debe indicar qué etapa mide: un ahorro local o una llamada IPC menos no acredita por sí solo un menor arranque total. Este criterio no promueve Oficial ni cambia los resultados históricos.
+
 El 8 de octubre el usuario aprobó reducir el mantenimiento del camino rápido:
 descubrir la configuración que publica YouTube, renovar datos obsoletos sin
 publicar una receta y probar alternativas verificadas antes del respaldo.
@@ -144,6 +146,8 @@ La [séptima ronda](informe-arranque-frio-2026-10-23.md#ronda-7-decodificador-m�
 **Arranque frío, octava ronda:** un único A/B frío, anónimo y con búsqueda, no acredita mejora al conservar el contexto oficial del embed: mediana 3649,15→3950,70 ms, cuatro de seis pares peores. Los doce son Native/ID correcto y cero Legacy; sólo 1/6 y 2/6 cumplen 3500 ms, todos Pupu. `fa46e10` se retiró con `ab7f7ff`; código y binario de banco vuelven a R7. ALR, secundario publicado y cver no adelantaron el CDN en sus muestras; el estudio temporal no justifica un nuevo umbral o más sondas. El contexto previo fue inconcluso y conservó seis SABR sin repetirlos. Candidato: 248 Rust pasan en serial tras un timeout del decoder en el pase paralelo; no se amplían límites. No se repiten 30 canciones, archivos completos, Android, Premium o anuncios para un candidato descartado: las pruebas R7 siguen siendo históricas. Persiste la meta estable de 3,5 s, sin publicación. [Informe y seis pares](informe-arranque-frio-2026-10-23.md#ronda-8-diagnóstico-del-cdn-y-candidato-retirado).
 
 Las 30 habituales mantienen Native/IDs, mediana 737,45 ms; sólo se observa el prefijo. Los tres archivos completos vuelven a coincidir con referencias y FFmpeg termina con 0. Pasan 245 Rust/30 ignoradas, 436 JS, tipos y ambos checks Android sin avisos nuevos; no se mide rendimiento móvil. El diagnóstico de range query no mejora los 403 y rechaza un 200 sin Content-Range: se conserva el método y calendario actual. Oficial no se promueve y Legacy sigue como respaldo; requiere app reconstruida, sin cambio de PWA ni receta OTA.
+
+**Arranque frío, novena ronda (`4bace13`, `cb592e2`):** seis copias JSON evitadas; ahorro medio local de 29/128/176 µs por HTML en depuración. Descartar ambas precargas pasa de dos cancelaciones IPC a una, pendiente de medir en la app. La tanda habitual conserva 30 Native/IDs, cero Legacy y mediana 631,7 ms. La candidata fría usa Native 6/6, pero no acredita un menor total; se conservan el control con Legacy y el fallo de codificación del banco. [Resultados, límites y experimentos descartados](informe-arranque-frio-2026-10-23.md#ronda-9-mejoras-pequeñas-y-medición-del-total). Oficial sigue experimental.
 
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá

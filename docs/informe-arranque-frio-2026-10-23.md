@@ -1,6 +1,19 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 8: diagnóstico del CDN; candidato retirado, sin mejora acreditada.**
+**Ronda 9: menos trabajo local; todavía sin mejora acreditada del arranque total.**
+Se conservan dos cambios pequeños: seis copias JSON evitadas y una llamada
+IPC menos al descartar ambas precargas. Las 30 canciones habituales arrancan
+por Native, con los IDs esperados y cero Legacy: mediana 631,7 ms en una tanda,
+sin atribuir la diferencia frente a otras tandas a estos cambios. En frío, la
+candidata usa Native en sus seis intentos, con tiempos de 3438,7–5694,4 ms.
+El [cierre R9](#ronda-9-mejoras-pequeñas-y-medición-del-total) conserva también
+el control que recurrió a Legacy y el defecto de clasificación del banco.
+
+**Criterio vigente del usuario:** 3,5 s es una referencia. Se acepta cualquier
+mejora pequeña, medible y repetible, indicando su alcance y conservando las
+comprobaciones de identidad, audio original, aislamiento y límites.
+
+**Cierre anterior, ronda 8:**
 La nueva comparación fría de la app dio 3649,15 ms de mediana en R7 y
 3950,70 ms en el candidato con contexto oficial; cuatro de seis pares
 empeoraron. Sólo 1/6 y 2/6, respectivamente, cumplieron 3500 ms, siempre
@@ -1169,3 +1182,120 @@ Todas las pruebas nuevas fueron sin sesión. Premium y una campaña con anuncios
 no se ejercitaron en R8; no hay nuevas cifras de anuncios vistos, saltados o entregados.
 Los 28 tests sintéticos de los nuevos auditores y los contratos PowerShell pasaron;
 no se confunden con pruebas del producto ni con mediciones adicionales de app.
+
+## Ronda 9: mejoras pequeñas y medición del total
+
+### Cambios conservados
+
+`4bace13` mueve los seis valores permitidos de la configuración JSON ya poseída,
+en lugar de clonarlos. Se mantienen selección, igualdad completa ante conflictos,
+límites y errores. En los tres HTML anónimos conservados se evitan seis copias
+por documento; esos valores suman unos 41,1 KB serializados, que no son una
+medida de memoria asignada.
+
+Un ensayo Rust offline en **depuración** mide análisis JSON y validación completa:
+20 calentamientos y ocho bloques A/B/B/A/B/A/A/B, 250 operaciones por bloque,
+1000 por brazo y HTML. Las salidas coinciden. Estos tiempos corresponden a
+esa etapa local; no acreditan una ganancia release o del primer sonido.
+
+| HTML | Media anterior, µs | Media nueva, µs | Ahorro observado, µs |
+|---|---:|---:|---:|
+| Epoitaitaye | 1656,49 | 1627,47 | 29,03 |
+| Maite Zaitut! | 2046,05 | 1917,99 | 128,06 |
+| Pupu Eta Lore | 2003,27 | 1826,91 | 176,36 |
+
+Hay dispersión y rangos solapados, especialmente en Epo. La reducción de copias
+es determinista; no se generaliza ese ahorro temporal a toda reproducción.
+Datos y procedencia: `capture-bench.local/config-move-ab*.json.local`.
+El EXE privado de ese ensayo no se archivó: se conservan su hash, helper,
+fuentes y logs; esa evidencia no tiene una copia binaria inmutable.
+
+`cb592e2` agrupa la cancelación cuando **ambas plazas 0 y 1** pertenecen a
+precargas obsoletas: dos llamadas pasan a una usando el comando existente.
+La barrera de cancelación sigue precediendo a las nuevas resoluciones. Si una
+plaza se está promoviendo a canción actual, se conserva la cancelación individual.
+Las pruebas cubren respuestas pendientes, Audio preparados, cancelación anterior
+y promoción. Falta medir el ahorro temporal de este caso en la app; no interviene
+en el primer arranque con cola vacía. Sólo cambia coordinación de reproducción,
+sin modificación visual, de base de datos o descargas.
+
+### Una tanda fría, sin sesión
+
+Se ejecutaron exactamente doce procesos, dos por ID y binario, orden alternado,
+FreshDecoder y política CDN idéntica. Control R7 `a32092b`, EXE `500457c7…`;
+candidata `cb592e2`, EXE
+`7e710907547280552885640bbfb4b88bc04d48bf0ab5f7b662b8e7b8aee242ee`.
+Ambos son release Clang 18/O2, de fuentes limpias y con sus configuraciones guardadas.
+
+| Canción | Réplica | Control, ms | Candidata, ms | Ruta control/candidata |
+|---|---:|---:|---:|---|
+| Epoitaitaye | 1 | 3451,4 | 5393,6 | Native/Native |
+| Epoitaitaye | 2 | 5323,9 | 5694,4 | Native/Native |
+| Maite Zaitut! | 1 | 6481,0 | 5492,0 | Legacy/Native |
+| Maite Zaitut! | 2 | 4473,6 | 4637,5 | Native/Native |
+| Pupu Eta Lore | 1 | 3533,6 | 3438,7 | Native/Native |
+| Pupu Eta Lore | 2 | 3316,9 | 3441,1 | Native/Native |
+
+Son tiempos brutos desde búsqueda hasta `playing` de Audio silenciado; excluyen
+el arranque previo del proceso y no son mediciones acústicas. Los doce IDs son
+correctos; la candidata es Native 6/6 y Legacy 0/6. El primer control de Maite
+usó Legacy y no permite comparar el mismo camino. Cuatro de los otros cinco
+pares empeoraron. No se acredita reducción del total ni causalidad entre los
+cambios locales y esa variación. Los logs conservan 10/17 sondas lógicas
+terminadas y 5/11 respuestas 403 en control/candidata; ninguna 429. El inventario
+no cuenta todas las peticiones físicas ni permite atribuir rechazos a anuncios.
+
+La clasificación del runner contiene otro fallo: PowerShell 5.1 interpreta
+como ANSI el literal UTF-8 sin BOM que debía separar el umbral histórico de
+300 ms. Lo añade a `row.failures` y el auditor lo conserva; por eso la auditoría
+original marca **0/12 elegibles**. Los doce informes originales conservan ese
+fallo de latencia. No se alteran ni se repite la tanda para obtener aprobaciones.
+El diagnóstico offline con el parser real de PowerShell confirma la diferencia
+de caracteres. La tabla anterior es descriptiva, no una campaña aprobada.
+
+Índice: `round9-cold-search-20261023-222347-6fe0476e-index.json.local`;
+auditoría: `round9-app-audit.json.local`, SHA256
+`fb35ef1319ee21a067a1f08d9a79d362afdf9c66091c00071ee1152f0e4694bd`.
+El diagnóstico separado `round9-filter-encoding-diagnostic.json.local` mantiene
+la procedencia y los archivos usados intactos. Una copia nueva del runner
+construye el literal de forma compatible con PowerShell 5.1; su validación
+offline conserva también un fallo real diferente. No se ejecutó esa copia.
+
+### Regresión habitual y validación
+
+La única tanda de `real_albums`, en un proceso y sin sesión, conserva **30/30
+Native, 30 IDs esperados y cero Legacy**, mediana **631,7 ms**, rango
+451,9–970,5 ms. No hay huecos ni esperas observados en los prefijos. Las 30
+filas superan 300 ms y el banco termina con ese fallo; no es una aprobación
+de todas las metas. No son treinta arranques fríos ni escucha hasta EOF.
+Informe `result-20261023-222507-a56c3647.json`, vinculado al EXE de la candidata.
+La diferencia frente a la mediana histórica R7 no se atribuye a R9.
+
+Pasan 441 pruebas JavaScript, tipos con cero errores/avisos y 245 pruebas Rust
+en serial, con 30 de red ignoradas. Se conservan logs y hashes del código y EXE
+de pruebas en `round9-source-test-proof.json.local`. Los checks Android arm64 y
+x86_64 terminan con código 0 y sin avisos nuevos frente a su referencia. Se
+conservan dos fallos del helper: tratamiento de stderr y serialización excesiva
+de metadatos PowerShell. El helper corregido registra ambos checks en
+`round9-final-android-clang-vendor-checks-20261023-223222.json.local`;
+una compilación no mide rendimiento en dispositivo. No cambian `capture.js`, receta, `youtubei.ts`,
+versiones/API ni bundles del decoder. Requiere reconstruir la app.
+
+### Experimentos descartados y pendientes
+
+El historial simplificado del analizador conserva los resultados semánticos,
+pero las tres fuentes con ABBA completo pasan de 2112,3 a 2237,5 ms de preparación
+aislada. Se descarta. Se preservan 15 verificaciones exactas y un fallo inicial
+del runner por tratamiento de stderr, sin sustituirlo. El índice de timestamp
+también conserva salidas y límites, pero se aparca antes de perfilar: añadiría
+dos barridos completos para evitar unas pocas consultas sobre rangos cortos.
+Ningún prototipo pasa a las fuentes productivas.
+
+Se conserva el ahorro local y sigue pendiente reducir la espera del CDN,
+medir la cancelación agrupada en uso real y conseguir un arranque frío menor
+y más estable. Oficial conserva su estado experimental y Propio su respaldo.
+Premium, anuncios reales y archivos completos no se repitieron en esta ronda;
+no hay nuevas cifras de anuncios vistos, saltados, entregados o espera publicitaria.
+No se publica OTA, instalador, versión o etiqueta. La evidencia bruta continúa
+fuera de Git, bajo `capture-bench.local/`; el manifiesto final de esta ronda es
+`round9-final-manifest.json.local`.
