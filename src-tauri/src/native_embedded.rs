@@ -9,7 +9,9 @@ use std::sync::atomic::AtomicBool;
 const LIMIT: usize = 4 * 1024 * 1024;
 const TTL: Duration = Duration::from_secs(6 * 3600);
 const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(4);
-const PREFETCH_DELAY: Duration = Duration::from_millis(25);
+// No intentional wait: another worker may dispatch the first foreground GETs
+// before fast-path completion. Drop aborts work; it cannot unsend a request.
+const PREFETCH_DELAY: Duration = Duration::ZERO;
 static PREFETCH_CLAIMED: AtomicBool = AtomicBool::new(false);
 // Different embed experiments can publish different players for the same album.
 // Keep four prepared scripts (at most 8 MiB), never their temporary JS runtimes.
@@ -579,7 +581,7 @@ impl RawPrefetch {
     fn adopt(self, id: &str) -> Result<(RawGet, RawGet), Error> {
         if self.id != id { return Err(fail("PREFETCH_BINDING")); }
         let Self { mut watch, mut embed, .. } = self;
-        // If the fast path already failed, do not wait out the speculative delay.
+        // Admission still wakes pending tasks without restarting their GETs.
         watch.admit();
         embed.admit();
         raw_prefetch_diagnostic(id, "adopted", None);
@@ -2794,13 +2796,14 @@ mod tests {
 
     #[tokio::test]
     async fn raw_prefetch_drop_or_wrong_id_before_first_poll_starts_no_get() {
-        assert_eq!(PREFETCH_DELAY, Duration::from_millis(25));
+        assert_eq!(PREFETCH_DELAY, Duration::ZERO);
         let calls = Arc::new(AtomicU64::new(0));
         let fetch = || {
             let calls = calls.clone();
             async move { calls.fetch_add(1, Ordering::Relaxed); Ok("unused raw text".into()) }
         };
-        // This current-thread test drops ownership before either task is polled.
+        // Even with zero delay, this current-thread test drops ownership before
+        // either task is polled.
         // In production, another worker may already have dispatched its GET.
         drop(RawPrefetch::spawn(ID, fetch(), fetch()));
         let wrong = RawPrefetch::spawn(ID, fetch(), fetch());
