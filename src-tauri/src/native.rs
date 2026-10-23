@@ -195,6 +195,12 @@ pub fn set_recipe(text: &str) -> Result<(), String> {
 
 /// URL del audio de un vídeo, ya comprobada (YouTube no la va a cortar a mitad).
 pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
+    resolve_with_priority(video_id, refresh, false).await
+}
+
+/// Only interactive playback may spend the process's one speculative discovery.
+/// Downloads and diagnostic/direct callers keep the unhinted `resolve` path.
+pub async fn resolve_with_priority(video_id: &str, refresh: bool, foreground: bool) -> Result<Direct, Error> {
     let started = Instant::now();
     let mut visitor_ms = 0.0;
     let mut player_ms = 0.0;
@@ -208,6 +214,9 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     {
         return Ok(d.clone());
     }
+    // Raw public documents only. Success/cancellation drops both owned requests;
+    // caches, discovery parsing, player POSTs and the decoder remain untouched.
+    let prefetched = embedded::prefetch_first(video_id, foreground);
     // Primero la receta descargada y, si con ella no sale, la incluida.
     let recipes: Vec<Recipe> = DOWNLOADED
         .read()
@@ -316,7 +325,13 @@ pub async fn resolve(video_id: &str, refresh: bool) -> Result<Direct, Error> {
     // página pública confirma ese caso, la ruta incrustada descubre su cliente
     // y calcula firma/n con funciones del reproductor oficial en un motor aislado.
     // Conserva el mismo vídeo y exige audio original y rangos CDN verificados.
-    match tokio::time::timeout(Duration::from_secs(30), embedded::resolve(video_id)).await {
+    let fallback = async {
+        match prefetched {
+            Some(raw) => embedded::resolve_prefetched(video_id, Some(raw)).await,
+            None => embedded::resolve(video_id).await,
+        }
+    };
+    match tokio::time::timeout(Duration::from_secs(30), fallback).await {
         Ok(Ok(d)) => {
             if std::env::var_os("MUSIFY_BENCH").is_some() {
                 eprintln!(

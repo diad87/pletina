@@ -4,10 +4,13 @@ use super::*;
 use crate::youtube_decoder::{self, PreparedDecoder};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 const LIMIT: usize = 4 * 1024 * 1024;
 const TTL: Duration = Duration::from_secs(6 * 3600);
 const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(4);
+const PREFETCH_DELAY: Duration = Duration::from_millis(100);
+static PREFETCH_CLAIMED: AtomicBool = AtomicBool::new(false);
 // Different embed experiments can publish different players for the same album.
 // Keep four prepared scripts (at most 8 MiB), never their temporary JS runtimes.
 const MAX_DECODERS: usize = 4;
@@ -518,6 +521,102 @@ async fn get(http: &reqwest::Client, url: reqwest::Url) -> Result<String, Error>
     result
 }
 
+// A JoinHandle alone detaches on drop. These requests instead belong to the
+// resolve future, including while it awaits a result or the configuration lock.
+struct RawGet {
+    start: Option<tokio::sync::oneshot::Sender<()>>,
+    task: tokio::task::JoinHandle<Result<String, Error>>,
+}
+
+impl RawGet {
+    fn spawn<F>(at: tokio::time::Instant, fetch: F) -> Self
+    where F: Future<Output = Result<String, Error>> + Send + 'static {
+        let (start, admitted) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            tokio::select! {
+                _ = tokio::time::sleep_until(at) => {},
+                _ = admitted => {},
+            }
+            // Headers, decompression and the entire decoded body share this
+            // deadline from dispatch; adoption never restarts a timed-out GET.
+            tokio::time::timeout(DISCOVERY_TIMEOUT, fetch).await
+                .map_err(|_| fail("DISCOVERY_TIMEOUT"))?
+        });
+        Self { start: Some(start), task }
+    }
+
+    fn admit(&mut self) {
+        if let Some(start) = self.start.take() { let _ = start.send(()); }
+    }
+
+    async fn read(mut self) -> Result<String, Error> {
+        (&mut self.task).await.map_err(|_| fail("PREFETCH_CANCELLED"))?
+    }
+}
+
+impl Drop for RawGet {
+    fn drop(&mut self) { self.task.abort(); }
+}
+
+// At most two LIMIT-byte decoded documents (8 MiB logically, not an RSS bound).
+// No source JS, parsed config, decoder, POST or cache reservation lives here.
+pub(super) struct RawPrefetch {
+    id: String,
+    watch: RawGet,
+    embed: RawGet,
+}
+
+impl RawPrefetch {
+    fn spawn<W, E>(id: &str, watch: W, embed: E) -> Self
+    where
+        W: Future<Output = Result<String, Error>> + Send + 'static,
+        E: Future<Output = Result<String, Error>> + Send + 'static,
+    {
+        let at = tokio::time::Instant::now() + PREFETCH_DELAY;
+        Self { id: id.into(), watch: RawGet::spawn(at, watch), embed: RawGet::spawn(at, embed) }
+    }
+
+    fn adopt(self, id: &str) -> Result<(RawGet, RawGet), Error> {
+        if self.id != id { return Err(fail("PREFETCH_BINDING")); }
+        let Self { mut watch, mut embed, .. } = self;
+        // If the fast path already failed, do not wait out the speculative delay.
+        watch.admit();
+        embed.admit();
+        raw_prefetch_diagnostic(id, "adopted", None);
+        Ok((watch, embed))
+    }
+}
+
+fn claim_prefetch(id: &str, foreground: bool, claimed: &AtomicBool) -> bool {
+    foreground && valid_id(id)
+        && claimed.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed).is_ok()
+}
+
+fn raw_prefetch_diagnostic(id: &str, phase: &'static str, role: Option<&'static str>) {
+    if diagnostic_enabled() {
+        // Reservation may now initialize the shared trace clock before the fast
+        // client. Compare stage durations, not that shifted origin, across builds.
+        eprintln!("[native-raw-prefetch] {}", json!({"id":id,"phase":phase,"role":role,
+            "epoch":"first-native-trace-event","atMs":trace_time()}));
+    }
+}
+
+pub(super) fn prefetch_first(id: &str, foreground: bool) -> Option<RawPrefetch> {
+    if !claim_prefetch(id, foreground, &PREFETCH_CLAIMED) { return None; }
+    raw_prefetch_diagnostic(id, "reserved", None);
+    let watch_id = id.to_owned();
+    let embed_id = id.to_owned();
+    Some(RawPrefetch::spawn(id, async move {
+        raw_prefetch_diagnostic(&watch_id, "dispatched", Some("watch"));
+        let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
+        get(http, reqwest::Url::parse(&format!("https://www.youtube.com/watch?v={watch_id}&hl=en")).unwrap()).await
+    }, async move {
+        raw_prefetch_diagnostic(&embed_id, "dispatched", Some("embed"));
+        let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
+        get(http, reqwest::Url::parse(&format!("https://www.youtube.com/embed/{embed_id}?html5=1")).unwrap()).await
+    }))
+}
+
 // Parse JSON values, never evaluate an assignment or arbitrary HTML/script text.
 fn json_after(text: &str, marker: &str) -> Result<Vec<Value>, Error> {
     if text.len() > LIMIT {
@@ -837,12 +936,29 @@ struct DiscoveredConfig {
     renewed: bool,
 }
 
-async fn configuration(http: &reqwest::Client, id: &str) -> Result<DiscoveredConfig, Error> {
-    configuration_bounded(&CONFIGS, id, Instant::now() + DISCOVERY_TIMEOUT, |_| async {
-        get(
-            http,
-            reqwest::Url::parse(&format!("https://www.youtube.com/embed/{id}?html5=1")).unwrap(),
-        ).await
+async fn configuration(http: &reqwest::Client, id: &str, prefetched: Option<RawGet>) -> Result<DiscoveredConfig, Error> {
+    // The existing admission/lock/parse-retry budget stays four seconds. A body
+    // completed before its transport deadline can wait for admission; a failed
+    // prefetched GET is not replaced. Only the existing parse retry may fetch #2.
+    configuration_prefetched(&CONFIGS, id, Instant::now() + DISCOVERY_TIMEOUT, prefetched, |_| async {
+        get(http, reqwest::Url::parse(&format!("https://www.youtube.com/embed/{id}?html5=1")).unwrap()).await
+    }).await
+}
+
+async fn configuration_prefetched<F, FF>(
+    cache: &tokio::sync::Mutex<ConfigCache>, id: &str, deadline: Instant,
+    mut prefetched: Option<RawGet>, mut fetch: F,
+) -> Result<DiscoveredConfig, Error>
+where F: FnMut(u8) -> FF, FF: Future<Output = Result<String, Error>> {
+    configuration_bounded(cache, id, deadline, |attempt| {
+        let first = if attempt == 1 { prefetched.take() } else { None };
+        let fresh = if first.is_none() { Some(fetch(attempt)) } else { None };
+        async move {
+            match first {
+                Some(raw) => raw.read().await,
+                None => fresh.expect("a non-prefetched attempt owns its fetch").await,
+            }
+        }
     }).await
 }
 
@@ -887,8 +1003,10 @@ where
     failure_cache(&mut cache.failed, id)?;
     let mut attempt = 1;
     let value = loop {
-        // Transport/status failures do not enter the parser recovery. Both GETs
-        // share the original four-second budget, including the cache lock.
+        // Transport/status failures do not enter parser recovery. The admission
+        // budget covers the lock, waiting, parsing and any second GET. A raw
+        // prefetched first GET additionally keeps its earlier dispatch deadline;
+        // these windows are distinct, not four seconds total from that dispatch.
         let html = fetch(attempt).await?;
         if Instant::now() >= deadline {
             return Err(fail("DISCOVERY_TIMEOUT"));
@@ -2208,28 +2326,39 @@ fn audio_candidates(formats: &[Value]) -> Vec<Value> {
 
 /// Only reached after the direct fast clients failed. The caller supplies the total deadline.
 pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
-    if !diagnostic_enabled() {
-        return resolve_inner(video_id).await;
-    }
-    let trace = NEXT_RESOLVE_TRACE.fetch_add(1, Ordering::Relaxed);
-    RESOLVE_TRACE.scope(trace, resolve_inner(video_id)).await
+    resolve_prefetched(video_id, None).await
 }
 
-async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
+pub(super) async fn resolve_prefetched(video_id: &str, prefetched: Option<RawPrefetch>) -> Result<Direct, Error> {
+    if !diagnostic_enabled() {
+        return resolve_inner(video_id, prefetched).await;
+    }
+    let trace = NEXT_RESOLVE_TRACE.fetch_add(1, Ordering::Relaxed);
+    RESOLVE_TRACE.scope(trace, resolve_inner(video_id, prefetched)).await
+}
+
+async fn resolve_inner(video_id: &str, prefetched: Option<RawPrefetch>) -> Result<Direct, Error> {
     if !valid_id(video_id) {
         return Err(fail("ID"));
     }
     let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
+    let (watch, embed) = match prefetched {
+        Some(raw) => { let (watch, embed) = raw.adopt(video_id)?; (Some(watch), Some(embed)) },
+        None => (None, None),
+    };
     let discovery_started = Instant::now();
     let (admit, admission) = tokio::sync::oneshot::channel();
     let (_, coordinated) = tokio::try_join!(
         async {
-            let watch = get(
+            let watch = match watch {
+                Some(raw) => raw.read().await?,
+                None => get(
                 http,
                 reqwest::Url::parse(&format!("https://www.youtube.com/watch?v={video_id}&hl=en"))
                     .unwrap(),
             )
-            .await?;
+            .await?,
+            };
             let started = Instant::now();
             let result = watch_player(&watch, video_id).map(|_| ());
             stage_timing(video_id, "watch-identity", started);
@@ -2241,7 +2370,7 @@ async fn resolve_inner(video_id: &str) -> Result<Direct, Error> {
             Ok::<_, Error>(())
         },
         async {
-            let discovered = configuration(http, video_id).await?;
+            let discovered = configuration(http, video_id, embed).await?;
             let config = discovered.config;
             let (early, notice) = tokio::sync::oneshot::channel();
             let previous = config.clone();
@@ -2639,6 +2768,181 @@ mod tests {
 
     fn cfg() -> Config {
         config(&format!("ytcfg.set({});", config_value())).unwrap()
+    }
+
+    #[test]
+    fn raw_prefetch_claim_is_foreground_valid_and_process_once_under_contention() {
+        let claimed = AtomicBool::new(false);
+        assert!(!claim_prefetch(ID, false, &claimed));
+        assert!(!claim_prefetch("not/a/video", true, &claimed));
+        assert!(!claimed.load(Ordering::Relaxed));
+        let winners = AtomicU64::new(0);
+        std::thread::scope(|scope| {
+            for i in 0..16 {
+                let claimed = &claimed;
+                let winners = &winners;
+                scope.spawn(move || {
+                    if claim_prefetch(if i % 2 == 0 { ID } else { "WtTRMAoN2Fw" }, true, claimed) {
+                        winners.fetch_add(1, Ordering::Relaxed);
+                    }
+                });
+            }
+        });
+        assert_eq!(winners.load(Ordering::Relaxed), 1);
+        assert!(!claim_prefetch(ID, true, &claimed));
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_fast_success_or_wrong_id_before_delay_starts_no_get() {
+        assert_eq!(PREFETCH_DELAY, Duration::from_millis(100));
+        let calls = Arc::new(AtomicU64::new(0));
+        let fetch = || {
+            let calls = calls.clone();
+            async move { calls.fetch_add(1, Ordering::Relaxed); Ok("unused raw text".into()) }
+        };
+        // A fast success drops ownership before the timer, without polling GET.
+        drop(RawPrefetch::spawn(ID, fetch(), fetch()));
+        let wrong = RawPrefetch::spawn(ID, fetch(), fetch());
+        assert!(matches!(wrong.adopt("WtTRMAoN2Fw"), Err(Error::Failed(code))
+            if code == "NATIVE_EMBEDDED_PREFETCH_BINDING"));
+        for _ in 0..4 { tokio::task::yield_now().await; }
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+    }
+
+    struct RawDrop(Arc<AtomicU64>);
+    impl Drop for RawDrop {
+        fn drop(&mut self) { self.0.fetch_add(1, Ordering::Relaxed); }
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_adoption_is_immediate_and_does_not_wait_for_both_documents() {
+        let (begun, started) = tokio::sync::oneshot::channel();
+        let dropped = Arc::new(AtomicU64::new(0));
+        let watch_drop = dropped.clone();
+        // Far-future timers make this assertion independent of machine speed.
+        let at = tokio::time::Instant::now() + Duration::from_secs(60);
+        let raw = RawPrefetch { id: ID.into(),
+            watch: RawGet::spawn(at, async move {
+                let _guard = RawDrop(watch_drop);
+                let _ = begun.send(());
+                std::future::pending().await
+            }),
+            embed: RawGet::spawn(at, async { Ok("independent embed".into()) }),
+        };
+        let (watch, embed) = raw.adopt(ID).unwrap();
+        assert_eq!(tokio::time::timeout(Duration::from_secs(1), embed.read()).await.unwrap().unwrap(), "independent embed");
+        started.await.unwrap();
+        assert_eq!(dropped.load(Ordering::Relaxed), 0, "watch is still in flight");
+        drop(watch);
+        tokio::task::yield_now().await;
+        assert_eq!(dropped.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_cancelling_owner_aborts_both_active_reads() {
+        let dropped = Arc::new(AtomicU64::new(0));
+        let begun = Arc::new(AtomicU64::new(0));
+        let fetch = || {
+            let dropped = dropped.clone();
+            let begun = begun.clone();
+            async move {
+                let _guard = RawDrop(dropped);
+                begun.fetch_add(1, Ordering::Relaxed);
+                std::future::pending::<Result<String, Error>>().await
+            }
+        };
+        let (watch, embed) = RawPrefetch::spawn(ID, fetch(), fetch()).adopt(ID).unwrap();
+        let owner = tokio::spawn(async move { tokio::try_join!(watch.read(), embed.read()) });
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while begun.load(Ordering::Relaxed) != 2 { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        owner.abort();
+        assert!(owner.await.unwrap_err().is_cancelled());
+        tokio::task::yield_now().await;
+        assert_eq!(dropped.load(Ordering::Relaxed), 2);
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_loopback_handoff_uses_get_once_and_preserves_only_parser_retry() {
+        let mut invalid = config_value();
+        invalid["VISITOR_DATA"] = json!("");
+        let (url, server) = local_sequence(vec![
+            response(200, "", format!("ytcfg.set({invalid});").as_bytes()),
+            response(200, "", format!("ytcfg.set({});", config_value()).as_bytes()),
+        ]);
+        let http = local_http();
+        let first_http = http.clone();
+        let first_url = url.clone();
+        let mut raw = RawGet::spawn(tokio::time::Instant::now(), async move {
+            text_response(first_http.get(first_url).send().await.unwrap()).await
+        });
+        raw.admit();
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let fresh = AtomicU64::new(0);
+        let result = configuration_prefetched(&cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            Some(raw), |attempt| {
+                assert_eq!(attempt, 2, "the prefetched response is the whole first attempt");
+                fresh.fetch_add(1, Ordering::Relaxed);
+                async { text_response(http.get(&url).send().await.unwrap()).await }
+            }).await.unwrap();
+        assert!(result.renewed, "parser retry consumes the existing SABR renewal");
+        assert_eq!(fresh.load(Ordering::Relaxed), 1);
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(requests.iter().all(|r| r.starts_with("GET / HTTP/1.1")));
+        assert!(requests.iter().all(|r| !r.to_ascii_lowercase().contains("cookie:")));
+        assert!(cache.lock().await.failed.is_empty());
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_errors_keep_transport_caps_and_do_not_refetch() {
+        for (raw_http, expected) in [
+            (response(403, "", b"private diagnostic must not escape"), "HTTP_STATUS"),
+            (response(429, "", b"not configuration"), "HTTP_STATUS"),
+            (response(200, "", &[0xff]), "UTF8"),
+            (format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n", LIMIT + 1).into_bytes(), "SIZE"),
+        ] {
+            let (url, server) = local(raw_http);
+            let raw = RawGet::spawn(tokio::time::Instant::now(), async move {
+                text_response(local_http().get(url).send().await.unwrap()).await
+            });
+            let cache = tokio::sync::Mutex::new(ConfigCache::default());
+            let result = configuration_prefetched(&cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+                Some(raw), |_| async { panic!("transport/body errors cannot start another GET") }).await;
+            assert!(matches!(result, Err(Error::Failed(code)) if code == format!("NATIVE_EMBEDDED_{expected}")));
+            server.join().unwrap();
+            assert!(cache.lock().await.entries.is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_cached_configuration_drops_unused_body_without_fetch() {
+        let cache = cache_with(Arc::new(cfg()));
+        let calls = Arc::new(AtomicU64::new(0));
+        let copy = calls.clone();
+        let raw = RawGet::spawn(tokio::time::Instant::now() + Duration::from_secs(60), async move {
+            copy.fetch_add(1, Ordering::Relaxed);
+            Ok("not parsed".into())
+        });
+        let result = configuration_prefetched(&cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            Some(raw), |_| async { panic!("cached config must not fetch") }).await.unwrap();
+        assert!(!result.renewed);
+        tokio::task::yield_now().await;
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn raw_prefetch_dispatch_timeout_is_not_restarted_at_adoption() {
+        let raw = RawGet::spawn(tokio::time::Instant::now(), std::future::pending());
+        // Await completion of the original deadline without consuming its result.
+        tokio::time::timeout(DISCOVERY_TIMEOUT + Duration::from_secs(1), async {
+            while !raw.task.is_finished() { tokio::time::sleep(Duration::from_millis(10)).await; }
+        }).await.unwrap();
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let result = configuration_prefetched(&cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            Some(raw), |_| async { panic!("expired prefetch must not restart transport") }).await;
+        assert!(matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_DISCOVERY_TIMEOUT"));
+        assert!(cache.lock().await.entries.is_empty());
     }
 
     fn cipher_value(url: &str) -> Value {

@@ -87,7 +87,7 @@ pub async fn stream_with_admission(ytdlp: &YtDlp, video_id: &str, refresh: bool,
 
 /// Motor propio: el nivel rápido y, si falla por lo que sea, el reproductor oficial.
 async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>) -> Result<VideoInfo, String> {
-    match native::resolve(video_id, refresh).await {
+    match native::resolve_with_priority(video_id, refresh, foreground).await {
         Ok(d) => Ok(VideoInfo { url: d.url, title: d.title, channel: d.channel, duration: d.duration }),
         Err(_e) => {
             #[cfg(debug_assertions)]
