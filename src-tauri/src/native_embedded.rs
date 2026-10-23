@@ -2152,11 +2152,105 @@ fn apply_decoded(
     Ok(url.into())
 }
 
-async fn strict_probe(http: &reqwest::Client, url: &str, length: u64) -> Result<(), Error> {
-    strict_probe_request(http.get(url), length).await
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+enum CdnIoFinal { Complete, Error, Cancelled }
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CdnIoRecord {
+    id: String,
+    attempt: u32,
+    at_ms: f64,
+    elapsed_ms: f64,
+    headers_ms: Option<f64>,
+    // Headers to termination, including validation and body reading; not pure I/O.
+    body_ms: Option<f64>,
+    status: Option<u16>,
+    version: Option<&'static str>,
+    bytes: u64,
+    #[serde(rename = "final")]
+    outcome: CdnIoFinal,
 }
 
-async fn strict_probe_request(request: reqwest::RequestBuilder, length: u64) -> Result<(), Error> {
+struct CdnIoTrace {
+    record: CdnIoRecord,
+    started: Instant,
+    headers_at: Option<Instant>,
+    #[cfg(test)]
+    sink: Option<Arc<std::sync::Mutex<Vec<CdnIoRecord>>>>,
+    #[cfg(test)]
+    headers_observed: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl CdnIoTrace {
+    fn new(enabled: bool, id: &str, attempt: u32, at_ms: f64) -> Option<Self> {
+        if !enabled || !valid_id(id) || !at_ms.is_finite() || at_ms < 0.0 {
+            return None;
+        }
+        Some(Self {
+            record: CdnIoRecord {
+                id: id.into(), attempt, at_ms, elapsed_ms: 0.0,
+                headers_ms: None, body_ms: None, status: None, version: None,
+                bytes: 0, outcome: CdnIoFinal::Cancelled,
+            },
+            started: Instant::now(), headers_at: None,
+            #[cfg(test)]
+            sink: None,
+            #[cfg(test)]
+            headers_observed: None,
+        })
+    }
+
+    fn headers(&mut self, response: &reqwest::Response) {
+        let now = Instant::now();
+        self.headers_at = Some(now);
+        self.record.headers_ms = Some(now.duration_since(self.started).as_secs_f64() * 1000.0);
+        self.record.status = Some(response.status().as_u16());
+        self.record.version = Some(match response.version() {
+            reqwest::Version::HTTP_09 => "http0.9",
+            reqwest::Version::HTTP_10 => "http1.0",
+            reqwest::Version::HTTP_11 => "http1.1",
+            reqwest::Version::HTTP_2 => "http2",
+            reqwest::Version::HTTP_3 => "http3",
+            _ => "other",
+        });
+        #[cfg(test)]
+        if let Some(sender) = self.headers_observed.take() { let _ = sender.send(()); }
+    }
+}
+
+impl Drop for CdnIoTrace {
+    fn drop(&mut self) {
+        let now = Instant::now();
+        self.record.elapsed_ms = now.duration_since(self.started).as_secs_f64() * 1000.0;
+        self.record.body_ms = self.headers_at.map(|at| now.duration_since(at).as_secs_f64() * 1000.0);
+        #[cfg(test)]
+        if let Some(sink) = &self.sink {
+            // Test-only sink avoids process-global BENCH changes and captures cancellation.
+            if let Ok(mut records) = sink.lock() {
+                records.push(self.record.clone());
+            }
+            return;
+        }
+        if let Ok(value) = serde_json::to_string(&self.record) {
+            use std::io::Write;
+            let _ = writeln!(std::io::stderr().lock(), "[native-cdn-io] {value}");
+        }
+    }
+}
+
+#[cfg(test)]
+async fn strict_probe(http: &reqwest::Client, url: &str, length: u64) -> Result<(), Error> {
+    strict_probe_request(http.get(url), length, None).await
+}
+
+async fn strict_probe_request(
+    request: reqwest::RequestBuilder,
+    length: u64,
+    mut trace: Option<CdnIoTrace>,
+) -> Result<(), Error> {
+    let result = async {
     if length < 1024 {
         return Err(fail("LENGTH"));
     }
@@ -2169,6 +2263,7 @@ async fn strict_probe_request(request: reqwest::RequestBuilder, length: u64) -> 
         .send()
         .await
         .map_err(|_| fail("CDN_TRANSPORT"))?;
+    if let Some(trace) = &mut trace { trace.headers(&response); }
     if response.status().as_u16() != 206 {
         return Err(fail(&format!("CDN_HTTP_{}", response.status().as_u16())));
     }
@@ -2200,6 +2295,7 @@ async fn strict_probe_request(request: reqwest::RequestBuilder, length: u64) -> 
     let mut received = 0;
     while let Some(chunk) = response.chunk().await.map_err(|_| fail("CDN_TRANSPORT"))? {
         received += chunk.len() as u64;
+        if let Some(trace) = &mut trace { trace.record.bytes = received; }
         if received > expected {
             return Err(fail("CDN_RANGE"));
         }
@@ -2208,6 +2304,11 @@ async fn strict_probe_request(request: reqwest::RequestBuilder, length: u64) -> 
         return Err(fail("CDN_TRUNCATED"));
     }
     Ok(())
+    }.await;
+    if let Some(trace) = &mut trace {
+        trace.record.outcome = if result.is_ok() { CdnIoFinal::Complete } else { CdnIoFinal::Error };
+    }
+    result
 }
 
 fn transient_cdn(error: &Error) -> bool {
@@ -2764,7 +2865,10 @@ async fn resolve_config(
                     } else {
                         0.0
                     };
-                    let result = strict_probe(http, url, length).await;
+                    let trace = CdnIoTrace::new(
+                        std::env::var_os("MUSIFY_BENCH").is_some(), video_id, attempt, at_ms,
+                    );
+                    let result = strict_probe_request(http.get(url), length, trace).await;
                     if std::env::var_os("MUSIFY_BENCH").is_some() {
                         eprintln!("[native-cdn-attempt] {}", json!({"id":video_id,"atMs":at_ms,
                             "attempt":attempt,"startedMs":probe_started.duration_since(probe_epoch).as_secs_f64()*1000.0,
@@ -4474,6 +4578,140 @@ mod tests {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap()
+    }
+
+    fn io_trace_fixture() -> (
+        CdnIoTrace,
+        Arc<std::sync::Mutex<Vec<CdnIoRecord>>>,
+        tokio::sync::oneshot::Receiver<()>,
+    ) {
+        let records = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let (sender, receiver) = tokio::sync::oneshot::channel();
+        let mut trace = CdnIoTrace::new(true, ID, 1, 12.5).unwrap();
+        trace.sink = Some(records.clone());
+        trace.headers_observed = Some(sender);
+        (trace, records, receiver)
+    }
+
+    #[test]
+    fn io_trace_is_disabled_without_bench_and_has_only_closed_fields() {
+        assert!(CdnIoTrace::new(false, ID, 1, 0.0).is_none());
+        for id in ["https://private.invalid/path?token=secret", "private-account"] {
+            assert!(CdnIoTrace::new(true, id, 1, 0.0).is_none());
+        }
+        assert!(CdnIoTrace::new(true, ID, 1, f64::NAN).is_none());
+        let (trace, records, _) = io_trace_fixture();
+        drop(trace);
+        let records = records.lock().unwrap();
+        let value = serde_json::to_value(&records[0]).unwrap();
+        let mut keys: Vec<_> = value.as_object().unwrap().keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["atMs", "attempt", "bodyMs", "bytes", "elapsedMs", "final", "headersMs", "id", "status", "version"]);
+        assert_eq!(value["final"], "cancelled");
+        assert!(value["headersMs"].is_null() && value["bodyMs"].is_null());
+        assert!(value["status"].is_null() && value["version"].is_null());
+        assert_eq!(value["bytes"], 0);
+    }
+
+    #[tokio::test]
+    async fn io_trace_keeps_empty_403_connection_reusable_for_strict206() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/audio", listener.local_addr().unwrap());
+        let worker = thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+            let mut requests = Vec::new();
+            for index in 0..2 {
+                let mut request = Vec::new();
+                while !request.windows(4).any(|v| v == b"\r\n\r\n") {
+                    let mut bytes = [0; 1024];
+                    let count = socket.read(&mut bytes).unwrap();
+                    assert!(count > 0, "both requests must use the same connection");
+                    request.extend_from_slice(&bytes[..count]);
+                }
+                requests.push(request);
+                if index == 0 {
+                    socket.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n").unwrap();
+                } else {
+                    socket.write_all(&response(206,
+                        "Content-Range: bytes 6553-7576/8192\r\nContent-Type: audio/webm\r\n",
+                        &[0; 1024])).unwrap();
+                }
+                socket.flush().unwrap();
+            }
+            requests
+        });
+        let http = local_http();
+        let (trace, failed, _) = io_trace_fixture();
+        let error = strict_probe_request(http.get(&url), 8192, Some(trace)).await.unwrap_err();
+        assert!(matches!(error, Error::Failed(code) if code == "NATIVE_EMBEDDED_CDN_HTTP_403"));
+        let (trace, succeeded, _) = io_trace_fixture();
+        strict_probe_request(http.get(&url), 8192, Some(trace)).await.unwrap();
+        let requests = worker.join().unwrap();
+        assert_eq!(requests[0], requests[1]);
+        for (records, status, outcome, bytes) in [
+            (failed, 403, "error", 0), (succeeded, 206, "complete", 1024),
+        ] {
+            let records = records.lock().unwrap();
+            assert_eq!(records.len(), 1);
+            let record = serde_json::to_value(&records[0]).unwrap();
+            assert_eq!(record["status"], status);
+            assert_eq!(record["version"], "http1.1");
+            assert_eq!(record["final"], outcome);
+            assert_eq!(record["bytes"], bytes);
+            assert!(record["headersMs"].is_number() && record["bodyMs"].is_number());
+        }
+    }
+
+    #[tokio::test]
+    async fn io_trace_distinguishes_slow_body_truncation_and_cancellation_after_headers() {
+        for outcome in ["complete", "error", "cancelled"] {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let url = format!("http://{}/audio", listener.local_addr().unwrap());
+            let (release, wait) = std::sync::mpsc::channel();
+            let worker = thread::spawn(move || {
+                let (mut socket, _) = listener.accept().unwrap();
+                socket.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
+                let mut request = Vec::new();
+                while !request.windows(4).any(|v| v == b"\r\n\r\n") {
+                    let mut bytes = [0; 1024];
+                    let count = socket.read(&mut bytes).unwrap();
+                    assert!(count > 0);
+                    request.extend_from_slice(&bytes[..count]);
+                }
+                socket.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 1024\r\nContent-Range: bytes 6553-7576/8192\r\nContent-Type: audio/webm\r\nConnection: close\r\n\r\n").unwrap();
+                socket.write_all(&[0; 4]).unwrap();
+                socket.flush().unwrap();
+                let finish = wait.recv_timeout(Duration::from_secs(3)).unwrap();
+                if finish { socket.write_all(&[0; 1020]).unwrap(); }
+            });
+            let (trace, records, headers) = io_trace_fixture();
+            let http = local_http();
+            let probe = tokio::spawn(async move {
+                strict_probe_request(http.get(&url), 8192, Some(trace)).await
+            });
+            tokio::time::timeout(Duration::from_secs(2), headers).await.unwrap().unwrap();
+            assert!(!probe.is_finished(), "headers alone never certify the probe");
+            assert!(records.lock().unwrap().is_empty(), "no completed record before body EOF");
+            if outcome == "cancelled" {
+                probe.abort();
+                assert!(probe.await.unwrap_err().is_cancelled());
+                release.send(false).unwrap();
+            } else {
+                release.send(outcome == "complete").unwrap();
+                assert_eq!(probe.await.unwrap().is_ok(), outcome == "complete");
+            }
+            worker.join().unwrap();
+            let records = records.lock().unwrap();
+            assert_eq!(records.len(), 1);
+            let record = serde_json::to_value(&records[0]).unwrap();
+            assert_eq!(record["final"], outcome);
+            assert_eq!(record["status"], 206);
+            assert_eq!(record["version"], "http1.1");
+            assert!(record["headersMs"].is_number() && record["bodyMs"].is_number());
+            if outcome == "complete" { assert_eq!(record["bytes"], 1024); }
+            else { assert!(record["bytes"].as_u64().unwrap() < 1024); }
+        }
     }
 
     fn local_sequence(responses: Vec<Vec<u8>>) -> (String, thread::JoinHandle<Vec<String>>) {
