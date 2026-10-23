@@ -50,6 +50,17 @@ function call(context, method, ...args) {
   ))
 }
 
+function stockPreparation(source) {
+  const analyzer = new JsAnalyzer(source, { extractions: [
+    { friendlyName: 'nsigFunction', match: nsigMatcher },
+    { friendlyName: 'signatureTimestampVar', match: timestampMatcher, collectDependencies: false },
+  ] })
+  const result = new JsExtractor(analyzer).buildScript({
+    disallowSideEffectInitializers: true, exportRawValues: true, rawValueOnly: ['signatureTimestampVar'],
+  })
+  return { script: result.output, signatureTimestamp: Number(result.exportedRawValues.signatureTimestampVar) }
+}
+
 test('extracts dependencies without executing the complete player and decodes both values', () => {
   const context = sandbox()
   const prepared = call(context, 'prepare', syntheticPlayer)
@@ -62,16 +73,49 @@ test('extracts dependencies without executing the complete player and decodes bo
 
 test('compact AST offsets preserve the exact script emitted by the unmodified analyzer', () => {
   const source = syntheticPlayer.replace('var shorthand', '/* Unicode offset: ñ😀 */ var shorthand')
-  const analyzer = new JsAnalyzer(source, { extractions: [
-    { friendlyName: 'nsigFunction', match: nsigMatcher },
-    { friendlyName: 'signatureTimestampVar', match: timestampMatcher, collectDependencies: false },
-  ] })
-  const expected = new JsExtractor(analyzer).buildScript({
-    disallowSideEffectInitializers: true, exportRawValues: true, rawValueOnly: ['signatureTimestampVar'],
-  })
+  const expected = stockPreparation(source)
   const actual = call(sandbox(), 'prepare', source)
-  assert.equal(actual.script, expected.output)
-  assert.equal(actual.signatureTimestamp, Number(expected.exportedRawValues.signatureTimestampVar))
+  assert.deepEqual(actual, expected)
+})
+
+const orderedHelpers = [
+  ['predeclared assignment', 'var reverse; reverse = function(value){return value;};'],
+  ['member defined after consumer', 'var reverse=function(value){return later.part+value;}; var later={}; later.part="v";'],
+  ['base before consumer, member later', 'var later={}; var reverse=function(value){return later.part+value;}; later.part="v";'],
+  ['member already visible', 'var later={}; later.part="v"; var reverse=function(value){return later.part+value;};'],
+  ['shadowed object', 'var reverse=function(value){var later={part:value}; return later.part;}; var later={part:"outer"};'],
+  ['nested function declaration', 'var other=function(value){return value;}; var reverse=function(value){function other(value){return value;} return other(value);};'],
+  ['catch binding', 'var reverse=function(value){try{throw value;}catch(error){return error;}};'],
+  ['destructuring bindings', 'var reverse=function(value){var [a,...rest]=[value]; const {part:b}={part:a}; return b;};'],
+  ['loop scope', 'var reverse=function(value){for(let i=0;i<1;i++){value+=i;}return value;};'],
+  ['class method scope', 'var reverse=function(value){class Local{run(){return value;}}return new Local().run();};'],
+  ['reassignment retains original resolution order', 'var reverse=function(value){return later.part+value;}; var later={}; later.part="v"; reverse=function(value){return later.part+value;};'],
+  ['prototype alias group', 'g.Other=function(value){this.value=value;};g.alias=g.Other.prototype;g.alias.read=function(){return this.value;};var reverse=function(value){return new g.Other(value).read();};'],
+]
+
+for (const [name, helper] of orderedHelpers) {
+  test(`selected closure matches stock analyzer: ${name}`, () => {
+    const source = syntheticPlayer.replace("var reverse = function(value) { return value.split('').reverse().join(''); };", helper)
+    const context = sandbox()
+    assert.deepEqual(call(context, 'prepare', source), stockPreparation(source))
+    assert.equal(context.completePlayerExecuted, undefined)
+  })
+}
+
+test('preparing different players in one runtime preserves each closure and does not execute unused code', () => {
+  const context = sandbox()
+  const first = syntheticPlayer
+  const second = syntheticPlayer.replace('signatureTimestamp: 20746', 'signatureTimestamp: 20747')
+    .replace("return value.split('').reverse().join('');", "return 'next:' + value;")
+  const withLateCode = first.replace('globalThis.completePlayerExecuted = true;',
+    'var late=function(){ return notDeclared.member; }; globalThis.completePlayerExecuted = true;')
+  const expectedFirst = stockPreparation(first)
+  for (const source of [first, second, withLateCode, second, first]) {
+    assert.deepEqual(call(context, 'prepare', source), stockPreparation(source))
+    assert.equal(context.completePlayerExecuted, undefined)
+  }
+  assert.deepEqual(call(context, 'prepare', withLateCode), expectedFirst)
+  assert.deepEqual(call(context, 'decode', expectedFirst.script, 'abcd', 'token'), { sig: 'dcba', n: 'transformed:token' })
 })
 
 test('passes quotes, slashes and statement-like cipher inputs as data', () => {

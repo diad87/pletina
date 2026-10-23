@@ -10214,9 +10214,103 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 	const MAX_SOURCE = 5242880;
 	const MAX_SCRIPT = 2097152;
 	const MAX_VALUE = 4096;
+	var DeclarationHistory = class extends Map {
+		constructor() {
+			super();
+			this.history = /* @__PURE__ */ new Map();
+			this.version = 0;
+		}
+		set(name, metadata) {
+			const entries = this.history.get(name) || [];
+			entries.push([++this.version, metadata]);
+			this.history.set(name, entries);
+			return super.set(name, metadata);
+		}
+		getAt(name, version) {
+			const entries = this.history.get(name);
+			if (!entries) return void 0;
+			let from = 0, to = entries.length;
+			while (from < to) {
+				const middle = from + to >>> 1;
+				if (entries[middle][0] <= version) from = middle + 1;
+				else to = middle;
+			}
+			return from ? entries[from - 1][1] : void 0;
+		}
+	};
+	var DeferredDependencies = class extends Set {
+		constructor(produce) {
+			super();
+			this.produce = produce;
+			this.pending = [];
+			this.resolved = null;
+		}
+		materialize() {
+			if (!this.resolved) {
+				const values = this.produce();
+				for (const value of this.pending) values.add(value);
+				this.resolved = values;
+				this.pending = null;
+				this.produce = null;
+			}
+			return this.resolved;
+		}
+		add(value) {
+			if (this.resolved) this.resolved.add(value);
+			else this.pending.push(value);
+			return this;
+		}
+		get size() {
+			return this.materialize().size;
+		}
+		has(value) {
+			return this.materialize().has(value);
+		}
+		[Symbol.iterator]() {
+			return this.materialize()[Symbol.iterator]();
+		}
+		values() {
+			return this.materialize().values();
+		}
+		keys() {
+			return this.materialize().keys();
+		}
+		entries() {
+			return this.materialize().entries();
+		}
+		forEach(callback, self) {
+			return this.materialize().forEach((value) => callback.call(self, value, value, this));
+		}
+		delete(value) {
+			return this.materialize().delete(value);
+		}
+		clear() {
+			return this.materialize().clear();
+		}
+	};
+	var SelectiveAnalyzer = class extends JsAnalyzer {
+		analyzeAst() {
+			this.declaredVariables = new DeclarationHistory();
+			return super.analyzeAst();
+		}
+		findDependencies(root, identifier) {
+			const declarations = this.declaredVariables, version = declarations.version;
+			const source = this.source, iifeParamName = this.iifeParamName;
+			return new DeferredDependencies(() => {
+				const witness = { dependents: /* @__PURE__ */ new Set() };
+				const view = {
+					source,
+					iifeParamName,
+					declaredVariables: { get: (name) => declarations.getAt(name, version) ? witness : void 0 },
+					dependentsTracker: /* @__PURE__ */ new Map()
+				};
+				return JsAnalyzer.prototype.findDependencies.call(view, root, identifier);
+			});
+		}
+	};
 	function prepare(source) {
 		if (typeof source !== "string" || !source.length || source.length > MAX_SOURCE) throw new Error("DECODER_SOURCE_SIZE");
-		const analyzer = new JsAnalyzer(source, { extractions: [{
+		const analyzer = new SelectiveAnalyzer(source, { extractions: [{
 			friendlyName: "nsigFunction",
 			match: nsigMatcher
 		}, {

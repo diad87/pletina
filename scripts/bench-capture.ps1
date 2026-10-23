@@ -30,6 +30,7 @@ param(
     [switch]$NoSeek,
     [switch]$CachedSeekReturn,
     [switch]$NoBuild,
+    [switch]$Release,
     [switch]$FreshDecoder
 )
 
@@ -38,10 +39,11 @@ $ErrorActionPreference = 'Stop'
 $projectDir = Split-Path -Parent $PSScriptRoot
 $outputDir = Join-Path $projectDir 'capture-bench.local'
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-$configPath = Join-Path $outputDir 'tauri.json'
-$binaryPath = Join-Path $projectDir 'src-tauri\target\debug\musify.exe'
-$buildMarker = Join-Path $outputDir 'built-identifier.txt'
-$buildMetadataPath = Join-Path $outputDir 'built-identifier.json'
+$buildProfile = if ($Release) { 'release' } else { 'debug' }
+$configPath = Join-Path $outputDir $(if ($Release) { 'tauri-release.json' } else { 'tauri.json' })
+$binaryPath = Join-Path $projectDir "src-tauri\target\$buildProfile\musify.exe"
+$buildMarker = Join-Path $outputDir $(if ($Release) { 'built-identifier-release.txt' } else { 'built-identifier.txt' })
+$buildMetadataPath = Join-Path $outputDir $(if ($Release) { 'built-identifier-release.json' } else { 'built-identifier.json' })
 $runId = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0, 8)
 $planPath = Join-Path $outputDir "plan-$runId.json"
 $resultPath = Join-Path $outputDir "result-$runId.json"
@@ -105,23 +107,32 @@ try {
     $cargoBin = Join-Path $env:USERPROFILE '.cargo\bin'
     $env:PATH = "$cargoBin;$env:PATH"
     if (!$NoBuild) {
-        & node 'node_modules/@tauri-apps/cli/tauri.js' build --debug --no-bundle --no-sign --config $configPath
+        $buildArguments = @('node_modules/@tauri-apps/cli/tauri.js', 'build', '--no-bundle', '--no-sign', '--config', $configPath)
+        if (!$Release) { $buildArguments += '--debug' }
+        & node @buildArguments
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo compilar el banco de captura.' }
-        [IO.File]::WriteAllText($buildMarker, (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash)
-        [IO.File]::WriteAllText($buildMetadataPath, (@{ commit = (& git rev-parse HEAD); changes = @(& git status --porcelain) } | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
-    } elseif (!(Test-Path -LiteralPath $buildMarker) -or (Get-Content -LiteralPath $buildMarker -Raw) -ne (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash) {
-        throw 'NoBuild requiere el mismo binario aislado que compiló este banco.'
+        $builtSha = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
+        [IO.File]::WriteAllText($buildMarker, $builtSha)
+        [IO.File]::WriteAllText($buildMetadataPath, (@{ commit = (& git rev-parse HEAD); changes = @(& git status --porcelain); buildProfile = $buildProfile; binarySha256 = $builtSha } | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
+    } elseif (!(Test-Path -LiteralPath $binaryPath) -or !(Test-Path -LiteralPath $buildMarker) -or (Get-Content -LiteralPath $buildMarker -Raw) -ne (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash) {
+        throw "NoBuild requiere el mismo binario aislado de perfil $buildProfile que compiló este banco."
+    }
+    $binaryProvenance = if (Test-Path -LiteralPath $buildMetadataPath) { Get-Content -LiteralPath $buildMetadataPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
+    # Old debug markers did not record a profile. Keep them compatible; release
+    # always requires its own explicit provenance as well as its matching SHA.
+    if (($binaryProvenance.buildProfile -and $binaryProvenance.buildProfile -ne $buildProfile) -or ($Release -and $binaryProvenance.buildProfile -ne 'release')) {
+        throw "El marcador de compilación no acredita el perfil $buildProfile."
     }
     # Every process runs an immutable copy, allowing the next build without replacing
     # an executable under measurement. Its SHA and build provenance remain in the report.
     $binarySha = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
+    if ($binaryProvenance.binarySha256 -and $binaryProvenance.binarySha256 -ne $binarySha) { throw 'Los metadatos de compilación no coinciden con el binario.' }
     $snapshotDirectory = Join-Path $outputDir "binaries\$binarySha"
     New-Item -ItemType Directory -Path $snapshotDirectory -Force | Out-Null
     $snapshotBinaryPath = Join-Path $snapshotDirectory 'musify.exe'
     if (!(Test-Path -LiteralPath $snapshotBinaryPath)) { Copy-Item -LiteralPath $binaryPath -Destination $snapshotBinaryPath }
     if ((Get-FileHash -LiteralPath $snapshotBinaryPath -Algorithm SHA256).Hash -ne $binarySha) { throw 'El binario inmutable no coincide con la compilación.' }
     $binaryPath = $snapshotBinaryPath
-    $binaryProvenance = if (Test-Path -LiteralPath $buildMetadataPath) { Get-Content -LiteralPath $buildMetadataPath -Raw -Encoding UTF8 | ConvertFrom-Json } else { $null }
     $env:MUSIFY_BENCH = $planPath
     $env:MUSIFY_BENCH_FRESH_DECODER = if ($FreshDecoder) { '1' } else { $null }
     # Experimento explícito: el marcador tardío de anuncios impide promoverlo a producción.
@@ -141,6 +152,7 @@ try {
         branch = (& git branch --show-current)
         commit = (& git rev-parse HEAD)
         changes = @(& git status --porcelain)
+        buildProfile = $buildProfile
         binarySha256 = (Get-FileHash -LiteralPath $binaryPath -Algorithm SHA256).Hash
         binaryBuild = $binaryProvenance
         identifier = 'dev.musify.captureofficialtest'

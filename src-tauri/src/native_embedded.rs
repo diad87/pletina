@@ -78,6 +78,16 @@ fn probe_diagnostic(id: &str, itag: u64, stage: &'static str, error: &str) {
     }
 }
 
+fn stage_timing(id: &str, stage: &str, started: Instant) {
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!(
+            "[native-stage] {}",
+            json!({"id":id,"stage":stage,
+            "ms":started.elapsed().as_secs_f64()*1000.0})
+        );
+    }
+}
+
 fn fail(code: &str) -> Error {
     Error::Failed(format!("NATIVE_EMBEDDED_{code}"))
 }
@@ -125,7 +135,9 @@ fn player_url(value: &str) -> Result<reqwest::Url, Error> {
 static WEB: LazyLock<Result<reqwest::Client, Error>> = LazyLock::new(|| {
     reqwest::Client::builder()
         .user_agent(UA)
-        .no_gzip()
+        // Public text may be compressed. text_response caps decoded bytes;
+        // original audio ranges use the separate, uncompressed CDN client.
+        .gzip(true)
         .timeout(Duration::from_secs(4))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() <= 2
@@ -179,16 +191,32 @@ async fn get(http: &reqwest::Client, url: reqwest::Url) -> Result<String, Error>
     if !youtube_url(&url) {
         return Err(fail("ORIGIN"));
     }
-    text_response(
-        http.get(url)
-            .header("Accept-Language", "en")
-            .header("Accept-Encoding", "identity")
-            .header("Referer", "https://www.reddit.com/")
-            .send()
-            .await
-            .map_err(|_| fail("TRANSPORT"))?,
-    )
-    .await
+    let role = if url.path() == "/watch" {
+        "watch"
+    } else if url.path().starts_with("/embed/") {
+        "embed"
+    } else {
+        "player-source"
+    };
+    let started = Instant::now();
+    let response = http
+        .get(url)
+        .header("Accept-Language", "en")
+        .header("Referer", "https://www.reddit.com/")
+        .send()
+        .await
+        .map_err(|_| fail("TRANSPORT"))?;
+    let headers_ms = started.elapsed().as_secs_f64() * 1000.0;
+    let result = text_response(response).await;
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!(
+            "[native-text] {}",
+            json!({"role":role,"headersMs":headers_ms,
+            "totalMs":started.elapsed().as_secs_f64()*1000.0,
+            "decodedBytes":result.as_ref().ok().map(String::len)})
+        );
+    }
+    result
 }
 
 // Parse JSON values, never evaluate an assignment or arbitrary HTML/script text.
@@ -538,6 +566,19 @@ where
     Ok((decoder, response))
 }
 
+async fn admitted_request<R>(
+    gate: Option<tokio::sync::oneshot::Receiver<()>>,
+    request: R,
+) -> Result<Value, Error>
+where
+    R: Future<Output = Result<Value, Error>>,
+{
+    if let Some(gate) = gate {
+        gate.await.map_err(|_| fail("ADMISSION"))?;
+    }
+    request.await
+}
+
 fn prepared_measurement(
     id: Option<&str>,
     mode: &str,
@@ -557,13 +598,14 @@ fn prepared_measurement(
 }
 
 async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<PreparedDecoder>, Error> {
-    Ok(prepare_request(http, config, None).await?.decoder)
+    Ok(prepare_request(http, config, None, None).await?.decoder)
 }
 
 async fn prepare_request(
     http: &reqwest::Client,
     config: &Config,
     id: Option<&str>,
+    admission: Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<Preparation, Error> {
     let started = Instant::now();
     let mut cache = COMPILED.lock().await;
@@ -617,7 +659,7 @@ async fn prepare_request(
         let decoder = if let (Some(id), Some(hint)) = (id, hint) {
             let (decoder, speculative) = analyze_preview(
                 youtube_decoder::prepare(source.clone()),
-                player_response(http, PLAYER, config, id, hint),
+                admitted_request(admission, player_response(http, PLAYER, config, id, hint)),
                 hint,
             )
             .await?;
@@ -764,12 +806,12 @@ async fn player_response(
     id: &str,
     sts: u32,
 ) -> Result<Value, Error> {
+    let started = Instant::now();
     let response = http
         .post(endpoint)
         .header("Content-Type", "application/json")
         .header("User-Agent", UA)
         .header("Origin", "https://www.youtube.com")
-        .header("Accept-Encoding", "identity")
         .header("X-Youtube-Client-Name", "56")
         .header("X-Youtube-Client-Version", &config.version)
         .header("X-Goog-Visitor-Id", &config.visitor)
@@ -785,6 +827,7 @@ async fn player_response(
     }
     let value: Value =
         serde_json::from_str(&text_response(response).await?).map_err(|_| fail("PLAYER_JSON"))?;
+    stage_timing(id, "player-response", started);
     #[cfg(test)]
     save_private_fixture(
         Some(id),
@@ -1042,7 +1085,12 @@ where
     let attempts = async {
         let started = Instant::now();
         let mut last = fail("CDN_TIMEOUT");
-        for offset in offsets.iter().take(5) {
+        for offset in offsets.iter().take(8) {
+            // A slow request can cross several slots. Do not replay expired
+            // positive slots as a burst; allow normal scheduler jitter.
+            if !offset.is_zero() && started.elapsed() > *offset + Duration::from_millis(50) {
+                continue;
+            }
             if let Some(wait) = offset.checked_sub(started.elapsed()) {
                 tokio::time::sleep(wait).await;
             }
@@ -1052,6 +1100,11 @@ where
                 Err(_) => fail("CDN_TIMEOUT"),
             };
             if !transient_cdn(&last) {
+                return Err(last);
+            }
+            // No additional polling after rate limiting. A caller can retry
+            // later; do not guess or shorten the server's Retry-After delay.
+            if matches!(&last, Error::Failed(code) if code == "NATIVE_EMBEDDED_CDN_HTTP_429") {
                 return Err(last);
             }
         }
@@ -1114,7 +1167,9 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
         return Err(fail("ID"));
     }
     let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
-    let (_, initial_config) = tokio::try_join!(
+    let discovery_started = Instant::now();
+    let (admit, admission) = tokio::sync::oneshot::channel();
+    let (_, (initial_config, preparation)) = tokio::try_join!(
         async {
             let watch = get(
                 http,
@@ -1122,14 +1177,27 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
                     .unwrap(),
             )
             .await?;
-            watch_player(&watch, video_id).map(|_| ())
+            let started = Instant::now();
+            let result = watch_player(&watch, video_id).map(|_| ());
+            stage_timing(video_id, "watch-identity", started);
+            result?;
+            // Only local public-source analysis may overlap this check. A
+            // speculative player POST remains gated by the explicit MFK proof.
+            let _ = admit.send(());
+            Ok::<_, Error>(())
         },
-        configuration(http, video_id)
+        async {
+            let config = configuration(http, video_id).await?;
+            let preparation =
+                prepare_request(http, &config, Some(video_id), Some(admission)).await?;
+            Ok::<_, Error>((config, preparation))
+        }
     )?;
+    stage_timing(video_id, "watch-config-and-prepare", discovery_started);
     let Preparation {
         decoder,
         mut response,
-    } = prepare_request(http, &initial_config, Some(video_id)).await?;
+    } = preparation;
     resolve_ready(
         &CONFIGS,
         video_id,
@@ -1233,6 +1301,7 @@ async fn resolve_config(
                 continue;
             }
         };
+        let decode_started = Instant::now();
         let decode = youtube_decoder::decode(decoder.clone(), input.sig.clone(), input.n.clone());
         // Trying another format after a permanent CDN error still shares the
         // first candidate's overall validation deadline, including its decoder.
@@ -1247,6 +1316,7 @@ async fn resolve_config(
         } else {
             decode.await
         };
+        stage_timing(video_id, "decode", decode_started);
         let decoded = match decoded_result {
             Ok(v) => v,
             Err(error) => {
@@ -1313,7 +1383,10 @@ async fn resolve_config(
                 Duration::ZERO,
                 Duration::from_millis(250),
                 Duration::from_secs(1),
+                Duration::from_secs(2),
                 Duration::from_secs(3),
+                Duration::from_secs(4),
+                Duration::from_secs(5),
                 Duration::from_secs(6),
             ]
         } else {
@@ -1324,8 +1397,25 @@ async fn resolve_config(
         let Some(remaining) = Duration::from_secs(8).checked_sub(started.elapsed()) else {
             return Err(fail("CDN_TIMEOUT"));
         };
+        let probe_epoch = *started;
+        let mut attempt = 0_u32;
         let result = bounded_cdn_probe(
-            || strict_probe(http, &direct.url, length),
+            || {
+                attempt += 1;
+                let attempt = attempt;
+                let url = &direct.url;
+                async move {
+                    let probe_started = Instant::now();
+                    let result = strict_probe(http, url, length).await;
+                    if std::env::var_os("MUSIFY_BENCH").is_some() {
+                        eprintln!("[native-cdn-attempt] {}", json!({"id":video_id,
+                            "attempt":attempt,"startedMs":probe_started.duration_since(probe_epoch).as_secs_f64()*1000.0,
+                            "ms":probe_started.elapsed().as_secs_f64()*1000.0,
+                            "code":result.as_ref().err().map(|e|validation_code(&e.to_string())).unwrap_or_else(||"ok".into())}));
+                    }
+                    result
+                }
+            },
             offsets,
             remaining.min(Duration::from_secs(if retry { 8 } else { 2 })),
         )
@@ -1390,6 +1480,38 @@ mod tests {
         json!({"signatureCipher":wrapped.query().unwrap()})
     }
 
+    #[tokio::test]
+    async fn compressed_public_text_is_bounded_after_decompression() {
+        for (compressed, expected) in [
+            (
+                include_bytes!("../../tests/fixtures/youtube-discovery-small.txt.gz").as_slice(),
+                true,
+            ),
+            (
+                include_bytes!("../../tests/fixtures/youtube-discovery-over-limit.txt.gz")
+                    .as_slice(),
+                false,
+            ),
+        ] {
+            let (url, server) = local(response(200, "Content-Encoding: gzip\r\n", compressed));
+            let http = WEB.as_ref().unwrap();
+            let result = text_response(http.get(url).send().await.unwrap()).await;
+            if expected {
+                assert_eq!(result.unwrap(), "public discovery text");
+            } else {
+                assert!(
+                    matches!(result, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_SIZE")
+                );
+            }
+            let request = server.join().unwrap();
+            assert!(
+                request
+                    .to_ascii_lowercase()
+                    .contains("accept-encoding: gzip")
+            );
+        }
+    }
+
     #[test]
     fn speculative_timestamp_requires_one_bounded_literal() {
         assert_eq!(
@@ -1408,6 +1530,36 @@ mod tests {
         ] {
             assert_eq!(timestamp_hint(source), None, "{source}");
         }
+    }
+
+    #[tokio::test]
+    async fn player_request_requires_admission_and_never_runs_after_rejection() {
+        let calls = AtomicU64::new(0);
+        let (admit, admission) = tokio::sync::oneshot::channel();
+        let waiting = admitted_request(Some(admission), async {
+            calls.fetch_add(1, Ordering::Relaxed);
+            Ok(json!({"admitted":true}))
+        });
+        tokio::pin!(waiting);
+        assert!(
+            tokio::time::timeout(Duration::from_millis(10), &mut waiting)
+                .await
+                .is_err()
+        );
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        admit.send(()).unwrap();
+        assert_eq!(waiting.await.unwrap(), json!({"admitted":true}));
+        let (reject, admission) = tokio::sync::oneshot::channel();
+        drop(reject);
+        assert!(
+            admitted_request(Some(admission), async {
+                calls.fetch_add(1, Ordering::Relaxed);
+                Ok(json!({"unreachable":true}))
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
     }
 
     #[tokio::test]
@@ -1789,7 +1941,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn retries_stop_on_permanent_errors_and_never_exceed_five_attempts() {
+    async fn retries_stop_on_permanent_errors_and_never_exceed_eight_attempts() {
         for code in [
             "CDN_RANGE",
             "CDN_MIME",
@@ -1823,7 +1975,47 @@ mod tests {
             .await
             .is_err()
         );
-        assert_eq!(calls.load(Ordering::Relaxed), 5);
+        assert_eq!(calls.load(Ordering::Relaxed), 8);
+    }
+
+    #[tokio::test]
+    async fn polling_skips_missed_slots_and_stops_on_rate_limiting() {
+        let calls = AtomicU64::new(0);
+        bounded_cdn_probe(
+            || {
+                let call = calls.fetch_add(1, Ordering::Relaxed);
+                async move {
+                    if call == 0 {
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        Err(fail("CDN_HTTP_403"))
+                    } else {
+                        Ok(())
+                    }
+                }
+            },
+            &[
+                Duration::ZERO,
+                Duration::from_millis(1),
+                Duration::from_millis(2),
+                Duration::from_millis(250),
+            ],
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+        assert_eq!(calls.load(Ordering::Relaxed), 2);
+        let calls = AtomicU64::new(0);
+        let result = bounded_cdn_probe(
+            || {
+                calls.fetch_add(1, Ordering::Relaxed);
+                async { Err(fail("CDN_HTTP_429")) }
+            },
+            &[Duration::ZERO; 8],
+            Duration::from_secs(1),
+        )
+        .await;
+        assert!(result.is_err());
+        assert_eq!(calls.load(Ordering::Relaxed), 1);
     }
 
     #[tokio::test]
