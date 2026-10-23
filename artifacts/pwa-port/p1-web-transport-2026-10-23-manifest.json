@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T08:45:35.529Z",
+  "report": "p1-web-transport-2026-10-23.json",
+  "sha256": "a26aa9f5e8782b0bd488b025f9bd70fa17bdf3cd7cc1ab8298b348ea9d43b8e6",
+  "execution": {
+    "scriptSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+    "sourceSnapshot": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+    "officialHead": "9892b9c4968e7b57a239f3b5bdcb45e74852c848",
+    "officialSources": [
+      {
+        "path": "docs/informe-contenido-infantil-2026-10-23.md",
+        "sha256": "f8da999f07b7e01a85e24b9d78293dcb58dbee79b5c86843dd71a5aee9f13959"
+      },
+      {
+        "path": "src-tauri/src/native_embedded.rs",
+        "sha256": "0a9ba8aa133034d3ccc845eb0c37fd0a78c9191c813bc1da9d478df434954427"
+      },
+      {
+        "path": "src-tauri/src/youtube_session.rs",
+        "sha256": "9a20a25a371a4eca1f68b29bf8db5079151c53875864265287e6fb51b99feede"
+      }
+    ]
+  },
+  "summary": {
+    "requestedCases": [
+      "epoitaitaye",
+      "iritsi",
+      "maite"
+    ],
+    "publicConfigurationsObtained": 3,
+    "browserBootstrapReadable": false,
+    "playerMetadataReadable": true,
+    "exactAudioCipherReturned": true,
+    "completePlaybackEstablished": false,
+    "standaloneBrowserBootstrapEstablished": false,
+    "mediaOrSignedUrlsWritten": false
+  },
+  "transportFindings": {
+    "bootstrapGetCount": 10,
+    "allFiveBootstrapKindsBlockedFromBothOrigins": true,
+    "opaqueExactVideosWithFourCipher": [
+      "DJzjkMBMook",
+      "fV-IUsecSsU",
+      "WtTRMAoN2Fw"
+    ],
+    "negativeControl": [
+      {
+        "videoId": "___________",
+        "opaque": [
+          {
+            "status": 200,
+            "playability": "ERROR",
+            "audio": 0
+          }
+        ]
+      }
+    ],
+    "embeddedJsonConfirmsNotice": false
+  },
+  "limits": [
+    "Body prepared from this QA own anonymous public Node bootstrap in RAM, not from readable PWA bootstrap.",
+    "Browser controls do not set forbidden UA/Origin/X client headers; public response explicitly permits opaque origin.",
+    "Cipher metadata is not a deciphered URL, successful CDN range, full recording or background playback proof.",
+    "No remote player code executed, no media requested and no API key/visitor/flags/signed URL values written.",
+    "Embedded JSON has playableInEmbed but lacks the exact infant notice required by the existing P1 watch eligibility gate; do not infer made-for-kids from artist/title."
+  ],
+  "browsersClosed": true,
+  "productChanged": false
+}

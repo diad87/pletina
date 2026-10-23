@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T09:27:32.137Z",
+  "build": "2cbb1fcf0376491f",
+  "sourceCommit": "91a7097a5bff4998dfa0a433039ff8ce86bce247",
+  "scope": "Independent read-only partial P1 integration audit before deployment. Only this audit JSON is written.",
+  "checks": [
+    {
+      "name": "frozen source and product scope",
+      "pass": true,
+      "changed": [
+        "scripts/tests/web-p1-parser.test.mjs",
+        "web-port/youtube.ts"
+      ]
+    },
+    {
+      "name": "central labels and deployment boundary",
+      "pass": true
+    },
+    {
+      "name": "compiled build and all distribution hashes",
+      "pass": true,
+      "files": 22
+    },
+    {
+      "name": "CSS and fonts identical to previous dist",
+      "pass": true,
+      "files": [
+        {
+          "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+          "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965",
+          "identicalToPrevious": true
+        },
+        {
+          "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+          "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd",
+          "identicalToPrevious": true
+        },
+        {
+          "path": "application/assets/index-BzWVG3zr.css",
+          "sha256": "0a89e5ae40d6c3e7488e53dcc10a1ff949f267f9523981781bfee3e62ed2dd25",
+          "identicalToPrevious": true
+        }
+      ]
+    },
+    {
+      "name": "no experimental decoder recipe or embedded bootstrap in distributed code",
+      "pass": true,
+      "findings": []
+    },
+    {
+      "name": "existing HTTP and visitor pipeline unchanged",
+      "pass": true,
+      "functions": [
+        "jsonBridge",
+        "requestJson",
+        "musicContext",
+        "searchMusic",
+        "searchVideos",
+        "rememberVisitor",
+        "session",
+        "stream"
+      ]
+    },
+    {
+      "name": "parser source and test hash provenance",
+      "pass": true
+    },
+    {
+      "name": "documentation bounds current implementation and research",
+      "pass": true
+    },
+    {
+      "name": "transport five report snapshot and ancillary hashes",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "name": "static prototype provenance and synthetic-only scope",
+      "pass": true
+    },
+    {
+      "name": "sandbox provenance and six synthetic-only controls",
+      "pass": true
+    },
+    {
+      "name": "new-build E2E totals match only its final reports",
+      "pass": true,
+      "media": {
+        "pass": 112,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 2
+      },
+      "official": {
+        "pass": 33,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "updatePassed": 11,
+      "primaryLivePassed": 3,
+      "physicalMobileVerified": false
+    },
+    {
+      "name": "no persisted audio secrets real signed URLs or live visitor/flags",
+      "pass": true,
+      "filesScanned": 82,
+      "bytesScanned": 3816417,
+      "mediaFiles": [],
+      "secretFindings": [],
+      "signedFindings": [],
+      "ephemeralFindings": [],
+      "literalFixtureMatches": [
+        {
+          "file": "artifacts/pwa-port/p1-parser-logic-2026-10-23.txt",
+          "host": "remote.test",
+          "keys": [],
+          "classification": "literal fixture or decoder synthetic dummy URL"
+        },
+        {
+          "file": "artifacts/pwa-port/p1-parser-logic-final-2026-10-23.txt",
+          "host": "remote.test",
+          "keys": [],
+          "classification": "literal fixture or decoder synthetic dummy URL"
+        },
+        {
+          "file": "artifacts/pwa-port/p1-static-source-8940bfa00d6ad9fe.mjs",
+          "host": "ytjs.googlevideo.com",
+          "keys": [
+            "expire",
+            "n"
+          ],
+          "classification": "literal fixture or decoder synthetic dummy URL"
+        },
+        {
+          "file": "artifacts/pwa-port/p1-static-source-ed20853568c157d7.mjs",
+          "host": "ytjs.googlevideo.com",
+          "keys": [
+            "expire",
+            "n"
+          ],
+          "classification": "literal fixture or decoder synthetic dummy URL"
+        },
+        {
+          "file": "scripts/tests/p1-static-decoder-prototype.mjs",
+          "host": "ytjs.googlevideo.com",
+          "keys": [
+            "expire",
+            "n"
+          ],
+          "classification": "literal fixture or decoder synthetic dummy URL"
+        }
+      ]
+    }
+  ],
+  "failures": [],
+  "summary": {
+    "passed": 13,
+    "total": 13,
+    "materialBlockers": 0,
+    "experimentalP1Activated": false,
+    "mediaOrSecretPersisted": false
+  },
+  "evidence": {
+    "central": {
+      "path": "artifacts/pwa-e2e/validation-2cbb1fcf0376491f.json",
+      "sha256": "de732fd6aa35bcdc5e88c36d63b58e0115d36d1dd29dc3bfe604b64aee8e0e96",
+      "statusObserved": "validated-awaiting-deployment"
+    },
+    "documentation": {
+      "path": "docs/pwa-p1-integration.md",
+      "sha256": "bbde7c101c78d49e5bb88ae0766ce51fb48fbd9938ed2744193ba23e1feb13f4"
+    },
+    "parser": {
+      "path": "artifacts/pwa-port/p1-parser-port-2026-10-23.json",
+      "sha256": "40c471d4c65d487d5f09fcd73b97a0a5b429b1b9205be6c17c08d4ceb5f5bfda"
+    },
+    "transport": {
+      "path": "artifacts/pwa-port/p1-web-transport-final-manifest-2026-10-23.json",
+      "sha256": "d964183c8387e6d30ac5d705189328713410df7a80dc557598509020fc69d128"
+    }
+  },
+  "limitations": [
+    "Physical Android/iPhone screen-off behavior is not established for this build.",
+    "Transport success with a Node-prepared public embedded visitor is a QA control, not a standalone PWA bootstrap.",
+    "Static decoder tests use synthetic inputs; no real cipher decode, CDN access or playback is inferred.",
+    "Multimedia totals above are read from this exact build's final reports, not carried forward from earlier builds."
+  ]
+}

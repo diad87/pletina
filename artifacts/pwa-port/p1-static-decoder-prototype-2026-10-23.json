@@ -1,0 +1,209 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T09:17:13.851Z",
+  "execution": {
+    "scriptSha256": "8940bfa00d6ad9fe5a3be9b7b61621f6c919e5ea488688c41a5eb0e65a022a83",
+    "snapshot": "artifacts/pwa-port/p1-static-source-8940bfa00d6ad9fe.mjs"
+  },
+  "policy": {
+    "productChanged": false,
+    "deployed": false,
+    "privateLocalFixturesUsed": false,
+    "accountsKeysCookiesOrProxy": false,
+    "playerPostRequested": false,
+    "mediaRequested": false,
+    "fullPlayerExecuted": false,
+    "bootstrapValuesPersisted": false,
+    "signedUrlsPersisted": false,
+    "musicalVideoIdInRecipe": false,
+    "browserWorkerImplemented": false
+  },
+  "checks": [
+    {
+      "name": "sig-and-n",
+      "pass": true,
+      "outcome": "decoded",
+      "sigInputLength": 83,
+      "nInputLength": 29,
+      "outputSha256": "dd491c8ffc0f454584d8aa64421330c7a1f9216e5c267302ab37979d7f84f205",
+      "outputLengths": {
+        "sig": 77,
+        "n": 24
+      }
+    },
+    {
+      "name": "signature-only",
+      "pass": true,
+      "outcome": "decoded",
+      "sigInputLength": 83,
+      "nInputLength": null,
+      "outputSha256": "cb42ade66accc135fe83fcdc827ca1e151a2f3a8ae12569b77b140393e6a9483",
+      "outputLengths": {
+        "sig": 77
+      }
+    },
+    {
+      "name": "n-only",
+      "pass": true,
+      "outcome": "decoded",
+      "sigInputLength": null,
+      "nInputLength": 32,
+      "outputSha256": "8e559500cc589b20085484a3d59dea8f75daea12ae9290e964a52ba41447ab49",
+      "outputLengths": {
+        "n": 27
+      }
+    },
+    {
+      "name": "quoted-values",
+      "pass": true,
+      "outcome": "decoded",
+      "sigInputLength": 115,
+      "nInputLength": 28,
+      "outputSha256": "4900bbc12766b6f727e6575baa01bcc57fa1a9e07f95ea2aeea125bf0189e238",
+      "outputLengths": {
+        "sig": 109,
+        "n": 29
+      }
+    }
+  ],
+  "errors": [],
+  "recipe": {
+    "schemaVersion": 1,
+    "createdAt": "2026-10-23T09:17:15.898Z",
+    "expiresAt": "2026-10-23T15:17:15.898Z",
+    "expiryMeaning": "Conservative local policy only; upstream may change earlier",
+    "client": {
+      "name": "WEB_EMBEDDED_PLAYER",
+      "id": 56,
+      "version": "2.20261022.01.00"
+    },
+    "player": {
+      "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+      "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+      "bytes": 1629008,
+      "signatureTimestamp": 20746
+    },
+    "decoder": {
+      "sha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+      "bytes": 173175,
+      "libraryVersion": "18.2.0",
+      "exportName": "nsigFunction",
+      "source": "artifacts/pwa-port/p1-static-functions-41b45da92d687a85.js"
+    },
+    "omittedRuntimeContext": [
+      "videoId",
+      "visitorData",
+      "encryptedHostFlags",
+      "deviceExperimentId",
+      "rolloutToken",
+      "appInstallData"
+    ],
+    "runtimeStatus": "Decoder material only. Generic player context, eligibility, CDN access and playback remain separate gates."
+  },
+  "recipeFile": "artifacts/pwa-port/p1-static-recipe-c6acef753928cbe1.json",
+  "evidence": {
+    "bootstrap": {
+      "bytes": 152472,
+      "sha256": "70cf7347b78153d5370a394ee3a28c3e4bd5690a6f86b56cf292d9eb4d19458c",
+      "method": "Anonymous public embed GET at build time; seed video ID not persisted"
+    },
+    "baseline": {
+      "commit": "9892b9c4968e7b57a239f3b5bdcb45e74852c848",
+      "libraryVersion": "18.1.0",
+      "bundleSha256": "6a18ed0ae8c909c36d5b96731fad6bb3fc9a5ea4088ed4865266f0f98c35f0e6",
+      "prepareMs": 998.2615000000001,
+      "preparedScriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+      "preparedScriptBytes": 173175
+    },
+    "installed": {
+      "libraryVersion": "18.2.0",
+      "prepareMs": 517.2434000000001,
+      "preparedScriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+      "preparedScriptBytes": 173175
+    },
+    "moduleComparison": [
+      {
+        "name": "JsAnalyzer.js",
+        "baselineSha256": "04dc1eaab8944b1d04ab3cf056c9f200b58f0475903f27a60679a721fea4daf5",
+        "installedSha256": "04dc1eaab8944b1d04ab3cf056c9f200b58f0475903f27a60679a721fea4daf5",
+        "identical": true
+      },
+      {
+        "name": "JsExtractor.js",
+        "baselineSha256": "852aaf259959ceeb21e901c2b7b4afd13a7804326a6d47cec503221d94754696",
+        "installedSha256": "852aaf259959ceeb21e901c2b7b4afd13a7804326a6d47cec503221d94754696",
+        "identical": true
+      },
+      {
+        "name": "matchers.js",
+        "baselineSha256": "2e23849f8d3c46276f1170c5f25ccc900036bf2a2756c88e490a378ba58fce25",
+        "installedSha256": "2e23849f8d3c46276f1170c5f25ccc900036bf2a2756c88e490a378ba58fce25",
+        "identical": true
+      },
+      {
+        "name": "helpers.js",
+        "baselineSha256": "81be9cc2182935bf5db418955d9b98446f13fb5da846a7136d1f55423078e2af",
+        "installedSha256": "81be9cc2182935bf5db418955d9b98446f13fb5da846a7136d1f55423078e2af",
+        "identical": true
+      }
+    ],
+    "preparedScriptsIdentical": true,
+    "checks": [
+      {
+        "name": "sig-and-n",
+        "pass": true,
+        "outcome": "decoded",
+        "sigInputLength": 83,
+        "nInputLength": 29,
+        "outputSha256": "dd491c8ffc0f454584d8aa64421330c7a1f9216e5c267302ab37979d7f84f205",
+        "outputLengths": {
+          "sig": 77,
+          "n": 24
+        }
+      },
+      {
+        "name": "signature-only",
+        "pass": true,
+        "outcome": "decoded",
+        "sigInputLength": 83,
+        "nInputLength": null,
+        "outputSha256": "cb42ade66accc135fe83fcdc827ca1e151a2f3a8ae12569b77b140393e6a9483",
+        "outputLengths": {
+          "sig": 77
+        }
+      },
+      {
+        "name": "n-only",
+        "pass": true,
+        "outcome": "decoded",
+        "sigInputLength": null,
+        "nInputLength": 32,
+        "outputSha256": "8e559500cc589b20085484a3d59dea8f75daea12ae9290e964a52ba41447ab49",
+        "outputLengths": {
+          "n": 27
+        }
+      },
+      {
+        "name": "quoted-values",
+        "pass": true,
+        "outcome": "decoded",
+        "sigInputLength": 115,
+        "nInputLength": 28,
+        "outputSha256": "4900bbc12766b6f727e6575baa01bcc57fa1a9e07f95ea2aeea125bf0189e238",
+        "outputLengths": {
+          "sig": 109,
+          "n": 29
+        }
+      }
+    ],
+    "comparisonScope": "Synthetic s/n values in isolated Node V8 contexts; no real URL signature validity, media, native QuickJS or browser-worker assertion."
+  },
+  "limitations": [
+    "Only extracted functions execute; the complete public player is analyzed as text.",
+    "Node vm is a QA comparison context, not a browser sandbox or an OS security boundary.",
+    "The candidate browser design is a dedicated worker in an opaque sandbox iframe with connect-src none, worker-src blob and external termination; it has not been implemented or tested here.",
+    "An opaque iframe alone does not remove worker network/import APIs. Worker CSP, input/output protocol and blocking imports/network require independent validation.",
+    "Browser workers offer termination but no equivalent hard 32 MiB per-runtime memory cap; build-time extraction avoids mobile AST preparation.",
+    "Static functions do not establish reusable flags/visitor/experiments, made-for-kids eligibility, CDN access, playback or background behavior."
+  ]
+}

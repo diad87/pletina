@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T09:19:58.792Z",
+  "round": "embedded-search-control",
+  "scope": "One generic public embedded recipe reused across IDs with a Music visitor freshly obtained in browser RAM. Opaque WEB metadata compares the P1 notice gate; no audio.",
+  "execution": {
+    "scriptSha256": "0b4d2a53dab0e9c7351b93a13d502cb57e0242e3f86384b88c4e8b704daf76af",
+    "sourceSnapshot": "artifacts/pwa-port/p1-web-transport-source-0b4d2a53dab0e9c7.mjs",
+    "frozenProvenance": {
+      "firstReport": "artifacts/pwa-port/p1-web-transport-2026-10-23.json",
+      "firstReportSha256": "a26aa9f5e8782b0bd488b025f9bd70fa17bdf3cd7cc1ab8298b348ea9d43b8e6",
+      "firstSourceSnapshot": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+      "firstSourceSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+      "portedConfigurationFunctionSha256": "24164598d9a3320063b9a8e2b5b4cee97c48377c1bcb2e3805ddeefb6d44a6b4",
+      "officialHead": "9892b9c4968e7b57a239f3b5bdcb45e74852c848",
+      "officialSources": [
+        {
+          "path": "docs/informe-contenido-infantil-2026-10-23.md",
+          "sha256": "f8da999f07b7e01a85e24b9d78293dcb58dbee79b5c86843dd71a5aee9f13959"
+        },
+        {
+          "path": "src-tauri/src/native_embedded.rs",
+          "sha256": "0a9ba8aa133034d3ccc845eb0c37fd0a78c9191c813bc1da9d478df434954427"
+        },
+        {
+          "path": "src-tauri/src/youtube_session.rs",
+          "sha256": "9a20a25a371a4eca1f68b29bf8db5079151c53875864265287e6fb51b99feede"
+        }
+      ],
+      "officialCheckoutReadThisRound": false
+    },
+    "pwaVersionSourceSha256": "75b47de62ff3a34b47f8c25b785d7f8b35fccf5f589a94f8f15bc5bc27bd8e67",
+    "versions": {
+      "music": "1.20260901.01.00",
+      "web": "2.20261007.00.00"
+    }
+  },
+  "policy": {
+    "productChanged": false,
+    "rustBuilt": false,
+    "proxyUsed": false,
+    "accountOrSubscriptionUsed": false,
+    "apiKeyUsed": false,
+    "cookieJarUsed": false,
+    "borrowedCredentialsUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "signedUrlsPersisted": false,
+    "visitorOrFlagsValuesPersisted": false,
+    "securityOverrides": false,
+    "backgroundThrottleOverrides": false,
+    "observerUserGesture": false,
+    "outputMuted": false,
+    "diagnosticBootstrap": "Fresh anonymous public HTML and JS read by QA Node GET in memory; availability through Node does not establish PWA CORS access."
+  },
+  "requestDifferenceFromNative": {
+    "clientName": "WEB_EMBEDDED_PLAYER",
+    "clientId": 56,
+    "copiedBodyFields": "P1 allowlist including its public embedded context and fresh ST",
+    "browserContentType": "text/plain;charset=UTF-8",
+    "nativeContentType": "application/json",
+    "omittedNativeHeaders": [
+      "User-Agent override",
+      "Origin override",
+      "Accept-Encoding override",
+      "X-Youtube-Client-Name",
+      "X-Youtube-Client-Version",
+      "X-Goog-Visitor-Id"
+    ],
+    "reason": "The browser owns forbidden headers; text/plain avoids adding a JSON/custom-header preflight. No header restriction is bypassed."
+  },
+  "nodeBootstrap": [
+    {
+      "title": "Epoitaitaye",
+      "videoId": "DJzjkMBMook",
+      "kind": "P1-native-positive",
+      "embed": {
+        "status": 200,
+        "bytes": 152015,
+        "sha256": "10c5abdc7cf8df9440ae3cfd18d4bd790bbdcc4291b4b7884eb06c723af58964"
+      },
+      "clientName": "WEB_EMBEDDED_PLAYER",
+      "clientVersion": "2.20261022.01.00",
+      "clientId": 56,
+      "visitorPresent": true,
+      "flagsPresent": true,
+      "contextFields": [
+        "platform",
+        "clientFormFactor",
+        "osName",
+        "osVersion",
+        "browserName",
+        "browserVersion",
+        "gl",
+        "deviceExperimentId",
+        "rolloutToken",
+        "configInfo"
+      ],
+      "player": {
+        "path": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+        "status": 200,
+        "bytes": 1629008,
+        "sha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+        "signatureTimestamp": 20746
+      },
+      "bodySha256": "f639746617a822df82ca60b5c49dfee8931b29c36447fb06d033b29ecb92950e",
+      "copiedRequestAccountOrTracking": false
+    }
+  ],
+  "corsReads": [],
+  "player": [],
+  "webEligibility": [],
+  "controls": [],
+  "transport": [
+    {
+      "host": "www.youtube.com",
+      "method": "POST",
+      "route": "player",
+      "phase": "response-headers",
+      "status": 400,
+      "allowOrigin": "null"
+    }
+  ],
+  "errors": [],
+  "browser": "Chrome/148.0.7778.97",
+  "embeddedSearchVisitor": {
+    "source": "Same public embedded search as earlier HTTP400; parse readable error JSON before judging visitor presence.",
+    "results": [
+      {
+        "origin": "opaque-null",
+        "readable": true,
+        "status": 400,
+        "type": "cors",
+        "contentType": "application/json",
+        "bytes": 285,
+        "sha256": "7b125bdfc23aa988068946e05804006bc959d12dc34f7267a11379eace9dfaa4",
+        "elapsedMs": 371,
+        "requestBodySha256": "a755cfc27a478685eb34d0a16434bca54dd320b682fde2958e6c408d39f82e4e",
+        "visitorPresent": false,
+        "responseContextPresent": false,
+        "apiErrorPresent": true,
+        "apiErrorCode": 400,
+        "musicSearchContentsRecognized": false,
+        "webSearchContentsRecognized": false,
+        "visitorBytes": 0,
+        "visitorSha256": null
+      }
+    ],
+    "rawValueReturnedToNode": false
+  },
+  "summary": {
+    "requestedCases": [
+      "epoitaitaye"
+    ],
+    "publicConfigurationsObtained": 1,
+    "browserBootstrapReadable": false,
+    "playerMetadataReadable": false,
+    "exactAudioCipherReturned": false,
+    "completePlaybackEstablished": false,
+    "standaloneBrowserBootstrapEstablished": false,
+    "mediaOrSignedUrlsWritten": false
+  },
+  "browsersClosed": true
+}

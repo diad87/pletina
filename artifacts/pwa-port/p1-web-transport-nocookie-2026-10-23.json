@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-23T09:20:35.845Z",
+  "round": "nocookie-read",
+  "scope": "One generic public embedded recipe reused across IDs with a Music visitor freshly obtained in browser RAM. Opaque WEB metadata compares the P1 notice gate; no audio.",
+  "execution": {
+    "scriptSha256": "d5e05c46752286254f344162b1f77598ae87f92d388bda1ca04984dc1481cdbe",
+    "sourceSnapshot": "artifacts/pwa-port/p1-web-transport-source-d5e05c4675228625.mjs",
+    "frozenProvenance": {
+      "firstReport": "artifacts/pwa-port/p1-web-transport-2026-10-23.json",
+      "firstReportSha256": "a26aa9f5e8782b0bd488b025f9bd70fa17bdf3cd7cc1ab8298b348ea9d43b8e6",
+      "firstSourceSnapshot": "artifacts/pwa-port/p1-web-transport-source-21491f1094d1f8fe.mjs",
+      "firstSourceSha256": "21491f1094d1f8fe24a9cc96babb584b58fec3b95439a60a1401b3ba7e02fa38",
+      "portedConfigurationFunctionSha256": "24164598d9a3320063b9a8e2b5b4cee97c48377c1bcb2e3805ddeefb6d44a6b4",
+      "officialHead": "9892b9c4968e7b57a239f3b5bdcb45e74852c848",
+      "officialSources": [
+        {
+          "path": "docs/informe-contenido-infantil-2026-10-23.md",
+          "sha256": "f8da999f07b7e01a85e24b9d78293dcb58dbee79b5c86843dd71a5aee9f13959"
+        },
+        {
+          "path": "src-tauri/src/native_embedded.rs",
+          "sha256": "0a9ba8aa133034d3ccc845eb0c37fd0a78c9191c813bc1da9d478df434954427"
+        },
+        {
+          "path": "src-tauri/src/youtube_session.rs",
+          "sha256": "9a20a25a371a4eca1f68b29bf8db5079151c53875864265287e6fb51b99feede"
+        }
+      ],
+      "officialCheckoutReadThisRound": false
+    },
+    "pwaVersionSourceSha256": "75b47de62ff3a34b47f8c25b785d7f8b35fccf5f589a94f8f15bc5bc27bd8e67",
+    "versions": {
+      "music": "1.20260901.01.00",
+      "web": "2.20261007.00.00"
+    }
+  },
+  "policy": {
+    "productChanged": false,
+    "rustBuilt": false,
+    "proxyUsed": false,
+    "accountOrSubscriptionUsed": false,
+    "apiKeyUsed": false,
+    "cookieJarUsed": false,
+    "borrowedCredentialsUsed": false,
+    "protectedAuthenticationOrDrmAttempted": false,
+    "remoteJavascriptExecuted": false,
+    "mediaRequested": false,
+    "signedUrlsPersisted": false,
+    "visitorOrFlagsValuesPersisted": false,
+    "securityOverrides": false,
+    "backgroundThrottleOverrides": false,
+    "observerUserGesture": false,
+    "outputMuted": false,
+    "diagnosticBootstrap": "Fresh anonymous public HTML and JS read by QA Node GET in memory; availability through Node does not establish PWA CORS access."
+  },
+  "requestDifferenceFromNative": {
+    "clientName": "WEB_EMBEDDED_PLAYER",
+    "clientId": 56,
+    "copiedBodyFields": "P1 allowlist including its public embedded context and fresh ST",
+    "browserContentType": "text/plain;charset=UTF-8",
+    "nativeContentType": "application/json",
+    "omittedNativeHeaders": [
+      "User-Agent override",
+      "Origin override",
+      "Accept-Encoding override",
+      "X-Youtube-Client-Name",
+      "X-Youtube-Client-Version",
+      "X-Goog-Visitor-Id"
+    ],
+    "reason": "The browser owns forbidden headers; text/plain avoids adding a JSON/custom-header preflight. No header restriction is bypassed."
+  },
+  "nodeBootstrap": [],
+  "corsReads": [
+    {
+      "kind": "privacy-enhanced-embed",
+      "videoId": "DJzjkMBMook",
+      "results": [
+        {
+          "origin": "opaque-null",
+          "readable": false,
+          "error": "TypeError",
+          "message": "Failed to fetch",
+          "elapsedMs": 395
+        }
+      ]
+    }
+  ],
+  "player": [],
+  "webEligibility": [],
+  "controls": [],
+  "transport": [
+    {
+      "host": "www.youtube-nocookie.com",
+      "method": "GET",
+      "route": "embed",
+      "phase": "response-headers",
+      "status": 200,
+      "allowOrigin": null
+    },
+    {
+      "host": "www.youtube-nocookie.com",
+      "method": "GET",
+      "route": "embed",
+      "phase": "failed",
+      "error": "net::ERR_FAILED",
+      "corsErrorStatus": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      },
+      "blockedReason": null
+    }
+  ],
+  "errors": [],
+  "browser": "Chrome/148.0.7778.97",
+  "summary": {
+    "requestedCases": [
+      "epoitaitaye"
+    ],
+    "publicConfigurationsObtained": 0,
+    "browserBootstrapReadable": false,
+    "playerMetadataReadable": false,
+    "exactAudioCipherReturned": false,
+    "completePlaybackEstablished": false,
+    "standaloneBrowserBootstrapEstablished": false,
+    "mediaOrSignedUrlsWritten": false
+  },
+  "browsersClosed": true
+}

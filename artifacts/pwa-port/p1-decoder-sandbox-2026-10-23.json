@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-23T09:14:54.124Z",
+  "scriptSha256": "a6aff508e0062993ed9fda5a1f93ceb692ba3c431df8594471f3cfad4f797041",
+  "checks": [
+    {
+      "name": "packaged transform runs in a worker with no DOM",
+      "pass": true
+    },
+    {
+      "name": "CSP blocks worker network",
+      "pass": true
+    },
+    {
+      "name": "opaque worker cannot open application storage",
+      "pass": true
+    },
+    {
+      "name": "busy worker is terminated at its deadline",
+      "pass": true
+    },
+    {
+      "name": "UI remains responsive after termination",
+      "pass": true
+    },
+    {
+      "name": "all sandbox frames removed",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "scope": "Synthetic transform isolation in a normal desktop browser, no provider decoding or playback proof.",
+  "productChanged": false,
+  "browserPolicyOverrides": false,
+  "providerCodeExecuted": false,
+  "providerAudioRequested": false,
+  "browser": "Chrome/148.0.7778.97",
+  "results": {
+    "pure": {
+      "result": {
+        "sig": "elpmas",
+        "n": "value-transformed",
+        "dom": "undefined"
+      },
+      "elapsedMs": 11
+    },
+    "network": {
+      "result": "network-denied",
+      "elapsedMs": 14
+    },
+    "storage": {
+      "result": "SecurityError",
+      "elapsedMs": 11
+    },
+    "loop": {
+      "error": "worker-deadline",
+      "elapsedMs": 314
+    },
+    "afterLoop": {
+      "result": "responsive",
+      "elapsedMs": 25
+    },
+    "framesRemaining": 0
+  },
+  "browsersClosed": true
+}

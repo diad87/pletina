@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T09:20:15.826Z",
+  "scope": "QA-only static decoder prototype and pinned read-only review of later P1 optimizations; no runtime adapter, product build or deployment.",
+  "prototype": {
+    "report": "artifacts/pwa-port/p1-static-decoder-prototype-final-2026-10-23.json",
+    "sha256": "c8b4e611f728c0523b79feb5e9511ec4ba66f72462db285bda27a856ee274e0b",
+    "scriptSha256": "ed20853568c157d7f0efc0df180c409180635f60efc9ab685947d5d6ddc05fe5",
+    "playerSha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "signatureTimestamp": 20746,
+    "decoderSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "decoderBytes": 173175,
+    "syntheticComparisonChecks": 4,
+    "allChecksPassed": true,
+    "prepared18_1And18_2Identical": true,
+    "ASTModulesIdentical": true,
+    "mediaOrPlayerPostRequested": false,
+    "fullPlayerExecuted": false,
+    "ephemeralContextPersisted": false
+  },
+  "laterP1": {
+    "commit": "8983e261bbd8dcaa89195a3aca53f15a672199a2",
+    "sources": [
+      {
+        "path": "src-tauri/src/native_embedded.rs",
+        "sha256": "048d4e03831cf98e96cc211fa85b5252c4d9ae6e7a722a2e0f81cb16a757c870"
+      },
+      {
+        "path": "src-tauri/src/youtube_decoder_cache.rs",
+        "sha256": "30f06a9c02e96b2c4eb9ccb98dc4c5defb82cf6c98ad2ba6f80e9e3481da7371"
+      },
+      {
+        "path": "src-tauri/src/youtube_decoder.rs",
+        "sha256": "7958a4cb7242ff2ce7f1c4d410b0d4da749d9992b631029afb0fb90dd5a10d4b"
+      },
+      {
+        "path": "src-tauri/Cargo.toml",
+        "sha256": "bcf51f6772d6ce397de75c51bce713cdeb5868219895db3dc31bfaa6d96805c4"
+      }
+    ],
+    "findings": [
+      {
+        "change": "Parallel watch eligibility and embed configuration bootstrap",
+        "portable": "Promise-level overlap is portable only after both browser requests are readable. It does not change CORS or grant access."
+      },
+      {
+        "change": "Speculative player POST overlaps AST preparation using a literal ST hint",
+        "portable": "Native accepts its response only if full AST extraction independently returns that exact ST. A pre-extracted static recipe already removes mobile AST preparation, so this overlap adds little to that design."
+      },
+      {
+        "change": "Persistent prepared-decoder cache",
+        "portable": "Useful identity pattern: source URL + fresh source SHA + analyzer/runtime ABI + script checksum + six-hour local TTL, capped at four entries/eight MiB. Actual new cache lookup still downloads base.js before trusting a saved decoder. With browser GET blocked, a PWA cannot claim that fresh-source validation; static recipe provenance/freshness must be a separate, explicitly bounded policy."
+      },
+      {
+        "change": "QuickJS release C optimization and app-local file initialization",
+        "portable": "Rust/QuickJS/native filesystem specifics, not a web adapter. Decoder transform itself did not change in this commit; youtube_decoder.rs changes add an ignored profiling test."
+      }
+    ]
+  },
+  "browserDesignAssessment": {
+    "implementedByThisPrototype": false,
+    "proposal": "Dedicated worker within an opaque sandbox iframe; connect-src none; narrowly bounded script/worker sources; network/import entrypoints constrained; trusted wrapper verifies protocol and terminates externally on deadline.",
+    "limits": [
+      "Opaque origin isolates application storage but does not alone disable worker networking or code imports.",
+      "connect-src none does not itself establish the importScripts/dynamic-import policy; worker script-src and import entrypoints require independent proof.",
+      "Browser termination controls time but offers no equivalent hard QuickJS memory quota.",
+      "Build-time AST extraction avoids the native 192 MiB preparation step on the phone, while signature/n execution still needs isolation and bounded inputs.",
+      "No browser execution of this provider fragment, fresh-visitor generic configuration, made-for-kids JSON eligibility, CDN bytes or playback has been established by this prototype."
+    ]
+  },
+  "decision": "Static decoder generation is established for this public player hash. Activating a generic runtime recipe remains gated on independent browser bootstrap/context and complete media validation."
+}

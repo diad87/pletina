@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T09:24:44.545Z",
+  "build": "2cbb1fcf0376491f",
+  "status": "validated-awaiting-deployment",
+  "sourceCommit": "91a7097a5bff4998dfa0a433039ff8ce86bce247",
+  "previousBuild": "2de9fb3adaa9c210",
+  "productChange": "Portable P1 Music response parsing, exact video identity and original-audio selection only. Existing VISIONOS transport remains; no embedded decoder or build session distributed.",
+  "logic": {
+    "pass": 568,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-parser-logic-final-2026-10-23.txt"
+  },
+  "types": {
+    "errors": 0,
+    "warnings": 0,
+    "report": "artifacts/pwa-port/p1-parser-types-final-2026-10-23.txt"
+  },
+  "directedParser": {
+    "pass": 59,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-parser-port-2026-10-23.json"
+  },
+  "media": {
+    "pass": 112,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 2,
+    "total": 114,
+    "reports": [
+      "artifacts/pwa-e2e/media-2cbb1fcf0376491f-win/summary.json",
+      "artifacts/pwa-e2e/media-2cbb1fcf0376491f-linux/summary.json"
+    ],
+    "unsupportedCases": [
+      {
+        "profile": "chromium-android-layout",
+        "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+        "reason": "This engine delegates file sharing to an OS picker; automated recipient selection is outside browser-only E2E."
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "media.download-quotaFailure-rollback-and-no-false-done",
+        "reason": "This browser does not expose navigator.storage.estimate; the quota-estimation failure cannot be injected without fabricating a platform API."
+      }
+    ],
+    "scope": "Three desktop engines with Android/iPhone layouts; controlled provider fixtures. OS/device integrations excluded.",
+    "unsupportedCount": 2
+  },
+  "officialVideoRegression": {
+    "pass": 33,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0,
+    "reports": [
+      "artifacts/pwa-e2e/official-youtube-2cbb1fcf0376491f-win/summary.json",
+      "artifacts/pwa-e2e/official-youtube-2cbb1fcf0376491f-linux/summary.json"
+    ],
+    "realYouTubePlaybackVerified": false
+  },
+  "livePrimary": {
+    "pass": 3,
+    "fail": 0,
+    "report": "artifacts/pwa-port/p1-browser-2cbb1fcf0376491f-local.json",
+    "providerMocked": false,
+    "scope": "Compiled PWA real Radiohead/Creep search and selected-source audio advance; desktop only, not fresh one-gesture autoplay proof."
+  },
+  "update": {
+    "from": "2de9fb3adaa9c210",
+    "pass": 11,
+    "fail": 0,
+    "report": "artifacts/pwa-port/update-e2e-2cbb1fcf0376491f.json",
+    "scope": "Real controlling service worker and IDB/download fixture state retained in isolated desktop browser."
+  },
+  "p1Research": {
+    "transport": "artifacts/pwa-port/p1-web-transport-final-manifest-2026-10-23.json",
+    "decoder": "artifacts/pwa-port/p1-static-feasibility-2026-10-23.json",
+    "sandbox": "artifacts/pwa-port/p1-decoder-sandbox-2026-10-23.json",
+    "runtimeRouteActivated": false,
+    "standaloneEmbeddedBootstrapEstablished": false,
+    "realCipherDecodeOrCdnPlaybackEstablished": false
+  },
+  "distribution": {
+    "files": 22,
+    "initialBytes": 49831,
+    "applicationBytes": 536203,
+    "totalBytes": 631607,
+    "cssAndFontsUnchanged": true,
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "app.b46a09708a46a032.js",
+        "bytes": 16483,
+        "sha256": "b46a09708a46a032641695e2a4e52114dbd44af65e41fe57ed80b17817c87dc4"
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-BzWVG3zr.css",
+        "bytes": 86726,
+        "sha256": "0a89e5ae40d6c3e7488e53dcc10a1ff949f267f9523981781bfee3e62ed2dd25"
+      },
+      {
+        "path": "application/assets/index-CxLHVpB4.js",
+        "bytes": 417726,
+        "sha256": "b21d9ceebc31488079c578c33b6f7210b389be01a1794d8a145e4dccd39f51ea"
+      },
+      {
+        "path": "application/index.af54cfc7b1a95e2f.html",
+        "bytes": 774,
+        "sha256": "af54cfc7b1a95e2fd71664ead9108e43494f4f88769dff0f750fd49c80265418"
+      },
+      {
+        "path": "application/launcher.f7da300b481f8779.js",
+        "bytes": 541,
+        "sha256": "f7da300b481f877971cfcbf295ac9aa74ef85184c2013030ad39b700784b2fe5"
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "index.html",
+        "bytes": 7798,
+        "sha256": "ee28478e783f0d9c80109a13defa051aec22316fe829cfc55df3b7c1ac1c7d11"
+      },
+      {
+        "path": "manifest.webmanifest",
+        "bytes": 499,
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "bytes": 15259,
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741"
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "bytes": 5810,
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9"
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "bytes": 581,
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba"
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "bytes": 4843,
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6"
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "bytes": 3235,
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e"
+      },
+      {
+        "path": "sw.js",
+        "bytes": 9206,
+        "sha256": "e2d97d6347375fd5bbfceff270354ac0085e3934679543c705cab1f3de959642"
+      }
+    ]
+  },
+  "webkitProvenance": "artifacts/pwa-e2e/webkit-2cbb1fcf0376491f-frozen-copy.json",
+  "physicalDeviceChecks": {
+    "android": "not repeated for this build",
+    "iphone": "not repeated for this build",
+    "screenOffVerified": false
+  },
+  "limits": [
+    "P1 embedded control bodies use anonymous Node-obtained public bootstrap during QA; no such visitor/config session is shipped.",
+    "Fresh Music/WEB browser visitors, missing visitor and nocookie bootstrap do not establish the new embedded route in the tested cases.",
+    "Synthetic decoder vectors and sandbox tests do not demonstrate real deciphered media or background playback.",
+    "No new Epoitaitaye recovery or universal catalog coverage claimed.",
+    "Android Auto/CarPlay native integrations remain unavailable in this static PWA."
+  ]
+}

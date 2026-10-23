@@ -1,0 +1,83 @@
+{
+  "recordedAt": "2026-10-23T09:17:40.267Z",
+  "scope": "P1 portable parser integration and independent encoding review only; no build, deployment, new transport or physical-device assertion.",
+  "provenance": {
+    "pwaFile": "web-port/youtube.ts",
+    "pwaFileSha256": "75b47de62ff3a34b47f8c25b785d7f8b35fccf5f589a94f8f15bc5bc27bd8e67",
+    "tests": "scripts/tests/web-p1-parser.test.mjs",
+    "testsSha256": "97e6cb2bd73280913ac40519ecc326fe96b3ecb12dc13b6b8064eca12c9040a7",
+    "p1Worktree": "C:/Users/iunan/musify-oficial",
+    "p1Head": "5915dd1fbc794268105130dccec77a9c9213ceba",
+    "originalFilterCommit": "d426c50f35d50e4de2f9d15203621d337e594677",
+    "originalFilterFile": "src-tauri/src/native.rs",
+    "originalFilterFunction": "original_audio_with_policy / audio_tags / protobuf_fields",
+    "globalPolicyFile": "src-tauri/src/native_embedded.rs",
+    "globalPolicyFunction": "candidate_audio / audio_candidates",
+    "originFilterUnchangedAtObservedHead": true,
+    "originNativeSectionSha256": "d7109a8f611fccf2aa6d605076a72227fa8a4f14c12fc393eab376b69b23335f",
+    "originEmbeddedSectionSha256": "fd9c9eaea546d1c4690e65980de5082c5ac38584db7913d436a3f34d26071c9e"
+  },
+  "review": {
+    "canonicalSerializationRepresentations": 2048,
+    "rawStandardPlusQueryCases": 8,
+    "independentSerializer": "youtubei.js FormatXTags.encode from installed generated protobuf schema",
+    "failures": [],
+    "malformedBoundaryTests": "Unit regressions cover truncated/duplicate/non-UTF8/oversized protobuf, 65-field limit, conflicting acont, DRC, DRM and implicit-original ambiguity.",
+    "discoveredAndFixed": [
+      {
+        "issue": "Browser atob accepts noncanonical trailing bits that native Rust base64 0.22 rejects.",
+        "fix": "Require exact canonical URL_SAFE_NO_PAD, URL_SAFE or STANDARD roundtrip."
+      },
+      {
+        "issue": "Default TextDecoder strips a leading UTF-8 BOM, unlike native str::from_utf8.",
+        "fix": "Use fatal UTF-8 with ignoreBOM:true to preserve BOM as data; it cannot become original identity."
+      }
+    ]
+  },
+  "validation": {
+    "directed": {
+      "passed": 59,
+      "total": 59,
+      "log": "artifacts/pwa-port/p1-parser-directed-final-2026-10-23.txt"
+    },
+    "allLogic": {
+      "passed": 568,
+      "total": 568,
+      "log": "artifacts/pwa-port/p1-parser-logic-final-2026-10-23.txt"
+    },
+    "types": {
+      "errors": 0,
+      "warnings": 0,
+      "log": "artifacts/pwa-port/p1-parser-types-final-2026-10-23.txt"
+    }
+  },
+  "comparison": [
+    {
+      "feature": "Music results",
+      "p1": "Known tabbed or flat section containers, recognized empty tabs, rejection of API error/ERROR alert.",
+      "pwa": "Ported without broad recursive scraping."
+    },
+    {
+      "feature": "Original audio",
+      "p1": "Explicit original marker required across all encodings once any audio track/language metadata is present; DRC/DRM/dub/contradiction rejected.",
+      "pwa": "Same policy with bounded FormatXTags protobuf; wholly untagged MP4 remains compatible."
+    },
+    {
+      "feature": "Requested video identity",
+      "p1": "Extractor checks the requested video identity.",
+      "pwa": "status OK now additionally requires exact valid videoDetails.videoId."
+    },
+    {
+      "feature": "Codec selection",
+      "p1": "Native formats may include Opus or other ordered codecs.",
+      "pwa": "Existing direct MP4 selection retained; no speculative Opus or cipher support added."
+    },
+    {
+      "feature": "Transport and capture",
+      "p1": "Rust HTTP, anonymous bootstrap, decoder and privileged capture APIs.",
+      "pwa": "Unchanged normal browser transport/session; parser changes do not overcome bootstrap/CDN CORS or supply captured bytes."
+    }
+  ],
+  "productFileChangedOnly": "web-port/youtube.ts parser regions; stream/requestJson/session unchanged",
+  "published": false
+}
