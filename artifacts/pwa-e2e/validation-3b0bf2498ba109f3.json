@@ -424,7 +424,17 @@
     "priorSelectionRequestedBuild": "9e5a1b663ba1d8ab",
     "priorSelectionFeedback": "Parece que ahora si cambia",
     "previousFeedbackReassigned": false,
-    "scope": "Prior tentative selection-change feedback is not validation of the new retry policy, counters, timing, cancellation, background or installed build."
+    "scope": "Selection and loading feedback are now user-confirmed on Xiaomi, with observed build unknown. This does not validate the new retry policy, counters, cancellation or background playback.",
+    "selectionConfirmation": {
+      "report": "artifacts/pwa-port/android-artist-selection-confirmation-2026-10-23.json",
+      "userResponse": "Sí, cambia y muestra la carga",
+      "requestedBuild": "9e5a1b663ba1d8ab",
+      "observedBuild": null,
+      "latestSelectedSongReportedCorrect": true,
+      "loadingFeedbackReportedVisible": true,
+      "newRetryPolicyVerified": false,
+      "scope": "User confirms the requested title/artwork selection and loading-indicator flow on the Xiaomi. This is user-reported evidence, with no installed build observation. It does not verify the subsequently published two-retry policy, separate title/artwork tap targets, retry cancellation or background playback."
+    }
   },
   "publicFiles": {
     "status": "verified",
@@ -444,8 +454,8 @@
   "limits": [
     "Two extra attempts are bounded and conditional; they do not guarantee provider availability or universal catalogue coverage.",
     "A transient final network/timeout remains an error, not an automatic video launch.",
-    "Historical selection feedback does not confirm the new retry UI or physical protocol.",
-    "No new physical Android/iPhone, screen-off/background, long-session or car integration claim.",
+    "User confirmation of selection and loading feedback does not confirm the new retry UI or physical protocol.",
+    "The new retry policy has no physical Android/iPhone, screen-off/background, long-session or car integration verification; selection/loading alone is user-confirmed on Xiaomi.",
     "P1 anonymous recipe lifetime/IP/cohort limits and download.allowed:false remain unchanged."
   ],
   "lineEndingNormalization": [
@@ -559,6 +569,11 @@
       "path": "artifacts/pwa-port/audio-final-retry-3b0bf2498ba109f3-public-manifest.json",
       "sha256": "414e0cb118ff9b5c67b033420778516b27ee0760fcfdf0cd5376d9534a3c4a02",
       "bytes": 7548
+    },
+    {
+      "path": "artifacts/pwa-port/android-artist-selection-confirmation-2026-10-23.json",
+      "sha256": "f475d66712a24045e3bfb738c07faabfdd212a31d344e0a2d34aa257ecaa52ea",
+      "bytes": 1549
     }
   ],
   "updatedAt": "2026-10-23T13:02:11.630Z",
@@ -589,5 +604,7 @@
     "resourcesClosed": true,
     "scope": "Published compiled UI with real-provider native audio in desktop foreground. Does not prove a retry was needed, a physical phone fix or universal coverage."
   },
-  "verifiedAt": "2026-10-23T13:02:11.628Z"
+  "verifiedAt": "2026-10-23T13:02:11.628Z",
+  "selectionSymptomReportedResolved": true,
+  "physicalFailureResolvedScope": "The overall retry/provider/physical protocol remains unverified; selection and loading feedback have a separate positive user confirmation."
 }
