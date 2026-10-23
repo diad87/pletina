@@ -831,8 +831,8 @@ fn published_client(client: Option<&Value>) -> Result<Map<String, Value>, Error>
 fn config(html: &str) -> Result<Config, Error> {
     let mut selected = Map::new();
     // Whitelist configuration only; do not propagate request/user/tracking contexts.
-    for value in json_after(html, "ytcfg.set(")? {
-        let object = value.as_object().ok_or_else(|| fail("CONFIG_OBJECT_TYPE"))?;
+    for mut value in json_after(html, "ytcfg.set(")? {
+        let object = value.as_object_mut().ok_or_else(|| fail("CONFIG_OBJECT_TYPE"))?;
         for key in [
             "INNERTUBE_CLIENT_NAME",
             "INNERTUBE_CLIENT_VERSION",
@@ -841,11 +841,11 @@ fn config(html: &str) -> Result<Config, Error> {
             "INNERTUBE_CONTEXT",
             "WEB_PLAYER_CONTEXT_CONFIGS",
         ] {
-            if let Some(value) = object.get(key) {
-                if selected.get(key).is_some_and(|previous| previous != value) {
+            if let Some(value) = object.remove(key) {
+                if selected.get(key).is_some_and(|previous| previous != &value) {
                     return Err(fail("CONFIG_AMBIGUOUS"));
                 }
-                selected.insert(key.into(), value.clone());
+                selected.insert(key.into(), value);
             }
         }
     }
