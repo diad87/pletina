@@ -1,7 +1,8 @@
 import type { Alternative, Playable, TrackQuery, YouTubeTrackPreview } from '../src/lib/types'
 import { readSourceChoice, saveSourceChoice, readYouTubeVideo } from './storage'
 import { resolvePodcastTrack } from './podcast-audio'
-import { MAX_DOWNLOAD_BYTES, readDownloadedPlayable, removeDownloadedTrack } from './download-store'
+import { readDownloadedPlayable, removeDownloadedTrack } from './download-store'
+import { youtubePlayable as playable } from './youtube-playable'
 import { resolveCatalogSource } from './catalog-sources'
 import { disposeVerifiedAudio, resolveVerifiedAudio } from './verified-audio'
 import { disposeFunkwhaleAudio, resolveFunkwhaleAudio } from './funkwhale-audio'
@@ -63,18 +64,6 @@ function validTrack(track: TrackQuery): void {
 }
 const isDirect = (track: TrackQuery) => track.id >= YOUTUBE_BASE && track.id < PODCAST_BASE
 const isPodcast = (track: TrackQuery) => track.id >= PODCAST_BASE && track.id < LOCAL_BASE
-const playable = (info: StreamInfo, title = info.title, channel = info.channel): Playable => {
-  const permitted = validVideoId(info.videoId) && Number.isSafeInteger(info.contentLength) && info.contentLength! > 0 &&
-    info.contentLength! <= MAX_DOWNLOAD_BYTES && typeof info.duration === 'number' && Number.isFinite(info.duration) &&
-    info.duration > 0 && info.duration <= 86400
-  return { videoId: info.videoId, url: info.url, title, channel, local: false,
-    ...(info.transport === 'p1' ? { source: { provider: 'youtube-p1' as const, id: info.videoId, expiresAt: info.expiresAt,
-      // These are declared metadata of the selected original encoding, not a
-      // hash or observed byte count. The downloader must validate its local
-      // cached duration and decodable tail before committing an offline copy.
-      download: permitted ? { allowed: true, contentLength: info.contentLength, duration: info.duration! } : { allowed: false } } } : {}),
-  }
-}
 const choice = (candidate: Candidate, score: number, verified: boolean) => ({ videoId: candidate.videoId, title: candidate.title,
   channel: candidate.artists.join(', '), duration: candidate.duration, score, verified })
 
@@ -227,7 +216,7 @@ async function resolve(track: TrackQuery, refresh: boolean, includeDownloaded: b
       checkAbort(signal)
       if (downloaded) return downloaded
     }
-    if (isPodcast(track)) return resolvePodcastTrack(track, refresh, signal)
+    if (isPodcast(track)) return resolvePodcastTrack(track, refresh, signal, includeDownloaded)
     let manualSource = false
     const exactLoaders = { verified: resolveVerifiedAudio, funkwhale: resolveFunkwhaleAudio, catalog: resolveCatalogSource }
     const exactAttempts = new Map<keyof typeof exactLoaders, Promise<Playable | null>>()

@@ -58,7 +58,8 @@ const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
 const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, p1Codecs, p1PrimaryRepair, p1Downloads, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
-  youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno' } }
+  youtubePodcast: { query: 'QA Podcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno',
+    episodes: castVideos.map((videoId, i) => ({ videoId, title: 'Episodio QA YouTube ' + titles[i], duration: 90 })) } }
 const spotifyId = '0123456789ABCDEFGHIJKL'
 const spotify = { id: spotifyId, uri: 'spotify:playlist:' + spotifyId,
   url: 'https://open.spotify.com/playlist/' + spotifyId, name: 'Spotify QA Orden y Duplicados',
@@ -454,6 +455,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (url.pathname.endsWith('/browse')) return json(podcastDetail)
       if (url.pathname.endsWith('/search')) {
         if (body.params === 'EgWKAQJQAWoMEA4QChADEAQQCRAF') return json({ items: flags.emptyYoutubePodcasts ? [] : [podcastShow] })
+        if (flags.p1PodcastDownloads) Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: 'unexpected-music-search' })
         let selectedTracks = selected(body.query || '')
         if (flags.p1Downloads && selectedTracks.length === 1 && p1DownloadTracks.some(track => track.id === selectedTracks[0].id)) {
           Object.assign(row, { fixtureCase: 'p1-download', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
@@ -506,6 +508,22 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
+        const p1Podcast = flags.p1PodcastDownloads && media.youtubePodcast.episodes.find(episode => episode.videoId === videoId)
+        if (p1Podcast) {
+          Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: 'player', videoId, clientName })
+          if (clientName === 'VISIONOS') {
+            row.playability = 'UNPLAYABLE'
+            return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
+          }
+          if (clientName !== 'WEB_EMBEDDED_PLAYER') return route.abort('blockedbyclient')
+          row.playability = 'OK'
+          return json({ playabilityStatus: { status: 'OK', playableInEmbed: true },
+            videoDetails: { videoId, title: p1Podcast.title, author: 'Autor QA', lengthSeconds: '90' },
+            streamingData: { adaptiveFormats: [{ itag: 140, bitrate: 128000, mimeType: 'audio/mp4; codecs="mp4a.40.2"',
+              contentLength: String(castAudio.length), audioTrack: { audioIsDefault: true, displayName: 'Original' },
+              url: 'https://fixture.googlevideo.com/videoplayback?expire=' + (Math.floor(Date.now() / 1000) + 7200) +
+                '&itag=140&mime=audio%2Fmp4&clen=' + castAudio.length + '&qa_p1_cast=' + videoId }] } })
+        }
         const p1Download = flags.p1Downloads && p1DownloadTracks.find(track => track.videoId === videoId)
         if (p1Download) {
           Object.assign(row, { fixtureCase: 'p1-download', operation: 'player', videoId, clientName })
@@ -634,6 +652,18 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.abort()
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test' || audiusStream) {
+      const p1Podcast = flags.p1PodcastDownloads && media.youtubePodcast.episodes.find(episode => episode.videoId === url.searchParams.get('qa_p1_cast'))
+      if (p1Podcast) {
+        const transfer = request.resourceType() === 'fetch', rejected = transfer && p1Podcast.videoId === castVideos[1]
+        Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: 'media', videoId: p1Podcast.videoId, transfer,
+          fetchMode: request.headers()['sec-fetch-mode'] ?? null,
+          responseStatus: rejected ? 403 : request.headers().range ? 206 : 200, responseMime: rejected ? 'text/html' : 'audio/mp4' })
+        if (rejected) {
+          const body = '<!doctype html><title>Controlled invalid podcast download</title><p>Not audio</p>'
+          Object.assign(row, { injectedFailure: 'p1-podcast-download-opaque-http403-html', bodySha256: createHash('sha256').update(body).digest('hex') })
+          return route.fulfill({ status: 403, headers, contentType: 'text/html', body })
+        }
+      }
       const p1Download = flags.p1Downloads && p1DownloadTracks.find(track => track.videoId === url.searchParams.get('qa_p1_download'))
       if (p1Download) {
         const transfer = request.resourceType() === 'fetch', rejected = transfer && p1Download.id === p1DownloadTracks[1].id
@@ -696,20 +726,20 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (flags.holdDownload && download) await new Promise(resolve => pending.add(resolve))
       if (flags.failMedia) return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'Fixture denied audio' })
       const bytes = codec && url.searchParams.get('itag') === '251' ? opusAudio
-        : url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) ? castAudio : audio
+        : p1Podcast || url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) ? castAudio : audio
       const contentType = codec && url.searchParams.get('itag') === '251' ? 'audio/webm' : 'audio/mp4'
       const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers().range || '')
       if (range) {
         const start = Number(range[1]), end = range[2] ? Math.min(Number(range[2]), bytes.length - 1) : bytes.length - 1
         if (start > end || start >= bytes.length) {
-          if (primaryRepair || p1Download) Object.assign(row, { responseStatus: 416, bodySha256: createHash('sha256').update('').digest('hex') })
+          if (primaryRepair || p1Download || p1Podcast) Object.assign(row, { responseStatus: 416, bodySha256: createHash('sha256').update('').digest('hex') })
           return route.fulfill({ status: 416, headers: { ...headers, 'content-range': 'bytes */' + bytes.length }, body: '' })
         }
-        if (primaryRepair || p1Download) Object.assign(row, { responseStatus: 206, bodySha256: createHash('sha256').update(bytes.subarray(start, end + 1)).digest('hex') })
+        if (primaryRepair || p1Download || p1Podcast) Object.assign(row, { responseStatus: 206, bodySha256: createHash('sha256').update(bytes.subarray(start, end + 1)).digest('hex') })
         return route.fulfill({ status: 206, headers: { ...headers, 'accept-ranges': 'bytes', 'content-range': 'bytes ' + start + '-' + end + '/' + bytes.length },
           contentType, body: bytes.subarray(start, end + 1) })
       }
-      if (p1Download) Object.assign(row, { responseStatus: 200, bodySha256: createHash('sha256').update(bytes).digest('hex') })
+      if (p1Download || p1Podcast) Object.assign(row, { responseStatus: 200, bodySha256: createHash('sha256').update(bytes).digest('hex') })
       return route.fulfill({ status: 200, headers: { ...headers, 'accept-ranges': 'bytes' }, contentType, body: bytes })
     }
     if (url.hostname === 'open.spotify.com') return route.fulfill({ status: 403, headers, contentType: 'text/html', body: '<!doctype html><title>Fixture access denied</title>' })
@@ -742,6 +772,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   await resumeRoutes()
   return { data: { artists, albums, tracks }, artists, albums, tracks, media, spotify, requests, counts, flags, set, reset, failNext,
     audioFile: { bytes: audio.length, sha256: createHash('sha256').update(audio).digest('hex'), mime: 'audio/mp4', duration: 12 },
+    podcastAudioFile: { bytes: castAudio.length, sha256: createHash('sha256').update(castAudio).digest('hex'), mime: 'audio/mp4', duration: 90 },
     opusAudioFile: { bytes: opusAudio.length, sha256: createHash('sha256').update(opusAudio).digest('hex'), mime: 'audio/webm', codec: 'opus', duration: 12.008 },
     // Additional pages must share the primary transport: Chromium opaque-frame
     // fetches need the same Puppeteer HTTP bridge, while other engines route normally.

@@ -1,6 +1,7 @@
 import type { Playable, TrackQuery } from '../src/lib/types'
 import { readPodcastEpisode } from './storage'
 import { checkAbort, stream, validVideoId } from './youtube'
+import { youtubePlayable } from './youtube-playable'
 
 const EPISODE_BASE = 750_000_000_000_000
 const LOCAL_BASE = 1_000_000_000_000_000
@@ -21,7 +22,7 @@ export function podcastAudioUrl(value: unknown): string {
 }
 
 /** Misma identidad y fuente de episodio que la app: RSS directo o vídeo del programa. */
-export async function resolvePodcastTrack(track: TrackQuery, refresh = false, signal?: AbortSignal): Promise<Playable> {
+export async function resolvePodcastTrack(track: TrackQuery, refresh = false, signal?: AbortSignal, recoverPrimary = false): Promise<Playable> {
   checkAbort(signal)
   if (!Number.isSafeInteger(track.id) || track.id < EPISODE_BASE || track.id >= LOCAL_BASE) {
     throw new Error('El identificador no corresponde a un episodio de pódcast.')
@@ -32,12 +33,10 @@ export async function resolvePodcastTrack(track: TrackQuery, refresh = false, si
   if (episode.audioUrl.startsWith('youtube:')) {
     const videoId = episode.audioUrl.slice('youtube:'.length)
     if (!validVideoId(videoId)) throw new Error('El vídeo de este episodio no es válido.')
-    const audio = await stream(videoId, refresh, signal)
+    const audio = await stream(videoId, refresh, signal, recoverPrimary)
     checkAbort(signal)
-    return { videoId, url: audio.url, title: track.title, channel: track.artist, local: false,
-      ...(audio.transport === 'p1' ? { source: { provider: 'youtube-p1' as const, id: videoId, expiresAt: audio.expiresAt,
-        download: { allowed: false } } } : {}),
-    }
+    if (audio.videoId !== videoId) throw new Error('El audio resuelto no corresponde al vídeo original de este episodio.')
+    return youtubePlayable(audio, track.title, track.artist)
   }
   return { videoId: '', url: podcastAudioUrl(episode.audioUrl), title: track.title, channel: track.artist, local: false }
 }

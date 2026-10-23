@@ -36,6 +36,7 @@ function harness() {
     path === './verified-audio' ? { resolveVerifiedAudio: forbidden('verified audio resolver'), disposeVerifiedAudio: forbidden('verified audio disposal') } :
     path === './funkwhale-audio' ? { resolveFunkwhaleAudio: forbidden('Funkwhale resolver'), disposeFunkwhaleAudio: forbidden('Funkwhale disposal') } :
     path === './podcast-audio' ? { resolvePodcastTrack: forbidden('podcast resolver') } :
+    path === './youtube-playable' ? { youtubePlayable: forbidden('audio playable construction') } :
       path === './download-store' ? { readDownloadedPlayable: forbidden('download read'), removeDownloadedTrack: forbidden('download removal') } :
         assert.fail('Unexpected audio import ' + path)
   new Function('exports', 'require', audioCode)(audio, requireAudio)

@@ -52,7 +52,9 @@ export const mediaScenarioInventory = Object.freeze([
   'download-quotaFailure-rollback-and-no-false-done', 'download-storageFailure-rollback-and-no-false-done',
   'download-failMedia-rollback-and-no-false-done', 'download-retry-after-provider-failure-succeeds',
   'rss-podcast-direct-audio-progress-reload-and-resume', 'rss-completion-next-episode-and-relisten-from-zero',
-  'youtube-podcast-keeps-episode-namespace-and-progress', 'audio-log-export-is-local-bounded-and-has-no-source-addresses',
+  'youtube-podcast-keeps-episode-namespace-and-progress',
+  'youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume',
+  'audio-log-export-is-local-bounded-and-has-no-source-addresses',
 ].map(name => ({ id: 'media.' + name })))
 
 export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
@@ -2185,6 +2187,105 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     await reload(); assert.ok((await state()).audios.every(audio => audio.paused)); await tap('.mini button[aria-label="Reproducir"]')
     value = await playing(media.youtubePodcast.episodeTitle); assert.ok(active(value).time >= saved.position - 0.5); await pause()
     return { id, saved, resumed: value, separateFromStandaloneYouTubeTracks: true }
+  })
+  await run('youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume', async () => {
+    const episodes = media.youtubePodcast.episodes
+    assert.equal(episodes.length, 2, 'Two exact YouTube episode identities are required for the serial download gate')
+    await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await controlsOff(); await clearDownloads(); await reload()
+    let offline, networkObserver
+    try {
+      await fixture.set({ p1PodcastDownloads: true })
+      await podcast(media.youtubePodcast)
+      const ids = await page.evaluate(videoIds => new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-library')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result, tx = db.transaction('episodes', 'readonly'), get = tx.objectStore('episodes').getAll()
+          let values
+          get.onsuccess = () => { values = videoIds.map(videoId => get.result.find(row => row.value.audioUrl === 'youtube:' + videoId)?.id) }
+          tx.oncomplete = () => { db.close(); resolve(values) }; tx.onabort = () => { db.close(); reject(tx.error) }
+        }
+      }), episodes.map(episode => episode.videoId))
+      assert.ok(ids.every(id => Number.isSafeInteger(id) && id >= 750_000_000_000_000 && id < 1_000_000_000_000_000))
+      assert.equal(new Set(ids).size, 2)
+      const choicesBefore = await sourceChoiceSnapshot(), requestMark = fixture.requests.length, mark = await transferMark()
+      await tap('.page .actions button.action[title="Descargar"]')
+      assert.equal((await terminal(mark, ids[0])).state, 'done')
+      assert.equal((await terminal(mark, ids[1])).state, 'error')
+      const events = await page.evaluate(({ mark, ids }) => window.__e2eTransfers.slice(mark).filter(event => ids.includes(event.id)), { mark, ids })
+      assert.ok(!events.some(event => event.id === ids[1] && event.state === 'done'), 'A rejected episode must never report Done')
+      const firstDone = events.findIndex(event => event.id === ids[0] && event.state === 'done')
+      const secondStart = events.findIndex(event => event.id === ids[1] && event.state === 'downloading')
+      assert.ok(firstDone >= 0 && secondStart > firstDone, 'The podcast button must use the existing serial queue')
+      const attempts = fixture.requests.slice(requestMark).filter(request => request.fixtureCase === 'p1-podcast-download')
+        .map(({ operation, videoId, clientName, playability, transfer, fetchMode, responseStatus, responseMime, bodySha256, injectedFailure }) => ({ operation,
+          ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}),
+          ...(transfer !== undefined ? { transfer } : {}), ...(fetchMode !== undefined ? { fetchMode, fetchModeObserved: fetchMode !== null } : {}),
+          ...(responseStatus ? { responseStatus } : {}), ...(responseMime ? { responseMime } : {}),
+          ...(bodySha256 ? { bodySha256 } : {}), ...(injectedFailure ? { injectedFailure } : {}) }))
+      assert.deepEqual(attempts.filter(request => request.operation === 'unexpected-music-search'), [], 'An episode cannot be replaced by musical text matching')
+      for (const [index, episode] of episodes.entries()) {
+        const players = attempts.filter(request => request.operation === 'player' && request.videoId === episode.videoId)
+        assert.ok(players.some(request => request.clientName === 'VISIONOS' && request.playability === 'UNPLAYABLE'))
+        assert.ok(players.some(request => request.clientName === 'WEB_EMBEDDED_PLAYER' && request.playability === 'OK'))
+        const transfers = attempts.filter(request => request.operation === 'media' && request.transfer && request.videoId === episode.videoId)
+        assert.ok(transfers.length >= 1 && transfers.length <= 2, 'Only one renewal retry may follow a failed transfer')
+        assert.ok(transfers.every(request => request.fetchMode === null || request.fetchMode === 'no-cors'), 'An observed Fetch Metadata header must confirm the opaque transfer mode')
+        assert.ok(transfers.every(request => request.responseStatus === (index ? 403 : 200) && request.responseMime === (index ? 'text/html' : 'audio/mp4')))
+        if (!index) assert.ok(transfers.every(request => request.bodySha256 === fixture.podcastAudioFile.sha256), 'The HTTP fixture must deliver the complete ninety-second AAC body')
+      }
+      const saved = await downloadState()
+      assert.deepEqual(saved, { rows: [{ id: ids[0], title: episodes[0].title, size: fixture.podcastAudioFile.bytes, present: true, type: 'opaque' }], cacheEntries: 1 },
+        'Only the complete locally decoded episode may retain an IDB pointer and cache body; failed stages must roll back')
+      const record = await page.evaluate(id => new Promise((resolve, reject) => {
+        const request = indexedDB.open('pletina-web-downloads')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result, tx = db.transaction('files', 'readonly'), get = tx.objectStore('files').get(id)
+          let value
+          get.onsuccess = () => { value = get.result }
+          tx.oncomplete = () => { db.close(); resolve(value) }; tx.onabort = () => { db.close(); reject(tx.error) }
+        }
+      }), ids[0])
+      assert.equal(record.source, undefined)
+      assert.doesNotMatch(JSON.stringify(record), /googlevideo|youtube-p1|signature|sha256|[?&](?:expire|sig)=/i)
+      assert.deepEqual(await sourceChoiceSnapshot(), choicesBefore, 'Podcast resolution must not create or change music source associations')
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      networkObserver = observeProviderRequests()
+      offline = await ctx.goOffline(true)
+      const fixtureMark = fixture.requests.length, observedMark = networkObserver.attempts.length
+      await reload()
+      assert.equal(await page.evaluate(() => navigator.onLine), !offline.navigatorOfflineExpected)
+      assert.ok((await state()).audios.every(audio => audio.paused), 'Offline reopening cannot autoplay')
+      await downloadsView(); await tap(row(0) + ' .name')
+      let value = await playing(episodes[0].title)
+      assert.equal(active(value).local, true); assert.equal(await currentId(), ids[0])
+      await seek(.5)
+      await wait(() => window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && audio.currentTime > audio.duration / 2 + .3))
+      await closeOverlays(); await pause()
+      await wait(async id => {
+        const db = await new Promise(resolve => { const request = indexedDB.open('pletina-web-library'); request.onsuccess = () => resolve(request.result) })
+        try { return await new Promise(resolve => { const request = db.transaction('progress').objectStore('progress').get(id); request.onsuccess = () => resolve(request.result?.position >= 44) }) }
+        finally { db.close() }
+      }, ids[0])
+      const checkpoint = await progress(ids[0]); assert.equal(checkpoint.completed, false)
+      await reload(); assert.ok((await state()).audios.every(audio => audio.paused))
+      await tap('.mini button[aria-label="Reproducir"]'); value = await playing(episodes[0].title)
+      assert.equal(active(value).local, true); assert.ok(active(value).time >= checkpoint.position - .5)
+      const observations = networkObserver.attempts.slice(observedMark)
+      assert.deepEqual(observations.filter(request => request.type !== 'media'), [], 'Offline playback and checkpoint restoration cannot resolve remote sources')
+      const delivered = fixture.requests.slice(fixtureMark).filter(request => /(?:^|\.)(?:youtube\.com|googlevideo\.com|audius\.co)$/.test(request.host) && !request.injectedFailure)
+      assert.deepEqual(delivered, [], 'No provider body may arrive after the actual outage')
+      assert.deepEqual(await sourceChoiceSnapshot(), choicesBefore)
+      assert.deepEqual(await downloadState(), saved, 'Reload and checkpoint restoration must retain the validated copy without resurrecting the failed episode')
+      return { episodeIds: ids, videoIds: episodes.map(episode => episode.videoId), events, attempts, database: saved,
+        persistedFields: Object.keys(record), checkpoint, resumed: value, nativeMediaObservations: observations,
+        networkMode: offline.mode, navigatorOfflineExpected: offline.navigatorOfflineExpected, physicalAirplaneModeClaimed: false,
+        scope: 'Actual podcast DownloadButton and serial product queue; native ninety-second silent AAC decoder, CacheStorage, IDB, local reload/seek/checkpoint resume, controlled second transfer403 HTML rollback. Opaque size is declared; no product body SHA, musical identity, live-provider, long-episode, physical-phone or background-download claim.' }
+    } finally {
+      networkObserver?.stop()
+      await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads()
+    }
   })
   await run('audio-log-export-is-local-bounded-and-has-no-source-addresses', async () => {
     await closeOverlays(); await clickText('.bottom-nav button', 'Tu biblioteca')

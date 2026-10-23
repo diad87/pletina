@@ -7,7 +7,7 @@ import ts from 'typescript'
 const compile = async (name) => ts.transpileModule(await readFile(new URL(`../../web-port/${name}.ts`, import.meta.url), 'utf8'), {
   compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.CommonJS },
 }).outputText
-const [youtubeCode, audioCode, podcastCode] = await Promise.all([compile('youtube'), compile('audio'), compile('podcast-audio')])
+const [youtubeCode, audioCode, podcastCode, playableCode] = await Promise.all([compile('youtube'), compile('audio'), compile('podcast-audio'), compile('youtube-playable')])
 const flush = async () => { for (let i = 0; i < 20; i++) await Promise.resolve() }
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 function retryClock() {
@@ -92,8 +92,10 @@ function engine(overrides = {}, savedChoice = null, directVideo = id, podcastEpi
     },
   }
   const downloads = { MAX_DOWNLOAD_BYTES: 256 * 1024 ** 2, readDownloadedPlayable: async () => downloaded, removeDownloadedTrack: async (trackId) => { downloaded = null; removedDownloads.push(trackId) } }
-  const podcasts = {}
-  const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage : assert.fail(`Unexpected import ${path}`)
+  const podcasts = {}, playable = {}
+  const dependency = (path) => path === './youtube' ? mocks : path === './storage' ? storage
+    : path === './download-store' ? downloads : path === './youtube-playable' ? playable : assert.fail(`Unexpected import ${path}`)
+  new Function('exports', 'require', playableCode)(playable, dependency)
   new Function('exports', 'require', podcastCode)(podcasts, dependency)
   const exports = {}
   new Function('exports', 'require', 'window', 'setTimeout', 'clearTimeout', audioCode)(exports,
@@ -501,6 +503,120 @@ test('P1 exposes only same-format declared size and duration for locally validat
     download: { allowed: true, contentLength: primary.contentLength, duration: primary.duration } })
   assert.equal(Object.hasOwn(result.source.download, 'sha256'), false)
   assert.equal(Object.hasOwn(result.source.download, 'mime'), false)
+})
+
+test('podcast P1 enables only the selected original video format for offline validation', async () => {
+  const track = { ...query, id: 750_000_000_000_011, title: 'El episodio', artist: 'El programa', duration: 9999 }
+  const primary = { ...info(second), transport: 'p1', contentLength: 345678, duration: 3599 }
+  const streams = []
+  const audio = engine({
+    stream: async (...args) => { streams.push(args); return primary },
+    searchMusic: async () => assert.fail('an episode never searches music'),
+    searchVideos: async () => assert.fail('an episode never searches for another video'),
+    resolveVerifiedAudio: async () => assert.fail('an episode never changes to catalog audio'),
+    resolveFunkwhaleAudio: async () => assert.fail('an episode never changes to Funkwhale'),
+    resolveCatalogSource: async () => assert.fail('an episode never changes to catalog audio'),
+  }, null, id, { id: track.id, audioUrl: `youtube:${second}` })
+  const result = await audio.resolveRemoteTrack(track)
+  assert.deepEqual(result, { videoId: second, url: primary.url, title: track.title, channel: track.artist, local: false,
+    source: { provider: 'youtube-p1', id: second, expiresAt: primary.expiresAt,
+      download: { allowed: true, contentLength: primary.contentLength, duration: primary.duration } } })
+  assert.deepEqual(streams.map(([videoId, refresh]) => [videoId, refresh]), [[second, false]])
+  assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+  assert.deepEqual(audio.writes, [])
+  assert.doesNotMatch(JSON.stringify(result.source), /sha256|mime/)
+})
+
+test('podcast P1 rejects missing or invalid size and duration using the music policy', async () => {
+  const track = { ...query, id: 750_000_000_000_012 }
+  for (const patch of [{ contentLength: undefined }, { contentLength: 0 }, { contentLength: -1 }, { contentLength: 1.5 },
+    { contentLength: 256 * 1024 ** 2 + 1 }, { duration: undefined }, { duration: null }, { duration: 0 }, { duration: NaN },
+    { duration: Infinity }, { duration: 86401 }]) {
+    const primary = { ...info(second), transport: 'p1', contentLength: 123456, ...patch }
+    const audio = engine({ stream: async () => primary }, null, id, { id: track.id, audioUrl: `youtube:${second}` })
+    const result = await audio.resolveRemoteTrack(track)
+    const song = await engine({ stream: async () => primary }).resolveTrack(query)
+    assert.deepEqual(result.source, song.source)
+    assert.deepEqual(result.source.download, { allowed: false })
+    assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+test('podcast P1 permits the exact size and duration boundaries shared with music', async () => {
+  const track = { ...query, id: 750_000_000_000_013 }
+  for (const [contentLength, duration] of [[1, 0.5], [256 * 1024 ** 2, 86400]]) {
+    const primary = { ...info(second), transport: 'p1', contentLength, duration }
+    const audio = engine({ stream: async () => primary }, null, id, { id: track.id, audioUrl: `youtube:${second}` })
+    const result = await audio.resolveRemoteTrack(track)
+    assert.deepEqual(result.source.download, { allowed: true, contentLength, duration })
+  }
+})
+
+test('podcast P1 refuses a different resolved video before playback or download', async () => {
+  const track = { ...query, id: 750_000_000_000_014 }
+  for (const transport of [undefined, 'p1']) for (const playback of [true, false]) {
+    const audio = engine({ stream: async () => ({ ...info(id), transport, contentLength: 123456 }) }, null, id,
+      { id: track.id, audioUrl: `youtube:${second}` })
+    await assert.rejects(playback ? audio.resolveTrack(track) : audio.resolveRemoteTrack(track), /vídeo.*episodio|episodio.*vídeo/i)
+    assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+    assert.deepEqual(audio.writes, [])
+  }
+})
+
+for (const playback of [true, false]) test(`podcast ${playback ? 'playback repair enables' : 'download renewal excludes'} early P1 recovery for its exact video`, async () => {
+  const track = { ...query, id: 750_000_000_000_015 }, streams = []
+  const audio = engine({ stream: async (...args) => { streams.push(args); return { ...info(second), transport: 'p1', contentLength: 123456 } } },
+    null, id, { id: track.id, audioUrl: `youtube:${second}` })
+  const value = await (playback ? audio.resolveTrack(track, true) : audio.resolveRemoteTrack(track, true))
+  assert.equal(value.videoId, second)
+  assert.equal(streams.length, 1)
+  assert.equal(streams[0][1], true)
+  assert.equal(streams[0][2].aborted, false)
+  assert.equal(streams[0][3], playback)
+  assert.deepEqual(audio.writes, [])
+})
+
+test('podcast downloaded playback skips extraction but a new download resolves only its original video', async () => {
+  const track = { ...query, id: 750_000_000_000_016 }, streams = []
+  const local = { videoId: '', url: `https://app.example/pletina/__audio__/${track.id}`, title: track.title, channel: track.artist, local: true }
+  const primary = { ...info(second), transport: 'p1', contentLength: 123456 }
+  const audio = engine({ stream: async (...args) => { streams.push(args); return primary } }, null, id,
+    { id: track.id, audioUrl: `youtube:${second}` }, local)
+  assert.equal(await audio.resolveTrack(track), local)
+  assert.deepEqual(audio.calls, [])
+  assert.deepEqual(streams, [])
+  const remote = await audio.resolveRemoteTrack(track)
+  assert.equal(remote.local, false)
+  assert.equal(remote.videoId, second)
+  assert.equal(remote.source.download.allowed, true)
+  assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+  assert.equal(streams.length, 1)
+  assert.deepEqual(audio.writes, [])
+})
+
+test('podcast P1 cancellation during extraction never returns late downloadable media', async () => {
+  const track = { ...query, id: 750_000_000_000_017 }, selected = deferred(), streams = []
+  const audio = engine({ stream: async (...args) => { streams.push(args); return selected.promise } }, null, id,
+    { id: track.id, audioUrl: `youtube:${second}` })
+  const pending = audio.resolveTrack(track), rejected = assert.rejects(pending, { name: 'AbortError' })
+  await flush()
+  assert.equal(streams.length, 1)
+  audio.cancelAudioRequests()
+  assert.equal(streams[0][2].aborted, true)
+  selected.resolve({ ...info(second), transport: 'p1', contentLength: 123456 })
+  await rejected
+  assert.deepEqual(audio.writes, [])
+})
+
+test('podcast RSS download resolution stays direct and never becomes P1 or catalog audio', async () => {
+  const track = { ...query, id: 750_000_000_000_018 }, source = 'https://podcast.example/episode.mp3?token=public#fragment'
+  const audio = engine({ stream: async () => assert.fail('RSS has no YouTube extractor'),
+    resolveFunkwhaleAudio: async () => assert.fail('RSS has no alternative source') }, null, id, { id: track.id, audioUrl: source })
+  const result = await audio.resolveRemoteTrack(track, true)
+  assert.deepEqual(result, { videoId: '', url: source.split('#')[0], title: track.title, channel: track.artist, local: false })
+  assert.deepEqual(audio.calls, [`podcast:${track.id}`])
+  assert.deepEqual(audio.writes, [])
 })
 
 test('missing or invalid P1 download metadata retains the exact-download rescue policy', async () => {
