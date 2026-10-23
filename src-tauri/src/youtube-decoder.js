@@ -97,13 +97,27 @@ class SelectiveAnalyzer extends JsAnalyzer {
   }
 }
 
+function filteredTimestampMatcher(source, node) {
+  const init = node.type === 'VariableDeclarator' ? node.init : null
+  if (init?.type === 'FunctionExpression' && Number.isSafeInteger(init.start) &&
+      Number.isSafeInteger(init.end) && init.start >= 0 && init.end > init.start && init.end <= source.length) {
+    const raw = source.slice(init.start, init.end)
+    // ECMA-262 12.7: an IdentifierName can spell this StringValue literally or
+    // with a Unicode escape (\uXXXX / \u{...}); it is not Unicode-normalized.
+    // Full parsing already succeeded. This only rules out an impossible match;
+    // positives, escapes and invalid ranges still use the original AST matcher.
+    if (!raw.includes('signatureTimestamp') && !raw.includes('\\u')) return false
+  }
+  return timestampMatcher(node)
+}
+
 function prepare(source) {
   if (typeof source !== 'string' || !source.length || source.length > MAX_SOURCE) {
     throw new Error('DECODER_SOURCE_SIZE')
   }
   const analyzer = new SelectiveAnalyzer(source, { extractions: [
     { friendlyName: 'nsigFunction', match: nsigMatcher },
-    { friendlyName: 'signatureTimestampVar', match: timestampMatcher, collectDependencies: false },
+    { friendlyName: 'signatureTimestampVar', match: node => filteredTimestampMatcher(source, node), collectDependencies: false },
   ] })
   const result = new JsExtractor(analyzer).buildScript({
     disallowSideEffectInitializers: true,

@@ -27,6 +27,7 @@ test('generator accepts only the reviewed dependency versions and exact private 
     analyzerSource.replace('module: false', 'module: true'),
     analyzerSource.replace('ranges: true', 'ranges: false'),
     analyzerSource.replace('module: false', 'module: false, onToken: []'),
+    analyzerSource.replace('module: false', 'module: false, onComment: []'),
     analyzerSource + '\nparseScript(otherSource);',
   ]) assert.throws(() => transformDecoderDependency(changed, analyzerPath), /parser .*compatibility/)
 })
@@ -36,6 +37,11 @@ test('generator rejects changed token getter and node offset semantics', () => {
     meriyahSource.replace('return this.token;', 'return this.token + 1;'),
     meriyahSource.replace('node.start = start.index;', 'node.start = start.index + 1;'),
     meriyahSource.replace('parser.getToken()', 'parser.peekToken()'),
+    meriyahSource.replace('index: this.tokenIndex,', 'index: this.tokenIndex + 1,'),
+    meriyahSource.replace('index: this.startIndex,', 'index: this.startIndex + 1,'),
+    meriyahSource.replace('index: this.index, line: this.line', 'index: this.index + 1, line: this.line'),
+    meriyahSource.replace('this.refs[name][0]', 'this.refs[name][1]'),
+    meriyahSource.replace('const { tokenValue, tokenStart } = parser;', 'const { tokenStart, tokenValue } = parser;'),
   ]) assert.throws(() => transformDecoderDependency(changed, meriyahPath), /Meriyah .*compatibility/)
 })
 
@@ -85,6 +91,44 @@ for (const [name, source] of syntaxCases) {
     assert.deepEqual(syntaxResult(specializedParser.parseScript, source), syntaxResult(parseScript, source))
   })
 }
+
+test('compact snapshots preserve tokenizer error locations and private-name validation', () => {
+  const prefixes = ['', '\ufeff', '#!/usr/bin/js\n', '/*😀*/', '//a\r\n', '//a\r', '//a\n', '//a\u2028', '//a\u2029', '/*\r\n\u2028*/']
+  const invalid = [
+    'const x = ;', 'let a = "unterminated', 'const y=`a\n${)}`;', '/[/;', '/a/gg;',
+    '0xg;', '1_0_;', '"use strict"; 017;', 'function f(a,a){"use strict";}',
+    'const f=async(a=await 1)=>a;', 'function f(){return "x\\\r\ny"; } )',
+  ]
+  const extra = [
+    'class X { read() {\r\nreturn this.#𐐀; } }',
+    'var s="a\u2028b"; const x = ;',
+    'var a=1;\r\r\nconst b = ;',
+    'var s="\ud800"; function f(',
+    '"use\\\r\nstrict"; const x = ;',
+    'a: a: while(true){}',
+    'const f=(a,...b,)=>a;',
+    'class X { read(){ return this.#missing; } }',
+  ]
+  for (const source of [...prefixes.flatMap(prefix => invalid.map(suffix => prefix + suffix)), ...extra]) {
+    assert.deepEqual(syntaxResult(specializedParser.parseScript, source), syntaxResult(parseScript, source), source)
+  }
+  // A failed parse must restore the private source used to reconstruct offsets.
+  assert.deepEqual(syntaxResult(specializedParser.parseScript, 'var later="valid";'), syntaxResult(parseScript, 'var later="valid";'))
+})
+
+test('identifier and literal leaves preserve UTF-16 offsets, raw values and BigInt branching', () => {
+  for (const source of [
+    String.raw`var \u0061bc = 1, 𐐀 = 0x20n;`,
+    String.raw`var x = 1_234n, y = 0b101n, z = '\u{1F600}';`,
+    'var ñ="😀";\r\nvar end = 3.5e2;',
+    'const o={key:1, "quoted":2, [name]:3, 100:4, big:0n};',
+    'function f(a="x"){return a/2;} const r=/[a-z]+/giu;',
+  ]) {
+    const options = { ranges: { start: true, end: true, range: false }, loc: false, module: false, raw: true }
+    const serialize = ast => JSON.stringify(ast, (_, value) => typeof value === 'bigint' ? { bigintValue: String(value) } : value)
+    assert.equal(serialize(specializedParser.parseScript(source, options)), serialize(parseScript(source, options)), source)
+  }
+})
 
 // Deliberately synthetic: the structural matcher sees a tiny player-shaped
 // program, not a copied YouTube player or any real signature/visitor data.
@@ -155,6 +199,63 @@ test('compact AST offsets preserve the exact script emitted by the unmodified an
   const expected = stockPreparation(source)
   const actual = call(sandbox(), 'prepare', source)
   assert.deepEqual(actual, expected)
+})
+
+test('timestamp prefilter preserves escaped identifiers and reassigned function ranges', () => {
+  const context = sandbox()
+  for (const source of [
+    syntheticPlayer.replace('var timestamp = function()', 'var timestamp; timestamp = function()'),
+    syntheticPlayer.replace('signatureTimestamp: 20746', String.raw`signature\u0054imestamp: 20746`),
+    syntheticPlayer.replace('signatureTimestamp: 20746', String.raw`\u{73}ignatureTimestamp: 20746`),
+    syntheticPlayer.replace('var timestamp = ', '/* signatureTimestamp */ var unrelated=function(){return "signatureTimestamp"}; var timestamp = '),
+    syntheticPlayer.replace('return { signatureTimestamp: 20746 };', 'return function(){return { signatureTimestamp: 20746 };};'),
+    syntheticPlayer.replace('return { signatureTimestamp: 20746 };', 'return `nested ${{signatureTimestamp:20746}}`;'),
+  ]) {
+    assert.deepEqual(call(context, 'prepare', source), stockPreparation(source))
+    assert.equal(context.completePlayerExecuted, undefined)
+  }
+})
+
+test('timestamp prefilter only rejects impossible AST matches and falls back for invalid ranges', () => {
+  // The hook exists only in this test VM; production keeps both matchers private.
+  const marker = '\tObject.defineProperty(globalThis, "__musifyYouTubeDecoder", {'
+  assert.equal(bundle.split(marker).length, 2)
+  const context = vm.createContext(Object.create(null))
+  vm.runInContext(bundle.replace(marker,
+    'globalThis.__timestampTest = (source, node) => [timestampMatcher(node), filteredTimestampMatcher(source, node)];\n' + marker), context)
+  const same = (source, node) => {
+    const [expected, actual] = context.__timestampTest(source, node)
+    assert.deepEqual(actual, expected)
+  }
+  for (const body of [
+    'return { signatureTimestamp: 20746 };',
+    String.raw`return { signatureTime\u{73}tamp: 20746 };`,
+    'return { [signatureTimestamp]: 20746 };',
+    'return { "signatureTimestamp": 20746 };',
+    String.raw`return { "\u0073ignatureTimestamp": 20746 };`,
+    'return { signatureTimestamp };',
+    'return { get signatureTimestamp(){ return 20746; } };',
+    'return { set signatureTimestamp(value){} };',
+    '/* signatureTimestamp */ return { different:1 };',
+    'return { different:"signatureTimestamp" };',
+    String.raw`return { different:/signatureTimestamp\u0073/ };`,
+    'return { signatureTimeſtamp: 20746 };',
+    'return { ｓignatureTimestamp: 20746 };',
+    String.raw`var ñ="😀"; return { different:"\n\t\\" };`,
+    'return { different:20746n };',
+  ]) {
+    const source = `var t=function(){${body}};`
+    const node = parseScript(source, { ranges: { start: true, end: true, range: false } }).body[0].declarations[0]
+    same(source, node)
+  }
+  const source = 'var t=function(){return {signatureTimestamp:20746}};'
+  for (const value of [undefined, null, -1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER]) {
+    for (const field of ['start', 'end']) {
+      const node = parseScript(source, { ranges: { start: true, end: true, range: false } }).body[0].declarations[0]
+      node.init[field] = value
+      same(source, node)
+    }
+  }
 })
 
 const orderedHelpers = [
