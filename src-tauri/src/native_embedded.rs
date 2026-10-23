@@ -259,6 +259,7 @@ struct Config {
     visitor: String,
     flags: String,
     player: reqwest::Url,
+    client_extra: Map<String, Value>,
 }
 
 fn bounded_string(value: &Value, max: usize) -> Result<String, Error> {
@@ -267,6 +268,40 @@ fn bounded_string(value: &Value, max: usize) -> Result<String, Error> {
         .filter(|s| !s.is_empty() && s.len() <= max && !s.chars().any(char::is_control))
         .map(str::to_owned)
         .ok_or_else(|| fail("CONFIG"))
+}
+
+fn published_client(client: Option<&Value>) -> Result<Map<String, Value>, Error> {
+    let mut extra = Map::new();
+    let Some(client) = client else {
+        return Ok(extra);
+    };
+    for (key, limit) in [
+        ("platform", 128),
+        ("clientFormFactor", 128),
+        ("osName", 128),
+        ("osVersion", 128),
+        ("browserName", 128),
+        ("browserVersion", 128),
+        ("gl", 128),
+        ("deviceExperimentId", 4096),
+        ("rolloutToken", 4096),
+    ] {
+        if let Some(value) = client.get(key) {
+            let value = bounded_string(value, limit)?;
+            if !value.is_ascii() {
+                return Err(fail("CONFIG"));
+            }
+            extra.insert(key.into(), json!(value));
+        }
+    }
+    if let Some(value) = client.pointer("/configInfo/appInstallData") {
+        let value = bounded_string(value, 8192)?;
+        if !value.is_ascii() {
+            return Err(fail("CONFIG"));
+        }
+        extra.insert("configInfo".into(), json!({"appInstallData":value}));
+    }
+    Ok(extra)
 }
 
 fn config(html: &str) -> Result<Config, Error> {
@@ -326,6 +361,7 @@ fn config(html: &str) -> Result<Config, Error> {
         visitor: bounded_string(visitor, 4096)?,
         flags: bounded_string(&context["encryptedHostFlags"], 32 * 1024)?,
         player: player_url(&bounded_string(&context["jsUrl"], 2048)?)?,
+        client_extra: published_client(client)?,
     })
 }
 
@@ -476,7 +512,112 @@ async fn prepared(http: &reqwest::Client, config: &Config) -> Result<Arc<Prepare
 }
 
 fn body(config: &Config, id: &str, sts: u32) -> Value {
-    json!({"videoId":id,"context":{"client":{"clientName":"WEB_EMBEDDED_PLAYER","clientVersion":config.version,"hl":"en","userAgent":UA,"visitorData":config.visitor},"thirdParty":{"embedUrl":"https://www.reddit.com/"}},"contentCheckOk":true,"racyCheckOk":true,"playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS","signatureTimestamp":sts,"encryptedHostFlags":config.flags}}})
+    let mut request = json!({"videoId":id,"context":{"client":{"clientName":"WEB_EMBEDDED_PLAYER","clientVersion":config.version,"hl":"en","userAgent":UA,"visitorData":config.visitor},"thirdParty":{"embedUrl":"https://www.reddit.com/"}},"contentCheckOk":true,"racyCheckOk":true,"playbackContext":{"contentPlaybackContext":{"html5Preference":"HTML5_PREF_WANTS","signatureTimestamp":sts,"encryptedHostFlags":config.flags}}});
+    request["context"]["client"]
+        .as_object_mut()
+        .unwrap()
+        .extend(config.client_extra.clone());
+    request
+}
+
+#[derive(Clone)]
+struct Ready {
+    config: Arc<Config>,
+    decoder: Arc<PreparedDecoder>,
+}
+
+async fn refresh_ready<F, Fut>(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    previous: &Ready,
+    fetch: F,
+) -> Result<Option<Ready>, Error>
+where
+    F: FnOnce(Option<Arc<Config>>) -> Fut,
+    Fut: Future<Output = Result<Ready, Error>>,
+{
+    let mut cache = cache.lock().await;
+    let newer = cache
+        .entries
+        .get(id)
+        .map(|(config, _)| config)
+        .filter(|config| !Arc::ptr_eq(config, &previous.config))
+        .cloned();
+    if newer.is_none() {
+        failure_cache(&mut cache.failed, id)?;
+    }
+    let next = fetch(newer.clone()).await?;
+    if newer
+        .as_ref()
+        .is_some_and(|current| !Arc::ptr_eq(current, &next.config))
+    {
+        return Err(fail("REFRESH_BINDING"));
+    }
+    // Every variable request header (version/visitor) is also in this body.
+    // A changed player URL alone cannot justify repeating an identical POST.
+    if body(&previous.config, id, previous.decoder.signature_timestamp)
+        == body(&next.config, id, next.decoder.signature_timestamp)
+    {
+        return Ok(None);
+    }
+    if newer.is_none() {
+        if !cache.entries.contains_key(id) && cache.entries.len() >= 16 {
+            if let Some(oldest) = cache
+                .entries
+                .iter()
+                .min_by_key(|(_, (_, at))| *at)
+                .map(|(id, _)| id.clone())
+            {
+                cache.entries.remove(&oldest);
+            }
+        }
+        cache
+            .entries
+            .insert(id.into(), (next.config.clone(), Instant::now()));
+    }
+    Ok(Some(next))
+}
+
+async fn resolve_ready<T, A, AF, F, FF>(
+    cache: &tokio::sync::Mutex<ConfigCache>,
+    id: &str,
+    first: Ready,
+    mut attempt: A,
+    fetch: F,
+) -> Result<T, Error>
+where
+    A: FnMut(Ready) -> AF,
+    AF: Future<Output = Result<T, Error>>,
+    F: FnOnce(Option<Arc<Config>>) -> FF,
+    FF: Future<Output = Result<Ready, Error>>,
+{
+    let result = attempt(first.clone()).await;
+    if !matches!(&result,Err(Error::Failed(code)) if code=="NATIVE_EMBEDDED_SABR_ONLY") {
+        if result.as_ref().is_err_and(|error| config_rejected(error)) {
+            invalidate_config(&mut *cache.lock().await, id, &first.config);
+        }
+        return result;
+    }
+    #[cfg(test)]
+    if TRACE_FIXTURES.load(Ordering::Relaxed) {
+        eprintln!("embedded-refresh id={id} phase=sabr-only");
+    }
+    let Some(next) = refresh_ready(cache, id, &first, fetch).await? else {
+        #[cfg(test)]
+        if TRACE_FIXTURES.load(Ordering::Relaxed) {
+            eprintln!("embedded-refresh id={id} phase=unchanged-request");
+        }
+        return result;
+    };
+    #[cfg(test)]
+    if TRACE_FIXTURES.load(Ordering::Relaxed) {
+        eprintln!("embedded-refresh id={id} phase=changed-request");
+    }
+    let result = attempt(next.clone()).await;
+    if result.as_ref().is_err_and(|error| config_rejected(error)) {
+        invalidate_config(&mut *cache.lock().await, id, &next.config);
+    }
+    result
 }
 
 async fn player_response(
@@ -507,6 +648,12 @@ async fn player_response(
     }
     let value: Value =
         serde_json::from_str(&text_response(response).await?).map_err(|_| fail("PLAYER_JSON"))?;
+    #[cfg(test)]
+    save_private_fixture(
+        Some(id),
+        "player-response.json.local",
+        value.to_string().as_bytes(),
+    );
     if value
         .pointer("/playabilityStatus/status")
         .and_then(Value::as_str)
@@ -520,6 +667,24 @@ async fn player_response(
             .is_some_and(Value::is_array)
     {
         return Err(fail("PLAYER_IDENTITY_OR_STATUS"));
+    }
+    let candidates = audio_candidates(
+        value["streamingData"]["adaptiveFormats"]
+            .as_array()
+            .unwrap(),
+    );
+    if !candidates.is_empty()
+        && candidates.iter().all(|format| {
+            ["url", "signatureCipher"]
+                .iter()
+                .all(|key| format.get(*key).is_none_or(Value::is_null))
+        })
+        && value
+            .pointer("/streamingData/serverAbrStreamingUrl")
+            .and_then(Value::as_str)
+            .is_some_and(direct_audio_url)
+    {
+        return Err(fail("SABR_ONLY"));
     }
     Ok(value)
 }
@@ -818,20 +983,45 @@ pub(super) async fn resolve(video_id: &str) -> Result<Direct, Error> {
     )
     .await?;
     watch_player(&watch, video_id)?;
-    let config = configuration(http, video_id).await?;
-    let result = resolve_config(http, &config, video_id).await;
-    if result.as_ref().is_err_and(|error| config_rejected(error)) {
-        invalidate_config(&mut *CONFIGS.lock().await, video_id, &config);
-    }
-    result
+    let initial_config = configuration(http, video_id).await?;
+    let decoder = prepared(http, &initial_config).await?;
+    resolve_ready(
+        &CONFIGS,
+        video_id,
+        Ready {
+            config: initial_config,
+            decoder,
+        },
+        |ready| async move { resolve_config(http, &ready.config, video_id, ready.decoder).await },
+        |current| async move {
+            let config = if let Some(current) = current {
+                current
+            } else {
+                let html = get(
+                    http,
+                    reqwest::Url::parse(&format!(
+                        "https://www.youtube.com/embed/{video_id}?html5=1"
+                    ))
+                    .unwrap(),
+                )
+                .await?;
+                #[cfg(test)]
+                save_private_fixture(Some(video_id), "embed-refresh.html.local", html.as_bytes());
+                Arc::new(config(&html)?)
+            };
+            let decoder = prepared(http, &config).await?;
+            Ok(Ready { config, decoder })
+        },
+    )
+    .await
 }
 
 async fn resolve_config(
     http: &reqwest::Client,
     config: &Config,
     video_id: &str,
+    decoder: Arc<PreparedDecoder>,
 ) -> Result<Direct, Error> {
-    let decoder = prepared(http, config).await?;
     let mut response =
         player_response(http, PLAYER, config, video_id, decoder.signature_timestamp).await?;
     #[cfg(test)]
@@ -1119,6 +1309,38 @@ mod tests {
         let mut mixed = config_value();
         mixed["INNERTUBE_CONTEXT"]["client"] = json!({"clientName":"WEB","clientVersion":"2.9"});
         assert!(super::config(&format!("ytcfg.set({mixed});")).is_err());
+    }
+
+    #[test]
+    fn published_client_context_is_bounded_and_does_not_copy_account_or_tracking() {
+        let mut value = config_value();
+        value["INNERTUBE_CONTEXT"]["client"] = json!({
+            "platform":"DESKTOP", "clientFormFactor":"UNKNOWN_FORM_FACTOR",
+            "osName":"Macintosh", "osVersion":"10_15_7", "browserName":"Safari",
+            "browserVersion":"15.5", "gl":"ES", "deviceExperimentId":"public-experiment",
+            "rolloutToken":"public-rollout", "configInfo":{"appInstallData":"public-install","account":"private"},
+            "originalUrl":"private", "remoteHost":"private", "clickTrackingParams":"private"
+        });
+        let parsed = config(&format!("ytcfg.set({value});")).unwrap();
+        let request = body(&parsed, ID, 20700);
+        assert_eq!(parsed.client_extra.len(), 10);
+        assert_eq!(request["context"]["client"]["platform"], "DESKTOP");
+        assert_eq!(
+            request["context"]["client"]["configInfo"],
+            json!({"appInstallData":"public-install"})
+        );
+        assert!(request["context"]["client"].get("clientScreen").is_none());
+        assert!(!request.to_string().contains("private"));
+        assert!(!request.to_string().contains("must-not-propagate"));
+        for bad in [
+            json!("x".repeat(129)),
+            json!("line\nbreak"),
+            json!({"unexpected":"map"}),
+        ] {
+            let mut invalid = value.clone();
+            invalid["INNERTUBE_CONTEXT"]["client"]["platform"] = bad;
+            assert!(config(&format!("ytcfg.set({invalid});")).is_err());
+        }
     }
 
     #[test]
@@ -1585,6 +1807,339 @@ mod tests {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .unwrap()
+    }
+
+    fn local_sequence(responses: Vec<Vec<u8>>) -> (String, thread::JoinHandle<Vec<String>>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        listener.set_nonblocking(true).unwrap();
+        let worker = thread::spawn(move || {
+            let mut requests = Vec::new();
+            for response in responses {
+                let deadline = Instant::now() + Duration::from_secs(3);
+                let mut socket = loop {
+                    match listener.accept() {
+                        Ok((socket, _)) => break socket,
+                        Err(error)
+                            if error.kind() == std::io::ErrorKind::WouldBlock
+                                && Instant::now() < deadline =>
+                        {
+                            thread::sleep(Duration::from_millis(2))
+                        }
+                        _ => return requests,
+                    }
+                };
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut request = Vec::new();
+                loop {
+                    let mut bytes = [0; 4096];
+                    let n = socket.read(&mut bytes).unwrap();
+                    assert!(n > 0 && request.len() < 64 * 1024);
+                    request.extend_from_slice(&bytes[..n]);
+                    if let Some(end) = request
+                        .windows(4)
+                        .position(|v| v == b"\r\n\r\n")
+                        .map(|i| i + 4)
+                    {
+                        let headers = String::from_utf8(request[..end].to_vec()).unwrap();
+                        let length = headers
+                            .lines()
+                            .find_map(|line| {
+                                line.split_once(':')
+                                    .filter(|(key, _)| key.eq_ignore_ascii_case("content-length"))
+                                    .map(|(_, v)| v.trim().parse::<usize>().unwrap())
+                            })
+                            .unwrap_or(0);
+                        if request.len() >= end + length {
+                            break;
+                        }
+                    }
+                }
+                requests.push(String::from_utf8(request).unwrap());
+                socket.write_all(&response).unwrap();
+            }
+            requests
+        });
+        (url, worker)
+    }
+
+    fn ready(config: Arc<Config>, sts: u32) -> Ready {
+        Ready {
+            config,
+            decoder: Arc::new(PreparedDecoder {
+                script: "unused-local-fixture".into(),
+                signature_timestamp: sts,
+            }),
+        }
+    }
+
+    fn cache_with(config: Arc<Config>) -> tokio::sync::Mutex<ConfigCache> {
+        tokio::sync::Mutex::new(ConfigCache {
+            entries: HashMap::from([(ID.into(), (config, Instant::now()))]),
+            failed: HashMap::new(),
+        })
+    }
+
+    fn sabr_response() -> Value {
+        let mut value = watch_value();
+        value["streamingData"] = json!({"adaptiveFormats":[{"itag":251,"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000}],"serverAbrStreamingUrl":"https://r1.googlevideo.com/videoplayback?test=sabr"});
+        value["adSlots"] = json!([{"slot":"unchanged-public-test"}]);
+        value
+    }
+
+    async fn fetch_local_ready(
+        http: &reqwest::Client,
+        url: &str,
+        current: Option<Arc<Config>>,
+        sts: u32,
+    ) -> Result<Ready, Error> {
+        let selected = if let Some(current) = current {
+            current
+        } else {
+            let response = http
+                .get(format!("{url}/embed"))
+                .send()
+                .await
+                .map_err(|_| fail("TRANSPORT"))?;
+            Arc::new(config(&text_response(response).await?)?)
+        };
+        Ok(ready(selected, sts))
+    }
+
+    #[tokio::test]
+    async fn sabr_recovery_relearns_once_and_posts_only_changed_effective_context() {
+        let first = ready(Arc::new(cfg()), 20700);
+        let cache = cache_with(first.config.clone());
+        let mut fresh = config_value();
+        fresh["INNERTUBE_CONTEXT"]["client"] =
+            json!({"platform":"DESKTOP","rolloutToken":"fresh-public-rollout"});
+        let mut playable = sabr_response();
+        playable["streamingData"]["adaptiveFormats"][0]["signatureCipher"] =
+            cipher_value(AUDIO)["signatureCipher"].clone();
+        let (url, server) = local_sequence(vec![
+            response(200, "", sabr_response().to_string().as_bytes()),
+            response(200, "", format!("ytcfg.set({fresh});").as_bytes()),
+            response(200, "", playable.to_string().as_bytes()),
+        ]);
+        let http = local_http();
+        let endpoint = format!("{url}/player");
+        let actual = resolve_ready(
+            &cache,
+            ID,
+            first.clone(),
+            |next| {
+                let http = &http;
+                let endpoint = &endpoint;
+                async move {
+                    player_response(
+                        http,
+                        endpoint,
+                        &next.config,
+                        ID,
+                        next.decoder.signature_timestamp,
+                    )
+                    .await
+                }
+            },
+            |current| fetch_local_ready(&http, &url, current, 20700),
+        )
+        .await
+        .unwrap();
+        assert_eq!(actual, playable);
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 3);
+        assert!(requests[0].starts_with("POST /player "));
+        assert!(requests[1].starts_with("GET /embed "));
+        assert!(requests[2].starts_with("POST /player "));
+        let old: Value =
+            serde_json::from_str(requests[0].split_once("\r\n\r\n").unwrap().1).unwrap();
+        let new: Value =
+            serde_json::from_str(requests[2].split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(old["videoId"], new["videoId"]);
+        assert_eq!(old["playbackContext"], new["playbackContext"]);
+        assert_eq!(old["context"]["thirdParty"], new["context"]["thirdParty"]);
+        assert_eq!(
+            new["context"]["client"]["rolloutToken"],
+            "fresh-public-rollout"
+        );
+        assert_ne!(old, new);
+        let mut state = cache.lock().await;
+        assert!(!Arc::ptr_eq(&state.entries[ID].0, &first.config));
+        assert!(
+            !invalidate_config(&mut state, ID, &first.config),
+            "old attempt cannot evict refreshed configuration"
+        );
+    }
+
+    #[tokio::test]
+    async fn sabr_identical_request_even_with_new_player_url_never_reposts_or_replaces_cache() {
+        let first = ready(Arc::new(cfg()), 20700);
+        let cache = cache_with(first.config.clone());
+        let mut fresh = config_value();
+        fresh["WEB_PLAYER_CONTEXT_CONFIGS"]["WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER"]["jsUrl"] =
+            json!("/s/player/12345678/player_es6.vflset/en_US/base.js");
+        let (url, server) = local_sequence(vec![
+            response(200, "", sabr_response().to_string().as_bytes()),
+            response(200, "", format!("ytcfg.set({fresh});").as_bytes()),
+        ]);
+        let http = local_http();
+        let endpoint = format!("{url}/player");
+        let result = resolve_ready(
+            &cache,
+            ID,
+            first.clone(),
+            |next| {
+                let http = &http;
+                let endpoint = &endpoint;
+                async move {
+                    player_response(
+                        http,
+                        endpoint,
+                        &next.config,
+                        ID,
+                        next.decoder.signature_timestamp,
+                    )
+                    .await
+                }
+            },
+            |current| fetch_local_ready(&http, &url, current, 20700),
+        )
+        .await;
+        assert!(matches!(result,Err(Error::Failed(code)) if code=="NATIVE_EMBEDDED_SABR_ONLY"));
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests.iter().filter(|v| v.starts_with("POST ")).count(),
+            1
+        );
+        assert!(Arc::ptr_eq(
+            &cache.lock().await.entries[ID].0,
+            &first.config
+        ));
+        let calls = AtomicU64::new(0);
+        assert!(
+            refresh_ready(&cache, ID, &first, |_| async {
+                calls.fetch_add(1, Ordering::Relaxed);
+                Err(fail("UNEXPECTED_FETCH"))
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(
+            calls.load(Ordering::Relaxed),
+            0,
+            "unchanged refresh is still deduplicated for 30 s"
+        );
+    }
+
+    #[tokio::test]
+    async fn sabr_recovery_never_retries_unplayable_wrong_id_or_unproven_missing_urls() {
+        let original = sabr_response();
+        let mut cases = Vec::new();
+        let mut wrong = original.clone();
+        wrong["videoDetails"]["videoId"] = json!("jNY_wLukVW0");
+        cases.push(wrong);
+        let mut unavailable = original.clone();
+        unavailable["playabilityStatus"]["status"] = json!("UNPLAYABLE");
+        cases.push(unavailable);
+        let mut no_candidates = original.clone();
+        no_candidates["streamingData"]["adaptiveFormats"] = json!([]);
+        cases.push(no_candidates);
+        let mut unsafe_sabr = original.clone();
+        unsafe_sabr["streamingData"]["serverAbrStreamingUrl"] =
+            json!("https://outside.invalid/audio");
+        cases.push(unsafe_sabr);
+        let mut some_url = original.clone();
+        some_url["streamingData"]["adaptiveFormats"][0]["url"] = json!(AUDIO);
+        cases.push(some_url);
+        let mut ambiguous = original.clone();
+        ambiguous["streamingData"]["adaptiveFormats"][0]["signatureCipher"] = json!({});
+        cases.push(ambiguous);
+        for value in cases {
+            let first = ready(Arc::new(cfg()), 20700);
+            let cache = cache_with(first.config.clone());
+            let (url, server) = local(response(200, "", value.to_string().as_bytes()));
+            let http = local_http();
+            let fetches = AtomicU64::new(0);
+            let _ = resolve_ready(
+                &cache,
+                ID,
+                first,
+                |next| {
+                    let http = &http;
+                    let url = &url;
+                    async move {
+                        player_response(
+                            http,
+                            url,
+                            &next.config,
+                            ID,
+                            next.decoder.signature_timestamp,
+                        )
+                        .await
+                    }
+                },
+                |_| async {
+                    fetches.fetch_add(1, Ordering::Relaxed);
+                    Err(fail("UNEXPECTED_FETCH"))
+                },
+            )
+            .await;
+            server.join().unwrap();
+            assert_eq!(fetches.load(Ordering::Relaxed), 0);
+        }
+    }
+
+    #[tokio::test]
+    async fn concurrent_sabr_refresh_fetches_one_html_and_failed_refresh_preserves_good_config() {
+        let first = ready(Arc::new(cfg()), 20700);
+        let cache = cache_with(first.config.clone());
+        let mut fresh = config_value();
+        fresh["VISITOR_DATA"] = json!("new-public-visitor");
+        let (url, server) = local_sequence(vec![response(
+            200,
+            "",
+            format!("ytcfg.set({fresh});").as_bytes(),
+        )]);
+        let http = local_http();
+        let (a, b) = tokio::join!(
+            refresh_ready(&cache, ID, &first, |current| fetch_local_ready(
+                &http, &url, current, 20700
+            )),
+            refresh_ready(&cache, ID, &first, |current| fetch_local_ready(
+                &http, &url, current, 20700
+            )),
+        );
+        let a = a.unwrap().unwrap();
+        let b = b.unwrap().unwrap();
+        assert!(Arc::ptr_eq(&a.config, &b.config));
+        assert_eq!(server.join().unwrap().len(), 1);
+        let calls = AtomicU64::new(0);
+        assert!(
+            refresh_ready(&cache, ID, &a, |_| async {
+                calls.fetch_add(1, Ordering::Relaxed);
+                Err(fail("UNEXPECTED_FETCH"))
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+        let failure_cache = cache_with(first.config.clone());
+        let (url, server) = local(response(503, "", b"unavailable"));
+        assert!(
+            refresh_ready(&failure_cache, ID, &first, |current| fetch_local_ready(
+                &http, &url, current, 20700
+            ))
+            .await
+            .is_err()
+        );
+        server.join().unwrap();
+        assert!(Arc::ptr_eq(
+            &failure_cache.lock().await.entries[ID].0,
+            &first.config
+        ));
     }
 
     #[tokio::test]

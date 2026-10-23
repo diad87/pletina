@@ -29,9 +29,23 @@ datos de configuración, conservando la rapidez y las comprobaciones del audio.
 - Esta ruta calcula firma y `n` con un bundle local de los analizadores de
   youtubei.js 18.1.0 y Meriyah. El reproductor descargado se analiza como texto;
   sólo se ejecutan las funciones y dependencias extraídas. La configuración y
-  las funciones preparadas tienen caché acotada en memoria. Los formatos deben
-  identificar audio original, sin DRC ni DRM, y superar una sonda HTTP 206 con
-  rango, tamaño total y cuerpo completos hacia el 80 % del archivo.
+  las funciones preparadas tienen caché acotada en memoria: hasta cuatro scripts
+  preparados, como máximo 8 MiB, sin conservar sus runtimes temporales.
+  Si cualquier formato de audio aporta metadatos de pista, idioma o `xtags`,
+  todos los candidatos deben identificar expresamente audio original. Una
+  respuesta enteramente sin esas etiquetas conserva la compatibilidad de sus
+  variantes de códec/bitrate; es el caso de los tres fixtures infantiles, no
+  una prueba semántica universal de originalidad. Se rechazan DRC/DRM y se exige
+  una sonda HTTP 206 con rango, tamaño total y cuerpo completos hacia el 80 %.
+  Los rechazos transitorios CDN permiten hasta cinco intentos de la misma URL
+  dentro de ocho segundos, sin multiplicar ese presupuesto por formato.
+- Si la respuesta confirma el vídeo pero sólo ofrece SABR, sin URL ni cipher
+  en ningún audio seleccionable, se relee la configuración incrustada una vez.
+  Sólo se repite el POST si cambian su cuerpo o cabeceras efectivos, incluido
+  el ST; un cambio de URL del reproductor por sí solo no basta. Se conservan
+  los datos anteriores ante un fallo y la renovación se deduplica por vídeo
+  durante 30 segundos. Se copian sólo campos públicos acotados del cliente,
+  no contextos de cuenta, petición o seguimiento. No se decide según anuncios.
 - Si tampoco resulta utilizable, se prueba el cliente WEB descubierto, con un presupuesto
   total de seis segundos. Sólo se aceptan el vídeo solicitado, formatos de audio
   compatibles y URLs HTTPS de GoogleVideo que superen una sonda no vacía. Las
@@ -64,8 +78,10 @@ evalúa el reproductor remoto completo. QuickJS está dentro del proceso de la
 aplicación: este aislamiento no es un sandbox del sistema operativo.
 
 La sonda verifica acceso a una muestra del audio, no la canción íntegra ni EOF.
-Si el CDN responde 200 e ignora Range, la muestra tampoco demuestra acceso al
-80 %. Las campañas de captura completa y anuncios tienen criterios separados.
+La ruta incrustada exige 206 exacto. En el nivel rápido, un 200 que ignore Range
+sólo acredita acceso al prefijo, no al 80 %. Las campañas de captura completa
+y anuncios tienen criterios separados. Una URL que pasa de 403 a 206 tras
+esperar no acredita que se haya reproducido o saltado publicidad.
 
 La configuración se obtiene sin sesión, cookies de cuenta ni perfil Premium.
 Sólo se conservan los campos necesarios y los errores públicos son categorías
@@ -115,12 +131,32 @@ de EOF, continuidad o comparación independiente de publicidad.
 
 La búsqueda Music ya encontraba las tres canciones del corpus infantil con
 puntuación 112; el problema estaba en la obtención del audio directo. El control
-de app inició las tres por Legacy, no por Native. La nueva ruta incrustada sigue
-en validación: el decoder real de QuickJS coincide con V8, pero dos respuestas
-recientes todavía fallaron la sonda CDN con HTTP 403. Preparar el reproductor en
-frío tardó 6,85 segundos en una prueba real de QuickJS; la caché evita repetir
-ese trabajo para cada canción con el mismo reproductor.
+de app inició las tres por Legacy. En `d426c50`, el nuevo ensayo con búsqueda
+inició dos por Native y Epoitaitaye por Legacy, tras `CIPHER_MISSING`; tardaron
+7726,6, 1660,7 y 11831,9 ms, respectivamente. Ese intento fallido se conserva.
+Después se añadió la renovación SABR acotada: una prueba real posterior resolvió
+las tres y recuperó Maite Zaitut! tras una configuración efectiva nueva. No se
+ha aislado qué campo concreto causó la diferencia; falta medir la app final.
+
+Un ensayo directo posterior resolvió las tres mediante WEB_EMBEDDED_PLAYER/251:
+14073, 7446 y 8325 ms. Pasaron las sondas de inicio/80 % y las comprobaciones de
+reproducción inicial, salto y cola. No fue escucha completa en la app. En una
+prueba separada, los tres archivos completos fueron idénticos byte a byte a las
+referencias 251 obtenidas con yt-dlp y FFmpeg los decodificó sin errores.
+
+La regresión con búsqueda de las 30 canciones habituales conservó 30 rutas
+Native, cero respaldos y ningún fallo distinto del umbral de 300 ms: mediana
+595,5 ms, intervalo 431,7–949,1 ms. Ninguna cumplió ese umbral. No mide EOF ni
+continuidad completa. Preparar un reproductor en frío tardó 6,85 segundos en
+QuickJS; la caché evita repetirlo para el mismo reproductor, pero YouTube puede
+publicar distintos scripts. Ese tiempo y los límites del runtime no miden RSS
+de la aplicación ni predicen el rendimiento de Android.
 
 El [informe infantil](informe-contenido-infantil-2026-10-23.md) separa esos
-resultados de las mediciones de app y regresión aún pendientes. No se presenta
-el corpus de tres canciones como compatibilidad con todo el catálogo infantil.
+resultados, fallos e historial. Android x86_64/arm64 compilaba antes de la última
+guarda de selección. Además, un harness del mismo decoder pasó 6 pruebas de
+aislamiento y el fixture real en un emulador Android 15 x86_64: preparación de
+10911,5 ms, con los mismos límites y cuatro firmas/`n` idénticas a V8. No ejecutó
+la app, JNI ni ExoPlayer; la reproducción Android y el dispositivo ARM físico
+siguen pendientes. No se presenta el corpus de tres canciones como compatibilidad
+con todo el catálogo infantil ni como una medición de ausencia de publicidad.
