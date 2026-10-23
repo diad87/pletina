@@ -157,7 +157,24 @@ pub async fn warm(surface: Surface) {
     let _ = current(surface).await;
 }
 
-static HTTP: LazyLock<Result<reqwest::Client, String>> = LazyLock::new(|| {
+// Only the connection pool is shared. Visitor/context, compression preference and
+// deadlines belong to each request; no cookie store or authorization is installed.
+static MUSIC_HTTP: LazyLock<Result<reqwest::Client, String>> = LazyLock::new(new_music_http);
+
+pub(crate) fn new_music_http() -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .user_agent(crate::youtube::BROWSER_UA)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|_| "YOUTUBE_SESSION_HTTP: no se pudo crear el cliente anónimo".into())
+}
+
+pub(crate) fn music_http() -> Result<reqwest::Client, String> {
+    MUSIC_HTTP.as_ref().cloned().map_err(Clone::clone)
+}
+
+static WEB_HTTP: LazyLock<Result<reqwest::Client, String>> = LazyLock::new(|| {
     reqwest::Client::builder()
         .user_agent(crate::youtube::BROWSER_UA)
         .redirect(reqwest::redirect::Policy::none())
@@ -176,34 +193,62 @@ fn allowed_url(surface: Surface, url: &reqwest::Url) -> bool {
 }
 
 async fn download(surface: Surface) -> Result<Vec<u8>, String> {
+    let http = match surface {
+        Surface::Music => MUSIC_HTTP.as_ref(),
+        Surface::Web => WEB_HTTP.as_ref(),
+    }
+    .map_err(Clone::clone)?;
+    download_with_client(surface, http).await
+}
+
+async fn download_with_client(surface: Surface, http: &reqwest::Client) -> Result<Vec<u8>, String> {
+    // Music's European home page can redirect to cookie consent. Its service
+    // worker bootstrap belongs to the same surface and returns WEB_REMIX.
+    let url = reqwest::Url::parse(&format!("https://{}/sw.js_data", surface.identity().2))
+        .map_err(|_| SCHEMA.to_string())?;
+    let referer = format!("https://{}/sw.js", surface.identity().2);
+    download_from(http, url, &referer, |url| allowed_url(surface, url)).await
+}
+
+async fn download_from(
+    http: &reqwest::Client,
+    mut url: reqwest::Url,
+    referer: &str,
+    allowed: impl Fn(&reqwest::Url) -> bool,
+) -> Result<Vec<u8>, String> {
+    if !allowed(&url) {
+        return Err("YOUTUBE_SESSION_REDIRECT: origen no admitido".into());
+    }
+    let started = Instant::now();
+    let mut headers_ms = None;
+    let mut body_ms = None;
+    let mut redirects = 0;
     // El plazo incluye todos los saltos y la descarga del cuerpo, no sólo los headers.
-    tokio::time::timeout(TIMEOUT, async {
-        let http = HTTP.as_ref().map_err(Clone::clone)?;
-        // El bootstrap del service worker pertenece a esta misma superficie. En
-        // Music la portada europea puede redirigir a consentimiento sin cookies;
-        // /sw.js_data entrega su propio WEB_REMIX, nunca el WEB de www.
-        let mut url = reqwest::Url::parse(&format!("https://{}/sw.js_data", surface.identity().2))
-            .map_err(|_| SCHEMA.to_string())?;
-        let referer = format!("https://{}/sw.js", surface.identity().2);
+    let result = tokio::time::timeout(TIMEOUT, async {
         for redirect in 0..=2 {
+            let headers_started = Instant::now();
             let mut response = http
                 .get(url.clone())
+                .timeout(TIMEOUT)
                 .header("Accept-Language", "es-ES,es;q=0.9")
                 .header("Accept-Encoding", "identity")
-                .header(reqwest::header::REFERER, &referer)
+                .header(reqwest::header::REFERER, referer)
                 .send()
                 .await
                 .map_err(|_| "YOUTUBE_SESSION_HTTP: falló el bootstrap anónimo")?;
+            headers_ms =
+                Some(headers_ms.unwrap_or(0.0) + headers_started.elapsed().as_secs_f64() * 1000.0);
             if response.status().is_redirection() {
                 let next = response
                     .headers()
                     .get(reqwest::header::LOCATION)
                     .and_then(|v| v.to_str().ok())
                     .and_then(|v| url.join(v).ok())
-                    .filter(|u| allowed_url(surface, u));
+                    .filter(|u| allowed(u));
                 if redirect == 2 || next.is_none() {
                     return Err("YOUTUBE_SESSION_REDIRECT: redirección no admitida".into());
                 }
+                redirects += 1;
                 url = next.unwrap();
                 continue;
             }
@@ -216,7 +261,10 @@ async fn download(surface: Surface) -> Result<Vec<u8>, String> {
             {
                 return Err("YOUTUBE_SESSION_SIZE: bootstrap demasiado grande".into());
             }
+            let body_started = Instant::now();
             let mut body = Vec::new();
+            // A Music server that sends gzip despite identity is decoded by the
+            // shared API client; this cap applies to decoded bytes, not wire size.
             while let Some(chunk) = response
                 .chunk()
                 .await
@@ -227,12 +275,49 @@ async fn download(surface: Surface) -> Result<Vec<u8>, String> {
                 }
                 body.extend_from_slice(&chunk);
             }
+            body_ms = Some(body_started.elapsed().as_secs_f64() * 1000.0);
             return Ok(body);
         }
         Err("YOUTUBE_SESSION_REDIRECT: demasiadas redirecciones".into())
     })
     .await
-    .map_err(|_| "YOUTUBE_SESSION_TIMEOUT: bootstrap agotó su plazo".to_string())?
+    .unwrap_or_else(|_| Err("YOUTUBE_SESSION_TIMEOUT: bootstrap agotó su plazo".to_string()));
+    if std::env::var_os("MUSIFY_BENCH").is_some() {
+        eprintln!(
+            "[music-http] {}",
+            json!({
+                "phase":"bootstrap", "surface":if referer.contains("music.youtube.com") { "music" } else { "web" },
+                "ok":result.is_ok(), "headersMs":headers_ms,
+                "bodyMs":body_ms, "redirects":redirects,
+                "bytes":result.as_ref().ok().map(Vec::len),
+                "totalMs":started.elapsed().as_secs_f64()*1000.0
+            }).to_string()
+        );
+    }
+    result
+}
+
+// Explicit per-instance transports for isolated tests; no production URL or
+// global-client override is exposed.
+#[cfg(test)]
+pub(crate) async fn test_music_bootstrap(
+    http: &reqwest::Client,
+    loopback: Option<&str>,
+) -> Result<Config, String> {
+    let body = if let Some(loopback) = loopback {
+        let url = reqwest::Url::parse(loopback).map_err(|_| SCHEMA)?;
+        if url.scheme() != "http" || url.host_str() != Some("127.0.0.1") {
+            return Err(SCHEMA.into());
+        }
+        let origin = url.origin();
+        download_from(http, url, "https://music.youtube.com/sw.js", |u| {
+            u.origin() == origin && u.username().is_empty() && u.password().is_none()
+        })
+        .await?
+    } else {
+        download_with_client(Surface::Music, http).await?
+    };
+    parse(Surface::Music, &body)
 }
 
 fn same_string(values: &[Option<&Value>]) -> Result<Option<String>, String> {
@@ -465,9 +550,161 @@ fn configuration(html: &str) -> Result<Map<String, Value>, String> {
 }
 
 #[cfg(test)]
+pub(crate) mod transport_test {
+    use std::{
+        collections::VecDeque,
+        io::{BufRead, BufReader, Read, Write},
+        net::TcpListener,
+        sync::{
+            Arc, Mutex,
+            atomic::{AtomicBool, Ordering},
+        },
+        thread,
+        time::Duration,
+    };
+
+    pub(crate) struct Server {
+        pub url: String,
+        pub requests: Arc<Mutex<Vec<(usize, String)>>>,
+        stopped: Arc<AtomicBool>,
+        worker: Option<thread::JoinHandle<()>>,
+    }
+
+    pub(crate) fn response(headers: &str, body: &[u8]) -> Vec<u8> {
+        let mut bytes = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n{headers}\r\n",
+            body.len()
+        )
+        .into_bytes();
+        bytes.extend_from_slice(body);
+        bytes
+    }
+
+    impl Server {
+        pub fn new(responses: Vec<Vec<u8>>) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let url = format!("http://{}", listener.local_addr().unwrap());
+            let requests = Arc::new(Mutex::new(Vec::new()));
+            let stopped = Arc::new(AtomicBool::new(false));
+            let seen = requests.clone();
+            let stop = stopped.clone();
+            let worker = thread::spawn(move || {
+                let mut responses: VecDeque<_> = responses.into();
+                let mut connection = 0;
+                while !stop.load(Ordering::Relaxed) {
+                    let (stream, _) = match listener.accept() {
+                        Ok(value) => value,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            thread::sleep(Duration::from_millis(1));
+                            continue;
+                        }
+                        Err(e) => panic!("loopback accept: {e}"),
+                    };
+                    connection += 1;
+                    stream.set_nonblocking(false).unwrap();
+                    stream
+                        .set_read_timeout(Some(Duration::from_millis(50)))
+                        .unwrap();
+                    let mut reader = BufReader::new(stream);
+                    while !stop.load(Ordering::Relaxed) {
+                        let mut raw = String::new();
+                        match reader.read_line(&mut raw) {
+                            Ok(0) => break,
+                            Ok(_) => {}
+                            Err(e)
+                                if matches!(
+                                    e.kind(),
+                                    std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+                                ) =>
+                            {
+                                continue;
+                            }
+                            Err(_) => break,
+                        }
+                        loop {
+                            let mut line = String::new();
+                            assert!(reader.read_line(&mut line).unwrap() > 0);
+                            raw.push_str(&line);
+                            assert!(raw.len() < 64 * 1024);
+                            if line == "\r\n" {
+                                break;
+                            }
+                        }
+                        let length = raw
+                            .lines()
+                            .filter_map(|s| s.split_once(':'))
+                            .find(|(name, _)| name.eq_ignore_ascii_case("content-length"))
+                            .map_or(0, |(_, value)| value.trim().parse::<usize>().unwrap());
+                        assert!(length < 64 * 1024);
+                        let mut body = vec![0; length];
+                        reader.read_exact(&mut body).unwrap();
+                        raw.push_str(std::str::from_utf8(&body).unwrap());
+                        seen.lock().unwrap().push((connection, raw));
+                        let Some(response) = responses.pop_front() else {
+                            break;
+                        };
+                        let closes = response.windows(17).any(|s| s == b"Connection: close");
+                        if reader.get_mut().write_all(&response).is_err() || closes {
+                            break;
+                        }
+                    }
+                }
+            });
+            Self {
+                url,
+                requests,
+                stopped,
+                worker: Some(worker),
+            }
+        }
+    }
+
+    impl Drop for Server {
+        fn drop(&mut self) {
+            self.stopped.store(true, Ordering::Relaxed);
+            self.worker.take().unwrap().join().unwrap();
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[tokio::test]
+    async fn music_bootstrap_bounds_decoded_body_and_rejects_truncation_and_foreign_redirect() {
+        use super::transport_test::{Server, response};
+        use base64::Engine;
+        // Synthetic, compressed WEB_REMIX configuration; no real visitor or source.
+        let gzip = base64::engine::general_purpose::STANDARD.decode("H4sIAAAAAAACCrMpTi7KLCixqyxJTkvXK04t0ahW8vTzcw0KCXVyjXf28XT1C4n3c/R1VbJSCnd1ig9y9fWMUNJBVuPvF+IaEYKq1sxcB9OYMNegYE9/P6BJhnpGBkZmhgZGJnoGhnoGBigGOgZ4IiktM1Sq1bS20Ye6EwCCiSMGsAAAAA==").unwrap();
+        let http = new_music_http().unwrap();
+        let server = Server::new(vec![response("Content-Encoding: gzip\r\n", &gzip)]);
+        let config = test_music_bootstrap(&http, Some(&server.url))
+            .await
+            .unwrap();
+        assert_eq!(config.client_name, "WEB_REMIX");
+        assert_eq!(config.client_version, "1.20261024.01.00");
+        assert!(
+            server.requests.lock().unwrap()[0]
+                .1
+                .to_ascii_lowercase()
+                .contains("accept-encoding: identity\r\n")
+        );
+
+        for raw in [
+            // Missing Content-Length cannot bypass the decoded streaming cap.
+            [b"HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n".as_slice(), &vec![b' '; MAX_BODY+1]].concat(),
+            response("Content-Encoding: gzip\r\nConnection: close\r\n", &gzip[..gzip.len()-8]),
+            b"HTTP/1.1 200 OK\r\nContent-Length: 1024\r\nConnection: close\r\n\r\nshort".to_vec(),
+            b"HTTP/1.1 302 Found\r\nLocation: https://other.invalid/sw.js_data\r\nContent-Length: 0\r\n\r\n".to_vec(),
+        ] {
+            let server = Server::new(vec![raw]);
+            assert!(test_music_bootstrap(&http, Some(&server.url)).await.is_err());
+            assert_eq!(server.requests.lock().unwrap().len(), 1);
+        }
+    }
 
     fn body(surface: Surface, version: &str) -> Vec<u8> {
         let (name, id, _) = surface.identity();

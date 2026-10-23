@@ -8,6 +8,7 @@
 use crate::youtube_session::{self, Config, Surface};
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::time::Instant;
 
 // Only used if the anonymous web bootstrap is unavailable, never to replace a
 // discovered session after an authorization failure.
@@ -142,12 +143,7 @@ fn valid_response(endpoint: &str, response: &Value) -> bool {
 
 impl YouTubeMusic {
     pub fn new() -> Self {
-        let http = reqwest::Client::builder()
-            .user_agent(BROWSER_UA)
-            .redirect(reqwest::redirect::Policy::none())
-            .timeout(std::time::Duration::from_secs(10))
-            .build()
-            .expect("cliente HTTP");
+        let http = youtube_session::music_http().expect("cliente HTTP");
         Self {
             http,
             #[cfg(test)]
@@ -165,9 +161,19 @@ impl YouTubeMusic {
         if !valid_endpoint(endpoint) || !body.is_object() {
             return Err("Petición de YouTube Music no válida".into());
         }
-        let config = youtube_session::current(Surface::Music)
-            .await
-            .unwrap_or_else(|_| fallback_config());
+        let config_started = Instant::now();
+        let discovered = youtube_session::current(Surface::Music).await;
+        if std::env::var_os("MUSIFY_BENCH").is_some() {
+            eprintln!(
+                "[music-http] {}",
+                json!({
+                    "phase":"configuration", "endpoint":endpoint, "discovered":discovered.is_ok(),
+                    "totalMs":config_started.elapsed().as_secs_f64()*1000.0
+                })
+                .to_string()
+            );
+        }
+        let config = discovered.unwrap_or_else(|_| fallback_config());
         self.api_with_session(endpoint, body, config, |previous| async move {
             youtube_session::refresh(Surface::Music, &previous).await
         })
@@ -242,36 +248,64 @@ impl YouTubeMusic {
         if let Some(visitor) = &config.visitor_data {
             request = request.header("X-Goog-Visitor-Id", visitor);
         }
-        let res = request
-            .body(body.to_string())
-            .send()
-            .await
-            .map_err(|_| ApiFailure {
-                message: "No se pudo conectar con YouTube Music".into(),
+        let started = Instant::now();
+        let mut headers_ms = None;
+        let mut body_ms = None;
+        let mut parse_ms = None;
+        let mut status = None;
+        let mut byte_count = None;
+        let result = async {
+            let res = request
+                .body(body.to_string())
+                .send()
+                .await
+                .map_err(|_| ApiFailure {
+                    message: "No se pudo conectar con YouTube Music".into(),
+                    refresh: false,
+                })?;
+            headers_ms = Some(started.elapsed().as_secs_f64() * 1000.0);
+            status = Some(res.status().as_u16());
+            if !res.status().is_success() {
+                return Err(ApiFailure {
+                    message: format!("YouTube Music respondió {}", res.status()),
+                    refresh: matches!(res.status().as_u16(), 400 | 401 | 403),
+                });
+            }
+            let body_started = Instant::now();
+            let bytes = res.bytes().await.map_err(|_| ApiFailure {
+                message: "No se pudo leer la respuesta de YouTube Music".into(),
                 refresh: false,
             })?;
-        if !res.status().is_success() {
-            return Err(ApiFailure {
-                message: format!("YouTube Music respondió {}", res.status()),
-                refresh: matches!(res.status().as_u16(), 400 | 401 | 403),
-            });
-        }
-        let bytes = res.bytes().await.map_err(|_| ApiFailure {
-            message: "No se pudo leer la respuesta de YouTube Music".into(),
-            refresh: false,
-        })?;
-        let value = serde_json::from_slice(&bytes).map_err(|_| ApiFailure {
-            message: "YouTube Music devolvió una respuesta no reconocida".into(),
-            refresh: true,
-        })?;
-        if !valid_response(endpoint, &value) {
-            return Err(ApiFailure {
-                message: "YouTube Music devolvió un error o cambió la estructura de su respuesta"
-                    .into(),
+            body_ms = Some(body_started.elapsed().as_secs_f64() * 1000.0);
+            byte_count = Some(bytes.len());
+            let parse_started = Instant::now();
+            let value = serde_json::from_slice(&bytes).map_err(|_| ApiFailure {
+                message: "YouTube Music devolvió una respuesta no reconocida".into(),
                 refresh: true,
-            });
+            })?;
+            if !valid_response(endpoint, &value) {
+                return Err(ApiFailure {
+                    message:
+                        "YouTube Music devolvió un error o cambió la estructura de su respuesta"
+                            .into(),
+                    refresh: true,
+                });
+            }
+            parse_ms = Some(parse_started.elapsed().as_secs_f64() * 1000.0);
+            Ok(value)
         }
-        Ok(value)
+        .await;
+        if std::env::var_os("MUSIFY_BENCH").is_some() {
+            eprintln!(
+                "[music-http] {}",
+                json!({
+                    "phase":"api", "endpoint":endpoint, "ok":result.is_ok(), "status":status,
+                    "headersMs":headers_ms, "bodyMs":body_ms, "parseMs":parse_ms, "bytes":byte_count,
+                    "totalMs":started.elapsed().as_secs_f64()*1000.0
+                }).to_string()
+            );
+        }
+        result
     }
 
     pub async fn search_songs(&self, query: &str) -> Result<Vec<Candidate>, String> {
@@ -656,6 +690,160 @@ mod tests {
                 ]}}}
             ]
         }})
+    }
+
+    #[test]
+    fn benchmark_json_string_avoids_fragmented_writes_without_changing_log_bytes() {
+        use std::fmt::Write;
+        #[derive(Default)]
+        struct Sink {
+            calls: usize,
+            text: String,
+        }
+        impl std::fmt::Write for Sink {
+            fn write_str(&mut self, text: &str) -> std::fmt::Result {
+                self.calls += 1;
+                self.text.push_str(text);
+                Ok(())
+            }
+        }
+        let value = json!({"phase":"api","endpoint":"search","ok":true,
+            "status":200,"headersMs":100.2,"bodyMs":2.3,"parseMs":1.1,
+            "bytes":1234,"totalMs":103.6});
+        let mut fragmented = Sink::default();
+        writeln!(&mut fragmented, "[music-http] {value}").unwrap();
+        let mut buffered = Sink::default();
+        let json = value.to_string();
+        writeln!(&mut buffered, "[music-http] {json}").unwrap();
+        assert_eq!(fragmented.text, buffered.text);
+        assert!(buffered.calls <= 3, "only prefix, JSON string and newline");
+        assert!(fragmented.calls > buffered.calls * 10);
+        println!(
+            "music_log_write_calls value={} string={}",
+            fragmented.calls, buffered.calls
+        );
+    }
+
+    #[tokio::test]
+    async fn bootstrap_and_search_reuse_connection_without_sharing_request_identity() {
+        use crate::youtube_session::transport_test::{Server, response};
+        let config = json!({
+            "INNERTUBE_CLIENT_NAME":"WEB_REMIX", "INNERTUBE_CONTEXT_CLIENT_NAME":67,
+            "INNERTUBE_CLIENT_VERSION":"1.20990101.01.00", "INNERTUBE_API_VERSION":"v1",
+            "INNERTUBE_CONTEXT":{"client":{"visitorData":"test-current-visitor"}}
+        });
+        let bootstrap = format!("<script>ytcfg.set({config});</script>");
+        let server = Server::new(vec![
+            response(
+                "Set-Cookie: forbidden=bootstrap; Path=/\r\n",
+                bootstrap.as_bytes(),
+            ),
+            response(
+                "Content-Type: application/json\r\n",
+                empty_search().to_string().as_bytes(),
+            ),
+        ]);
+        let http = youtube_session::new_music_http().unwrap();
+        let config = youtube_session::test_music_bootstrap(
+            &http,
+            Some(&format!("{}/sw.js_data", server.url)),
+        )
+        .await
+        .unwrap();
+        let ytm = YouTubeMusic {
+            http,
+            api_base: Some(format!("{}/youtubei", server.url)),
+        };
+        ytm.api_with_session(
+            "search",
+            json!({"query":"synthetic song"}),
+            config,
+            |_| async { panic!("valid response must not refresh") },
+        )
+        .await
+        .unwrap();
+        let requests = server.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[0].0, requests[1].0,
+            "GET and POST must reuse the same connection"
+        );
+        let first = requests[0].1.to_ascii_lowercase();
+        let second = requests[1].1.to_ascii_lowercase();
+        assert!(first.starts_with("get /sw.js_data "));
+        assert!(second.starts_with("post /youtubei/v1/search?prettyprint=false "));
+        assert!(first.contains("accept-encoding: identity\r\n"));
+        assert!(second.contains("accept-encoding: gzip\r\n"));
+        assert!(!first.contains("x-goog-visitor-id:"));
+        assert!(second.contains("x-goog-visitor-id: test-current-visitor\r\n"));
+        assert!(!first.contains("origin:"));
+        assert!(second.contains("origin: https://music.youtube.com\r\n"));
+        assert!(!second.contains("referer:"));
+        for request in [&first, &second] {
+            assert!(!request.contains("\r\ncookie:"));
+            assert!(!request.contains("\r\nauthorization:"));
+        }
+    }
+
+    /// One isolated process per arm; runner chooses A/B/B/A. No session/native
+    /// cache, pre-warm, media resolution or credentials participate in this timer.
+    #[tokio::test]
+    #[ignore]
+    async fn real_music_transport_comparison() {
+        let shared = match std::env::var("MUSIFY_TEST_MUSIC_TRANSPORT").as_deref() {
+            Ok("shared") => true,
+            Ok("separate") => false,
+            _ => panic!("set MUSIFY_TEST_MUSIC_TRANSPORT to shared or separate"),
+        };
+        let started = Instant::now();
+        let http = youtube_session::new_music_http().unwrap();
+        // Baseline bootstrap's old no_gzip policy is retained. Its request asks
+        // for identity in either arm; the API client always supports gzip.
+        let bootstrap_http = if shared {
+            http.clone()
+        } else {
+            reqwest::Client::builder()
+                .user_agent(BROWSER_UA)
+                .redirect(reqwest::redirect::Policy::none())
+                .no_gzip()
+                .timeout(Duration::from_secs(2))
+                .build()
+                .unwrap()
+        };
+        let constructed_ms = started.elapsed().as_secs_f64() * 1000.0;
+        let config = youtube_session::test_music_bootstrap(&bootstrap_http, None).await;
+        let configured_ms = started.elapsed().as_secs_f64() * 1000.0;
+        let result = match config {
+            Ok(config) => {
+                let ytm = YouTubeMusic {
+                    http,
+                    api_base: None,
+                };
+                ytm.send_api(
+                    "search",
+                    json!({"query":"Radiohead Airbag", "params":SONGS_PARAMS}),
+                    &config,
+                )
+                .await
+                .map_err(|_| "search")
+            }
+            Err(_) => Err("bootstrap"),
+        };
+        let total_ms = started.elapsed().as_secs_f64() * 1000.0;
+        println!(
+            "music_transport {}",
+            json!({
+                "shared":shared, "freshClient":true, "ok":result.is_ok(),
+                "clientMs":constructed_ms, "configurationMs":configured_ms-constructed_ms,
+                "postAndParseMs":total_ms-configured_ms, "totalMs":total_ms,
+                "candidates":result.as_ref().ok().map(|value| parse_search_songs(value).len()),
+                "errorPhase":result.as_ref().err()
+            })
+        );
+        assert!(
+            result.is_ok(),
+            "anonymous transport attempt failed; retain the attempt"
+        );
     }
 
     #[test]
