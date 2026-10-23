@@ -420,6 +420,113 @@ test('quitar la siguiente espera a cancelar next antes de crear una nueva precar
   assert.deepEqual(calls.at(-1), { id: 3, foreground: false })
 })
 
+test('descartar las dos plazas usa un IPC y bloquea la nueva resolución hasta su respuesta', async t => {
+  for (const prepared of [false, true]) await t.test(prepared ? 'Audio preparado' : 'resolución pendiente', async t => {
+    const cancellation = deferred(), old = [deferred(), deferred()], calls = [], cancellations = []
+    const env = await setup(t, {
+      resolve: (track, _refresh, foreground) => {
+        calls.push({ id: track.id, foreground })
+        return track.id === 2 || track.id === 3 ? old[track.id - 2].promise : Promise.resolve(playable(`track-${track.id}`))
+      },
+      cancelPrefetch: slot => { cancellations.push(slot); return cancellation.promise },
+    })
+    env.extractor.engine = 'propio'
+    env.player.playQueue([item(1), item(2), item(3)], 0)
+    await settle(() => calls.length === 3)
+    if (prepared) {
+      old.forEach((pending, index) => pending.resolve(playable(`track-${index + 2}`)))
+      await settle(() => env.player.preparedAudios.length === 2)
+    }
+    const discarded = env.player.preparedAudios.map(entry => entry.audio)
+    env.player.playQueue([item(4), item(5), item(6)], 0)
+    await settle(() => cancellations.length === 1)
+    assert.deepEqual(cancellations, [undefined], 'una llamada cancela exactamente las dos plazas descartadas')
+    assert.equal(env.player.status, 'loading')
+    assert.equal(env.player.current.track.id, 4)
+    assert.equal(calls.length, 3, 'ni foreground ni next nuevos adelantan la cancelación')
+    assert.equal(env.player.preparedAudios.length, 0)
+    for (const audio of discarded) { assert.equal(audio.paused, true); assert.equal(audio.src, '') }
+    if (!prepared) {
+      old.forEach((pending, index) => pending.resolve(playable(`obsolete-${index + 2}`)))
+      await tick()
+      assert.equal(env.player.preparedAudios.length, 0, 'las respuestas retiradas no recuperan sus plazas')
+    }
+    cancellation.resolve()
+    await settle(() => env.player.status === 'playing' && env.player.preparedAudios.length === 2)
+    assert.deepEqual(calls.slice(3), [{ id: 4, foreground: true }, { id: 5, foreground: false }, { id: 6, foreground: false }])
+    assert.equal(env.player.playbackAudio.src, 'track-4')
+    assert.deepEqual(env.player.preparedAudios.map(entry => [entry.trackId, entry.slot]), [[5, 0], [6, 1]])
+    assert.deepEqual(cancellations, [undefined])
+  })
+})
+
+test('la cancelación agrupada sigue a la pendiente y protege las nuevas entradas de esas mismas plazas', async t => {
+  const firstCancel = deferred(), bothCancel = deferred(), calls = [], cancellations = []
+  const env = await setup(t, {
+    resolve: async (track, _refresh, foreground) => { calls.push({ id: track.id, foreground }); return playable(`track-${track.id}`) },
+    cancelPrefetch: slot => {
+      cancellations.push(slot)
+      return cancellations.length === 1 ? firstCancel.promise : bothCancel.promise
+    },
+  })
+  env.extractor.engine = 'propio'
+  env.player.playQueue([item(1)], 0)
+  await settle(() => env.player.status === 'playing')
+  env.player.playNext([item(2), item(3)])
+  await settle(() => env.player.preparedAudios.length === 2)
+  const retained = env.player.preparedAudios[1].audio
+  env.player.removeFromQueue(env.player.userQueue[0].key)
+  env.player.playNext([item(4)])
+  await settle(() => cancellations.length === 1)
+  assert.deepEqual(cancellations, [0], 'retirar una sola plaza conserva la otra')
+  assert.equal(env.player.preparedAudio, retained)
+  env.player.clearQueue()
+  env.player.playNext([item(5), item(6)])
+  await tick()
+  assert.deepEqual(cancellations, [0], 'la agrupada no adelanta la cancelación anterior')
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3])
+  firstCancel.resolve()
+  await settle(() => cancellations.length === 2)
+  assert.deepEqual(cancellations, [0, undefined])
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3], 'la entrada 4 retirada no llega a Rust y 5/6 esperan el segundo fence')
+  assert.equal(env.player.playbackAudio.src, 'track-1')
+  assert.equal(env.player.status, 'playing')
+  bothCancel.resolve()
+  await settle(() => env.player.preparedAudios.length === 2)
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3, 5, 6])
+  assert.deepEqual(env.player.preparedAudios.map(entry => [entry.trackId, entry.slot]), [[5, 0], [6, 1]])
+  assert.equal(retained.src, '')
+})
+
+test('descartar la única plaza restante durante una promoción nunca usa cancelar ambas', async t => {
+  const cancellation = deferred(), promotion = deferred(), calls = [], cancellations = []
+  const env = await setup(t, {
+    resolve: (track, _refresh, foreground) => {
+      calls.push({ id: track.id, foreground })
+      return track.id === 2 && foreground ? promotion.promise : Promise.resolve(captured(track.id))
+    },
+    cancelPrefetch: slot => { cancellations.push(slot); return cancellation.promise },
+  })
+  env.player.playQueue([item(1), item(2), item(3)], 0)
+  await settle(() => env.player.preparedAudios.length === 2)
+  const [adopted, discarded] = env.player.preparedAudios
+  env.player.playQueue([item(2)], 0)
+  await settle(() => cancellations.length === 1)
+  assert.deepEqual(cancellations, [1], 'la plaza 0 adoptada todavía puede ser next en Rust')
+  assert.equal(env.player.playbackAudio, adopted.audio)
+  assert.equal(adopted.audio.paused, false)
+  assert.equal(adopted.audio.src, captured(2).url)
+  assert.equal(discarded.audio.src, '')
+  assert.deepEqual(calls.map(call => call.id), [1, 2, 3], 'la promoción respeta el fence de la otra plaza')
+  cancellation.resolve()
+  await settle(() => calls.length === 4)
+  promotion.resolve(captured(2))
+  await tick()
+  assert.equal(env.player.playbackAudio, adopted.audio)
+  assert.equal(env.player.status, 'playing')
+  assert.deepEqual(cancellations, [1])
+})
+
 test('promocionar la siguiente preparada no envía cancel_prefetch que pudiera cerrarla', async t => {
   let cancellations = 0
   const env = await setup(t, {

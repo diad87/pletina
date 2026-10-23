@@ -633,8 +633,16 @@ class Player implements PlayerApi {
 
   #prunePrefetch(following: QueueItem[]) {
     const wanted = new Set(following.map(item => item.track.id))
-    for (const entry of this.#prefetches.values())
-      if (!wanted.has(entry.item.track.id) || entry.engine !== extractor.engine) this.#removePrefetch(entry, true)
+    const discarded = [...this.#prefetches.values()].filter(entry =>
+      !wanted.has(entry.item.track.id) || entry.engine !== extractor.engine)
+    // Sólo ambas plazas: tras adoptar una canción puede quedar una entrada cuya
+    // cancelación no debe revocar la plaza promovida todavía pendiente en Rust.
+    if (this.#prefetches.size === 2 && discarded.length === 2 &&
+        discarded.some(entry => entry.slot === 0) && discarded.some(entry => entry.slot === 1)) {
+      this.#discardPrefetch(true)
+      return
+    }
+    for (const entry of discarded) this.#removePrefetch(entry, true)
   }
 
   /** Prepara hasta dos Audio sin cambiar la plaza de una canción todavía deseada. */
