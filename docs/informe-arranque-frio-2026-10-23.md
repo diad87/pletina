@@ -1,17 +1,19 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 7: búsqueda y descifrado más rápidos; el arranque total no mejora de forma estable.**
-En seis pares fríos de la app, la búsqueda baja de mediana 617 a 503 ms y el
-descifrado de 41 a 24 ms. Sin embargo, el total pasa de 3972,7 a 5428,4 ms:
-el CDN rechaza más sondas del candidato y añade esperas de hasta unos dos
-segundos. Sólo 1/6 cumple 3500 ms en cada brazo. Epo sigue por Native sin
-Legacy, pero tarda 5,40–5,46 s en esta tanda; sus 3,36–3,41 s de R6 quedan
-como resultados de aquella tanda. No se eligen réplicas favorables ni se
-declara conseguida la meta estable. Las 30 habituales conservan Native e IDs
-correctos, mediana 737,45 ms. Los tres audios infantiles completos vuelven
-a ser idénticos y decodificables sin errores. Todo lo nuevo se mide sin sesión;
-no hay nueva campaña Premium o publicitaria ni promoción de Oficial.
-Se conserva el historial y el [informe infantil](informe-contenido-infantil-2026-10-23.md).
+**Ronda 8: diagnóstico del CDN; candidato retirado, sin mejora acreditada.**
+La nueva comparación fría de la app dio 3649,15 ms de mediana en R7 y
+3950,70 ms en el candidato con contexto oficial; cuatro de seis pares
+empeoraron. Sólo 1/6 y 2/6, respectivamente, cumplieron 3500 ms, siempre
+Pupu. Los doce fueron Native, con identidad correcta y sin Legacy.
+El candidato `fa46e10` se retiró mediante `ab7f7ff`; código y binario de
+banco quedaron restaurados a R7. No se presenta la variación entre tandas
+como una mejora de producto. La meta estable de 3,5 s sigue pendiente.
+
+Las pruebas CDN no justificaron añadir parámetros, cambiar de servidor
+ni adelantar sondas. En Maite hubo rechazos a unos 3 s y éxitos a unos
+4 s desde el POST; Epo seguía rechazando a 4 s. Son muestras, no un
+umbral universal ni prueba de publicidad. Todo se midió sin sesión.
+Se conservan los fallos y el [informe infantil](informe-contenido-infantil-2026-10-23.md).
 
 ## Ronda 1: cambios y límites
 
@@ -1084,3 +1086,86 @@ resolver son nombres de binarios npm del lockfile de documentación upstream.
 Ninguna evidencia medida falta. Estos casos no se confunden con fallos de las
 huellas de archivos incluidos. Sólo se suben
 código y resúmenes; raws, medios y perfiles permanecen fuera de Git.
+
+## Ronda 8: diagnóstico del CDN y candidato retirado
+
+Se contrastaron tres variantes de URL, un estudio temporal y el contexto oficial omitido. La comparación fría de app con este último no acreditó mejora: se retira el candidato y se conserva R7. La meta estable de 3500 ms sigue pendiente.
+
+### Tres variantes sin beneficio observado
+
+Cada variante usó una respuesta nueva por canción y tres GET consecutivos A/B/A sobre el mismo audio original itag 251. Se mantuvieron identidad, ST y descifrado verificados, Range, respuesta 206 y validación exacta de 1024 bytes al 80%; no se aceptaron respuestas 200 ni se siguieron redirecciones.
+
+| Variante B | Primer GET desde inicio del POST | Epoitaitaye | Maite Zaitut! | Pupu Eta Lore |
+|---|---:|---|---|---|
+| `alr=yes` | 306,736–366,971 ms | 403/403/403 | 403/403/403 | 206/206/206 |
+| Servidor secundario publicado; ALR fijo en todos los brazos | 2603,829–2616,581 ms | 403/403/403 | 403/403/403 | 206/206/206 |
+| `cver` igual a la versión descubierta; sin ALR | 2601,192–2609,924 ms | 403/403/403 | 403/403/403 | 206/206/206 |
+
+Total: 9 POST y 27 GET del helper, 18 respuestas 403 y 9 respuestas 206 estrictas; cero respuestas 429, 200 o cabeceras Location. Todas las conexiones observadas usaron IPv4 y HTTP/1.1. El contador corresponde a las solicitudes CDN del diagnóstico; no incluye los GET de descubrimiento.
+
+No se observó ventaja de ninguna variante en esas muestras. ALR se ensayó mucho antes que las otras dos: no son tres mediciones equivalentes del arranque frío. El secundario combina cambio de host con `fallback_count=1`; el resultado tampoco separa esos dos efectos. Las fechas HTTP tienen resolución de un segundo, sin Age ni Retry-After que identifiquen un reloj de admisión.
+
+### Estudio fijo de la edad del POST y del primer GET
+
+Se prepararon configuración y AST antes de T0. Por ID se mantuvieron cuerpo, configuración y ST fijos, con una respuesta firmada propia por intento y orden ABCCBA. A envía POST en T0 y GET inmediato más GET en T0 + 4 s; B omite el GET inmediato; C retrasa el POST 1 s y mantiene el GET en T0 + 4 s. Cada GET usa un cliente nuevo y conserva la URL recibida sin parámetros añadidos.
+
+| Brazo | Edad real del POST en el GET común de Maite | Maite | Epo |
+|---|---:|---|---|
+| A | 3996,047 / 3998,270 ms | GET inicial 403; GET común 206, 2/2 | 4 GET con 403 |
+| B | 3987,132 / 3996,252 ms | GET común 206, 2/2 | 2 GET con 403 |
+| C | 3007,287 / 3006,017 ms | GET común 403, 2/2 | 2 GET con 403 |
+
+Se ejecutaron exactamente 12 POST y 16 GET: cuatro respuestas 206 estrictas y doce 403; cero respuestas 429 o redirecciones. Todos los casos llegaron al CDN, con itag 251 e identidad correcta. Las tardanzas frente al GET previsto fueron 1,467–13,595 ms, mucho menores que el segundo que separaba los brazos. Epo no mostró disponibilidad en ninguna de sus ocho sondas, incluidas las enviadas aproximadamente 4 s después del POST.
+
+En Maite, el GET inicial de esa respuesta no fue necesario para los éxitos observados a unos 4 s. Retrasar el POST 1 s mantuvo el 403 en las dos réplicas. Es compatible con disponibilidad dependiente de la edad de los metadatos, pero no identifica el inicio interno de un bloqueo ni separa POST, cabeceras y EOF de respuesta. Respuestas diferentes y estado compartido del servidor impiden atribuir una causalidad universal. Tampoco puede descartarse influencia de solicitudes de brazos anteriores.
+
+Estos datos no justifican añadir sondas de activación ni esperar siempre 4 s: Pupu ya respondía 206 inmediatamente. Una mejora futura necesitaría un retraso evitable concreto y una comparación fría apareada de su eliminación, conservando las validaciones y el presupuesto de solicitudes. No se ha seleccionado un nuevo umbral ni cambiado el calendario productivo.
+
+### Alcance y procedencia
+
+Los diagnósticos HTTP usaron la revisión `60938ebd8322f154fb698570d61ba18d0f083f0f` con inclusión temporal sólo de pruebas. Sus manifiestos registran la restauración de `native_embedded.rs` al SHA256 `7f1c79c8fea91f5881fe8001b6c5556be3740e295813d9a9d9cb86100c5605a2`. La candidata posterior y su retirada se distinguen al final.
+
+| Evidencia local | SHA256 |
+|---|---|
+| `round8-cdn-fixed-diagnostics.json.local` | `7505e75640ac400dd2102da164843cfd04173ba951589269748016804192f7ca` |
+| `post-get-causal-1792779718429.local/report.json.local` | `41b8f504d50db82080ccbe7df023add17e14f0d9f87115075ceb27a5f953871a` |
+| `post-get-causal-1792779718429.local/summary.json.local` | `e6d4bfbde820188a2c61d70d8d6666110825cc2d601d6f2cf7b89042da6b5e49` |
+| `post-get-causal-1792779718429.local/manifest.json.local` | `2cb037b9c2e1c549f979828729ea4626040f5726dfe835a131c5ed8711f667a5` |
+
+Los EXEs de los tres primeros diagnósticos no se archivaron: sus hashes fueron observados al ejecutarlos, pero el artefacto de `target/debug` se sobrescribió posteriormente. El estudio causal sí conserva su EXE inmutable, SHA256 `700cbf0ebef05feaea1fb60e91fb302b3f99edfad5054f93c2aae31f64782186`, además de procedencia de compilación y ejecución. La revisión independiente contrastó informes, manifiestos, contratos y archivos pequeños; no volvió a calcular hashes de EXEs.
+
+Se conservó un fallo inicial de compilación del helper cver por codificación UTF-8, corregido antes de su única tanda de red. Los contratos locales finales pasaron: ALR 1, secundario 4 y cver 1; causal 3. No se omitieron intentos CDN fallidos.
+
+Los 206 y `bodyEof` sólo acreditan el fragmento HTTP de 1024 bytes. No prueban EOF de canción, igualdad de archivo completo, anuncio reproducido o saltado, ni mejora del primer sonido. Las respuestas, URLs firmadas y logs brutos permanecen fuera de Git; sólo corresponden al diagnóstico local.
+
+### Contexto publicado: diagnóstico inconcluso
+
+Se contrastó A/B/A, donde B añadía únicamente el objeto `embeddedPlayerContext` descubierto en la misma configuración. Hubo 9 POST y sólo 3 GET: Maite y Pupu devolvieron SABR_ONLY en sus seis brazos, sin URL utilizable ni comparación CDN. Epo respondió 403/206/206 a aproximadamente POST + 2,6 s; también pasó el último A, por lo que el resultado no aísla una ventaja de B. No se atribuyen estos estados a anuncios. Reporte SHA256: `c39ed6ad1d31b1106d4c4b414e52fd7d0a8125d3677848fa96f3f7349bfd940d`; manifiesto: `ee9ea6e0cc5a99234d65ace17f49360d64ed154910040c22296f4f3aca49c277`.
+
+### Comparación en app: candidata retirada
+
+Una tanda fija comparó R7 (`a32092b`, binario `500457c7529fe68df18ec53e5a4ba7729837fcb93a37c38b5ab15adca0f9a132`) con la candidata `fa46e10`, binario `f929f7a77ed5fd85de7d15f6c70f4d0c320b704b7b5567af57720d74584f2458`. Ambos eran release de fuentes limpias, con idéntica política CDN. Hubo dos réplicas por ID y binario, orden alternado, proceso nuevo anónimo y FreshDecoder: doce casos, todos conservados.
+
+| Canción | Réplica | R7, ms | Candidata, ms | Diferencia, ms | Respuestas 403 R7/candidata |
+|---|---:|---:|---:|---:|---:|
+| Epoitaitaye | 1 | 3683,7 | 5034,6 | +1350,9 | 0/2 |
+| Epoitaitaye | 2 | 3545,2 | 3556,7 | +11,5 | 0/0 |
+| Maite Zaitut! | 1 | 5412,6 | 5789,7 | +377,1 | 3/3 |
+| Maite Zaitut! | 2 | 4577,4 | 4344,7 | −232,7 | 2/2 |
+| Pupu Eta Lore | 1 | 3614,6 | 3499,6 | −115,0 | 0/0 |
+| Pupu Eta Lore | 2 | 3383,5 | 3478,0 | +94,5 | 0/0 |
+
+La mediana pasó de 3649,15 a 3950,70 ms; cuatro de seis pares fueron más lentos. El objetivo exacto ≤3500 ms se cumplió en 1/6 controles y 2/6 candidatas, siempre Pupu. Las doce selecciones usaron Native e ID esperado, sin Legacy. No se observaron cortes posteriores al arranque en la ventana breve; todas conservaron el fallo histórico del umbral 300 ms. Esto no acredita EOF, escucha completa ni ausencia de anuncios.
+
+Las sondas lógicas terminadas fueron 11 frente a 13 y los 403, 5 frente a 7. Sólo Epo 1 añadió reintentos: la fase CDN hasta terminar el 206 pasó de 282,165 a 1028,329 ms, sin explicar por sí sola toda la diferencia de primer sonido. Preparación mediana: 2581,83→2621,84 ms; análisis+preview: 2521,92→2577,17 ms, más alto en cinco pares y sin ser una medida de CPU pura. Pupu candidata 2 recuperó un SABR_ONLY antes del éxito. No puede atribuirse toda la diferencia al contexto ni generalizarse causalidad a partir de seis pares.
+
+`firstSoundMs` incluye búsqueda hasta `playing` de Audio silenciado; excluye el arranque previo del proceso y no es una medida acústica. Se verificaron las evidencias de frío, los doce casos únicos y 60 archivos pequeños; el auditor original ya verificó los binarios. Índice SHA256: `7ccaffe43de1e6155f3816c056db8788f24d5b857d9faa9cac98df7e58fb427d`; auditoría `round8-app-audit.json.local`: `71b0b5a1437203cac38dc8eebfcdb3672ce545b14bd89b84a182a88fe05fa7a8`.
+
+`fa46e10` sólo fue una candidata: `ab7f7ff` la revierte y deja el producto idéntico a R7, con el binario de banco R7 restaurado. No se ejecutó una campaña 30, archivos completos o Android de cierre para esta candidata descartada; los resultados anteriores de R7 conservan su procedencia histórica. Todos los intentos malos de R8 permanecen en los artefactos locales.
+
+El manifiesto final local conserva 479 archivos verificados en dos pases, SHA256 `f3e8efd6e7b6649da321c88eb6df39862a327cc9066e3abcf8ba2bde3b346b32`. `round8-source-proof.json.local` vincula la candidata y su EXE de pruebas al código: primer pase 247 aprobadas y un timeout del decoder; pase serial 248 aprobadas, ambos con 30 ignoradas. Los 39 enlaces sin resolver del manifiesto son referencias del package-lock de documentación QuickJS, no evidencia medida ausente.
+
+Todas las pruebas nuevas fueron sin sesión. Premium y una campaña con anuncios reales
+no se ejercitaron en R8; no hay nuevas cifras de anuncios vistos, saltados o entregados.
+Los 28 tests sintéticos de los nuevos auditores y los contratos PowerShell pasaron;
+no se confunden con pruebas del producto ni con mediciones adicionales de app.
