@@ -1167,6 +1167,67 @@ test('PWA permanent RSS reserves do not expire during a long current episode', a
   await flush()
 })
 
+for (const expiry of ['url', 'source']) test(`PWA resumes a paused YouTube podcast only after refreshing its expired ${expiry}`, async () => {
+  const id = 750_000_000_000_001, renewal = deferred(), now = Date.now()
+  const original = { ...playable(id), videoId: '9RfVp-GhKfs',
+    url: 'https://r1.googlevideo.com/podcast-old?expire=' + (Math.floor(now / 1000) + (expiry === 'url' ? 120 : 7200)),
+    ...(expiry === 'source' ? { source: { provider: 'youtube-p1', id: '9RfVp-GhKfs', expiresAt: now + 120_000, download: { allowed: false } } } : {}) }
+  const h = pwaHarness({ resolve: (_track, refresh) => refresh ? renewal.promise : original })
+  h.player.playQueue([item(id)], 0); await flush()
+  h.audio.currentTime = 37; h.audio.dispatchEvent(new Event('timeupdate')); h.player.toggle()
+  h.jumpWall(70_000)
+  const audio = h.audio, plays = audio.plays
+  h.player.toggle(); await flush()
+  assert.deepEqual(h.resolutions, [[id, false], [id, true]], 'Refresh must precede another attempt to play the expired URL')
+  assert.equal(audio.plays, plays); assert.equal(audio.paused, true); assert.equal(h.player.status, 'loading')
+  const fresh = { ...original, url: 'https://r1.googlevideo.com/podcast-fresh?expire=' + (Math.floor(now / 1000) + 7200), source: undefined }
+  renewal.resolve(fresh); await flush()
+  assert.equal(h.player.current.track.id, id); assert.equal(h.player.status, 'playing')
+  assert.equal(h.player.time, 37); assert.equal(audio.currentTime, 37)
+  assert.equal(audio.plays, plays + 1); assert.equal(h.audio, audio); assert.equal(h.audios.length, 1)
+  assert.deepEqual(h.sources, [original.url, fresh.url]); assert.deepEqual(h.messages, [])
+})
+
+for (const mode of ['pause', 'replace']) test(`PWA a late podcast renewal cannot undo a newer ${mode} intent`, async () => {
+  const id = 750_000_000_000_001, renewal = deferred(), now = Date.now()
+  const original = { ...playable(id), videoId: '9RfVp-GhKfs',
+    url: 'https://r1.googlevideo.com/podcast-old?expire=' + (Math.floor(now / 1000) + 120) }
+  const h = pwaHarness({ resolve: (track, refresh) => track.id !== id ? playable(track.id) : refresh ? renewal.promise : original })
+  h.player.playQueue([item(id)], 0); await flush()
+  h.audio.currentTime = 37; h.audio.dispatchEvent(new Event('timeupdate')); h.player.toggle(); h.jumpWall(70_000)
+  const plays = h.audio.plays
+  h.player.toggle(); await flush()
+  assert.deepEqual(h.resolutions.filter(([value]) => value === id), [[id, false], [id, true]])
+  assert.equal(h.audio.plays, plays)
+  if (mode === 'pause') h.player.toggle()
+  else h.player.playQueue([item(7)], 0)
+  await flush()
+  const current = h.player.current.track.id, status = h.player.status, source = h.audio.src, settledPlays = h.audio.plays
+  renewal.resolve({ ...original, url: 'https://r1.googlevideo.com/late-podcast?expire=' + (Math.floor(now / 1000) + 7200) })
+  await flush()
+  assert.equal(h.player.current.track.id, current); assert.equal(h.player.status, status)
+  assert.equal(h.audio.src, source); assert.equal(h.audio.plays, settledPlays)
+  assert.ok(!h.sources.some(url => url.includes('late-podcast')))
+  if (mode === 'pause') { assert.equal(status, 'paused'); assert.equal(h.player.time, 37) }
+  else { assert.equal(current, 7); assert.equal(status, 'playing') }
+  assert.deepEqual(h.messages, [])
+})
+
+for (const kind of ['rss', 'youtube-valid']) test(`PWA a paused ${kind} episode keeps its still-usable source and position`, async () => {
+  const id = 750_000_000_000_001, now = Date.now(), source = kind === 'rss'
+    ? { ...playable(id), videoId: '', url: 'https://audio.example.org/published-episode.mp3' }
+    : { ...playable(id), videoId: '9RfVp-GhKfs', url: 'https://r1.googlevideo.com/podcast-valid?expire=' + (Math.floor(now / 1000) + 7200) }
+  const h = pwaHarness({ resolve: () => source })
+  h.player.playQueue([item(id)], 0); await flush()
+  h.audio.currentTime = 37; h.audio.dispatchEvent(new Event('timeupdate')); h.player.toggle()
+  h.jumpWall(kind === 'rss' ? 65 * 60_000 : 120_000)
+  const plays = h.audio.plays
+  h.player.toggle(); await flush()
+  assert.equal(h.player.status, 'playing'); assert.equal(h.audio.currentTime, 37)
+  assert.equal(h.audio.plays, plays + 1); assert.deepEqual(h.resolutions, [[id, false]])
+  assert.deepEqual(h.sources, [source.url]); assert.deepEqual(h.messages, [])
+})
+
 test('PWA refreshes a temporary upcoming podcast while current audio still advances', async () => {
   const id = 750_000_000_000_001
   let prepared = 0

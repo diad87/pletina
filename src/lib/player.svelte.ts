@@ -523,7 +523,7 @@ class Player implements PlayerApi {
       this.#start(item, false, this.time, true)
       return
     }
-    if (api.inPwa && this.#playable && !this.#playable.local && !isPodcast(item.track.id) &&
+    if (api.inPwa && this.#playable && !this.#playable.local &&
       this.#preparedExpiry(this.#playable, item.track.id) <= Date.now()) {
       this.#start(item, true, this.time, true)
       return
@@ -1137,7 +1137,7 @@ class Player implements PlayerApi {
     // El enclosure RSS publicado no es una URL temporal de YouTube: puede esperar al siguiente
     // episodio aunque el actual dure horas. El navegador comprobará su disponibilidad al cargarlo.
     if (!temporary && isPodcast(id) && !source.videoId) expiresAt = Infinity
-    if (!source.local && !isPodcast(id) && typeof source.source?.expiresAt === 'number' && Number.isFinite(source.source.expiresAt)) {
+    if (!source.local && (!isPodcast(id) || !!source.videoId) && typeof source.source?.expiresAt === 'number' && Number.isFinite(source.source.expiresAt)) {
       expiresAt = Math.min(expiresAt, source.source.expiresAt - 60_000)
     }
     return expiresAt
