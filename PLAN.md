@@ -164,6 +164,8 @@ La segunda ronda también repitió los tres archivos completos, idénticos a las
 
 **Arranque frío, novena ronda (`4bace13`, `cb592e2`):** seis copias JSON evitadas; ahorro medio local de 29/128/176 µs por HTML en depuración. Descartar ambas precargas pasa de dos cancelaciones IPC a una, pendiente de medir en la app. La tanda habitual conserva 30 Native/IDs, cero Legacy y mediana 631,7 ms. La candidata fría usa Native 6/6, pero no acredita un menor total; se conservan el control con Legacy y el fallo de codificación del banco. [Resultados, límites y experimentos descartados](docs/informe-arranque-frio-2026-10-23.md#ronda-9-mejoras-pequeñas-y-medición-del-total). Oficial sigue experimental.
 
+**Arranque frío, décima ronda:** A (`06823dc`) se retiró con `91c1d44`; B (`114df0b`) se conserva como mejora acotada de espera: en 4/12 candidatos, la respuesta 206 se completó 467–475 ms antes del antiguo turno de 2 s. La media observada de ventana CDN baja 1117→944 y 856→606 ms entre procesos; no demuestra menor total: 8/12 pares empeoran. Pasan 247 Rust/30 ignoradas y compilan Android arm64/x86_64; sin nueva evidencia de rendimiento móvil, EOF, anuncios o Premium. Requiere app reconstruida; OTA y PWA siguen iguales. Rige el criterio incremental sin relajar garantías; Oficial sigue experimental. [Informe R10](docs/informe-arranque-frio-2026-10-23.md#ronda-10-oportunidad-adicional-durante-la-espera-del-cdn).
+
 La descripción y las mediciones siguientes corresponden al prototipo histórico; «nivel garantizado» era su denominación, no una garantía frente a cualquier cambio de plataforma. Sus tiempos no describen la nueva captura experimental a velocidad normal.
 
 #### Motor propio

@@ -1,6 +1,14 @@
 # Arranque frío de Propio — 23 de octubre de 2026
 
-**Ronda 9: menos trabajo local; todavía sin mejora acreditada del arranque total.**
+**Ronda 10: una oportunidad adicional durante la espera del CDN.**
+Se conserva una comprobación a 1,5 s dentro del hueco entre los turnos antiguos.
+En cuatro intentos recibió el fragmento válido 467–475 ms antes del siguiente
+turno de 2 s, después de tres rechazos. Es un adelanto dentro de esa espera;
+la comparación entre procesos todavía no acredita un menor primer sonido total.
+El [cierre R10](#ronda-10-oportunidad-adicional-durante-la-espera-del-cdn)
+incluye los dos experimentos, los pares desfavorables y un inicio de 9356 ms.
+
+**Cierre anterior, ronda 9:**
 Se conservan dos cambios pequeños: seis copias JSON evitadas y una llamada
 IPC menos al descartar ambas precargas. Las 30 canciones habituales arrancan
 por Native, con los IDs esperados y cero Legacy: mediana 631,7 ms en una tanda,
@@ -1299,3 +1307,120 @@ no hay nuevas cifras de anuncios vistos, saltados, entregados o espera publicita
 No se publica OTA, instalador, versión o etiqueta. La evidencia bruta continúa
 fuera de Git, bajo `capture-bench.local/`; el manifiesto final de esta ronda es
 `round9-final-manifest.json.local`.
+
+## Ronda 10: oportunidad adicional durante la espera del CDN
+
+### Cambio conservado y coste
+
+`114df0b` conserva los ocho turnos anteriores y añade uno a 1,5 s. Ese intento
+adicional vence al llegar a 2 s, antes de despachar el turno antiguo. Todas las
+comprobaciones son secuenciales. El primer formato admite nueve intentos y los
+otros uno cada uno, sujetos a una **cuota global efectiva de diez**, que cuenta
+también los abortados. Se conserva el plazo global de 8 s y los 2 s por intento
+normal. No se modifican URL, calidad, identidad, audio original ni validación
+estricta de 206, rango al 80 %, longitud, codificación y cuerpo completo de la sonda.
+Un 429 observado sigue deteniendo la validación.
+
+El intento extra puede añadir una petición cuando falle. Su cancelación puede
+cerrar una conexión HTTP/1.1: preservar el horario de despacho no garantiza la
+misma latencia de conexión. Las pruebas verifican cuotas compartidas, descarte
+antes del siguiente turno, vencimiento sin consumir token, errores terminales
+y cancelación. Los logs cuentan sondeos terminados; no inventarían un despacho
+abortado sin registro ni todas las peticiones físicas con redirecciones.
+
+### Dos experimentos, sin reemplazar intentos
+
+Los 35 éxitos Native anteriores no incluían ninguno en el turno de 250 ms;
+diecisiete sondas allí devolvieron 403. Eso justificó probar A, que trasladaba
+ese turno a 1,5 s. Sus dos tandas no acreditaron mejora: `06823dc` quedó retirado
+con `91c1d44`. Cinco éxitos en el nuevo turno tampoco demostraban adelanto:
+los controles tenían menos rechazos iniciales y todos sus reintentos exitosos
+terminaban ya alrededor de 1 s.
+
+B conserva también los 250 ms. Cada experimento tuvo dos cohortes fijadas de
+doce procesos: tres IDs, dos repeticiones por brazo, orden alternado, sin sesión
+y FreshDecoder. Se preservan **48/48 Native, IDs correctos y cero Legacy** entre
+los cuatro conjuntos. Todas las filas conservan el fallo histórico de 300 ms.
+
+| Experimento / cohorte | Mediana control, ms | Mediana candidata, ms | Pares más lentos |
+|---|---:|---:|---:|
+| A / 1, retirado | 3877,55 | 4957,05 | 5/6 |
+| A / 2, retirado | 4428,25 | 4330,05 | 5/6 |
+| B / 1, conservado | 4361,90 | 4673,05 | 4/6 |
+| B / 2, conservado | 4585,55 | 4786,10 | 4/6 |
+
+Son tiempos desde búsqueda hasta `playing` de Audio silenciado, excluyendo el
+arranque previo del proceso. No son medidas acústicas, treinta arranques fríos
+habituales ni escucha hasta EOF. Las respuestas y edades de URL recibidas de
+YouTube difieren entre procesos; la tabla **no acredita una mejora global**.
+
+### Beneficio acotado observado en B
+
+Cuatro intentos de B recibieron su primer 206 completo en el turno adicional,
+tras los tres 403 anteriores. El margen se calcula como
+`2000 - (startedMs + ms)`, en el mismo reloj del presupuesto CDN: indica cuánto
+antes del siguiente turno antiguo había terminado la sonda. No es un ahorro
+medido de primer sonido frente a otro proceso.
+
+| Caso candidato B | Margen antes del turno antiguo, ms |
+|---|---:|
+| Cohorte 1, Epo, repetición 1 | 472,68 |
+| Cohorte 1, Epo, repetición 2 | 469,13 |
+| Cohorte 1, Maite, repetición 2 | 467,13 |
+| Cohorte 2, Maite, repetición 1 | 475,29 |
+
+La ventana desde el primer intento CDN hasta completar el primer 206 válido
+también fue menor de media en ambas cohortes:
+
+| Cohorte B | Media control, ms | Media candidata, ms |
+|---|---:|---:|
+| 1 | 1116,9 | 943,9 |
+| 2 | 856,3 | 606,4 |
+
+Son observaciones entre procesos con respuestas remotas distintas, no una
+estimación causal ni un ahorro de CPU. El análisis independiente conserva las
+24 filas y sus relojes en `r10b-independent-cdn-analysis.json.local`, SHA256
+`480824c45556cb72bdbdc73211fb3c2e614c5c0507ec0867425f52b668edbb92`.
+
+B se conserva por esa oportunidad útil repetida en ambas cohortes. Su agregado
+de primer sonido fue 4413,75→4786,10 ms de mediana; mejoraron cuatro pares y
+empeoraron ocho. Los sondeos terminados fueron 31→30 y los 403, 19→18, con cero
+429; esas diferencias tampoco aíslan causalidad. No se observaron huecos de
+ordinal compatibles con aborto del extra en estas muestras.
+
+**Pupu, cohorte 2 candidata, 9356 ms, permanece íntegro.** La búsqueda tardó
+5523,943 ms y la preparación 3509,094 ms; el primer sondeo CDN fue válido en
+17,8935 ms. No hubo SABR ni turno extra. Dentro de la búsqueda, los timers de
+configuración Music y API suman unos 478 ms; el resto no está descompuesto.
+El fallback de búsqueda por baja confianza es una hipótesis pendiente, no una
+causa probada. Este resultado no se atribuye a la espera adicional del CDN.
+
+### Validación y evidencias
+
+Pasan **247 Rust**, con 30 ignoradas, y los checks Android arm64/x86_64
+con código 0, sin avisos nuevos. El primer build de pruebas de B falló por el
+préstamo temporal de un array del test; se corrigió y se conserva su log. La
+fuente final y su PE de pruebas están archivados en
+`capture-bench.local/round10b.local/source-proof.json.local`. Los helpers tienen
+48 pruebas Node y 31 comprobaciones PowerShell; no son pruebas adicionales del
+producto. No se repiten JavaScript/tipos, 30 habituales o archivos completos
+para este cambio localizado de Rust. No cambian bundles, receta, `capture.js`,
+`youtubei.ts`, versiones ni API; requiere una app reconstruida.
+
+Release B: commit `114df0b`, EXE
+`9b0fc70dbe30b8f26dcaf351178ff16e1d362d8fc1057ef435ac26221c33811c`.
+El control de ambos experimentos es R9 `cb592e2`, EXE `7e710907…`. A también
+conserva su EXE `f86f6e84…`. Las cuatro auditorías verifican hashes de binarios,
+configuraciones, políticas, planes, informes y logs, sin alterar los originales.
+Los doce pares de B y el caso lento están en
+`round10b-closed-audit-summary.json.local`, SHA256
+`db540fbcde87d0b394fd44960bea0346fb22691ea5692a5dfeca714c9e2b032e`.
+El cierre A es `round10a-closed-results.json.local`; el diagnóstico independiente
+inicial es `r10-cdn-schedule-proposal.json.local`.
+
+Continúan pendientes un primer sonido total menor y más estable, la explicación
+de las búsquedas lentas y las campañas anteriores de Oficial. No se repiten
+Premium, anuncios reales, EOF o rendimiento móvil; no hay nuevas cifras de
+publicidad vista, omitida, entregada o esperada. La evidencia bruta sigue fuera
+de Git. No se publica versión, etiqueta o extractor OTA; la rama se sube para
+revisión. Manifiesto local de cierre: `round10-final-manifest.json.local`.

@@ -149,6 +149,8 @@ Las 30 habituales mantienen Native/IDs, mediana 737,45 ms; sólo se observa el p
 
 **Arranque frío, novena ronda (`4bace13`, `cb592e2`):** seis copias JSON evitadas; ahorro medio local de 29/128/176 µs por HTML en depuración. Descartar ambas precargas pasa de dos cancelaciones IPC a una, pendiente de medir en la app. La tanda habitual conserva 30 Native/IDs, cero Legacy y mediana 631,7 ms. La candidata fría usa Native 6/6, pero no acredita un menor total; se conservan el control con Legacy y el fallo de codificación del banco. [Resultados, límites y experimentos descartados](informe-arranque-frio-2026-10-23.md#ronda-9-mejoras-pequeñas-y-medición-del-total). Oficial sigue experimental.
 
+**Arranque frío, décima ronda:** A (`06823dc`) se retiró con `91c1d44`; B (`114df0b`) se conserva como mejora acotada de espera: en 4/12 candidatos, la respuesta 206 se completó 467–475 ms antes del antiguo turno de 2 s. La media observada de ventana CDN baja 1117→944 y 856→606 ms entre procesos; no demuestra menor total: 8/12 pares empeoran. Pasan 247 Rust/30 ignoradas y compilan Android arm64/x86_64; sin nueva evidencia de rendimiento móvil, EOF, anuncios o Premium. Requiere app reconstruida; OTA y PWA siguen iguales. Rige el criterio incremental sin relajar garantías; Oficial sigue experimental. [Informe R10](informe-arranque-frio-2026-10-23.md#ronda-10-oportunidad-adicional-durante-la-espera-del-cdn).
+
 El camino recomendado es **Propio**: audio directo en Rust, sin iniciar sesión,
 y captura oficial como respaldo. yt-dlp sigue predeterminado. La captura nueva sustituirá
 el respaldo histórico cuando supere sus resultados y las pruebas de admisión.
