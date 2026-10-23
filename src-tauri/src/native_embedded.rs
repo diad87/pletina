@@ -264,13 +264,14 @@ fn player_summary(value: &Value, id: &str) -> PlayerSummary {
     summary
 }
 
-fn public_version(config: &Config) -> Option<&str> {
-    let version = config.version.as_str();
-    (!version.is_empty()
+fn client_version_token(version: &str) -> bool {
+    !version.is_empty()
         && version.len() <= 64
-        && version.contains('.')
-        && version.bytes().all(|b| b.is_ascii_digit() || b == b'.'))
-    .then_some(version)
+        && version.bytes().all(|b| b.is_ascii_alphanumeric() || b"._-+".contains(&b))
+}
+
+fn public_version(config: &Config) -> Option<&str> {
+    client_version_token(&config.version).then_some(config.version.as_str())
 }
 
 #[derive(serde::Serialize)]
@@ -759,7 +760,9 @@ fn config(html: &str) -> Result<Config, Error> {
         64,
         false,
     )?;
-    if !version.bytes().all(|b| b.is_ascii_digit() || b == b'.') || !version.contains('.') {
+    // The official embed also publishes rollout suffixes. Preserve its opaque
+    // token unchanged in both the request body and header; never infer a date.
+    if !client_version_token(&version) {
         return Err(fail("CONFIG_VERSION_FORMAT"));
     }
     let client = value.pointer("/INNERTUBE_CONTEXT/client");
@@ -3229,6 +3232,75 @@ mod tests {
     }
 
     #[test]
+    fn published_version_tokens_preserve_rollout_suffixes_and_exact_identity() {
+        // Public version observed on the anonymous embed; all other fixture
+        // fields are synthetic, with no visitor/flags from the real document.
+        let rollout = "2.20261022.01.00-canary_control_2.20261023.01.00";
+        for version in [rollout.to_owned(), "release_1+fix-2.3".into(), "canary".into(), "v".repeat(64)] {
+            let mut published = config_value();
+            published["INNERTUBE_CLIENT_VERSION"] = json!(version);
+            published["INNERTUBE_CONTEXT"]["client"] = json!({
+                "clientName":"WEB_EMBEDDED_PLAYER", "clientVersion":version,
+            });
+            let parsed = config(&format!("ytcfg.set({published});")).unwrap();
+            assert_eq!(parsed.version, version);
+            assert_eq!(public_version(&parsed), Some(version.as_str()));
+            assert_eq!(body(&parsed, ID, 20700)["context"]["client"]["clientVersion"], version);
+
+            published["INNERTUBE_CONTEXT"]["client"]["clientVersion"] = json!("2.20261022.01.00");
+            assert!(matches!(config(&format!("ytcfg.set({published});")), Err(Error::Failed(code))
+                if code == "NATIVE_EMBEDDED_CONFIG_AMBIGUOUS"));
+        }
+        for version in ["", "2.1 bad", "2.1\tbad", "2.1\r\nCookie:bad", "2.1é", "2.1/next", "2.1?key", "2.1\"", &"v".repeat(65)] {
+            let mut published = config_value();
+            published["INNERTUBE_CLIENT_VERSION"] = json!(version);
+            assert!(config(&format!("ytcfg.set({published});")).is_err());
+            assert!(!client_version_token(version));
+        }
+        let mut changed = config_value();
+        changed["INNERTUBE_CLIENT_VERSION"] = json!(rollout);
+        assert!(matches!(config(&format!("ytcfg.set({});ytcfg.set({changed});", config_value())),
+            Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_CONFIG_AMBIGUOUS"));
+    }
+
+    #[tokio::test]
+    async fn rollout_config_is_admitted_on_first_get_and_post_preserves_its_exact_token() {
+        let version = "2.20261022.01.00-canary_control_2.20261023.01.00";
+        let mut published = config_value();
+        published["INNERTUBE_CLIENT_VERSION"] = json!(version);
+        published["INNERTUBE_CONTEXT"]["client"] = json!({
+            "clientName":"WEB_EMBEDDED_PLAYER", "clientVersion":version,
+        });
+        let mut value = watch_value();
+        value["streamingData"] = json!({"adaptiveFormats":[]});
+        let (url, server) = local_sequence(vec![
+            response(200, "", format!("ytcfg.set({published});").as_bytes()),
+            response(200, "Content-Type: application/json\r\n", value.to_string().as_bytes()),
+        ]);
+        let cache = tokio::sync::Mutex::new(ConfigCache::default());
+        let http = local_http();
+        let discovered = configuration_bounded(
+            &cache, ID, Instant::now() + DISCOVERY_TIMEOUT,
+            |_| async { text_response(http.get(&url).send().await.unwrap()).await },
+        ).await.unwrap();
+        assert!(!discovered.renewed, "a valid rollout must not consume the SABR renewal");
+        player_response(&http, &url, &discovered.config, ID, 20700).await.unwrap();
+        let requests = server.join().unwrap();
+        assert_eq!(requests.len(), 2, "one GET and one POST, not two configuration GETs");
+        assert!(requests[0].starts_with("GET / HTTP/1.1"));
+        assert!(requests[1].starts_with("POST / HTTP/1.1"));
+        let (headers, text) = requests[1].split_once("\r\n\r\n").unwrap();
+        let header = headers.lines().find_map(|line| line.split_once(':')
+            .filter(|(key, _)| key.eq_ignore_ascii_case("x-youtube-client-version"))
+            .map(|(_, value)| value.trim())).unwrap();
+        assert_eq!(header, version);
+        assert!(!headers.to_ascii_lowercase().contains("cookie:"));
+        let request: Value = serde_json::from_str(text).unwrap();
+        assert_eq!(request["context"]["client"]["clientVersion"], version);
+        assert_eq!(request, body(&discovered.config, ID, 20700));
+    }
+
+    #[test]
     fn published_client_context_is_bounded_and_does_not_copy_account_or_tracking() {
         let mut value = config_value();
         value["INNERTUBE_CONTEXT"]["client"] = json!({
@@ -5150,6 +5222,38 @@ mod tests {
                 .to_ascii_lowercase()
                 .contains("accept-encoding: identity")
         );
+    }
+
+    #[tokio::test]
+    #[ignore = "one anonymous metadata POST using the privately saved rollout fixture; no URL output"]
+    async fn real_saved_rollout_config_metadata_post() {
+        let html = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../capture-bench.local/round6-embed-config.local/DJzjkMBMook-1792766152130.html.local",
+        )).expect("private rollout fixture is required");
+        let config = config(&html).expect("saved public rollout configuration must parse");
+        assert_eq!(config.version, "2.20261022.01.00-canary_control_2.20261023.01.00");
+        let started = Instant::now();
+        let result = tokio::time::timeout(Duration::from_secs(30), async {
+            let http = WEB.as_ref().map_err(|_| fail("HTTP"))?;
+            let watch = get(http, reqwest::Url::parse(&format!("https://www.youtube.com/watch?v={ID}&hl=en")).unwrap()).await?;
+            watch_player(&watch, ID)?;
+            let decoder = prepared(http, &config, None).await?;
+            player_response(http, PLAYER, &config, ID, decoder.signature_timestamp).await
+        }).await;
+        match &result {
+            Ok(Ok(value)) => eprintln!("rollout-metadata {}", json!({
+                "id":ID, "success":true, "version":public_version(&config),
+                "ms":started.elapsed().as_secs_f64()*1000.0,
+                "summary":player_summary(value, ID), "audioProbed":false,
+            })),
+            Ok(Err(error)) => eprintln!("rollout-metadata {}", json!({
+                "id":ID, "success":false, "code":post_code(Some(error)), "audioProbed":false,
+            })),
+            Err(_) => eprintln!("rollout-metadata {}", json!({
+                "id":ID, "success":false, "code":"measurement-timeout", "audioProbed":false,
+            })),
+        }
+        assert!(matches!(result, Ok(Ok(_))), "metadata request was not accepted; see safe diagnostic");
     }
 
     #[tokio::test]
