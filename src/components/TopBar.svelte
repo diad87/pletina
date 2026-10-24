@@ -3,6 +3,7 @@
   import { nav } from '../lib/nav.svelte'
   import { theme } from '../lib/theme.svelte'
   import { updates } from '../lib/updates.svelte'
+  import { inPwa } from '../lib/api'
   import Icon from './Icon.svelte'
 
   let { scrollY = 0 }: { scrollY?: number } = $props()
@@ -99,6 +100,12 @@
     {/if}
   </label>
   {/if}
+  {#if inPwa}
+    <button class="car-mode" onclick={() => { theme.nowPlaying = false; theme.queueSheet = false; theme.driving = true }}
+      aria-label="Modo coche" title="Modo coche">
+      <Icon name="car" size={24} /><span>Modo coche</span>
+    </button>
+  {/if}
   {#if updates.state === 'ready' && !layout.mobile}
     <button class="update" onclick={() => updates.install()} title="Se instalará sola al cerrar Pletina; pulsa para instalarla ya">
       <span class="dot"></span> Versión {updates.version} lista · <strong>Reiniciar</strong>
@@ -107,6 +114,24 @@
 </header>
 
 <style>
+  .car-mode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    gap: 8px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 12px;
+    margin-left: auto;
+    border-radius: 22px;
+    background: rgb(0 0 0 / 0.6);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .car-mode:hover { background: var(--elevated); }
+  .mobile .car-mode { padding: 0 10px; }
+  .mobile .car-mode span { display: none; }
   .topbar {
     position: absolute;
     inset: 0 0 auto;

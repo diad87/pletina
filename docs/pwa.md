@@ -1,5 +1,7 @@
 # Pletina PWA: port de la APK 0.11.2
 
+**En desarrollo local: [Modo coche](pwa-driving-mode.md).** Controles grandes en vertical y horizontal, favoritos/descargas/colecciones/cola, pantalla encendida cuando el navegador lo permite y órdenes Media Session reforzadas. La versión pública descrita a continuación no incorpora todavía estos cambios. La comprobación en móviles y mandos de coche físicos sigue pendiente.
+
 <!-- crossplatform-audit-summary:start -->
 **Auditoría del 24 de octubre, versión publicada `bbdda9c0c16f145e`.** [Informe multiplataforma](pwa-crossplatform-audit-2026-10-24.md): **956/956** pruebas de lógica, tipos sin errores/avisos, **115 comprobaciones de navegador correctas** (incluyen preparativos; dos confirmaciones nativas fuera del runner) y **6/6 de instalación por CDP** tanto en Windows como en Linux/WSL. Cada resultado conserva su versión y ámbito; no se suman reejecuciones. El usuario confirma en su Xiaomi el contador con horas y audio de pódcast tras bloquear 30 segundos. Mac e iPhone actuales siguen pendientes de equipo físico; tampoco se acreditan Auto/CarPlay ni descargas bajo suspensión del sistema. La migración con la app cerrada pasa; el intento de actualización con la app abierta sigue sin acreditarse.
 <!-- crossplatform-audit-summary:end -->

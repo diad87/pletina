@@ -1,5 +1,6 @@
 <script lang="ts">
   import BottomNav from './components/BottomNav.svelte'
+  import DrivingMode from './components/DrivingMode.svelte'
   import ContextMenu from './components/ContextMenu.svelte'
   import MiniPlayer from './components/MiniPlayer.svelte'
   import NowPlaying from './components/NowPlaying.svelte'
@@ -60,6 +61,11 @@
 
   function onKeydown(e: KeyboardEvent) {
     if (document.querySelector('dialog[open]')) return
+    if (inPwa && theme.driving) {
+      if (e.key === 'Escape') { theme.driving = false; e.preventDefault() }
+      else if (e.key === ' ' && !isTyping(e.target) && !(e.target instanceof HTMLElement && e.target.closest('button, a, [role="button"]'))) { player.toggle(); e.preventDefault() }
+      return
+    }
     if (e.altKey && e.key === 'ArrowLeft') nav.back()
     else if (e.altKey && e.key === 'ArrowRight') nav.forward()
     else if (e.ctrlKey && (e.key === 'k' || e.key === 'l')) nav.focusSearch()
@@ -85,6 +91,7 @@
       return true
     }
     if (menu.open) menu.close()
+    else if (inPwa && theme.driving) theme.driving = false
     else if (player.picking) player.picking = null
     else if (theme.queueSheet && layout.mobile) theme.queueSheet = false
     else if (theme.nowPlaying) theme.nowPlaying = false
@@ -95,8 +102,8 @@
   // Los diálogos HTML tienen su propio comportamiento Atrás. Los paneles de la app
   // usan una entrada temporal en la PWA; en Tauri este método no hace nada.
   $effect(() => {
-    nav.overlay(Boolean((inPwa && officialYouTube.opened) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay,
-      () => Boolean((inPwa && officialYouTube.opened) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying))
+    nav.overlay(Boolean((inPwa && (officialYouTube.opened || theme.driving)) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying), closeOverlay,
+      () => Boolean((inPwa && (officialYouTube.opened || theme.driving)) || menu.open || (theme.queueSheet && layout.mobile) || theme.nowPlaying))
   })
 
   // Botón "atrás" de Android (MainActivity.kt): conserva el contrato nativo.
@@ -159,6 +166,7 @@
   {/key}
 {/snippet}
 
+<div class="app-shell" inert={inPwa && theme.driving}>
 {#if layout.mobile}
   <!-- Móvil: la página a pantalla completa y, abajo, lo que suena y las secciones. -->
   <div class="app mobile">
@@ -198,8 +206,11 @@
 <NowPlaying />
 <SourcePicker />
 <ContextMenu />
+</div>
+{#if inPwa && theme.driving}<DrivingMode />{/if}
 
 <style>
+  .app-shell { display: contents; }
   .app {
     display: grid;
     grid-template-columns: 248px minmax(0, 1fr);

@@ -1,5 +1,6 @@
 <script lang="ts" module>
   const PATHS = {
+    car: 'M5 3h14l3 8v9h-3v-2H5v2H2v-9l3-8zm1.4 2-2 6h15.2l-2-6H6.4zM4 13v3h16v-3H4zm2 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm12 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z',
     text: 'M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4zm0 5h10v2H4zm13-5h3v7h-3z',
     home: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z',
     search:

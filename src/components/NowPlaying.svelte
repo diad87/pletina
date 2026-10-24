@@ -137,6 +137,11 @@
         <Transport big />
         <!-- Móvil: la cola no cabe al lado; se abre a pantalla completa. -->
         <div class="extras">
+          {#if api.inPwa}
+            <button onclick={() => { theme.nowPlaying = false; theme.queueSheet = false; theme.driving = true }}>
+              <Icon name="car" size={22} /> Modo coche
+            </button>
+          {/if}
           {#if api.inPwa && player.status === 'idle' && !podcast && !isLocal(current.track.id)}
             <button onclick={() => api.openYouTubePlayer(toQuery(current)).catch(() => toast.show('No se pudo abrir el reproductor de YouTube.'))}>
               <Icon name="play" size={20} /> Reproducir con YouTube

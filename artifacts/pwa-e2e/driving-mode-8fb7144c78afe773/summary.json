@@ -1,0 +1,5859 @@
+{
+  "schemaVersion": 1,
+  "build": "8fb7144c78afe773",
+  "consolidatedAt": "2026-10-24T11:15:00.576Z",
+  "scope": "Unique final profile reports for one compiled PWA build. Chromium and Firefox passed all ten checks. Windows WebKit UI/catalogue revalidated after correcting a runner race with the asynchronous library refresh; its five native-media cases remain blocked by the documented Windows WebKit 26.5 transport limitation.",
+  "profiles": [
+    {
+      "profile": "chromium-android-layout",
+      "engine": "chromium",
+      "build": "8fb7144c78afe773",
+      "checks": [
+        {
+          "name": "setup.open: compiled PWA and real service worker",
+          "startedAt": "2026-10-24T11:11:48.138Z",
+          "status": "pass",
+          "build": "8fb7144c78afe773",
+          "applicationPath": "/pletina/application/index.29918a0c510b5bbc.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T11:11:48.929Z"
+        },
+        {
+          "name": "driving.empty: idle playback, empty queue and all viewport sizes",
+          "startedAt": "2026-10-24T11:11:48.931Z",
+          "status": "pass",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:11:52.429Z"
+        },
+        {
+          "name": "driving.wake-preference: toggle persists and close releases acquired native locks",
+          "startedAt": "2026-10-24T11:11:52.430Z",
+          "status": "pass",
+          "nativeWakeLockSupported": true,
+          "preferenceRestored": true,
+          "nativeAcquisitions": 7,
+          "nativeRequestErrors": [],
+          "allAcquiredSentinelsReleased": true,
+          "hardwareScreenSleepClaimed": false,
+          "finishedAt": "2026-10-24T11:11:54.191Z"
+        },
+        {
+          "name": "driving.setup: favorites, playlist and download are created through UI",
+          "startedAt": "2026-10-24T11:11:54.192Z",
+          "status": "pass",
+          "favoriteIds": [
+            101,
+            102,
+            103
+          ],
+          "playlistName": "Conducir QA",
+          "downloadedTitle": "Canción QA Uno",
+          "dataSource": "Product UI and controlled provider HTTP",
+          "finishedAt": "2026-10-24T11:11:59.567Z"
+        },
+        {
+          "name": "driving.library: selected collection persists through tabs and rotation",
+          "startedAt": "2026-10-24T11:11:59.567Z",
+          "status": "pass",
+          "favoriteTitles": [
+            "Canción QA Tres",
+            "Canción QA Dos",
+            "Canción QA Uno"
+          ],
+          "playlistName": "Conducir QA",
+          "queueIds": [
+            101,
+            102
+          ],
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:12:03.996Z"
+        },
+        {
+          "name": "driving.transport: play, pause, next, previous and selected queue use one audio",
+          "startedAt": "2026-10-24T11:12:03.997Z",
+          "status": "pass",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 31,
+                  "y": 515.53125,
+                  "width": 100,
+                  "height": 80
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 147,
+                  "y": 507.53125,
+                  "width": 96,
+                  "height": 96
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 259,
+                  "y": 515.53125,
+                  "width": 100,
+                  "height": 80
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 24,
+                  "y": 615.53125,
+                  "width": 165,
+                  "height": 56
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 201,
+                  "y": 615.53125,
+                  "width": 165,
+                  "height": 56
+                }
+              ],
+              "screenshot": "playing-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 410.890625,
+                  "y": 202.890625,
+                  "width": 100,
+                  "height": 64
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 530.890625,
+                  "y": 196.890625,
+                  "width": 76,
+                  "height": 76
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 626.890625,
+                  "y": 202.890625,
+                  "width": 100,
+                  "height": 64
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 325.796875,
+                  "y": 278.890625,
+                  "width": 237.09375,
+                  "height": 48
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 574.890625,
+                  "y": 278.890625,
+                  "width": 237.09375,
+                  "height": 48
+                }
+              ],
+              "screenshot": "playing-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 20,
+                  "y": 318.328125,
+                  "width": 84,
+                  "height": 64
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 120,
+                  "y": 310.328125,
+                  "width": 80,
+                  "height": 80
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 216,
+                  "y": 318.328125,
+                  "width": 84,
+                  "height": 64
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 20,
+                  "y": 398.328125,
+                  "width": 134,
+                  "height": 48
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 166,
+                  "y": 398.328125,
+                  "width": 134,
+                  "height": 48
+                }
+              ],
+              "screenshot": "playing-320x568.png"
+            }
+          ],
+          "longTitleLayout": {
+            "viewport": {
+              "width": 320,
+              "height": 568
+            },
+            "documentWidth": 320,
+            "dialog": {
+              "x": 0,
+              "y": 0,
+              "right": 320,
+              "bottom": 568
+            },
+            "scrollWidth": 320,
+            "clientWidth": 320,
+            "controls": [
+              {
+                "label": "Sonando",
+                "x": 8,
+                "y": 492.25,
+                "width": 98.65625,
+                "height": 67.75
+              },
+              {
+                "label": "Tu música",
+                "x": 110.65625,
+                "y": 492.25,
+                "width": 98.671875,
+                "height": 67.75
+              },
+              {
+                "label": "Cola",
+                "x": 213.328125,
+                "y": 492.25,
+                "width": 98.65625,
+                "height": 67.75
+              },
+              {
+                "label": "Salir del modo coche",
+                "x": 260,
+                "y": 7.5,
+                "width": 48,
+                "height": 48
+              },
+              {
+                "label": "Anterior",
+                "x": 20,
+                "y": 345.921875,
+                "width": 84,
+                "height": 64
+              },
+              {
+                "label": "Reproducir",
+                "x": 120,
+                "y": 337.921875,
+                "width": 80,
+                "height": 80
+              },
+              {
+                "label": "Siguiente",
+                "x": 216,
+                "y": 345.921875,
+                "width": 84,
+                "height": 64
+              },
+              {
+                "label": "Aleatorio",
+                "x": 20,
+                "y": 425.921875,
+                "width": 134,
+                "height": 48
+              },
+              {
+                "label": "Quitar de favoritos",
+                "x": 166,
+                "y": 425.921875,
+                "width": 134,
+                "height": 48
+              }
+            ],
+            "screenshot": "playing-long-title-320x568.png",
+            "scope": "CSS-only two-line h1 text stress; media metadata, queue and product state are unchanged"
+          },
+          "selectedFromQueue": "Canción QA Uno",
+          "nativeAudioReused": true,
+          "spaceOnTransportAndNavigationVerified": true,
+          "finishedAt": "2026-10-24T11:12:07.803Z"
+        },
+        {
+          "name": "driving.exit: exit button, Escape and browser Back preserve uninterrupted audio",
+          "startedAt": "2026-10-24T11:12:07.803Z",
+          "status": "pass",
+          "actions": [
+            {
+              "action": "button",
+              "audioIndex": 0,
+              "timeBefore": 0.274469,
+              "timeAfter": 0.468021
+            },
+            {
+              "action": "Escape",
+              "audioIndex": 0,
+              "timeBefore": 0.273111,
+              "timeAfter": 0.314764
+            },
+            {
+              "action": "history.back",
+              "audioIndex": 0,
+              "timeBefore": 0.26225,
+              "timeAfter": 0.310048
+            }
+          ],
+          "browserBackSource": "Real browser history API; phone system Back and car hardware unverified",
+          "finishedAt": "2026-10-24T11:12:11.193Z"
+        },
+        {
+          "name": "driving.media-session: registered system handlers operate the car-mode player",
+          "startedAt": "2026-10-24T11:12:11.194Z",
+          "status": "pass",
+          "registeredActions": [
+            "play",
+            "pause",
+            "stop",
+            "previoustrack",
+            "nexttrack",
+            "seekto",
+            "seekbackward",
+            "seekforward"
+          ],
+          "invokedActions": [
+            "play",
+            "pause",
+            "nexttrack",
+            "previoustrack",
+            "seekto"
+          ],
+          "source": "Native registration observed; handlers invoked by QA. Actual Bluetooth buttons/car display unverified.",
+          "finishedAt": "2026-10-24T11:12:12.635Z"
+        },
+        {
+          "name": "driving.podcast: skip 30/15 seconds uses same episode and fits all viewports",
+          "startedAt": "2026-10-24T11:12:12.636Z",
+          "status": "pass",
+          "title": "Episodio QA Uno",
+          "forwardSeconds": 30,
+          "backwardSeconds": 15,
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 147,
+                  "y": 507.53125,
+                  "width": 96,
+                  "height": 96
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 24,
+                  "y": 615.53125,
+                  "width": 165,
+                  "height": 56
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 201,
+                  "y": 615.53125,
+                  "width": 165,
+                  "height": 56
+                }
+              ],
+              "screenshot": "podcast-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 530.890625,
+                  "y": 196.890625,
+                  "width": 76,
+                  "height": 76
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 325.796875,
+                  "y": 278.890625,
+                  "width": 237.09375,
+                  "height": 48
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 574.890625,
+                  "y": 278.890625,
+                  "width": 237.09375,
+                  "height": 48
+                }
+              ],
+              "screenshot": "podcast-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 120,
+                  "y": 310.328125,
+                  "width": 80,
+                  "height": 80
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 20,
+                  "y": 398.328125,
+                  "width": 134,
+                  "height": 48
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 166,
+                  "y": 398.328125,
+                  "width": 134,
+                  "height": 48
+                }
+              ],
+              "screenshot": "podcast-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:12:16.844Z"
+        },
+        {
+          "name": "driving.offline: downloaded collection starts without provider response bytes",
+          "startedAt": "2026-10-24T11:12:16.845Z",
+          "status": "pass",
+          "title": "Canción QA Uno",
+          "localAudio": true,
+          "screenshot": "offline-downloaded.png",
+          "physicalAirplaneModeClaimed": false,
+          "finishedAt": "2026-10-24T11:12:18.124Z"
+        }
+      ],
+      "errors": [],
+      "browserVersion": "153.0.8010.52",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-24T11:11:48.030Z",
+      "networkTransport": "Puppeteer HTTP interception and Playwright UI; production modules and SW retained.",
+      "counts": {
+        "pass": 10,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "focusTransfers": [
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        }
+      ],
+      "exitProgress": [
+        {
+          "action": "button",
+          "stage": "start"
+        },
+        {
+          "action": "button",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        },
+        {
+          "action": "Escape",
+          "stage": "start"
+        },
+        {
+          "action": "Escape",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        },
+        {
+          "action": "history.back",
+          "stage": "start"
+        },
+        {
+          "action": "history.back",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        }
+      ],
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-24T11:12:17.343Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": false,
+          "after": true,
+          "at": "2026-10-24T11:12:17.977Z"
+        }
+      ],
+      "finalState": {
+        "path": "/pletina/application/index.29918a0c510b5bbc.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Podcast QA RSS",
+          "Episodios"
+        ],
+        "navigation": {
+          "index": 5,
+          "route": {
+            "name": "podcast",
+            "id": 500000000000001
+          },
+          "historyLength": 9
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": true,
+              "time": 0.379685,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            },
+            {
+              "index": 1,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 18783,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 18783,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 18785,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 18785,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 18793,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 19048,
+              "time": 0.227773,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 19215,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 19217,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 19217,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 19218,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 19218,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 19224,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 19481,
+              "time": 0.230918,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 19665,
+              "time": 0.391624,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 19665,
+              "time": 0.391624,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 20299,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 20300,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 20300,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 20302,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 20302,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 20308,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 20565,
+              "time": 0.234719,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 20833,
+              "time": 0.498299,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 20949,
+              "time": 0.604409,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 20949,
+              "time": 0.604409,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21550,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 21551,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 21551,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 21553,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 21553,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 21559,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21815,
+              "time": 0.235021,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21982,
+              "time": 0.378312,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 21982,
+              "time": 0.378312,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 22600,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 22601,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 22601,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 22602,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 22602,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 22609,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 22882,
+              "time": 0.243269,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23066,
+              "time": 0.416738,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 23066,
+              "time": 0.416738,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23684,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 23685,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 23686,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 23687,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 23687,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 23694,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23954,
+              "time": 0.233946,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23972,
+              "time": 0.242951,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 23972,
+              "time": 0.242951,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 23975,
+              "time": 0.246017,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 23979,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 23980,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 23981,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 23981,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 23988,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24120,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 24121,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 24121,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 24123,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 24123,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 24129,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 24270,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 24270,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24270,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 24270,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 24270,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24366,
+              "time": 3.033839,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 24366,
+              "time": 3.033839,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26486,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26488,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 26488,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 26492,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 26492,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26503,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26751,
+              "time": 0.231394,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 27009,
+              "time": 0.484483,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 27101,
+              "time": 30.484498,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 27101,
+              "time": 30.484498,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 27101,
+              "time": 30.484498,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 27101,
+              "time": 30.484498,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 27102,
+              "time": 30.484498,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 27251,
+              "time": 15.484497,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 27251,
+              "time": 15.484497,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 27252,
+              "time": 15.489271,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 27252,
+              "time": 15.489544,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 27252,
+              "time": 15.489986,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 27401,
+              "time": 15.583868,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 27401,
+              "time": 15.583868,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29319,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 29322,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 29322,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 29323,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 29324,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 29331,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29602,
+              "time": 0.243674,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29753,
+              "time": 0.379685,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 29753,
+              "time": 0.379685,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "stop",
+            "previoustrack",
+            "nexttrack",
+            "seekto",
+            "seekbackward",
+            "seekforward"
+          ]
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 45,
+          "api.deezer.com/search/artist": 7,
+          "api.deezer.com/search/album": 7,
+          "api.deezer.com/search/track": 7,
+          "music.youtube.com/youtubei/v1/search": 4,
+          "www.youtube.com/youtubei/v1/search": 1,
+          "www.youtube.com/youtubei/v1/player": 3,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1,
+          "fixture.googlevideo.com/audio/qaAudio003c": 1,
+          "fixture.googlevideo.com/audio/qaAudio002b": 1,
+          "itunes.apple.com/search": 1,
+          "feeds.pletina.test/rss": 1,
+          "feeds.pletina.test/english": 1,
+          "media.pletina.test/episode-0.m4a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio003c",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio002b",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-24T11:12:18.145Z",
+      "browserClosed": true,
+      "sourceReport": "D:\\tmp\\pletina-driving-mode\\final-8fb7144c78afe773\\chromium-android-layout\\report.json"
+    },
+    {
+      "profile": "webkit-iphone-layout",
+      "engine": "webkit",
+      "build": "8fb7144c78afe773",
+      "checks": [
+        {
+          "name": "setup.open: compiled PWA and real service worker",
+          "startedAt": "2026-10-24T11:14:05.731Z",
+          "status": "pass",
+          "build": "8fb7144c78afe773",
+          "applicationPath": "/pletina/application/index.29918a0c510b5bbc.html",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T11:14:06.536Z"
+        },
+        {
+          "name": "driving.empty: idle playback, empty queue and all viewport sizes",
+          "startedAt": "2026-10-24T11:14:06.537Z",
+          "status": "pass",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:14:12.991Z"
+        },
+        {
+          "name": "driving.wake-preference: toggle persists and close releases acquired native locks",
+          "startedAt": "2026-10-24T11:14:12.992Z",
+          "status": "pass",
+          "nativeWakeLockSupported": true,
+          "preferenceRestored": true,
+          "nativeAcquisitions": 7,
+          "nativeRequestErrors": [],
+          "allAcquiredSentinelsReleased": true,
+          "hardwareScreenSleepClaimed": false,
+          "finishedAt": "2026-10-24T11:14:17.703Z"
+        },
+        {
+          "name": "driving.setup: favorites, playlist and download are created through UI",
+          "startedAt": "2026-10-24T11:14:17.703Z",
+          "status": "pass",
+          "favoriteIds": [
+            101,
+            102,
+            103
+          ],
+          "playlistName": "Conducir QA",
+          "downloadStatus": "blocked",
+          "downloadBlock": {
+            "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+            "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+            "physicalIPhoneClaimed": false
+          },
+          "dataSource": "Product UI and controlled provider HTTP",
+          "finishedAt": "2026-10-24T11:14:26.414Z"
+        },
+        {
+          "name": "driving.library: selected collection persists through tabs and rotation",
+          "startedAt": "2026-10-24T11:14:26.415Z",
+          "status": "pass",
+          "favoriteTitles": [
+            "Canción QA Tres",
+            "Canción QA Dos",
+            "Canción QA Uno"
+          ],
+          "playlistName": "Conducir QA",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.65625,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.65625,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.328125,
+                  "y": 330,
+                  "width": 262.671875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.65625,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.65625,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.328125,
+                  "y": 492.25,
+                  "width": 98.671875,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-320x568.png"
+            }
+          ],
+          "emptyDownloadAndRecentNavigation": true,
+          "playbackStatus": "blocked",
+          "playbackBlock": {
+            "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+            "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+            "physicalIPhoneClaimed": false
+          },
+          "finishedAt": "2026-10-24T11:14:34.561Z"
+        },
+        {
+          "name": "driving.transport: native media prerequisite",
+          "startedAt": "2026-10-24T11:14:34.561Z",
+          "status": "blocked",
+          "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+          "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+          "physicalIPhoneClaimed": false,
+          "finishedAt": "2026-10-24T11:14:34.561Z"
+        },
+        {
+          "name": "driving.exit: native media prerequisite",
+          "startedAt": "2026-10-24T11:14:34.562Z",
+          "status": "blocked",
+          "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+          "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+          "physicalIPhoneClaimed": false,
+          "finishedAt": "2026-10-24T11:14:34.562Z"
+        },
+        {
+          "name": "driving.media-session: native media prerequisite",
+          "startedAt": "2026-10-24T11:14:34.563Z",
+          "status": "blocked",
+          "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+          "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+          "physicalIPhoneClaimed": false,
+          "finishedAt": "2026-10-24T11:14:34.563Z"
+        },
+        {
+          "name": "driving.podcast: native media prerequisite",
+          "startedAt": "2026-10-24T11:14:34.563Z",
+          "status": "blocked",
+          "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+          "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+          "physicalIPhoneClaimed": false,
+          "finishedAt": "2026-10-24T11:14:34.563Z"
+        },
+        {
+          "name": "driving.offline: native media prerequisite",
+          "startedAt": "2026-10-24T11:14:34.564Z",
+          "status": "blocked",
+          "reason": "Windows WebKit 26.5 native HTMLAudio bypasses the controlled provider transport/proxy and service worker. Same-origin AAC decodes in the host probe; this does not determine Safari iOS behavior.",
+          "evidence": "artifacts/pwa-e2e/webkit-aac-probe.json",
+          "physicalIPhoneClaimed": false,
+          "finishedAt": "2026-10-24T11:14:34.564Z"
+        }
+      ],
+      "errors": [],
+      "browserVersion": "26.5",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-24T11:14:05.553Z",
+      "networkTransport": "Playwright HTTP interception plus loopback TLS proxy for eight allowlisted fixture hosts (media, RSS, images, Audius and Spotify); original URLs, response headers and production SW retained. No external upstream. Self-signed fixture certificate accepted only in this disposable QA context.",
+      "networkTransportHosts": [
+        "fixture.googlevideo.com",
+        "media.pletina.test",
+        "feeds.pletina.test",
+        "images.pletina.test",
+        "i.ytimg.com",
+        "api.audius.co",
+        "open.spotify.com",
+        "api-partner.spotify.com"
+      ],
+      "counts": {
+        "pass": 5,
+        "fail": 0,
+        "blocked": 5,
+        "unsupported": 0
+      },
+      "focusTransfers": [
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        }
+      ],
+      "finalState": {
+        "path": "/pletina/application/index.29918a0c510b5bbc.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Canciones",
+          "Resultado principal",
+          "Artistas",
+          "Discos"
+        ],
+        "navigation": {
+          "index": 3,
+          "route": {
+            "name": "search",
+            "query": "QA Media"
+          },
+          "historyLength": 6
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": false,
+              "local": false,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [],
+          "handlers": []
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 7,
+          "api.deezer.com/search/artist": 4,
+          "api.deezer.com/search/album": 4,
+          "api.deezer.com/search/track": 4
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-24T11:14:34.572Z",
+      "browserClosed": true,
+      "sourceReport": "D:\\tmp\\pletina-driving-mode\\final-webkit-8fb7144c78afe773\\webkit-iphone-layout\\report.json"
+    },
+    {
+      "profile": "firefox-narrow",
+      "engine": "firefox",
+      "build": "8fb7144c78afe773",
+      "checks": [
+        {
+          "name": "setup.open: compiled PWA and real service worker",
+          "startedAt": "2026-10-24T11:12:42.910Z",
+          "status": "pass",
+          "build": "8fb7144c78afe773",
+          "applicationPath": "/pletina/application/index.29918a0c510b5bbc.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T11:12:44.215Z"
+        },
+        {
+          "name": "driving.empty: idle playback, empty queue and all viewport sizes",
+          "startedAt": "2026-10-24T11:12:44.216Z",
+          "status": "pass",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.6666564941406,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.3333129882812,
+                  "y": 330,
+                  "width": 262.66668701171875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.66666412353516,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.3333282470703,
+                  "y": 492.25,
+                  "width": 98.66667175292969,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "empty-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:12:47.861Z"
+        },
+        {
+          "name": "driving.wake-preference: toggle persists and close releases acquired native locks",
+          "startedAt": "2026-10-24T11:12:47.862Z",
+          "status": "pass",
+          "nativeWakeLockSupported": true,
+          "preferenceRestored": true,
+          "nativeAcquisitions": 7,
+          "nativeRequestErrors": [],
+          "allAcquiredSentinelsReleased": true,
+          "hardwareScreenSleepClaimed": false,
+          "finishedAt": "2026-10-24T11:12:49.949Z"
+        },
+        {
+          "name": "driving.setup: favorites, playlist and download are created through UI",
+          "startedAt": "2026-10-24T11:12:49.949Z",
+          "status": "pass",
+          "favoriteIds": [
+            101,
+            102,
+            103
+          ],
+          "playlistName": "Conducir QA",
+          "downloadedTitle": "Canción QA Uno",
+          "dataSource": "Product UI and controlled provider HTTP",
+          "finishedAt": "2026-10-24T11:12:55.535Z"
+        },
+        {
+          "name": "driving.library: selected collection persists through tabs and rotation",
+          "startedAt": "2026-10-24T11:12:55.536Z",
+          "status": "pass",
+          "favoriteTitles": [
+            "Canción QA Tres",
+            "Canción QA Dos",
+            "Canción QA Uno"
+          ],
+          "playlistName": "Conducir QA",
+          "queueIds": [
+            101,
+            102
+          ],
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.6666564941406,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.3333129882812,
+                  "y": 330,
+                  "width": 262.66668701171875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.66666412353516,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.3333282470703,
+                  "y": 492.25,
+                  "width": 98.66667175292969,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                }
+              ],
+              "screenshot": "favorites-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:13:00.395Z"
+        },
+        {
+          "name": "driving.transport: play, pause, next, previous and selected queue use one audio",
+          "startedAt": "2026-10-24T11:13:00.396Z",
+          "status": "pass",
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 31,
+                  "y": 515.5499877929688,
+                  "width": 100,
+                  "height": 80
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 147,
+                  "y": 507.54998779296875,
+                  "width": 96,
+                  "height": 96
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 259,
+                  "y": 515.5499877929688,
+                  "width": 100,
+                  "height": 80
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 24,
+                  "y": 615.5499877929688,
+                  "width": 165,
+                  "height": 56
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 201,
+                  "y": 615.5499877929688,
+                  "width": 165,
+                  "height": 56
+                }
+              ],
+              "screenshot": "playing-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.6666564941406,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.3333129882812,
+                  "y": 330,
+                  "width": 262.66668701171875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 410.8999938964844,
+                  "y": 202.89999389648438,
+                  "width": 100,
+                  "height": 64
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 530.9000244140625,
+                  "y": 196.89999389648438,
+                  "width": 76,
+                  "height": 76
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 626.9000244140625,
+                  "y": 202.89999389648438,
+                  "width": 100,
+                  "height": 64
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 325.79998779296875,
+                  "y": 278.8999938964844,
+                  "width": 237.10003662109375,
+                  "height": 48
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 574.9000244140625,
+                  "y": 278.8999938964844,
+                  "width": 237.0999755859375,
+                  "height": 48
+                }
+              ],
+              "screenshot": "playing-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.66666412353516,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.3333282470703,
+                  "y": 492.25,
+                  "width": 98.66667175292969,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Anterior",
+                  "x": 20,
+                  "y": 318.3500061035156,
+                  "width": 84,
+                  "height": 64
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 120,
+                  "y": 310.3500061035156,
+                  "width": 80,
+                  "height": 80
+                },
+                {
+                  "label": "Siguiente",
+                  "x": 216,
+                  "y": 318.3500061035156,
+                  "width": 84,
+                  "height": 64
+                },
+                {
+                  "label": "Aleatorio",
+                  "x": 20,
+                  "y": 398.3500061035156,
+                  "width": 134,
+                  "height": 48
+                },
+                {
+                  "label": "Quitar de favoritos",
+                  "x": 166,
+                  "y": 398.3500061035156,
+                  "width": 134,
+                  "height": 48
+                }
+              ],
+              "screenshot": "playing-320x568.png"
+            }
+          ],
+          "longTitleLayout": {
+            "viewport": {
+              "width": 320,
+              "height": 568
+            },
+            "documentWidth": 320,
+            "dialog": {
+              "x": 0,
+              "y": 0,
+              "right": 320,
+              "bottom": 568
+            },
+            "scrollWidth": 320,
+            "clientWidth": 320,
+            "controls": [
+              {
+                "label": "Sonando",
+                "x": 8,
+                "y": 492.25,
+                "width": 98.66666412353516,
+                "height": 67.75
+              },
+              {
+                "label": "Tu música",
+                "x": 110.66666412353516,
+                "y": 492.25,
+                "width": 98.66666412353516,
+                "height": 67.75
+              },
+              {
+                "label": "Cola",
+                "x": 213.3333282470703,
+                "y": 492.25,
+                "width": 98.66667175292969,
+                "height": 67.75
+              },
+              {
+                "label": "Salir del modo coche",
+                "x": 260,
+                "y": 7.5,
+                "width": 48,
+                "height": 48
+              },
+              {
+                "label": "Anterior",
+                "x": 20,
+                "y": 345.95001220703125,
+                "width": 84,
+                "height": 64
+              },
+              {
+                "label": "Reproducir",
+                "x": 120,
+                "y": 337.95001220703125,
+                "width": 80,
+                "height": 80
+              },
+              {
+                "label": "Siguiente",
+                "x": 216,
+                "y": 345.95001220703125,
+                "width": 84,
+                "height": 64
+              },
+              {
+                "label": "Aleatorio",
+                "x": 20,
+                "y": 425.95001220703125,
+                "width": 134,
+                "height": 48
+              },
+              {
+                "label": "Quitar de favoritos",
+                "x": 166,
+                "y": 425.95001220703125,
+                "width": 134,
+                "height": 48
+              }
+            ],
+            "screenshot": "playing-long-title-320x568.png",
+            "scope": "CSS-only two-line h1 text stress; media metadata, queue and product state are unchanged"
+          },
+          "selectedFromQueue": "Canción QA Uno",
+          "nativeAudioReused": true,
+          "spaceOnTransportAndNavigationVerified": true,
+          "finishedAt": "2026-10-24T11:13:04.772Z"
+        },
+        {
+          "name": "driving.exit: exit button, Escape and browser Back preserve uninterrupted audio",
+          "startedAt": "2026-10-24T11:13:04.773Z",
+          "status": "pass",
+          "actions": [
+            {
+              "action": "button",
+              "audioIndex": 0,
+              "timeBefore": 0.339637,
+              "timeAfter": 0.500589
+            },
+            {
+              "action": "Escape",
+              "audioIndex": 0,
+              "timeBefore": 0.294081,
+              "timeAfter": 0.334557
+            },
+            {
+              "action": "history.back",
+              "audioIndex": 0,
+              "timeBefore": 0.262607,
+              "timeAfter": 0.343083
+            }
+          ],
+          "browserBackSource": "Real browser history API; phone system Back and car hardware unverified",
+          "finishedAt": "2026-10-24T11:13:08.371Z"
+        },
+        {
+          "name": "driving.media-session: registered system handlers operate the car-mode player",
+          "startedAt": "2026-10-24T11:13:08.372Z",
+          "status": "pass",
+          "registeredActions": [
+            "play",
+            "pause",
+            "stop",
+            "previoustrack",
+            "nexttrack",
+            "seekto",
+            "seekbackward",
+            "seekforward"
+          ],
+          "invokedActions": [
+            "play",
+            "pause",
+            "nexttrack",
+            "previoustrack",
+            "seekto"
+          ],
+          "source": "Native registration observed; handlers invoked by QA. Actual Bluetooth buttons/car display unverified.",
+          "finishedAt": "2026-10-24T11:13:10.119Z"
+        },
+        {
+          "name": "driving.podcast: skip 30/15 seconds uses same episode and fits all viewports",
+          "startedAt": "2026-10-24T11:13:10.120Z",
+          "status": "pass",
+          "title": "Episodio QA Uno",
+          "forwardSeconds": 30,
+          "backwardSeconds": 15,
+          "layouts": [
+            {
+              "viewport": {
+                "width": 390,
+                "height": 844
+              },
+              "documentWidth": 390,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 390,
+                "bottom": 844
+              },
+              "scrollWidth": 390,
+              "clientWidth": 390,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 134,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 260,
+                  "y": 768.25,
+                  "width": 122,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 330,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 147,
+                  "y": 507.54998779296875,
+                  "width": 96,
+                  "height": 96
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 24,
+                  "y": 615.5499877929688,
+                  "width": 165,
+                  "height": 56
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 201,
+                  "y": 615.5499877929688,
+                  "width": 165,
+                  "height": 56
+                }
+              ],
+              "screenshot": "podcast-390x844.png"
+            },
+            {
+              "viewport": {
+                "width": 844,
+                "height": 390
+              },
+              "documentWidth": 844,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 844,
+                "bottom": 390
+              },
+              "scrollWidth": 844,
+              "clientWidth": 844,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 20,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Tu música",
+                  "x": 290.6666564941406,
+                  "y": 330,
+                  "width": 262.6666564941406,
+                  "height": 56
+                },
+                {
+                  "label": "Cola",
+                  "x": 561.3333129882812,
+                  "y": 330,
+                  "width": 262.66668701171875,
+                  "height": 56
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 776,
+                  "y": 4,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 530.9000244140625,
+                  "y": 196.89999389648438,
+                  "width": 76,
+                  "height": 76
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 325.79998779296875,
+                  "y": 278.8999938964844,
+                  "width": 237.10003662109375,
+                  "height": 48
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 574.9000244140625,
+                  "y": 278.8999938964844,
+                  "width": 237.0999755859375,
+                  "height": 48
+                }
+              ],
+              "screenshot": "podcast-844x390.png"
+            },
+            {
+              "viewport": {
+                "width": 320,
+                "height": 568
+              },
+              "documentWidth": 320,
+              "dialog": {
+                "x": 0,
+                "y": 0,
+                "right": 320,
+                "bottom": 568
+              },
+              "scrollWidth": 320,
+              "clientWidth": 320,
+              "controls": [
+                {
+                  "label": "Sonando",
+                  "x": 8,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Tu música",
+                  "x": 110.66666412353516,
+                  "y": 492.25,
+                  "width": 98.66666412353516,
+                  "height": 67.75
+                },
+                {
+                  "label": "Cola",
+                  "x": 213.3333282470703,
+                  "y": 492.25,
+                  "width": 98.66667175292969,
+                  "height": 67.75
+                },
+                {
+                  "label": "Salir del modo coche",
+                  "x": 260,
+                  "y": 7.5,
+                  "width": 48,
+                  "height": 48
+                },
+                {
+                  "label": "Reproducir",
+                  "x": 120,
+                  "y": 310.3500061035156,
+                  "width": 80,
+                  "height": 80
+                },
+                {
+                  "label": "Retroceder 15 segundos",
+                  "x": 20,
+                  "y": 398.3500061035156,
+                  "width": 134,
+                  "height": 48
+                },
+                {
+                  "label": "Avanzar 30 segundos",
+                  "x": 166,
+                  "y": 398.3500061035156,
+                  "width": 134,
+                  "height": 48
+                }
+              ],
+              "screenshot": "podcast-320x568.png"
+            }
+          ],
+          "finishedAt": "2026-10-24T11:13:14.505Z"
+        },
+        {
+          "name": "driving.offline: downloaded collection starts without provider response bytes",
+          "startedAt": "2026-10-24T11:13:14.506Z",
+          "status": "pass",
+          "title": "Canción QA Uno",
+          "localAudio": true,
+          "screenshot": "offline-downloaded.png",
+          "physicalAirplaneModeClaimed": false,
+          "finishedAt": "2026-10-24T11:13:15.770Z"
+        }
+      ],
+      "errors": [],
+      "browserVersion": "153.0",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "kind": "desktop-browser-narrow",
+      "physical": false,
+      "startedAt": "2026-10-24T11:12:41.857Z",
+      "counts": {
+        "pass": 10,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "focusTransfers": [
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        },
+        {
+          "tag": "BUTTON",
+          "label": "Modo coche",
+          "className": "car-mode svelte-1h259us"
+        }
+      ],
+      "exitProgress": [
+        {
+          "action": "button",
+          "stage": "start"
+        },
+        {
+          "action": "button",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        },
+        {
+          "action": "Escape",
+          "stage": "start"
+        },
+        {
+          "action": "Escape",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        },
+        {
+          "action": "history.back",
+          "stage": "start"
+        },
+        {
+          "action": "history.back",
+          "stage": "closed",
+          "focusedTag": "BUTTON",
+          "focusedLabel": "Modo coche",
+          "focusedClass": "car-mode svelte-1h259us"
+        }
+      ],
+      "offlineTransitions": [
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-24T11:13:14.984Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": false,
+          "after": true,
+          "at": "2026-10-24T11:13:15.604Z"
+        }
+      ],
+      "finalState": {
+        "path": "/pletina/application/index.29918a0c510b5bbc.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Podcast QA RSS",
+          "Episodios"
+        ],
+        "navigation": {
+          "index": 5,
+          "route": {
+            "name": "podcast",
+            "id": 500000000000001
+          },
+          "historyLength": 7
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": true,
+              "time": 0.38517,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            },
+            {
+              "index": 1,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 20932,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 20934,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 20934,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 20944,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 20944,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 20944,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21382,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 21384,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 21384,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 21400,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 21400,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 21400,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21659,
+              "time": 0.218321,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 21878,
+              "time": 0.42077,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 21878,
+              "time": 0.42077,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 22516,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 22518,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 22518,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 22527,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 22527,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 22527,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 22789,
+              "time": 0.218639,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23072,
+              "time": 0.500589,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23197,
+              "time": 0.581632,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 23197,
+              "time": 0.581632,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 23816,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 23818,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 23818,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 23822,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 23823,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 23823,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24088,
+              "time": 0.213061,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24329,
+              "time": 0.415464,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 24329,
+              "time": 0.415464,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 24966,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 24967,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 24967,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 24971,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 24971,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 24971,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 25233,
+              "time": 0.222108,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 25480,
+              "time": 0.464195,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 25480,
+              "time": 0.464195,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26215,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26218,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 26218,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 26222,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 26222,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26222,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26483,
+              "time": 0.222108,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26554,
+              "time": 0.262335,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 26554,
+              "time": 0.262335,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26562,
+              "time": 0.262335,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26571,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 26571,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 26579,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 26579,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26579,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26782,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26784,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 26784,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 26788,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 26788,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26788,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 26950,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 26951,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 26951,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 26951,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 26952,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 27064,
+              "time": 3.057369,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 27064,
+              "time": 3.057369,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29233,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 29236,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 29236,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 29239,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 29239,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 29239,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29506,
+              "time": 0.225011,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29793,
+              "time": 0.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 29898,
+              "time": 30.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 29899,
+              "time": 30.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 29899,
+              "time": 30.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 29900,
+              "time": 30.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 29900,
+              "time": 30.512562,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 30047,
+              "time": 15.512561999999999,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 30048,
+              "time": 15.512561999999999,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 30049,
+              "time": 15.512561999999999,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 30049,
+              "time": 15.512561999999999,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 30049,
+              "time": 15.512561999999999,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 30180,
+              "time": 15.566371,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 30180,
+              "time": 15.566371,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 32234,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 32237,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 32237,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 32251,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 32251,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 32251,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 32515,
+              "time": 0.224195,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 32680,
+              "time": 0.38517,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 32680,
+              "time": 0.38517,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "stop",
+            "previoustrack",
+            "nexttrack",
+            "seekto",
+            "seekbackward",
+            "seekforward"
+          ]
+        },
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "api.deezer.com/search/artist": 7,
+          "api.deezer.com/search/album": 7,
+          "api.deezer.com/search/track": 7,
+          "images.pletina.test/cover.svg": 5,
+          "music.youtube.com/youtubei/v1/search": 4,
+          "www.youtube.com/youtubei/v1/search": 1,
+          "www.youtube.com/youtubei/v1/player": 3,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1,
+          "fixture.googlevideo.com/audio/qaAudio003c": 7,
+          "fixture.googlevideo.com/audio/qaAudio002b": 2,
+          "itunes.apple.com/search": 1,
+          "feeds.pletina.test/rss": 1,
+          "feeds.pletina.test/english": 1,
+          "media.pletina.test/episode-0.m4a": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio003c",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio002b",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio002b",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio003c",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "itunes.apple.com",
+            "path": "/search",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/rss",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "feeds.pletina.test",
+            "path": "/english",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "media.pletina.test",
+            "path": "/episode-0.m4a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "fetch"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-24T11:13:15.793Z",
+      "browserClosed": true,
+      "sourceReport": "D:\\tmp\\pletina-driving-mode\\final-8fb7144c78afe773\\firefox-narrow\\report.json"
+    }
+  ],
+  "counts": {
+    "pass": 25,
+    "fail": 0,
+    "blocked": 5,
+    "unsupported": 0
+  },
+  "errors": [],
+  "unblockedBrowserChecksPassed": true,
+  "browserChecksPassed": false,
+  "allRequestedPlatformsVerified": false,
+  "physicalAndroidVerified": false,
+  "physicalIPhoneVerified": false,
+  "carHardwareVerified": false,
+  "androidAutoCatalogClaimed": false,
+  "carPlayCatalogClaimed": false,
+  "diagnosticsPreserved": [
+    "D:\\tmp\\pletina-driving-mode\\final-8fb7144c78afe773\\summary.json"
+  ],
+  "supersededProfileReport": "D:\\tmp\\pletina-driving-mode\\final-8fb7144c78afe773\\webkit-iphone-layout\\report.json",
+  "runner": "C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/e2e/driving-mode.browser.mjs"
+}

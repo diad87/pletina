@@ -235,6 +235,7 @@ class Player implements PlayerApi {
     if (this.current) {
       this.#updateMediaSession(this.current)
       this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+      this.#syncPosition(true)
     }
   }
 
@@ -307,11 +308,20 @@ class Player implements PlayerApi {
     })
     a.addEventListener('pause', () => {
       if (a !== this.#audio || !a.paused) return
+      // Una interrupción del sistema puede llegar antes de resolver play().
+      // El reset interno ya ha retirado #playable; su pausa no cancela la carga
+      // de la siguiente pista. Los eventos tardíos con Audio reanudado se ignoran arriba.
+      if (this.status === 'loading' && this.#wantsPlay && this.#playable && a.src &&
+        this.#activeItem?.track.id === this.current?.track.id) {
+        this.#pause(false)
+        return
+      }
       this.#clearProgressTimer()
       if (this.status === 'playing') this.status = 'paused'
       this.#saveProgress(true)
       this.#saveQueue()
       this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+      this.#syncPosition()
     })
     a.addEventListener('seeked', () => {
       if (a !== this.#audio) return
@@ -319,6 +329,9 @@ class Player implements PlayerApi {
       this.#watchProgress()
       this.#saveProgress(true)
       this.#saveQueue()
+    })
+    a.addEventListener('ratechange', () => {
+      if (a === this.#audio) this.#syncPosition()
     })
     a.addEventListener('ended', () => {
       if (a !== this.#audio || !this.#wantsPlay || this.status === 'loading') return
@@ -379,6 +392,7 @@ class Player implements PlayerApi {
     previous.load()
     this.#retainWebAudio()
     this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+    this.#syncPosition()
   }
 
   get current(): QueueItem | null {
@@ -490,7 +504,7 @@ class Player implements PlayerApi {
     else this.#resume()
   }
 
-  #pause() {
+  #pause(pauseElement = true) {
     this.audioRetry = 0
     if (!this.current) return
     const cancelLoading = api.inPwa && this.status === 'loading'
@@ -506,9 +520,24 @@ class Player implements PlayerApi {
     }
     // Durante una renovación el elemento todavía no contiene audio; se conserva la posición guardada.
     if (this.#audio.src) this.time = Math.max(this.time, this.#audio.currentTime)
-    this.#audio.pause()
+    if (pauseElement) this.#audio.pause()
     this.status = 'paused'
     this.#saveProgress(true)
+    this.#saveQueue()
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+    this.#syncPosition()
+  }
+
+  /** El mando Detener libera la fuente y conserva la cola y el punto de escucha. */
+  #stop() {
+    this.#pause()
+    this.#clearPrepared()
+    this.#inFlight.clear()
+    if (api.inPwa) api.retainWebAudioRequests?.([])
+    this.#activeItem = null
+    this.#resetAudio()
+    this.status = 'idle'
+    this.#withMediaSession((ms) => { ms.playbackState = 'none' })
     this.#saveQueue()
   }
 
@@ -570,6 +599,7 @@ class Player implements PlayerApi {
         ++this.#token
         this.#resetAudio()
         this.status = 'idle'
+        this.#withMediaSession((ms) => { ms.playbackState = 'none' })
         this.#saveQueue()
         return
       }
@@ -577,6 +607,7 @@ class Player implements PlayerApi {
       this.#audio.currentTime = 0
       this.time = 0
       this.status = 'paused'
+      this.#syncPosition()
       this.#saveQueue()
     }
   }
@@ -591,6 +622,10 @@ class Player implements PlayerApi {
   }
 
   seek(seconds: number) {
+    if (!this.current || !Number.isFinite(seconds)) return
+    const duration = this.#metadataReady && this.#activeItem?.track.id === this.current.track.id
+      ? this.#audio.duration : this.duration
+    seconds = Math.max(0, Number.isFinite(duration) && duration > 0 ? Math.min(seconds, duration) : seconds)
     this.#completed = false
     this.#positionKnown = true
     this.#resumeRequestedAt = seconds
@@ -602,12 +637,14 @@ class Player implements PlayerApi {
         this.#resumeAt = 0
         this.#audio.currentTime = seconds
       } else this.#resumeAt = seconds
+      this.#syncPosition()
       this.#saveQueue()
       return
     }
     this.#resumeAt = 0
     this.#audio.currentTime = seconds
     this.time = seconds
+    this.#syncPosition()
     this.#clearProgressTimer()
     this.#watchProgress()
     this.#saveProgress(true)
@@ -754,6 +791,7 @@ class Player implements PlayerApi {
         this.#wantsPlay = false
         this.#resetAudio()
         this.status = 'idle'
+        this.#withMediaSession((ms) => { ms.playbackState = 'none' })
         toast.show(`No se pudo usar ese vídeo: ${e}`)
       }
       return false
@@ -820,6 +858,8 @@ class Player implements PlayerApi {
     this.status = 'loading'
     this.time = startAt
     this.duration = item.track.duration
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+    this.#syncPosition()
     this.#saveQueue()
     try {
       if (prepared) {
@@ -965,6 +1005,8 @@ class Player implements PlayerApi {
         this.#wantsPlay = false
         this.audioRetry = 0
         this.status = 'paused'
+        this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+        this.#syncPosition()
         toast.show('Audio preparado. Pulsa Reproducir para escucharlo.')
         return
       }
@@ -1088,6 +1130,7 @@ class Player implements PlayerApi {
     this.#activeItem = null
     this.#resetAudio()
     this.status = 'idle'
+    this.#withMediaSession((ms) => { ms.playbackState = 'none' })
     this.#saveQueue()
     toast.show('Sin conexión: no quedan canciones descargadas disponibles en esta cola.')
   }
@@ -1258,19 +1301,36 @@ class Player implements PlayerApi {
       this.next()
     } else {
       this.status = 'idle'
+      this.#withMediaSession((ms) => { ms.playbackState = 'none' })
     }
   }
 
-  // Teclas multimedia del teclado y panel multimedia de Windows.
+  // Mandos multimedia del sistema, pantalla bloqueada y coches compatibles.
   #setupMediaSession() {
     const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
       ['play', () => { if (this.status !== 'playing') this.#resume() }],
-      ['pause', () => this.#pause()],
+      ['pause', () => { if (this.#wantsPlay || this.status === 'playing') this.#pause() }],
+      ['stop', () => this.#stop()],
       ['previoustrack', () => this.prev()],
       ['nexttrack', () => this.next()],
       ['seekto', (d) => d.seekTime != null && this.seek(d.seekTime)],
+      ['seekbackward', (d) => this.#seekRelative(-1, d.seekOffset)],
+      ['seekforward', (d) => this.#seekRelative(1, d.seekOffset)],
     ]
     for (const [action, handler] of handlers) this.#withMediaSession((ms) => ms.setActionHandler(action, handler))
+  }
+
+  #seekRelative(direction: -1 | 1, requested?: number) {
+    if (!this.current) return
+    const offset = typeof requested === 'number' && Number.isFinite(requested) && requested > 0
+      ? requested : isPodcast(this.current.track.id) ? direction === -1 ? 15 : 30 : 10
+    const a = this.#audio
+    // timeupdate puede espaciarse con la pantalla bloqueada. El mando usa el
+    // reloj del audio actual; durante una carga/restauración conserva el seek pendiente.
+    const active = this.status !== 'loading' && this.#metadataReady && !this.#resumeAt && this.#playable &&
+      this.#activeItem?.track.id === this.current.track.id && a.src && (a.currentSrc || a.src) === a.src
+    const position = active && Number.isFinite(a.currentTime) && a.currentTime >= 0 ? a.currentTime : this.time
+    this.seek(position + direction * offset)
   }
 
   #withMediaSession(update: (session: MediaSession) => void) {
@@ -1294,18 +1354,25 @@ class Player implements PlayerApi {
     })
   }
 
-  #syncPosition() {
-    const d = this.#audio.duration
-    if (!('mediaSession' in navigator) || !Number.isFinite(d) || d <= 0) return
-    try {
-      navigator.mediaSession.setPositionState({
+  #syncPosition(restored = false) {
+    this.#withMediaSession((ms) => {
+      if (typeof ms.setPositionState !== 'function') return
+      // Al cambiar de canción el elemento web aún puede contener la duración
+      // anterior. Borrar esa posición evita publicarla bajo los nuevos metadatos.
+      const active = this.current && this.#activeItem?.track.id === this.current.track.id && this.#metadataReady
+      const d = active ? this.#audio.duration : restored ? this.duration : 0
+      const position = active && this.status !== 'loading' ? this.#audio.currentTime : this.time
+      if (!this.current || !Number.isFinite(d) || d <= 0 || !Number.isFinite(position)) {
+        ms.setPositionState()
+        return
+      }
+      ms.setPositionState({
         duration: d,
-        position: Math.min(this.#audio.currentTime, d),
-        playbackRate: this.#audio.playbackRate,
+        position: Math.max(0, Math.min(position, d)),
+        playbackRate: Number.isFinite(this.#audio.playbackRate) && this.#audio.playbackRate > 0
+          ? this.#audio.playbackRate : 1,
       })
-    } catch {
-      // Posición fuera de rango mientras cambia de canción: se ignora.
-    }
+    })
   }
 }
 

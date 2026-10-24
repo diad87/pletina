@@ -18,6 +18,8 @@ class Theme {
   play = $state<{ playing: boolean; toggle: () => void } | null>(null)
   /** Pantalla completa de "Sonando ahora" abierta. */
   nowPlaying = $state(false)
+  /** Interfaz de conducción de la PWA; se abre siempre de forma explícita. */
+  driving = $state(false)
   /** Letra o transcripción abierta en Sonando ahora. Se consulta bajo demanda. */
   mediaTextOpen = $state(false)
   /** Panel lateral de la cola abierto (escritorio; se recuerda). */
