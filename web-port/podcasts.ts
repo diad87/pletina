@@ -1,10 +1,12 @@
-import type { Podcast, PodcastDetail, PodcastSearchResults } from '../src/lib/types'
+import type { Podcast, PodcastDetail, PodcastSearchResults, TextDocument } from '../src/lib/types'
 import { savePodcastShows, savePodcastDetail, readPodcastFeedUrl, readPodcastDetail,
-  type PodcastShowInput, type PodcastEpisodeInput } from './storage'
+  readPodcastTranscripts, savePodcastTranscripts, type PodcastShowInput, type PodcastEpisodeInput } from './storage'
 import * as youtube from './youtube-podcasts'
+import { transcriptReferences, fetchTranscript } from './podcast-transcripts'
 
 type Row = Record<string, unknown>
 export interface PodcastOptions { signal?: AbortSignal }
+interface FeedOptions extends PodcastOptions { episodeGuid?: string; direct?: boolean }
 export interface PodcastDetailInput { podcast: PodcastShowInput; episodes: PodcastEpisodeInput[] }
 interface DirectoryEntry { appleId: number; feedUrl: string; title: string; author: string; image: string | null }
 const TTL = 10 * 60_000, MAX_BYTES = 20 * 1024 * 1024, MAX_EPISODES = 300
@@ -102,7 +104,7 @@ function artwork(node: Element, base: string): string | null {
   return webURL(child(node, 'image', ITUNES)?.getAttribute('href'), base, true) ??
     webURL(text(child(node, 'image') ? child(child(node, 'image')!, 'url') : undefined), base, true)
 }
-export function parseRSS(xml: string, contentBase: string, originalFeed = contentBase): PodcastDetailInput {
+export function parseRSS(xml: string, contentBase: string, originalFeed = contentBase, episodeGuid?: string): PodcastDetailInput {
   if (xml.length > MAX_BYTES || /<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml)) throw new Error('El RSS del pódcast no es válido.')
   let markers = 0, offset = -1
   while ((offset = xml.indexOf('<', offset + 1)) !== -1) {
@@ -134,13 +136,15 @@ export function parseRSS(xml: string, contentBase: string, originalFeed = conten
     }
     if (!audioUrl) continue
     const guid = value(item, 'guid') || audioUrl
+    if (episodeGuid !== undefined && guid !== episodeGuid) continue
     if (seen.has(guid)) continue
     seen.add(guid)
     const itemExplicit = child(item, 'explicit', ITUNES)
     episodes.push({ guid, title: title.slice(0, 4000), description: description(item), audioUrl,
       publishedAt: value(item, 'pubDate') || null, duration: durationSeconds(value(item, 'duration', ITUNES)),
-      image: artwork(item, contentBase) ?? image, explicit: itemExplicit ? explicit(text(itemExplicit)) : showExplicit })
-    if (episodes.length >= MAX_EPISODES) break
+      image: artwork(item, contentBase) ?? image, explicit: itemExplicit ? explicit(text(itemExplicit)) : showExplicit,
+      transcripts: transcriptReferences(item, contentBase), transcriptsChecked: Date.now() })
+    if (episodeGuid !== undefined || episodes.length >= MAX_EPISODES) break
   }
   return { podcast: { title: title.slice(0, 4000), author: value(channel, 'author', ITUNES) || value(channel, 'managingEditor') || title,
     description: description(channel), image, feedUrl: feedURL(originalFeed),
@@ -250,9 +254,9 @@ async function opaqueFeed(url: string, signal?: AbortSignal): Promise<{ bytes: U
     document.body.append(frame)
   })
 }
-export async function requestFeed(original: string, { signal }: PodcastOptions = {}): Promise<PodcastDetailInput> {
+export async function requestFeed(original: string, { signal, episodeGuid, direct }: FeedOptions = {}): Promise<PodcastDetailInput> {
   aborted(signal)
-  const identity = feedURL(original), previous = cached(feeds, identity)
+  const identity = feedURL(original), previous = episodeGuid === undefined ? cached(feeds, identity) : undefined
   if (previous) return previous
   const url = webURL(identity, undefined, true)!
   let result: { bytes: Uint8Array; finalURL: string }
@@ -277,11 +281,12 @@ export async function requestFeed(original: string, { signal }: PodcastOptions =
   } catch (error) {
     aborted(signal)
     if (!(error instanceof TypeError)) throw error
+    if (direct) throw new Error('No se pudo comprobar la transcripción del RSS: comprueba la conexión. El proveedor debe permitir el acceso desde el navegador (CORS). Vuelve a intentarlo.')
     result = await opaqueFeed(url, signal)
   }
   aborted(signal)
-  const parsed = parseRSS(decodeXML(result.bytes), result.finalURL, identity)
-  cache(feeds, identity, parsed, 32)
+  const parsed = parseRSS(decodeXML(result.bytes), result.finalURL, identity, episodeGuid)
+  if (episodeGuid === undefined) cache(feeds, identity, parsed, 32)
   return parsed
 }
 
@@ -438,4 +443,40 @@ export async function feedUrl(id: number): Promise<string> {
   const url = await readPodcastFeedUrl(id)
   if (!url) throw new Error('No se encuentra este pódcast en la biblioteca.')
   return url
+}
+export async function transcript(id: number): Promise<TextDocument | null> {
+  let stored = await readPodcastTranscripts(id)
+  if (!stored || stored.feedUrl.startsWith('youtube:')) return null
+  const signal = AbortSignal.timeout(25_000)
+  if (!stored.checked) {
+    try {
+      // Scan the full feed for saved historical GUIDs, beyond the catalog's 300.
+      const detail = await requestFeed(stored.feedUrl, { episodeGuid: stored.guid, direct: true, signal })
+      const episode = detail.episodes.find(candidate => candidate.guid === stored!.guid)
+      // A trimmed RSS cannot revoke an archived episode's published links.
+      // Only a matching item can replace them, including a removed transcript tag.
+      if (episode) {
+        await savePodcastTranscripts(id, episode.transcripts ?? [], episode.transcriptsChecked ?? Date.now())
+        stored = (await readPodcastTranscripts(id)) ?? stored
+      }
+    } catch (error) {
+      // Previously published links remain useful if the RSS is temporarily down.
+      if (!stored.references.length) throw error
+    }
+  }
+  const language = normalizeLanguage(stored.language)
+  const formats = ['text/vtt', 'application/json', 'application/x-subrip', 'text/plain']
+  stored.references.sort((a, b) => {
+    const mismatch = (value: string | null) => Number(!!language && !!normalizeLanguage(value) && normalizeLanguage(value) !== language)
+    return mismatch(a.language) - mismatch(b.language) || formats.indexOf(a.mimeType) - formats.indexOf(b.mimeType)
+  })
+  let lastError: unknown
+  for (const reference of stored.references) {
+    try {
+      const document = await fetchTranscript(reference, signal)
+      if (document) return document
+    } catch (error) { lastError = error; if (signal.aborted) break }
+  }
+  if (lastError) throw lastError
+  return null
 }

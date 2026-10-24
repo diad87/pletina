@@ -10,6 +10,7 @@
   import { theme } from '../lib/theme.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import MediaText from './MediaText.svelte'
   import SleepTimer from './SleepTimer.svelte'
   import Transport from './Transport.svelte'
 
@@ -63,9 +64,7 @@
         node.style.transform = ''
       }
     }
-    // Si no, el navegador se queda el gesto vertical (pointercancel) y la pantalla no llega a moverse.
-    // La cola de al lado (escritorio) sigue con su scroll: tiene su propio contenedor.
-    node.style.touchAction = 'none'
+    // El gesto se limita a header/stage: el texto conserva su scroll táctil.
     node.addEventListener('pointerdown', down)
     node.addEventListener('pointermove', move)
     node.addEventListener('pointerup', up)
@@ -100,10 +99,17 @@
         <span>Sonando desde</span>
         <button class="link" onclick={() => go(youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: current.albumId })}>{current.albumTitle}</button>
       </div>
+      {#if api.inPwa}
+        <button class="text-toggle" class:on={theme.mediaTextOpen} aria-pressed={theme.mediaTextOpen}
+          onclick={() => (theme.mediaTextOpen = !theme.mediaTextOpen)}
+          title={podcast ? 'Transcripción' : 'Letra'} aria-label={podcast ? 'Transcripción' : 'Letra'}>
+          <Icon name="text" size={22} /><span>{podcast ? 'Transcripción' : 'Letra'}</span>
+        </button>
+      {/if}
       <SleepTimer variant="header" />
     </header>
 
-    <div class="body">
+    <div class="body" class:reading={theme.mediaTextOpen}>
       <section class="stage">
         {#key current.track.id}
           <div class="art"><Cover src={big} /></div>
@@ -147,7 +153,10 @@
         </div>
       </section>
 
-      <aside class="queue">
+      <aside class="queue" class:show-text={theme.mediaTextOpen}>
+        {#if theme.mediaTextOpen}
+          <MediaText item={current} />
+        {:else}
         <h2>A continuación</h2>
         {#if queued.length || upcoming.length}
           <ol>
@@ -178,6 +187,7 @@
           </ol>
         {:else}
           <p class="empty">No hay nada más en la cola.</p>
+        {/if}
         {/if}
       </aside>
     </div>
@@ -231,7 +241,10 @@
     align-items: center;
     gap: 16px;
     padding: 18px 28px;
+    touch-action: none;
   }
+  .text-toggle { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 20px; color: rgb(255 255 255 / 0.7); font-size: 13px; }
+  .text-toggle.on { color: var(--accent); background: rgb(0 0 0 / 0.25); }
   .close {
     width: 40px;
     flex: none;
@@ -286,6 +299,7 @@
     justify-content: center;
     gap: 28px;
     min-height: 0;
+    touch-action: none;
   }
   .art {
     width: min(52vh, 520px, 100%);
@@ -433,6 +447,8 @@
     display: none;
   }
   @media (max-width: 720px) {
+    .text-toggle { padding: 8px; }
+    .text-toggle span { display: none; }
     header {
       padding: calc(8px + var(--safe-top)) 12px 4px;
     }
@@ -443,6 +459,14 @@
     .queue {
       display: none;
     }
+    .body.reading { display: flex; flex-direction: column; gap: 16px; padding: 4px 20px calc(12px + var(--safe-bottom)); }
+    .reading .queue.show-text { display: flex; order: -1; flex: 1; padding: 12px 4px; }
+    .reading .stage { flex: none; gap: 12px; }
+    .reading .art { display: none; }
+    .reading .meta { width: 100%; }
+    .reading .extras { display: none; }
+    .reading h1 { font-size: 18px; }
+    .reading .artist { font-size: 14px; }
     .art,
     .meta {
       width: min(100%, 44vh);

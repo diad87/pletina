@@ -110,6 +110,10 @@ Debajo salen también los programas de **YouTube Music**, en su propia sección 
 
 Cada episodio recuerda su punto de escucha en este dispositivo. Al volver a reproducirlo, continúa donde lo dejaste, también después de cerrar la app. La lista muestra **Continuar desde…**, una barra de progreso y **Escuchado** al terminar; los episodios completados vuelven a empezar desde el principio. En Android, el servicio de audio guarda el progreso incluso con la pantalla apagada.
 
+### Letras y transcripciones en la PWA
+
+En la **PWA**, **Sonando ahora → Letra / Transcripción** permite leer letras de [LRCLIB](https://lrclib.net) y las transcripciones que publica cada episodio en su RSS. También hay un acceso en la barra de reproducción del ordenador. Cuando hay tiempos, puedes pulsar un fragmento para ir a ese momento y activar **Seguir**; las transcripciones empiezan sin seguimiento porque otra versión del audio puede tener anuncios o introducciones diferentes. Si falta el texto o falla su consulta, la interfaz lo indica y permite reintentar los errores. Los servidores de los podcasts deben permitir acceso desde el navegador. [Detalles de la función web](docs/pwa-media-text.md).
+
 ### Temporizador de apagado
 
 Pulsa la luna de **Sonando ahora** o de la barra de reproducción del PC para pausar la música o el pódcast dentro de **15, 30 o 60 minutos**, elegir un tiempo **Personalizado** (de 1 minuto a 24 horas) o detenerte **al terminar el episodio o la canción**. La cuenta atrás muestra cuánto queda y la hora de pausa. Puedes cambiar o desactivar el temporizador desde el mismo botón; en móvil se abre como un panel inferior.
@@ -164,6 +168,7 @@ Pletina no tiene cuentas, ni analíticas, ni servidores propios. Tu biblioteca, 
 - **Deezer**, para buscar artistas y discos y bajar las carátulas ([privacidad de Deezer](https://www.deezer.com/legal/personal-datas)).
 - **Spotify**, solo al importar una playlist mediante su enlace público, para leer los títulos y artistas. Al importar por enlace o CSV, se consultan esos títulos, artistas y, si existe, el ISRC en **Deezer** para encontrar las canciones equivalentes. No se envía el archivo CSV a Spotify ni se solicitan credenciales de su cuenta.
 - **Apple Podcasts**, para buscar podcasts, y **los servidores de sus autores y proveedores de alojamiento**, para consultar el idioma y los episodios del RSS, cargar las portadas y reproducir el audio. Estas conexiones se realizan al usar la sección de podcasts.
+- **LRCLIB**, en la PWA al abrir una letra, recibe título, artista, álbum y duración de la canción. Las transcripciones se solicitan a las direcciones publicadas por el autor en su RSS al abrir el panel. No se envía el audio ni se generan transcripciones automáticas.
 - **YouTube y YouTube Music**, para encontrar cada canción, buscar sus podcasts y reproducir el audio ([privacidad de Google](https://policies.google.com/privacy)).
 - **GitHub**, para buscar y bajar actualizaciones de la app y de los extractores de audio, y yt-dlp en el PC ([privacidad de GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement)).
 

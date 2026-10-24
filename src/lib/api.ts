@@ -31,6 +31,7 @@ import type {
   YouTubeTrackPreview,
   SearchResults,
   TrackQuery,
+  TextDocument,
 } from './types'
 
 /** Dentro de la app de escritorio, o en un navegador normal con `npm run dev`. */
@@ -113,6 +114,9 @@ export const podcastSearch = (query: string, language: string) =>
   invoke<PodcastSearchResults>('podcast_search', { query, language })
 export const podcastDetail = (feedUrl: string) => invoke<PodcastDetail>('podcast_detail', { feedUrl })
 export const podcastFeedUrl = (id: number) => invoke<string>('podcast_feed_url', { id })
+export const podcastTranscript = (id: number) => invoke<TextDocument | null>('podcast_transcript', { id })
+export const lyricsGet = (track: Omit<TrackQuery, 'id'>) => invoke<TextDocument | null>('lyrics_get', track)
+export const openTextSource = (url: string) => invoke<void>('open_text_source', { url })
 
 export const podcastProgress = (ids: number[]) => invoke<PodcastProgress[]>('podcast_progress', { ids })
 export const savePodcastProgress = (progress: PodcastProgress) => {

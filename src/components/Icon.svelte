@@ -1,5 +1,6 @@
 <script lang="ts" module>
   const PATHS = {
+    text: 'M4 4h16v2H4zm0 5h16v2H4zm0 5h10v2H4zm0 5h10v2H4zm13-5h3v7h-3z',
     home: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z',
     search:
       'M11 4a7 7 0 1 0 4.4 12.4l4.3 4.3 1.4-1.4-4.3-4.3A7 7 0 0 0 11 4zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10z',

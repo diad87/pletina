@@ -1,5 +1,6 @@
 <script lang="ts">
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
+  import * as api from '../lib/api'
   import { library } from '../lib/library.svelte'
   import { isLocal, isPodcast, isYouTubeTrack } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
@@ -73,6 +74,13 @@
   <div class="center"><Transport /></div>
 
   <div class="side">
+    {#if api.inPwa}
+      <button class="icon" disabled={!current} title={podcast ? 'Transcripción' : 'Letra'}
+        aria-label={podcast ? 'Transcripción' : 'Letra'}
+        onclick={() => { theme.mediaTextOpen = true; theme.nowPlaying = true }}>
+        <Icon name="text" size={18} />
+      </button>
+    {/if}
     <SleepTimer />
     {#if !podcast && !youtube}
       <button

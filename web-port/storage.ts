@@ -4,6 +4,7 @@ import type {
 } from '../src/lib/types'
 import { BACKUP_LIMITS, BACKUP_MAX_ROWS, BACKUP_STORES, emptyBackupSummary, makeWebLibraryBackup, parseWebLibraryBackup,
   type BackupData, type BackupEnvelope, type BackupImportSummary, type BackupProgress } from './library-backup.ts'
+import { normalizeTranscriptReferences, type TranscriptReference } from './podcast-transcripts.ts'
 export { previewWebLibraryBackup } from './library-backup.ts'
 export type { BackupEnvelope, BackupSummary, BackupImportSummary } from './library-backup.ts'
 
@@ -42,7 +43,7 @@ interface PlaylistRow { id: number; name: string; order: number }
 interface EntryRow { entryId: number; playlistId: number; trackId: number; position: number; at: number }
 interface HistoryRow { entryId: number; trackId: number; at: number }
 interface PodcastRow extends Timed<Podcast> { saved: boolean; episodeIds?: number[] }
-interface EpisodeRow { id: number; podcastId: number; guid: string; value: PodcastEpisode }
+interface EpisodeRow { id: number; podcastId: number; guid: string; value: PodcastEpisode; transcripts?: TranscriptReference[]; transcriptsChecked?: number }
 interface YouTubeRow { trackId: number; videoId: string; saved: boolean; at: number; order: number }
 interface SourceRow { trackId: number; choice: SourceChoice }
 interface MetaRow { key: string; value: number }
@@ -54,9 +55,10 @@ export interface WebStorageOptions {
 }
 
 export type PodcastShowInput = Omit<Podcast, 'id'> & { id?: number }
-export type PodcastEpisodeInput = Omit<PodcastEpisode, 'id'> & { id?: number; guid: string }
+export type PodcastEpisodeInput = Omit<PodcastEpisode, 'id'> & { id?: number; guid: string; transcripts?: TranscriptReference[]; transcriptsChecked?: number }
 export interface PodcastDetailInput { podcast: PodcastShowInput; episodes: PodcastEpisodeInput[] }
 export interface StoredPodcastEpisode extends PodcastEpisode { podcastId: number; feedUrl: string; guid: string }
+export interface StoredPodcastTranscripts { feedUrl: string; guid: string; language: string | null; references: TranscriptReference[]; checked: boolean }
 
 function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} no es válido.`)
@@ -154,9 +156,11 @@ function podcastAudio(value: unknown): string {
   url.hash = ''
   return url.href
 }
-function podcastEpisode(value: unknown): { guid: string; value: PodcastEpisode } {
+function podcastEpisode(value: unknown): { guid: string; value: PodcastEpisode; transcripts?: TranscriptReference[]; transcriptsChecked?: number } {
   const row = object(value, 'El episodio')
-  return { guid: text(row.guid, 'La identidad del episodio', false, 16384), value: {
+  return { guid: text(row.guid, 'La identidad del episodio', false, 16384),
+    ...(row.transcripts !== undefined ? { transcripts: normalizeTranscriptReferences(row.transcripts),
+      transcriptsChecked: integer(row.transcriptsChecked, 'La fecha de las transcripciones') } : {}), value: {
     id: 0, title: text(row.title, 'El título'), description: text(row.description, 'La descripción', true, 200_000),
     publishedAt: nullableText(row.publishedAt, 'La fecha'), duration: number(row.duration, 'La duración'),
     audioUrl: podcastAudio(row.audioUrl), image: image(row.image), explicit: boolean(row.explicit, 'El indicador de contenido explícito'),
@@ -534,7 +538,8 @@ export function createWebStorage(options: WebStorageOptions = {}) {
         seen.add(candidate.guid)
         const previous = await request(tx.objectStore('episodes').index('identity').get([row.id, candidate.guid])) as EpisodeRow | undefined
         const value = { ...candidate.value, id: previous?.id ?? await podcastId(tx, true) }
-        await put(tx, 'episodes', { id: value.id, podcastId: row.id, guid: candidate.guid, value } satisfies EpisodeRow)
+        await put(tx, 'episodes', { ...previous, id: value.id, podcastId: row.id, guid: candidate.guid, value,
+          ...(candidate.transcripts !== undefined ? { transcripts: candidate.transcripts, transcriptsChecked: candidate.transcriptsChecked } : {}) } satisfies EpisodeRow)
         await put(tx, 'tracks', { id: value.id, title: value.title, duration: value.duration, explicit: value.explicit,
           artistId: row.id, artistName: row.value.author || row.value.title, albumId: row.id,
           albumTitle: row.value.title, albumArtistId: row.id, cover: value.image ?? row.value.image } satisfies LibTrack)
@@ -571,6 +576,29 @@ export function createWebStorage(options: WebStorageOptions = {}) {
         return episode.value
       }))
       return { podcast: row.value, episodes }
+    })
+  }
+  async function readPodcastTranscripts(episodeId: number): Promise<StoredPodcastTranscripts | null> {
+    if (!Number.isSafeInteger(episodeId) || episodeId <= EPISODE_BASE || episodeId >= LOCAL_BASE) return null
+    return transaction('readonly', async tx => {
+      const row = await get<EpisodeRow>(tx, 'episodes', episodeId)
+      if (!row) return null
+      const show = await get<PodcastRow>(tx, 'podcasts', row.podcastId)
+      if (!show) throw new Error('No se encuentran los metadatos del programa de este episodio.')
+      const checked = row.transcriptsChecked ?? 0, now = Date.now()
+      return { feedUrl: show.value.feedUrl, guid: row.guid, language: show.value.language,
+        references: normalizeTranscriptReferences(row.transcripts), checked: checked > now - 600_000 && checked <= now + 60_000 }
+    })
+  }
+  async function savePodcastTranscripts(episodeId: number, references: TranscriptReference[], checked = Date.now()): Promise<void> {
+    const key = integer(episodeId, 'El episodio', EPISODE_BASE + 1, LOCAL_BASE - 1)
+    const normalized = normalizeTranscriptReferences(references)
+    integer(checked, 'La fecha de las transcripciones')
+    // A targeted RSS refresh must never replace the visible episode list or IDs.
+    await transaction('readwrite', async tx => {
+      const row = await get<EpisodeRow>(tx, 'episodes', key)
+      if (!row) return
+      await put(tx, 'episodes', { ...row, transcripts: normalized, transcriptsChecked: checked } satisfies EpisodeRow)
     })
   }
   async function readSourceChoice(trackId: number): Promise<SourceChoice | null> {
@@ -761,7 +789,7 @@ export function createWebStorage(options: WebStorageOptions = {}) {
     connection = undefined
   }
   return { storageInvoke, handlesStorage, rememberPodcasts, savePodcastShows, savePodcastDetail,
-    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readStoredTrack, readSourceChoice, saveSourceChoice, readYouTubeVideo, exportBackup, importBackup, close }
+    readPodcastFeedUrl, readPodcastEpisode, readPodcastDetail, readPodcastTranscripts, savePodcastTranscripts, readStoredTrack, readSourceChoice, saveSourceChoice, readYouTubeVideo, exportBackup, importBackup, close }
 }
 
 export const handlesStorage = (command: string): boolean => COMMANDS.has(command)
@@ -776,6 +804,8 @@ export const savePodcastDetail = (detail: PodcastDetailInput): Promise<PodcastDe
 export const readPodcastFeedUrl = (showId: number): Promise<string | null> => storage().readPodcastFeedUrl(showId)
 export const readPodcastEpisode = (episodeId: number): Promise<StoredPodcastEpisode | null> => storage().readPodcastEpisode(episodeId)
 export const readPodcastDetail = (feedUrl: string): Promise<PodcastDetail | null> => storage().readPodcastDetail(feedUrl)
+export const readPodcastTranscripts = (episodeId: number): Promise<StoredPodcastTranscripts | null> => storage().readPodcastTranscripts(episodeId)
+export const savePodcastTranscripts = (episodeId: number, references: TranscriptReference[], checked?: number): Promise<void> => storage().savePodcastTranscripts(episodeId, references, checked)
 export const readStoredTrack = (trackId: number): Promise<LibTrack | null> => storage().readStoredTrack(trackId)
 export const readSourceChoice = (trackId: number): Promise<SourceChoice | null> => storage().readSourceChoice(trackId)
 export const saveSourceChoice = (trackId: number, choice: SourceChoice): Promise<void> => storage().saveSourceChoice(trackId, choice)

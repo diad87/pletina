@@ -18,6 +18,8 @@ class Theme {
   play = $state<{ playing: boolean; toggle: () => void } | null>(null)
   /** Pantalla completa de "Sonando ahora" abierta. */
   nowPlaying = $state(false)
+  /** Letra o transcripción abierta en Sonando ahora. Se consulta bajo demanda. */
+  mediaTextOpen = $state(false)
   /** Panel lateral de la cola abierto (escritorio; se recuerda). */
   #queueOpen = $state(readFlag('musify:queueOpen'))
   /** Móvil: la cola a pantalla completa (no se recuerda: al abrir la app, cerrada). */

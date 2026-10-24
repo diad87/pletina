@@ -4,6 +4,7 @@ import * as catalog from './catalog'
 import * as audio from './audio'
 import { openOfficialYouTube } from './official-youtube.svelte'
 import * as podcasts from './podcasts'
+import { lyricsGet } from './lyrics'
 import { readPlaylistCsv, readSpotifyPlaylist } from './imports'
 import { shareWebLog } from './diagnostics'
 import { listDownloads, enqueueDownloads, cancelDownloads, removeDownloads } from './downloads'
@@ -63,6 +64,8 @@ export async function webInvoke<T = unknown>(command: string, args?: InvokeArgs)
     case 'podcast_search': result = await podcasts.search(String(values.query ?? ''), String(values.language ?? 'all')); break
     case 'podcast_detail': result = await podcasts.detail(String(values.feedUrl ?? '')); break
     case 'podcast_feed_url': result = await podcasts.feedUrl(Number(values.id)); break
+    case 'lyrics_get': result = await lyricsGet(values as unknown as Omit<TrackQuery, 'id'>); break
+    case 'podcast_transcript': result = await podcasts.transcript(Number(values.id)); break
     case 'player_native': {
       if (values.cmd !== 'shareLog') throw new Error('Esta acción del sistema no está disponible en el navegador.')
       result = await shareWebLog(); break

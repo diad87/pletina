@@ -124,6 +124,21 @@ export interface PodcastProgress {
   completed: boolean
 }
 
+/** Letra o transcripción publicada por su proveedor; tiempos en segundos. */
+export interface TextCue {
+  start: number
+  end: number | null
+  text: string
+}
+
+export interface TextDocument {
+  text: string
+  cues: TextCue[]
+  source: string
+  sourceUrl: string
+  instrumental: boolean
+}
+
 /** Tu música local (carpetas importadas). */
 export interface LocalLibrary {
   folders: string[]
