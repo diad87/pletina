@@ -1,11 +1,19 @@
 # Captura oficial de YouTube — P1
 
-Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No publicar extractores,
-fusionar a main ni hacer push a main. Está autorizada la integración de `origin/main`
-en esta rama y su push para revisión. Estado: implementación
+Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No fusionar ni hacer push
+a main. El 24 de octubre el usuario autoriza publicar la aplicación: se prepara
+Pletina 0.12.0 desde esta rama, integrando la versión publicada `v0.11.2` y
+`origin/main` `1868d4f`. No se publica una OTA separada de extractores. Estado: implementación
 API4/captura v25, todavía sin aprobar la promoción; el
 [informe inicial](informe-captura-youtube-2026-10-07.md) y el
 [diagnóstico del 8 de octubre](informe-captura-youtube-2026-10-08.md) conservan los resultados.
+
+La integración conserva temporizador, radio, favoritos, Android Auto, podcasts y
+recuperación de reproducción y descargas. La dependencia general youtubei.js es
+18.3.0; el constructor privado del descifrador sigue fijado en 18.1.0 y Meriyah
+7.4.0 mediante alias, con ambos assets idénticos a los medidos en R15. La captura
+Oficial sigue experimental en Windows y Propio conserva Legacy. La publicación
+queda pendiente de las compilaciones y pruebas de distribución en GitHub.
 
 ## Decisiones vigentes
 
