@@ -54,7 +54,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav \
-            gstreamer1.0-tools ffmpeg xvfb webkit2gtk-driver pulseaudio
+            gstreamer1.0-tools ffmpeg libopus-dev xvfb webkit2gtk-driver pulseaudio
 
       - run: npm ci
 
@@ -75,7 +75,7 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: 1
         run: brew install ffmpeg
 
-      - name: FFprobe fijado para los inventarios de las pruebas Linux
+      - name: FFmpeg y FFprobe fijados para las pruebas de audio Linux
         if: runner.os == 'Linux'
         id: test-ffprobe
         run: bash scripts/install-test-ffprobe.sh
