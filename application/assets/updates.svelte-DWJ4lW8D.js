@@ -1,0 +1,1 @@
+import{t as e}from"./updates.svelte-DZqi8l40.js";export{e as applyWebUpdate};
