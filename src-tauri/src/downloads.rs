@@ -167,13 +167,13 @@ async fn fetch(
     let mut video_id = player::find_video(&q, db, ytm, ytdlp).await?;
     let file = match get(&video_id, &target, ytdlp, &mut report).await {
         Ok(file) => file,
-        // El vídeo guardado ya no existe: se busca otro una vez.
+        // El vídeo automático ya no existe: comprueba hasta tres alternativas
+        // nuevas sin ocupar las capturas ni cancelar la reproducción actual.
         Err(e) if player::is_gone(&e)
             && !crate::youtube_tracks::is_youtube(t.id)
+            && !crate::podcasts::is_podcast(t.id)
             && !db.source(t.id).is_some_and(|source| source.verified) => {
-            db.delete_automatic_source(t.id, &video_id)
-                .map_err(|e| format!("No se pudo quitar la fuente anterior: {e}"))?;
-            video_id = player::find_video(&q, db, ytm, ytdlp).await?;
+            video_id = player::find_download_replacement(&q, &video_id, db, ytm, ytdlp).await?;
             get(&video_id, &target, ytdlp, &mut report).await?
         }
         Err(e) => return Err(e),

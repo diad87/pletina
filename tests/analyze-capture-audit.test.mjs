@@ -39,7 +39,9 @@ function builder(directory) {
   }
 }
 function realTone(path, hz, codec = 'libopus') {
-  const result = spawnSync('ffmpeg', ['-v', 'error', '-nostdin', '-f', 'lavfi', '-i', `sine=frequency=${hz}:sample_rate=48000:duration=${codec === 'aac' ? '0.384' : '0.4'}`, '-c:a', codec, ...(codec === 'aac' ? ['-movflags', '+frag_keyframe+empty_moov+default_base_moof'] : []), path], { encoding: 'utf8', windowsHide: true, timeout: 30000 })
+  // FFmpeg 4.4 can write a stereo MP4 sample entry for mono AAC. Request stereo
+  // explicitly so the entry and AudioSpecificConfig agree; Opus stays mono.
+  const result = spawnSync('ffmpeg', ['-v', 'error', '-nostdin', '-f', 'lavfi', '-i', `sine=frequency=${hz}:sample_rate=48000:duration=${codec === 'aac' ? '0.384' : '0.4'}`, '-c:a', codec, ...(codec === 'aac' ? ['-ac', '2', '-movflags', '+frag_keyframe+empty_moov+default_base_moof'] : []), path], { encoding: 'utf8', windowsHide: true, timeout: 30000 })
   assert.equal(result.status, 0, 'Real FFmpeg fixture generation is required')
   return readFileSync(path)
 }

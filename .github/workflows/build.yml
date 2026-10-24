@@ -58,6 +58,12 @@ jobs:
 
       - run: npm ci
 
+      - name: FFmpeg para las pruebas de audio en macOS
+        if: runner.os == 'macOS'
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: 1
+        run: brew install ffmpeg
+
       - name: Comprobar antes de compilar instaladores
         run: |
           npm test

@@ -595,6 +595,77 @@ pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtD
     }
 }
 
+/// Recuperación de una descarga: comprueba hasta tres coincidencias nuevas con su
+/// motor de descarga, sin tickets, admisión ni ventanas de captura de reproducción.
+pub async fn find_download_replacement(
+    q: &TrackQuery,
+    failed_video: &str,
+    db: &Db,
+    ytm: &YouTubeMusic,
+    ytdlp: &YtDlp,
+) -> Result<String, String> {
+    download_replacement_with(q, failed_video, db, || search(q, ytm, ytdlp, false), |id| async move {
+        #[cfg(desktop)]
+        { ytdlp.stream(&id, false).await.map(|_| ()) }
+        #[cfg(mobile)]
+        { crate::native::resolve(&id, false).await.map(|_| ()).map_err(|e| e.to_string()) }
+    }).await
+}
+
+async fn download_replacement_with<S, Search, P, Probe>(
+    q: &TrackQuery,
+    failed_video: &str,
+    db: &Db,
+    search: S,
+    mut probe: P,
+) -> Result<String, String>
+where
+    S: FnOnce() -> Search,
+    Search: std::future::Future<Output = Result<Vec<Scored>, String>>,
+    P: FnMut(String) -> Probe,
+    Probe: std::future::Future<Output = Result<(), String>>,
+{
+    if crate::youtube_tracks::is_youtube(q.id) {
+        return Err("Esta canción usa el enlace de YouTube que añadiste".into());
+    }
+    if crate::podcasts::is_podcast(q.id) {
+        return Err("Los episodios usan el audio original del podcast".into());
+    }
+    let chosen = || db.source(q.id).filter(|source| source.verified).map(|source| source.video_id);
+    if let Some(id) = chosen() {
+        return Ok(id);
+    }
+    db.delete_automatic_source(q.id, failed_video).map_err(db_write_error)?;
+    let candidates = search().await?;
+    if let Some(id) = chosen() {
+        return Ok(id);
+    }
+    let mut last_err = None;
+    for (c, score, _) in candidates.into_iter()
+        .filter(|(c, score, _)| *score >= MIN_SCORE && c.video_id != failed_video)
+        .take(MAX_ATTEMPTS)
+    {
+        let checked = probe(c.video_id.clone()).await;
+        // Una elección manual hecha mientras se buscaba/comprobaba sigue mandando,
+        // también si la comprobación automática acaba de fallar.
+        if let Some(id) = chosen() {
+            return Ok(id);
+        }
+        match checked {
+            Ok(()) => {
+                let source = Source { video_id: c.video_id, title: c.title, channel: c.artists.join(", "),
+                    duration: c.duration, score, verified: false };
+                if db.save_source(q.id, &source).map_err(db_write_error)? {
+                    return Ok(source.video_id);
+                }
+                return chosen().ok_or_else(|| "No se pudo guardar el vídeo de la canción".into());
+            }
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap_or_else(|| "No se ha encontrado en YouTube".into()))
+}
+
 /// El usuario elige el vídeo de una canción: se guarda como verificado y se devuelve listo para sonar.
 /// Si estaba descargada, se borra el archivo (era de otro vídeo).
 pub async fn choose(
@@ -1012,6 +1083,147 @@ mod tests {
 #[cfg(test)]
 mod resolve_tests {
     use super::*;
+
+    fn download_query() -> TrackQuery {
+        TrackQuery { id: 7, title: "Fixture".into(), artist: "Artista".into(), album: "Disco".into(), duration: 180 }
+    }
+
+    fn download_candidate(id: &str, score: i32) -> Scored {
+        (Candidate { video_id: id.into(), title: "Fixture".into(), artists: vec!["Artista".into()],
+            album: Some("Disco".into()), duration: Some(180) }, score, "music")
+    }
+
+    fn download_source(id: &str, verified: bool) -> Source {
+        Source { video_id: id.into(), title: "Fixture".into(), channel: "Artista".into(),
+            duration: Some(180), score: 100, verified }
+    }
+
+    #[tokio::test]
+    async fn download_recovery_skips_gone_and_unplayable_without_superseding_playback() {
+        let _requests = RESOLUTION_TEST_LOCK.lock().unwrap();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let q = download_query();
+        db.save_source(q.id, &download_source("gone", false)).unwrap();
+        let playing = begin_request(true, None, None, 77).unwrap();
+        let next = begin_request(false, Some(playing.resolution), Some(1), 78).unwrap();
+        let calls = std::cell::RefCell::new(Vec::new());
+        let found = download_replacement_with(&q, "gone", &db,
+            || async { Ok(vec![download_candidate("gone", 100), download_candidate("low", MIN_SCORE - 1),
+                download_candidate("private", 99), download_candidate("unavailable", 98),
+                download_candidate("playable", 97), download_candidate("unused", 96)]) },
+            |id| {
+                calls.borrow_mut().push(id.clone());
+                std::future::ready(if id == "playable" { Ok(()) } else { Err(format!("{id}: unavailable")) })
+            }).await.unwrap();
+        assert_eq!(found, "playable");
+        assert_eq!(*calls.borrow(), ["private", "unavailable", "playable"]);
+        let saved = db.source(q.id).unwrap();
+        assert_eq!(saved.video_id, "playable");
+        assert_eq!(saved.score, 97);
+        assert!(!saved.verified);
+        assert!(ensure_current(playing).is_ok());
+        assert!(ensure_current(next).is_ok());
+    }
+
+    #[tokio::test]
+    async fn download_recovery_stops_after_three_failed_candidates_and_keeps_the_error() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let q = download_query();
+        db.save_source(q.id, &download_source("gone", false)).unwrap();
+        let calls = std::cell::RefCell::new(Vec::new());
+        let error = download_replacement_with(&q, "gone", &db,
+            || async { Ok(["first", "second", "third", "fourth"].into_iter()
+                .map(|id| download_candidate(id, 100)).collect()) },
+            |id| {
+                calls.borrow_mut().push(id.clone());
+                std::future::ready(Err(format!("{id}: unavailable")))
+            }).await.unwrap_err();
+        assert_eq!(error, "third: unavailable");
+        assert_eq!(*calls.borrow(), ["first", "second", "third"]);
+        assert!(db.source(q.id).is_none(), "no guarda un candidato que no se pudo reproducir");
+    }
+
+    #[tokio::test]
+    async fn download_recovery_preserves_manual_choices_before_and_during_awaits() {
+        let q = download_query();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.save_source(q.id, &download_source("manual-before", true)).unwrap();
+        let calls = std::cell::Cell::new(0);
+        assert_eq!(download_replacement_with(&q, "gone", &db,
+            || { calls.set(calls.get() + 1); std::future::ready(Ok(vec![])) },
+            |_| { calls.set(calls.get() + 1); std::future::ready(Ok(())) }).await.unwrap(), "manual-before");
+        assert_eq!(calls.get(), 0);
+
+        // Elección manual mientras se busca, antes de comprobar ningún resultado.
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        assert_eq!(download_replacement_with(&q, "gone", &db,
+            || async {
+                tokio::task::yield_now().await;
+                db.save_source(q.id, &download_source("manual-search", true)).unwrap();
+                Ok(vec![download_candidate("automatic", 100)])
+            },
+            |_| { calls.set(calls.get() + 1); std::future::ready(Ok(())) }).await.unwrap(), "manual-search");
+        assert_eq!(calls.get(), 0);
+
+        // Tanto un probe válido como uno fallido deben respetar la elección nueva.
+        for probe_ok in [true, false] {
+            let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+            let found = download_replacement_with(&q, "gone", &db,
+                || async { Ok(vec![download_candidate("automatic", 100)]) },
+                |_| async {
+                    tokio::task::yield_now().await;
+                    db.save_source(q.id, &download_source("manual-probe", true)).unwrap();
+                    if probe_ok { Ok(()) } else { Err("unavailable".into()) }
+                }).await.unwrap();
+            assert_eq!(found, "manual-probe");
+            assert!(db.source(q.id).unwrap().verified);
+        }
+    }
+
+    #[tokio::test]
+    async fn download_recovery_propagates_database_and_search_failures() {
+        let q = download_query();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        db.save_source(q.id, &download_source("gone", false)).unwrap();
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=ON;").unwrap();
+        let calls = std::cell::Cell::new(0);
+        let error = download_replacement_with(&q, "gone", &db,
+            || { calls.set(calls.get() + 1); std::future::ready(Ok(vec![])) },
+            |_| std::future::ready(Ok(()))).await.unwrap_err();
+        assert!(error.starts_with("No se pudo actualizar la biblioteca:"));
+        assert_eq!(calls.get(), 0);
+        assert_eq!(db.source(q.id).unwrap().video_id, "gone");
+
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        let error = download_replacement_with(&q, "gone", &db,
+            || async { Ok(vec![download_candidate("playable", 100)]) },
+            |_| async {
+                db.0.lock().unwrap().execute_batch("PRAGMA query_only=ON;").unwrap();
+                Ok(())
+            }).await.unwrap_err();
+        assert!(error.starts_with("No se pudo actualizar la biblioteca:"));
+        assert!(db.source(q.id).is_none());
+
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        assert_eq!(download_replacement_with(&q, "gone", &db,
+            || async { Err("search failed".into()) },
+            |_| std::future::ready(Ok(()))).await.unwrap_err(), "search failed");
+    }
+
+    #[tokio::test]
+    async fn download_recovery_never_remaps_youtube_links_or_podcasts() {
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        for id in [crate::youtube_tracks::YOUTUBE_BASE + 7, 750_000_000_000_007] {
+            let q = TrackQuery { id, ..download_query() };
+            db.save_source(id, &download_source("fixed", false)).unwrap();
+            let calls = std::cell::Cell::new(0);
+            assert!(download_replacement_with(&q, "fixed", &db,
+                || { calls.set(calls.get() + 1); std::future::ready(Ok(vec![])) },
+                |_| { calls.set(calls.get() + 1); std::future::ready(Ok(())) }).await.is_err());
+            assert_eq!(calls.get(), 0);
+            assert_eq!(db.source(id).unwrap().video_id, "fixed");
+        }
+    }
 
     #[tokio::test]
     async fn native_reopens_do_not_supersede_ui_selection_or_prefetch() {
