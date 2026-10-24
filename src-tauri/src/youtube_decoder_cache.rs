@@ -22,7 +22,10 @@ const MAX_SOURCE: usize = 5 * 1024 * 1024;
 const MAX_SCRIPT: usize = 2 * 1024 * 1024;
 const MAX_BYTES: u64 = 8 * 1024 * 1024;
 const MAX_ENTRIES: usize = 4;
-const TTL_SECONDS: u64 = 6 * 3600;
+// These disk entries are checked against newly downloaded source bytes, URL and
+// analyzer ABI on every load. Expiring unchanged source overnight needlessly
+// repeats the full analysis. This does not extend any URL-only in-memory cache.
+const TTL_SECONDS: u64 = 30 * 24 * 3600;
 static SEQUENCE: AtomicU64 = AtomicU64::new(0);
 static STORE: OnceLock<Store> = OnceLock::new();
 static ABI: LazyLock<String> = LazyLock::new(|| {
@@ -581,6 +584,41 @@ mod tests {
                 .is_none()
         );
         assert!(fixture.store.load(&identity, AT - 1).is_none());
+    }
+
+    #[test]
+    fn unchanged_downloaded_source_survives_overnight_without_renewing_its_age() {
+        let fixture = Fixture::new();
+        let identity = Identity::new(URL, "freshly downloaded same bytes").unwrap();
+        fixture.store.store(&identity, &prepared(), AT).unwrap();
+        let original = fs::read(fixture.store.path(&identity)).unwrap();
+        let reopened = Store::new(&fixture.directory).unwrap();
+        for age in [7 * 3600, 12 * 3600, 24 * 3600, 7 * 24 * 3600, 30 * 24 * 3600] {
+            let decoder = reopened.load(&identity, AT + age).unwrap();
+            assert_eq!(decoder.script, prepared().script);
+            assert_eq!(decoder.signature_timestamp, prepared().signature_timestamp);
+            assert_eq!(fs::read(fixture.store.path(&identity)).unwrap(), original);
+        }
+        assert!(reopened.load(&identity, AT + 30 * 24 * 3600 + 1).is_none());
+    }
+
+    #[test]
+    fn older_entries_still_require_exact_current_source_url_and_abi() {
+        let fixture = Fixture::new();
+        let identity = Identity::new(URL, "fresh source").unwrap();
+        fixture.store.store(&identity, &prepared(), AT).unwrap();
+        let reopened = Store::new(&fixture.directory).unwrap();
+        let at = AT + 7 * 24 * 3600;
+        assert!(reopened.load(&identity, at).is_some());
+        let changed = Identity::new(URL, "fresh source changed by one byte").unwrap();
+        assert!(reopened.load(&changed, at).is_none());
+        let changed_url = Identity::new(&URL.replace("en_US", "es_ES"), "fresh source").unwrap();
+        assert!(reopened.load(&changed_url, at).is_none());
+        let mut incompatible: Entry = serde_json::from_value(fixture.read(&identity)).unwrap();
+        incompatible.abi = "0".repeat(64);
+        incompatible.checksum = incompatible.checksum();
+        fixture.write(&identity, serde_json::to_value(incompatible).unwrap());
+        assert!(reopened.load(&identity, at).is_none());
     }
 
     #[test]
