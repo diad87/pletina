@@ -276,8 +276,8 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::Falta el secreto RELEASES_TOKEN: la versión está compilada (artefactos de esta ejecución) pero no se ha publicado."
-            exit 0
+            echo "::error::Falta el secreto RELEASES_TOKEN: la versión está compilada (artefactos de esta ejecución) pero no se ha publicado."
+            exit 1
           fi
           gh release create "$GITHUB_REF_NAME" artifacts/_release/* \
             --repo diad87/pletina-releases \
