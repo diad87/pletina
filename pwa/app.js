@@ -1,9 +1,9 @@
 // Instalación mínima. El reproductor se importa solo cuando se solicita.
 const status = document.querySelector('#status')
 const installButton = document.querySelector('#install')
+const installHelp = document.querySelector('#install-help')
 const checkButton = document.querySelector('#check-update')
 const applyButton = document.querySelector('#apply-update')
-const headline = document.querySelector('#headline')
 const intro = document.querySelector('#intro')
 const installGuide = document.querySelector('#install-guide')
 const guideTitle = document.querySelector('#guide-title')
@@ -11,9 +11,13 @@ const guideSteps = document.querySelector('#guide-steps')
 const playerButton = document.querySelector('#open-player')
 const homeScreen = document.querySelector('#home-screen')
 const playerScreen = document.querySelector('#player-screen')
+const launchScreen = document.querySelector('#launch-screen')
+const launchStatus = document.querySelector('#launch-status')
+const retryLaunch = document.querySelector('#retry-launch')
 const playerURL = new URL('./player/entry.mjs', location.href)
 const portable = location.protocol === 'file:' || document.documentElement.hasAttribute('data-portable')
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+let autoLaunching = !portable && (standalone() || new URL(location.href).searchParams.get('open') === 'app')
 const say = (message) => { status.textContent = message }
 const ua = navigator.userAgent
 const iPad = /iPad/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
@@ -30,6 +34,12 @@ let playerLoadFailed = false
 let opening = false
 let applying = false
 
+if (autoLaunching) {
+  document.documentElement.setAttribute('data-auto-launch', '')
+  homeScreen.hidden = true
+  launchScreen.hidden = false
+}
+
 if (portable) {
   playerButton.hidden = true
   document.querySelector('link[rel="manifest"]')?.remove()
@@ -42,6 +52,10 @@ async function openPletina(updateOnly = false, allowUpdate = true) {
   if (opening || applying) return
   opening = true
   playerButton.disabled = applyButton.disabled = true
+  if (autoLaunching) {
+    launchStatus.textContent = 'Abriendo Pletina…'
+    retryLaunch.hidden = true
+  }
   try {
     if (!player || updateOnly) {
       say('Preparando Pletina…')
@@ -60,10 +74,18 @@ async function openPletina(updateOnly = false, allowUpdate = true) {
     }
     homeScreen.hidden = true
     playerScreen.hidden = false
-    playerButton.textContent = 'Abrir Pletina'
+    autoLaunching = false
+    document.documentElement.removeAttribute('data-auto-launch')
+    launchScreen.hidden = true
     document.querySelector('#back-home').focus()
   } catch {
     playerLoadFailed = true
+    if (autoLaunching) {
+      launchStatus.textContent = 'No se pudo abrir Pletina. Comprueba la conexión y vuelve a intentarlo.'
+      retryLaunch.hidden = false
+      retryLaunch.focus()
+      return
+    }
     // La actualización puede haber terminado mientras fallaba el recurso antiguo.
     // El siguiente clic debe ofrecer B, en lugar de recargar A indefinidamente.
     try { await checkForUpdate(); await waitForInstalling() } catch { /* Conserva la versión activa. */ }
@@ -77,6 +99,14 @@ async function openPletina(updateOnly = false, allowUpdate = true) {
   }
 }
 playerButton.addEventListener('click', () => openPletina())
+retryLaunch.addEventListener('click', () => {
+  if (opening || applying || retryLaunch.disabled) return
+  retryLaunch.disabled = true
+  launchStatus.textContent = 'Abriendo Pletina…'
+  // Una recarga solicitada por el usuario limpia también un import fallido.
+  // El nuevo arranque sigue abriendo la versión activa, sin consentir updates.
+  location.reload()
+})
 
 async function waitForInstalling() {
   const worker = registration?.installing
@@ -142,9 +172,12 @@ document.querySelector('#back-home').addEventListener('click', () => {
 
 function showInstallState() {
   installed ||= standalone()
-  installButton.hidden = installed || portable
-  headline.textContent = installed || portable ? headline.dataset.installedTitle : 'Instalar Pletina'
-  intro.textContent = portable ? 'Copia local, sin servidor.' : installed ? 'Todo empieza por algo pequeño.' : 'Llévala a tu pantalla de inicio.'
+  const updateReady = Boolean(registration?.waiting)
+  installButton.hidden = installed || portable || updateReady
+  installHelp.hidden = installed || portable
+  playerButton.hidden = portable || updateReady
+  // La bienvenida conserva el titular y el texto aprobados en el HTML.
+  if (portable) intro.textContent = 'Copia local, sin servidor.'
 }
 showInstallState()
 matchMedia('(display-mode: standalone)').addEventListener('change', showInstallState)
@@ -251,6 +284,7 @@ function showInstallGuide() {
   if (!installGuide.open) installGuide.showModal()
 }
 document.querySelector('#close-guide').addEventListener('click', () => installGuide.close())
+installHelp.addEventListener('click', showInstallGuide)
 installGuide.addEventListener('click', (event) => { if (event.target === installGuide) installGuide.close() })
 
 window.addEventListener('beforeinstallprompt', (event) => {
@@ -279,13 +313,28 @@ window.addEventListener('appinstalled', () => {
   installPrompt = undefined
   installGuide.close()
   showInstallState()
+  if (!portable) {
+    // Este evento sí confirma la instalación en esta sesión. La entrada
+    // automática conserva la versión activa aunque haya un update esperando.
+    autoLaunching = true
+    document.documentElement.setAttribute('data-auto-launch', '')
+    homeScreen.hidden = true
+    launchScreen.hidden = false
+    // La pestaña que instaló no pasa a standalone: conservar esta intención
+    // permite que un reintento explícito vuelva a entrar sin mostrar portada.
+    try {
+      const destination = new URL(location.href)
+      destination.searchParams.set('open', 'app')
+      history.replaceState(history.state, '', destination.href)
+    } catch { /* La apertura actual no depende de modificar el historial. */ }
+    void openPletina(false, false)
+  }
 })
 
 function showState() {
   if (applying) return
-  applyButton.hidden = !registration?.waiting
-  if (!player) playerButton.textContent = registration?.waiting ? 'Actualizar y abrir'
-    : playerLoadFailed ? 'Recargar para reintentar' : 'Abrir Pletina'
+  applyButton.hidden = portable || !registration?.waiting
+  showInstallState()
   if (registration?.waiting) {
     say('Hay una nueva versión lista.')
   } else if (registration?.installing) {
@@ -359,8 +408,6 @@ if (!portable && 'serviceWorker' in navigator && window.isSecureContext) {
 }
 
 if (!portable) {
-  let reopen = new URL(location.href).searchParams.get('open') === 'app'
-  try { reopen ||= standalone() && localStorage.getItem('pletina:web:opened') === '1' } catch { /* Sin persistencia. */ }
   // Reabrir la app guardada no equivale a consentir una actualización pendiente.
-  if (reopen) void openPletina(false, false)
+  if (autoLaunching) void openPletina(false, false)
 }

@@ -27,7 +27,7 @@ export async function runInstallationScenarios(ctx) {
     await page.goto(baseURL, { waitUntil: 'load' })
     await page.locator('#install').waitFor()
     await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller))
-    assert.match(await page.locator('#headline').textContent(), /Instalar Pletina/)
+    assert.match(await page.locator('#headline').textContent(), /Dale\s*al play\./)
     assert.equal(applicationRequests.length, 0)
     const cachedApplicationFiles = await page.evaluate(async () => {
       const found = []

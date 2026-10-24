@@ -53,8 +53,7 @@ async function buildPair(t) {
   const first = await buildAt(root, 'first', source)
   const htmlPath = join(source, 'index.html')
   const html = await readFile(htmlPath, 'utf8')
-  assert.ok(html.includes('Hola mundo.'))
-  await writeFile(htmlPath, html.replace('Hola mundo.', 'Hola mundo. Versión nueva.'))
+  await writeFile(htmlPath, `${html}\n<!-- Nueva versión de la bienvenida. -->\n`)
   const second = await buildAt(root, 'second', source)
   assert.notEqual(first.version, second.version)
   return { first, second }

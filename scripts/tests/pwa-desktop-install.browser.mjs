@@ -96,14 +96,16 @@ try {
   report.checks.push({ name: 'App registered by browser', pass: true })
   await cdp.send('PWA.changeAppUserSettings', { manifestId, displayMode: 'standalone' })
   let app = await openInstalled(cdp)
-  await app.waitForSelector('#open-player')
-  await app.click('#open-player')
   await app.waitForSelector('.app')
   assert.equal(await app.evaluate(() => matchMedia('(display-mode: standalone)').matches), true)
+  const visibleWelcomeCTAs = await app.$$eval('#home-screen #install, #home-screen #open-player, #home-screen #apply-update', nodes =>
+    nodes.filter(node => node.getClientRects().length && getComputedStyle(node).visibility !== 'hidden').map(node => node.id))
+  assert.deepEqual(visibleWelcomeCTAs, [], 'The installed app must open directly without a welcome CTA')
+  report.initialStandaloneLaunch = { manualOpenClick: false, visibleWelcomeCTAs }
   const navigation = await app.$$eval('.sidebar nav button, .sidebar .heading, .bottom-nav button', nodes => nodes.map(node => node.textContent.replace(/\s+/g, ' ').trim()))
   report.navigation = navigation
   for (const label of ['Inicio', 'Buscar', 'Podcasts', 'Tu biblioteca']) assert.ok(navigation.includes(label), label)
-  report.checks.push({ name: 'Standalone window opens app with navigation and persistent desktop library', pass: true })
+  report.checks.push({ name: 'Standalone window opens app directly with navigation and persistent desktop library', pass: true })
   const sentinel = crypto.randomUUID()
   await app.evaluate(value => localStorage.setItem('pletina:qa:desktop-install', value), sentinel)
   await browser.close()

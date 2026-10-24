@@ -191,18 +191,46 @@ export async function createHarness({ browser, baseURL, profile, engine, directo
   }
   async function open() {
     const expectedBuild = report.build
-    await page.goto(baseURL, { waitUntil: 'load' })
+    const isApplicationURL = url => /\/application\/index\.[a-f0-9]{16}\.html$/.test(url.pathname)
+    try { await page.goto(baseURL, { waitUntil: 'load' }) }
+    catch (error) {
+      // Warm standalone entries may replace the landing document before its
+      // load completes. Accept that interruption only if the real app arrives.
+      if (!/interrupted by another navigation|net::ERR_ABORTED/i.test(error.message)) throw error
+      await page.waitForURL(isApplicationURL)
+    }
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller))
-    report.build = await page.locator('#version').textContent().then(value => value.trim())
+    let automaticEntry = false
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        automaticEntry = await page.evaluate(() => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true)
+        break
+      } catch (error) {
+        if (attempt === 2 || !/Execution context was destroyed|Cannot find context with specified id/i.test(error.message)) throw error
+        await page.waitForLoadState('domcontentloaded')
+      }
+    }
+    if (automaticEntry) {
+      await page.waitForURL(isApplicationURL)
+      await page.locator('.app').waitFor()
+      report.build = await page.evaluate(async workerURL => {
+        const response = await fetch(workerURL, { cache: 'no-store' })
+        if (!response.ok) throw new Error('The served worker could not be read')
+        return (await response.text()).match(/const VERSION = "([a-f0-9]{16})"/)?.[1] ?? null
+      }, new URL('sw.js', baseURL).href)
+      assert.match(report.build ?? '', /^[a-f0-9]{16}$/, 'The served worker must identify the compiled distribution')
+    } else report.build = await page.locator('#version').textContent().then(value => value.trim())
     if (expectedBuild) assert.equal(report.build, expectedBuild, 'The served shell must match the compiled distribution under test')
-    await settle()
-    await Promise.all([page.waitForURL(url => /\/application\/index\.[a-f0-9]{16}\.html$/.test(url.pathname)), page.locator('#open-player').click()])
+    if (!automaticEntry) {
+      await settle()
+      await Promise.all([page.waitForURL(isApplicationURL), page.locator('#open-player').click()])
+    }
     await page.locator('.app').waitFor()
     appURL = page.url()
     await settle()
     const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))
     assert.equal(viewport.width, spec.context.viewport.width, 'The network bridge must preserve the configured Playwright viewport')
-    return { build: report.build, applicationPath: new URL(appURL).pathname, viewport, physicalPlatform: false }
+    return { build: report.build, applicationPath: new URL(appURL).pathname, viewport, automaticEntry, physicalPlatform: false }
   }
   async function goOffline(value = true) {
     const before = await page.evaluate(() => navigator.onLine).catch(() => null)
