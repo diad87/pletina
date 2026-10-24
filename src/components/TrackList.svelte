@@ -1,6 +1,7 @@
 <script lang="ts">
   // Lista de canciones: la de un disco, favoritas, una playlist o el historial.
   import { trackMenu } from '../lib/actions'
+  import { inPwa } from '../lib/api'
   import { downloads } from '../lib/downloads.svelte'
   import { duration, songs } from '../lib/format'
   import { layout } from '../lib/layout.svelte'
@@ -27,6 +28,8 @@
     meta?: (index: number) => string
     /** De dónde vienen (nombre del disco, de la playlist…), para la cola. */
     context?: string
+    /** En la búsqueda web, la fila completa reproduce la canción y abre su disco. */
+    openAlbumOnPlay?: boolean
     /** Busca dentro de esta lista sin cambiar la cola ni los índices de sus entradas. */
     searchable?: boolean
     searchLabel?: string
@@ -34,7 +37,7 @@
   }
 
   let {
-    items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta, context = '',
+    items, variant = 'album', albumArtistId, playlistId, entryIds, metaLabel = '', meta, context = '', openAlbumOnPlay = false,
     searchable = false, searchLabel = 'Buscar en esta lista', query = $bindable(''),
   }: Props = $props()
 
@@ -59,8 +62,16 @@
   const reorderable = $derived(playlistId != null && entryIds != null && !filtering)
   const hasPodcasts = $derived(items.some((item) => isPodcast(item.track.id)))
   const audioRetry = $derived(player.audioRetry === 1 || player.audioRetry === 2 ? player.audioRetry : 0)
+  const albumSelection = $derived(inPwa && openAlbumOnPlay)
 
   function play(i: number) {
+    if (albumSelection) {
+      const item = items[i]
+      if (!isCurrent(item, i)) player.playQueue(items, i, context)
+      else if (player.status === 'paused' || player.status === 'idle') player.toggle()
+      nav.go({ name: 'album', id: item.albumId })
+      return
+    }
     if (isCurrent(items[i], i)) player.toggle()
     else player.playQueue(items, i, context)
   }
@@ -184,11 +195,21 @@
         role="button"
         aria-current={current ? 'true' : undefined}
         aria-busy={loading}
-        title={loading ? 'Cancelar carga' : undefined}
+        title={loading && !albumSelection ? 'Cancelar carga' : undefined}
         tabindex="0"
         draggable={!layout.mobile}
         onclick={() => play(i)}
-        onkeydown={(e) => e.key === 'Enter' && play(i)}
+        onkeydown={(e) => {
+          if (albumSelection) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation()
+              if (e.target === e.currentTarget) {
+                e.preventDefault()
+                play(i)
+              }
+            }
+          } else if (e.key === 'Enter') play(i)
+        }}
         oncontextmenu={(e) => openMenu(e, i)}
         ondragstart={(e) => {
           // Se puede arrastrar a la cola (panel lateral) y, en playlists, para reordenar.
@@ -207,7 +228,7 @@
             <span class="eq" aria-label="Sonando"><i></i><i></i><i></i></span>
           {:else}
             <span class="index">{variant === 'album' ? item.track.trackPosition || i + 1 : i + 1}</span>
-            <span class="hover-play"><Icon name={current && player.status !== 'paused' ? 'pause' : 'play'} size={16} /></span>
+            <span class="hover-play"><Icon name={!albumSelection && current && player.status !== 'paused' ? 'pause' : 'play'} size={16} /></span>
           {/if}
         </span>
 
@@ -224,7 +245,7 @@
                 {/if}
                 {#if item.track.explicitLyrics}<span class="explicit" title="Explícita">E</span>{/if}
                 {#if showArtist}
-                  {#if youtube || selfArtist}<span class="artist-name">{item.track.artist.name}</span>{:else}
+                  {#if albumSelection || youtube || selfArtist}<span class="artist-name">{item.track.artist.name}</span>{:else}
                   <button class="link artist-name" onclick={(e) => go(e, podcast ? { name: 'podcast', id: item.albumId } : { name: 'artist', id: item.track.artist.id })}
                     >{item.track.artist.name}</button
                   >
@@ -238,7 +259,11 @@
 
         {#if variant === 'list'}
           <span class="album">
-            <button class="link" onclick={(e) => go(e, youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
+            {#if albumSelection}
+              <span class="album-name">{item.albumTitle}</span>
+            {:else}
+              <button class="link" onclick={(e) => go(e, youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: item.albumId })}>{item.albumTitle}</button>
+            {/if}
           </span>
         {/if}
         {#if meta}<span class="meta">{meta(i)}</span>{/if}

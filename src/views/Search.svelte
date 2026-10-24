@@ -116,7 +116,7 @@
       {/if}
       {#if queue.length}
         <h2 class="section-title">Canciones</h2>
-        <TrackList items={expanded ? queue : queue.slice(0, 8)} variant="list" context={`Búsqueda: ${resultQuery}`} />
+        <TrackList items={expanded ? queue : queue.slice(0, 8)} variant="list" context={`Búsqueda: ${resultQuery}`} openAlbumOnPlay={api.inPwa} />
         {#if queue.length > 8}
           <button class="more" onclick={() => expanded = !expanded}>{expanded ? 'Ver menos' : `Ver más (${queue.length})`}</button>
         {/if}

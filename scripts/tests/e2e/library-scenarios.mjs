@@ -6,7 +6,7 @@ import { runPodcastRecoveryScenario } from './podcast-recovery-scenario.mjs'
 export const libraryScenarioInventory = [
   { id: 'library.navigation', actions: ['four mobile tabs', 'browser Back/Forward', 'query replacement', 'reload', 'viewport bounds'] },
   { id: 'library.discovery', actions: ['discovery cards', 'artist detail', 'album detail', 'recently viewed navigation', 'pinned tile navigation', 'unpin on Home'] },
-  { id: 'library.search', actions: ['songs/artists/albums', 'title plays selected song', 'artist button opens detail without playback', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
+  { id: 'library.search', actions: ['songs/artists/albums', 'song row starts selected song and opens album', 'artist menu opens detail without playback', 'natural title de artist fallback', 'expand/collapse tracks', 'empty results', 'partial-provider retry', 'artist discography filters'] },
   { id: 'library.favorites', actions: ['save/remove artist', 'save/remove album', 'like/filter/unlike song'] },
   { id: 'library.playlists', actions: ['create empty/from track menu', 'rename/cancel', 'pin/unpin', 'append album', 'duplicates', 'filter/clear', 'reorder', 'remove entry', 'delete/cancel'] },
   { id: 'library.csv', actions: ['invalid/oversized file', 'provider failure', 'retry/cancel', 'cancel pending catalog response', 'navigate away during pending match', 'ignore obsolete matches without saving', 'all omitted', 'empty name', 'review matches/omissions', 'transaction abort rollback and retry', 'save duplicate entries', 'reload'] },
@@ -172,15 +172,16 @@ export async function runLibraryScenarios(ctx) {
       await u.tap(pauseButton)
       await u.wait(() => window.__qaAudio.instances.every(audio => audio.paused))
       selected = await playbackState()
+      assert.equal(await currentRoute(), 'album')
       assert.equal(selected.selectedId, first.id)
       assert.equal(selected.title, first.title)
       assert.ok(selected.audios.some(audio => audio.time > 0 && audio.duration > 0 && audio.time < Math.min(30, audio.duration / 2)),
         'Pause before the product records this short playback in history')
       const playingEvents = selected.playingEvents
-      // Choose another row: accidentally bubbling to its play handler would select a different song.
-      const artistLink = u.rows().nth(1).locator('.by button.link')
-      assert.equal((await artistLink.textContent()).trim(), trackArtist)
-      await u.tap(artistLink)
+      // Search song rows now both play and open their album. Navigation alone
+      // remains an explicit menu action; it must not change the paused song.
+      await u.search(query)
+      await u.rowMenu(1); await u.menu('Ir al artista')
       await u.wait(name => document.querySelector('.banner h1')?.textContent === name, trackArtist)
       assert.equal(await currentRoute(), 'artist')
       afterArtist = await playbackState()
@@ -195,7 +196,7 @@ export async function runLibraryScenarios(ctx) {
       if (await pauseButton.isVisible().catch(() => false)) await u.tap(pauseButton)
     }
     return { tracks: tracks.length, artists: artists.length, albums: albums.length,
-      titleStartedTrackId: selected.selectedId, artistOpenedWithoutPlayback: true,
+      titleStartedTrackId: selected.selectedId, titleOpenedSelectedAlbum: true, artistMenuOpenedWithoutPlayback: true,
       pausedBeforeHistoryThreshold: true, historyRemainedEmpty: true, audioAfterArtist: afterArtist.audios }
   })
 

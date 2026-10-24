@@ -13,14 +13,17 @@ const query = option('--query', ''), title = option('--title', ''), artist = opt
 assert.ok(query.length > 0 && query.length <= 200 && title.length > 0 && title.length <= 200 && artist.length <= 200)
 const diagnostic = args.includes('--exceptions'), reportName = option('--report', 'p1-song-ui-diagnostic.json')
 const artistView = args.includes('--artist-view')
+const mobile = args.includes('--mobile')
 const songControl = option('--song-control', 'title')
-assert.ok(['title', 'cover'].includes(songControl))
+assert.ok(['title', 'cover', 'artist', 'album', 'row'].includes(songControl))
+assert.ok(!mobile || songControl !== 'album', 'The album column is hidden on mobile')
 assert.match(reportName, /^p1-song-[a-z0-9.-]+\.json$/)
 const source = await readFile(new URL(import.meta.url)), sha = value => crypto.createHash('sha256').update(value).digest('hex')
 const directory = new URL('../../artifacts/pwa-port/', import.meta.url), began = Date.now(), timestamp = () => ({ at: new Date().toISOString(), elapsedMs: Date.now() - began })
 const report = { schemaVersion: 1, testedAt: new Date().toISOString(), expectedBuild, build: null, query, expectedTitle: title, expectedArtist: artist,
   runnerSha256: sha(source), sourceSnapshot: `artifacts/pwa-port/p1-song-ui-diagnostic-source-${sha(source).slice(0, 16)}.mjs`,
   scope: 'Public compiled PWA, real catalog search and trusted play click. Desktop foreground only. Optional debugger timing is not comparable to ordinary runs.',
+  inputMode: mobile ? 'Trusted touchscreen taps, Android layout emulation; not a physical phone or OS keyboard.' : 'Trusted mouse clicks in desktop layout',
   policy: { providerMocks: false, nodeBootstrap: false, productMethodsReplaced: false, audioConstructorReplaced: false, sdkInjected: false,
     securityOverrides: false, autoplayOverrides: false, rawRecipeSaved: false, rawMediaUrlsSaved: false, mediaBytesSaved: false,
     exceptionLocalsRead: false, exceptionPropertiesRead: false, debuggerPauses: diagnostic, instrumentedTimings: diagnostic, physicalPhone: false, backgroundVerified: false },
@@ -45,14 +48,16 @@ async function poll(name, fn, maximumMs = 15000) {
 async function click(selector, purpose) {
   if (artistView) {
     report.inputActions.push({ ...timestamp(), kind: 'declared viewport scroll without activation', purpose })
-    await rpc(selector => document.querySelector(selector)?.scrollIntoView({ block: 'center', behavior: 'instant' }), selector)
+    await rpc(selector => (selector.startsWith('menu:') ? [...document.querySelectorAll('[role="menuitem"]')].find(node => node.textContent.trim() === selector.slice(5)) : document.querySelector(selector))?.scrollIntoView({ block: 'center', behavior: 'instant' }), selector)
   }
-  const point = await rpc(selector => { const node = document.querySelector(selector); if (!node) return null
+  const point = await rpc(selector => { const node = selector.startsWith('menu:') ? [...document.querySelectorAll('[role="menuitem"]')].find(node => node.textContent.trim() === selector.slice(5)) : document.querySelector(selector); if (!node) return null
     const rect = node.getBoundingClientRect(), style = getComputedStyle(node), x = rect.x + rect.width / 2, y = rect.y + rect.height / 2
     const hit = document.elementFromPoint(x, y)
     return rect.width > 0 && rect.height > 0 && x > 0 && x < innerWidth && y > 0 && y < innerHeight && style.visibility !== 'hidden' && style.display !== 'none' && hit && (hit === node || node.contains(hit)) ? { x, y } : null
   }, selector)
-  assert.ok(point, 'Visible control: ' + purpose); report.inputActions.push({ ...timestamp(), kind: 'trusted mouse click', purpose }); await page.mouse.click(point.x, point.y)
+  assert.ok(point, 'Visible control: ' + purpose); report.inputActions.push({ ...timestamp(), kind: mobile ? 'trusted touchscreen tap' : 'trusted mouse click', purpose })
+  if (mobile) await page.touchscreen.tap(point.x, point.y)
+  else await page.mouse.click(point.x, point.y)
 }
 const state = () => rpc(() => {
   const dialog = document.querySelector('dialog[data-official-youtube][open]'), frame = dialog?.querySelector('iframe[data-official-video]')
@@ -63,9 +68,12 @@ const state = () => rpc(() => {
       artist: item.track.artist?.name ?? null, album: item.albumTitle ?? null, duration: item.track.duration, isrc: item.track.isrc ?? null }
   } catch { /* Missing queue is reported as null. */ }
   const slider = document.querySelector('.player input[aria-label="Posición"]')
-  return { selected, mediaSession: { title: navigator.mediaSession?.metadata?.title ?? null, artist: navigator.mediaSession?.metadata?.artist ?? null,
-    playbackState: navigator.mediaSession?.playbackState ?? null }, progress: slider ? { time: Number(slider.value), duration: Number(slider.max), disabled: slider.disabled } : null,
-    playerTitle: document.querySelector('.player .title')?.textContent.trim() ?? null,
+  const bar = document.querySelector('.mini .bar')
+  const route = history.state?.snapshot?.stack[history.state?.index]
+  return { selected, route: route && { name: route.name, id: route.id }, albumHeading: document.querySelector('.hero h1')?.textContent.trim() ?? null,
+    searchQuery: document.querySelector('input[aria-label="Buscar música"]')?.value ?? null, mediaSession: { title: navigator.mediaSession?.metadata?.title ?? null, artist: navigator.mediaSession?.metadata?.artist ?? null,
+    playbackState: navigator.mediaSession?.playbackState ?? null }, progress: slider ? { time: Number(slider.value), duration: Number(slider.max), disabled: slider.disabled } : bar && selected ? { time: Number(bar.style.getPropertyValue('--progress')) * selected.duration, duration: selected.duration, source: 'Rendered mini progress fraction times catalog duration' } : null,
+    playerTitle: document.querySelector('.mini .title,.player .title')?.textContent.trim() ?? null,
     playerHint: document.querySelector('.player .hint')?.textContent.trim() ?? null,
     fallback: { opened: Boolean(dialog), track: dialog?.querySelector('.track')?.textContent.trim() ?? null, videoId: frame?.dataset.videoId ?? null,
       visible: frame ? (() => { const r = frame.getBoundingClientRect(), s = getComputedStyle(frame); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none' })() : false },
@@ -91,7 +99,9 @@ try {
     ignoreDefaultArgs: ['--mute-audio', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'], args: [] })
   assert.ok(!browser.process().spawnargs.some(value => /autoplay-policy|MediaEngagementBypassAutoplayPolicies|disable-web-security|ignore-certificate-errors|--mute-audio/.test(value)))
   report.browser = await browser.version(); context = await browser.createBrowserContext(); assert.equal((await context.cookies()).length, 0)
-  page = await context.newPage(); await page.setViewport({ width: 1280, height: 1000 }); const cdp = page.mainFrame().client, cdn = new Map()
+  page = await context.newPage(); await page.setViewport(mobile ? { width: 393, height: 852, isMobile: true, hasTouch: true, deviceScaleFactor: 1 } : { width: 1280, height: 1000 })
+  if (mobile) await page.setUserAgent('Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Mobile Safari/537.36')
+  const cdp = page.mainFrame().client, cdn = new Map()
   await cdp.send('Network.enable')
   if (diagnostic) {
     await cdp.send('Debugger.enable')
@@ -139,6 +149,10 @@ try {
   report.build = await poll('Landing build', () => rpc(() => document.querySelector('#version')?.textContent.trim() ?? null)); assert.equal(report.build, expectedBuild)
   report.initialActivation = await rpc(() => navigator.userActivation.hasBeenActive); assert.equal(report.initialActivation, false)
   await click('#open-player', 'open compiled Pletina')
+  if (mobile) {
+    await poll('Mobile navigation', () => rpc(() => Boolean(document.querySelector('.bottom-nav'))))
+    await click('.bottom-nav button:nth-child(2)', 'open Buscar from mobile navigation')
+  }
   await poll('Search input', () => rpc(() => Boolean(document.querySelector('input[aria-label="Buscar música"]'))), 45000)
   await click('input[aria-label="Buscar música"]', 'focus normal search')
   report.inputActions.push({ ...timestamp(), kind: 'trusted keyboard typing', characters: query.length }); await page.keyboard.type(query)
@@ -152,7 +166,8 @@ try {
   report.searchResults = rows
   let selected = rows.find(row => normalize(row.title) === normalize(title) && artist.split(/\s+/).every(word => normalize(row.artist).includes(normalize(word))))
   if (artistView) {
-    await click(`.tracks li[data-reorder-index="${selected.index}"] .by button.link`, 'open artist from canonical search result')
+    await click(`.tracks li[data-reorder-index="${selected.index}"] .more-cell button`, 'open selected song options')
+    await click('menu:Ir al artista', 'open artist explicitly from selected song menu')
     report.artistHeading = await poll('Canonical artist page', () => rpc(() => document.querySelector('.banner h1')?.textContent.trim() ?? null))
     assert.ok(artist.split(/\s+/).every(word => normalize(report.artistHeading).includes(normalize(word))))
     await poll('Artist popular songs', async () => (await readRows()).length > 0)
@@ -165,12 +180,20 @@ try {
   report.clickedRow = selected
   if (diagnostic) await cdp.send('Debugger.setPauseOnExceptions', { state: 'all' })
   report.songControl = songControl
-  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] ${songControl === 'cover' ? '.thumb' : '.name'}`, artistView ? `single artist popular ${songControl} click` : `single search song ${songControl} click`)
+  const songTarget = { title: '.name', cover: '.thumb', artist: '.artist-name', album: '.album-name', row: '.row' }[songControl]
+  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] ${songTarget}`, artistView ? `single artist popular ${songControl} click` : `single search song ${songControl} click`)
   const outcome = await poll('Native audio or official fallback', async () => {
     const value = await state()
     return value.fallback.opened || value.mediaSession.playbackState === 'playing' && value.progress?.time > 2 ? value : null
   }, 120000)
   report.finalState = outcome; report.outcome = outcome.fallback.opened ? 'official-video-fallback' : 'native-audio'
+  if (!artistView) {
+    assert.equal(outcome.route?.name, 'album', 'Selecting a search song opens its album')
+    assert.equal(outcome.selected?.title, selected.title, 'The selected song must already play without a second album-row tap')
+    report.openedAlbum = await poll('Selected album is visible', async () => { const value = await state(); return value.route?.name === 'album' && value.albumHeading ? value : null })
+    assert.equal(normalize(report.openedAlbum.albumHeading), normalize(selected.album))
+    assert.notEqual(report.openedAlbum.searchQuery, query, 'The search screen must be closed')
+  }
   if (artistView) {
     assert.equal(outcome.selected?.title, selected.title, 'The played catalog entry must be the chosen popular row')
     assert.equal(outcome.mediaSession.title, selected.title, 'Media metadata must name the chosen popular song')
@@ -191,7 +214,7 @@ try {
   report.checks.push({ name: 'normal song click plays native audio without a video modal', pass: report.outcome === 'native-audio', outcome: report.outcome })
   report.screenshot = reportName.replace(/\.json$/, '.png'); await page.screenshot({ path: new URL(report.screenshot, directory).pathname.replace(/^\/C:/, 'C:'), fullPage: true })
   if (outcome.fallback.opened) await click('#official-youtube-close', 'close observed video fallback after evidence')
-  else if (outcome.mediaSession.playbackState === 'playing') await click('.player .play', 'pause after native audio observation')
+  else if (outcome.mediaSession.playbackState === 'playing') await click(mobile ? '.mini button[aria-label="Pausa"]' : '.player .play', 'pause after native audio observation')
 } catch (error) { report.errors.push({ kind: 'runner', message: scrub(error.message) }); if (page) try { report.lastState = await state() } catch { /* Navigation may have failed. */ } }
 finally { await Promise.allSettled([...pending]); await context?.close(); await browser?.close(); if (server) await new Promise(resolve => server.close(resolve)); report.resourcesClosed = true }
 await mkdir(directory, { recursive: true }); await writeFile(new URL(report.sourceSnapshot.replace('artifacts/pwa-port/', ''), directory), source)

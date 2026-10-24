@@ -53,7 +53,7 @@ const downloadCovers = { query: 'QA Portadas descargadas', tracks: downloadCover
 const searchHomonymAlbum = { ...albums[0], id: 44, title: 'Ni, Ni, Ni! QA', artist: artists[0] }
 const searchHomonymTracks = ['Ni, Ni, Ni! QA', 'Otra canción QA del mismo disco'].map((title, i) => ({ ...tracks[0],
   id: 216 + i, title, title_short: title, artist: artists[0], artistName: artists[0].name, album: searchHomonymAlbum,
-  track_position: i + 1, isrc: 'QAABC2600' + (216 + i), videoId: 'qaHit0000' + (i + 1) + String.fromCharCode(97 + i) }))
+  duration: 90, track_position: i + 1, isrc: 'QAABC2600' + (216 + i), videoId: 'qaHit0000' + (i + 1) + String.fromCharCode(97 + i) }))
 const searchHomonyms = { query: 'Ni, Ni, Ni! QA', tracks: searchHomonymTracks, album: searchHomonymAlbum, artist: artists[0] }
 // A separate artist/top namespace keeps selection races independent from source
 // caches and the radio/search fixtures used by the rest of the suite.
@@ -701,9 +701,9 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
           : [...retryTracks, ...selectionTracks, ...searchHomonymTracks, ...downloadCoverTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
-        const bytes = cast >= 0 ? castAudio : audio
+        const bytes = cast >= 0 || searchHomonymTracks.some(track => track.videoId === videoId) ? castAudio : audio
         return json({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: track?.title || 'Episodio QA YouTube ' + titles[Math.max(0, cast)],
-          author: track?.artist.name || 'Autor QA', lengthSeconds: String(cast >= 0 ? 90 : 12) },
+          author: track?.artist.name || 'Autor QA', lengthSeconds: String(track?.duration ?? (cast >= 0 ? 90 : 12)) },
         streamingData: { adaptiveFormats: [{ mimeType: 'audio/mp4; codecs="mp4a.40.2"', bitrate: 64000,
           contentLength: String(bytes.length), url: 'https://fixture.googlevideo.com/audio/' + videoId + '?expire=' + (Math.floor(Date.now() / 1000) + 7200) + '&clen=' + bytes.length }] } })
       }
@@ -792,7 +792,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       if (flags.holdDownload && download) await new Promise(resolve => pending.add(resolve))
       if (flags.failMedia) return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'Fixture denied audio' })
       const bytes = codec && url.searchParams.get('itag') === '251' ? opusAudio
-        : p1Podcast || url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) ? castAudio : audio
+        : p1Podcast || url.hostname === 'media.pletina.test' || castVideos.some(id => url.pathname.includes(id)) || searchHomonymTracks.some(track => url.pathname.includes(track.videoId)) ? castAudio : audio
       const contentType = codec && url.searchParams.get('itag') === '251' ? 'audio/webm' : 'audio/mp4'
       const range = /^bytes=(\d+)-(\d*)$/.exec(request.headers().range || '')
       if (range) {
