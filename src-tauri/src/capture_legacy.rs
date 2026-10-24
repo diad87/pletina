@@ -424,7 +424,7 @@ async fn open_locked(
                 let result = unsafe { attach(&pw, &url, expected_id, generation) }
                     .map_err(|e| e.to_string());
                 #[cfg(not(windows))]
-                let result = {
+                let result: Result<(), String> = {
                     let _ = (pw, url, expected_id, generation);
                     Err("CAPTURE_UNSUPPORTED_PLATFORM".to_string())
                 };
