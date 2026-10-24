@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-24T10:05:06.162Z",
+  "build": "a2e6b8da9fb17c07",
+  "suite": "smoke",
+  "selectedMediaScenarios": null,
+  "profiles": [
+    {
+      "profile": "chromium-desktop",
+      "engine": "chromium",
+      "checks": [
+        {
+          "name": "setup.browser",
+          "status": "fail",
+          "error": "Failed to launch the browser process:  Code: 1\n\nstderr:\n[840:840:1024/120512.247987:ERROR:content/browser/zygote_host/zygote_host_impl_linux.cc:101] Running as root without --no-sandbox is not supported. See [URL]\n\nTROUBLESHOOTING: [URL]\n"
+        }
+      ],
+      "errors": [],
+      "build": "a2e6b8da9fb17c07",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "linux",
+        "arch": "x64",
+        "node": "v24.22.0"
+      },
+      "puppeteerVersion": "25.14.0",
+      "counts": {
+        "pass": 0,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.0"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 0,
+    "fail": 1,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-24T10:05:12.283Z",
+  "browserFeatureChecksPassed": false
+}

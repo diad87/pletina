@@ -1,0 +1,2235 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-24T10:10:23.501Z",
+  "build": "a2e6b8da9fb17c07",
+  "runnerSha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4",
+  "sourceBindings": [
+    {
+      "path": "scripts/tests/library-backup.browser.mjs",
+      "sha256": "b106bba4a15cf07e7c940e239e554b0dfe40c233541951e634c6a1794929dce4"
+    },
+    {
+      "path": "scripts/tests/e2e/harness.mjs",
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739"
+    },
+    {
+      "path": "scripts/tests/e2e/provider-fixtures.mjs",
+      "sha256": "6571fba81de6c52564314a5ba5fc7661c65aa1ac071b56882166677c692855df"
+    },
+    {
+      "path": "scripts/tests/e2e/webkit-network-transport.mjs",
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e"
+    }
+  ],
+  "layout": "desktop viewport 1440x900",
+  "viewportOnly": true,
+  "scope": "Compiled PWA UI with synthetic HTTP metadata/silence fixtures; real file download/upload, IndexedDB and CacheStorage assertions. Desktop Chromium, Firefox and WebKit only; no physical mobile or APK migration.",
+  "policy": {
+    "productModulesReplaced": false,
+    "productAPIsInvokedByQA": false,
+    "browserStorageWritesByQA": false,
+    "providerMode": "HTTP fixtures",
+    "audioObserver": "Existing harness observer; not a media or audible-playback accreditation.",
+    "backupIncludesAudio": false,
+    "APKPrivateStorageAccess": false
+  },
+  "engines": [
+    {
+      "engine": "chromium",
+      "layout": "desktop viewport 1440x900",
+      "build": "a2e6b8da9fb17c07",
+      "checks": [
+        {
+          "context": "source",
+          "name": "setup.open",
+          "startedAt": "2026-10-24T10:10:24.457Z",
+          "status": "pass",
+          "build": "a2e6b8da9fb17c07",
+          "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T10:10:25.400Z"
+        },
+        {
+          "context": "destination",
+          "name": "setup.open",
+          "startedAt": "2026-10-24T10:10:25.541Z",
+          "status": "pass",
+          "build": "a2e6b8da9fb17c07",
+          "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T10:10:26.407Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.source-ui-and-real-file-export",
+          "startedAt": "2026-10-24T10:10:26.408Z",
+          "status": "pass",
+          "file": "synthetic-library-export.json",
+          "bytes": 1738,
+          "sha256": "52e1fc6e24a1a4773ff72278fe9208bf725d864d618ce76393ac62d63796b578",
+          "sourceCounts": {
+            "albums": 1,
+            "artists": 1,
+            "entries": 3,
+            "episodes": 0,
+            "history": 1,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 2,
+            "tracks": 2,
+            "youtube": 0
+          },
+          "order": [
+            101,
+            102,
+            101
+          ],
+          "actualFileDownload": true,
+          "finishedAt": "2026-10-24T10:10:37.361Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.preview-is-readonly-and-current-playlist-is-preserved",
+          "startedAt": "2026-10-24T10:10:37.361Z",
+          "status": "pass",
+          "before": {
+            "albums": 0,
+            "artists": 0,
+            "entries": 1,
+            "episodes": 0,
+            "history": 0,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 0,
+            "tracks": 1,
+            "youtube": 0
+          },
+          "after": {
+            "albums": 0,
+            "artists": 0,
+            "entries": 1,
+            "episodes": 0,
+            "history": 0,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 0,
+            "tracks": 1,
+            "youtube": 0
+          },
+          "fingerprint": "2896a50a7232dac3e3d8ea9972e4afc7fbf8a95908807964162e1f7ef03c75ed",
+          "previewLabels": [
+            "Favoritos",
+            "Listas",
+            "Canciones en listas",
+            "Discos",
+            "Artistas",
+            "Escuchas del historial",
+            "Pódcasts",
+            "Episodios con progreso"
+          ],
+          "previewValues": [
+            "1",
+            "1",
+            "3",
+            "1",
+            "1",
+            "1",
+            "0",
+            "0"
+          ],
+          "screenshot": "preview-readonly.png",
+          "finishedAt": "2026-10-24T10:10:39.569Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.cancel-and-leave-preview-have-no-ghost-import",
+          "startedAt": "2026-10-24T10:10:39.571Z",
+          "status": "pass",
+          "cancelDiscardedPreview": true,
+          "navigationDiscardedPreview": true,
+          "storageUnchanged": true,
+          "scope": "Leaving a completed file preview; no artificial File.text delay.",
+          "finishedAt": "2026-10-24T10:10:41.141Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-malformed-without-writes",
+          "startedAt": "2026-10-24T10:10:41.144Z",
+          "status": "pass",
+          "fileBytes": 1,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia de seguridad no es válida: JSON ilegible. No se ha cambiado la biblioteca.",
+          "finishedAt": "2026-10-24T10:10:41.171Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-future-version-without-writes",
+          "startedAt": "2026-10-24T10:10:41.172Z",
+          "status": "pass",
+          "fileBytes": 1741,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia de seguridad no es válida: formato o versión no admitidos. No se ha cambiado la biblioteca.",
+          "finishedAt": "2026-10-24T10:10:41.190Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-oversized-without-writes",
+          "startedAt": "2026-10-24T10:10:41.191Z",
+          "status": "pass",
+          "fileBytes": 10485761,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia no puede superar los 10 MB.",
+          "finishedAt": "2026-10-24T10:10:44.745Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.explicit-merge-remaps-playlist-and-keeps-duplicates-and-existing-data",
+          "startedAt": "2026-10-24T10:10:44.746Z",
+          "status": "pass",
+          "originalPlaylistId": 1,
+          "importedPlaylistId": 2,
+          "order": [
+            101,
+            102,
+            101
+          ],
+          "counts": {
+            "albums": 1,
+            "artists": 1,
+            "entries": 4,
+            "episodes": 0,
+            "history": 1,
+            "likes": 2,
+            "meta": 2,
+            "playlists": 2,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 2,
+            "tracks": 3,
+            "youtube": 0
+          },
+          "existingDataPreserved": true,
+          "downloadStoreUnchanged": true,
+          "downloadCacheUnchanged": true,
+          "downloadDataWasInitiallyEmpty": true,
+          "screenshot": "merge-success.png",
+          "finishedAt": "2026-10-24T10:10:45.062Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reload-shows-both-playlists-with-correct-order-and-no-playback",
+          "startedAt": "2026-10-24T10:10:45.063Z",
+          "status": "pass",
+          "originalAndImportedVisible": true,
+          "duplicatesInOrder": true,
+          "reloadPersisted": true,
+          "playbackNotStarted": true,
+          "finishedAt": "2026-10-24T10:10:46.439Z"
+        }
+      ],
+      "errors": [],
+      "contexts": [
+        {
+          "engine": "chromium",
+          "build": "a2e6b8da9fb17c07",
+          "checks": [
+            {
+              "name": "setup.open",
+              "startedAt": "2026-10-24T10:10:24.457Z",
+              "status": "pass",
+              "build": "a2e6b8da9fb17c07",
+              "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "physicalPlatform": false,
+              "finishedAt": "2026-10-24T10:10:25.400Z"
+            }
+          ],
+          "errors": [],
+          "role": "source",
+          "profile": "chromium-desktop",
+          "host": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v24.18.1"
+          },
+          "kind": "desktop-browser",
+          "physical": false,
+          "startedAt": "2026-10-24T10:10:24.181Z",
+          "networkTransport": "Existing fixture contract through Puppeteer HTTP interception; real compiled UI and storage.",
+          "counts": {
+            "pass": 1,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "finalState": {
+            "path": "/pletina/application/index.3afac9986cb53c9f.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "Copia de seguridad",
+              "Guardar una copia",
+              "Importar una copia"
+            ],
+            "navigation": {
+              "index": 5,
+              "route": {
+                "name": "library-backup"
+              },
+              "historyLength": 8
+            },
+            "tabs": [],
+            "notices": [],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": true,
+                  "local": false,
+                  "time": 6.415215,
+                  "duration": 12,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 4,
+                  "error": null
+                }
+              ],
+              "events": [
+                {
+                  "type": "waiting",
+                  "index": 0,
+                  "at": 4005,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "loadstart",
+                  "index": 0,
+                  "at": 4005,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "durationchange",
+                  "index": 0,
+                  "at": 4011,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "loadedmetadata",
+                  "index": 0,
+                  "at": 4011,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "playing",
+                  "index": 0,
+                  "at": 4088,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 4265,
+                  "time": 0.096201,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 4536,
+                  "time": 0.362041,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 4802,
+                  "time": 0.626552,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5067,
+                  "time": 0.898979,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5326,
+                  "time": 1.153505,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5600,
+                  "time": 1.42601,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5866,
+                  "time": 1.687888,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6131,
+                  "time": 1.959794,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6393,
+                  "time": 2.216474,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6656,
+                  "time": 2.486642,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6921,
+                  "time": 2.750999,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7200,
+                  "time": 3.027962,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7450,
+                  "time": 3.28222,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7716,
+                  "time": 3.54341,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7982,
+                  "time": 3.808282,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8249,
+                  "time": 4.070629,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8515,
+                  "time": 4.343834,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8784,
+                  "time": 4.611607,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9049,
+                  "time": 4.87155,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9316,
+                  "time": 5.145782,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9578,
+                  "time": 5.405791,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9849,
+                  "time": 5.672862,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10116,
+                  "time": 5.946806,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10383,
+                  "time": 6.212209,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10601,
+                  "time": 6.415215,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "pause",
+                  "index": 0,
+                  "at": 10601,
+                  "time": 6.415215,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                }
+              ],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900,
+              "documentWidth": 1440
+            }
+          },
+          "fixture": {
+            "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+            "counts": {
+              "api.deezer.com/chart/0/albums": 1,
+              "api.deezer.com/chart/0/artists": 1,
+              "images.pletina.test/cover.svg": 7,
+              "api.deezer.com/search/track": 2,
+              "music.youtube.com/youtubei/v1/search": 2,
+              "www.youtube.com/youtubei/v1/search": 1,
+              "www.youtube.com/youtubei/v1/player": 2,
+              "fixture.googlevideo.com/audio/qaAudio001a": 1,
+              "api.deezer.com/album/11": 1,
+              "api.deezer.com/album/11/tracks": 1,
+              "api.deezer.com/artist/7": 1,
+              "api.deezer.com/artist/7/albums": 1,
+              "api.deezer.com/artist/7/top": 1
+            },
+            "requests": [
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/artists",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "music.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/player",
+                "method": "POST",
+                "type": "fetch",
+                "operation": "player",
+                "videoId": "qaAudio001a",
+                "clientName": "VISIONOS"
+              },
+              {
+                "host": "fixture.googlevideo.com",
+                "path": "/audio/qaAudio001a",
+                "method": "GET",
+                "type": "media"
+              },
+              {
+                "host": "music.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "other"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/player",
+                "method": "POST",
+                "type": "fetch",
+                "operation": "player",
+                "videoId": "qaAudio002b",
+                "clientName": "VISIONOS"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "other"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/album/11",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/album/11/tracks",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/top",
+                "method": "GET",
+                "type": "script"
+              }
+            ]
+          },
+          "contextClosed": true,
+          "finishedAt": "2026-10-24T10:10:46.463Z"
+        },
+        {
+          "engine": "chromium",
+          "build": "a2e6b8da9fb17c07",
+          "checks": [
+            {
+              "name": "setup.open",
+              "startedAt": "2026-10-24T10:10:25.541Z",
+              "status": "pass",
+              "build": "a2e6b8da9fb17c07",
+              "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "physicalPlatform": false,
+              "finishedAt": "2026-10-24T10:10:26.407Z"
+            },
+            {
+              "name": "backup.source-ui-and-real-file-export",
+              "startedAt": "2026-10-24T10:10:26.408Z",
+              "status": "pass",
+              "file": "synthetic-library-export.json",
+              "bytes": 1738,
+              "sha256": "52e1fc6e24a1a4773ff72278fe9208bf725d864d618ce76393ac62d63796b578",
+              "sourceCounts": {
+                "albums": 1,
+                "artists": 1,
+                "entries": 3,
+                "episodes": 0,
+                "history": 1,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 2,
+                "tracks": 2,
+                "youtube": 0
+              },
+              "order": [
+                101,
+                102,
+                101
+              ],
+              "actualFileDownload": true,
+              "finishedAt": "2026-10-24T10:10:37.361Z"
+            },
+            {
+              "name": "backup.preview-is-readonly-and-current-playlist-is-preserved",
+              "startedAt": "2026-10-24T10:10:37.361Z",
+              "status": "pass",
+              "before": {
+                "albums": 0,
+                "artists": 0,
+                "entries": 1,
+                "episodes": 0,
+                "history": 0,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 0,
+                "tracks": 1,
+                "youtube": 0
+              },
+              "after": {
+                "albums": 0,
+                "artists": 0,
+                "entries": 1,
+                "episodes": 0,
+                "history": 0,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 0,
+                "tracks": 1,
+                "youtube": 0
+              },
+              "fingerprint": "2896a50a7232dac3e3d8ea9972e4afc7fbf8a95908807964162e1f7ef03c75ed",
+              "previewLabels": [
+                "Favoritos",
+                "Listas",
+                "Canciones en listas",
+                "Discos",
+                "Artistas",
+                "Escuchas del historial",
+                "Pódcasts",
+                "Episodios con progreso"
+              ],
+              "previewValues": [
+                "1",
+                "1",
+                "3",
+                "1",
+                "1",
+                "1",
+                "0",
+                "0"
+              ],
+              "screenshot": "preview-readonly.png",
+              "finishedAt": "2026-10-24T10:10:39.569Z"
+            },
+            {
+              "name": "backup.cancel-and-leave-preview-have-no-ghost-import",
+              "startedAt": "2026-10-24T10:10:39.571Z",
+              "status": "pass",
+              "cancelDiscardedPreview": true,
+              "navigationDiscardedPreview": true,
+              "storageUnchanged": true,
+              "scope": "Leaving a completed file preview; no artificial File.text delay.",
+              "finishedAt": "2026-10-24T10:10:41.141Z"
+            },
+            {
+              "name": "backup.reject-malformed-without-writes",
+              "startedAt": "2026-10-24T10:10:41.144Z",
+              "status": "pass",
+              "fileBytes": 1,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia de seguridad no es válida: JSON ilegible. No se ha cambiado la biblioteca.",
+              "finishedAt": "2026-10-24T10:10:41.171Z"
+            },
+            {
+              "name": "backup.reject-future-version-without-writes",
+              "startedAt": "2026-10-24T10:10:41.172Z",
+              "status": "pass",
+              "fileBytes": 1741,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia de seguridad no es válida: formato o versión no admitidos. No se ha cambiado la biblioteca.",
+              "finishedAt": "2026-10-24T10:10:41.190Z"
+            },
+            {
+              "name": "backup.reject-oversized-without-writes",
+              "startedAt": "2026-10-24T10:10:41.191Z",
+              "status": "pass",
+              "fileBytes": 10485761,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia no puede superar los 10 MB.",
+              "finishedAt": "2026-10-24T10:10:44.745Z"
+            },
+            {
+              "name": "backup.explicit-merge-remaps-playlist-and-keeps-duplicates-and-existing-data",
+              "startedAt": "2026-10-24T10:10:44.746Z",
+              "status": "pass",
+              "originalPlaylistId": 1,
+              "importedPlaylistId": 2,
+              "order": [
+                101,
+                102,
+                101
+              ],
+              "counts": {
+                "albums": 1,
+                "artists": 1,
+                "entries": 4,
+                "episodes": 0,
+                "history": 1,
+                "likes": 2,
+                "meta": 2,
+                "playlists": 2,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 2,
+                "tracks": 3,
+                "youtube": 0
+              },
+              "existingDataPreserved": true,
+              "downloadStoreUnchanged": true,
+              "downloadCacheUnchanged": true,
+              "downloadDataWasInitiallyEmpty": true,
+              "screenshot": "merge-success.png",
+              "finishedAt": "2026-10-24T10:10:45.062Z"
+            },
+            {
+              "name": "backup.reload-shows-both-playlists-with-correct-order-and-no-playback",
+              "startedAt": "2026-10-24T10:10:45.063Z",
+              "status": "pass",
+              "originalAndImportedVisible": true,
+              "duplicatesInOrder": true,
+              "reloadPersisted": true,
+              "playbackNotStarted": true,
+              "finishedAt": "2026-10-24T10:10:46.439Z"
+            }
+          ],
+          "errors": [],
+          "role": "destination",
+          "profile": "chromium-desktop",
+          "host": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v24.18.1"
+          },
+          "kind": "desktop-browser",
+          "physical": false,
+          "startedAt": "2026-10-24T10:10:25.402Z",
+          "networkTransport": "Existing fixture contract through Puppeteer HTTP interception; real compiled UI and storage.",
+          "counts": {
+            "pass": 9,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "finalState": {
+            "path": "/pletina/application/index.3afac9986cb53c9f.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "QA Copia Origen"
+            ],
+            "navigation": {
+              "index": 7,
+              "route": {
+                "name": "playlist",
+                "id": 2
+              },
+              "historyLength": 10
+            },
+            "tabs": [],
+            "notices": [],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": false,
+                  "local": false,
+                  "time": 0,
+                  "duration": null,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 0,
+                  "error": null
+                }
+              ],
+              "events": [],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900,
+              "documentWidth": 1440
+            }
+          },
+          "fixture": {
+            "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+            "counts": {
+              "api.deezer.com/chart/0/albums": 1,
+              "api.deezer.com/chart/0/artists": 1,
+              "images.pletina.test/cover.svg": 9,
+              "api.deezer.com/search/track": 1,
+              "api.deezer.com/artist/7/albums": 1,
+              "api.deezer.com/artist/7/related": 1,
+              "api.deezer.com/artist/8/albums": 1
+            },
+            "requests": [
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/artists",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/related",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/8/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              }
+            ]
+          },
+          "contextClosed": true,
+          "finishedAt": "2026-10-24T10:10:46.490Z"
+        }
+      ],
+      "browserVersion": "153.0.8010.52",
+      "browserClosed": true,
+      "counts": {
+        "pass": 10,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    },
+    {
+      "engine": "firefox",
+      "layout": "desktop viewport 1440x900",
+      "build": "a2e6b8da9fb17c07",
+      "checks": [
+        {
+          "context": "source",
+          "name": "setup.open",
+          "startedAt": "2026-10-24T10:10:49.843Z",
+          "status": "pass",
+          "build": "a2e6b8da9fb17c07",
+          "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T10:10:51.371Z"
+        },
+        {
+          "context": "destination",
+          "name": "setup.open",
+          "startedAt": "2026-10-24T10:10:51.661Z",
+          "status": "pass",
+          "build": "a2e6b8da9fb17c07",
+          "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T10:10:52.538Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.source-ui-and-real-file-export",
+          "startedAt": "2026-10-24T10:10:52.538Z",
+          "status": "pass",
+          "file": "synthetic-library-export.json",
+          "bytes": 1738,
+          "sha256": "a7e02069e283cd846c2e1fdc15a6be3dc7b84023f9c6af31c608fb219b064b9d",
+          "sourceCounts": {
+            "albums": 1,
+            "artists": 1,
+            "entries": 3,
+            "episodes": 0,
+            "history": 1,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 2,
+            "tracks": 2,
+            "youtube": 0
+          },
+          "order": [
+            101,
+            102,
+            101
+          ],
+          "actualFileDownload": true,
+          "finishedAt": "2026-10-24T10:11:03.456Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.preview-is-readonly-and-current-playlist-is-preserved",
+          "startedAt": "2026-10-24T10:11:03.458Z",
+          "status": "pass",
+          "before": {
+            "albums": 0,
+            "artists": 0,
+            "entries": 1,
+            "episodes": 0,
+            "history": 0,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 0,
+            "tracks": 1,
+            "youtube": 0
+          },
+          "after": {
+            "albums": 0,
+            "artists": 0,
+            "entries": 1,
+            "episodes": 0,
+            "history": 0,
+            "likes": 1,
+            "meta": 1,
+            "playlists": 1,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 0,
+            "tracks": 1,
+            "youtube": 0
+          },
+          "fingerprint": "94978fdd305a39fc77ddb424d745b3a794818a8379e600eefeed43793e1dd7aa",
+          "previewLabels": [
+            "Favoritos",
+            "Listas",
+            "Canciones en listas",
+            "Discos",
+            "Artistas",
+            "Escuchas del historial",
+            "Pódcasts",
+            "Episodios con progreso"
+          ],
+          "previewValues": [
+            "1",
+            "1",
+            "3",
+            "1",
+            "1",
+            "1",
+            "0",
+            "0"
+          ],
+          "screenshot": "preview-readonly.png",
+          "finishedAt": "2026-10-24T10:11:05.612Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.cancel-and-leave-preview-have-no-ghost-import",
+          "startedAt": "2026-10-24T10:11:05.613Z",
+          "status": "pass",
+          "cancelDiscardedPreview": true,
+          "navigationDiscardedPreview": true,
+          "storageUnchanged": true,
+          "scope": "Leaving a completed file preview; no artificial File.text delay.",
+          "finishedAt": "2026-10-24T10:11:07.170Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-malformed-without-writes",
+          "startedAt": "2026-10-24T10:11:07.173Z",
+          "status": "pass",
+          "fileBytes": 1,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia de seguridad no es válida: JSON ilegible. No se ha cambiado la biblioteca.",
+          "finishedAt": "2026-10-24T10:11:07.239Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-future-version-without-writes",
+          "startedAt": "2026-10-24T10:11:07.241Z",
+          "status": "pass",
+          "fileBytes": 1741,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia de seguridad no es válida: formato o versión no admitidos. No se ha cambiado la biblioteca.",
+          "finishedAt": "2026-10-24T10:11:07.317Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reject-oversized-without-writes",
+          "startedAt": "2026-10-24T10:11:07.318Z",
+          "status": "pass",
+          "fileBytes": 10485761,
+          "storageUnchanged": true,
+          "alert": "No se pudo leer la copia: La copia no puede superar los 10 MB.",
+          "finishedAt": "2026-10-24T10:11:07.745Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.explicit-merge-remaps-playlist-and-keeps-duplicates-and-existing-data",
+          "startedAt": "2026-10-24T10:11:07.746Z",
+          "status": "pass",
+          "originalPlaylistId": 1,
+          "importedPlaylistId": 2,
+          "order": [
+            101,
+            102,
+            101
+          ],
+          "counts": {
+            "albums": 1,
+            "artists": 1,
+            "entries": 4,
+            "episodes": 0,
+            "history": 1,
+            "likes": 2,
+            "meta": 2,
+            "playlists": 2,
+            "podcasts": 0,
+            "progress": 0,
+            "sources": 2,
+            "tracks": 3,
+            "youtube": 0
+          },
+          "existingDataPreserved": true,
+          "downloadStoreUnchanged": true,
+          "downloadCacheUnchanged": true,
+          "downloadDataWasInitiallyEmpty": true,
+          "screenshot": "merge-success.png",
+          "finishedAt": "2026-10-24T10:11:08.074Z"
+        },
+        {
+          "context": "destination",
+          "name": "backup.reload-shows-both-playlists-with-correct-order-and-no-playback",
+          "startedAt": "2026-10-24T10:11:08.075Z",
+          "status": "pass",
+          "originalAndImportedVisible": true,
+          "duplicatesInOrder": true,
+          "reloadPersisted": true,
+          "playbackNotStarted": true,
+          "finishedAt": "2026-10-24T10:11:09.467Z"
+        }
+      ],
+      "errors": [],
+      "contexts": [
+        {
+          "engine": "firefox",
+          "build": "a2e6b8da9fb17c07",
+          "checks": [
+            {
+              "name": "setup.open",
+              "startedAt": "2026-10-24T10:10:49.843Z",
+              "status": "pass",
+              "build": "a2e6b8da9fb17c07",
+              "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "physicalPlatform": false,
+              "finishedAt": "2026-10-24T10:10:51.371Z"
+            }
+          ],
+          "errors": [],
+          "role": "source",
+          "profile": "chromium-desktop",
+          "host": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v24.18.1"
+          },
+          "kind": "desktop-browser",
+          "physical": false,
+          "startedAt": "2026-10-24T10:10:48.540Z",
+          "counts": {
+            "pass": 1,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "finalState": {
+            "path": "/pletina/application/index.3afac9986cb53c9f.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "Copia de seguridad",
+              "Guardar una copia",
+              "Importar una copia"
+            ],
+            "navigation": {
+              "index": 5,
+              "route": {
+                "name": "library-backup"
+              },
+              "historyLength": 6
+            },
+            "tabs": [],
+            "notices": [],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": true,
+                  "local": false,
+                  "time": 6.458639,
+                  "duration": 12,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 4,
+                  "error": null
+                }
+              ],
+              "events": [
+                {
+                  "type": "waiting",
+                  "index": 0,
+                  "at": 4646,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "loadstart",
+                  "index": 0,
+                  "at": 4646,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "durationchange",
+                  "index": 0,
+                  "at": 4651,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "loadedmetadata",
+                  "index": 0,
+                  "at": 4652,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "playing",
+                  "index": 0,
+                  "at": 4724,
+                  "time": 0,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 4790,
+                  "time": 0.019138,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5075,
+                  "time": 0.303083,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5358,
+                  "time": 0.586371,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5644,
+                  "time": 0.872312,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 5927,
+                  "time": 1.155419,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6210,
+                  "time": 1.438367,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6493,
+                  "time": 1.720702,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 6775,
+                  "time": 2.003333,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7058,
+                  "time": 2.285963,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7341,
+                  "time": 2.569365,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7624,
+                  "time": 2.852108,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 7913,
+                  "time": 3.140226,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8195,
+                  "time": 3.423718,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8478,
+                  "time": 3.706712,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 8761,
+                  "time": 3.989478,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9044,
+                  "time": 4.272018,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9327,
+                  "time": 4.55492,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9609,
+                  "time": 4.837142,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 9895,
+                  "time": 5.123333,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10177,
+                  "time": 5.405827,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10461,
+                  "time": 5.68941,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 10744,
+                  "time": 5.972539,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 11027,
+                  "time": 6.2556,
+                  "paused": false,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "timeupdate",
+                  "index": 0,
+                  "at": 11265,
+                  "time": 6.458639,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                },
+                {
+                  "type": "pause",
+                  "index": 0,
+                  "at": 11265,
+                  "time": 6.458639,
+                  "paused": true,
+                  "hidden": false,
+                  "error": null,
+                  "local": false
+                }
+              ],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900,
+              "documentWidth": 1440
+            }
+          },
+          "fixture": {
+            "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+            "counts": {
+              "api.deezer.com/chart/0/albums": 1,
+              "api.deezer.com/chart/0/artists": 1,
+              "api.deezer.com/search/track": 2,
+              "images.pletina.test/cover.svg": 1,
+              "music.youtube.com/youtubei/v1/search": 2,
+              "www.youtube.com/youtubei/v1/search": 1,
+              "www.youtube.com/youtubei/v1/player": 2,
+              "fixture.googlevideo.com/audio/qaAudio001a": 1,
+              "api.deezer.com/album/11": 1,
+              "api.deezer.com/album/11/tracks": 1,
+              "api.deezer.com/artist/7": 1,
+              "api.deezer.com/artist/7/albums": 1,
+              "api.deezer.com/artist/7/top": 1
+            },
+            "requests": [
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/artists",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "music.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/player",
+                "method": "POST",
+                "type": "fetch",
+                "operation": "player",
+                "videoId": "qaAudio001a",
+                "clientName": "VISIONOS"
+              },
+              {
+                "host": "fixture.googlevideo.com",
+                "path": "/audio/qaAudio001a",
+                "method": "GET",
+                "type": "media"
+              },
+              {
+                "host": "music.youtube.com",
+                "path": "/youtubei/v1/search",
+                "method": "POST",
+                "type": "fetch"
+              },
+              {
+                "host": "www.youtube.com",
+                "path": "/youtubei/v1/player",
+                "method": "POST",
+                "type": "fetch",
+                "operation": "player",
+                "videoId": "qaAudio002b",
+                "clientName": "VISIONOS"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/album/11",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/album/11/tracks",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/top",
+                "method": "GET",
+                "type": "script"
+              }
+            ]
+          },
+          "contextClosed": true,
+          "finishedAt": "2026-10-24T10:11:09.507Z"
+        },
+        {
+          "engine": "firefox",
+          "build": "a2e6b8da9fb17c07",
+          "checks": [
+            {
+              "name": "setup.open",
+              "startedAt": "2026-10-24T10:10:51.661Z",
+              "status": "pass",
+              "build": "a2e6b8da9fb17c07",
+              "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "physicalPlatform": false,
+              "finishedAt": "2026-10-24T10:10:52.538Z"
+            },
+            {
+              "name": "backup.source-ui-and-real-file-export",
+              "startedAt": "2026-10-24T10:10:52.538Z",
+              "status": "pass",
+              "file": "synthetic-library-export.json",
+              "bytes": 1738,
+              "sha256": "a7e02069e283cd846c2e1fdc15a6be3dc7b84023f9c6af31c608fb219b064b9d",
+              "sourceCounts": {
+                "albums": 1,
+                "artists": 1,
+                "entries": 3,
+                "episodes": 0,
+                "history": 1,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 2,
+                "tracks": 2,
+                "youtube": 0
+              },
+              "order": [
+                101,
+                102,
+                101
+              ],
+              "actualFileDownload": true,
+              "finishedAt": "2026-10-24T10:11:03.456Z"
+            },
+            {
+              "name": "backup.preview-is-readonly-and-current-playlist-is-preserved",
+              "startedAt": "2026-10-24T10:11:03.458Z",
+              "status": "pass",
+              "before": {
+                "albums": 0,
+                "artists": 0,
+                "entries": 1,
+                "episodes": 0,
+                "history": 0,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 0,
+                "tracks": 1,
+                "youtube": 0
+              },
+              "after": {
+                "albums": 0,
+                "artists": 0,
+                "entries": 1,
+                "episodes": 0,
+                "history": 0,
+                "likes": 1,
+                "meta": 1,
+                "playlists": 1,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 0,
+                "tracks": 1,
+                "youtube": 0
+              },
+              "fingerprint": "94978fdd305a39fc77ddb424d745b3a794818a8379e600eefeed43793e1dd7aa",
+              "previewLabels": [
+                "Favoritos",
+                "Listas",
+                "Canciones en listas",
+                "Discos",
+                "Artistas",
+                "Escuchas del historial",
+                "Pódcasts",
+                "Episodios con progreso"
+              ],
+              "previewValues": [
+                "1",
+                "1",
+                "3",
+                "1",
+                "1",
+                "1",
+                "0",
+                "0"
+              ],
+              "screenshot": "preview-readonly.png",
+              "finishedAt": "2026-10-24T10:11:05.612Z"
+            },
+            {
+              "name": "backup.cancel-and-leave-preview-have-no-ghost-import",
+              "startedAt": "2026-10-24T10:11:05.613Z",
+              "status": "pass",
+              "cancelDiscardedPreview": true,
+              "navigationDiscardedPreview": true,
+              "storageUnchanged": true,
+              "scope": "Leaving a completed file preview; no artificial File.text delay.",
+              "finishedAt": "2026-10-24T10:11:07.170Z"
+            },
+            {
+              "name": "backup.reject-malformed-without-writes",
+              "startedAt": "2026-10-24T10:11:07.173Z",
+              "status": "pass",
+              "fileBytes": 1,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia de seguridad no es válida: JSON ilegible. No se ha cambiado la biblioteca.",
+              "finishedAt": "2026-10-24T10:11:07.239Z"
+            },
+            {
+              "name": "backup.reject-future-version-without-writes",
+              "startedAt": "2026-10-24T10:11:07.241Z",
+              "status": "pass",
+              "fileBytes": 1741,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia de seguridad no es válida: formato o versión no admitidos. No se ha cambiado la biblioteca.",
+              "finishedAt": "2026-10-24T10:11:07.317Z"
+            },
+            {
+              "name": "backup.reject-oversized-without-writes",
+              "startedAt": "2026-10-24T10:11:07.318Z",
+              "status": "pass",
+              "fileBytes": 10485761,
+              "storageUnchanged": true,
+              "alert": "No se pudo leer la copia: La copia no puede superar los 10 MB.",
+              "finishedAt": "2026-10-24T10:11:07.745Z"
+            },
+            {
+              "name": "backup.explicit-merge-remaps-playlist-and-keeps-duplicates-and-existing-data",
+              "startedAt": "2026-10-24T10:11:07.746Z",
+              "status": "pass",
+              "originalPlaylistId": 1,
+              "importedPlaylistId": 2,
+              "order": [
+                101,
+                102,
+                101
+              ],
+              "counts": {
+                "albums": 1,
+                "artists": 1,
+                "entries": 4,
+                "episodes": 0,
+                "history": 1,
+                "likes": 2,
+                "meta": 2,
+                "playlists": 2,
+                "podcasts": 0,
+                "progress": 0,
+                "sources": 2,
+                "tracks": 3,
+                "youtube": 0
+              },
+              "existingDataPreserved": true,
+              "downloadStoreUnchanged": true,
+              "downloadCacheUnchanged": true,
+              "downloadDataWasInitiallyEmpty": true,
+              "screenshot": "merge-success.png",
+              "finishedAt": "2026-10-24T10:11:08.074Z"
+            },
+            {
+              "name": "backup.reload-shows-both-playlists-with-correct-order-and-no-playback",
+              "startedAt": "2026-10-24T10:11:08.075Z",
+              "status": "pass",
+              "originalAndImportedVisible": true,
+              "duplicatesInOrder": true,
+              "reloadPersisted": true,
+              "playbackNotStarted": true,
+              "finishedAt": "2026-10-24T10:11:09.467Z"
+            }
+          ],
+          "errors": [],
+          "role": "destination",
+          "profile": "chromium-desktop",
+          "host": {
+            "platform": "win32",
+            "arch": "x64",
+            "node": "v24.18.1"
+          },
+          "kind": "desktop-browser",
+          "physical": false,
+          "startedAt": "2026-10-24T10:10:51.372Z",
+          "counts": {
+            "pass": 9,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "finalState": {
+            "path": "/pletina/application/index.3afac9986cb53c9f.html",
+            "online": true,
+            "title": "Pletina",
+            "headings": [
+              "QA Copia Origen"
+            ],
+            "navigation": {
+              "index": 7,
+              "route": {
+                "name": "playlist",
+                "id": 2
+              },
+              "historyLength": 8
+            },
+            "tabs": [],
+            "notices": [],
+            "audio": {
+              "instances": [
+                {
+                  "index": 0,
+                  "srcPresent": false,
+                  "local": false,
+                  "time": 0,
+                  "duration": null,
+                  "paused": true,
+                  "ended": false,
+                  "muted": false,
+                  "volume": 0.8,
+                  "readyState": 0,
+                  "error": null
+                }
+              ],
+              "events": [],
+              "handlers": [
+                "play",
+                "pause",
+                "previoustrack",
+                "nexttrack",
+                "seekto"
+              ]
+            },
+            "viewport": {
+              "width": 1440,
+              "height": 900,
+              "documentWidth": 1440
+            }
+          },
+          "fixture": {
+            "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+            "counts": {
+              "api.deezer.com/chart/0/albums": 1,
+              "api.deezer.com/chart/0/artists": 1,
+              "api.deezer.com/search/track": 1,
+              "images.pletina.test/cover.svg": 2,
+              "api.deezer.com/artist/7/albums": 1,
+              "api.deezer.com/artist/7/related": 1,
+              "api.deezer.com/artist/8/albums": 1
+            },
+            "requests": [
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/chart/0/artists",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/search/track",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/7/related",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "api.deezer.com",
+                "path": "/artist/8/albums",
+                "method": "GET",
+                "type": "script"
+              },
+              {
+                "host": "images.pletina.test",
+                "path": "/cover.svg",
+                "method": "GET",
+                "type": "image"
+              }
+            ]
+          },
+          "contextClosed": true,
+          "finishedAt": "2026-10-24T10:11:09.555Z"
+        }
+      ],
+      "browserVersion": "153.0",
+      "browserClosed": true,
+      "counts": {
+        "pass": 10,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      }
+    }
+  ],
+  "errors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-24T10:11:10.021Z",
+  "counts": {
+    "pass": 20,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "allPassed": true,
+  "sourceBindingsUnchanged": true
+}

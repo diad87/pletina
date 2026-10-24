@@ -1,0 +1,126 @@
+{
+  "testedAt": "2026-10-24T10:28:35.953Z",
+  "expectedBuild": "bbdda9c0c16f145e",
+  "host": {
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "scope": "Installed browser app lifecycle in a disposable desktop profile, controlled by CDP; not the native install dialog or a physical mobile device.",
+  "sourceSha256": "cf0ca64d4697c26ae22bfe24f79fbe2d62e0a32a3590f8364861eac77fd32c91",
+  "profile": "/tmp/pletina-pwa-install-Tk6VDC",
+  "executablePath": "/mnt/d/tmp/pletina-crossplatform-a2-linux-chromium/chrome-nosandbox.sh",
+  "flags": [
+    "--enable-unsafe-extension-debugging",
+    "--remote-debugging-pipe",
+    "--no-sandbox"
+  ],
+  "nativeInstallDialogVerified": false,
+  "osLauncherShortcutVerified": false,
+  "checks": [
+    {
+      "name": "Public manifest and installability",
+      "pass": true
+    },
+    {
+      "name": "App registered by browser",
+      "pass": true
+    },
+    {
+      "name": "Standalone window opens app with navigation and persistent desktop library",
+      "pass": true
+    },
+    {
+      "name": "Browser restart preserves installation, app launch and origin storage",
+      "pass": true
+    },
+    {
+      "name": "Installed app reloads without network after browser restart",
+      "pass": true
+    },
+    {
+      "name": "Only the disposable-profile installation is removed",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "browser": "Chrome/151.0.7922.34",
+  "manifest": {
+    "id": "https://diad87.github.io/",
+    "startURL": "https://diad87.github.io/pletina/",
+    "scope": "https://diad87.github.io/pletina/"
+  },
+  "osAppState": {
+    "badgeCount": 0,
+    "fileHandlers": []
+  },
+  "launches": [
+    {
+      "targetId": "2BE1DA1762D1C8FF781786B2077676B1",
+      "url": "https://diad87.github.io/pletina/",
+      "standalone": true
+    },
+    {
+      "targetId": "170F5CFDC1E6D5B5FDBA58B6A4F94A68",
+      "url": "https://diad87.github.io/pletina/application/index.4f630678dc94c542.html",
+      "standalone": true
+    }
+  ],
+  "navigation": [
+    "Inicio",
+    "Buscar",
+    "Podcasts",
+    "Tu biblioteca"
+  ],
+  "osAppStateAfterBrowserRestart": {
+    "badgeCount": 0,
+    "fileHandlers": []
+  },
+  "networkProof": {
+    "online": {
+      "url": "https://diad87.github.io/pletina-network-probe-7b374fc2-da6c-42a8-8858-169387c7de1f",
+      "outsideApplicationScope": true,
+      "response": {
+        "status": 404,
+        "fromServiceWorker": false,
+        "fromCache": false
+      },
+      "requestFailure": null,
+      "fetch": {
+        "resolved": true,
+        "status": 404
+      },
+      "navigatorOnline": true
+    },
+    "beforeReload": {
+      "url": "https://diad87.github.io/pletina-network-probe-08230074-c816-4c7f-b5cd-48ebbe289c23",
+      "outsideApplicationScope": true,
+      "response": null,
+      "requestFailure": "net::ERR_INTERNET_DISCONNECTED",
+      "fetch": {
+        "resolved": false,
+        "name": "TypeError",
+        "message": "Failed to fetch"
+      },
+      "navigatorOnline": false
+    },
+    "reload": {
+      "status": 200,
+      "fromServiceWorker": true
+    },
+    "afterReload": {
+      "url": "https://diad87.github.io/pletina-network-probe-f95c006e-23ca-4940-b91c-f3c4b823248f",
+      "outsideApplicationScope": true,
+      "response": null,
+      "requestFailure": "net::ERR_INTERNET_DISCONNECTED",
+      "fetch": {
+        "resolved": false,
+        "name": "TypeError",
+        "message": "Failed to fetch"
+      },
+      "navigatorOnline": true
+    }
+  },
+  "navigatorOfflineSignalLimitation": "navigator.onLine is true after reload despite native ERR_INTERNET_DISCONNECTED and no response for an uncached out-of-scope URL. This test verifies the network outage directly; it does not verify an OS airplane-mode signal.",
+  "resourcesClosed": true,
+  "passed": true
+}

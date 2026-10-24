@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-24T10:02:39.351Z",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "kind": "platform-preflight",
+  "featureE2E": false,
+  "physicalPlatformsTested": false,
+  "engines": {
+    "chromium": {
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "path": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+      "present": true
+    },
+    "webkit": {
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "path": "D:\\tmp\\pletina-e2e-browsers\\webkit-2336\\Playwright.exe",
+      "present": true
+    },
+    "firefox": {
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "path": "D:\\tmp\\pletina-e2e-browsers\\firefox-1538\\firefox\\firefox.exe",
+      "present": true
+    }
+  },
+  "targets": [
+    {
+      "id": "chromium-android-layout",
+      "engine": "chromium",
+      "kind": "desktop-emulation",
+      "device": "Pixel 7",
+      "physical": false,
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "scope": "Engine preflight only; feature cases have separate results."
+    },
+    {
+      "id": "webkit-iphone-layout",
+      "engine": "webkit",
+      "kind": "desktop-emulation",
+      "device": "iPhone 13",
+      "physical": false,
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "scope": "Engine preflight only; feature cases have separate results."
+    },
+    {
+      "id": "chromium-desktop",
+      "engine": "chromium",
+      "kind": "desktop-browser",
+      "physical": false,
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "scope": "Engine preflight only; feature cases have separate results."
+    },
+    {
+      "id": "firefox-desktop",
+      "engine": "firefox",
+      "kind": "desktop-browser",
+      "physical": false,
+      "optional": true,
+      "status": "blocked",
+      "reason": "Launch was disabled; file inventory only.",
+      "scope": "Engine preflight only; feature cases have separate results."
+    },
+    {
+      "id": "android-physical",
+      "kind": "physical-device",
+      "physical": true,
+      "status": "blocked",
+      "reason": "No physical Android runner/evidence configured. Device connection was not inspected and no device automation was attempted."
+    },
+    {
+      "id": "iphone-physical",
+      "kind": "physical-device",
+      "physical": true,
+      "status": "blocked",
+      "reason": "No physical iPhone runner/evidence configured. Windows cannot run Apple iOS Simulator."
+    },
+    {
+      "id": "android-auto",
+      "kind": "car-integration",
+      "physical": false,
+      "status": "unsupported",
+      "reason": "This static PWA does not expose the native Android MediaLibraryService/MediaBrowserService required for Android Auto media integration. The APK source is a separate target, not exercised here."
+    },
+    {
+      "id": "carplay",
+      "kind": "car-integration",
+      "physical": false,
+      "status": "unsupported",
+      "reason": "This static PWA is not a signed iOS CarPlay app with the audio entitlement and CarPlay scenes. A browser viewport cannot substitute for that integration."
+    }
+  ],
+  "tools": {
+    "androidSdk": [],
+    "androidCommandsExecuted": [],
+    "xcode": {
+      "supportedHost": false,
+      "inspected": false,
+      "applicationPresent": false
+    },
+    "nativeAndroidSource": {
+      "mediaLibraryService": true,
+      "automotiveMetadata": true,
+      "mediaBrowserIntent": true,
+      "sourceInspectionOnly": true
+    },
+    "physicalDeviceConnectionChecked": false
+  },
+  "constraints": [
+    "No adb, Android emulator, DHU or device daemon is launched.",
+    "Desktop emulation is not physical Android/iPhone, installed iOS PWA, Android Auto or CarPlay."
+  ],
+  "playwrightVersion": "1.62.1",
+  "cleanup": {
+    "serverClosed": true,
+    "browserProfiles": "Disposable Playwright contexts; every launched browser closed in finally."
+  },
+  "counts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 6,
+    "unsupported": 2
+  },
+  "allRequestedPlatformsVerified": false,
+  "finishedAt": "2026-10-24T10:02:39.659Z"
+}

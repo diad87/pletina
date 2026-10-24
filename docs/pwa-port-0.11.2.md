@@ -1,7 +1,11 @@
 # Port web de Pletina 0.11.2
 
+<!-- crossplatform-audit-summary:start -->
+**Auditoría del 24 de octubre, versión publicada `bbdda9c0c16f145e`.** [Informe multiplataforma](pwa-crossplatform-audit-2026-10-24.md): **956/956** pruebas de lógica, tipos sin errores/avisos, **115 comprobaciones de navegador correctas** (incluyen preparativos; dos confirmaciones nativas fuera del runner) y **6/6 de instalación por CDP** tanto en Windows como en Linux/WSL. Cada resultado conserva su versión y ámbito; no se suman reejecuciones. El usuario confirma en su Xiaomi el contador con horas y audio de pódcast tras bloquear 30 segundos. Mac e iPhone actuales siguen pendientes de equipo físico; tampoco se acreditan Auto/CarPlay ni descargas bajo suspensión del sistema. La migración con la app cerrada pasa; el intento de actualización con la app abierta sigue sin acreditarse.
+<!-- crossplatform-audit-summary:end -->
+
 <!-- podcast-controls-a2-summary:start -->
-**Actual: `a2e6b8da9fb17c07`, publicada y verificada**, fuente `0f930563fb29b3f4d61c75ab09fbf135c1ee9882`. [Controles del pódcast](pwa-podcast-controls.md): play circular sin compresión, descarga con área fija de 44 × 44 px y fila de controles que permite saltos; el mensaje queda debajo en móvil. Inspección visual antes/después en seis anchos (320–1280 px), tipos sin errores/avisos y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-a2e6b8da9fb17c07.json). [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40081086271). La inspección usa Firefox de escritorio y respuestas HTTP controladas; no acredita un móvil físico ni reproducción. Las 14 comprobaciones de selección de canciones corresponden a la entrega anterior.
+**Anterior: `a2e6b8da9fb17c07`, publicada y verificada**, fuente `0f930563fb29b3f4d61c75ab09fbf135c1ee9882`. [Controles del pódcast](pwa-podcast-controls.md): play circular sin compresión, descarga con área fija de 44 × 44 px y fila de controles que permite saltos; el mensaje queda debajo en móvil. Inspección visual antes/después en seis anchos (320–1280 px), tipos sin errores/avisos y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-a2e6b8da9fb17c07.json). [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40081086271). La inspección usa Firefox de escritorio y respuestas HTTP controladas; no acredita un móvil físico ni reproducción. Las 14 comprobaciones de selección de canciones corresponden a la entrega anterior.
 <!-- podcast-controls-a2-summary:end -->
 
 ## Historial anterior a a2e6b8da9fb17c07

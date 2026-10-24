@@ -1,0 +1,359 @@
+{
+  "engine": "chromium",
+  "build": "a2e6b8da9fb17c07",
+  "checks": [
+    {
+      "name": "setup.open",
+      "startedAt": "2026-10-24T10:10:25.541Z",
+      "status": "pass",
+      "build": "a2e6b8da9fb17c07",
+      "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "physicalPlatform": false,
+      "finishedAt": "2026-10-24T10:10:26.407Z"
+    },
+    {
+      "name": "backup.source-ui-and-real-file-export",
+      "startedAt": "2026-10-24T10:10:26.408Z",
+      "status": "pass",
+      "file": "synthetic-library-export.json",
+      "bytes": 1738,
+      "sha256": "52e1fc6e24a1a4773ff72278fe9208bf725d864d618ce76393ac62d63796b578",
+      "sourceCounts": {
+        "albums": 1,
+        "artists": 1,
+        "entries": 3,
+        "episodes": 0,
+        "history": 1,
+        "likes": 1,
+        "meta": 1,
+        "playlists": 1,
+        "podcasts": 0,
+        "progress": 0,
+        "sources": 2,
+        "tracks": 2,
+        "youtube": 0
+      },
+      "order": [
+        101,
+        102,
+        101
+      ],
+      "actualFileDownload": true,
+      "finishedAt": "2026-10-24T10:10:37.361Z"
+    },
+    {
+      "name": "backup.preview-is-readonly-and-current-playlist-is-preserved",
+      "startedAt": "2026-10-24T10:10:37.361Z",
+      "status": "pass",
+      "before": {
+        "albums": 0,
+        "artists": 0,
+        "entries": 1,
+        "episodes": 0,
+        "history": 0,
+        "likes": 1,
+        "meta": 1,
+        "playlists": 1,
+        "podcasts": 0,
+        "progress": 0,
+        "sources": 0,
+        "tracks": 1,
+        "youtube": 0
+      },
+      "after": {
+        "albums": 0,
+        "artists": 0,
+        "entries": 1,
+        "episodes": 0,
+        "history": 0,
+        "likes": 1,
+        "meta": 1,
+        "playlists": 1,
+        "podcasts": 0,
+        "progress": 0,
+        "sources": 0,
+        "tracks": 1,
+        "youtube": 0
+      },
+      "fingerprint": "2896a50a7232dac3e3d8ea9972e4afc7fbf8a95908807964162e1f7ef03c75ed",
+      "previewLabels": [
+        "Favoritos",
+        "Listas",
+        "Canciones en listas",
+        "Discos",
+        "Artistas",
+        "Escuchas del historial",
+        "Pódcasts",
+        "Episodios con progreso"
+      ],
+      "previewValues": [
+        "1",
+        "1",
+        "3",
+        "1",
+        "1",
+        "1",
+        "0",
+        "0"
+      ],
+      "screenshot": "preview-readonly.png",
+      "finishedAt": "2026-10-24T10:10:39.569Z"
+    },
+    {
+      "name": "backup.cancel-and-leave-preview-have-no-ghost-import",
+      "startedAt": "2026-10-24T10:10:39.571Z",
+      "status": "pass",
+      "cancelDiscardedPreview": true,
+      "navigationDiscardedPreview": true,
+      "storageUnchanged": true,
+      "scope": "Leaving a completed file preview; no artificial File.text delay.",
+      "finishedAt": "2026-10-24T10:10:41.141Z"
+    },
+    {
+      "name": "backup.reject-malformed-without-writes",
+      "startedAt": "2026-10-24T10:10:41.144Z",
+      "status": "pass",
+      "fileBytes": 1,
+      "storageUnchanged": true,
+      "alert": "No se pudo leer la copia: La copia de seguridad no es válida: JSON ilegible. No se ha cambiado la biblioteca.",
+      "finishedAt": "2026-10-24T10:10:41.171Z"
+    },
+    {
+      "name": "backup.reject-future-version-without-writes",
+      "startedAt": "2026-10-24T10:10:41.172Z",
+      "status": "pass",
+      "fileBytes": 1741,
+      "storageUnchanged": true,
+      "alert": "No se pudo leer la copia: La copia de seguridad no es válida: formato o versión no admitidos. No se ha cambiado la biblioteca.",
+      "finishedAt": "2026-10-24T10:10:41.190Z"
+    },
+    {
+      "name": "backup.reject-oversized-without-writes",
+      "startedAt": "2026-10-24T10:10:41.191Z",
+      "status": "pass",
+      "fileBytes": 10485761,
+      "storageUnchanged": true,
+      "alert": "No se pudo leer la copia: La copia no puede superar los 10 MB.",
+      "finishedAt": "2026-10-24T10:10:44.745Z"
+    },
+    {
+      "name": "backup.explicit-merge-remaps-playlist-and-keeps-duplicates-and-existing-data",
+      "startedAt": "2026-10-24T10:10:44.746Z",
+      "status": "pass",
+      "originalPlaylistId": 1,
+      "importedPlaylistId": 2,
+      "order": [
+        101,
+        102,
+        101
+      ],
+      "counts": {
+        "albums": 1,
+        "artists": 1,
+        "entries": 4,
+        "episodes": 0,
+        "history": 1,
+        "likes": 2,
+        "meta": 2,
+        "playlists": 2,
+        "podcasts": 0,
+        "progress": 0,
+        "sources": 2,
+        "tracks": 3,
+        "youtube": 0
+      },
+      "existingDataPreserved": true,
+      "downloadStoreUnchanged": true,
+      "downloadCacheUnchanged": true,
+      "downloadDataWasInitiallyEmpty": true,
+      "screenshot": "merge-success.png",
+      "finishedAt": "2026-10-24T10:10:45.062Z"
+    },
+    {
+      "name": "backup.reload-shows-both-playlists-with-correct-order-and-no-playback",
+      "startedAt": "2026-10-24T10:10:45.063Z",
+      "status": "pass",
+      "originalAndImportedVisible": true,
+      "duplicatesInOrder": true,
+      "reloadPersisted": true,
+      "playbackNotStarted": true,
+      "finishedAt": "2026-10-24T10:10:46.439Z"
+    }
+  ],
+  "errors": [],
+  "role": "destination",
+  "profile": "chromium-desktop",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "kind": "desktop-browser",
+  "physical": false,
+  "startedAt": "2026-10-24T10:10:25.402Z",
+  "networkTransport": "Existing fixture contract through Puppeteer HTTP interception; real compiled UI and storage.",
+  "counts": {
+    "pass": 9,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "finalState": {
+    "path": "/pletina/application/index.3afac9986cb53c9f.html",
+    "online": true,
+    "title": "Pletina",
+    "headings": [
+      "QA Copia Origen"
+    ],
+    "navigation": {
+      "index": 7,
+      "route": {
+        "name": "playlist",
+        "id": 2
+      },
+      "historyLength": 10
+    },
+    "tabs": [],
+    "notices": [],
+    "audio": {
+      "instances": [
+        {
+          "index": 0,
+          "srcPresent": false,
+          "local": false,
+          "time": 0,
+          "duration": null,
+          "paused": true,
+          "ended": false,
+          "muted": false,
+          "volume": 0.8,
+          "readyState": 0,
+          "error": null
+        }
+      ],
+      "events": [],
+      "handlers": [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto"
+      ]
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    }
+  },
+  "fixture": {
+    "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+    "counts": {
+      "api.deezer.com/chart/0/albums": 1,
+      "api.deezer.com/chart/0/artists": 1,
+      "images.pletina.test/cover.svg": 9,
+      "api.deezer.com/search/track": 1,
+      "api.deezer.com/artist/7/albums": 1,
+      "api.deezer.com/artist/7/related": 1,
+      "api.deezer.com/artist/8/albums": 1
+    },
+    "requests": [
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/artists",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/related",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/8/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      }
+    ]
+  },
+  "contextClosed": true,
+  "finishedAt": "2026-10-24T10:10:46.490Z"
+}

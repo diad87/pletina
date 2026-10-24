@@ -1,5 +1,9 @@
 # Pletina PWA: port de la APK 0.11.2
 
+<!-- crossplatform-audit-summary:start -->
+**Auditoría del 24 de octubre, versión publicada `bbdda9c0c16f145e`.** [Informe multiplataforma](pwa-crossplatform-audit-2026-10-24.md): **956/956** pruebas de lógica, tipos sin errores/avisos, **115 comprobaciones de navegador correctas** (incluyen preparativos; dos confirmaciones nativas fuera del runner) y **6/6 de instalación por CDP** tanto en Windows como en Linux/WSL. Cada resultado conserva su versión y ámbito; no se suman reejecuciones. El usuario confirma en su Xiaomi el contador con horas y audio de pódcast tras bloquear 30 segundos. Mac e iPhone actuales siguen pendientes de equipo físico; tampoco se acreditan Auto/CarPlay ni descargas bajo suspensión del sistema. La migración con la app cerrada pasa; el intento de actualización con la app abierta sigue sin acreditarse.
+<!-- crossplatform-audit-summary:end -->
+
 <!-- media-text-summary:start -->
 **Actual: `bbdda9c0c16f145e`, publicada y verificada**, fuente `5a6967c`. [Letras y transcripciones](pwa-media-text.md) en Sonando ahora: LRCLIB, texto RSS publicado, seguimiento y salto por fragmentos, estados de ausencia/instrumental/error y reintento. Conserva la mejora concurrente de duraciones de más de una hora (`af7f849`). [Validación](../artifacts/pwa-port/media-text-release-bbdda9c0c16f145e.json): tipos **0 errores/0 avisos**, **956/956 pruebas de lógica**, **18/18 comprobaciones** en Chromium de escritorio y diseño móvil de 320 px, y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-bbdda9c0c16f145e.json). [Publicación correcta](https://github.com/diad87/pletina/actions/runs/40085844089). LRCLIB comprobado con CORS real; las transcripciones necesitan que el proveedor permita acceso web. Sin nuevas pruebas de teléfonos físicos ni pantalla apagada.
 

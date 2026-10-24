@@ -1,0 +1,7493 @@
+{
+  "profile": "chromium-desktop",
+  "engine": "chromium",
+  "checks": [
+    {
+      "name": "install.minimal: initial entry avoids all application assets",
+      "startedAt": "2026-10-24T10:17:10.347Z",
+      "status": "pass",
+      "applicationRequests": 0,
+      "cachedApplicationFiles": [],
+      "realServiceWorkerController": true,
+      "finishedAt": "2026-10-24T10:17:10.538Z"
+    },
+    {
+      "name": "install.manifest: stable scope, standalone identity and icon resources",
+      "startedAt": "2026-10-24T10:17:10.540Z",
+      "status": "pass",
+      "stableIdentity": true,
+      "iconSizes": [
+        "192x192",
+        "512x512"
+      ],
+      "finishedAt": "2026-10-24T10:17:10.550Z"
+    },
+    {
+      "name": "install.guide: platform instructions open and close",
+      "startedAt": "2026-10-24T10:17:10.551Z",
+      "status": "pass",
+      "guideVerifiedForUserAgent": true,
+      "OSConfirmationClaimed": false,
+      "finishedAt": "2026-10-24T10:17:10.877Z"
+    },
+    {
+      "name": "install.offline: cached entry reloads with the network disconnected",
+      "startedAt": "2026-10-24T10:17:10.878Z",
+      "status": "pass",
+      "cachedInstaller": true,
+      "applicationNotDownloaded": true,
+      "disconnectionMode": "browser-offline",
+      "navigatorOfflineExpected": true,
+      "physicalAirplaneModeClaimed": false,
+      "finishedAt": "2026-10-24T10:17:10.996Z"
+    },
+    {
+      "name": "install.native-prompt: actual phone installation",
+      "startedAt": "2026-10-24T10:17:10.997Z",
+      "status": "unsupported",
+      "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone.",
+      "finishedAt": "2026-10-24T10:17:10.998Z"
+    },
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "startedAt": "2026-10-24T10:17:10.999Z",
+      "status": "pass",
+      "build": "dced66a0c3e715b5",
+      "applicationPath": "/pletina/application/index.d9be072506e825c6.html",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "physicalPlatform": false,
+      "finishedAt": "2026-10-24T10:17:11.703Z"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "startedAt": "2026-10-24T10:17:11.704Z",
+      "status": "pass",
+      "firstSong": "Canción QA Uno",
+      "interceptedTrackSearches": 1,
+      "playbackStarted": false,
+      "finishedAt": "2026-10-24T10:17:13.210Z"
+    },
+    {
+      "name": "library.navigation: four tabs, browser history, reload and viewport",
+      "startedAt": "2026-10-24T10:17:13.217Z",
+      "status": "pass",
+      "sameURL": true,
+      "restoredQuery": true,
+      "viewport": {
+        "width": 1440,
+        "document": 1440,
+        "height": 900,
+        "bottom": null,
+        "navHeight": null
+      },
+      "finishedAt": "2026-10-24T10:17:14.619Z"
+    },
+    {
+      "name": "library.discovery: home cards and empty history",
+      "startedAt": "2026-10-24T10:17:14.622Z",
+      "status": "pass",
+      "discoveryCards": true,
+      "initiallyEmptyHistory": true,
+      "finishedAt": "2026-10-24T10:17:15.716Z"
+    },
+    {
+      "name": "library.search: tracks, artists, albums and expanded results",
+      "startedAt": "2026-10-24T10:17:15.717Z",
+      "status": "pass",
+      "tracks": 12,
+      "artists": 2,
+      "albums": 3,
+      "titleStartedTrackId": 101,
+      "titleOpenedSelectedAlbum": true,
+      "artistMenuOpenedWithoutPlayback": true,
+      "pausedBeforeHistoryThreshold": true,
+      "historyRemainedEmpty": true,
+      "audioAfterArtist": [
+        {
+          "paused": true,
+          "time": 0.314013,
+          "duration": 12,
+          "error": null
+        }
+      ],
+      "finishedAt": "2026-10-24T10:17:21.123Z"
+    },
+    {
+      "name": "library.search: natural song de artist retries the empty literal query",
+      "startedAt": "2026-10-24T10:17:21.124Z",
+      "status": "pass",
+      "naturalQuery": "Canción QA Uno de Artista QA Uno",
+      "selectedTrackId": 101,
+      "title": "Canción QA Uno",
+      "interceptedTrackRequests": 2,
+      "artistOpenedWithoutPlayback": true,
+      "finishedAt": "2026-10-24T10:17:23.156Z"
+    },
+    {
+      "name": "library.search: empty results and partial-provider retry remain explicit",
+      "startedAt": "2026-10-24T10:17:23.157Z",
+      "status": "pass",
+      "emptyState": true,
+      "partialResultsUsable": true,
+      "retriedFailedSection": true,
+      "finishedAt": "2026-10-24T10:17:24.606Z"
+    },
+    {
+      "name": "library.artist: detail, favorites and discography filters",
+      "startedAt": "2026-10-24T10:17:24.607Z",
+      "status": "pass",
+      "artist": "Artista QA Uno",
+      "favorite": true,
+      "filters": [
+        "Todo",
+        "Álbumes1",
+        "Sencillos y EP1"
+      ],
+      "finishedAt": "2026-10-24T10:17:26.437Z"
+    },
+    {
+      "name": "library.album: detail, save, pin and library persistence",
+      "startedAt": "2026-10-24T10:17:26.438Z",
+      "status": "pass",
+      "album": "Disco QA Uno",
+      "tracks": 4,
+      "savedAndPinnedAcrossReload": true,
+      "finishedAt": "2026-10-24T10:17:29.948Z"
+    },
+    {
+      "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+      "startedAt": "2026-10-24T10:17:29.949Z",
+      "status": "pass",
+      "menuBackClosedOnlyOverlay": true,
+      "songArtistAndAlbumNavigation": true,
+      "pinnedTileAndRecentArtistOpened": true,
+      "directHomeUnpin": true,
+      "surpriseEnabledOnlyWithSavedAlbum": true,
+      "finishedAt": "2026-10-24T10:17:37.879Z"
+    },
+    {
+      "name": "library.favorites: like, search, clear and remove one song",
+      "startedAt": "2026-10-24T10:17:37.880Z",
+      "status": "pass",
+      "accentInsensitiveSearch": true,
+      "removedOnlyOne": true,
+      "remaining": "Canción QA Uno",
+      "finishedAt": "2026-10-24T10:17:41.162Z"
+    },
+    {
+      "name": "library.playlists: create, rename/cancel and pin",
+      "startedAt": "2026-10-24T10:17:41.163Z",
+      "status": "pass",
+      "playlistName": "E2E Biblioteca Renombrada",
+      "renameCancel": true,
+      "pinned": true,
+      "finishedAt": "2026-10-24T10:17:43.229Z"
+    },
+    {
+      "name": "library.playlists: append album, duplicate entries, filter and reorder",
+      "startedAt": "2026-10-24T10:17:43.230Z",
+      "status": "pass",
+      "duplicateEntriesIndependent": true,
+      "filteredReorderDisabled": true,
+      "reorderedAndPersisted": true,
+      "remaining": 5,
+      "finishedAt": "2026-10-24T10:17:56.121Z"
+    },
+    {
+      "name": "library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates",
+      "startedAt": "2026-10-24T10:17:56.125Z",
+      "status": "pass",
+      "anonymousGuestToken": true,
+      "realReaderAndMatcher": true,
+      "persistedQueryContract": true,
+      "explicitNextOffsetPages": [
+        0,
+        2
+      ],
+      "found": 3,
+      "omitted": 1,
+      "noWritesBeforeSave": true,
+      "orderedDuplicateEntries": true,
+      "persistedAcrossReload": true,
+      "temporaryPlaylistDeleted": true,
+      "providerSource": "Synthetic intercepted HTTP only",
+      "finishedAt": "2026-10-24T10:18:01.222Z"
+    },
+    {
+      "name": "library.spotify-in-flight: cancelling the held token response preserves the next review",
+      "startedAt": "2026-10-24T10:18:01.223Z",
+      "status": "pass",
+      "heldStage": "token",
+      "cancelledBeforeMatching": true,
+      "nextReviewPreserved": true,
+      "noGhostPlaylist": true,
+      "noWritesBeforeSave": true,
+      "reloadUnchanged": true,
+      "finishedAt": "2026-10-24T10:18:03.609Z"
+    },
+    {
+      "name": "library.spotify-in-flight: cancelling the held playlist response preserves the next review",
+      "startedAt": "2026-10-24T10:18:03.611Z",
+      "status": "pass",
+      "heldStage": "playlist",
+      "cancelledBeforeMatching": true,
+      "nextReviewPreserved": true,
+      "noGhostPlaylist": true,
+      "noWritesBeforeSave": true,
+      "reloadUnchanged": true,
+      "finishedAt": "2026-10-24T10:18:05.828Z"
+    },
+    {
+      "name": "library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation",
+      "startedAt": "2026-10-24T10:18:05.829Z",
+      "status": "pass",
+      "heldStage": "playlist",
+      "destination": "home",
+      "navigationPreserved": true,
+      "noCatalogMatching": true,
+      "noGhostPlaylist": true,
+      "reopenedImportEmpty": true,
+      "reloadUnchanged": true,
+      "finishedAt": "2026-10-24T10:18:08.536Z"
+    },
+    {
+      "name": "library.csv: explicit Spotify denial, invalid CSV, retry, review and save",
+      "startedAt": "2026-10-24T10:18:08.537Z",
+      "status": "pass",
+      "found": 3,
+      "omitted": 1,
+      "retriedProviderFailure": true,
+      "repeatedEntriesPreserved": true,
+      "spotifyDenied403Visible": true,
+      "expectedHandledNetworkErrors": 0,
+      "finishedAt": "2026-10-24T10:18:11.986Z"
+    },
+    {
+      "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+      "startedAt": "2026-10-24T10:18:11.989Z",
+      "status": "pass",
+      "oversizedFileRejected": true,
+      "allOmittedCannotSave": true,
+      "blankNameCannotSave": true,
+      "importAnotherReset": true,
+      "cancelledPausedImport": true,
+      "createdPlaylist": false,
+      "finishedAt": "2026-10-24T10:18:21.581Z"
+    },
+    {
+      "name": "library.csv-in-flight: cancel ignores the old response while a new import reaches review",
+      "startedAt": "2026-10-24T10:18:21.582Z",
+      "status": "pass",
+      "heldCatalogResponseConsumed": true,
+      "oldImportCancelled": true,
+      "newReviewPreserved": true,
+      "matchingRequests": 2,
+      "remainingOldTracksRequested": false,
+      "persistedLibraryUnchanged": true,
+      "reloadUnchanged": true,
+      "finishedAt": "2026-10-24T10:18:22.961Z"
+    },
+    {
+      "name": "library.csv-in-flight: leaving the view prevents late matching, saving or navigation",
+      "startedAt": "2026-10-24T10:18:22.978Z",
+      "status": "pass",
+      "heldCatalogResponseConsumed": true,
+      "navigationPreserved": true,
+      "destination": "home",
+      "matchingRequests": 1,
+      "remainingOldTracksRequested": false,
+      "reopenedImportEmpty": true,
+      "persistedLibraryUnchanged": true,
+      "reloadUnchanged": true,
+      "finishedAt": "2026-10-24T10:18:25.041Z"
+    },
+    {
+      "name": "library.csv-storage: a real transaction abort rolls back partial save and permits retry",
+      "startedAt": "2026-10-24T10:18:25.042Z",
+      "status": "pass",
+      "fault": {
+        "database": "pletina-web-library",
+        "store": "entries",
+        "attempts": 1,
+        "successfulNativeWrites": 1,
+        "transactionAborts": 1
+      },
+      "realTransactionRollback": true,
+      "noLateNavigationOnFailure": true,
+      "reviewPreserved": true,
+      "retrySavedReviewedTracks": true,
+      "retryPersistedAcrossReload": true,
+      "temporaryPlaylistDeleted": true,
+      "finishedAt": "2026-10-24T10:18:28.246Z"
+    },
+    {
+      "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+      "startedAt": "2026-10-24T10:18:28.247Z",
+      "status": "pass",
+      "listedCandidateChosen": true,
+      "invalidInputRejected": true,
+      "manualChoiceRemembered": true,
+      "selected": "Canción QA Tres",
+      "finishedAt": "2026-10-24T10:18:32.690Z"
+    },
+    {
+      "name": "library.youtube: preview, edit, save/update and remove personal link",
+      "startedAt": "2026-10-24T10:18:32.692Z",
+      "status": "pass",
+      "invalidLinkRejected": true,
+      "changeLinkResetReview": true,
+      "blankTitleCannotSave": true,
+      "editedMetadata": true,
+      "sameVideoUpdatedWithoutDuplicate": true,
+      "removed": true,
+      "finishedAt": "2026-10-24T10:18:35.594Z"
+    },
+    {
+      "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+      "startedAt": "2026-10-24T10:18:35.595Z",
+      "status": "fail",
+      "error": "locator.scrollIntoViewIfNeeded: Timeout 14990.332999999999ms exceeded.\nCall log:\n  - attempting scroll into view action\n    2 × waiting for element to be stable\n      - element is not visible\n    - retrying scroll into view action\n    - waiting 20ms\n    2 × waiting for element to be stable\n      - element is not visible\n    - retrying scroll into view action\n      - waiting 100ms\n    28 × waiting for element to be stable\n       - element is not visible\n     - retrying scroll into view action\n       - waiting 500ms\n",
+      "state": {
+        "path": "/pletina/application/index.d9be072506e825c6.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Historial"
+        ],
+        "navigation": {
+          "index": 45,
+          "route": {
+            "name": "history"
+          },
+          "historyLength": 48
+        },
+        "tabs": [],
+        "notices": [
+          "Quitada de Canciones de YouTube. Se conserva en tus playlists y favoritos."
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 0.343552,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            },
+            {
+              "index": 1,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 86282,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 86282,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 86286,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 86286,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 86295,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 86562,
+              "time": 0.220176,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 86696,
+              "time": 0.343552,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 86696,
+              "time": 0.343552,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 1,
+              "at": 87222,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 1,
+              "at": 87232,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 1,
+              "at": 87232,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "documentWidth": 1440
+        }
+      },
+      "screenshot": "30-library-youtube-edited-metadata-survives-old-playback-copies-and-downl.png",
+      "finishedAt": "2026-10-24T10:18:56.052Z"
+    },
+    {
+      "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+      "startedAt": "2026-10-24T10:18:56.055Z",
+      "status": "pass",
+      "languageFilters": [
+        "es",
+        "all",
+        "en"
+      ],
+      "rssEpisodes": 2,
+      "savedAcrossReload": true,
+      "rssLeftSavedForMediaScenarios": true,
+      "finishedAt": "2026-10-24T10:19:03.699Z"
+    },
+    {
+      "name": "library.persistence: saved artist/album and pin removal survive reload",
+      "startedAt": "2026-10-24T10:19:03.700Z",
+      "status": "pass",
+      "artistRemoved": true,
+      "albumRemoved": true,
+      "albumUnpinned": true,
+      "finishedAt": "2026-10-24T10:19:05.940Z"
+    },
+    {
+      "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+      "startedAt": "2026-10-24T10:19:05.941Z",
+      "status": "pass",
+      "cancelKeptList": true,
+      "deletedPlaylistAndPin": true,
+      "importedPlaylistKeptForMediaScenarios": "E2E CSV Duplicados",
+      "finishedAt": "2026-10-24T10:19:08.320Z"
+    },
+    {
+      "name": "library.contextual-playlist: create from a song and delete the temporary list",
+      "startedAt": "2026-10-24T10:19:08.322Z",
+      "status": "pass",
+      "createdFromTrackMenu": true,
+      "firstTrackPreserved": true,
+      "temporaryListDeleted": true,
+      "finishedAt": "2026-10-24T10:19:11.441Z"
+    },
+    {
+      "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+      "startedAt": "2026-10-24T10:19:11.443Z",
+      "status": "pass",
+      "injectedHttpStatus": 503,
+      "failedFeedRequests": 2,
+      "retryFeedRequests": 2,
+      "recoveredRssEpisodes": 2,
+      "youtubeFallbackUsed": false,
+      "genuineEmptyIsNotAnError": true,
+      "realReloadClearedMemoryCache": true,
+      "finishedAt": "2026-10-24T10:19:16.477Z"
+    },
+    {
+      "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+      "startedAt": "2026-10-24T10:19:16.480Z",
+      "status": "pass",
+      "viewports": [
+        {
+          "width": 390,
+          "height": 844,
+          "documentWidth": 390,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ],
+          "dock": {
+            "top": 780.0625,
+            "bottom": 844,
+            "height": 63.9375
+          },
+          "sidebar": false,
+          "query": "QA Media"
+        },
+        {
+          "width": 1100,
+          "height": 650,
+          "documentWidth": 1100,
+          "tabs": [],
+          "sidebar": true,
+          "query": "QA Media"
+        },
+        {
+          "width": 700,
+          "height": 390,
+          "documentWidth": 700,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ],
+          "dock": {
+            "top": 326.0625,
+            "bottom": 390,
+            "height": 63.9375
+          },
+          "sidebar": false,
+          "query": "QA Media"
+        },
+        {
+          "width": 390,
+          "height": 650,
+          "documentWidth": 390,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ],
+          "dock": {
+            "top": 586.0625,
+            "bottom": 650,
+            "height": 63.9375
+          },
+          "sidebar": false,
+          "query": "QA Media"
+        }
+      ],
+      "physicalRotationClaimed": false,
+      "finishedAt": "2026-10-24T10:19:18.579Z"
+    },
+    {
+      "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+      "startedAt": "2026-10-24T10:19:18.580Z",
+      "status": "pass",
+      "syntheticLifecycleSignals": true,
+      "realReload": true,
+      "physicalProcessRestoreClaimed": false,
+      "finishedAt": "2026-10-24T10:19:21.154Z"
+    },
+    {
+      "name": "responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard",
+      "startedAt": "2026-10-24T10:19:21.180Z",
+      "status": "pass",
+      "syntheticViewportMetrics": true,
+      "physicalKeyboardClaimed": false,
+      "samples": [
+        {
+          "step": "focus-without-occlusion",
+          "innerHeight": 844,
+          "visualHeight": 844,
+          "scale": 1,
+          "hidden": false,
+          "display": "flex",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "small-height-change",
+          "innerHeight": 844,
+          "visualHeight": 754,
+          "scale": 1,
+          "hidden": false,
+          "display": "flex",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "focused-entry-with-occlusion",
+          "innerHeight": 844,
+          "visualHeight": 506,
+          "scale": 1,
+          "hidden": true,
+          "display": "none",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "height-recovery-with-focus-retained",
+          "innerHeight": 844,
+          "visualHeight": 844,
+          "scale": 1,
+          "hidden": false,
+          "display": "flex",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "pinch-zoom-is-not-a-keyboard",
+          "innerHeight": 844,
+          "visualHeight": 422,
+          "scale": 2,
+          "hidden": false,
+          "display": "flex",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "occlusion-after-zoom-reset",
+          "innerHeight": 844,
+          "visualHeight": 506,
+          "scale": 1,
+          "hidden": true,
+          "display": "none",
+          "searchFocused": true,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        },
+        {
+          "step": "blur-with-occlusion-still-reported",
+          "innerHeight": 844,
+          "visualHeight": 506,
+          "scale": 1,
+          "hidden": false,
+          "display": "flex",
+          "searchFocused": false,
+          "tabs": [
+            "Inicio",
+            "Buscar",
+            "Podcasts",
+            "Tu biblioteca"
+          ]
+        }
+      ],
+      "descriptorsRestored": true,
+      "finishedAt": "2026-10-24T10:19:21.761Z"
+    },
+    {
+      "name": "responsive.keyboard-navigation: Tab and Enter reach named searches with a current destination",
+      "startedAt": "2026-10-24T10:19:21.763Z",
+      "status": "pass",
+      "keyboardActions": [
+        "Tab",
+        "Enter",
+        "typing",
+        "Escape"
+      ],
+      "currentDestination": "Podcasts",
+      "screenReaderDeviceClaimed": false,
+      "finishedAt": "2026-10-24T10:19:22.766Z"
+    },
+    {
+      "name": "responsive.source-dialog-accessibility: keyboard validation exposes and clears its associated error",
+      "startedAt": "2026-10-24T10:19:22.768Z",
+      "status": "pass",
+      "nativeDialogClosedByEscape": true,
+      "labelledInputAndError": true,
+      "screenReaderDeviceClaimed": false,
+      "finishedAt": "2026-10-24T10:19:24.962Z"
+    },
+    {
+      "name": "desktop.layout",
+      "startedAt": "2026-10-24T10:19:25.407Z",
+      "status": "pass",
+      "layout": "actual 1440px desktop sidebar and PlayerBar",
+      "viewportEmulationOfPhone": false,
+      "finishedAt": "2026-10-24T10:19:25.416Z"
+    },
+    {
+      "name": "media.search-song-row-starts-selected-audio-and-opens-album-with-one-touch",
+      "startedAt": "2026-10-24T10:19:25.420Z",
+      "status": "pass",
+      "homonymousTitle": "Ni, Ni, Ni! QA",
+      "songId": 216,
+      "albumId": 44,
+      "artistId": 7,
+      "input": "mouse in desktop profile",
+      "titleHit": {
+        "width": 88.046875,
+        "height": 20.296875,
+        "targetIsInside": true,
+        "rowIndex": "0",
+        "albumCard": false,
+        "buttonClass": null
+      },
+      "coverHit": {
+        "width": 40,
+        "height": 40,
+        "targetIsInside": true,
+        "rowIndex": "0",
+        "albumCard": false,
+        "buttonClass": null
+      },
+      "bylineHit": {
+        "width": 88.046875,
+        "height": 18.84375,
+        "targetIsInside": true,
+        "rowIndex": "1",
+        "albumCard": false,
+        "buttonClass": null
+      },
+      "rowBodyHit": {
+        "width": 489.140625,
+        "height": 40,
+        "targetIsInside": true,
+        "rowIndex": "0",
+        "albumCard": false,
+        "buttonClass": null
+      },
+      "desktopAlbumHit": {
+        "width": 77.5625,
+        "height": 15,
+        "targetIsInside": true,
+        "rowIndex": "0",
+        "albumCard": false,
+        "buttonClass": null
+      },
+      "titleInputEvents": [
+        {
+          "type": "pointerdown",
+          "trusted": true,
+          "pointerType": "mouse",
+          "rowIndex": "0"
+        },
+        {
+          "type": "click",
+          "trusted": true,
+          "pointerType": "mouse",
+          "rowIndex": "0"
+        }
+      ],
+      "songTargetsStartedAudioAndOpenedAlbum": true,
+      "samePlaybackAudio": true,
+      "currentPlayingReselectionKeptSourceAndPosition": true,
+      "reselectionInputEvents": [
+        {
+          "type": "pointerdown",
+          "trusted": true,
+          "pointerType": "mouse",
+          "rowIndex": "0"
+        },
+        {
+          "type": "click",
+          "trusted": true,
+          "pointerType": "mouse",
+          "rowIndex": "0"
+        }
+      ],
+      "titleAndCoverStartedWithoutSecondPlayGesture": true,
+      "explicitArtistRoute": {
+        "name": "artist",
+        "id": 7
+      },
+      "bylineAndAlbumTextPlayedTheirSong": true,
+      "menuAndHeartDidNotPlayOrOpenAlbum": true,
+      "keyboardMenuAndHeartWereIsolated": true,
+      "keyboardEnterSelectedId": 217,
+      "keyboardSpaceSelectedId": 216,
+      "explicitAlbumMenuRoute": {
+        "name": "album",
+        "id": 44
+      },
+      "explicitAlbumCardRoute": {
+        "name": "album",
+        "id": 44
+      },
+      "fixtureOnly": true,
+      "hardTrackAvailabilityClaimed": false,
+      "reportedUserTapCauseReproduced": false,
+      "scope": "Controlled homonymous song/album in the compiled PWA. Touch-enabled Chrome/WebKit use trusted touch with search focused; a song-row title, cover, byline, body or desktop album text starts that exact song and opens its album in one gesture. Context menu and heart remain separate actions, and Enter starts the focused song. Physical Android keyboard behavior and real recording availability are separate checks.",
+      "finishedAt": "2026-10-24T10:19:50.475Z"
+    },
+    {
+      "name": "desktop.transport",
+      "startedAt": "2026-10-24T10:19:50.480Z",
+      "status": "pass",
+      "audio": {
+        "title": "Canción QA Uno",
+        "selectedId": 101,
+        "audio": [
+          {
+            "index": 0,
+            "time": 0.16139,
+            "duration": 12,
+            "paused": false,
+            "seeking": false,
+            "volume": 0.8,
+            "error": null,
+            "source": "/audio/qaAudio001a",
+            "local": false
+          }
+        ],
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "metadata": "Canción QA Uno",
+        "audioEvents": [
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          }
+        ],
+        "width": 1440,
+        "mobileDock": false
+      },
+      "actualDesktopControls": true,
+      "sameAudioElement": true,
+      "finishedAt": "2026-10-24T10:19:54.721Z"
+    },
+    {
+      "name": "desktop.shuffle-repeat",
+      "startedAt": "2026-10-24T10:19:54.723Z",
+      "status": "pass",
+      "preservedCurrent": 101,
+      "queueMembershipUnchanged": true,
+      "repeatCycle": [
+        "all",
+        "one",
+        "off"
+      ],
+      "finishedAt": "2026-10-24T10:19:58.772Z"
+    },
+    {
+      "name": "desktop.media-session",
+      "startedAt": "2026-10-24T10:19:58.774Z",
+      "status": "pass",
+      "capturedBrowserHandlers": true,
+      "nativeOSControlsClaimed": false,
+      "after": {
+        "title": "Canción QA Dos",
+        "selectedId": 102,
+        "audio": [
+          {
+            "index": 0,
+            "time": 0.163156,
+            "duration": 12,
+            "paused": false,
+            "seeking": false,
+            "volume": 0.8,
+            "error": null,
+            "source": "/audio/qaAudio002b",
+            "local": false
+          }
+        ],
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "metadata": "Canción QA Dos",
+        "audioEvents": [
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          }
+        ],
+        "width": 1440,
+        "mobileDock": false
+      },
+      "finishedAt": "2026-10-24T10:20:02.066Z"
+    },
+    {
+      "name": "desktop.volume",
+      "startedAt": "2026-10-24T10:20:02.068Z",
+      "status": "fail",
+      "error": "page.waitForFunction: Timeout 15000ms exceeded.",
+      "state": {
+        "path": "/pletina/application/index.d9be072506e825c6.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Disco QA Uno"
+        ],
+        "navigation": {
+          "index": 104,
+          "route": {
+            "name": "album",
+            "id": 11
+          },
+          "historyLength": 50
+        },
+        "tabs": [],
+        "notices": [],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 3.443783,
+              "duration": 12,
+              "paused": false,
+              "ended": false,
+              "muted": true,
+              "volume": 0.01,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 169465,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 169480,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 169725,
+              "time": 0.214613,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 169975,
+              "time": 0.454372,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 169975,
+              "time": 0.454372,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 170978,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 170980,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 170980,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 170981,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 170982,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 170993,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 171242,
+              "time": 0.22142,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 171337,
+              "time": 0.320469,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 171337,
+              "time": 0.320469,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 171343,
+              "time": 0.327324,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeking",
+              "index": 0,
+              "at": 171360,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 171360,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 171360,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "seeked",
+              "index": 0,
+              "at": 171360,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 171361,
+              "time": 3,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 171366,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 171366,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 171368,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 171368,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 171378,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 171628,
+              "time": 0.230406,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 171725,
+              "time": 0.315405,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 171725,
+              "time": 0.315405,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 172786,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 172788,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 172788,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 172801,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 172801,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 172815,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 173068,
+              "time": 0.231219,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 173341,
+              "time": 0.534462,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 173606,
+              "time": 0.802599,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 173870,
+              "time": 1.063482,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 174131,
+              "time": 1.33314,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 174392,
+              "time": 1.596408,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 174659,
+              "time": 1.864375,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 174926,
+              "time": 2.128927,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 175192,
+              "time": 2.391163,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 175461,
+              "time": 2.656413,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 175726,
+              "time": 2.917294,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 175994,
+              "time": 3.200635,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 176257,
+              "time": 3.462589,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 176520,
+              "time": 3.722574,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 176785,
+              "time": 3.982512,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 177060,
+              "time": 4.254635,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 177326,
+              "time": 4.5167,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 177590,
+              "time": 4.782786,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 177853,
+              "time": 5.058582,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178116,
+              "time": 5.319251,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178378,
+              "time": 5.577709,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178643,
+              "time": 5.845765,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178910,
+              "time": 6.107978,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179177,
+              "time": 6.371064,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179444,
+              "time": 6.635109,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179708,
+              "time": 6.91253,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179972,
+              "time": 7.177982,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180244,
+              "time": 7.449033,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180511,
+              "time": 7.714938,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180778,
+              "time": 7.978021,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181040,
+              "time": 8.242733,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181311,
+              "time": 8.514676,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181578,
+              "time": 8.783093,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181839,
+              "time": 9.042632,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182101,
+              "time": 9.302714,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182361,
+              "time": 9.557474,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182628,
+              "time": 9.824924,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182895,
+              "time": 10.089368,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183162,
+              "time": 10.354381,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183429,
+              "time": 10.624625,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183695,
+              "time": 10.892339,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183962,
+              "time": 11.156367,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184223,
+              "time": 11.422536,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184496,
+              "time": 11.692565,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184762,
+              "time": 11.956411,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184812,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 184813,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "ended",
+              "index": 0,
+              "at": 184814,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 184816,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 184817,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 184819,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 184819,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 184825,
+              "time": 0.000339,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185090,
+              "time": 0.22014,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185346,
+              "time": 0.469504,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185612,
+              "time": 0.734296,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185879,
+              "time": 1.003936,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186146,
+              "time": 1.268972,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186414,
+              "time": 1.533443,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186680,
+              "time": 1.80037,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186941,
+              "time": 2.061605,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187213,
+              "time": 2.345524,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187480,
+              "time": 2.613607,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187747,
+              "time": 2.877494,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188008,
+              "time": 3.136784,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188272,
+              "time": 3.400247,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "documentWidth": 1440
+        }
+      },
+      "screenshot": "46-desktop-volume.png",
+      "finishedAt": "2026-10-24T10:20:18.918Z"
+    },
+    {
+      "name": "desktop.queue",
+      "startedAt": "2026-10-24T10:20:18.920Z",
+      "status": "pass",
+      "desktopHTMLDragAndDrop": true,
+      "duplicatesAllowed": true,
+      "removePlayConsumeSaveClear": true,
+      "finishedAt": "2026-10-24T10:20:26.196Z"
+    },
+    {
+      "name": "desktop.loading-status-and-cancel",
+      "startedAt": "2026-10-24T10:20:26.202Z",
+      "status": "pass",
+      "actualHeldHTTPResponse": true,
+      "sixSecondFeedbackClockAdvanced": true,
+      "cancellationPreventedLatePlay": true,
+      "delivery": {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaPick0002b",
+        "clientName": "VISIONOS",
+        "playerGate": "delivered"
+      },
+      "audio": {
+        "title": "Selección QA B",
+        "selectedId": 195,
+        "audio": [
+          {
+            "index": 0,
+            "time": 0.170193,
+            "duration": 12,
+            "paused": false,
+            "seeking": false,
+            "volume": 0.01,
+            "error": null,
+            "source": "/audio/qaPick0002b",
+            "local": false
+          }
+        ],
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "metadata": "Selección QA B",
+        "audioEvents": [
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "ended",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "pause",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          }
+        ],
+        "width": 1440,
+        "mobileDock": false
+      },
+      "finishedAt": "2026-10-24T10:20:28.635Z"
+    },
+    {
+      "name": "desktop.sleep-timer",
+      "startedAt": "2026-10-24T10:20:28.638Z",
+      "status": "pass",
+      "customValidation": true,
+      "oneMinuteDeadline": true,
+      "clock": "Browser clock advanced; no real OS sleep claim.",
+      "finishedAt": "2026-10-24T10:20:30.928Z"
+    },
+    {
+      "name": "desktop.download-album-offline",
+      "startedAt": "2026-10-24T10:20:30.931Z",
+      "status": "fail",
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ Set(5) {\n- Set(4) {\n    'Canción QA Cuatro',\n    'Canción QA Dos',\n    'Canción QA Tres',\n    'Canción QA Uno',\n+   'E2E YouTube Ficha Corregida'\n  }\n",
+      "state": {
+        "path": "/pletina/application/index.d9be072506e825c6.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Descargas",
+          "En este navegador · 5 canciones · 0 MB"
+        ],
+        "navigation": {
+          "index": 115,
+          "route": {
+            "name": "downloads"
+          },
+          "historyLength": 50
+        },
+        "tabs": [],
+        "notices": [
+          "4 canciones descargadas"
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": false,
+              "time": 1.201221,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": true,
+              "volume": 0.01,
+              "readyState": 4,
+              "error": null
+            },
+            {
+              "index": 1,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            },
+            {
+              "index": 2,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            },
+            {
+              "index": 3,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            },
+            {
+              "index": 4,
+              "srcPresent": false,
+              "local": true,
+              "time": 0,
+              "duration": null,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 1,
+              "readyState": 0,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178116,
+              "time": 5.319251,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178378,
+              "time": 5.577709,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178643,
+              "time": 5.845765,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 178910,
+              "time": 6.107978,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179177,
+              "time": 6.371064,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179444,
+              "time": 6.635109,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179708,
+              "time": 6.91253,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 179972,
+              "time": 7.177982,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180244,
+              "time": 7.449033,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180511,
+              "time": 7.714938,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 180778,
+              "time": 7.978021,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181040,
+              "time": 8.242733,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181311,
+              "time": 8.514676,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181578,
+              "time": 8.783093,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 181839,
+              "time": 9.042632,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182101,
+              "time": 9.302714,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182361,
+              "time": 9.557474,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182628,
+              "time": 9.824924,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 182895,
+              "time": 10.089368,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183162,
+              "time": 10.354381,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183429,
+              "time": 10.624625,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183695,
+              "time": 10.892339,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 183962,
+              "time": 11.156367,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184223,
+              "time": 11.422536,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184496,
+              "time": 11.692565,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184762,
+              "time": 11.956411,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 184812,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 184813,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "ended",
+              "index": 0,
+              "at": 184814,
+              "time": 12,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 184816,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 184817,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 184819,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 184819,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 184825,
+              "time": 0.000339,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185090,
+              "time": 0.22014,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185346,
+              "time": 0.469504,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185612,
+              "time": 0.734296,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 185879,
+              "time": 1.003936,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186146,
+              "time": 1.268972,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186414,
+              "time": 1.533443,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186680,
+              "time": 1.80037,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 186941,
+              "time": 2.061605,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187213,
+              "time": 2.345524,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187480,
+              "time": 2.613607,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 187747,
+              "time": 2.877494,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188008,
+              "time": 3.136784,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188272,
+              "time": 3.400247,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188543,
+              "time": 3.670706,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 188764,
+              "time": 3.882977,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 188764,
+              "time": 3.882977,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 189925,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 189929,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 189929,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 189932,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 189933,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 189953,
+              "time": 0.000419,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 190190,
+              "time": 0.195573,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 190448,
+              "time": 0.440457,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 190448,
+              "time": 0.440457,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 193502,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 193502,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 193504,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 193504,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 193512,
+              "time": 0.000293,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 193785,
+              "time": 0.221007,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 194050,
+              "time": 0.481408,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 194050,
+              "time": 0.481408,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 197385,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 204012,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 204012,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 204016,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 204016,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 204024,
+              "time": 0.000309,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 204277,
+              "time": 0.205947,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 204382,
+              "time": 0.300019,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 204383,
+              "time": 0.300019,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 205439,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 205441,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 205442,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 205444,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 205444,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 205462,
+              "time": 0.000364,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 205711,
+              "time": 0.200056,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 205985,
+              "time": 0.472853,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 206249,
+              "time": 0.746987,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 206517,
+              "time": 1.010817,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 266749,
+              "time": 1.201221,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 266749,
+              "time": 1.201221,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": false
+            },
+            {
+              "type": "loadstart",
+              "index": 1,
+              "at": 268280,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 1,
+              "at": 268283,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 1,
+              "at": 268283,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 2,
+              "at": 268296,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 2,
+              "at": 268298,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 2,
+              "at": 268298,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 3,
+              "at": 268309,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 3,
+              "at": 268311,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 3,
+              "at": 268311,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 4,
+              "at": 268351,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 4,
+              "at": 268353,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 4,
+              "at": 268353,
+              "time": 0,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "documentWidth": 1440
+        }
+      },
+      "screenshot": "50-desktop-download-album-offline.png",
+      "finishedAt": "2026-10-24T10:20:33.224Z"
+    },
+    {
+      "name": "desktop.podcast-progress-resume",
+      "startedAt": "2026-10-24T10:20:33.229Z",
+      "status": "pass",
+      "episodeId": 750000000000001,
+      "savedPosition": 8.113935,
+      "sameEpisodeAfterReload": true,
+      "resumed": {
+        "title": "Episodio QA Uno",
+        "selectedId": 750000000000001,
+        "audio": [
+          {
+            "index": 0,
+            "time": 8.113935,
+            "duration": 90,
+            "paused": false,
+            "seeking": false,
+            "volume": 0.01,
+            "error": null,
+            "source": "/episode-0.m4a",
+            "local": false
+          }
+        ],
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ],
+        "metadata": "Episodio QA Uno",
+        "audioEvents": [
+          {
+            "type": "waiting",
+            "index": 0
+          },
+          {
+            "type": "loadstart",
+            "index": 0
+          },
+          {
+            "type": "durationchange",
+            "index": 0
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0
+          },
+          {
+            "type": "seeking",
+            "index": 0
+          },
+          {
+            "type": "timeupdate",
+            "index": 0
+          },
+          {
+            "type": "seeked",
+            "index": 0
+          },
+          {
+            "type": "playing",
+            "index": 0
+          }
+        ],
+        "width": 1440,
+        "mobileDock": false
+      },
+      "finishedAt": "2026-10-24T10:20:36.685Z"
+    },
+    {
+      "name": "library.history: recorded plays, cancel clear, clear and reload",
+      "startedAt": "2026-10-24T10:20:36.689Z",
+      "status": "blocked",
+      "reason": "Recording history requires the preceding real-playback scenario to pass.",
+      "prerequisite": "media.selection-html-audio",
+      "prerequisiteStatus": "not-run",
+      "finishedAt": "2026-10-24T10:20:36.689Z"
+    }
+  ],
+  "errors": [],
+  "build": "dced66a0c3e715b5",
+  "providerMode": "fixture",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "puppeteerVersion": "25.14.0",
+  "browserVersion": "153.0.8010.52",
+  "kind": "desktop-browser",
+  "physical": false,
+  "startedAt": "2026-10-24T10:17:10.198Z",
+  "networkTransport": "Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.",
+  "counts": {
+    "pass": 47,
+    "fail": 3,
+    "blocked": 1,
+    "unsupported": 1
+  },
+  "offlineTransitions": [
+    {
+      "requestedOffline": true,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": true,
+      "expectedNavigatorOnline": false,
+      "before": true,
+      "after": false,
+      "at": "2026-10-24T10:17:10.894Z"
+    },
+    {
+      "requestedOffline": false,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": false,
+      "expectedNavigatorOnline": true,
+      "before": false,
+      "after": true,
+      "at": "2026-10-24T10:17:10.996Z"
+    }
+  ],
+  "youtubeMetadataFailure": {
+    "stage": "favorite and playlist from the old current item",
+    "error": "locator.scrollIntoViewIfNeeded: Timeout 14990.332999999999ms exceeded.\nCall log:\n\u001b[2m  - attempting scroll into view action\u001b[22m\n\u001b[2m    2 × waiting for element to be stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying scroll into view action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying scroll into view action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    28 × waiting for element to be stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying scroll into view action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n",
+    "state": {
+      "path": "/pletina/application/index.d9be072506e825c6.html",
+      "online": true,
+      "title": "Pletina",
+      "headings": [
+        "Canciones de YouTube",
+        "Tus canciones"
+      ],
+      "navigation": {
+        "index": 44,
+        "route": {
+          "name": "youtube-tracks"
+        },
+        "historyLength": 48
+      },
+      "tabs": [],
+      "notices": [],
+      "audio": {
+        "instances": [
+          {
+            "index": 0,
+            "srcPresent": true,
+            "local": false,
+            "time": 0.343552,
+            "duration": 12,
+            "paused": true,
+            "ended": false,
+            "muted": false,
+            "volume": 0.8,
+            "readyState": 4,
+            "error": null
+          },
+          {
+            "index": 1,
+            "srcPresent": false,
+            "local": true,
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "muted": false,
+            "volume": 1,
+            "readyState": 0,
+            "error": null
+          }
+        ],
+        "events": [
+          {
+            "type": "waiting",
+            "index": 0,
+            "at": 86282,
+            "time": 0,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "loadstart",
+            "index": 0,
+            "at": 86282,
+            "time": 0,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "durationchange",
+            "index": 0,
+            "at": 86286,
+            "time": 0,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 0,
+            "at": 86286,
+            "time": 0,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "playing",
+            "index": 0,
+            "at": 86295,
+            "time": 0,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "timeupdate",
+            "index": 0,
+            "at": 86562,
+            "time": 0.220176,
+            "paused": false,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "timeupdate",
+            "index": 0,
+            "at": 86696,
+            "time": 0.343552,
+            "paused": true,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "pause",
+            "index": 0,
+            "at": 86696,
+            "time": 0.343552,
+            "paused": true,
+            "hidden": false,
+            "error": null,
+            "local": false
+          },
+          {
+            "type": "loadstart",
+            "index": 1,
+            "at": 87222,
+            "time": 0,
+            "paused": true,
+            "hidden": false,
+            "error": null,
+            "local": true
+          },
+          {
+            "type": "durationchange",
+            "index": 1,
+            "at": 87232,
+            "time": 0,
+            "paused": true,
+            "hidden": false,
+            "error": null,
+            "local": true
+          },
+          {
+            "type": "loadedmetadata",
+            "index": 1,
+            "at": 87232,
+            "time": 0,
+            "paused": true,
+            "hidden": false,
+            "error": null,
+            "local": true
+          }
+        ],
+        "handlers": [
+          "play",
+          "pause",
+          "previoustrack",
+          "nexttrack",
+          "seekto"
+        ]
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1440
+      }
+    }
+  },
+  "keyboardOcclusion": {
+    "syntheticViewportMetrics": true,
+    "physicalKeyboardClaimed": false,
+    "samples": [
+      {
+        "step": "focus-without-occlusion",
+        "innerHeight": 844,
+        "visualHeight": 844,
+        "scale": 1,
+        "hidden": false,
+        "display": "flex",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "small-height-change",
+        "innerHeight": 844,
+        "visualHeight": 754,
+        "scale": 1,
+        "hidden": false,
+        "display": "flex",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "focused-entry-with-occlusion",
+        "innerHeight": 844,
+        "visualHeight": 506,
+        "scale": 1,
+        "hidden": true,
+        "display": "none",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "height-recovery-with-focus-retained",
+        "innerHeight": 844,
+        "visualHeight": 844,
+        "scale": 1,
+        "hidden": false,
+        "display": "flex",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "pinch-zoom-is-not-a-keyboard",
+        "innerHeight": 844,
+        "visualHeight": 422,
+        "scale": 2,
+        "hidden": false,
+        "display": "flex",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "occlusion-after-zoom-reset",
+        "innerHeight": 844,
+        "visualHeight": 506,
+        "scale": 1,
+        "hidden": true,
+        "display": "none",
+        "searchFocused": true,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      },
+      {
+        "step": "blur-with-occlusion-still-reported",
+        "innerHeight": 844,
+        "visualHeight": 506,
+        "scale": 1,
+        "hidden": false,
+        "display": "flex",
+        "searchFocused": false,
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ]
+      }
+    ],
+    "descriptorsRestored": true
+  },
+  "finalState": {
+    "path": "/pletina/application/index.d9be072506e825c6.html",
+    "online": true,
+    "title": "Pletina",
+    "headings": [
+      "Podcast QA RSS",
+      "Episodios"
+    ],
+    "navigation": {
+      "index": 117,
+      "route": {
+        "name": "podcast",
+        "id": 500000000000001
+      },
+      "historyLength": 50
+    },
+    "tabs": [],
+    "notices": [],
+    "audio": {
+      "instances": [
+        {
+          "index": 0,
+          "srcPresent": true,
+          "local": false,
+          "time": 8.323734,
+          "duration": 90,
+          "paused": true,
+          "ended": false,
+          "muted": false,
+          "volume": 0.01,
+          "readyState": 4,
+          "error": null
+        }
+      ],
+      "events": [
+        {
+          "type": "waiting",
+          "index": 0,
+          "at": 272226,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "loadstart",
+          "index": 0,
+          "at": 272227,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "durationchange",
+          "index": 0,
+          "at": 272232,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "loadedmetadata",
+          "index": 0,
+          "at": 272233,
+          "time": 0,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "seeking",
+          "index": 0,
+          "at": 272233,
+          "time": 8.113935,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 272241,
+          "time": 8.113935,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "seeked",
+          "index": 0,
+          "at": 272241,
+          "time": 8.113935,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "playing",
+          "index": 0,
+          "at": 272242,
+          "time": 8.113935,
+          "paused": false,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "timeupdate",
+          "index": 0,
+          "at": 272502,
+          "time": 8.323734,
+          "paused": true,
+          "hidden": false,
+          "error": null,
+          "local": false
+        },
+        {
+          "type": "pause",
+          "index": 0,
+          "at": 272503,
+          "time": 8.323734,
+          "paused": true,
+          "hidden": false,
+          "error": null,
+          "local": false
+        }
+      ],
+      "handlers": [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekto"
+      ]
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    }
+  },
+  "fixture": {
+    "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+    "counts": {
+      "api.deezer.com/chart/0/albums": 3,
+      "api.deezer.com/chart/0/artists": 3,
+      "images.pletina.test/cover.svg": 145,
+      "api.deezer.com/search/artist": 51,
+      "api.deezer.com/search/album": 51,
+      "api.deezer.com/search/track": 69,
+      "api.deezer.com/album/11": 5,
+      "api.deezer.com/album/11/tracks": 5,
+      "music.youtube.com/youtubei/v1/search": 26,
+      "www.youtube.com/youtubei/v1/search": 6,
+      "www.youtube.com/youtubei/v1/player": 15,
+      "fixture.googlevideo.com/audio/qaAudio001a": 4,
+      "api.deezer.com/artist/7": 3,
+      "api.deezer.com/artist/7/albums": 11,
+      "api.deezer.com/artist/7/top": 3,
+      "api.deezer.com/artist/7/related": 8,
+      "api.deezer.com/artist/8/albums": 8,
+      "open.spotify.com/embed/api/token": 5,
+      "api-partner.spotify.com/pathfinder/v1/query": 8,
+      "i.ytimg.com/vi/qaAudio008h/mqdefault.jpg": 2,
+      "i.ytimg.com/vi/qaAudio003c/mqdefault.jpg": 2,
+      "i.ytimg.com/vi/qaAudio003c/hqdefault.jpg": 28,
+      "fixture.googlevideo.com/audio/qaAudio003c": 3,
+      "itunes.apple.com/search": 7,
+      "feeds.pletina.test/rss": 7,
+      "feeds.pletina.test/english": 6,
+      "music.youtube.com/youtubei/v1/browse": 2,
+      "i.ytimg.com/vi/qaAudio001a/mqdefault.jpg": 1,
+      "api.deezer.com/album/44": 1,
+      "api.deezer.com/album/44/tracks": 1,
+      "fixture.googlevideo.com/audio/qaHit00001a": 1,
+      "fixture.googlevideo.com/audio/qaHit00002b": 1,
+      "fixture.googlevideo.com/audio/qaAudio002b": 2,
+      "api.deezer.com/artist/9": 1,
+      "api.deezer.com/artist/9/albums": 1,
+      "api.deezer.com/artist/9/top": 1,
+      "fixture.googlevideo.com/audio/qaPick0002b": 1,
+      "fixture.googlevideo.com/audio/qaAudio004d": 1,
+      "media.pletina.test/episode-0.m4a": 2
+    },
+    "requests": [
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "itunes.apple.com",
+        "path": "/search",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/rss",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/english",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "itunes.apple.com",
+        "path": "/search",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/rss",
+        "method": "GET",
+        "type": "fetch",
+        "injectedFailure": "rss-http-503"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/english",
+        "method": "GET",
+        "type": "fetch",
+        "injectedFailure": "rss-http-503"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/rss",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/english",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "itunes.apple.com",
+        "path": "/search",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/related",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/8/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "itunes.apple.com",
+        "path": "/search",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/rss",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/english",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio001a/mqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/44",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/44/tracks",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaHit00001a",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaHit00001a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaHit00002b",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaHit00002b",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/top",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11/tracks",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio001a",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio001a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio002b",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio002b",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio003c",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio001a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/9",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/9/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/9/top",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaPick0002b",
+        "clientName": "VISIONOS",
+        "playerGate": "delivered"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaPick0002b",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaPick0002b",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaPick0003c",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio001a",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio002b",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio003c",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio004d",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio004d",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "itunes.apple.com",
+        "path": "/search",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "media.pletina.test",
+        "path": "/episode-0.m4a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "feeds.pletina.test",
+        "path": "/rss",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "i.ytimg.com",
+        "path": "/vi/qaAudio003c/hqdefault.jpg",
+        "method": "GET",
+        "type": "fetch"
+      },
+      {
+        "host": "media.pletina.test",
+        "path": "/episode-0.m4a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      }
+    ]
+  },
+  "contextClosed": true,
+  "finishedAt": "2026-10-24T10:20:36.708Z",
+  "browserClosed": true,
+  "puppeteerBrowserClosed": true
+}

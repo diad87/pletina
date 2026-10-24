@@ -1,0 +1,76 @@
+{
+  "testedAt": "2026-10-24T10:16:26.785Z",
+  "expectedBuild": "a2e6b8da9fb17c07",
+  "host": {
+    "platform": "linux",
+    "arch": "x64"
+  },
+  "scope": "Installed browser app lifecycle in a disposable desktop profile, controlled by CDP; not the native install dialog or a physical mobile device.",
+  "sourceSha256": "60594eee9f8cb8452024934f51e3b216963f1cc409d791a60fbe0d8f513fb15b",
+  "profile": "/tmp/pletina-pwa-install-AflxcP",
+  "flags": [
+    "--enable-unsafe-extension-debugging",
+    "--remote-debugging-pipe"
+  ],
+  "nativeInstallDialogVerified": false,
+  "osLauncherShortcutVerified": false,
+  "checks": [
+    {
+      "name": "Public manifest and installability",
+      "pass": true
+    },
+    {
+      "name": "App registered by browser",
+      "pass": true
+    },
+    {
+      "name": "Standalone window opens app with navigation and persistent desktop library",
+      "pass": true
+    },
+    {
+      "name": "Browser restart preserves installation, app launch and origin storage",
+      "pass": true
+    }
+  ],
+  "errors": [
+    {
+      "name": "AssertionError",
+      "message": "Expected values to be strictly equal:\n\ntrue !== false\n"
+    }
+  ],
+  "browser": "Chrome/151.0.7922.34",
+  "manifest": {
+    "id": "https://diad87.github.io/",
+    "startURL": "https://diad87.github.io/pletina/",
+    "scope": "https://diad87.github.io/pletina/"
+  },
+  "osAppState": {
+    "badgeCount": 0,
+    "fileHandlers": []
+  },
+  "launches": [
+    {
+      "targetId": "1B62E429D32C681206343F35A9045B8C",
+      "url": "https://diad87.github.io/pletina/",
+      "standalone": true
+    },
+    {
+      "targetId": "8EA84599D53BC8A3A7080ED2C8A037A0",
+      "url": "https://diad87.github.io/pletina/application/index.3afac9986cb53c9f.html",
+      "standalone": true
+    }
+  ],
+  "navigation": [
+    "Inicio",
+    "Buscar",
+    "Podcasts",
+    "Tu biblioteca"
+  ],
+  "osAppStateAfterBrowserRestart": {
+    "badgeCount": 0,
+    "fileHandlers": []
+  },
+  "cleanupUninstalled": true,
+  "resourcesClosed": true,
+  "passed": false
+}

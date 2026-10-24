@@ -1,0 +1,413 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-24T10:34:17.216Z",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "currentBuild": "bbdda9c0c16f145e",
+  "currentApprovedBrowserChecks": 101,
+  "currentFailedBrowserChecks": 0,
+  "allRequestedPlatformsVerified": false,
+  "physicalPhoneRunsByThisAudit": 0,
+  "scope": "Windows Chrome/Firefox browser tests; real compiled PWA, actual desktop UI or explicitly labeled desktop viewport emulation; synthetic HTTP providers and real silent media/IndexedDB/CacheStorage/service worker. No OS hardware, audible recording identity, macOS, physical Android/iOS, Android Auto or CarPlay accreditation.",
+  "qaChanges": [
+    "Dedicated desktop UI suite, without forcing the mobile viewport.",
+    "Library metadata assertions use actual MiniPlayer or PlayerBar controls, including desktop queue button.",
+    "--suite all supports an explicit --scenarios media filter; selectedMediaScenarios is always recorded."
+  ],
+  "currentSourceBindings": [
+    {
+      "directory": "crossplatform-bbdda9c0c16f145e-desktop",
+      "unchanged": true
+    },
+    {
+      "directory": "crossplatform-bbdda9c0c16f145e-firefox-regression",
+      "unchanged": true
+    }
+  ],
+  "currentFirefoxFifoHostLimit": {
+    "automaticOnlineResume": false,
+    "networkRecovery": "real-online-document-reload",
+    "evidence": "artifacts/pwa-e2e/firefox-online-event-control-c2a70158ef06a3d5-win.json",
+    "controlBrowserVersion": "153.0",
+    "reason": "This exact desktop Firefox protocol-offline host changes navigator.onLine after an offline reload without emitting the native online event, reproduced independently without Pletina and with/without the QA clock. A real online reload verifies retained FIFO recovery; automatic event-based resumption is not accredited on this host."
+  },
+  "originalInterruptedRun": "crossplatform-a2e6b8da9fb17c07-windows/interrupted-run.json",
+  "datasets": [
+    {
+      "directory": "crossplatform-a2e6b8da9fb17c07-windows",
+      "build": "a2e6b8da9fb17c07",
+      "counts": {
+        "pass": 142,
+        "fail": 7,
+        "blocked": 70,
+        "unsupported": 3
+      },
+      "interpretation": "Original broad run: Chromium profiles complete; Firefox interrupted explicitly after 12 passes. Desktop QA used mobile-only selectors. Android had five demonstrated QA gaps.",
+      "profiles": [
+        {
+          "profile": "chromium-desktop",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 38,
+            "fail": 2,
+            "blocked": 70,
+            "unsupported": 1
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "error": "locator.textContent: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.mini .title')\n"
+            },
+            {
+              "name": "media.selection-html-audio",
+              "error": "page.waitForFunction: Timeout 15000ms exceeded."
+            }
+          ],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        },
+        {
+          "profile": "chromium-android-layout",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 104,
+            "fail": 5,
+            "blocked": 0,
+            "unsupported": 2
+          },
+          "failures": [
+            {
+              "name": "media.audio-final-retry-cancel-or-replace-prevents-late-audio-and-video",
+              "error": "page.waitForFunction: Timeout 15000ms exceeded."
+            },
+            {
+              "name": "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+              "error": "Expected values to be strictly equal:\n\n0 !== 1\n"
+            },
+            {
+              "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+              "error": "page.waitForFunction: Timeout 25000ms exceeded."
+            },
+            {
+              "name": "media.p1-opaque-download-http403-html-rolls-back-without-done-or-partial-cache",
+              "error": "page.waitForFunction: Timeout 25000ms exceeded."
+            },
+            {
+              "name": "media.offline-dj-missing-cache-repeat-all-stops-boundedly",
+              "error": "locator.scrollIntoViewIfNeeded: Timeout 15000ms exceeded.\nCall log:\n  - waiting for locator('.tracks li[data-reorder-index=\"5\"] button.more')\n"
+            }
+          ],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            },
+            {
+              "name": "media.audio-log-export-is-local-bounded-and-has-no-source-addresses",
+              "reason": "This engine delegates file sharing to an OS picker; automated recipient selection is outside browser-only E2E."
+            }
+          ],
+          "browserClosed": true
+        }
+      ]
+    },
+    {
+      "directory": "crossplatform-a2e6b8da9fb17c07-backup-desktop",
+      "build": "a2e6b8da9fb17c07",
+      "counts": {
+        "pass": 20,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "interpretation": "Backup import/export on actual desktop layout; pre-hours/pre-lyrics baseline.",
+      "profiles": [
+        {
+          "profile": "chromium",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 10,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "failures": [],
+          "unsupported": [],
+          "browserClosed": true
+        },
+        {
+          "profile": "firefox",
+          "browserVersion": "153.0",
+          "counts": {
+            "pass": 10,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "failures": [],
+          "unsupported": [],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-dced66a0c3e715b5-desktop",
+      "build": "dced66a0c3e715b5",
+      "counts": {
+        "pass": 47,
+        "fail": 3,
+        "blocked": 1,
+        "unsupported": 1
+      },
+      "interpretation": "Initial desktop QA negative: hidden mobile queue button, mute assertion read volume instead of muted, preexisting download expected absent; history prerequisite not yet adapted.",
+      "profiles": [
+        {
+          "profile": "chromium-desktop",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 47,
+            "fail": 3,
+            "blocked": 1,
+            "unsupported": 1
+          },
+          "failures": [
+            {
+              "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+              "error": "locator.scrollIntoViewIfNeeded: Timeout 14990.332999999999ms exceeded.\nCall log:\n  - attempting scroll into view action\n    2 × waiting for element to be stable\n      - element is not visible\n    - retrying scroll into view action\n    - waiting 20ms\n    2 × waiting for element to be stable\n      - element is not visible\n    - retrying scroll into view action\n      - waiting 100ms\n    28 × waiting for element to be stable\n       - element is not visible\n     - retrying scroll into view action\n       - waiting 500ms\n"
+            },
+            {
+              "name": "desktop.volume",
+              "error": "page.waitForFunction: Timeout 15000ms exceeded."
+            },
+            {
+              "name": "desktop.download-album-offline",
+              "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ Set(5) {\n- Set(4) {\n    'Canción QA Cuatro',\n    'Canción QA Dos',\n    'Canción QA Tres',\n    'Canción QA Uno',\n+   'E2E YouTube Ficha Corregida'\n  }\n"
+            }
+          ],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-dced66a0c3e715b5-desktop-v2",
+      "build": "dced66a0c3e715b5",
+      "counts": {
+        "pass": 51,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "interpretation": "Corrected desktop focused suite, before the independent lyrics publication.",
+      "profiles": [
+        {
+          "profile": "chromium-desktop",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 51,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 1
+          },
+          "failures": [],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-dced66a0c3e715b5-firefox",
+      "build": "dced66a0c3e715b5",
+      "counts": {
+        "pass": 109,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "interpretation": "Full 111-check baseline, with one QA observer initialization error. Loaded-source-correction.json binds the actual media v2 imported before first media check.",
+      "profiles": [
+        {
+          "profile": "firefox-narrow",
+          "browserVersion": "153.0",
+          "counts": {
+            "pass": 109,
+            "fail": 1,
+            "blocked": 0,
+            "unsupported": 1
+          },
+          "failures": [
+            {
+              "name": "media.durable-download-queue-reopens-offline-and-resumes-fifo-online",
+              "error": "Cannot read properties of undefined (reading 'filter')"
+            }
+          ],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-dced66a0c3e715b5-android-focused",
+      "build": "dced66a0c3e715b5",
+      "counts": {
+        "pass": 8,
+        "fail": 1,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "interpretation": "QA v2 warm same-ID queue setup negative preserved.",
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 8,
+            "fail": 1,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "failures": [
+            {
+              "name": "media.p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download",
+              "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    193,\n-   104\n  ]\n"
+            }
+          ],
+          "unsupported": [],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-dced66a0c3e715b5-corrected-focus-v3",
+      "build": "dced66a0c3e715b5",
+      "counts": {
+        "pass": 18,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "interpretation": "Corrected six media contracts on Chromium Android layout and Firefox, including SABR preceding multi-AAC.",
+      "profiles": [
+        {
+          "profile": "chromium-android-layout",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 9,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "failures": [],
+          "unsupported": [],
+          "browserClosed": true
+        },
+        {
+          "profile": "firefox-narrow",
+          "browserVersion": "153.0",
+          "counts": {
+            "pass": 9,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 0
+          },
+          "failures": [],
+          "unsupported": [],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-bbdda9c0c16f145e-desktop",
+      "build": "bbdda9c0c16f145e",
+      "counts": {
+        "pass": 51,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "interpretation": "Current published build: full library/responsive stages and dedicated actual desktop PlayerBar/queue UI cases.",
+      "profiles": [
+        {
+          "profile": "chromium-desktop",
+          "browserVersion": "153.0.8010.52",
+          "counts": {
+            "pass": 51,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 1
+          },
+          "failures": [],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    },
+    {
+      "directory": "crossplatform-bbdda9c0c16f145e-firefox-regression",
+      "build": "bbdda9c0c16f145e",
+      "counts": {
+        "pass": 50,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 1
+      },
+      "interpretation": "Current published build: library/responsive stages plus ten selected media checks, not a repetition of the full 111-check media matrix.",
+      "profiles": [
+        {
+          "profile": "firefox-narrow",
+          "browserVersion": "153.0",
+          "counts": {
+            "pass": 50,
+            "fail": 0,
+            "blocked": 0,
+            "unsupported": 1
+          },
+          "failures": [],
+          "unsupported": [
+            {
+              "name": "install.native-prompt: actual phone installation",
+              "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone."
+            }
+          ],
+          "browserClosed": true
+        }
+      ],
+      "serverClosed": true
+    }
+  ]
+}

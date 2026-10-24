@@ -1,0 +1,1049 @@
+{
+  "profile": "chromium-desktop",
+  "engine": "chromium",
+  "checks": [
+    {
+      "name": "install.minimal: initial entry avoids all application assets",
+      "startedAt": "2026-10-24T10:06:11.106Z",
+      "status": "pass",
+      "applicationRequests": 0,
+      "cachedApplicationFiles": [],
+      "realServiceWorkerController": true,
+      "finishedAt": "2026-10-24T10:06:11.450Z"
+    },
+    {
+      "name": "install.manifest: stable scope, standalone identity and icon resources",
+      "startedAt": "2026-10-24T10:06:11.454Z",
+      "status": "pass",
+      "stableIdentity": true,
+      "iconSizes": [
+        "192x192",
+        "512x512"
+      ],
+      "finishedAt": "2026-10-24T10:06:11.470Z"
+    },
+    {
+      "name": "install.guide: platform instructions open and close",
+      "startedAt": "2026-10-24T10:06:11.474Z",
+      "status": "pass",
+      "guideVerifiedForUserAgent": true,
+      "OSConfirmationClaimed": false,
+      "finishedAt": "2026-10-24T10:06:11.814Z"
+    },
+    {
+      "name": "install.offline: cached entry reloads with the network disconnected",
+      "startedAt": "2026-10-24T10:06:11.817Z",
+      "status": "fail",
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n",
+      "state": {
+        "path": "/pletina/",
+        "online": true,
+        "title": "Pletina",
+        "headings": [],
+        "navigation": {
+          "historyLength": 3
+        },
+        "tabs": [],
+        "notices": [],
+        "audio": {
+          "instances": [],
+          "events": [],
+          "handlers": []
+        },
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "documentWidth": 1440
+        }
+      },
+      "screenshot": "04-install-offline-cached-entry-reloads-with-the-network-disconnected.png",
+      "finishedAt": "2026-10-24T10:06:12.039Z"
+    },
+    {
+      "name": "install.native-prompt: actual phone installation",
+      "startedAt": "2026-10-24T10:06:12.042Z",
+      "status": "unsupported",
+      "reason": "A desktop browser context cannot confirm Add to Home Screen, installed standalone state or an OS native installation prompt on Android/iPhone.",
+      "finishedAt": "2026-10-24T10:06:12.042Z"
+    },
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "startedAt": "2026-10-24T10:06:12.053Z",
+      "status": "pass",
+      "build": "a2e6b8da9fb17c07",
+      "applicationPath": "/pletina/application/index.3afac9986cb53c9f.html",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "physicalPlatform": false,
+      "finishedAt": "2026-10-24T10:06:12.828Z"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "startedAt": "2026-10-24T10:06:12.833Z",
+      "status": "pass",
+      "firstSong": "Canción QA Uno",
+      "interceptedTrackSearches": 1,
+      "playbackStarted": false,
+      "finishedAt": "2026-10-24T10:06:14.242Z"
+    },
+    {
+      "name": "library.navigation: four tabs, browser history, reload and viewport",
+      "startedAt": "2026-10-24T10:06:14.269Z",
+      "status": "pass",
+      "sameURL": true,
+      "restoredQuery": true,
+      "viewport": {
+        "width": 1440,
+        "document": 1440,
+        "height": 900,
+        "bottom": null,
+        "navHeight": null
+      },
+      "finishedAt": "2026-10-24T10:06:15.746Z"
+    },
+    {
+      "name": "library.discovery: home cards and empty history",
+      "startedAt": "2026-10-24T10:06:15.765Z",
+      "status": "pass",
+      "discoveryCards": true,
+      "initiallyEmptyHistory": true,
+      "finishedAt": "2026-10-24T10:06:16.854Z"
+    },
+    {
+      "name": "library.search: tracks, artists, albums and expanded results",
+      "startedAt": "2026-10-24T10:06:16.862Z",
+      "status": "pass",
+      "tracks": 12,
+      "artists": 2,
+      "albums": 3,
+      "titleStartedTrackId": 101,
+      "titleOpenedSelectedAlbum": true,
+      "artistMenuOpenedWithoutPlayback": true,
+      "pausedBeforeHistoryThreshold": true,
+      "historyRemainedEmpty": true,
+      "audioAfterArtist": [
+        {
+          "paused": true,
+          "time": 0.331938,
+          "duration": 12,
+          "error": null
+        }
+      ],
+      "finishedAt": "2026-10-24T10:06:22.381Z"
+    },
+    {
+      "name": "library.search: natural song de artist retries the empty literal query",
+      "startedAt": "2026-10-24T10:06:22.394Z",
+      "status": "pass",
+      "naturalQuery": "Canción QA Uno de Artista QA Uno",
+      "selectedTrackId": 101,
+      "title": "Canción QA Uno",
+      "interceptedTrackRequests": 2,
+      "artistOpenedWithoutPlayback": true,
+      "finishedAt": "2026-10-24T10:06:24.757Z"
+    },
+    {
+      "name": "library.search: empty results and partial-provider retry remain explicit",
+      "startedAt": "2026-10-24T10:06:24.763Z",
+      "status": "pass",
+      "emptyState": true,
+      "partialResultsUsable": true,
+      "retriedFailedSection": true,
+      "finishedAt": "2026-10-24T10:06:26.267Z"
+    },
+    {
+      "name": "library.artist: detail, favorites and discography filters",
+      "startedAt": "2026-10-24T10:06:26.274Z",
+      "status": "pass",
+      "artist": "Artista QA Uno",
+      "favorite": true,
+      "filters": [
+        "Todo",
+        "Álbumes1",
+        "Sencillos y EP1"
+      ],
+      "finishedAt": "2026-10-24T10:06:28.135Z"
+    },
+    {
+      "name": "library.album: detail, save, pin and library persistence",
+      "startedAt": "2026-10-24T10:06:28.139Z",
+      "status": "pass",
+      "album": "Disco QA Uno",
+      "tracks": 4,
+      "savedAndPinnedAcrossReload": true,
+      "finishedAt": "2026-10-24T10:06:31.704Z"
+    },
+    {
+      "name": "library.home-and-menus: song destinations, recent cards and direct unpin",
+      "startedAt": "2026-10-24T10:06:31.715Z",
+      "status": "pass",
+      "menuBackClosedOnlyOverlay": true,
+      "songArtistAndAlbumNavigation": true,
+      "pinnedTileAndRecentArtistOpened": true,
+      "directHomeUnpin": true,
+      "surpriseEnabledOnlyWithSavedAlbum": true,
+      "finishedAt": "2026-10-24T10:06:40.672Z"
+    },
+    {
+      "name": "library.favorites: like, search, clear and remove one song",
+      "startedAt": "2026-10-24T10:06:40.676Z",
+      "status": "pass",
+      "accentInsensitiveSearch": true,
+      "removedOnlyOne": true,
+      "remaining": "Canción QA Uno",
+      "finishedAt": "2026-10-24T10:06:43.747Z"
+    },
+    {
+      "name": "library.playlists: create, rename/cancel and pin",
+      "startedAt": "2026-10-24T10:06:43.751Z",
+      "status": "fail",
+      "error": "locator.press: Target page, context or browser has been closed\nCall log:\n  - waiting for locator('input[aria-label=\"Nombre de la playlist\"]')\n    - locator resolved to <input maxlength=\"100\" class=\"name-input svelte-147woxn\" aria-label=\"Nombre de la playlist\"/>\n  - elementHandle.press(\"Enter\")\n",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:44.971Z"
+    },
+    {
+      "name": "library.playlists: append album, duplicate entries, filter and reorder",
+      "startedAt": "2026-10-24T10:06:45.002Z",
+      "status": "blocked",
+      "reason": "Playlist creation failed in the preceding UI scenario.",
+      "finishedAt": "2026-10-24T10:06:45.003Z"
+    },
+    {
+      "name": "library.spotify: public URL uses the real reader, reviews before writing and saves ordered duplicates",
+      "startedAt": "2026-10-24T10:06:45.021Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.026Z"
+    },
+    {
+      "name": "library.spotify-in-flight: cancelling the held token response preserves the next review",
+      "startedAt": "2026-10-24T10:06:45.059Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.060Z"
+    },
+    {
+      "name": "library.spotify-in-flight: cancelling the held playlist response preserves the next review",
+      "startedAt": "2026-10-24T10:06:45.076Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.077Z"
+    },
+    {
+      "name": "library.spotify-in-flight: leaving during metadata read ignores the late response and preserves navigation",
+      "startedAt": "2026-10-24T10:06:45.093Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.094Z"
+    },
+    {
+      "name": "library.csv: explicit Spotify denial, invalid CSV, retry, review and save",
+      "startedAt": "2026-10-24T10:06:45.108Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.110Z"
+    },
+    {
+      "name": "library.csv-validation: size limit, all omitted, empty name and cancel",
+      "startedAt": "2026-10-24T10:06:45.121Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.122Z"
+    },
+    {
+      "name": "library.csv-in-flight: cancel ignores the old response while a new import reaches review",
+      "startedAt": "2026-10-24T10:06:45.149Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.151Z"
+    },
+    {
+      "name": "library.csv-in-flight: leaving the view prevents late matching, saving or navigation",
+      "startedAt": "2026-10-24T10:06:45.164Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.165Z"
+    },
+    {
+      "name": "library.csv-storage: a real transaction abort rolls back partial save and permits retry",
+      "startedAt": "2026-10-24T10:06:45.178Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.179Z"
+    },
+    {
+      "name": "library.source-picker: candidates, invalid link, manual choice and remembered source",
+      "startedAt": "2026-10-24T10:06:45.192Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.193Z"
+    },
+    {
+      "name": "library.youtube: preview, edit, save/update and remove personal link",
+      "startedAt": "2026-10-24T10:06:45.208Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.209Z"
+    },
+    {
+      "name": "library.youtube: edited metadata survives old playback copies and downloaded audio across reload",
+      "startedAt": "2026-10-24T10:06:45.224Z",
+      "status": "fail",
+      "error": "page.addInitScript: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.226Z"
+    },
+    {
+      "name": "library.podcasts: RSS/YouTube catalogs, language filtering and saved-show reload",
+      "startedAt": "2026-10-24T10:06:45.238Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.239Z"
+    },
+    {
+      "name": "library.persistence: saved artist/album and pin removal survive reload",
+      "startedAt": "2026-10-24T10:06:45.251Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.252Z"
+    },
+    {
+      "name": "library.playlists: cancellation and permanent deletion remove the pinned list",
+      "startedAt": "2026-10-24T10:06:45.264Z",
+      "status": "blocked",
+      "reason": "Playlist creation failed in the preceding UI scenario.",
+      "finishedAt": "2026-10-24T10:06:45.265Z"
+    },
+    {
+      "name": "library.contextual-playlist: create from a song and delete the temporary list",
+      "startedAt": "2026-10-24T10:06:45.279Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.280Z"
+    },
+    {
+      "name": "library.podcast-recovery: failed RSS shows an error, retry recovers feeds and a genuine empty search stays empty",
+      "startedAt": "2026-10-24T10:06:45.292Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.293Z"
+    },
+    {
+      "name": "responsive.resize: query and dock survive portrait, desktop and short landscape",
+      "startedAt": "2026-10-24T10:06:45.312Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.313Z"
+    },
+    {
+      "name": "responsive.resume: navigation survives lifecycle signals and reload after resizing",
+      "startedAt": "2026-10-24T10:06:45.317Z",
+      "status": "fail",
+      "error": "page.setViewportSize: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.318Z"
+    },
+    {
+      "name": "responsive.keyboard-occlusion: dock follows visual occlusion without treating focus or zoom as a keyboard",
+      "startedAt": "2026-10-24T10:06:45.329Z",
+      "status": "fail",
+      "error": "page.setViewportSize: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.330Z"
+    },
+    {
+      "name": "responsive.keyboard-navigation: Tab and Enter reach named searches with a current destination",
+      "startedAt": "2026-10-24T10:06:45.341Z",
+      "status": "fail",
+      "error": "page.setViewportSize: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.342Z"
+    },
+    {
+      "name": "responsive.source-dialog-accessibility: keyboard validation exposes and clears its associated error",
+      "startedAt": "2026-10-24T10:06:45.353Z",
+      "status": "fail",
+      "error": "locator.count: Target page, context or browser has been closed",
+      "state": {
+        "closed": true
+      },
+      "finishedAt": "2026-10-24T10:06:45.354Z"
+    },
+    {
+      "name": "suite.execution",
+      "status": "fail",
+      "error": "page.setViewportSize: Target page, context or browser has been closed"
+    }
+  ],
+  "errors": [],
+  "build": "a2e6b8da9fb17c07",
+  "providerMode": "fixture",
+  "host": {
+    "platform": "linux",
+    "arch": "x64",
+    "node": "v24.22.0"
+  },
+  "puppeteerVersion": "25.14.0",
+  "browserVersion": "151.0.7922.34",
+  "kind": "desktop-browser",
+  "physical": false,
+  "startedAt": "2026-10-24T10:06:10.925Z",
+  "networkTransport": "Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.",
+  "counts": {
+    "pass": 14,
+    "fail": 24,
+    "blocked": 2,
+    "unsupported": 1
+  },
+  "offlineTransitions": [
+    {
+      "requestedOffline": true,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": true,
+      "expectedNavigatorOnline": false,
+      "before": true,
+      "after": false,
+      "at": "2026-10-24T10:06:11.829Z"
+    },
+    {
+      "requestedOffline": false,
+      "mode": "browser-offline",
+      "navigatorOfflineExpected": false,
+      "expectedNavigatorOnline": true,
+      "before": true,
+      "after": true,
+      "at": "2026-10-24T10:06:11.923Z"
+    }
+  ],
+  "finalState": {
+    "closed": true
+  },
+  "fixture": {
+    "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+    "counts": {
+      "api.deezer.com/chart/0/albums": 3,
+      "api.deezer.com/chart/0/artists": 3,
+      "images.pletina.test/cover.svg": 15,
+      "api.deezer.com/search/artist": 15,
+      "api.deezer.com/search/album": 15,
+      "api.deezer.com/search/track": 16,
+      "api.deezer.com/album/11": 2,
+      "api.deezer.com/album/11/tracks": 2,
+      "music.youtube.com/youtubei/v1/search": 2,
+      "www.youtube.com/youtubei/v1/search": 1,
+      "www.youtube.com/youtubei/v1/player": 2,
+      "fixture.googlevideo.com/audio/qaAudio001a": 1,
+      "api.deezer.com/artist/7": 2,
+      "api.deezer.com/artist/7/albums": 4,
+      "api.deezer.com/artist/7/top": 2,
+      "api.deezer.com/artist/7/related": 2,
+      "api.deezer.com/artist/8/albums": 2
+    },
+    "requests": [
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/artists",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/artists",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11/tracks",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio001a",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "fixture.googlevideo.com",
+        "path": "/audio/qaAudio001a",
+        "method": "GET",
+        "type": "media"
+      },
+      {
+        "host": "music.youtube.com",
+        "path": "/youtubei/v1/search",
+        "method": "POST",
+        "type": "fetch"
+      },
+      {
+        "host": "www.youtube.com",
+        "path": "/youtubei/v1/player",
+        "method": "POST",
+        "type": "fetch",
+        "operation": "player",
+        "videoId": "qaAudio002b",
+        "clientName": "VISIONOS"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "other"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/top",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/related",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/8/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/chart/0/artists",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/related",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/8/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/album/11/tracks",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/albums",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/artist/7/top",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "images.pletina.test",
+        "path": "/cover.svg",
+        "method": "GET",
+        "type": "image"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/artist",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/album",
+        "method": "GET",
+        "type": "script"
+      },
+      {
+        "host": "api.deezer.com",
+        "path": "/search/track",
+        "method": "GET",
+        "type": "script"
+      }
+    ]
+  },
+  "contextClosed": true,
+  "finishedAt": "2026-10-24T10:06:45.367Z",
+  "browserClosed": true,
+  "puppeteerBrowserClosed": true
+}

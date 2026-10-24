@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-24",
+  "publishedBuildAtAudit": "a2e6b8da9fb17c07",
+  "kind": "platform-and-evidence-audit-with-Linux-browser-verification",
+  "productMutations": false,
+  "browserFeatureTestsExecutedByThisAudit": true,
+  "runtimeServerAdded": false,
+  "host": {
+    "operatingSystem": "Microsoft Windows 11 Pro",
+    "version": "10.0.26200",
+    "architecture": "x64",
+    "chrome": "153.0.8010.52",
+    "edge": "156.0.4314.42",
+    "linuxEnvironment": "Ubuntu under WSL2, Linux 6.6.87.2-microsoft-standard-WSL2 x86_64",
+    "linuxBrowserInventory": ["webkit-2336", "ffmpeg-1011", "chromium-1234", "chromium_headless_shell-1234"],
+    "linuxChromiumVersion": "151.0.7922.34",
+    "linuxRuntimeAddedForQAOnly": "Playwright downloaded its Chromium and headless-shell runtimes under D:/tmp. No apt packages, Android SDK, native app or runtime product server was installed.",
+    "androidSdkRootsFound": [],
+    "androidSdkEnvironmentVariablesPresent": false,
+    "commandsNotInPath": ["adb", "emulator", "xcrun", "xcodebuild"],
+    "matchingPresentPhonePnpDevices": 0,
+    "physicalDeviceAbsenceProven": false,
+    "physicalDeviceInspectionScope": "Windows present-device names matching Xiaomi, iPhone, Android, Apple Mobile, MTP or 15T. No adb daemon, emulator, DHU or Xcode process launched."
+  },
+  "preflight": {
+    "report": "artifacts/pwa-e2e/crossplatform-a2e6b8da9fb17c07-capabilities-inventory-selected.json",
+    "mode": "inventory-only",
+    "enginesWereNotLaunched": true,
+    "blockedMeans": "Launch deliberately disabled; these statuses do not establish product incompatibility.",
+    "coverageGap": "Existing target inventory has desktop Chromium/Firefox and emulated mobile layouts, but no separately named macOS Safari, macOS Chromium, Linux Chromium or Edge targets."
+  },
+  "manifestInspection": {
+    "file": "pwa/manifest.webmanifest",
+    "idScopeAndStartUrl": "./",
+    "display": "standalone",
+    "iconSizes": ["192x192", "512x512"],
+    "appleTouchIconDeclared": true,
+    "browserComputedId": "https://diad87.github.io/",
+    "browserComputedScopeAndStartURL": "https://diad87.github.io/pletina/",
+    "idResolution": "A relative manifest id uses start_url's origin; it does not use the manifest directory. Product identity was preserved. Only the installation QA observer was corrected.",
+    "osInstallationConfirmedByInspection": false
+  },
+  "historicalPhysicalEvidence": [
+    {
+      "platform": "Android",
+      "device": "Xiaomi 15T Pro",
+      "scope": "User reported installation, music playback, screen-off playback and transitions on earlier builds; later Home-button background music and root Back retention were also reported.",
+      "currentBuildAttribution": false,
+      "fullPhysicalProtocolCompleted": false,
+      "references": ["docs/pwa-screen-off-results.md", "artifacts/pwa-port/android-installed-user-report-1785b6edf53a230b.json", "artifacts/pwa-port/android-installed-protected-back-user-report-2026-10-22.json"],
+      "negativeEvidence": "Official YouTube video fallback cut off both when pressing Home and locking, as reported by the user on an earlier build. Current native-audio P1 results must be retested separately.",
+      "negativeReference": "artifacts/pwa-port/android-automatic-youtube-background-user-report-2026-10-22.json"
+    },
+    {
+      "platform": "iPhone",
+      "scope": "User explicitly reported installation and music playback only.",
+      "model": null,
+      "osVersion": null,
+      "browser": null,
+      "observedBuild": null,
+      "screenOffVerified": false,
+      "offlineDownloadsVerified": false,
+      "reference": "artifacts/pwa-port/iphone-install-playback-user-report-2026-10-22.json"
+    }
+  ],
+  "platformConclusions": [
+    {"platform": "Windows", "installSupport": "Chrome and Edge supported; Firefox also provides web apps on supported Windows releases.", "auditResult": "Actual Windows host and browsers inventoried. Product and installed-app checks are separate runner evidence."},
+    {"platform": "macOS", "installSupport": "Chrome; Safari Add to Dock on macOS Sonoma 14 or later.", "auditResult": "No Mac host, Safari app or Xcode available. WebKit on WSL and a Mac user agent do not verify macOS integration."},
+    {"platform": "Linux", "installSupport": "Chrome; other Chromium builds depend on packaging and desktop environment.", "auditResult": "Real Linux x64 Chromium under WSL2: latest public bbdda9c0c16f145e installed lifecycle 6/6 and desktop smoke 3/3. Previous dced desktop suite 50 pass, one protocol navigator assertion failure and one unsupported native OS prompt. This verifies browser behavior, not a graphical Linux distribution's launcher, physical media keys or audio output."},
+    {"platform": "Android", "installSupport": "Chrome Android is the current intended installation route.", "auditResult": "Historical Xiaomi manual partial evidence; no connected-device automation or current-build physical run executed by this audit."},
+    {"platform": "iPhone", "installSupport": "Safari Add to Home Screen is the intended instruction path.", "auditResult": "Historical manual install/play confirmation only. Installed audio continuation, next track, storage and update remain physical checks."},
+    {"platform": "Android Auto", "auditResult": "Unsupported as a full browseable car media app by this static PWA; required native MediaLibraryService is not exposed by web Media Session."},
+    {"platform": "CarPlay", "auditResult": "Unsupported as a full CarPlay app by this static PWA; it is not a signed iOS CarPlay-entitled application."}
+  ],
+  "importantVerificationDistinctions": [
+    "Installation-scenarios validates manifest, instructions and cached entry; install.native-prompt deliberately returns unsupported rather than completing OS installation.",
+    "Most harness tap calls are locator.click; the dedicated Search row scenario separately uses real Playwright touch events. An emulated viewport or user agent is not a physical phone.",
+    "Page-hidden, minimized, OS Home, locked screen, process termination and browser-close are distinct states and must have separately labelled results.",
+    "Safari Mac Add to Dock copies cookies but does not copy IndexedDB/Cache Storage or other local storage from the tab. Verify library/download persistence inside the installed web app itself.",
+    "Firefox manifest-based PWA installation differs from Firefox Windows taskbar web apps. Avoid the outdated blanket statement that Firefox cannot install web apps.",
+    "A WebKit Linux storage estimate gap does not establish a Safari iOS/macOS gap; Safari 17+ officially supports the Storage API.",
+    "Offline storage is subject to quota, eviction and user clearing; an installation does not establish permanent retention.",
+    "The historical physical protocol's Search byline-navigation expectation predates the published whole-row play-and-open-album contract. Use the new contract for current tests."
+  ],
+  "completedLinuxVerification": {
+    "latestPublicBuild": "bbdda9c0c16f145e",
+    "browserHost": "Linux x64 Ubuntu under WSL2, Chromium 151.0.7922.34, Node24.22.0",
+    "testRuntimeFlags": ["--no-sandbox for the default root WSL user", "Puppeteer default automation flags", "--enable-unsafe-extension-debugging and --remote-debugging-pipe for CDP installation"],
+    "physicalLinuxDesktopClaimed": false,
+    "latestPublicInstallation": {
+      "passed": 6,
+      "total": 6,
+      "report": "artifacts/pwa-port/crossplatform-bbdd-linux-chromium-install-network-proof.json",
+      "screenshot": "artifacts/pwa-port/crossplatform-bbdd-linux-chromium-install-network-proof.png",
+      "scope": "CDP installation in a disposable browser profile, standalone app launch, browser restart with persistent origin storage, real cached offline app reload and uninstall of this QA installation only. Native OS confirmation dialog and launcher shortcut were not inspected.",
+      "networkProof": "Before disconnect: uncached random out-of-scope same-origin URL received HTTP404, not from cache or SW. Before and after offline reload: distinct random URLs rejected with native net::ERR_INTERNET_DISCONNECTED and no HTTP response. App document reload returned HTTP200 from its real service worker.",
+      "navigatorSignalLimitation": "navigator.onLine changed false to true after reload despite both disconnected native transport probes. No navigator override was used; offline status is established independently."
+    },
+    "latestDesktopSmoke": {"pass": 3, "fail": 0, "report": "artifacts/pwa-e2e/crossplatform-bbdd-linux-chromium-smoke/summary.json"},
+    "dcedDesktopSuite": {"build": "dced66a0c3e715b5", "pass": 50, "fail": 1, "unsupported": 1, "report": "artifacts/pwa-e2e/crossplatform-dced-linux-chromium-desktop/summary.json", "limitation": "Only failure is install.offline's strict post-reload navigator.onLine assertion. The unsupported case is an actual phone OS installation prompt. Library, responsive and dedicated desktop transport/queue/volume/Media Session/download/podcast checks passed."},
+    "originalMediaSuite": {"build": "a2e6b8da9fb17c07", "pass": 61, "fail": 11, "report": "artifacts/pwa-e2e/crossplatform-a2-linux-chromium-mobile-layout-media/summary.json", "scope": "Linux browser with an emulated Android layout; no physical Android claim. Raw failures are preserved."},
+    "dcedFocusedMediaV2": {"build": "dced66a0c3e715b5", "pass": 7, "fail": 2, "report": "artifacts/pwa-e2e/crossplatform-dced-linux-chromium-focused-v2/summary.json", "remainingFailures": ["Opaque download completes, but its post-reload navigator assertion fails before the local-play checks.", "Durable queue preserves all three IDs and shows the interrupted-network retry state; protocol navigator remains true after reload and emits no online event when restored, so the automatic-resume terminal check times out."]},
+    "supersededAttempts": [
+      "Initial Chromium launch failed because default WSL user is root; isolated QA wrapper adds --no-sandbox.",
+      "Original all-desktop attempt was interrupted after the coordinator identified mobile-only selector assumptions. It is not a completed suite.",
+      "Focused media v1 preserved two new QA temporal-dead-zone failures and two empty-Search preparation failures. The owner corrected these in v2, which verified the intended cases.",
+      "Initial public dced installation attempt stopped before installing because another authorized task had published bbdda. The final run explicitly verifies bbdda."
+    ],
+    "qaOnlyEditsByThisAgent": ["scripts/tests/e2e/installation-scenarios.mjs: resolve manifest id using origin and retain scope/start URL separately.", "scripts/tests/pwa-desktop-install.browser.mjs: direct uncached network probes, service-worker reload evidence, navigator signal limitation and runtime flag reporting."],
+    "noProductSourcesChanged": true,
+    "closedResources": true,
+    "noAggregateAcrossDifferentBuildsClaimed": true
+  },
+  "remainingPhysicalMatrix": [
+    "Installed launch, reopen, restart and update without losing library or downloads.",
+    "Search/play exact selected song; all four navigation tabs; keyboard/orientation/safe areas and 320-1440 px layouts.",
+    "Queue transition after screen lock and Home/background, including 20-minute run, pause/resume, seek and system controls.",
+    "Airplane-mode reopen, offline queue transition and durable downloads; interruption and storage-pressure recovery.",
+    "Calls, alarms, Bluetooth/headphone disconnect and competing-audio interruption.",
+    "RSS and YouTube podcast audio, progression, resume, offline episode and next episode.",
+    "Native share target dialog, file import/export and TalkBack/VoiceOver or desktop screen reader."
+  ],
+  "officialSources": [
+    {"subject": "Chrome Windows, Mac and Linux web app installation and shortcuts", "url": "https://support.google.com/chrome/answer/9658361?hl=en"},
+    {"subject": "Safari Mac web apps require macOS Sonoma 14+", "url": "https://support.apple.com/en-us/104996"},
+    {"subject": "Safari web apps cookie-only copy and storage API", "url": "https://webkit.org/blog/14445/webkit-features-in-safari-17-0/"},
+    {"subject": "WebKit quotas, best effort storage and eviction", "url": "https://webkit.org/blog/14403/updates-to-storage-policy/"},
+    {"subject": "Firefox Windows web apps from 143, Store builds from 150", "url": "https://support.mozilla.org/es/kb/web-apps-firefox-windows"},
+    {"subject": "Firefox implementation: Windows enabled; Linux disabled by default; macOS unavailable", "url": "https://firefox-source-docs.mozilla.org/browser/components/taskbartabs/docs/index.html"},
+    {"subject": "Android Auto media requires native media library service/session", "url": "https://developer.android.com/media/implement/surfaces/cars"},
+    {"subject": "CarPlay requires entitlement and signed Xcode app configuration", "url": "https://developer.apple.com/documentation/carplay/requesting-carplay-entitlements"},
+    {"subject": "Manifest relative id uses start URL origin; installed identity must remain stable", "url": "https://developer.chrome.com/docs/capabilities/pwa-manifest-id"}
+  ],
+  "allPlatformsAndFeaturesVerified": false
+}
