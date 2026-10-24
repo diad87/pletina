@@ -10,10 +10,11 @@ import { createPwaServer } from '../preview-pwa.mjs'
 const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
 const expectedBuild = option('--expected-build', '')
+const fullPlayback = args.includes('--full-playback')
 assert.match(expectedBuild, /^[a-f0-9]{16}$/, '--expected-build is required')
-const definitions = { epoitaitaye: { videoId: 'DJzjkMBMook', title: 'Epoitaitaye' }, maite: { videoId: 'WtTRMAoN2Fw', title: 'Maite Zaitut!' }, iritsi: { videoId: 'fV-IUsecSsU', title: 'Iritsi da Eguna' } }
+const definitions = { nini: { videoId: 'NGp3dh-hBe8', title: 'Ni, Ni, Ni!' }, epoitaitaye: { videoId: 'DJzjkMBMook', title: 'Epoitaitaye' }, maite: { videoId: 'WtTRMAoN2Fw', title: 'Maite Zaitut!' }, iritsi: { videoId: 'fV-IUsecSsU', title: 'Iritsi da Eguna' } }
 const cases = option('--cases', 'epoitaitaye,maite,iritsi').split(',')
-assert.ok(cases.length > 0 && cases.length <= 3 && new Set(cases).size === cases.length && cases.every(name => Object.hasOwn(definitions, name)))
+assert.ok(cases.length > 0 && cases.length <= 4 && new Set(cases).size === cases.length && cases.every(name => Object.hasOwn(definitions, name)))
 const reportName = option('--report', `p1-integrated-live-${expectedBuild}-local.json`)
 assert.match(reportName, /^p1-integrated-[a-z0-9.-]+\.json$/)
 const directory = new URL('../../artifacts/pwa-port/', import.meta.url)
@@ -23,6 +24,7 @@ const timestamp = () => ({ at: new Date().toISOString(), elapsedMs: Date.now() -
 const report = { schemaVersion: 1, testedAt: new Date().toISOString(), expectedBuild, build: null,
   runnerSha256: sourceHash, sourceSnapshot: `artifacts/pwa-port/p1-integrated-source-${sourceHash.slice(0, 16)}.mjs`,
   scope: 'Compiled P1 check page; real anonymous browser provider requests, desktop Chrome foreground audio. No physical Android/iPhone, installed PWA, background, screen-off or audible human verification.',
+  fullPlaybackRequested: fullPlayback,
   policy: { providerMocks: false, productMethodsReplaced: false, sdkInjected: false, nodeProviderBootstrap: false, runtimeBackend: false,
     signedUrlsPersisted: false, rawRecipePersisted: false, mediaPersisted: false, browserSecurityOverrides: false, autoplayOverrides: false,
     outputSilencedByLaunchArgument: false, physicalAndroid: false, physicalIPhone: false, background: false, screenOff: false,
@@ -194,7 +196,7 @@ try {
   for (const name of cases) {
     const song = definitions[name], result = { name, videoId: song.videoId, title: song.title, checks: [], samples: [], startedAt: new Date().toISOString() }
     report.cases.push(result)
-    await check(name + ': one real button click starts unmuted AAC through P1', async () => {
+    await check(name + ': one real button click starts unmuted native audio through P1', async () => {
       const began = Date.now(); await click(`[data-song="${name}"]`, 'single normal play click: ' + name)
       const playing = await poll('Unmuted P1 playback: ' + name, async () => {
         const value = await state(); result.samples.push(value)
@@ -208,12 +210,28 @@ try {
       return { elapsedMs: result.elapsedToAdvancingAudioMs, duration: result.duration, transport: playing.transport, exactVideoId: true,
         time: playing.audio.time, paused: false, unmutedAudio: true, frameCount: 0, sameAudio: true, extraPlayInteraction: false }
     }, result.checks)
-    await check(name + ': audio advances after a declared programmatic 80 percent seek', async () => {
+    if (fullPlayback) await check(name + ': complete uninterrupted native audio reaches natural ended without another interaction', async () => {
+      const samples = [], deadline = Date.now() + (result.duration + 20) * 1000
+      let last = 0, ended = false
+      while (Date.now() < deadline) {
+        const value = await state(), audio = value.audio
+        assert.equal(value.frameCount, 0); assert.equal(value.videoCount, 0)
+        assert.equal(audio.errorCode, null); assert.equal(audio.muted, false)
+        assert.ok(audio.time >= last - 0.1); last = audio.time
+        samples.push({ at: new Date().toISOString(), time: audio.time, paused: audio.paused, ended: audio.ended })
+        if (audio.ended) { ended = true; break }
+        assert.equal(audio.paused, false)
+        await delay(1000)
+      }
+      assert.equal(ended, true); assert.ok(last >= result.duration - 0.1)
+      return { samples, ended: true, duration: result.duration, seeks: 0, extraInteractions: 0, audibleHumanVerification: false }
+    }, result.checks)
+    if (!fullPlayback) await check(name + ': audio advances after a declared programmatic 80 percent seek', async () => {
       const requested = await seek(0.8); assert.ok(requested)
       const value = await poll('Advance after 80 percent seek', async () => { const value = await state(); return !value.audio.paused && value.audio.time > requested.target + 0.7 && !value.audio.errorCode ? value : null }, 15000)
       return { target: requested.target, time: value.audio.time, userGesture: false }
     }, result.checks)
-    await check(name + ': natural ended follows a declared programmatic tail seek', async () => {
+    if (!fullPlayback) await check(name + ': natural ended follows a declared programmatic tail seek', async () => {
       const requested = await seek(0, true); assert.ok(requested)
       const value = await poll('Natural tail ended', async () => { const value = await state(); return value.audio.ended && value.audio.paused ? value : null }, 12000)
       assert.ok(value.audio.time >= value.audio.duration - 0.1); assert.equal(await sameAudio(), true)

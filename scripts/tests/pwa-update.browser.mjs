@@ -34,12 +34,14 @@ const report = {
   updateTrigger: 'registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.',
   playlistFixture: coldOnly ? 'No playlist or metadata fixture is seeded in the cold-installer-only run.' : 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
   audioFixture: coldOnly ? 'No audio fixture is seeded in the cold-installer-only run.' : 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
+  coverFixture: coldOnly ? 'No cover fixture is seeded in the cold-installer-only run.' : 'Owned PNG bytes and a permanent public HTTPS reference seeded directly in the downloaded-track metadata and readable cover CacheStorage. Update persistence and the new offline SW route only; no UI/provider download or physical lock-screen artwork claim.',
   runKind: coldOnly ? 'cold-installer-update-only' : 'cold-installer-and-opened-application-updates',
 }
 const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '[URL]')
   .replace(/[A-Z]:[\\/][^\s\n"']+/gi, '[path]').replace(/\u001b\[[0-9;]*m/g, '').slice(0, 700)
 let temporary, browser, server, page, gate, live = 'A', phase = 'setup', origin
 const servers = new Map(), requests = [], blockedHosts = new Set()
+const workerExpectations = new Map()
 let failingPath = null
 const migrationTraceWorkers = []
 async function collectMigrationTrace() {
@@ -122,6 +124,9 @@ function waveFixture() {
   return result
 }
 const fixtureBytes = waveFixture(), fixtureHash = digest(fixtureBytes)
+const coverFixturePath = 'scripts/tests/e2e/fixtures/offline-cover.png'
+const coverFixtureBytes = await readFile(join(workspace, coverFixturePath)), coverFixtureHash = digest(coverFixtureBytes)
+const coverFixtureURL = 'https://images.pletina.test/qa-offline-cover.png'
 const podcastId = 500000000000101, episodeId = 750000000000101
 async function context() {
   const result = await browser.newContext({ viewport: { width: 1440, height: 1000 }, serviceWorkers: 'allow' })
@@ -247,12 +252,17 @@ async function seedLegacyLibrary() {
   }), { podcastId, episodeId })
 }
 async function seedDownloadAndEpisode() {
-  await page.evaluate(async ({ bytes, episodeId, podcastId }) => {
+  await page.evaluate(async ({ bytes, coverBytes, coverURL, episodeId, podcastId }) => {
     const track = { id: 101, title: 'Canción de QA', duration: 180, explicit: false,
-      artistId: 1, artistName: 'Artista de QA', albumId: 1, albumTitle: 'Álbum de QA', albumArtistId: 1, cover: null }
+      artistId: 1, artistName: 'Artista de QA', albumId: 1, albumTitle: 'Álbum de QA', albumArtistId: 1, cover: coverURL }
     const root = new URL('../', location.href)
     const key = new URL(`__audio__/101?stage=${Date.now()}-${crypto.randomUUID()}`, root).href
     await (await caches.open('pletina-audio-downloads:v1')).put(key, new Response(new Uint8Array(bytes), { headers: { 'Content-Type': 'audio/wav' } }))
+    const coverKey = new URL('__covers__', root)
+    coverKey.searchParams.set('url', coverURL)
+    await (await caches.open('pletina-cover-downloads:v1')).put(coverKey.href, new Response(new Uint8Array(coverBytes), {
+      headers: { 'Content-Type': 'image/png', 'Content-Length': String(coverBytes.length), 'X-Content-Type-Options': 'nosniff' },
+    }))
     await new Promise((resolve, reject) => {
       const opening = indexedDB.open('pletina-web-downloads', 1)
       opening.onupgradeneeded = () => opening.result.createObjectStore('files', { keyPath: 'id' })
@@ -279,7 +289,7 @@ async function seedDownloadAndEpisode() {
         tx.onabort = () => { db.close(); reject(new Error('Could not commit episode fixture')) }
       }
     })
-  }, { bytes: [...fixtureBytes], episodeId, podcastId })
+  }, { bytes: [...fixtureBytes], coverBytes: [...coverFixtureBytes], coverURL: coverFixtureURL, episodeId, podcastId })
 }
 async function downloadSnapshot() {
   return page.evaluate(async () => {
@@ -298,9 +308,16 @@ async function downloadSnapshot() {
     if (!cached) throw new Error('Cached download bytes vanished')
     const hash = async response => [...new Uint8Array(await crypto.subtle.digest('SHA-256', await response.arrayBuffer()))].map(byte => byte.toString(16).padStart(2, '0')).join('')
     const cachedSha256 = await hash(cached)
+    const coverKey = new URL('../__covers__', location.href)
+    coverKey.searchParams.set('url', saved.track.cover)
+    const cover = await (await caches.open('pletina-cover-downloads:v1')).match(coverKey.href)
+    if (!cover) throw new Error('Cached cover bytes vanished')
+    const coverInfo = { key: coverKey.href, path: coverKey.pathname, source: saved.track.cover, cacheName: 'pletina-cover-downloads:v1',
+      type: cover.type, status: cover.status, mime: cover.headers.get('content-type'), bytes: Number(cover.headers.get('content-length')),
+      cachedSha256: await hash(cover) }
     const stable = new URL('../__audio__/101', location.href), response = await fetch(stable)
     return { rows, stablePath: stable.pathname, status: response.status, cachedSha256, servedSha256: await hash(response),
-      online: navigator.onLine, controlled: Boolean(navigator.serviceWorker.controller), cacheName: 'pletina-audio-downloads:v1' }
+      cover: coverInfo, online: navigator.onLine, controlled: Boolean(navigator.serviceWorker.controller), cacheName: 'pletina-audio-downloads:v1' }
   })
 }
 async function openApplication() {
@@ -340,12 +357,13 @@ try {
       `<meta name="qa-release" content="${name}"><title>Pletina QA ${name}</title>`))
     const output = join(temporary, `site-${name}`)
     builds[name] = await buildPwa({ source: shell, application: app, output })
+    workerExpectations.set(name, { sha256: digest(await readFile(join(output, 'sw.js'))), version: builds[name].version })
     servers.set(name, createPwaServer({ directory: output }))
   }
   assert.notEqual(builds.A.version, builds.B.version)
   assert.notEqual(builds.A.applicationPage, builds.B.applicationPage)
   report.builds = Object.fromEntries(Object.entries(builds).map(([name, value]) => [name, {
-    version: value.version, applicationPage: value.applicationPage, optionalFiles: value.optionalFiles,
+    version: value.version, applicationPage: value.applicationPage, optionalFiles: value.optionalFiles, workerSha256: workerExpectations.get(name).sha256,
   }]))
   const compiledWorker = await readFile(join(temporary, 'site-A', 'sw.js'), 'utf8')
   report.sourceApplicationAssets = JSON.parse(compiledWorker.match(/const OPTIONAL = (\[[^\n]+\])/)[1])
@@ -358,6 +376,17 @@ try {
     const version = live
     const observed = { phase, version, path: pathname }
     requests.push(observed)
+    if (pathname === '/pletina/sw.js') {
+      // Passive capture of the exact bytes passed to the immutable static QA
+      // server response; the original end method and its result are unchanged.
+      const originalEnd = response.end
+      response.end = function (chunk, ...args) {
+        const bytes = chunk == null || typeof chunk === 'function' ? Buffer.alloc(0)
+          : Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, typeof args[0] === 'string' ? args[0] : undefined)
+        observed.worker = { bytes: bytes.length, sha256: digest(bytes), version: bytes.toString('utf8').match(/const VERSION = "([a-f0-9]{16})"/)?.[1] ?? null }
+        return Reflect.apply(originalEnd, this, [chunk, ...args])
+      }
+    }
     response.once('finish', () => { observed.status = response.statusCode })
     if (pathname === failingPath) { response.writeHead(503, { 'Cache-Control': 'no-store' }); response.end('QA interrupted download'); return }
     if (gate?.path === pathname && version === 'B') { gate.entered.resolve(); await gate.release.promise }
@@ -433,6 +462,7 @@ try {
     const messages = report.messages.filter(message => message.phase === phase).map(message => message.type)
     assert.ok(messages.indexOf('PREPARE_APPLICATION') >= 0)
     assert.ok(messages.indexOf('ACTIVATE_UPDATE') > messages.indexOf('PREPARE_APPLICATION'))
+    assert.equal(messages.filter(type => type === 'ACTIVATE_UPDATE').length, 1)
     assert.equal(requests.filter(request => request.phase.startsWith('cold-') && retiredA.includes(request.path)).length, 0)
     const installedB = await snapshot()
     assert.deepEqual(installedB.cacheInfo.map(cache => cache.version), [builds.B.version])
@@ -449,6 +479,16 @@ try {
   await coldContext.close(); page = null
   failingPath = null; live = 'A'
   if (!coldOnly) {
+  // The cold worker and offline-emulation state belong to an independent QA
+  // exercise. Release its entire process before creating the warm update case,
+  // as already required by the separate real-distribution migration below.
+  const coldBrowserVersion = browser.version()
+  await browser.close()
+  report.fullApplicationBrowserIsolation = { previousBrowserClosed: !browser.isConnected(),
+    mode: 'Fresh disposable Chrome process after closing the cold-installer context; same launch options and immutable A/B distributions.', previousBrowserVersion: coldBrowserVersion }
+  browser = await chromium.launch(browserOptions)
+  report.fullApplicationBrowserIsolation.fullBrowserVersion = browser.version()
+  assert.equal(browser.version(), coldBrowserVersion)
   const fullContext = await context()
   page = await newPage(fullContext)
   const playlistName = 'QA actualización persistente'
@@ -509,8 +549,15 @@ try {
     assert.equal(expectedDownload.cachedSha256, fixtureHash)
     assert.equal(expectedDownload.servedSha256, fixtureHash)
     assert.equal(expectedDownload.status, 200)
+    assert.equal(expectedDownload.cover.cachedSha256, coverFixtureHash)
+    assert.equal(expectedDownload.cover.status, 200)
+    assert.equal(expectedDownload.cover.mime, 'image/png')
+    assert.equal(expectedDownload.cover.bytes, coverFixtureBytes.length)
+    assert.ok(['default', 'basic'].includes(expectedDownload.cover.type))
     report.downloadFixture = { trackId: 101, bytes: fixtureBytes.length, sha256: fixtureHash, stablePath: expectedDownload.stablePath,
-      playbackTested: false, providerDownloaded: false }
+      playbackTested: false, providerDownloaded: false, cover: { sourceFile: coverFixturePath, bytes: coverFixtureBytes.length,
+        sha256: coverFixtureHash, cachedType: expectedDownload.cover.type, stablePath: expectedDownload.cover.path,
+        seededDirectly: true, providerDownloaded: false, uiDownloadClaimed: false } }
     return { librarySchemaFrom: 1, librarySchemaTo: expectedDatabase.version, podcastId, episodeId,
       progress: expectedDatabase.progress[0], download: report.downloadFixture }
   })
@@ -579,6 +626,7 @@ try {
     const messages = report.messages.filter((message) => message.phase === phase).map((message) => message.type)
     assert.ok(messages.indexOf('PREPARE_APPLICATION') >= 0)
     assert.ok(messages.indexOf('ACTIVATE_UPDATE') > messages.indexOf('PREPARE_APPLICATION'))
+    assert.equal(messages.filter(type => type === 'ACTIVATE_UPDATE').length, 1)
     assert.deepEqual(await database(), expectedDatabase)
     assert.deepEqual(await downloadSnapshot(), expectedDownload)
     const state = await snapshot()
@@ -600,11 +648,21 @@ try {
     assert.equal(downloaded.online, false)
     assert.equal(downloaded.cachedSha256, fixtureHash)
     assert.equal(downloaded.servedSha256, fixtureHash)
+    const servedCover = await page.evaluate(async key => {
+      const response = await fetch(key), bytes = await response.arrayBuffer()
+      const sha256 = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(byte => byte.toString(16).padStart(2, '0')).join('')
+      return { status: response.status, mime: response.headers.get('content-type'), bytes: bytes.byteLength, sha256,
+        local: new URL(response.url).origin === location.origin, redirected: response.redirected, online: navigator.onLine }
+    }, downloaded.cover.key)
+    assert.equal(servedCover.status, 200); assert.equal(servedCover.mime, 'image/png')
+    assert.equal(servedCover.sha256, coverFixtureHash); assert.equal(servedCover.bytes, coverFixtureBytes.length)
+    assert.equal(servedCover.local, true); assert.equal(servedCover.redirected, false); assert.equal(servedCover.online, false)
     return { online: await page.evaluate(() => navigator.onLine), playlistId: expectedDatabase.playlists[0].id,
       entryIds: expectedDatabase.entries.map((row) => row.entryId), podcastId, episodeId,
       podcastPosition: expectedDatabase.progress[0].position, downloadedTrackId: 101,
       cachedSha256: downloaded.cachedSha256, swRouteSha256: downloaded.servedSha256, swRouteStatus: downloaded.status,
-      downloadedBytes: fixtureBytes.length, fixturePlaybackClaimed: false, providerDownloadClaimed: false }
+      downloadedBytes: fixtureBytes.length, cachedCover: downloaded.cover, swCoverRoute: servedCover,
+      fixturePlaybackClaimed: false, providerDownloadClaimed: false, coverFixtureSeededDirectly: true }
   })
   await fullContext.close()
   page = null
@@ -626,6 +684,7 @@ try {
     await cp(resolve(prototype), old, { recursive: true })
     const worker = await readFile(join(old, 'sw.js'), 'utf8')
     report.prototypeVersion = worker.match(/const VERSION = "([a-f0-9]{16})"/)?.[1] ?? null
+    workerExpectations.set('prototype', { sha256: digest(worker), version: report.prototypeVersion })
     const previousOptional = JSON.parse(worker.match(/const OPTIONAL = (\[[^\n]+\])/)?.[1] ?? '[]').map(file => file.url)
     const previousFull = previousOptional.some(path => path.startsWith('application/'))
     const oldManifest = JSON.parse(await readFile(join(old, 'manifest.webmanifest'), 'utf8'))
@@ -747,9 +806,13 @@ try {
     report.temporarySiteRemoved = true
   }
   report.blockedExternalHosts = [...blockedHosts].sort()
+  report.workerResponses = requests.filter(request => request.path === '/pletina/sw.js').map(request => ({ ...request,
+    matchesImmutableDistribution: request.status === 200 && request.worker?.sha256 === workerExpectations.get(request.version)?.sha256 &&
+      request.worker?.version === workerExpectations.get(request.version)?.version }))
+  report.workerResponsesImmutable = report.workerResponses.length > 0 && report.workerResponses.every(response => response.matchesImmutableDistribution)
   report.finishedAt = new Date().toISOString()
   report.passed = !report.fatal && report.checks.length >= (coldOnly ? 3 : option('--prototype', null) ? 11 : 10)
-    && report.checks.every((check) => check.pass) && report.errors.length === 0
+    && report.checks.every((check) => check.pass) && report.errors.length === 0 && report.workerResponsesImmutable
   await mkdir(artifactDirectory, { recursive: true })
   await writeFile(join(artifactDirectory, reportName), `${JSON.stringify(report, null, 2)}\n`)
   process.stdout.write(`Report: artifacts/pwa-port/${reportName}; ${report.passed ? 'PASS' : 'FAIL'}\n`)

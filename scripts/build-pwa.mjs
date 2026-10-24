@@ -27,7 +27,10 @@ async function readTree(directory, base = directory) {
 
 export async function buildPwa({ source = sourceDirectory, output = outputDirectory, application } = {}) {
   const files = await readTree(source)
-  const worker = files.get('sw.js').toString()
+  const routing = files.get('cover-routing.mjs')?.toString()
+  if (!routing || !routing.includes('export default function coverRouting(')) throw new Error('Falta la política compartida de carátulas.')
+  const worker = files.get('sw.js').toString().replace('__COVER_ROUTING_FACTORY__', routing.replace('export default ', ''))
+  files.delete('cover-routing.mjs')
   files.delete('sw.js')
   const optionalNames = new Set()
   let applicationPage

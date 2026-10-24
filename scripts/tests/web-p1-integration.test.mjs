@@ -74,7 +74,7 @@ function engine(t, options = {}) {
     return exports
   }
   const realP1 = instantiate(p1Code), realProbe = instantiate(probeCode), p1Recipe = options.recipe ?? recipe()
-  const dependencies = { './youtube-p1': realP1, './youtube-p1-probe': realProbe, './p1-recipe.generated': { p1Recipe }, ...options.modules }
+  const dependencies = { './youtube-p1': realP1, './youtube-p1-probe': realProbe, './p1-recipe.generated': { p1Recipe, p1FallbackRecipe: options.fallbackRecipe }, ...options.modules }
   const api = instantiate(youtubeCode, path => {
     imports.push(path)
     assert.ok(Object.hasOwn(dependencies, path), `unexpected module ${path}`)
@@ -116,9 +116,9 @@ async function completeP1(yt, label = 'p1') {
   yt.result(player(label))
   await flush()
   assert.equal(yt.args().message, 'pletina-youtube-p1-metadata')
-  assert.equal(yt.args().expectedDuration, 209)
-  assert.equal(yt.args().url, audioUrl(label))
-  yt.send({ duration: 209.16 })
+  assert.equal(yt.args().candidates[0].expectedDuration, 209)
+  assert.equal(yt.args().candidates[0].url, audioUrl(label))
+  yt.send({ index: 0, duration: 209.16 })
   await flush()
 }
 
@@ -136,43 +136,38 @@ function aacAndOpus() {
   return response
 }
 
-for (const support of ['maybe', 'probably']) test(`native ${support} Opus support rescues the same video after the AAC probe fails`, async t => {
+for (const support of ['maybe', 'probably']) test(`native ${support} Opus support sends one original quality-ordered metadata batch`, async t => {
   const yt = engine(t, { opusSupport: support }), { pending } = await visionos(yt)
   await p1Request(yt); const response = aacAndOpus(); yt.result(response); await flush()
-  assert.equal(yt.frames.length, 2)
-  const [aac, opus] = [...yt.frames]
-  assert.equal(yt.args(aac).url, response.streamingData.adaptiveFormats[0].url)
-  assert.equal(yt.args(opus).url, response.streamingData.adaptiveFormats[1].url)
-  let settled = false; pending.finally(() => { settled = true }).catch(() => {})
-  yt.send({ duration: 209.16 }, opus); await flush()
-  assert.equal(settled, false, 'Opus must wait for the preferred AAC')
-  yt.send({ error: 'network' }, aac)
+  assert.equal(yt.frames.length, 1)
+  assert.deepEqual(yt.args().candidates, [response.streamingData.adaptiveFormats[1], response.streamingData.adaptiveFormats[0]]
+    .map(format => ({ url: format.url, expectedDuration: 209 })))
+  yt.send({ index: 0, duration: 209.16 })
   const value = await pending
-  assert.equal(value.videoId, id)
-  assert.equal(value.transport, 'p1')
+  assert.equal(value.videoId, id); assert.equal(value.transport, 'p1')
   assert.equal(value.url, response.streamingData.adaptiveFormats[1].url)
   assert.equal(yt.frames.length, 0)
   const requests = yt.history.length
-  assert.equal(await yt.stream(), value)
-  assert.equal(yt.history.length, requests)
+  assert.equal(await yt.stream(), value); assert.equal(yt.history.length, requests)
   assert.deepEqual(yt.storageAccess, [])
 })
 
-test('a healthy AAC wins even when the higher-bitrate Opus probe finishes first', async t => {
+test('one supported-native batch can hand off AAC as the selected original fallback', async t => {
   const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
   await p1Request(yt); yt.result(aacAndOpus()); await flush()
-  const [aac, opus] = [...yt.frames]
-  yt.send({ duration: 209.16 }, opus); yt.send({ duration: 209.16 }, aac)
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().candidates[0].url, audioUrl('opus').replace('itag=140', 'itag=251') + '&mime=audio%2Fwebm')
+  yt.send({ index: 1, duration: 209.16 })
   assert.equal((await pending).url, audioUrl('aac'))
   assert.equal(yt.frames.length, 0)
 })
 
-for (const support of ['', 'no', true, new Error('Capability unavailable')]) test(`unsupported Opus capability ${String(support)} never reaches a probe`, async t => {
+for (const support of ['', 'no', true, new Error('Capability unavailable')]) test(`unsupported Opus capability ${String(support)} never enters the shared batch`, async t => {
   const yt = engine(t, { opusSupport: support }), { pending } = await visionos(yt)
   await p1Request(yt); yt.result(aacAndOpus()); await flush()
   assert.equal(yt.frames.length, 1)
-  assert.equal(yt.args().url, audioUrl('aac'))
-  yt.send({ duration: 209.16 })
+  assert.deepEqual(yt.args().candidates, [{ url: audioUrl('aac'), expectedDuration: 209 }])
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, audioUrl('aac'))
 })
 
@@ -192,124 +187,102 @@ test('a rejected AAC does not hide an explicitly original Opus of the same video
   response.streamingData.adaptiveFormats[1].audioTrack = { displayName: 'Basque (Original)', audioIsDefault: false }
   yt.result(response); await flush()
   assert.equal(yt.frames.length, 1)
-  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
-  yt.send({ duration: 209.16 })
+  assert.deepEqual(yt.args().candidates, [{ url: response.streamingData.adaptiveFormats[1].url, expectedDuration: 209 }])
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
 })
 
-test('mixed codecs retain the four-format bound and never evict an AAC sibling for Opus', async t => {
+test('mixed codecs retain the four-format bound and use Native Opus order only when supported', async t => {
   const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
   await p1Request(yt); const response = aacAndOpus(), [aac, opus] = response.streamingData.adaptiveFormats
   response.streamingData.adaptiveFormats = [...Array.from({ length: 9 }, (_, n) => ({ ...opus, bitrate: 500000 + n, url: opus.url + '&extra=' + n })),
     ...Array.from({ length: 4 }, (_, n) => ({ ...aac, bitrate: 64000 + n, url: audioUrl('aac-' + n) }))]
   yt.result(response); await flush()
-  assert.equal(yt.frames.length, 4)
-  assert.ok(yt.frames.every(frame => yt.args(frame).url.includes('fixture=aac-')))
-  yt.send({ duration: 209.16 }, yt.frames[0])
-  assert.equal((await pending).url, audioUrl('aac-3'))
+  assert.equal(yt.frames.length, 1)
+  assert.equal(yt.args().candidates.length, 4)
+  assert.ok(yt.args().candidates.every(candidate => candidate.url.includes('fixture=opus')))
+  assert.ok(yt.args().candidates[0].url.endsWith('&extra=8'))
+  yt.send({ index: 0, duration: 209.16 })
+  assert.ok((await pending).url.endsWith('&extra=8'))
   assert.equal(yt.frames.length, 0)
 })
 
-test('abort while Opus is ready and AAC pending unloads both and caches neither', async t => {
+test('abort unloads the shared Opus/AAC batch and caches no late selected format', async t => {
   const yt = engine(t, { opusSupport: 'probably' }), controller = new AbortController()
   const { pending } = await visionos(yt, false, controller.signal)
   await p1Request(yt); yt.result(aacAndOpus()); await flush()
-  const [aac, opus] = [...yt.frames]
-  yt.send({ duration: 209.16 }, opus); await flush()
+  const batch = yt.frames[0]
+  assert.equal(yt.args().candidates.length, 2)
   controller.abort()
   await assert.rejects(pending, { name: 'AbortError' })
   assert.equal(yt.frames.length, 0)
-  yt.send({ duration: 209.16 }, aac)
+  yt.send({ index: 0, duration: 209.16 }, batch)
   const retry = await visionos(yt)
   yt.result(player('new-after-opus-cancel'))
   assert.equal((await retry.pending).url, audioUrl('new-after-opus-cancel'))
 })
 
-test('a failed Opus duration check cannot hide a transient AAC failure or poison the cache', async t => {
+test('an incorrect selected Opus duration cannot enter the stream cache', async t => {
   const yt = engine(t, { opusSupport: 'probably' }), { pending } = await visionos(yt)
   await p1Request(yt); yt.result(aacAndOpus()); await flush()
-  const [aac, opus] = [...yt.frames]
-  yt.send({ error: 'network' }, aac); yt.send({ duration: 120 }, opus)
-  await assert.rejects(pending, error => error.code === 'network')
+  yt.send({ index: 0, duration: 120 })
+  await assert.rejects(pending, error => error.code === 'unavailable')
   const retry = await visionos(yt)
   yt.result(player('no-invalid-opus-cache'))
   assert.equal((await retry.pending).url, audioUrl('no-invalid-opus-cache'))
 })
 
-for (const failure of ['network', 'timeout', 'duration']) test(`P1 tries another original AAC when the best metadata probe fails with ${failure}`, async t => {
+for (const index of [0, 1]) test(`one shared AAC batch maps selected index ${index} to its exact format`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt)
-  const response = multipleAac()
-  yt.result(response); await flush()
-  assert.equal(yt.frames.length, 2, 'bounded metadata probes share one time window')
-  const [best, lower] = [...yt.frames]
-  assert.equal(yt.args(best).url, audioUrl('best'))
-  assert.equal(yt.args(lower).url, response.streamingData.adaptiveFormats[1].url)
-  yt.send({ duration: 209.16 }, lower)
-  await flush()
-  if (failure === 'duration') yt.send({ duration: 120 }, best)
-  else yt.send({ error: failure }, best)
+  await p1Request(yt); const response = multipleAac(); yt.result(response); await flush()
+  assert.equal(yt.frames.length, 1, 'All encodings must share the single bridge budget')
+  assert.deepEqual(yt.args().candidates.map(candidate => candidate.url), response.streamingData.adaptiveFormats.map(format => format.url))
+  yt.send({ index, duration: 209.16 })
   const value = await pending
-  assert.equal(value.url, response.streamingData.adaptiveFormats[1].url)
-  assert.equal(value.videoId, id)
-  assert.equal(value.transport, 'p1')
-  assert.equal(yt.frames.length, 0, 'all probes unload before handing the locator to the player')
-  const requests = yt.history.length
-  assert.equal(await yt.stream(), value)
-  assert.equal(yt.history.length, requests, 'only the successful lower-quality locator enters the cache')
-})
-
-test('a valid higher-quality AAC wins and cancels a still-pending lower probe', async t => {
-  const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt); yt.result(multipleAac()); await flush()
-  assert.equal(yt.frames.length, 2)
-  yt.send({ duration: 209.16 }, yt.frames[0])
-  assert.equal((await pending).url, audioUrl('best'))
+  assert.equal(value.url, response.streamingData.adaptiveFormats[index].url)
+  assert.equal(value.videoId, id); assert.equal(value.transport, 'p1')
   assert.equal(yt.frames.length, 0)
+  const requests = yt.history.length
+  assert.equal(await yt.stream(), value); assert.equal(yt.history.length, requests)
 })
 
-test('a lower AAC success waits for the preferred candidate instead of silently lowering quality', async t => {
+test('an out-of-range batch selection cannot select another recording or cache a locator', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  let settled = false; pending.finally(() => { settled = true }).catch(() => {})
   await p1Request(yt); yt.result(multipleAac()); await flush()
-  const [best, lower] = [...yt.frames]
-  yt.send({ duration: 209.16 }, lower); await flush()
-  assert.equal(settled, false)
-  yt.send({ duration: 209.16 }, best)
-  assert.equal((await pending).url, audioUrl('best'))
+  yt.send({ index: 2, duration: 209.16 })
+  await assert.rejects(pending, error => error.code === 'unavailable')
+  const retry = await visionos(yt)
+  yt.result(player('no-invalid-selection-cache'))
+  assert.equal((await retry.pending).url, audioUrl('no-invalid-selection-cache'))
 })
 
 test('an invalid AAC locator does not hide a healthy original AAC', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt)
-  const response = multipleAac()
+  await p1Request(yt); const response = multipleAac()
   response.streamingData.adaptiveFormats[0].url = 'https://invalid.example/videoplayback'
   yt.result(response); await flush()
-  assert.equal(yt.frames.length, 1)
-  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
-  yt.send({ duration: 209.16 })
+  assert.deepEqual(yt.args().candidates, [{ url: response.streamingData.adaptiveFormats[1].url, expectedDuration: 209 }])
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
 })
 
-test('many dubbed AAC encodings cannot use the four-candidate budget before the original', async t => {
+test('many dubbed AAC encodings cannot consume the four-candidate budget before the original', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt)
-  const response = player('original'), original = response.streamingData.adaptiveFormats[0]
+  await p1Request(yt); const response = player('original'), original = response.streamingData.adaptiveFormats[0]
   original.audioTrack = { displayName: 'Original', audioIsDefault: true }
   response.streamingData.adaptiveFormats = [...Array.from({ length: 6 }, (_, index) => ({ ...original,
     url: audioUrl('dub' + index), bitrate: 200000 + index, audioTrack: { displayName: 'English dubbed', audioIsDefault: true } })), original]
   yt.result(response); await flush()
-  assert.equal(yt.frames.length, 1)
-  assert.equal(yt.args().url, audioUrl('original'))
-  yt.send({ duration: 209.16 })
+  assert.deepEqual(yt.args().candidates, [{ url: audioUrl('original'), expectedDuration: 209 }])
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, audioUrl('original'))
 })
 
-for (const code of ['network', 'timeout']) test(`P1 transient ${code} from all AAC probes stays transient and caches none`, async t => {
+for (const code of ['network', 'timeout']) test(`shared AAC batch transient ${code} stays transient and caches none`, async t => {
   const yt = engine(t), { pending } = await visionos(yt)
   await p1Request(yt); yt.result(multipleAac()); await flush()
-  const frames = [...yt.frames]
-  for (const frame of frames) yt.send({ error: code }, frame)
+  assert.equal(yt.frames.length, 1); assert.equal(yt.args().candidates.length, 2)
+  yt.send({ error: code })
   await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === code)
   assert.equal(yt.frames.length, 0)
   const retry = await visionos(yt)
@@ -317,19 +290,9 @@ for (const code of ['network', 'timeout']) test(`P1 transient ${code} from all A
   assert.equal((await retry.pending).url, audioUrl('retry-all-failed'))
 })
 
-test('P1 transient failure is not hidden by a later AAC duration rejection', async t => {
-  const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt); yt.result(multipleAac()); await flush()
-  const [best, lower] = [...yt.frames]
-  yt.send({ error: 'network' }, best)
-  yt.send({ duration: 120 }, lower)
-  await assert.rejects(pending, error => error instanceof yt.YouTubeError && error.code === 'network')
-  assert.equal(yt.frames.length, 0)
-})
-
-test('only a typed P1 probe failure can replace the original error category', async t => {
+test('only a typed P1 batch failure can replace the original error category', async t => {
   const module = {}, yt = engine(t, { modules: { './youtube-p1-probe': module } })
-  Object.assign(module, yt.realProbe, { async probeP1Audio() {
+  Object.assign(module, yt.realProbe, { async probeP1AudioCandidates() {
     throw Object.assign(new Error('Synthetic lookalike'), { name: 'P1ProbeError', code: 'network' })
   } })
   const { pending } = await visionos(yt)
@@ -347,26 +310,12 @@ test('a typed P1 engine timeout remains transient instead of authorizing a visib
   assert.equal(yt.frames.length, 0)
 })
 
-test('abort cancels all simultaneous probes and late metadata cannot enter the cache', async t => {
+test('abort while removing the completed batch bridge prevents caching its chosen locator', async t => {
   const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
   await p1Request(yt); yt.result(multipleAac()); await flush()
-  const obsolete = [...yt.frames]
-  assert.equal(obsolete.length, 2)
-  controller.abort()
-  await assert.rejects(pending, { name: 'AbortError' })
-  assert.equal(yt.frames.length, 0)
-  for (const frame of obsolete) yt.send({ duration: 209.16 }, frame)
-  const retry = await visionos(yt)
-  yt.result(player('after-multi-abort'))
-  assert.equal((await retry.pending).url, audioUrl('after-multi-abort'))
-})
-
-test('abort while unloading an unused probe prevents the chosen locator from being cached', async t => {
-  const yt = engine(t), controller = new AbortController(), { pending } = await visionos(yt, false, controller.signal)
-  await p1Request(yt); yt.result(multipleAac()); await flush()
-  const [best, lower] = [...yt.frames], postMessage = lower.contentWindow.postMessage
-  lower.contentWindow.postMessage = data => { controller.abort(); postMessage(data) }
-  yt.send({ duration: 209.16 }, best)
+  const batch = yt.frames[0], remove = batch.remove
+  batch.remove = () => { controller.abort(); remove() }
+  yt.send({ index: 0, duration: 209.16 }, batch)
   await assert.rejects(pending, { name: 'AbortError' })
   assert.equal(yt.frames.length, 0)
   const retry = await visionos(yt)
@@ -374,28 +323,41 @@ test('abort while unloading an unused probe prevents the chosen locator from bei
   assert.equal((await retry.pending).url, audioUrl('after-cleanup-abort'))
 })
 
-test('duplicate AAC URLs use only one metadata probe', async t => {
+test('duplicate AAC URLs enter the shared batch only once', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt)
-  const response = multipleAac()
+  await p1Request(yt); const response = multipleAac()
   response.streamingData.adaptiveFormats[1].url = response.streamingData.adaptiveFormats[0].url
   yt.result(response); await flush()
-  assert.equal(yt.frames.length, 1)
-  yt.send({ duration: 209.16 })
+  assert.equal(yt.args().candidates.length, 1)
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, audioUrl('best'))
 })
 
-test('an expired highest-quality locator does not hide another fresh original AAC', async t => {
+test('an expired highest-quality locator does not hide a fresh original AAC', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
-  await p1Request(yt)
-  const response = multipleAac()
+  await p1Request(yt); const response = multipleAac()
   response.streamingData.adaptiveFormats[0].url = audioUrl('expired').replace('expire=9999999999', 'expire=1')
   yt.result(response); await flush()
-  assert.equal(yt.frames.length, 1)
-  assert.equal(yt.args().url, response.streamingData.adaptiveFormats[1].url)
-  yt.send({ duration: 209.16 })
+  assert.deepEqual(yt.args().candidates, [{ url: response.streamingData.adaptiveFormats[1].url, expectedDuration: 209 }])
+  yt.send({ index: 0, duration: 209.16 })
   assert.equal((await pending).url, response.streamingData.adaptiveFormats[1].url)
 })
+
+for (const support of ['', 'probably']) test(`orchestration forwards Native context fallback and its codec gate ${support || 'AAC-only'}`, async t => {
+  const fallback = recipe(), module = {}, calls = []
+  fallback.context.thirdParty.embedUrl = 'https://www.example.com/'
+  const yt = engine(t, { opusSupport: support, fallbackRecipe: fallback, modules: { './youtube-p1': module } })
+  Object.assign(module, yt.realP1, { async requestP1Player(...args) { calls.push(args); return player('context-forwarded') } })
+  const { pending } = await visionos(yt)
+  yt.result(unavailable()); await flush()
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][0], id); assert.equal(typeof calls[0][1], 'function')
+  assert.equal(calls[0][2], yt.p1Recipe); assert.equal(calls[0][5], support === 'probably')
+  assert.equal(calls[0][6], fallback); assert.equal(typeof calls[0][4], 'function')
+  yt.send({ index: 0, duration: 209.16 })
+  assert.equal((await pending).url, audioUrl('context-forwarded'))
+})
+
 
 test('VISIONOS success avoids all P1 imports and reuses only the in-memory stream', async t => {
   const yt = engine(t), { pending } = await visionos(yt)
@@ -522,7 +484,7 @@ for (const category of ['unavailable', 'format']) test(`${category} invokes P1 a
   await flush()
   assert.equal(settled, false, 'a locator alone must not be returned as a playable stream')
   assert.equal(yt.args().message, 'pletina-youtube-p1-metadata')
-  yt.send({ duration: 209.16 })
+  yt.send({ index: 0, duration: 209.16 })
   const value = await pending, requests = yt.history.length
   assert.equal(value.transport, 'p1')
   assert.equal(value.videoId, id)
@@ -660,7 +622,7 @@ for (const mismatch of ['identity', 'duration', 'secondary-audio']) test(`P1 ${m
   if (mismatch === 'secondary-audio') response.streamingData.adaptiveFormats[0].audioTrack = { displayName: 'Descriptive audio', audioIsDefault: true }
   yt.result(response)
   await flush()
-  if (mismatch === 'duration') yt.send({ duration: 120 })
+  if (mismatch === 'duration') yt.send({ index: 0, duration: 120 })
   else assert.equal(yt.frames.length, 0, 'an invalid response must be rejected before metadata probing')
   await assert.rejects(pending, error => error.code === 'unavailable')
   const retry = await visionos(yt)
@@ -725,7 +687,7 @@ test('abort during metadata probing unloads its frame and never caches a late re
   controller.abort()
   await assert.rejects(pending, { name: 'AbortError' })
   assert.equal(yt.frames.length, 0)
-  yt.send({ duration: 209 }, obsolete)
+  yt.send({ index: 0, duration: 209 }, obsolete)
   const retry = await visionos(yt)
   yt.result(player('after-probe-abort'))
   assert.equal((await retry.pending).url, audioUrl('after-probe-abort'))
@@ -760,15 +722,12 @@ test('a fresh module instance cannot retrieve another instance\'s signed locator
 
 test('abort between completed P1 cleanup and the public stream continuation cannot cache the locator', async t => {
   const controller = new AbortController()
-  const yt = engine(t, { modules: { './youtube-p1-probe': { async probeP1Audio() {
-    // Move cancellation through four promise jobs after metadata success. This
-    // targets the async handoff to stream(), after p1Stream's cleanup/check, so
-    // the public operation must check its own signal before committing to RAM.
-    // No timer race, product hook, provider transport or audible Audio is used.
-    let jobs = Promise.resolve()
-    for (let index = 0; index < 4; index++) jobs = jobs.then(() => {})
-    jobs.then(() => controller.abort())
-    return { duration: 209.16 }
+  const yt = engine(t, { modules: { './youtube-p1-probe': { async probeP1AudioCandidates() {
+    // The controlled result schedules cancellation when orchestration reads
+    // its selected index. It lands after p1Stream's synchronous check and before
+    // stream() resumes, independently of the old parallel cleanup microtasks.
+    // The public operation must check again before committing the locator.
+    return { get index() { queueMicrotask(() => controller.abort()); return 0 }, duration: 209.16 }
   } } } })
   const { pending } = await visionos(yt, false, controller.signal)
   await p1Request(yt)

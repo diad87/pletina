@@ -399,7 +399,7 @@ function supportsP1Opus(): boolean {
 
 async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamInfo> {
   checkAbort(signal)
-  const [{ requestP1Player, P1EngineError }, { probeP1Audio, P1ProbeError }, { p1Recipe }] = await Promise.all([
+  const [{ requestP1Player, P1EngineError }, { probeP1AudioCandidates, P1ProbeError }, { p1Recipe, p1FallbackRecipe }] = await Promise.all([
     import('./youtube-p1'), import('./youtube-p1-probe'), import('./p1-recipe.generated'),
   ])
   checkAbort(signal)
@@ -407,7 +407,7 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   let response: unknown
   try {
     response = await requestP1Player(videoId, (body, requestSignal) => requestJson('youtube', 'player', body, requestSignal), p1Recipe, signal,
-      (format, available) => originalAudio(format, !explicitOriginalRequired(available)), allowOpus)
+      (format, available) => originalAudio(format, !explicitOriginalRequired(available)), allowOpus, p1FallbackRecipe)
   } catch (error) {
     checkAbort(signal)
     if (error instanceof P1EngineError && error.code === 'timeout') throw new YouTubeError(error.message, 'timeout')
@@ -418,7 +418,7 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   const candidates: StreamInfo[] = [], seen = new Set<string>()
   let lastError: unknown
   for (const format of available.filter(format => typeof format.url === 'string')
-    .sort((a, b) => Number(!string(a.mimeType).startsWith('audio/mp4')) - Number(!string(b.mimeType).startsWith('audio/mp4')) ||
+    .sort((a, b) => Number(!string(a.mimeType).startsWith(allowOpus ? 'audio/webm' : 'audio/mp4')) - Number(!string(b.mimeType).startsWith(allowOpus ? 'audio/webm' : 'audio/mp4')) ||
       (Number(b.bitrate) || 0) - (Number(a.bitrate) || 0)).slice(0, 4)) {
     // Keep every format's language/track metadata when testing one locator, so
     // an excluded encoding can never turn an untagged track into the original.
@@ -434,34 +434,17 @@ async function p1Stream(videoId: string, signal?: AbortSignal): Promise<StreamIn
   }
   if (!candidates.length) throw lastError ?? new YouTubeError('Este vídeo no ofrece audio compatible.', 'format')
 
-  // All bounded metadata probes share the same eight-second window. Await in
-  // quality order: a healthy best encoding starts immediately, while a failed
-  // encoding does not prevent another original encoding from being used. AAC
-  // stays first; Opus is only admitted after a positive native codec check.
-  const controller = new AbortController(), cancel = () => controller.abort(abortReason(signal))
-  signal?.addEventListener('abort', cancel, { once: true })
-  if (signal?.aborted) cancel()
-  const attempts = candidates.map(info => probeP1Audio(info.url, info.duration, controller.signal)
-    .then(() => ({ info }), error => ({ error })))
-  let selected: StreamInfo | undefined
-  let transient: YouTubeError | undefined
+  // Native's nine retry slots and ten-dispatch budget are shared across every
+  // original encoding in one opaque bridge. Prefer its Opus path only after a
+  // positive browser codec check; unsupported browsers retain AAC.
+  let selected: StreamInfo
   try {
-    for (const attempt of attempts) {
-      const result = await attempt
-      checkAbort(signal)
-      if ('info' in result) { selected = result.info; break }
-      lastError = result.error
-      if (result.error instanceof P1ProbeError && (result.error.code === 'network' || result.error.code === 'timeout')) {
-        transient ??= new YouTubeError(result.error.message, result.error.code)
-      }
-    }
-    // A rejected sibling cannot turn a known CDN transport failure into proof
-    // that audio is unavailable. Successful original encodings still win.
-    if (!selected) throw transient ?? lastError
-  } finally {
-    controller.abort()
-    signal?.removeEventListener('abort', cancel)
-    await Promise.all(attempts)
+    const result = await probeP1AudioCandidates(candidates.map(info => ({ url: info.url, expectedDuration: info.duration })), signal)
+    selected = candidates[result.index]
+  } catch (error) {
+    checkAbort(signal)
+    if (error instanceof P1ProbeError && (error.code === 'network' || error.code === 'timeout')) throw new YouTubeError(error.message, error.code)
+    throw error
   }
   checkAbort(signal)
   return { ...selected, transport: 'p1' }

@@ -38,8 +38,8 @@ try {
     const allowed = data.is_downloadable === true && data.is_download_gated === false && data.access?.download === true
     if (!allowed || !data.is_available || data.is_stream_gated || data.access?.stream !== true) throw new Error('Control is not publicly downloadable')
     const blob = text => URL.createObjectURL(new Blob([text], { type: 'text/javascript' }))
-    const storeUrl = blob(storeCode), unusedUrl = blob('export function resolveRemoteTrack(){throw new Error("Uninjected resolver")};export function stream(){throw new Error("YouTube must not be called")};')
-    const moduleUrl = blob(downloadCode.replace("'./download-store'", JSON.stringify(storeUrl)).replace("'./audio'", JSON.stringify(unusedUrl)).replace("'./youtube'", JSON.stringify(unusedUrl)))
+    const storeUrl = blob(storeCode), unusedUrl = blob('export function resolveRemoteTrack(){throw new Error("Uninjected resolver")};export function stream(){throw new Error("YouTube must not be called")};export function createDownloadCovers(){throw new Error("Uninjected covers")};')
+    const moduleUrl = blob(downloadCode.replace("'./download-store'", JSON.stringify(storeUrl)).replace("'./audio'", JSON.stringify(unusedUrl)).replace("'./youtube'", JSON.stringify(unusedUrl)).replace("'./download-covers'", JSON.stringify(unusedUrl)))
     const storeModule = await import(storeUrl), module = await import(moduleUrl)
     const events = [], id = 1999999901, audioEvents = [], audioInstances = []
     const NativeAudio = globalThis.Audio
@@ -54,7 +54,7 @@ try {
     const track = { id, title: data.title, duration: data.duration, artistId: 0, artistName: data.user.name,
       albumId: 0, albumTitle: 'Audius download route QA', albumArtistId: 0, explicit: false, cover: null }
     const store = storeModule.createDownloadStore({ scope: new URL('./', location.href) })
-    const manager = module.createDownloadManager({ store, emit: event => events.push(event), timeout: 60000,
+    const manager = module.createDownloadManager({ store, covers: false, emit: event => events.push(event), timeout: 60000,
       resolve: async () => ({ videoId: '', url: `https://api.audius.co/v1/tracks/${data.id}/stream`, title: data.title,
         channel: data.user.name, local: false, source: { provider: 'audius', id: data.id, download: { allowed, duration: data.duration } } }) })
     globalThis.__catalogDownloadProbe = { store, manager, events, track }

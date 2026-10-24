@@ -2,6 +2,7 @@ import { stream } from './youtube'
 import { p1Recipe } from './p1-recipe.generated'
 
 const songs = {
+  nini: { id: 'NGp3dh-hBe8', title: 'Ni, Ni, Ni!' },
   epoitaitaye: { id: 'DJzjkMBMook', title: 'Epoitaitaye' },
   maite: { id: 'WtTRMAoN2Fw', title: 'Maite Zaitut!' },
   iritsi: { id: 'fV-IUsecSsU', title: 'Iritsi da Eguna' },

@@ -164,8 +164,8 @@ try {
   }
   report.clickedRow = selected
   if (diagnostic) await cdp.send('Debugger.setPauseOnExceptions', { state: 'all' })
-  report.songControl = artistView ? songControl : 'number'
-  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] ${artistView ? songControl === 'cover' ? '.thumb' : '.name' : '.num'}`, artistView ? `single artist popular ${songControl} click` : 'single normal song play click')
+  report.songControl = songControl
+  report.started = timestamp(); await click(`.tracks li[data-reorder-index="${selected.index}"] ${songControl === 'cover' ? '.thumb' : '.name'}`, artistView ? `single artist popular ${songControl} click` : `single search song ${songControl} click`)
   const outcome = await poll('Native audio or official fallback', async () => {
     const value = await state()
     return value.fallback.opened || value.mediaSession.playbackState === 'playing' && value.progress?.time > 2 ? value : null

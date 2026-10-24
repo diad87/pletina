@@ -4,8 +4,10 @@ import { stream, type StreamInfo } from './youtube'
 import { audioCacheUrl, defaultDownloadStore, DOWNLOAD_CACHE, downloadId, downloadRevision, downloadTrack, MAX_DOWNLOAD_BYTES, type DownloadStore } from './download-store'
 import { defaultDownloadQueueJournal, type DownloadQueueJournal } from './download-queue'
 import { defaultDownloadOwnership, type DownloadOwnership } from './download-ownership'
+import { createDownloadCovers, type DownloadCovers } from './download-covers'
 
 interface Options {
+  covers?: DownloadCovers | false
   store?: DownloadStore
   caches?: CacheStorage
   fetch?: typeof fetch
@@ -110,6 +112,8 @@ export function createDownloadManager(options: Options = {}) {
   const journal = options.journal ?? defaultDownloadQueueJournal()
   const online = options.online ?? (() => globalThis.navigator?.onLine !== false)
   const ownership = options.ownership ?? defaultDownloadOwnership()
+  const covers = options.covers === false ? null : options.covers ?? createDownloadCovers({ scope: store.scope,
+    list: store.list, caches: cacheStorage, fetch: request, online })
   const emit = options.emit ?? ((detail: DownloadProgress) => window.dispatchEvent(new CustomEvent('pletina:download', { detail })))
   const pending = new Set<number>(), queue: LibTrack[] = [], failed = new Set<number>()
   let running: Promise<void> | null = null, current: LibTrack | null = null, loaded = false, suspended = false
@@ -271,8 +275,12 @@ export function createDownloadManager(options: Options = {}) {
           ...('identity' in details && details.identity ? { source: details.identity } : {}) }))
         check()
         committed = true
+        // La portada tiene su propio plazo breve y es opcional: el audio ya
+        // está confirmado y ningún fallo de imagen vuelve a descargarlo.
+        clearTimeout(timer)
         if (old && old.cacheKey !== attemptStage) await cache.delete(old.cacheKey).catch(() => false)
         failed.delete(id)
+        try { await covers?.save(track.cover) } catch { /* El audio ya está confirmado. */ }
         break
       }
     } finally {
@@ -383,9 +391,11 @@ export function createDownloadManager(options: Options = {}) {
         await store.removeDownloadedTrack(id)
       }
     })
+    try { if (covers) void covers.prune().catch(() => {}) } catch { /* La limpieza de portadas es opcional. */ }
   }
-  return { enqueueDownloads, cancelDownloads, removeDownloads, pendingDownloads, resumeDownloads, listDownloads: store.listDownloads,
-    async idle() { while (running) await running } }
+  return { enqueueDownloads, cancelDownloads, removeDownloads, pendingDownloads, resumeDownloads,
+    async listDownloads() { const entries = await store.listDownloads(); try { covers?.backfill() } catch { /* La lista no espera imágenes. */ } return entries },
+    async idle() { while (running) await running; await covers?.idle() } }
 }
 let manager: ReturnType<typeof createDownloadManager> | undefined
 const downloads = () => manager ??= createDownloadManager()

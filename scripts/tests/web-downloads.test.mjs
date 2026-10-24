@@ -60,9 +60,11 @@ function setup(t, options = {}) {
     : path === './audio' ? { resolveRemoteTrack() { assert.fail('uninjected resolver') } }
     : path === './download-queue' ? { defaultDownloadQueueJournal: () => journal }
     : path === './download-ownership' ? { defaultDownloadOwnership: () => ({ acquire: async () => {}, assertOwned() {} }) }
+    : path === './download-covers' ? { createDownloadCovers() { assert.fail('Cover I/O must be explicitly injected in audio-only unit tests') } }
     : path === './youtube' ? { stream() { assert.fail('uninjected stream') } } : assert.fail(path), options.Audio ?? globalThis.Audio,
     options.clock?.setTimeout ?? setTimeout, options.clock?.clearTimeout ?? clearTimeout, options.clock?.Date ?? Date, options.clock?.performance ?? performance)
   const manager = exports.createDownloadManager({
+    covers: options.covers ?? false,
     store, caches, journal, online: options.online ?? (() => true), emit: (value) => events.push(value), timeout: options.useDefaultTimeout ? undefined : options.timeout ?? 2000, retryDelay: options.retryDelay ?? 0,
     ...(options.ownership ? { ownership: options.ownership } : {}),
     resolve: options.resolve ?? (async (query) => { sources.push(query.id); return { videoId: '9RfVp-GhKfs', local: false, url: 'https://r1.googlevideo.com/audio?signature=SECRET' } }),
@@ -115,6 +117,69 @@ test('downloads are serial, skip duplicates, and report done only after media va
   assert.equal((await h.listDownloads()).length, 2)
   assert.equal((await h.store.readDownloadedPlayable(1)).local, true)
   assert.doesNotMatch(JSON.stringify(await h.store.list()), /signature|SECRET|googlevideo/)
+})
+
+test('optional cover work starts only after the audio commit and completes before its done event', async t => {
+  const entered = deferred(), gate = deferred(), covers = []
+  t.after(() => gate.resolve())
+  let h
+  h = setup(t, { covers: { async save(url) {
+    assert.equal((await h.store.list()).length, 1, 'Audio metadata is already durable')
+    assert.equal((await h.store.readDownloadedPlayable(1)).local, true)
+    assert.equal(h.events.some(event => event.state === 'done'), false)
+    covers.push(url); entered.resolve(); await gate.promise
+  }, async prune() {}, backfill() {}, async idle() {} } })
+  await h.enqueueDownloads([song()])
+  await Promise.race([entered.promise, h.idle().then(() => assert.fail('Audio completed without invoking the optional cover saver'))])
+  assert.deepEqual(h.sources, [1])
+  gate.resolve(); await h.idle()
+  assert.deepEqual(covers, [song().cover])
+  assert.deepEqual(h.events.filter(event => event.state === 'done').map(event => event.trackId), [1])
+})
+
+test('cover cache rejection or a synchronous image failure never retries audio or stops the next download', async t => {
+  for (const synchronous of [false, true]) {
+    const save = synchronous ? () => { throw new Error('optional cover failed synchronously') }
+      : async () => { throw new DOMException('cover cache quota', 'QuotaExceededError') }
+    const h = setup(t, { covers: { save, async prune() {}, backfill() {}, async idle() {} } })
+    await h.enqueueDownloads([song(1), song(2)]); await h.idle()
+    assert.deepEqual(h.sources, [1, 2])
+    assert.deepEqual(h.events.filter(event => event.state === 'done').map(event => event.trackId), [1, 2])
+    assert.equal(h.events.some(event => event.state === 'error'), false)
+    assert.equal((await h.store.list()).length, 2)
+  }
+})
+
+test('removal prunes shared cover references only after audio metadata is removed', async t => {
+  const references = [], pruned = deferred()
+  let h
+  h = setup(t, { covers: { async save() {}, async prune() {
+    references.push((await h.store.list()).map(row => row.id)); pruned.resolve()
+  }, backfill() {}, async idle() {} } })
+  await h.enqueueDownloads([song(1), song(2)]); await h.idle()
+  await h.removeDownloads([1]); await pruned.promise
+  assert.deepEqual(references, [[2]])
+  assert.equal((await h.store.get(2)).track.cover, song(2).cover)
+})
+
+test('download listing schedules optional old-cover backfill without awaiting network or changing its result', async t => {
+  let scans = 0
+  const h = setup(t, { covers: { async save() {}, async prune() {}, backfill() { scans++; return new Promise(() => {}) }, async idle() {} } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  const entries = await h.listDownloads()
+  assert.equal(scans, 1)
+  assert.deepEqual(entries.map(row => row.track.id), [1])
+  assert.equal(entries[0].track.cover, song().cover)
+})
+
+test('a cover backfill or cleanup failure cannot fail the local listing or audio removal', async t => {
+  const h = setup(t, { covers: { async save() {}, prune() { throw new Error('optional cleanup failure') },
+    backfill() { throw new Error('optional backfill failure') }, async idle() {} } })
+  await h.enqueueDownloads([song()]); await h.idle()
+  assert.equal((await h.listDownloads()).length, 1)
+  await h.removeDownloads([1])
+  assert.equal(await h.store.get(1), null)
+  assert.equal(h.rows.size, 0)
 })
 
 test('cancel discards only pending jobs while the active transfer finishes', async (t) => {

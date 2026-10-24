@@ -103,11 +103,14 @@ const hasDrm = (value: Record<string, unknown>) =>
   Object.hasOwn(value, 'licenseInfos') || Object.hasOwn(value, 'drmTrackType') || Object.hasOwn(value, 'keySystems') ||
   Object.hasOwn(value, 'drmFamilies') && (!Array.isArray(value.drmFamilies) || value.drmFamilies.length > 0)
 
+const supportedAudio = (value: unknown, allowOpus: boolean): value is Record<string, unknown> =>
+  record(value) && typeof value.mimeType === 'string' &&
+  (/^audio\/mp4\s*;\s*codecs\s*=\s*"mp4a\.40\.(?:1|2|5|29)"\s*$/i.test(value.mimeType) ||
+    allowOpus === true && /^audio\/webm\s*;\s*codecs\s*=\s*"opus"\s*$/i.test(value.mimeType)) && !hasDrm(value)
+
 /** AAC remains the default; an explicitly supported browser may also try Opus/WebM. */
 export function inspectP1Format(value: unknown, allowOpus = false): P1Cipher {
-  if (!record(value) || typeof value.mimeType !== 'string' ||
-      !(/^audio\/mp4\s*;\s*codecs\s*=\s*"mp4a\.40\.(?:1|2|5|29)"\s*$/i.test(value.mimeType) ||
-        allowOpus === true && /^audio\/webm\s*;\s*codecs\s*=\s*"opus"\s*$/i.test(value.mimeType)) || hasDrm(value))
+  if (!supportedAudio(value, allowOpus))
     return fail('format', 'P1 requires a supported unencrypted audio format')
   const hasSignatureCipher = Object.hasOwn(value, 'signatureCipher'), hasCipher = Object.hasOwn(value, 'cipher')
   const cipherValue = hasSignatureCipher ? value.signatureCipher : value.cipher
@@ -130,6 +133,34 @@ export function inspectP1Format(value: unknown, allowOpus = false): P1Cipher {
   if (signature !== null && url.searchParams.has(sp)) return fail('format', 'P1 signature is already present')
   return { url: url.href, signature, signatureParameter: sp as P1Cipher['signatureParameter'], n }
 }
+
+function publicAudioResponse(value: unknown, videoId: string) {
+  if (!record(value) || !record(value.playabilityStatus) || !record(value.videoDetails) || value.videoDetails.videoId !== videoId)
+    return fail('response', 'P1 response identity mismatch')
+  if (value.playabilityStatus.status !== 'OK' || value.playabilityStatus.playableInEmbed === false || value.videoDetails.playableInEmbed === false || value.videoDetails.isPrivate === true)
+    return fail('restricted', 'P1 audio is not publicly playable')
+  if (!record(value.streamingData) || hasDrm(value.streamingData) || !Array.isArray(value.streamingData.adaptiveFormats) || value.streamingData.adaptiveFormats.length > 128)
+    return fail('format', 'P1 response has no unencrypted audio')
+  return { response: value, streaming: value.streamingData, available: value.streamingData.adaptiveFormats as unknown[] }
+}
+
+function sabrOnly(streaming: Record<string, unknown>, available: readonly unknown[], allowOpus: boolean,
+  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean): boolean {
+  // A normal response may contain both SABR and usable ciphers. Only a trusted
+  // SABR endpoint with entirely absent audio locators warrants another context;
+  // malformed URLs/ciphers and failed decipher operations never do.
+  try { mediaUrl(streaming.serverAbrStreamingUrl) } catch { return false }
+  const audio = available.filter(value => supportedAudio(value, allowOpus))
+  if (!audio.length || audio.some(format => ['url', 'signatureCipher', 'cipher'].some(key => format[key] !== undefined && format[key] !== null))) return false
+  return audio.some(format => {
+    try { return !acceptFormat || acceptFormat(format, available) === true } catch { return false }
+  })
+}
+
+// Recipe timestamps, source hashes and key insertion order do not change the
+// effective public POST. Match Native's semantic body comparison before retrying.
+const comparableBody = (body: Record<string, unknown>) => JSON.stringify(body, (_key, value) =>
+  record(value) ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : value)
 
 /** Validate untrusted decoder output before inserting it into a provider URL. */
 export function applyP1Decoded(cipher: P1Cipher, decoded: unknown): string {
@@ -249,7 +280,7 @@ function decode(script: string, values: P1Cipher[], signal: AbortSignal): Promis
 
 /** Resolve a public P1 response using a caller-supplied ordinary browser POST. */
 export async function requestP1Player(videoId: string, request: (body: Record<string, unknown>, signal: AbortSignal) => Promise<unknown>, recipe: P1Recipe, signal?: AbortSignal,
-  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean, allowOpus = false): Promise<unknown> {
+  acceptFormat?: (format: Record<string, unknown>, allFormats: readonly unknown[]) => boolean, allowOpus = false, renewedRecipe?: P1Recipe): Promise<unknown> {
   checkAbort(signal)
   if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) return fail('response', 'Invalid P1 video ID')
   const { context, playbackContext } = validateRecipe(recipe)
@@ -267,14 +298,23 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
   try {
     if (signal?.aborted) controller.abort()
     checkAbort(controller.signal)
-    const response = jsonCopy(await awaitAbort(request({ videoId, context, playbackContext, contentCheckOk: true, racyCheckOk: true }, controller.signal)), MAX_RESPONSE, 'response')
+    const body = { videoId, context, playbackContext, contentCheckOk: true, racyCheckOk: true }
+    let activeRecipe = recipe
+    let result = publicAudioResponse(jsonCopy(await awaitAbort(request(body, controller.signal)), MAX_RESPONSE, 'response'), videoId)
     checkAbort(controller.signal)
-    if (!record(response) || !record(response.playabilityStatus) || !record(response.videoDetails) || response.videoDetails.videoId !== videoId) return fail('response', 'P1 response identity mismatch')
-    if (response.playabilityStatus.status !== 'OK' || response.playabilityStatus.playableInEmbed === false || response.videoDetails.playableInEmbed === false || response.videoDetails.isPrivate === true)
-      return fail('restricted', 'P1 audio is not publicly playable')
-    if (!record(response.streamingData) || hasDrm(response.streamingData) || !Array.isArray(response.streamingData.adaptiveFormats) || response.streamingData.adaptiveFormats.length > 128)
-      return fail('format', 'P1 response has no unencrypted audio')
-    const available: unknown[] = response.streamingData.adaptiveFormats
+    if (renewedRecipe && sabrOnly(result.streaming, result.available, allowOpus, acceptFormat)) {
+      const renewed = validateRecipe(renewedRecipe)
+      const renewedBody = { videoId, ...renewed, contentCheckOk: true, racyCheckOk: true }
+      if (comparableBody(body) !== comparableBody(renewedBody)) {
+        checkAbort(controller.signal)
+        activeRecipe = renewedRecipe
+        // Both POSTs and the decoder share this original controller and 15s
+        // deadline. A second SABR-only response cannot request a third context.
+        result = publicAudioResponse(jsonCopy(await awaitAbort(request(renewedBody, controller.signal)), MAX_RESPONSE, 'response'), videoId)
+      }
+    }
+    checkAbort(controller.signal)
+    const { response, streaming, available } = result
     const candidates: { format: Record<string, unknown>; cipher: P1Cipher }[] = []
     // Global bounds stay strict, but one bad/dubbed/incompatible AAC must not
     // invalidate another encoding. The caller's originality policy sees every
@@ -289,11 +329,11 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
       } catch { checkAbort(controller.signal) }
     }
     const bitrate = (value: unknown) => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 0
-    const family = (format: Record<string, unknown>) => /^audio\/mp4(?:\s*;|$)/i.test(String(format.mimeType)) ? 0 : 1
+    const family = (format: Record<string, unknown>) => /^audio\/webm(?:\s*;|$)/i.test(String(format.mimeType)) === allowOpus ? 0 : 1
     const selected = candidates.sort((a, b) => family(a.format) - family(b.format) || bitrate(b.format.bitrate) - bitrate(a.format.bitrate)).slice(0, 4)
     if (!selected.length) return fail('format', 'P1 response has no compatible audio candidate')
     const needDecode = selected.filter(({ cipher }) => cipher.signature !== null || cipher.n !== null)
-    const results = needDecode.length ? await decode(recipe.script, needDecode.map(({ cipher }) => cipher), controller.signal) : []
+    const results = needDecode.length ? await decode(activeRecipe.script, needDecode.map(({ cipher }) => cipher), controller.signal) : []
     checkAbort(controller.signal)
     const approved = new Map<Record<string, unknown>, string>()
     let index = 0
@@ -308,7 +348,7 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
       catch { checkAbort(controller.signal) }
     }
     if (!approved.size) return fail('decoder', 'P1 decoder rejected every audio candidate')
-    response.streamingData.adaptiveFormats = available.map(format => {
+    streaming.adaptiveFormats = available.map(format => {
       if (!record(format)) return format
       const result: Record<string, unknown> = { ...format }
       delete result.url; delete result.signatureCipher; delete result.cipher
@@ -317,7 +357,7 @@ export async function requestP1Player(videoId: string, request: (body: Record<st
       return result
     })
     // Do not allow an unprocessed muxed/cipher format to bypass this audio path.
-    delete response.streamingData.formats
+    delete streaming.formats
     return response
   } catch (error) {
     if (timedOut) throw new P1EngineError('P1 request timed out', 'timeout')

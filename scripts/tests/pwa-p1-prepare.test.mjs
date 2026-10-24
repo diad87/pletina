@@ -13,7 +13,7 @@ const source = (await readFile(moduleURL, 'utf8')).split('if (process.argv[1]')[
   .replace(/^import .*\r?$/gm, '').replace('export async function preparePwaP1', 'async function preparePwaP1')
   .replaceAll('import.meta.url', JSON.stringify(moduleURL.href))
 
-function harness(version) {
+function harness(version, { changedPlayer = false } = {}) {
   const requests = [], writes = new Map()
   const configuration = {
     INNERTUBE_CLIENT_NAME: 'WEB_EMBEDDED_PLAYER', INNERTUBE_CONTEXT_CLIENT_NAME: 56,
@@ -27,6 +27,11 @@ function harness(version) {
     mkdir: async () => {}, writeFile: async (name, value) => { writes.set(name, value) } }
   const fetch = async (url, options) => {
     requests.push(url.href); assert.equal(options.credentials, 'omit'); assert.equal(options.redirect, 'error')
+    if (url.pathname.startsWith('/embed/')) {
+      const index = requests.filter(value => new URL(value).pathname.startsWith('/embed/')).length
+      configuration.VISITOR_DATA = 'synthetic-public-visitor-' + index
+      if (changedPlayer && index === 2) configuration.WEB_PLAYER_CONTEXT_CONFIGS.WEB_PLAYER_CONTEXT_CONFIG_ID_EMBEDDED_PLAYER.jsUrl = '/s/player/second/player_ias.vflset/en_US/base.js'
+    }
     const bytes = new TextEncoder().encode(url.pathname.startsWith('/embed/')
       ? 'ytcfg.set(' + JSON.stringify(configuration) + ');' : 'synthetic player, never executed')
     return { ok: true, body: new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close() } }) }
@@ -41,12 +46,23 @@ function harness(version) {
 test('public bootstrap preserves opaque rollout versions in the emitted recipe and hashes', async () => {
   for (const version of ['2.20261022.01.00-canary_control_2.20261023.01.00', 'release_1+fix-2.3', 'canary', 'v'.repeat(64)]) {
     const h = harness(version), report = await h.prepare()
-    assert.equal(h.requests.length, 2); assert.equal(h.writes.size, 2)
+    assert.equal(h.requests.length, 3); assert.equal(h.writes.size, 2)
     const recipe = [...h.writes.entries()].find(([name]) => name.endsWith('p1-recipe.generated.ts'))[1]
     assert.ok(recipe.includes('"clientVersion":' + JSON.stringify(version)), 'The published token must not be parsed as a date or truncated')
     assert.equal(crypto.createHash('sha256').update(recipe).digest('hex'), report.outputSha256)
     assert.equal(report.authCookiesOrAccountIncluded, false); assert.equal(report.audioOrSignedMediaUrlsIncluded, false)
+    assert.notEqual(report.contextSha256, report.renewal.contextSha256)
+    assert.equal(report.renewal.sharedDecoderCount, 1)
+    assert.equal(h.requests.filter(url => new URL(url).pathname.startsWith('/embed/')).every(url => url.includes('/embed/M7lc1UVf-VE?html5=1')), true)
+    assert.match(recipe, /export const p1FallbackRecipe/)
   }
+})
+
+test('renewal follows a changed public player URL instead of binding a decoder to a different source', async () => {
+  const h = harness('2.20261022.01.00', { changedPlayer: true }), report = await h.prepare()
+  assert.equal(h.requests.length, 4)
+  assert.ok(h.requests.some(url => url.includes('/s/player/second/')))
+  assert.equal(report.renewal.requestedOnlyForProvenSabrAndChangedEffectiveContext, true)
 })
 
 test('malformed version tokens stop before player source fetch or any recipe write', async () => {

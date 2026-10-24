@@ -16,6 +16,8 @@ let sequence = 0
 const cancelled = (signal?: AbortSignal): Error => signal?.reason instanceof Error
   ? signal.reason : new DOMException('Operación cancelada.', 'AbortError')
 const validDuration = (duration: unknown): duration is number => typeof duration === 'number' && Number.isFinite(duration) && duration > 0 && duration <= 604800
+export interface P1AudioProbeCandidate { url: string; expectedDuration: number | null }
+export interface P1AudioProbeSelection { index: number; duration: number }
 
 function validatedUrl(value: string): URL {
   try {
@@ -49,9 +51,12 @@ function validatedUrl(value: string): URL {
 
 // Self-contained because this application-owned code runs in srcdoc, with no
 // provider script, application origin, storage or MediaSession access.
-async function metadataBridge(config: { requestId: number; message: string; url: string; expectedDuration: number | null }) {
-  const offsets = [0, 500, 1500, 3500, 6000]
+async function metadataBridge(config: { requestId: number; message: string; candidates: P1AudioProbeCandidate[] }) {
+  // Native's first-format opportunities share one budget with all alternatives.
+  // HTMLMediaElement cannot expose HTTP429; a media error is never a status.
+  const offsets = [0, 250, 1000, 1500, 2000, 3000, 4000, 5000, 6000]
   const began = performance.now()
+  let dispatched = 0
   let finished = false
   let active: HTMLAudioElement | null = null
   let cancelAttempt = () => {}
@@ -63,7 +68,7 @@ async function metadataBridge(config: { requestId: number; message: string; url:
     return id
   }
   const clear = (id: ReturnType<typeof setTimeout>) => { clearTimeout(id); timers.delete(id) }
-  const finish = (result: { duration: number } | { error: 'network' | 'timeout' | 'response' | 'cancelled' }) => {
+  const finish = (result: P1AudioProbeSelection | { error: 'network' | 'timeout' | 'response' | 'cancelled' }) => {
     if (finished) return
     finished = true
     cancelAttempt()
@@ -84,7 +89,7 @@ async function metadataBridge(config: { requestId: number; message: string; url:
     const id = timer(() => { cancelWait = () => {}; resolve() }, ms)
     cancelWait = () => { clear(id); cancelWait = () => {}; resolve() }
   })
-  const attempt = () => new Promise<{ duration: number } | { error: 'network' | 'timeout' | 'response' | 'cancelled' }>(resolve => {
+  const attempt = (candidate: P1AudioProbeCandidate, maximumMs: number) => new Promise<{ duration: number } | { error: 'network' | 'timeout' | 'response' | 'cancelled' }>(resolve => {
     const audio = new Audio()
     active = audio
     let settled = false
@@ -105,13 +110,13 @@ async function metadataBridge(config: { requestId: number; message: string; url:
       resolve(result)
     }
     const loaded = () => {
-      const duration = audio.duration, expected = config.expectedDuration
+      const duration = audio.duration, expected = candidate.expectedDuration
       const tolerance = expected === null ? 0 : Math.min(3, Math.max(1, expected * 0.015))
       settle(Number.isFinite(duration) && duration > 0 && duration <= 604800 &&
         (expected === null || Math.abs(duration - expected) <= tolerance) ? { duration } : { error: 'response' })
     }
     const failed = () => settle({ error: 'network' })
-    const timeout = timer(() => settle({ error: 'timeout' }), 1500)
+    const timeout = timer(() => settle({ error: 'timeout' }), maximumMs)
     cancelAttempt = () => settle({ error: 'cancelled' })
     audio.autoplay = false
     audio.defaultMuted = true
@@ -123,37 +128,66 @@ async function metadataBridge(config: { requestId: number; message: string; url:
     // Deliberately no crossOrigin attribute: CORS-unreadable CDN metadata can
     // still be checked by HTMLMediaElement. Browser-managed CDN requests remain
     // subject to the browser's normal policy; no cookies/headers are supplied.
-    try { audio.src = config.url; audio.load() }
+    try { audio.src = candidate.url; audio.load() }
     catch { settle({ error: 'network' }) }
   })
-  let last: 'network' | 'timeout' = 'network'
+  let last: 'network' | 'timeout' | 'response' = 'network'
+  let transient: 'network' | 'timeout' | null = null
   try {
-    for (const offset of offsets) {
-      if (finished) return
-      const elapsed = performance.now() - began
-      if (elapsed >= 8000) { finish({ error: 'timeout' }); return }
-      if (offset > 0 && elapsed > offset + 50) continue
-      if (offset > elapsed) await wait(offset - elapsed)
-      if (finished) return
-      // A suspended renderer must not replay expired slots as a burst.
-      if (offset > 0 && performance.now() - began > offset + 50) continue
-      if (performance.now() - began >= 8000) { finish({ error: 'timeout' }); return }
-      const result = await attempt()
-      if (finished) return
-      if ('duration' in result) { finish(result); return }
-      if (result.error === 'response') { finish(result); return }
-      if (result.error === 'cancelled') return
-      last = result.error
+    for (let index = 0; index < config.candidates.length && dispatched < 10; index++) {
+      const slots = index === 0 ? offsets : [0]
+      for (const offset of slots) {
+        if (finished) return
+        const elapsed = performance.now() - began
+        if (elapsed >= 8000) { finish({ error: 'timeout' }); return }
+        if (offset > 0 && elapsed > offset + 50) continue
+        if (offset > elapsed) await wait(offset - elapsed)
+        if (finished) return
+        const now = performance.now() - began
+        // A suspended renderer must not replay expired slots as a burst. The
+        // optional 1.5s attempt must release the original 2s opportunity.
+        if (offset > 0 && now > offset + 50) continue
+        if (now >= 8000) { finish({ error: 'timeout' }); return }
+        const maximumMs = Math.min(1500, 8000 - now, offset === 1500 ? 2000 - now : Infinity)
+        if (maximumMs <= 0) continue
+        if (dispatched >= 10) break
+        dispatched++
+        const result = await attempt(config.candidates[index], maximumMs)
+        if (finished) return
+        if (performance.now() - began >= 8000) { finish({ error: 'timeout' }); return }
+        if ('duration' in result) { finish({ index, duration: result.duration }); return }
+        if (result.error === 'cancelled') return
+        if (result.error === 'response') { last = 'response'; break }
+        // An expired optional slot must not displace the last useful failure.
+        if (offset === 1500 && result.error === 'timeout') continue
+        last = result.error
+        transient ??= result.error
+      }
     }
-    finish({ error: last })
+    finish({ error: transient ?? last })
   } catch { finish({ error: 'network' }) }
 }
 
 /** Metadata availability, not audible or complete-file validation. No URL is persisted. */
 export async function probeP1Audio(value: string, expectedDuration: number | null, signal?: AbortSignal): Promise<{ duration: number }> {
+  const result = await probeP1AudioCandidates([{ url: value, expectedDuration }], signal)
+  return { duration: result.duration }
+}
+
+/** Ordered formats share one opaque bridge, eight seconds and ten dispatches.
+ * The preferred format owns the retry slots; each fallback gets one remaining
+ * opportunity. Availability is metadata-only, never full-file or HTTP proof. */
+export async function probeP1AudioCandidates(values: readonly P1AudioProbeCandidate[], signal?: AbortSignal): Promise<P1AudioProbeSelection> {
   if (signal?.aborted) throw cancelled(signal)
-  const url = validatedUrl(value)
-  if (expectedDuration !== null && !validDuration(expectedDuration)) throw new P1ProbeError('response')
+  if (!Array.isArray(values) || !values.length || values.length > 4) throw new P1ProbeError('response')
+  const seen = new Set<string>()
+  const candidates = Array.from(values, value => {
+    if (!value || typeof value !== 'object') throw new P1ProbeError('response')
+    const url = validatedUrl(value.url)
+    if (value.expectedDuration !== null && !validDuration(value.expectedDuration) || seen.has(url.href)) throw new P1ProbeError('response')
+    seen.add(url.href)
+    return { url: url.href, expectedDuration: value.expectedDuration }
+  })
   return new Promise((resolve, reject) => {
     const frame = document.createElement('iframe')
     frame.hidden = true
@@ -165,7 +199,7 @@ export async function probeP1Audio(value: string, expectedDuration: number | nul
     let finished = false
     let stopping: Error | null = null
     let cancelTimer: ReturnType<typeof setTimeout> | undefined
-    const finish = (error: Error | null, result?: { duration: number }) => {
+    const finish = (error: Error | null, result?: P1AudioProbeSelection) => {
       if (finished) return
       finished = true
       clearTimeout(deadline)
@@ -191,16 +225,19 @@ export async function probeP1Audio(value: string, expectedDuration: number | nul
       const data = event.data
       if (Object.hasOwn(data, 'duration') === Object.hasOwn(data, 'error')) { finish(new P1ProbeError('response')); return }
       if (validDuration(data.duration) && !Object.hasOwn(data, 'error')) {
+        if (!Number.isSafeInteger(data.index) || data.index < 0 || data.index >= candidates.length) { finish(new P1ProbeError('response')); return }
+        const expectedDuration = candidates[data.index].expectedDuration
         const tolerance = expectedDuration === null ? 0 : Math.min(3, Math.max(1, expectedDuration * 0.015))
         if (expectedDuration !== null && Math.abs(data.duration - expectedDuration) > tolerance) finish(new P1ProbeError('response'))
-        else finish(null, { duration: data.duration })
-      } else finish(new P1ProbeError(data.error === 'network' || data.error === 'timeout' ? data.error : 'response'))
+        else finish(null, { index: data.index, duration: data.duration })
+      } else finish(new P1ProbeError(Object.hasOwn(data, 'index') ? 'response' : data.error === 'network' || data.error === 'timeout' ? data.error : 'response'))
     }
     const deadline = setTimeout(() => finish(stopping ?? new P1ProbeError('timeout')), DEADLINE)
     window.addEventListener('message', receive)
     signal?.addEventListener('abort', abort, { once: true })
-    const args = JSON.stringify({ requestId, message: MESSAGE, url: url.href, expectedDuration }).replaceAll('<', '\\u003c')
-    frame.srcdoc = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; media-src ' + url.origin + '; connect-src \'none\'; base-uri \'none\'; form-action \'none\'">' +
+    const args = JSON.stringify({ requestId, message: MESSAGE, candidates }).replaceAll('<', '\\u003c')
+    const origins = [...new Set(candidates.map(candidate => new URL(candidate.url).origin))].join(' ')
+    frame.srcdoc = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; media-src ' + origins + '; connect-src \'none\'; base-uri \'none\'; form-action \'none\'">' +
       '<script>(' + metadataBridge.toString() + ')(' + args + ')<' + '/script>'
     try { (document.body || document.documentElement).append(frame) }
     catch { finish(stopping ?? new P1ProbeError('network')) }

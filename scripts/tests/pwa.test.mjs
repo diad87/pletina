@@ -117,7 +117,7 @@ function worker(build, { storage = new MemoryCacheStorage(), base = scope, netwo
   }
   runInNewContext(build.assets.get('sw.js').toString(), {
     self, caches: storage, fetch: network.fetch.bind(network), crypto: webcrypto,
-    URL, Request, Response, Uint8Array,
+    URL, Request, Response, Uint8Array, AbortController, DOMException, setTimeout, clearTimeout,
   }, { filename: 'built-pwa-sw.js' })
 
   return {
@@ -166,7 +166,8 @@ test('el build es determinista y referencia el JavaScript publicado por su conte
   const html = first.assets.get('index.html').toString()
   assert.ok(html.includes(`src="./${scripts[0]}"`))
   assert.ok(html.includes(first.version))
-  assert.doesNotMatch(html + first.assets.get('sw.js'), /__APP_SCRIPT__|__BUILD_VERSION__|__PRECACHE_FILES__|__OPTIONAL_FILES__/)
+  assert.doesNotMatch(html + first.assets.get('sw.js'), /__APP_SCRIPT__|__BUILD_VERSION__|__PRECACHE_FILES__|__OPTIONAL_FILES__|__COVER_ROUTING_FACTORY__/)
+  assert.equal(first.assets.has('cover-routing.mjs'), false, 'The shared policy is embedded before hashing, not shipped as an extra public script')
   assert.ok(first.assets.has('.nojekyll'))
 })
 

@@ -41,6 +41,20 @@ const p1PrimaryRepair = { tracks: p1PrimaryRepairTracks, query: track => 'QA rep
 const p1DownloadTracks = ['Descarga completa', 'Descarga cuerpo inválido'].map((name, i) => ({ ...tracks[0], id: 211 + i,
   title: 'P1 QA ' + name, title_short: 'P1 QA ' + name, isrc: 'QAABC2600' + (211 + i), videoId: 'qaP1Save0' + (i + 1) + String.fromCharCode(97 + i) }))
 const p1Downloads = { tracks: p1DownloadTracks, query: track => 'QA copia P1 ' + track.title }
+const sharedDownloadCover = 'https://images.pletina.test/download-cover.png'
+const invalidDownloadCover = 'https://images.pletina.test/download-cover-invalid.png'
+const downloadCoverAlbums = [41, 42].map((id, index) => ({ ...albums[0], id, title: 'Portadas QA ' + (index ? 'B' : 'A'),
+  cover_medium: index ? invalidDownloadCover : sharedDownloadCover, cover_big: index ? invalidDownloadCover : sharedDownloadCover,
+  cover_xl: index ? invalidDownloadCover : sharedDownloadCover }))
+const downloadCoverTracks = ['Portada compartida uno', 'Portada compartida dos', 'Portada rechazada'].map((name, index) => ({ ...tracks[0], id: 213 + index,
+  title: 'Canción QA ' + name, title_short: 'Canción QA ' + name, album: downloadCoverAlbums[index === 2 ? 1 : 0],
+  isrc: 'QAABC2600' + (213 + index), videoId: 'qaCover00' + (index + 1) + String.fromCharCode(97 + index) }))
+const downloadCovers = { query: 'QA Portadas descargadas', tracks: downloadCoverTracks, sharedURL: sharedDownloadCover, invalidURL: invalidDownloadCover }
+const searchHomonymAlbum = { ...albums[0], id: 44, title: 'Ni, Ni, Ni! QA', artist: artists[0] }
+const searchHomonymTracks = ['Ni, Ni, Ni! QA', 'Otra canción QA del mismo disco'].map((title, i) => ({ ...tracks[0],
+  id: 216 + i, title, title_short: title, artist: artists[0], artistName: artists[0].name, album: searchHomonymAlbum,
+  track_position: i + 1, isrc: 'QAABC2600' + (216 + i), videoId: 'qaHit0000' + (i + 1) + String.fromCharCode(97 + i) }))
+const searchHomonyms = { query: 'Ni, Ni, Ni! QA', tracks: searchHomonymTracks, album: searchHomonymAlbum, artist: artists[0] }
 // A separate artist/top namespace keeps selection races independent from source
 // caches and the radio/search fixtures used by the rest of the suite.
 const selectionArtists = [{ ...artists[0], id: 9, name: 'Artista QA Selección' }, { ...artists[1], id: 10, name: 'Artista QA Invitado' }]
@@ -57,7 +71,7 @@ const audioRetry = { tracks: retryTracks, query: name => 'QA Reintento ' + name 
 const castVideos = ['qaCast0001a', 'qaCast0002b']
 const episodes = ['Episodio QA Uno', 'Episodio QA Dos'].map((title, i) => ({ title, duration: 90, guid: 'rss-' + i,
   url: 'https://media.pletina.test/episode-' + i + '.m4a' }))
-const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, p1Codecs, p1PrimaryRepair, p1Downloads, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
+const media = { query: 'QA Media', tracks: tracks.slice(0, 3), webRescue, audiusRescue, p1Multi, p1Transient, p1Codecs, p1PrimaryRepair, p1Downloads, downloadCovers, searchHomonyms, artistSelection, audioRetry, rss: { query: 'QA Podcast', showTitle: 'Podcast QA RSS', episodes },
   youtubePodcast: { query: 'QA Podcast', browseId: 'MPSPqapodcast', showTitle: 'Podcast QA YouTube', episodeTitle: 'Episodio QA YouTube Uno',
     episodes: castVideos.map((videoId, i) => ({ videoId, title: 'Episodio QA YouTube ' + titles[i], duration: 90 })) } }
 const spotifyId = '0123456789ABCDEFGHIJKL'
@@ -71,6 +85,12 @@ const duration = seconds => Math.floor(seconds / 60) + ':' + String(seconds % 60
 const normalize = text => String(text).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
 function selected(query) {
   const q = normalize(query)
+  if (q === normalize(downloadCovers.query)) return downloadCoverTracks
+  const downloadCover = downloadCoverTracks.find(track => q.includes(normalize(track.title)))
+  if (downloadCover) return [downloadCover]
+  if (q === normalize(searchHomonyms.query)) return searchHomonymTracks
+  const homonym = searchHomonymTracks.find(track => q.includes(normalize(track.title)))
+  if (homonym) return [homonym]
   const p1Download = p1DownloadTracks.find(track => q.includes(normalize(track.title)))
   if (p1Download) return [p1Download]
   const primaryRepair = p1PrimaryRepairTracks.find(track => q.includes(normalize(track.title)))
@@ -134,6 +154,7 @@ function rss(english) {
 export async function createProviderFixtures(context, { baseURL } = {}) {
   const audio = await readFile(new URL('./fixtures/silence-12s.m4a', import.meta.url))
   const castAudio = await readFile(new URL('./fixtures/silence-90s.m4a', import.meta.url))
+  const coverImage = await readFile(new URL('./fixtures/offline-cover.png', import.meta.url))
   // Generated silence, never music: ffmpeg -f lavfi -i anullsrc=r=48000:cl=stereo -t 12 -c:a libopus -b:a 32k -vbr off -application audio -map_metadata -1 -fflags +bitexact -flags:a +bitexact.
   const opusAudio = await readFile(new URL('./fixtures/silence-12s.webm', import.meta.url))
   const flags = {}, failures = [], requests = [], counts = {}
@@ -384,8 +405,8 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
     if (url.hostname === 'api.deezer.com') {
       const q = url.searchParams.get('q') || ''
-      if (url.pathname === '/chart/0/albums' || url.pathname === '/search/album') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(artistSelection.query) ? [selectionAlbum] : albums })
-      if (url.pathname === '/chart/0/artists' || url.pathname === '/search/artist') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(artistSelection.query) ? [selectionArtists[0]] : artists })
+      if (url.pathname === '/chart/0/albums' || url.pathname === '/search/album') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(searchHomonyms.query) ? [searchHomonymAlbum] : normalize(q) === normalize(artistSelection.query) ? [selectionAlbum] : albums })
+      if (url.pathname === '/chart/0/artists' || url.pathname === '/search/artist') return jsonp({ data: /zzzz|inexistente/i.test(q) ? [] : normalize(q) === normalize(searchHomonyms.query) ? [artists[0]] : normalize(q) === normalize(artistSelection.query) ? [selectionArtists[0]] : artists })
       if (url.pathname.startsWith('/search')) return jsonp({ data: selected(q), total: selected(q).length })
       const match = /^\/(artist|album|track)\/(\d+)(?:\/(albums|top|related|tracks))?$/.exec(url.pathname)
       if (match) {
@@ -397,6 +418,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(selectionArtists.find(artist => artist.id === id))
         }
         if (type === 'album' && id === selectionAlbum.id) return jsonp(child === 'tracks' ? { data: selectionTracks } : selectionAlbum)
+        if (type === 'album' && id === searchHomonymAlbum.id) return jsonp(child === 'tracks' ? { data: searchHomonymTracks } : searchHomonymAlbum)
         if (type === 'artist') {
           if (child === 'albums') return jsonp({ data: albums.filter(album => album.artist.id === id) })
           if (child === 'top') return jsonp({ data: tracks.filter(track => track.artist.id === id).slice(0, 10) })
@@ -404,7 +426,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
           return jsonp(artists.find(artist => artist.id === id) || artists[0])
         }
         if (type === 'album') return jsonp(child === 'tracks' ? { data: tracks.filter(track => track.album.id === id) } : albums.find(album => album.id === id) || albums[0])
-        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...p1TransientTracks, ...p1CodecTracks, ...retryTracks, ...selectionTracks, ...tracks].find(track => track.id === id) || tracks[0])
+        return jsonp([webRescueTrack, audiusRescueTrack, audiusRejectedTrack, p1MultiTrack, ...p1TransientTracks, ...p1CodecTracks, ...retryTracks, ...selectionTracks, ...searchHomonymTracks, ...downloadCoverTracks, ...tracks].find(track => track.id === id) || tracks[0])
       }
       return jsonp({ error: { code: 800 } })
     }
@@ -648,7 +670,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         }
         if (rescue) row.playability = 'OK'
         const track = [webRescue.musicVideoId, webRescue.webVideoId].includes(videoId) ? webRescueTrack
-          : [...retryTracks, ...selectionTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
+          : [...retryTracks, ...selectionTracks, ...searchHomonymTracks, ...downloadCoverTracks, ...tracks].find(track => track.videoId === videoId), cast = castVideos.indexOf(videoId)
         const bytes = cast >= 0 ? castAudio : audio
         return json({ playabilityStatus: { status: 'OK' }, videoDetails: { videoId, title: track?.title || 'Episodio QA YouTube ' + titles[Math.max(0, cast)],
           author: track?.artist.name || 'Autor QA', lengthSeconds: String(cast >= 0 ? 90 : 12) },
@@ -749,6 +771,13 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.fulfill({ status: 200, headers: { ...headers, 'accept-ranges': 'bytes' }, contentType, body: bytes })
     }
     if (url.hostname === 'open.spotify.com') return route.fulfill({ status: 403, headers, contentType: 'text/html', body: '<!doctype html><title>Fixture access denied</title>' })
+    if (url.hostname === 'images.pletina.test' && ['/download-cover.png', '/download-cover-invalid.png'].includes(url.pathname)) {
+      const invalid = url.pathname === '/download-cover-invalid.png'
+      const body = invalid ? Buffer.from('<!doctype html><title>Controlled invalid cover</title><p>This is not a raster image.</p>') : coverImage
+      Object.assign(row, { fixtureCase: 'download-covers', operation: 'image', responseStatus: 200, responseMime: 'image/png',
+        invalidRaster: invalid, cacheControl: headers['cache-control'], bodySha256: createHash('sha256').update(body).digest('hex') })
+      return route.fulfill({ status: 200, headers, contentType: 'image/png', body })
+    }
     if (['images.pletina.test', 'i.ytimg.com'].includes(url.hostname)) return route.fulfill({ status: 200, headers, contentType: 'image/svg+xml',
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#6847ab"/><circle cx="100" cy="100" r="50" fill="#bcd784"/></svg>' })
     return route.abort('blockedbyclient')
@@ -778,6 +807,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   await resumeRoutes()
   return { data: { artists, albums, tracks }, artists, albums, tracks, media, spotify, requests, counts, flags, set, reset, failNext,
     audioFile: { bytes: audio.length, sha256: createHash('sha256').update(audio).digest('hex'), mime: 'audio/mp4', duration: 12 },
+    coverFile: { source: 'scripts/tests/e2e/fixtures/offline-cover.png', bytes: coverImage.length, sha256: createHash('sha256').update(coverImage).digest('hex'), mime: 'image/png', width: 192, height: 192 },
     podcastAudioFile: { bytes: castAudio.length, sha256: createHash('sha256').update(castAudio).digest('hex'), mime: 'audio/mp4', duration: 90 },
     opusAudioFile: { bytes: opusAudio.length, sha256: createHash('sha256').update(opusAudio).digest('hex'), mime: 'audio/webm', codec: 'opus', duration: 12.008 },
     // Additional pages must share the primary transport: Chromium opaque-frame

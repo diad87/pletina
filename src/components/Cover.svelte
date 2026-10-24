@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte'
   import { mediaUrl } from '../lib/media'
   import Icon from './Icon.svelte'
 
@@ -12,7 +13,7 @@
     void src
     failed = false
     // Si ya estaba cargada (caché), el "load" pudo llegar antes que esto: se mira directamente.
-    loaded = !!(img?.complete && img.naturalWidth)
+    loaded = untrack(() => !!(img?.complete && img.naturalWidth))
   })
 </script>
 

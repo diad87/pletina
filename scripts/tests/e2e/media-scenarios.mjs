@@ -2,12 +2,14 @@
 // Reads of browser storage and the test-only Audio observer are assertions, never player commands.
 import assert from 'node:assert/strict'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { runSearchHitTargetScenario, SEARCH_HOMONYM_SCENARIO_ID } from './search-hit-targets-scenario.mjs'
+import { runDownloadCoversScenario, DOWNLOAD_COVERS_SCENARIO } from './download-covers-scenario.mjs'
 
 export const mediaScenarioInventory = Object.freeze([
-  'selection-html-audio', 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
+  'selection-html-audio', SEARCH_HOMONYM_SCENARIO_ID.replace(/^media\./, ''), 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
   'p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download',
-  'p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video',
-  'p1-healthy-aac-keeps-priority-over-higher-bitrate-opus',
+  'p1-native-opus-priority-when-supported-even-if-aac-is-denied',
+  'p1-native-opus-priority-when-supported-with-healthy-aac-sibling',
   'p1-primary-json-ok-cdn403-repairs-same-id-without-extra-click-or-video',
   'p1-healthy-primary-does-not-start-repair-or-p1',
   'p1-cancel-primary-cdn-repair-never-starts-late-audio-or-video',
@@ -39,6 +41,7 @@ export const mediaScenarioInventory = Object.freeze([
   'reload-restores-current-dj-position-and-paused-intent', 'downloads-serial-duplicate-suppression-and-cancel-pending',
   'p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable',
   'p1-opaque-download-http403-html-rolls-back-without-done-or-partial-cache',
+  DOWNLOAD_COVERS_SCENARIO,
   'downloaded-library-native-order-and-offline-collection-playback',
   'download-list-reconciles-evicted-copy-and-allows-redownload-without-reload',
   'download-remove-all-cancel-preserves-files-and-reload-ui',
@@ -393,6 +396,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     for (const scenario of mediaScenarioInventory.slice(1).filter(scenario => selectedScenario(scenario.id.replace(/^media\./, '')))) await check(scenario.id, async () => ({ status: 'blocked', reason: 'The initial compiled-player audio prerequisite failed.' }))
     return
   }
+  if (selectedScenario(SEARCH_HOMONYM_SCENARIO_ID.replace(/^media\./, ''))) await runSearchHitTargetScenario(ctx)
 
   const selection = media.artistSelection
   const selectionIds = ['artist-popular-selection-immediately-shows-loading-and-long-wait-feedback',
@@ -921,14 +925,14 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     }
   })
 
-  for (const [index, name] of ['p1-aac-cdn-failure-rescues-same-id-with-native-opus-without-video',
-    'p1-healthy-aac-keeps-priority-over-higher-bitrate-opus'].entries()) await run(name, async () => {
+  for (const [index, name] of ['p1-native-opus-priority-when-supported-even-if-aac-is-denied',
+    'p1-native-opus-priority-when-supported-with-healthy-aac-sibling'].entries()) await run(name, async () => {
     const capability = await page.evaluate(() => {
       const audio = document.createElement('audio')
       return { opus: audio.canPlayType('audio/webm; codecs="opus"'), aac: audio.canPlayType('audio/mp4; codecs="mp4a.40.2"') }
     })
     if (!['maybe', 'probably'].includes(capability.opus)) return { status: 'unsupported',
-      reason: 'This exact desktop engine reports no native Opus/WebM capability. No canPlayType replacement or renamed AAC bytes are used; compatible-Opus rescue and its ordering against AAC remain unverified here.', capability }
+      reason: 'This exact desktop engine reports no native Opus/WebM capability. Native Opus priority is unverified here; no capability replacement or renamed AAC bytes are used.', capability }
     const track = media.p1Codecs?.tracks[index]
     assert.ok(track && fixture.opusAudioFile?.codec === 'opus', 'Dedicated real Opus HTTP fixture is required')
     await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
@@ -967,7 +971,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         const audio = window.__qaAudio.instances[index], url = new URL(audio.currentSrc || audio.src)
         return { path: url.pathname, videoId: url.searchParams.get('qa_codecs'), itag: Number(url.searchParams.get('itag')), mime: url.searchParams.get('mime') }
       }, audio.index)
-      assert.deepEqual(selected, { path: '/videoplayback', videoId: track.videoId, itag: index === 0 ? 251 : 140, mime: index === 0 ? 'audio/webm' : 'audio/mp4' })
+      assert.deepEqual(selected, { path: '/videoplayback', videoId: track.videoId, itag: 251, mime: 'audio/webm' })
       await wait(({ index, time }) => window.__qaAudio.instances[index].currentTime > time + .15, { index: audio.index, time: audio.time })
       const attempts = trace()
       assert.deepEqual(attempts.filter(request => request.operation === 'player').map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
@@ -976,9 +980,9 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       ])
       assert.deepEqual(attempts.filter(request => request.operation.endsWith('-search')).map(request => request.operation), ['music-search'])
       assert.ok(attempts.some(request => request.operation === 'media' && request.itag === selected.itag &&
-        request.responseMime === selected.mime && request.bodySha256 === (index === 0 ? fixture.opusAudioFile.sha256 : fixture.audioFile.sha256)), 'Selected MIME must serve its real encoded fixture bytes')
-      if (index === 0) assert.ok(attempts.some(request => request.operation === 'media' && request.itag === 140 && request.responseStatus === 403))
-      else assert.ok(attempts.filter(request => request.operation === 'media' && request.itag === 140).every(request => !request.responseStatus || request.responseStatus < 400))
+        request.responseMime === selected.mime && request.bodySha256 === fixture.opusAudioFile.sha256), 'Selected MIME must serve its real encoded Opus bytes')
+      assert.equal(attempts.filter(request => request.operation === 'media' && request.itag === 140).length, 0,
+        'A healthy preferred Opus must not start an AAC probe, whether the unrequested AAC sibling is healthy or denied')
       const observed = await page.evaluate(() => {
         const value = window.__p1CodecQA, queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
         return { officialObserved: value.officialObserved, clicks: value.clicks,
@@ -1694,6 +1698,11 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       await clearDownloads()
     }
   })
+
+  await run(DOWNLOAD_COVERS_SCENARIO, () => runDownloadCoversScenario(ctx, {
+    restoreNetwork, closeOverlays, pause, controlsOff, clearDownloads, reload, wait, menu, transferMark, terminal,
+    downloadState, downloadsView, state, active, playing, nowPlaying,
+  }))
 
   await run('downloaded-library-native-order-and-offline-collection-playback', async () => {
     await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads(); await music()

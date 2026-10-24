@@ -3,6 +3,7 @@ const VERSION = __BUILD_VERSION__
 const FILES = __PRECACHE_FILES__
 const OPTIONAL = __OPTIONAL_FILES__
 const ROOT = new URL(self.registration.scope)
+const COVERS = (__COVER_ROUTING_FACTORY__)(ROOT)
 const PREFIX = `pletina-pwa:${encodeURIComponent(ROOT.href)}:`
 const CACHE = PREFIX + VERSION
 // Audio separado de los archivos de la app: una actualización conserva las descargas.
@@ -12,6 +13,35 @@ const audioPath = new URL('__audio__/', ROOT).pathname
 const indexURL = new URL('index.html', ROOT).href
 const required = new Map(FILES.map((file) => [new URL(file.url, ROOT).href, file]))
 const assets = new Map([...FILES, ...OPTIONAL].map((file) => [new URL(file.url, ROOT).href, file]))
+const coverPath = new URL('__covers__', ROOT).pathname
+
+async function coveredImage(url) {
+  const original = COVERS.parse(url)
+  if (!original) return new Response('', { status: 404 })
+  try {
+    const cached = await (await caches.open(COVERS.cacheName)).match(COVERS.key(original))
+    if (cached) {
+      const raster = await COVERS.readRaster(cached)
+      if (raster) return raster
+    }
+  } catch { /* Artwork must remain independent of audio/storage failures. */ }
+  if (self.navigator?.onLine === false) return new Response('', { status: 404 })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  try {
+    for (const candidate of COVERS.candidates(original)) {
+      try {
+        const response = await fetch(candidate, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer', signal: controller.signal })
+        const raster = await COVERS.readRaster(response, controller.signal)
+        if (raster) return raster
+      } catch { /* A readable original candidate can still follow a failed variant. */ }
+      if (controller.signal.aborted) break
+    }
+  } finally { clearTimeout(timer) }
+  // Unsupported/CORS-blocked art keeps its normal online image behaviour.
+  // Never store or serve an opaque, SVG or HTML body under our own origin.
+  return Response.redirect(original, 302)
+}
 
 function audioKey(url, id) {
   if (url.origin !== ROOT.origin || url.pathname !== audioPath + id || url.hash) return false
@@ -144,6 +174,10 @@ self.addEventListener('fetch', (event) => {
   const request = event.request
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
+  if (url.pathname === coverPath) {
+    event.respondWith(coveredImage(url).catch(() => new Response('', { status: 404 })))
+    return
+  }
   if (url.pathname.startsWith(audioPath)) {
     event.respondWith(downloadedAudio(url, request.headers.get('range')).catch(() => new Response('', { status: 404 })))
     return

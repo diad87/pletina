@@ -4,8 +4,10 @@ import { runInNewContext } from 'node:vm'
 import test from 'node:test'
 import { webcrypto } from 'node:crypto'
 import { IDBFactory } from 'fake-indexeddb'
+import coverRouting from '../../pwa/cover-routing.mjs'
 
 const source = (await readFile(new URL('../../pwa/sw.js', import.meta.url), 'utf8'))
+  .replace('__COVER_ROUTING_FACTORY__', coverRouting.toString())
   .replace('__BUILD_VERSION__', '"download-test"').replace('__PRECACHE_FILES__', '[]').replace('__OPTIONAL_FILES__', '[]')
 const scope = 'https://example.test/pletina/'
 const cacheName = 'pletina-audio-downloads:v1'
@@ -27,7 +29,7 @@ function harness() {
   }
   runInNewContext(source, {
     self: { registration: { scope }, addEventListener(type, callback) { handlers.set(type, callback) }, clients: { async claim() {} } },
-    caches, indexedDB, URL, Request, Response, Headers, crypto: webcrypto, Uint8Array,
+    caches, indexedDB, URL, Request, Response, Headers, crypto: webcrypto, Uint8Array, AbortController, DOMException, setTimeout, clearTimeout,
     fetch() { network++; throw new Error('El audio guardado no debe usar la red.') },
   })
   return {

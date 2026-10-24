@@ -7,7 +7,7 @@ import puppeteer from 'puppeteer-core'
 import { prepareStaticDecoder } from './p1-static-decoder-prototype.mjs'
 
 const args = process.argv.slice(2), option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
-const cases = { epoitaitaye: { videoId: 'DJzjkMBMook', title: 'Epoitaitaye' }, maite: { videoId: 'WtTRMAoN2Fw', title: 'Maite Zaitut!' }, iritsi: { videoId: 'fV-IUsecSsU', title: 'Iritsi da Eguna' } }
+const cases = { nini: { videoId: 'NGp3dh-hBe8', title: 'Ni, Ni, Ni!' }, epoitaitaye: { videoId: 'DJzjkMBMook', title: 'Epoitaitaye' }, maite: { videoId: 'WtTRMAoN2Fw', title: 'Maite Zaitut!' }, iritsi: { videoId: 'fV-IUsecSsU', title: 'Iritsi da Eguna' } }
 const name = option('--case', 'epoitaitaye'); assert.ok(Object.hasOwn(cases, name))
 const requestedItag = Number(option('--itag', '140')); assert.ok([140, 251].includes(requestedItag))
 const song = cases[name], directory = new URL('../../artifacts/pwa-port/', import.meta.url)

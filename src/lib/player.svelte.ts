@@ -1289,7 +1289,7 @@ class Player implements PlayerApi {
         title: item.track.title,
         artist: item.track.artist.name,
         album: item.albumTitle,
-        artwork: cover ? [{ src: cover, sizes: '500x500', type: 'image/jpeg' }] : [],
+        artwork: cover ? [api.inPwa ? { src: cover } : { src: cover, sizes: '500x500', type: 'image/jpeg' }] : [],
       })
     })
   }

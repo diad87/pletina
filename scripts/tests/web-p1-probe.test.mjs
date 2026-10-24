@@ -128,28 +128,28 @@ test('WebM metadata uses the same muted opaque probe and tears down without play
 test('a CDN that becomes metadata-readable is retried at bounded absolute slots without playing', async () => {
   const h = harness({ plan: (audio, index) => {
     assert.ok(h.audios.filter(other => other !== audio).every(other => !other.src && other.paused), 'previous probe must be unloaded before creating a new one')
-    return index < 4 ? { after: 0, error: true } : { after: 0, duration: 209 }
+    return index < 8 ? { after: 0, error: true } : { after: 0, duration: 209 }
   } })
   const promise = h.probeP1Audio(fixture, 209)
   await h.advance(7000)
   assert.deepEqual(await promise, { duration: 209 })
-  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 500, 1500, 3500, 6000])
+  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 250, 1000, 1500, 2000, 3000, 4000, 5000, 6000])
   assert.equal(h.audios.reduce((sum, a) => sum + a.plays, 0), 0)
   assert.ok(h.audios.every(a => !a.src && a.paused)); assert.equal(h.frames.length, 0)
 })
 
-test('media errors do not become absence or a claimed HTTP status, and at most five attempts run', async () => {
+test('media errors do not become absence or a claimed HTTP status, and at most nine preferred attempts run', async () => {
   const h = harness({ plan: () => ({ after: 0, error: true }) })
   const failure = assert.rejects(h.probeP1Audio(fixture, 209), error => error instanceof h.P1ProbeError && error.code === 'network' && !/403|429|retirad/.test(error.message))
   await h.advance(8000); await failure
-  assert.equal(h.audios.length, 5); assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+  assert.equal(h.audios.length, 9); assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
 })
 
 test('per-attempt timeout skips already elapsed slots and respects the overall bound', async () => {
   const h = harness({ plan: () => null })
   const failure = assert.rejects(h.probeP1Audio(fixture, null), error => error.code === 'timeout')
   await h.advance(8000); await failure
-  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 1500, 3500, 6000])
+  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 1500, 2000, 4000, 6000])
   assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
 })
 
@@ -158,7 +158,7 @@ test('a suspended renderer skips expired retries instead of sending a burst', as
   const promise = h.probeP1Audio(fixture, 209)
   await h.jump(2000); await h.advance(2000)
   assert.deepEqual(await promise, { duration: 209 })
-  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 3500])
+  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 2000])
 })
 
 test('a renderer resuming beyond the deadline cannot report a late successful attempt', async () => {
@@ -224,7 +224,7 @@ test('cancellation during mount or with an unresponsive bridge cannot retain med
 
 test('messages must come from this opaque frame and match the request; malformed result is rejected', async () => {
   const h = harness({ runBridge: false }), promise = h.probeP1Audio(fixture, 209), frame = h.frames[0], args = h.args(frame)
-  const result = { type: args.message, requestId: args.requestId, duration: 209 }
+  const result = { type: args.message, requestId: args.requestId, index: 0, duration: 209 }
   h.send(frame, result, {}); h.send(frame, result, frame.contentWindow, 'https://evil.example'); h.send(frame, { ...result, requestId: args.requestId + 1 })
   await flush(); assert.equal(h.frames.length, 1)
   h.send(frame, result); assert.deepEqual(await promise, { duration: 209 }); assert.equal(h.frames.length, 0)
@@ -253,6 +253,110 @@ test('concurrent independent probes do not cancel or accept messages for one ano
   const second = h.probeP1Audio(fixture.replace('n=good_n', 'n=other_n'), 209), secondFrame = h.frames[1], args = h.args(secondFrame)
   firstController.abort(); await h.advance(32); await first
   assert.equal(h.frames.length, 1)
-  h.send(secondFrame, { type: args.message, requestId: args.requestId, duration: 209 }); assert.deepEqual(await second, { duration: 209 })
+  h.send(secondFrame, { type: args.message, requestId: args.requestId, index: 0, duration: 209 }); assert.deepEqual(await second, { duration: 209 })
   assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+const candidate = (index = 0, expectedDuration = 209) => ({
+  url: fixture.replace('r1.googlevideo.com', 'r' + (index + 1) + '.googlevideo.com').replace('n=good_n', 'n=candidate_' + index), expectedDuration,
+})
+
+test('ordered candidates use one isolated bridge and a healthy preferred format starts without probing siblings', async () => {
+  const h = harness(), choices = [candidate(), candidate(1), candidate(2), candidate(3)]
+  const promise = h.probeP1AudioCandidates(choices)
+  assert.equal(h.frames.length, 1)
+  assert.match(h.frames[0].srcdoc, /media-src https:\/\/r1\.googlevideo\.com https:\/\/r2\.googlevideo\.com https:\/\/r3\.googlevideo\.com https:\/\/r4\.googlevideo\.com;/)
+  await h.advance(0)
+  assert.deepEqual(await promise, { index: 0, duration: 209.159 })
+  assert.equal(h.audios.length, 1); assert.equal(h.audios[0].plays, 0)
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+test('an unavailable preferred AAC leaves one shared-budget opportunity for native-supported Opus', async () => {
+  const choices = [candidate(), { ...candidate(1), url: candidate(1).url.replace('itag=140', 'itag=251').replace('mime=audio%2Fmp4', 'mime=audio%2Fwebm') }]
+  const h = harness({ plan: (audio) => ({ after: 0, ...(audio.src === choices[0].url ? { error: true } : { duration: 209 }) }) })
+  const promise = h.probeP1AudioCandidates(choices)
+  await h.advance(6000)
+  assert.deepEqual(await promise, { index: 1, duration: 209 })
+  const loads = h.operations.filter(op => op.type === 'load-probe' && op.src)
+  assert.equal(loads.length, 10)
+  assert.deepEqual(loads.map(op => op.src), [...Array(9).fill(choices[0].url), choices[1].url])
+  assert.ok(h.audios.every(audio => !audio.src && audio.paused && audio.plays === 0))
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+test('four failing formats share at most ten dispatches, not a new retry schedule per format', async () => {
+  const h = harness({ plan: () => ({ after: 0, error: true }) }), choices = [candidate(), candidate(1), candidate(2), candidate(3)]
+  const failure = assert.rejects(h.probeP1AudioCandidates(choices), error => error.code === 'network' && !/403|429/.test(error.message))
+  await h.advance(8000); await failure
+  const loads = h.operations.filter(op => op.type === 'load-probe' && op.src)
+  assert.equal(loads.length, 10)
+  assert.deepEqual(choices.map(value => loads.filter(op => op.src === value.url).length), [9, 1, 0, 0])
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+test('a permanent duration mismatch skips preferred retries and validates the next candidate against its own duration', async () => {
+  const choices = [candidate(0, 30), candidate(1, 90)]
+  const h = harness({ plan: (audio) => ({ after: 0, duration: audio.src === choices[0].url ? 50 : 90.5 }) })
+  const promise = h.probeP1AudioCandidates(choices)
+  await h.advance(0)
+  assert.deepEqual(await promise, { index: 1, duration: 90.5 })
+  assert.equal(h.audios.length, 2)
+  assert.ok(h.operations.findIndex(op => op.type === 'remove-src') < h.operations.findLastIndex(op => op.type === 'new-probe'))
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+test('the optional 1500ms probe unloads by 2000ms and preserves the original next slot', async () => {
+  const h = harness({ plan: (_audio, index) => index < 3 ? { after: 0, error: true } : index === 3 ? null : { after: 0, duration: 209 } })
+  const promise = h.probeP1AudioCandidates([candidate()])
+  await h.advance(2000)
+  assert.deepEqual(await promise, { index: 0, duration: 209 })
+  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 250, 1000, 1500, 2000])
+  const atDeadline = h.operations.filter(op => op.at === 2000)
+  assert.ok(atDeadline.findIndex(op => op.type === 'remove-src') < atDeadline.findIndex(op => op.type === 'new-probe'))
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+})
+
+test('a slow preferred format and a fallback cannot extend the shared eight-second deadline', async () => {
+  const h = harness({ plan: (audio) => audio.src === candidate().url ? null : { after: 750, duration: 209 } })
+  const failure = assert.rejects(h.probeP1AudioCandidates([candidate(), candidate(1)]), error => error.code === 'timeout')
+  await h.advance(8000); await failure
+  assert.deepEqual(h.operations.filter(op => op.type === 'new-probe').map(op => op.at), [0, 1500, 2000, 4000, 6000, 7500])
+  assert.equal(h.now, 8000); assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+  assert.ok(h.audios.every(audio => !audio.src && audio.paused && audio.plays === 0))
+  await h.advance(1000); assert.equal(h.audios.length, 6)
+})
+
+test('cancelling the remaining fallback unloads it and preserves the original cancellation reason', async () => {
+  const reason = new DOMException('Another song selected', 'AbortError'), controller = new AbortController()
+  const h = harness({ plan: (audio) => audio.src === candidate().url ? { after: 0, error: true } : null })
+  const failure = assert.rejects(h.probeP1AudioCandidates([candidate(), candidate(1)], controller.signal), error => error === reason)
+  await h.advance(6000); assert.equal(h.audios.length, 10)
+  controller.abort(reason); await failure
+  assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+  assert.ok(h.audios.every(audio => !audio.src && audio.paused && audio.plays === 0))
+  await h.advance(8000); assert.equal(h.audios.length, 10)
+})
+
+test('candidate count, distinct trusted locators and duration bounds are validated before mounting', async () => {
+  for (const values of [[], Array.from({ length: 5 }, (_, index) => candidate(index)), [candidate(), candidate()],
+    [candidate(), { ...candidate(1), url: 'https://evil.example/audio' }], [candidate(), candidate(1, NaN)],
+    [candidate(), { url: candidate(1).url }], [null], Array(2)]) {
+    const h = harness()
+    await assert.rejects(h.probeP1AudioCandidates(values), error => error.code === 'response')
+    assert.equal(h.frames.length, 0); assert.equal(h.audios.length, 0)
+  }
+})
+
+test('the selected candidate index and its own expected duration are checked at the opaque boundary', async () => {
+  for (const extra of [{ duration: 209 }, { index: -1, duration: 209 }, { index: 2, duration: 209 },
+    { index: .5, duration: 209 }, { index: 1, duration: 209 }, { index: 0, error: 'network' }]) {
+    const h = harness({ runBridge: false }), failure = assert.rejects(h.probeP1AudioCandidates([candidate(), candidate(1, 90)]), error => error.code === 'response')
+    const frame = h.frames[0], args = h.args(frame)
+    h.send(frame, { type: args.message, requestId: args.requestId, ...extra }); await failure
+    assert.equal(h.frames.length, 0); assert.equal(h.timers.size, 0)
+  }
+  const h = harness({ runBridge: false }), promise = h.probeP1AudioCandidates([candidate(), candidate(1, 90)]), frame = h.frames[0], args = h.args(frame)
+  h.send(frame, { type: args.message, requestId: args.requestId, index: 1, duration: 90 })
+  assert.deepEqual(await promise, { index: 1, duration: 90 }); assert.equal(h.frames.length, 0)
 })

@@ -20,6 +20,9 @@ const cipherFormat = (signature = 'input_signature', n = 'input_n') => mp4({ sig
 }).toString() })
 const player = (formats = [mp4({ url: baseUrl })]) => ({ playabilityStatus: { status: 'OK', playableInEmbed: true },
   videoDetails: { videoId, title: 'Synthetic test', lengthSeconds: '210' }, streamingData: { adaptiveFormats: formats } })
+const sabrPlayer = (formats = [mp4({})]) => ({ ...player(formats), streamingData: {
+  adaptiveFormats: formats, serverAbrStreamingUrl: baseUrl + '&sabr=1',
+} })
 // A deliberately tiny extracted-fragment fixture, with the same public export
 // and URL-like prototype contract as P1. No provider data or media is persisted.
 const script = `
@@ -37,12 +40,15 @@ var exportedVars = { nsigFunction(url, key, sig) {
 const recipe = extra => ({ context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: '2.20261022.01.00', visitorData: 'synthetic-public-visitor' },
   thirdParty: { embedUrl: 'https://www.reddit.com/' } }, playbackContext: { contentPlaybackContext: { html5Preference: 'HTML5_PREF_WANTS', encryptedHostFlags: 'synthetic-public-flags' } },
   signatureTimestamp: 20746, script, createdAt: '2026-01-01T00:00:00Z', playerSHA: 'a'.repeat(64), ...extra })
+const renewedRecipe = extra => recipe({ context: { ...recipe().context,
+  client: { ...recipe().context.client, visitorData: 'second-independent-public-visitor' } }, ...extra })
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve() }
 
 function harness(options = {}) {
   const api = {}, listeners = new Set(), frames = new Set(), blobs = new Map(), timers = new Set(), workers = new Set()
-  const metrics = { requests: 0, workerStarts: 0, revoked: 0, stops: 0, emitted: 0, batchSizes: [] }
+  const metrics = { requests: 0, workerStarts: 0, revoked: 0, stops: 0, emitted: 0, batchSizes: [], scheduledMs: [] }
   const schedule = (fn, ms) => {
+    metrics.scheduledMs.push(ms)
     const handle = setTimeout(() => { timers.delete(handle); fn() }, options.fastTimeout && ms >= 1500 ? 10 : ms)
     timers.add(handle); return handle
   }
@@ -220,7 +226,7 @@ test('Opus is explicit opt-in and never admits other containers, codecs, video o
   assert.equal(h.metrics.workerStarts, 0); h.clean()
 })
 
-test('mixed encodings preserve all metadata, prefer AAC, and share one four-cipher budget', async () => {
+test('mixed encodings preserve all metadata, prefer supported Opus, and share one four-cipher budget', async () => {
   const h = harness(), encrypted = (format, value) => ({ ...format, signatureCipher: cipherFormat(value).signatureCipher })
   const formats = [encrypted(opus({ bitrate: 900000 }), 'opus-low'), encrypted(mp4({ bitrate: 96000 }), 'aac-low'),
     encrypted(opus({ bitrate: 1000000 }), 'opus-mid'), encrypted(opus({ bitrate: 1100000 }), 'opus-high'),
@@ -230,8 +236,8 @@ test('mixed encodings preserve all metadata, prefer AAC, and share one four-ciph
     inspected++; assert.equal(all.length, 6); return true
   }, true)
   assert.equal(inspected, 6)
-  assert.deepEqual(result.streamingData.adaptiveFormats.map(format => Boolean(format.url)), [false, true, false, true, true, true],
-    'Higher bitrate Opus siblings must not consume the slots needed by healthy AAC')
+  assert.deepEqual(result.streamingData.adaptiveFormats.map(format => Boolean(format.url)), [true, false, true, true, false, true],
+    'An explicitly Opus-capable browser follows Native codec order, then bitrate')
   assert.deepEqual(result.streamingData.adaptiveFormats.map(format => format.mimeType), formats.map(format => format.mimeType))
   assert.ok(result.streamingData.adaptiveFormats.every(format => !Object.hasOwn(format, 'signatureCipher')))
   assert.deepEqual(h.metrics.batchSizes, [4]); h.clean()
@@ -264,6 +270,147 @@ test('public rollout version tokens pass through exactly while malformed tokens 
     await rejects(h, () => h.requestP1Player(videoId, () => { throw Error('Invalid recipe reached HTTP') },
       recipe({ context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: version } } })), 'recipe')
   h.clean()
+})
+
+test('proved SABR-only audio renews one changed public context and uses its matching decoder', async () => {
+  const h = harness(), bodies = [], signals = []
+  const first = sabrPlayer([mp4({ url: null, signatureCipher: null }), opus({ audioTrack: { displayName: 'Original' } })])
+  const second = sabrPlayer([cipherFormat()])
+  const fallback = renewedRecipe({ script: script.replace('decoded_signature==', 'renewed_signature==').replace("'decoded_n'", "'renewed_n'") })
+  const result = await h.requestP1Player(videoId, async (body, signal) => {
+    bodies.push(body); signals.push(signal); return bodies.length === 1 ? first : second
+  }, recipe(), undefined, () => true, true, fallback)
+  assert.equal(bodies.length, 2); assert.equal(signals[0], signals[1])
+  assert.ok(bodies.every(body => body.videoId === videoId && body.contentCheckOk === true && body.racyCheckOk === true))
+  assert.equal(bodies[0].context.client.visitorData, 'synthetic-public-visitor')
+  assert.equal(bodies[1].context.client.visitorData, 'second-independent-public-visitor')
+  assert.deepEqual(bodies[0].playbackContext, bodies[1].playbackContext)
+  assert.equal(h.metrics.scheduledMs.filter(ms => ms === 15000).length, 1, 'renewal cannot reset the original deadline')
+  const url = new URL(result.streamingData.adaptiveFormats[0].url)
+  assert.equal(url.searchParams.get('sig'), 'renewed_signature=='); assert.equal(url.searchParams.get('n'), 'renewed_n')
+  assert.equal(first.streamingData.adaptiveFormats[0].url, null, 'wire responses remain untouched')
+  assert.equal(h.metrics.workerStarts, 1); h.clean()
+})
+
+test('recipe metadata and object key order cannot disguise an unchanged effective POST', async () => {
+  const original = recipe()
+  const reordered = recipe({ context: { thirdParty: original.context.thirdParty, client: {
+    visitorData: original.context.client.visitorData, clientVersion: original.context.client.clientVersion,
+    clientName: original.context.client.clientName,
+  } }, playbackContext: { contentPlaybackContext: { encryptedHostFlags: 'synthetic-public-flags',
+    signatureTimestamp: 20746, html5Preference: 'HTML5_PREF_WANTS' } } })
+  for (const fallback of [recipe({ createdAt: '2026-10-24T00:00:00Z', playerSHA: 'b'.repeat(64), script: 'throw Error("unused")' }), reordered]) {
+    const h = harness()
+    await rejects(h, () => h.requestP1Player(videoId, h.request(sabrPlayer()), original, undefined, undefined, false, fallback), 'format')
+    assert.equal(h.metrics.requests, 1); assert.equal(h.metrics.workerStarts, 0); h.clean()
+  }
+})
+
+test('SABR beside a usable locator is a normal one-POST response, even with an invalid unused fallback', async () => {
+  const h = harness()
+  const result = await h.requestP1Player(videoId, h.request(sabrPlayer([cipherFormat()])), recipe(), undefined, undefined, false,
+    renewedRecipe({ script: '' }))
+  assert.equal(new URL(result.streamingData.adaptiveFormats[0].url).searchParams.get('n'), 'decoded_n')
+  assert.equal(h.metrics.requests, 1); assert.equal(h.metrics.workerStarts, 1); h.clean()
+})
+
+test('renewal requires trusted SABR, supported unencrypted audio and no malformed existing locators', async () => {
+  const missingSabr = sabrPlayer(); delete missingSabr.streamingData.serverAbrStreamingUrl
+  const cases = [missingSabr, sabrPlayer([]), sabrPlayer([{ mimeType: 'video/mp4; codecs="avc1.640028"' }]),
+    sabrPlayer([mp4({ drmFamilies: ['WIDEVINE'] })]), sabrPlayer([mp4({ signatureCipher: '' })]),
+    sabrPlayer([mp4({ signatureCipher: 'malformed-cipher' })]), sabrPlayer([mp4({ url: 'https://outside.invalid/' })]),
+    sabrPlayer([mp4({}), mp4({ cipher: 'malformed-cipher' })])]
+  for (const url of ['http://rr.googlevideo.com/videoplayback', 'https://googlevideo.com.evil.invalid/videoplayback',
+    'https://user:pass@rr.googlevideo.com/videoplayback', 'https://rr.googlevideo.com:444/videoplayback',
+    'https://rr.googlevideo.com/other', baseUrl + '#fragment', baseUrl + '&expire=1', baseUrl + '&n=%ZZ']) {
+    const input = sabrPlayer(); input.streamingData.serverAbrStreamingUrl = url; cases.push(input)
+  }
+  for (const input of cases) {
+    const h = harness()
+    await rejects(h, () => h.requestP1Player(videoId, h.request(input), recipe(), undefined, undefined, false, renewedRecipe()), 'format')
+    assert.equal(h.metrics.requests, 1); assert.equal(h.metrics.workerStarts, 0); h.clean()
+  }
+})
+
+test('missing locators cannot renew rejected language metadata or unsupported Opus', async () => {
+  const input = sabrPlayer([mp4({ audioTrack: { displayName: 'Dubbed' } }), opus({ audioTrack: { displayName: 'Original' } })])
+  const accept = (format, all) => { assert.equal(all.length, 2); return format.audioTrack?.displayName === 'Original' }
+  const aacOnly = harness()
+  await rejects(aacOnly, () => aacOnly.requestP1Player(videoId, aacOnly.request(input), recipe(), undefined, accept, false, renewedRecipe()), 'format')
+  assert.equal(aacOnly.metrics.requests, 1); aacOnly.clean()
+  const supported = harness(); let calls = 0
+  const result = await supported.requestP1Player(videoId, async () => ++calls === 1 ? input : player([
+    mp4({ audioTrack: { displayName: 'Dubbed' }, url: baseUrl }), opus({ audioTrack: { displayName: 'Original' }, url: baseUrl + '&opus=1' }),
+  ]), recipe(), undefined, accept, true, renewedRecipe())
+  assert.equal(calls, 2); assert.equal(result.streamingData.adaptiveFormats[0].url, undefined)
+  assert.equal(result.streamingData.adaptiveFormats[1].url, baseUrl + '&opus=1'); supported.clean()
+})
+
+test('identity, restrictions and global DRM are checked before any context renewal', async () => {
+  const cases = [[{ ...sabrPlayer(), videoDetails: { videoId: 'bbbbbbbbbbb' } }, 'response'],
+    [{ ...sabrPlayer(), playabilityStatus: { status: 'LOGIN_REQUIRED' } }, 'restricted'],
+    [{ ...sabrPlayer(), playabilityStatus: { status: 'OK', playableInEmbed: false } }, 'restricted'],
+    [{ ...sabrPlayer(), videoDetails: { videoId, isPrivate: true } }, 'restricted'],
+    [{ ...sabrPlayer(), streamingData: { ...sabrPlayer().streamingData, licenseInfos: [] } }, 'format']]
+  for (const [input, code] of cases) {
+    const h = harness()
+    await rejects(h, () => h.requestP1Player(videoId, h.request(input), recipe(), undefined, undefined, false, renewedRecipe()), code)
+    assert.equal(h.metrics.requests, 1); assert.equal(h.metrics.workerStarts, 0); h.clean()
+  }
+})
+
+test('an invalid renewed recipe never reaches the transport and a second SABR response never renews again', async () => {
+  const invalid = harness()
+  await rejects(invalid, () => invalid.requestP1Player(videoId, invalid.request(sabrPlayer()), recipe(), undefined, undefined, false,
+    renewedRecipe({ context: { client: { clientName: 'WEB_EMBEDDED_PLAYER', clientVersion: '2.0', accessToken: 'forbidden' } } })), 'recipe')
+  assert.equal(invalid.metrics.requests, 1); invalid.clean()
+  const twice = harness()
+  await rejects(twice, () => twice.requestP1Player(videoId, twice.request(sabrPlayer()), recipe(), undefined, undefined, false, renewedRecipe()), 'format')
+  assert.equal(twice.metrics.requests, 2); assert.equal(twice.metrics.workerStarts, 0); twice.clean()
+})
+
+test('the renewed response must independently satisfy exact identity, public status, DRM and locator bounds', async () => {
+  for (const [input, code] of [[{ ...player(), videoDetails: { videoId: 'bbbbbbbbbbb' } }, 'response'],
+    [{ ...player(), playabilityStatus: { status: 'UNPLAYABLE' } }, 'restricted'],
+    [{ ...player(), streamingData: { ...player().streamingData, drmFamilies: ['WIDEVINE'] } }, 'format'],
+    [player([mp4({ signatureCipher: 'bad' })]), 'format']]) {
+    const h = harness(); let calls = 0
+    await rejects(h, () => h.requestP1Player(videoId, async () => ++calls === 1 ? sabrPlayer() : input,
+      recipe(), undefined, undefined, false, renewedRecipe()), code)
+    assert.equal(calls, 2); assert.equal(h.metrics.workerStarts, 0); h.clean()
+  }
+})
+
+test('decoder failures and transport failures never cause context renewal', async () => {
+  const decoder = harness()
+  await rejects(decoder, () => decoder.requestP1Player(videoId, decoder.request(sabrPlayer([cipherFormat()])),
+    recipe({ script: 'throw Error("unusable cipher")' }), undefined, undefined, false, renewedRecipe()), 'decoder')
+  assert.equal(decoder.metrics.requests, 1); decoder.clean()
+  const transport = harness(), error = Error('offline'); let calls = 0
+  await assert.rejects(() => transport.requestP1Player(videoId, async () => { calls++; throw error }, recipe(), undefined, undefined, false, renewedRecipe()), value => value === error)
+  assert.equal(calls, 1); transport.clean()
+})
+
+test('context renewal shares the first deadline and interrupts a renewed transport that ignores abort', async () => {
+  const h = harness({ fastTimeout: true }), signals = []; let calls = 0
+  await rejects(h, () => h.requestP1Player(videoId, (_body, signal) => {
+    calls++; signals.push(signal); return calls === 1 ? Promise.resolve(sabrPlayer()) : new Promise(() => {})
+  }, recipe(), undefined, undefined, false, renewedRecipe()), 'timeout')
+  assert.equal(calls, 2); assert.equal(signals[0], signals[1]); assert.equal(signals[1].aborted, true)
+  assert.equal(h.metrics.scheduledMs.filter(ms => ms === 15000).length, 1); assert.equal(h.metrics.workerStarts, 0); h.clean()
+})
+
+test('caller cancellation before or during renewal cannot return late media or leave resources', async () => {
+  for (const abortAt of [1, 2]) {
+    const h = harness(), controller = new AbortController(); let calls = 0, lateResolve
+    const pending = h.requestP1Player(videoId, (_body, signal) => {
+      calls++; if (calls === abortAt) { controller.abort(); return new Promise(resolve => { lateResolve = resolve }) }
+      assert.equal(signal.aborted, false); return Promise.resolve(sabrPlayer())
+    }, recipe(), controller.signal, undefined, false, renewedRecipe())
+    await assert.rejects(pending, { name: 'AbortError' }); assert.equal(calls, abortAt)
+    lateResolve(player([cipherFormat()])); await flush()
+    assert.equal(h.metrics.workerStarts, 0); h.clean()
+  }
 })
 
 test('exact ID, OK status, public visibility and embed availability are mandatory', async () => {
