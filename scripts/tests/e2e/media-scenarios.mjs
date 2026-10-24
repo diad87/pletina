@@ -39,6 +39,8 @@ export const mediaScenarioInventory = Object.freeze([
   'reload-restores-current-dj-position-and-paused-intent', 'downloads-serial-duplicate-suppression-and-cancel-pending',
   'p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable',
   'p1-opaque-download-http403-html-rolls-back-without-done-or-partial-cache',
+  'downloaded-library-native-order-and-offline-collection-playback',
+  'download-list-reconciles-evicted-copy-and-allows-redownload-without-reload',
   'download-remove-all-cancel-preserves-files-and-reload-ui',
   'download-offline-reload-play-seek-from-local-service-worker', 'download-removal-clears-pointer-body-and-ui',
   'download-automatic-renewal-after-one-transfer-failure-and-offline-play',
@@ -1691,6 +1693,118 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause()
       await clearDownloads()
     }
+  })
+
+  await run('downloaded-library-native-order-and-offline-collection-playback', async () => {
+    await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads(); await music()
+    const indices = [0, 1, 4, 8], expected = [8, 4, 0, 1].map(index => fixture.tracks[index])
+    await wait(titles => {
+      const rows = [...document.querySelectorAll('.tracks li[data-reorder-index] .name')]
+      return rows.length === titles.length && titles.every((title, index) => rows[index]?.textContent.trim() === title)
+    }, fixture.tracks.map(track => track.title))
+    assert.equal(fixture.tracks.length, 12)
+    await downloadMusic(indices)
+    const observer = observeProviderRequests()
+    try {
+      const database = await downloadState()
+      assert.deepEqual(database.rows.map(file => file.id), indices.map(index => fixture.tracks[index].id))
+      assert.equal(database.cacheEntries, 4); assert.ok(database.rows.every(file => file.present))
+      await downloadsView()
+      const metadata = () => page.evaluate(() => [...document.querySelectorAll('.tracks li[data-reorder-index]')].map(node => ({
+        title: node.querySelector('.name')?.textContent.trim(), artist: node.querySelector('.artist-name')?.textContent.trim(),
+        album: node.querySelector('.album .link')?.textContent.trim(), downloaded: Boolean(node.querySelector('.dl[title="Descargada"]')),
+      })))
+      const expectedMetadata = expected.map(track => ({ title: track.title, artist: track.artist.name, album: track.album.title, downloaded: true }))
+      assert.deepEqual(await metadata(), expectedMetadata,
+        'Descargas must follow native artist/album ASCII NOCASE, oldest date, then deterministic ID order')
+      const offline = await ctx.goOffline(true), requestMark = observer.attempts.length, fixtureMark = fixture.requests.length
+      await reload(); await downloadsView()
+      assert.equal(await page.evaluate(() => navigator.onLine), !offline.navigatorOfflineExpected)
+      assert.ok((await state()).audios.every(audio => audio.paused), 'Reopening the collection cannot autoplay')
+      assert.deepEqual(await metadata(), expectedMetadata, 'Offline reload must retain the native visible collection order and metadata')
+      await tap('.page .actions .big-play')
+      const before = await playing(expected[0].title), audioIndex = active(before).index
+      assert.equal(active(before).local, true)
+      const queued = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
+      assert.deepEqual(queued.queue.map(item => item.track.id), expected.map(track => track.id),
+        'The collection button must build its complete queue from the same visible order')
+      assert.deepEqual(queued.order, [0, 1, 2, 3]); assert.equal(queued.pos, 0); assert.equal(queued.userQueue.length, 0)
+      await seek(.91)
+      await wait(({ title, audioIndex }) => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        !window.__qaAudio.instances[audioIndex].paused && window.__qaAudio.instances[audioIndex].currentTime > .15,
+      { title: expected[1].title, audioIndex })
+      const after = await state()
+      assert.equal(after.audios.length, before.audios.length); assert.equal(active(after).index, audioIndex); assert.equal(active(after).local, true)
+      assert.ok(after.events.filter(event => event.type === 'ended').length > before.events.filter(event => event.type === 'ended').length,
+        'The next native-ordered download must start after a real ended event without another play gesture')
+      const checkpoint = await page.evaluate(() => JSON.parse(localStorage.getItem('pletina:web:queue:v1')))
+      assert.deepEqual(checkpoint.queue.map(item => item.track.id), expected.map(track => track.id))
+      assert.equal(checkpoint.queue[checkpoint.order[checkpoint.pos]].track.id, expected[1].id)
+      const delivery = assertOfflineProviderDelivery(observer, requestMark, fixtureMark)
+      return { downloadedIds: indices.map(index => fixture.tracks[index].id), visibleIds: expected.map(track => track.id), metadata: expectedMetadata,
+        collectionQueueIds: queued.queue.map(item => item.track.id), automaticEnded: true, sameAudio: true, extraPlayGesture: false,
+        database, audio: after, providerDelivery: delivery, networkMode: offline.mode, navigatorOfflineExpected: offline.navigatorOfflineExpected,
+        physicalPhoneClaimed: false }
+    } finally { observer.stop(); await cleanDownloadScenario() }
+  })
+
+  await run('download-list-reconciles-evicted-copy-and-allows-redownload-without-reload', async () => {
+    await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads(); await music()
+    const track = fixture.tracks[0]
+    await wait(titles => {
+      const rows = [...document.querySelectorAll('.tracks li[data-reorder-index] .name')]
+      return rows.length === titles.length && titles.every((title, index) => rows[index]?.textContent.trim() === title)
+    }, fixture.tracks.map(track => track.title))
+    // Keep another song selected so the final row click resolves the new local
+    // copy instead of toggling an already selected remote source.
+    await tap(row(1) + ' .name'); await playing(fixture.tracks[1].title); await pause()
+    await downloadMusic([0])
+    const pointer = () => page.evaluate(id => new Promise((resolve, reject) => {
+      const request = indexedDB.open('pletina-web-downloads')
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const db = request.result, tx = db.transaction('files', 'readonly'), get = tx.objectStore('files').get(id)
+        let value
+        get.onsuccess = () => { value = get.result?.cacheKey ?? null }
+        tx.oncomplete = () => { db.close(); resolve(value) }; tx.onabort = () => { db.close(); reject(tx.error) }
+      }
+    }), track.id)
+    try {
+      await page.locator(row(0) + ' .dl[title="Descargada"]').waitFor()
+      const firstPointer = await pointer(), documentEpoch = await page.evaluate(() => performance.timeOrigin)
+      assert.ok(firstPointer)
+      assert.equal(await removeCachedBody(track.id), true, 'Fault injection deletes only the body of an actual UI-created download')
+      const evicted = await downloadState()
+      assert.deepEqual(evicted.rows.map(file => ({ id: file.id, present: file.present })), [{ id: track.id, present: false }])
+      assert.equal(evicted.cacheEntries, 0)
+      assert.equal(await page.locator(row(0) + ' .dl[title="Descargada"]').count(), 1, 'Cache eviction alone cannot write the product done state')
+      await downloadsView()
+      await page.locator('.empty-state strong:text-is("Aún no has descargado nada")').waitFor()
+      assert.deepEqual(await downloadState(), { rows: [], cacheEntries: 0 }, 'The real list API must retire the missing body pointer')
+      assert.equal(await pointer(), null)
+      await music()
+      assert.equal(await page.locator(row(0) + ' .dl[title="Descargada"]').count(), 0,
+        'List reconciliation must clear the done marker without reloading the document')
+      await tap(row(0) + ' button.more')
+      await page.getByRole('menuitem', { name: 'Descargar', exact: true }).waitFor()
+      assert.equal(await page.getByRole('menuitem', { name: 'Quitar descarga', exact: true }).count(), 0)
+      const mark = await transferMark()
+      await clickText('[role="menuitem"]', 'Descargar')
+      assert.equal((await terminal(mark, track.id)).state, 'done')
+      await page.locator(row(0) + ' .dl[title="Descargada"]').waitFor()
+      const replacement = await downloadState(), secondPointer = await pointer()
+      assert.equal(replacement.rows.length, 1); assert.equal(replacement.rows[0].id, track.id); assert.equal(replacement.rows[0].present, true)
+      assert.equal(replacement.cacheEntries, 1); assert.ok(secondPointer); assert.notEqual(secondPointer, firstPointer)
+      const events = await page.evaluate(({ mark, id }) => window.__e2eTransfers.slice(mark).filter(event => event.id === id).map(event => event.state), { mark, id: track.id })
+      assert.deepEqual(events, ['queued', 'downloading', 'done'], 'A new real job must replace the evicted copy exactly once')
+      await downloadsView(); await tap(row(0) + ' .name')
+      const audio = await playing(track.title)
+      assert.equal(active(audio).local, true); assert.equal(active(audio).error, null)
+      assert.equal(await page.evaluate(() => performance.timeOrigin), documentEpoch, 'Eviction, UI reconciliation, redownload and local play must share one document')
+      return { trackId: track.id, fault: 'Only the committed CacheStorage body was deleted; no IDB or done state was seeded',
+        stalePointerRetired: true, staleDoneMarkerCleared: true, menuAllowedNewDownload: true, replacementUsesNewStage: true,
+        documentReloaded: false, events, database: replacement, audio, physicalStorageEvictionClaimed: false }
+    } finally { await cleanDownloadScenario() }
   })
 
   let downloaded = false

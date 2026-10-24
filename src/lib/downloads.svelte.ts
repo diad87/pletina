@@ -1,4 +1,5 @@
 import { listen } from './events'
+import { untrack } from 'svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import * as api from './api'
 import { fromLib, toLib } from './library.svelte'
@@ -7,7 +8,7 @@ import { isAndroid } from './player-android.svelte'
 import { youtubeEpisodes } from './podcasts'
 import type { QueueItem } from './player.svelte'
 import { toast } from './toast.svelte'
-import type { DownloadProgress } from './types'
+import type { DownloadEntry, DownloadProgress } from './types'
 
 /** Estado de las descargas, al día con los eventos "download" del backend. */
 class Downloads {
@@ -34,6 +35,7 @@ class Downloads {
   #ready = false
   #initializing: Promise<void> | undefined
   #restoring: Promise<void> | undefined
+  #listing = 0
 
   constructor() {
     if (!api.inPwa) return
@@ -53,6 +55,27 @@ class Downloads {
       if (api.inPwa) await this.resume()
     })()
     await this.#initializing
+  }
+
+  /** La lista local comprueba qué archivos siguen guardados. Actualiza las
+   * marcas web sin deshacer una descarga o eliminación posterior a su lectura. */
+  async list(): Promise<DownloadEntry[]> {
+    if (!api.inPwa) return api.downloadsList()
+    const listing = ++this.#listing, changes = new Map(this.#changes), before = untrack(() => new Set(this.done))
+    const entries = await api.downloadsList()
+    if (listing !== this.#listing) return entries
+    const available = new Set(entries.map((entry) => entry.track.id))
+    for (const id of new Set([...before, ...available])) {
+      if (this.active.has(id) || this.#changes.get(id) !== changes.get(id) || this.done.has(id) !== before.has(id)) continue
+      if (this.done.has(id) === available.has(id)) continue
+      if (available.has(id)) this.done.add(id)
+      else this.done.delete(id)
+      this.#terminal.add(id)
+      this.#change(id)
+    }
+    // done es reactivo. No incrementar version aquí: la vista ya está leyendo
+    // esta lista y su efecto no debe iniciar otra consulta por reconciliarla.
+    return entries
   }
 
   /** Rebuild visible pending rows before resuming persisted work. This resumes
@@ -155,6 +178,7 @@ class Downloads {
           if (this.#attempts.get(id) !== attempts.get(id) || this.active.has(id) || remaining.has(id)) continue
           changed = this.done.delete(id) || changed
           this.#terminal.add(id)
+          this.#change(id)
         }
         if (changed) this.version++
       } catch {

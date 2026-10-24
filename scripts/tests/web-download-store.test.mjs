@@ -149,3 +149,128 @@ test('el lector registrado por el adaptador se aplica también a una descarga cr
   assert.deepEqual(h.cacheWrites, [])
   assert.deepEqual(h.requests, [])
 })
+
+test('la lista visible de descargas agrupa artista y disco como la APK, con fecha ascendente y sin alterar el listado interno', async t => {
+  const h = setup(t), store = h.download(), records = []
+  for (const [id, artistName, albumTitle, at] of [
+    [101, 'Zulu', 'A', 200], [102, 'alpha', 'Zulu', 100], [103, 'Alpha', 'beta', 300],
+    [104, 'ALPHA', 'BETA', 100], [105, 'alpha', 'beta', 200],
+  ]) {
+    const record = { ...await h.seed(store, { ...ordinary(id), artistName, albumTitle }), at }
+    await store.put(record); records.push(record)
+  }
+  const bytes = await h.cacheSnapshot()
+  const rawOrder = (await store.list()).map(record => record.id)
+  assert.deepEqual(rawOrder, [103, 105, 101, 104, 102], 'Internal newest-first ordering remains available to existing callers')
+  const visible = await store.listDownloads()
+  assert.deepEqual(visible.map(entry => entry.track.id), [104, 105, 103, 102, 101])
+  assert.deepEqual((await store.list()).map(record => record.id), rawOrder)
+  for (const record of records) assert.deepEqual(await store.get(record.id), record)
+  assert.deepEqual(await h.cacheSnapshot(), bytes)
+  assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+})
+
+test('el orden de descargas usa NOCASE ASCII y bytes UTF-8, sin idioma, plegado de acentos ni orden UTF-16', async t => {
+  const h = setup(t), store = h.download()
+  const names = ['a', 'B', 'z', 'Á', 'á', '😀', '\uffff', 'A']
+  for (const [index, name] of names.entries()) {
+    await h.seed(store, { ...ordinary(index + 1), artistName: name, albumTitle: 'Igual' })
+    await h.seed(store, { ...ordinary(index + 101), artistName: 'Grupo', albumTitle: name })
+  }
+  const values = await store.listDownloads()
+  assert.deepEqual(values.filter(entry => entry.track.id < 100).map(entry => entry.track.id), [1, 8, 2, 3, 4, 5, 7, 6])
+  assert.deepEqual(values.filter(entry => entry.track.id > 100).map(entry => entry.track.id), [101, 108, 102, 103, 104, 105, 107, 106])
+  assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+})
+
+test('el desempate visible por ID es ascendente y estable tras reabrir, aunque las inserciones se hagan al revés', async t => {
+  const h = setup(t), store = h.download()
+  for (const id of [30, 10, 20]) await h.seed(store, { ...ordinary(id), artistName: id === 20 ? 'ARTISTA' : 'Artista', albumTitle: id === 10 ? 'DISCO' : 'Disco' })
+  assert.deepEqual((await store.listDownloads()).map(entry => entry.track.id), [10, 20, 30])
+  assert.deepEqual((await store.list()).map(record => record.id), [30, 20, 10])
+  await store.close()
+  const reopened = h.download()
+  assert.deepEqual((await reopened.listDownloads()).map(entry => entry.track.id), [10, 20, 30])
+  assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+})
+
+test('el orden visible se calcula con los metadatos canónicos actuales de YouTube, conservando los archivos originales', async t => {
+  const h = setup(t), store = h.download()
+  const first = await h.library.storageInvoke('save_youtube_track', { ...input, artist: 'Zulu' })
+  const secondInput = { ...input, videoId: 'lmnopqrstuv', title: 'Otra canción', artist: 'Alpha' }
+  const second = await h.library.storageInvoke('save_youtube_track', secondInput)
+  const firstRecord = await h.seed(store, first), secondRecord = await h.seed(store, second)
+  await h.seed(store, { ...ordinary(90), artistName: 'Middle' })
+  const bytes = await h.cacheSnapshot()
+  await h.library.storageInvoke('save_youtube_track', { ...input, artist: 'Beta' })
+  await h.library.storageInvoke('save_youtube_track', { ...secondInput, artist: 'Zulu' })
+  await h.reopenLibrary()
+  const values = await store.listDownloads()
+  assert.deepEqual(values.map(entry => entry.track.id), [first.id, 90, second.id])
+  assert.deepEqual(values.map(entry => entry.track.artistName), ['Beta', 'Middle', 'Zulu'])
+  assert.deepEqual(await store.get(first.id), firstRecord); assert.deepEqual(await store.get(second.id), secondRecord)
+  assert.deepEqual(await h.cacheSnapshot(), bytes)
+  assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+})
+
+for (const method of ['listDownloads', 'readDownloadedPlayable']) {
+  test(`${method}: retira una referencia cuya copia sigue ausente sin borrar otros archivos`, async t => {
+    const h = setup(t), store = h.download()
+    const missing = await h.seed(store, ordinary(1)), kept = await h.seed(store, ordinary(2))
+    h.rows.delete(missing.cacheKey)
+    const bytes = await h.cacheSnapshot()
+    const value = await store[method](1)
+    if (method === 'listDownloads') assert.deepEqual(value.map(entry => entry.track.id), [2])
+    else assert.equal(value, null)
+    assert.equal(await store.get(1), null); assert.deepEqual(await store.get(2), kept)
+    assert.deepEqual(await h.cacheSnapshot(), bytes)
+    assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+  })
+
+  test(`${method}: una copia nueva confirmada mientras se comprueba la antigua conserva su referencia y se devuelve`, async t => {
+    const h = setup(t), store = h.download(), old = await h.seed(store, ordinary(1))
+    const replacement = { ...old, at: old.at + 1, track: { ...old.track, title: 'Copia nueva' },
+      cacheKey: old.cacheKey.replace(/0$/, '1') }
+    const open = h.caches.open, probes = []
+    h.caches.open = async name => {
+      const cache = await open(name)
+      return { ...cache, async match(key) {
+        probes.push(String(key))
+        if (String(key) === old.cacheKey) {
+          h.rows.delete(old.cacheKey)
+          h.rows.set(replacement.cacheKey, new Response(fixture, { headers: { 'content-type': 'audio/wav' } }))
+          await store.put(replacement)
+          return undefined
+        }
+        return cache.match(key)
+      } }
+    }
+    const value = await store[method](1)
+    if (method === 'listDownloads') assert.deepEqual(value.map(entry => entry.track.title), ['Copia nueva'])
+    else assert.equal(value?.title, 'Copia nueva')
+    assert.deepEqual(probes, [old.cacheKey, replacement.cacheKey], 'Only one replacement stage needs a bounded cache probe')
+    assert.deepEqual(await store.get(1), replacement)
+    assert.equal(h.rows.size, 1); assert.ok(h.rows.has(replacement.cacheKey))
+    assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+  })
+
+  test(`${method}: la referencia nueva también se retira si su propia copia falta, con una sola comprobación adicional`, async t => {
+    const h = setup(t), store = h.download(), old = await h.seed(store, ordinary(1))
+    const replacement = { ...old, at: old.at + 1, cacheKey: old.cacheKey.replace(/0$/, '2') }
+    const open = h.caches.open, probes = []
+    h.caches.open = async name => {
+      const cache = await open(name)
+      return { ...cache, async match(key) {
+        probes.push(String(key))
+        if (String(key) === old.cacheKey) { h.rows.delete(old.cacheKey); await store.put(replacement) }
+        return undefined
+      } }
+    }
+    const value = await store[method](1)
+    if (method === 'listDownloads') assert.deepEqual(value, [])
+    else assert.equal(value, null)
+    assert.deepEqual(probes, [old.cacheKey, replacement.cacheKey])
+    assert.equal(await store.get(1), null); assert.equal(h.rows.size, 0)
+    assert.deepEqual(h.cacheWrites, []); assert.deepEqual(h.requests, [])
+  })
+}

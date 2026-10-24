@@ -25,6 +25,20 @@ const text = (value: unknown, empty = true) => {
   if (typeof value !== 'string' || value.length > 4000 || !empty && !value.trim()) throw new Error('Los metadatos de la descarga no son válidos.')
   return value.trim()
 }
+// SQLite NOCASE only folds ASCII A–Z; localeCompare would also reorder accents.
+// Encoding once per entry preserves native UTF-8 order beyond the BMP as well.
+function downloadTextKey(value: string): Uint8Array {
+  const bytes = new TextEncoder().encode(value)
+  for (let i = 0; i < bytes.length; i++) if (bytes[i] >= 65 && bytes[i] <= 90) bytes[i] += 32
+  return bytes
+}
+function compareDownloadText(left: Uint8Array, right: Uint8Array): number {
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    if (left[i] !== right[i]) return left[i] - right[i]
+    if (left[i] === 0) break // NOCASE treats NUL as the end of the compared text.
+  }
+  return left.length - right.length
+}
 export function downloadTrack(value: LibTrack): LibTrack {
   if (!value || typeof value !== 'object' || typeof value.explicit !== 'boolean' || typeof value.duration !== 'number' || !Number.isFinite(value.duration) || value.duration < 0) throw new Error('La canción de la descarga no es válida.')
   let cover: string | null = null
@@ -116,6 +130,36 @@ export function createDownloadStore(options: Options = {}) {
   }
   const put = async (value: DownloadRecord): Promise<void> => { const normalized = row(value); await request('readwrite', (store) => store.put(normalized)) }
   const remove = async (id: number): Promise<void> => { await request('readwrite', (store) => store.delete(downloadId(id))) }
+  /** A cache probe can finish after a newer download commits. Retire only the
+   * pointer actually observed missing, atomically with rereading the current row. */
+  async function retireMissing(observed: DownloadRecord): Promise<DownloadRecord | null> {
+    const db = await open()
+    const replacement = await new Promise<DownloadRecord | undefined>((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite'), store = tx.objectStore('files')
+      let current: DownloadRecord | undefined
+      tx.oncomplete = () => resolve(current)
+      tx.onabort = tx.onerror = () => reject(new Error('No se pudo comprobar la biblioteca de descargas.'))
+      const pending = store.get(observed.id)
+      pending.onsuccess = () => {
+        try {
+          if (pending.result?.cacheKey === observed.cacheKey) store.delete(observed.id)
+          else current = pending.result
+        } catch { tx.abort() }
+      }
+    })
+    if (!replacement) return null
+    try { return row(replacement) } catch { return null }
+  }
+  async function presentCopy(saved: DownloadRecord, cache: Cache): Promise<DownloadRecord | null> {
+    let current: DownloadRecord | null = saved
+    // One replacement probe avoids returning an obsolete miss after redownload,
+    // while concurrent changes cannot create an unbounded reconciliation loop.
+    for (let attempt = 0; attempt < 2 && current; attempt++) {
+      if (await cache.match(current.cacheKey)) return current
+      current = await retireMissing(current)
+    }
+    return null
+  }
   /** Run only once, before the exclusive download owner starts its worker.
    * Staging bodies from a dead context have no IDB pointer. A current context's
    * in-flight stage must never be swept: subsequent resume calls skip this load.
@@ -166,19 +210,26 @@ export function createDownloadStore(options: Options = {}) {
   async function readDownloadedPlayable(id: number): Promise<Playable | null> {
     const saved = await get(id)
     if (!saved) return null
-    const response = await (await cacheStorage.open(DOWNLOAD_CACHE)).match(saved.cacheKey)
-    if (!response) { await remove(id); return null }
-    const track = await trackMetadata(saved)
+    const current = await presentCopy(saved, await cacheStorage.open(DOWNLOAD_CACHE))
+    if (!current) return null
+    const track = await trackMetadata(current)
     return { videoId: '', url: audioCacheUrl(id, scope), title: track.title, channel: track.artistName, local: true,
-      ...(saved.source ? { source: saved.source } : {}) }
+      ...(current.source ? { source: current.source } : {}) }
   }
   async function listDownloads(): Promise<DownloadEntry[]> {
     const cache = await cacheStorage.open(DOWNLOAD_CACHE), values: DownloadEntry[] = []
     for (const saved of await list()) {
-      if (!await cache.match(saved.cacheKey)) { await remove(saved.id); continue }
-      values.push({ track: await trackMetadata(saved), path: audioCacheUrl(saved.id, scope), size: saved.size, at: saved.at })
+      const current = await presentCopy(saved, cache)
+      if (!current) continue
+      values.push({ track: await trackMetadata(current), path: audioCacheUrl(current.id, scope), size: current.size, at: current.at })
     }
-    return values
+    // Sort the display/play queue after canonical YouTube metadata is read.
+    // The APK groups artist/album, then oldest download first. Its SQL leaves
+    // exact ties unspecified; ID ascending makes those ties stable on reopen.
+    return values.map(entry => ({ entry, artist: downloadTextKey(entry.track.artistName), album: downloadTextKey(entry.track.albumTitle) }))
+      .sort((a, b) => compareDownloadText(a.artist, b.artist) || compareDownloadText(a.album, b.album) ||
+        a.entry.at - b.entry.at || a.entry.track.id - b.entry.track.id)
+      .map(value => value.entry)
   }
   async function close() { await opening?.catch(() => {}); connection?.close(); connection = undefined; opening = undefined }
   return { scope, get, list, put, remove, close, reconcileStages, listDownloads, readDownloadedPlayable, removeDownloadedTrack }

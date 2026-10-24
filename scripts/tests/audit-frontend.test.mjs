@@ -5,8 +5,11 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { compileModule } from 'svelte/compiler'
 import * as svelte from 'svelte/internal/client'
-import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import ts from 'typescript'
+
+// Node's default svelte/reactivity export uses plain Map/Set. Browser stores
+// need the actual reactive collections to catch accidental effect subscriptions.
+const { SvelteMap, SvelteSet } = await import(new URL('../../reactivity/index-client.js', import.meta.resolve('svelte/internal/client')))
 
 const flush = async () => { for (let i = 0; i < 40; i++) await Promise.resolve() }
 const deferred = () => {
@@ -58,6 +61,7 @@ function downloadsHarness(overrides = {}) {
   }
   const yt = new Set([500_000_000_000_002])
   const modules = {
+    'svelte': { untrack: svelte.untrack },
     'svelte/internal/client': svelte,
     'svelte/reactivity': { SvelteMap, SvelteSet },
     './api': api,
@@ -71,6 +75,169 @@ function downloadsHarness(overrides = {}) {
   const { downloads } = load(downloadCode, modules, { Image: class { src = '' }, window, navigator })
   return { downloads, api, calls, messages, window, navigator, emit: (trackId, state, progress = 0, error = null) => callbacks.forEach((cb) => cb({ payload: { trackId, state, progress, error } })) }
 }
+
+// Before this change DownloadsView called the API directly. Keeping that exact
+// old read path allows the frozen baseline to expose its stale badge behavior.
+const readDownloads = (h) => typeof h.downloads.list === 'function' ? h.downloads.list() : h.api.downloadsList()
+
+test('PWA-DL-LIST: opening downloads clears evicted badges and permits downloading the missing audio again', async () => {
+  const entries = [{ track: { id: 2 } }], reads = []
+  const h = downloadsHarness({ inPwa: true, downloadsList: async () => { reads.push('list'); return entries } })
+  await h.downloads.init([1, 2])
+  assert.equal(await readDownloads(h), entries)
+  assert.deepEqual([...h.downloads.done], [2])
+  assert.equal(h.downloads.version, 0, 'A listing must not trigger a version/read effect loop')
+  assert.deepEqual(reads, ['list'])
+  h.downloads.start([item(1), item(2)])
+  assert.deepEqual(h.calls.filter(([name]) => name === 'download'), [['download', [1]]])
+})
+
+test('PWA-DL-LIST: a verified local listing adopts copies completed in another window without writing jobs', async () => {
+  const entries = [{ track: { id: 2 } }]
+  const h = downloadsHarness({ inPwa: true, downloadsList: async () => entries })
+  await h.downloads.init([])
+  const calls = h.calls.length
+  await readDownloads(h)
+  assert.deepEqual([...h.downloads.done], [2])
+  assert.equal(h.downloads.version, 0)
+  assert.equal(h.calls.length, calls)
+  h.downloads.start([item(2)])
+  assert.equal(h.calls.length, calls, 'A verified existing copy cannot be queued again')
+})
+
+test('PWA-DL-LIST: reconciling the real Svelte set does not subscribe the view effect to its own read', async () => {
+  let reads = 0
+  const h = downloadsHarness({ inPwa: true, downloadsList: async () => { reads++; return [] } })
+  await h.downloads.init([1])
+  const stop = svelte.effect_root(() => svelte.render_effect(() => {
+    void h.downloads.version
+    void readDownloads(h)
+  }))
+  try {
+    await flush()
+    await svelte.tick()
+    await flush()
+    assert.equal(reads, 1, 'The badge change must not invoke the listing effect again')
+    assert.equal(h.downloads.version, 0)
+  } finally { stop() }
+})
+
+test('PWA-DL-LIST: an unavailable listing preserves badges and reports the read failure', async () => {
+  const h = downloadsHarness({ inPwa: true, downloadsList: async () => { throw new Error('cache database unavailable') } })
+  await h.downloads.init([1, 2])
+  await assert.rejects(readDownloads(h), /cache database unavailable/)
+  assert.deepEqual([...h.downloads.done], [1, 2])
+  assert.equal(h.downloads.version, 0)
+})
+
+test('PWA-DL-LIST: listing cannot clear pending rows or promote an active transfer to done', async () => {
+  const h = downloadsHarness({ inPwa: true, downloadsList: async () => [{ track: { id: 2 } }, { track: { id: 4 } }] })
+  await h.downloads.init([])
+  h.downloads.start([item(2), item(3)])
+  h.emit(2, 'downloading', 0.4)
+  await readDownloads(h)
+  assert.deepEqual([...h.downloads.done], [4])
+  assert.deepEqual([...h.downloads.active], [[2, 0.4], [3, 0]])
+  assert.deepEqual([...h.downloads.queued.keys()], [2, 3])
+  assert.deepEqual([...h.downloads.transferring], [2])
+})
+
+test('PWA-DL-LIST: a completion after the read starts survives an older missing-copy result', async () => {
+  const gate = deferred()
+  const h = downloadsHarness({ inPwa: true, downloadsList: () => gate.promise })
+  await h.downloads.init([])
+  h.downloads.start([item(2)])
+  const listing = readDownloads(h)
+  h.emit(2, 'done', 1)
+  gate.resolve([])
+  await listing
+  assert.equal(h.downloads.done.has(2), true)
+  assert.equal(h.downloads.version, 1)
+})
+
+test('PWA-DL-LIST: an older read cannot resurrect an explicitly removed download', async () => {
+  const gate = deferred()
+  const h = downloadsHarness({ inPwa: true, downloadsList: () => gate.promise })
+  await h.downloads.init([1])
+  const listing = readDownloads(h)
+  await h.downloads.remove([1])
+  gate.resolve([{ track: { id: 1 } }])
+  await listing
+  assert.equal(h.downloads.done.has(1), false)
+  assert.equal(h.downloads.version, 1)
+})
+
+test('PWA-DL-LIST: a replacement transfer survives stale metadata from its previous copy', async () => {
+  const gate = deferred()
+  const h = downloadsHarness({ inPwa: true, downloadsList: () => gate.promise })
+  await h.downloads.init([1])
+  const listing = readDownloads(h)
+  await h.downloads.remove([1])
+  h.downloads.start([item(1)])
+  h.emit(1, 'downloading', 0.25)
+  gate.resolve([{ track: { id: 1 } }])
+  await listing
+  assert.equal(h.downloads.done.has(1), false)
+  assert.equal(h.downloads.active.get(1), 0.25)
+  h.emit(1, 'done', 1)
+  assert.equal(h.downloads.done.has(1), true)
+})
+
+test('PWA-DL-LIST: overlapping reads reconcile only the latest requested snapshot', async () => {
+  for (const reverse of [false, true]) {
+    const first = deferred(), latest = deferred(), pending = [first, latest]
+    const h = downloadsHarness({ inPwa: true, downloadsList: () => pending.shift().promise })
+    await h.downloads.init([1])
+    const oldRead = readDownloads(h), newRead = readDownloads(h)
+    if (reverse) {
+      first.resolve([]); await oldRead
+      assert.equal(h.downloads.done.has(1), true, 'A superseded request cannot clear the badge')
+      latest.resolve([{ track: { id: 1 } }]); await newRead
+      assert.equal(h.downloads.done.has(1), true)
+    } else {
+      latest.resolve([]); await newRead
+      first.resolve([{ track: { id: 1 } }]); await oldRead
+      assert.equal(h.downloads.done.has(1), false, 'An older request cannot restore an evicted badge')
+    }
+  }
+})
+
+test('PWA-DL-LIST: a partial removal failure is not undone by an already pending read', async () => {
+  const gate = deferred()
+  let first = true
+  const h = downloadsHarness({ inPwa: true, removeDownloads: async () => { throw new Error('second file locked') },
+    downloadsList: () => first ? (first = false, gate.promise) : Promise.resolve([{ track: { id: 2 } }]) })
+  await h.downloads.init([1, 2])
+  const listing = readDownloads(h)
+  await h.downloads.remove([1, 2])
+  gate.resolve([{ track: { id: 1 } }, { track: { id: 2 } }])
+  await listing
+  assert.deepEqual([...h.downloads.done], [2])
+  assert.equal(h.downloads.version, 1)
+})
+
+test('PWA-DL-LIST: player-side local-copy corrections survive an older listing', async () => {
+  for (const available of [false, true]) {
+    const gate = deferred()
+    const h = downloadsHarness({ inPwa: true, downloadsList: () => gate.promise })
+    await h.downloads.init(available ? [] : [1])
+    const listing = readDownloads(h)
+    if (available) h.downloads.done.add(1)
+    else h.downloads.done.delete(1)
+    gate.resolve(available ? [] : [{ track: { id: 1 } }])
+    await listing
+    assert.equal(h.downloads.done.has(1), available)
+  }
+})
+
+test('PWA-DL-LIST: native listings retain their previous direct read behavior', async () => {
+  const entries = [{ track: { id: 2 } }]
+  const h = downloadsHarness({ downloadsList: async () => entries })
+  await h.downloads.init([1])
+  assert.equal(await readDownloads(h), entries)
+  assert.deepEqual([...h.downloads.done], [1])
+  assert.equal(h.downloads.version, 0)
+})
 
 test('CORE-DL-010: initial persisted downloads remain available offline', async () => {
   const h = downloadsHarness()

@@ -26,10 +26,11 @@
   $effect(() => {
     void downloads.version
     let alive = true
-    api
-      .downloadsList()
+    downloads
+      .list()
       .then((list) => {
         if (!alive) return
+        error = null
         entries = list
         if (first) nav.ready()
         first = false
