@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-10-24T07:50:09.917Z",
+  "nativeCommit": "566d3aa415669367dbfcb9d0f488b4a48e72b36c",
+  "previousNativeCommit": "9892b9c4968e7b57a239f3b5bdcb45e74852c848",
+  "nativeLegacyYoutubeiByteIdenticalSincePreviousCommit": true,
+  "nativeWorkingTreeEdited": false,
+  "pwaEngineEdited": false,
+  "exactCase": {
+    "videoId": "NGp3dh-hBe8",
+    "title": "Ni, Ni, Ni!",
+    "album": "Zazpikoloroa",
+    "successfulNativeItag": 251,
+    "codec": "Opus",
+    "sourceCommitOfMeasuredBinary": "506986a478e6164e44e29844d79651dc9bb21833",
+    "firstPlayingMs": 5234.699999809265,
+    "cdnProbeOffsetsObservedMs": [
+      0.0013,
+      255.2142,
+      1016.1218000000001,
+      1513.0464
+    ],
+    "cdnStatuses": [
+      403,
+      403,
+      403,
+      206
+    ],
+    "successfulProbeBytes": 1024,
+    "fullSongEOFVerified": false,
+    "completeCoverageVerified": false,
+    "physicalMobileOrPwaVerified": false,
+    "evidenceSha256": "da1cf0822e1a01d234c7b3ee185e93ab5f68440d6f46a88901fb13fc247e8f8b",
+    "evidenceScope": "Single cold search and native Audio playing/start, muted. Synthetic benchmark catalog IDs. Not a full-song or acoustic match claim."
+  },
+  "pwaRecipe": {
+    "path": "web-port/p1-recipe.generated.ts",
+    "sha256": "951a8ca0c52372eef67c31a6ba40a6833f3675ecf3909287f125ae308d6fd618",
+    "createdAt": "2026-10-24T07:48:23.922Z",
+    "playerSHA": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "clientVersion": "2.20261023.01.00",
+    "signatureTimestamp": 20746,
+    "decoderBytes": 173175,
+    "decoderSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "clientFieldNames": [
+      "clientName",
+      "clientVersion",
+      "hl",
+      "userAgent",
+      "visitorData",
+      "platform",
+      "clientFormFactor",
+      "osName",
+      "osVersion",
+      "browserName",
+      "browserVersion",
+      "gl",
+      "deviceExperimentId",
+      "rolloutToken",
+      "configInfo"
+    ],
+    "anonymousValuesNotCopiedIntoAudit": true
+  },
+  "differences": [
+    {
+      "area": "Codec order",
+      "native": "Bundled audio/webm before audio/mp4; measured Ni used itag251.",
+      "pwa": "AAC before Opus; Opus requires canPlayType. Up to four native-metadata probes run concurrently but are awaited in quality order.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:2469; src-tauri/recipe/youtube.json audio",
+      "webLines": "web-port/youtube.ts:400-460",
+      "portable": "Codec preference is ordinary web logic; preserve actual browser codec support and existing AAC fallback tests."
+    },
+    {
+      "area": "Fresh discovery and contextual binding",
+      "native": "Fetches target watch+embed, exact ID and made-for-kids eligibility; derives current per-video public client, visitor, flags, playerJS, analyzer-matched timestamp.",
+      "pwa": "Neutral anonymous M7lc1UVf-VE embed recipe is static build-time data prepared on 2026-10-23.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:831,987,2511",
+      "webLines": "scripts/prepare-pwa-p1.mjs:15-68",
+      "portable": "Pure parsing and binding are portable; reading current remote HTML/player requires measured browser CORS access or a build-time recipe refresh. Do not infer a native result from a Node-only fetch."
+    },
+    {
+      "area": "Published context fields",
+      "native": "Preserves opaque rollout version plus published client_extra whitelist.",
+      "pwa": "Current recipe already contains deviceExperimentId, rolloutToken, configInfo and platform/browser/region fields.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:803,1430",
+      "webLines": "scripts/prepare-pwa-p1.mjs:55-68",
+      "portable": "Already represented; not a missing context-field fix."
+    },
+    {
+      "area": "Decoder preparation and value execution",
+      "native": "SelectiveAnalyzer + versioned DeclarationHistory + DeferredDependencies + filteredTimestampMatcher; separate parser/execution bundles, source/hash/ABI cache. Pinned youtubei18.1.0 and Meriyah7.4.0.",
+      "pwa": "Build-time youtubei18.2.0 analyzer produces the static extracted fragment. Runtime processValues follows the same nsigFunction/deferred-method/sig+n algorithm in a bounded isolated Worker.",
+      "nativeLines": "src-tauri/src/youtube-decoder.js:12-141; scripts/build-youtube-decoder.mjs; src-tauri/src/youtube_decoder_cache.rs",
+      "webLines": "web-port/youtube-p1.ts:153-194",
+      "portable": "Pure JS execution logic is portable and already equivalent. Parser performance specializations must not be copied across pinned dependency versions without equivalence tests."
+    },
+    {
+      "area": "Bounded renewal",
+      "native": "Retries incomplete embed parsing once; early SABR-only preparation can replace changed configuration/decoder once, under original deadline and at most two POSTs. A byte-identical request is not reissued as fresh.",
+      "pwa": "No runtime discovery/recipe renewal for SABR-only responses; source refresh reruns the same static recipe.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:987,1576,1781,1869",
+      "portable": "Pure coordination is portable only when fresh public configuration is actually available; preserve cancellation and identity binding."
+    },
+    {
+      "area": "CDN validation",
+      "native": "Strict readable 206 Range at80%, exact Content-Range/length, identity encoding and complete1024-byte body. First candidate retry slots0,250,1000,1500(optional until2000),2000,3000,4000,5000,6000; global8s and10dispatches; observed429 stops.",
+      "pwa": "Muted HTMLAudio metadata probes at0,500,1500,3500,6000, <=4 candidates in parallel; no readable HTTP headers/body.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:2244-2451",
+      "webLines": "web-port/youtube-p1-probe.ts:57-149; web-port/youtube.ts:444",
+      "portable": "Cadence/budgets/cancellation are web-portable. Audio seek/decode deeper into a file can test media availability but must not be called equivalent to Rust exact HTTP-envelope validation."
+    },
+    {
+      "area": "HTTP transport",
+      "native": "reqwest controls Origin, User-Agent, client headers and visitor header; readable watch/embed/player and strict CDN ranges.",
+      "pwa": "Sandbox opaque browser context sends ordinary POST text/plain without cookies; browser controls Origin and transport.",
+      "nativeLines": "src-tauri/src/native_embedded.rs:436,459,1934",
+      "webLines": "web-port/youtube.ts:87-146",
+      "portable": "Same ID/body must be measured in the actual browser. No claim of impossibility or guaranteed success based only on native availability or CORS assumptions."
+    }
+  ],
+  "recommendedNextGate": "Fresh neutral build-time recipe; exact NGp3dh-hBe8 browser canary including healthy AAC and native-supported Opus candidates, duration/deeper seek/background boundaries reported separately. Do not add a per-song mapping or claim a full-song result from the Native prefix test.",
+  "sources": [
+    {
+      "gitPath": "src-tauri/src/native_embedded.rs",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\src\\native_embedded.rs",
+      "bytes": 232350,
+      "sha256": "2356c70935f3cf706637653e4be326b871fa87ef048876d9c3f3165b1bbfd07a"
+    },
+    {
+      "gitPath": "src/lib/extractor/youtubei.ts",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src\\lib\\extractor\\youtubei.ts",
+      "bytes": 5834,
+      "sha256": "0bc3b291da32a62e6dcbc8f71be8cfcbace2cd46cebf12ff33a0ac31500eea0e"
+    },
+    {
+      "gitPath": "docs/informe-arranque-frio-2026-10-24.md",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\docs\\informe-arranque-frio-2026-10-24.md",
+      "bytes": 12042,
+      "sha256": "fc359cc21d2021360de7baa3c138b0efc5082b46648e716655efb81a083da6c8"
+    },
+    {
+      "gitPath": "src-tauri/src/youtube_decoder.rs",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\src\\youtube_decoder.rs",
+      "bytes": 36394,
+      "sha256": "f28fb05319b07b1116d535231fdfb2256913e7f9cd64a255d09c92e2f0b47ae0"
+    },
+    {
+      "ignoredEvidenceSource": "C:\\Users\\iunan\\musify-oficial\\capture-bench.local\\ni-ni-ni-compatibility-verified.json.local",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\ni-ni-ni-compatibility-verified.json.local",
+      "bytes": 3096,
+      "sha256": "da1cf0822e1a01d234c7b3ee185e93ab5f68440d6f46a88901fb13fc247e8f8b"
+    },
+    {
+      "ignoredEvidenceSource": "C:\\Users\\iunan\\musify-oficial\\capture-bench.local\\ni-ni-ni-compatibility-20261024-093909-5cf34a51-report.json.local",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\ni-ni-ni-compatibility-20261024-093909-5cf34a51-report.json.local",
+      "bytes": 6080,
+      "sha256": "0d84b2dd547318c6e290e86e177aa8b51a67b73d6b71e33acf43c5b8a9a5b440"
+    },
+    {
+      "gitPath": "src-tauri/src/youtube_decoder_cache.rs",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\src\\youtube_decoder_cache.rs",
+      "bytes": 25380,
+      "sha256": "73e5a0fa1e3ff0797d6b3125beb484070c17043430920595ee45f158a764c70c"
+    },
+    {
+      "gitPath": "src-tauri/src/youtube-decoder.js",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\src\\youtube-decoder.js",
+      "bytes": 5936,
+      "sha256": "63df358bd1a24324b37cd0fe2d57d1a4e00272d06ec131571e4182e0cd15c534"
+    },
+    {
+      "gitPath": "src-tauri/src/youtube-decoder-values.js",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\src\\youtube-decoder-values.js",
+      "bytes": 2716,
+      "sha256": "5e7832a90a7c38ea661971ccf26c62ffd786b86ca296ec2d104ed48d6ac7d9f6"
+    },
+    {
+      "gitPath": "scripts/build-youtube-decoder.mjs",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\scripts\\build-youtube-decoder.mjs",
+      "bytes": 12588,
+      "sha256": "20bba5766644fd3a8faba78c389f98f34aa51a7e484c4a36657e5f5a881e6d2f"
+    },
+    {
+      "gitPath": "src-tauri/recipe/youtube.json",
+      "snapshotPath": "D:\\tmp\\pletina-native-p1-audit-566d3aa\\src-tauri\\recipe\\youtube.json",
+      "bytes": 899,
+      "sha256": "33900ac011fd0aa05c59738a4cf37a0ab197ddd5151c0ee573ed770719078c3f"
+    }
+  ]
+}

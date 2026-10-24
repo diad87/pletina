@@ -1,0 +1,33 @@
+✖ cover cleanup never deletes another scope or an unrelated cache key (33.225ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 497.241
+
+✖ failing tests:
+
+test at artifacts\pwa-port\offline-covers-scope-negative-sources\scripts\tests\web-download-covers.test.mjs:129:1
+✖ cover cleanup never deletes another scope or an unrelated cache key (33.225ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'https://app.example/another/__covers__?url=https%3A%2F%2Fimages.example%2Fcover.png',
+  -   'https://app.example/unrelated-cover.png'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/offline-covers-scope-negative-sources/scripts/tests/web-download-covers.test.mjs:136:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'https://app.example/another/__covers__?url=https%3A%2F%2Fimages.example%2Fcover.png', 'https://app.example/unrelated-cover.png' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

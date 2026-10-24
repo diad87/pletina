@@ -1,0 +1,89 @@
+✔ native maybe Opus support sends one original quality-ordered metadata batch (9.2522ms)
+✔ native probably Opus support sends one original quality-ordered metadata batch (5.5093ms)
+✔ one supported-native batch can hand off AAC as the selected original fallback (1.5772ms)
+✔ unsupported Opus capability  never enters the shared batch (1.512ms)
+✔ unsupported Opus capability no never enters the shared batch (1.2271ms)
+✔ unsupported Opus capability true never enters the shared batch (1.2205ms)
+✔ unsupported Opus capability Error: Capability unavailable never enters the shared batch (1.4392ms)
+✔ Opus cannot borrow originality from a rejected or dubbed AAC encoding (1.5892ms)
+✔ a rejected AAC does not hide an explicitly original Opus of the same video (1.2702ms)
+✔ mixed codecs retain the four-format bound and use Native Opus order only when supported (2.0965ms)
+✔ abort unloads the shared Opus/AAC batch and caches no late selected format (2.0921ms)
+✔ an incorrect selected Opus duration cannot enter the stream cache (1.4078ms)
+✔ one shared AAC batch maps selected index 0 to its exact format (1.3029ms)
+✔ one shared AAC batch maps selected index 1 to its exact format (1.4055ms)
+✔ an out-of-range batch selection cannot select another recording or cache a locator (4.683ms)
+✔ an invalid AAC locator does not hide a healthy original AAC (1.5647ms)
+✔ many dubbed AAC encodings cannot consume the four-candidate budget before the original (1.2403ms)
+✔ shared AAC batch transient network stays transient and caches none (1.2228ms)
+✔ shared AAC batch transient timeout stays transient and caches none (1.1736ms)
+✔ only a typed P1 batch failure can replace the original error category (1.0318ms)
+✔ a typed P1 engine timeout remains transient instead of authorizing a visible fallback (0.823ms)
+✔ abort while removing the completed batch bridge prevents caching its chosen locator (1.4045ms)
+✔ duplicate AAC URLs enter the shared batch only once (1.1737ms)
+✔ an expired highest-quality locator does not hide a fresh original AAC (1.1434ms)
+✔ orchestration forwards Native context fallback and its codec gate AAC-only (0.9058ms)
+✔ orchestration forwards Native context fallback and its codec gate probably (0.7674ms)
+✔ VISIONOS success avoids all P1 imports and reuses only the in-memory stream (0.7082ms)
+✔ refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client (1.3883ms)
+✔ a failed P1 repair still allows one freshly resolved primary locator (1.0917ms)
+✔ a failed P1 repair is not repeated after the fresh primary also fails and its transport category survives (1.1972ms)
+✔ cancelling primary repair cannot start a fresh primary request or cache late P1 audio (1.2193ms)
+✔ a P1 repair with another video ID is rejected before fresh primary recovery (1.3236ms)
+✔ an expired primary locator renews through the normal client order (1.3199ms)
+✔ refresh without an earlier primary locator keeps the initial fast path (0.6274ms)
+✔ a refresh without playback repair permission preserves the primary download path (0.7846ms)
+✔ unavailable invokes P1 and validates metadata before caching (6.3389ms)
+✔ format invokes P1 and validates metadata before caching (1.3779ms)
+✔ successful P1 refresh replaces the old locator instead of returning it (1.7515ms)
+✔ failed refresh evicts the previously usable P1 URL and a retry resolves anew (1.6333ms)
+✔ login restriction never activates the format/unavailable rescue (0.7247ms)
+✔ identity mismatch never activates the format/unavailable rescue (0.5632ms)
+✔ anonymous session network transport failure can use the same-ID P1 recipe without a VISIONOS request (1.3273ms)
+✔ anonymous session timeout transport failure can use the same-ID P1 recipe without a VISIONOS request (0.9206ms)
+✔ VISIONOS network transport failure can recover the same ID with probed P1 audio (0.9752ms)
+✔ VISIONOS timeout transport failure can recover the same ID with probed P1 audio (0.9895ms)
+✔ an anonymous session malformed response does not activate P1 (0.5826ms)
+✔ P1 request network remains transient after a primary format rejection (0.8231ms)
+✔ P1 request timeout remains transient after a primary format rejection (0.7627ms)
+✔ transport recovery still rejects a P1 identity mismatch without caching it (0.9691ms)
+✔ invalid anonymous recipe does not replace a primary transport category or reach a P1 request (0.7242ms)
+✔ P1 invalid format preserves original format for later providers (0.9702ms)
+✔ P1 invalid format preserves original unavailable for later providers (1.2137ms)
+✔ rejected lazy import leaves the original source error and no cached locator (0.9067ms)
+✔ P1 identity mismatch cannot enter the stream cache (1.1107ms)
+✔ P1 duration mismatch cannot enter the stream cache (1.0776ms)
+✔ P1 secondary-audio mismatch cannot enter the stream cache (0.9976ms)
+✔ abort before starting creates no frames, imports or cached stream (3.3858ms)
+✔ abort during primary session transport never activates P1 recovery (0.6337ms)
+✔ abort during primary VISIONOS transport never activates P1 recovery (0.6426ms)
+✔ abort during lazy loading does not invoke the loaded P1 engine (0.8289ms)
+✔ abort during P1 request removes transport and ignores its late successful response (0.961ms)
+✔ abort during metadata probing unloads its frame and never caches a late result (1.1672ms)
+✔ account-bearing recipes are rejected before the P1 transport; anonymous IDs remain RAM only (0.9958ms)
+✔ a fresh module instance cannot retrieve another instance's signed locator (1.4931ms)
+✖ abort between completed P1 cleanup and the public stream continuation cannot cache the locator (1.4627ms)
+ℹ tests 65
+ℹ suites 0
+ℹ pass 64
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 556.538
+
+✖ failing tests:
+
+test at scripts\tests\web-p1-integration.test.mjs:723:1
+✖ abort between completed P1 cleanup and the public stream continuation cannot cache the locator (1.4627ms)
+  AssertionError [ERR_ASSERTION]: Missing expected rejection (AbortError).
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:738:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: { name: 'AbortError' },
+    operator: 'rejects',
+    diff: 'simple'
+  }

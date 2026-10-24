@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "build": "73187a1127b5ae37",
+  "createdAt": "2026-10-24T08:16:39.147Z",
+  "scenario": "media.p1-sabr-only-renews-anonymous-context-once-and-plays-same-id-with-one-click",
+  "scope": "Compiled PWA controlled HTTP SABR-only renewal on desktop native AAC; no module/player substitution. The two embedded responses confirm the same video identity and original/default audio metadata. Public runtime contexts and signed addresses are not retained.",
+  "sourceSnapshot": {
+    "path": "artifacts/pwa-port/p1-sabr-73187a1127b5ae37-qa-sources/manifest.json",
+    "sha256": "cd9861d0d5c8b1b7abba7430fedc64e3d751ba2ab829e155fe4fd1442a97cd1c",
+    "bytes": 2143
+  },
+  "sourcesStillMatchFrozen": true,
+  "distributionInventory": {
+    "path": "artifacts/pwa-port/p1-native-73187a1127b5ae37-controlled-evidence.json",
+    "sha256": "ffc1226eaf748d043986afc1b893473d4c8f82ab5e472ebdc3cda9513eb2673c",
+    "bytes": 17918
+  },
+  "runs": [
+    {
+      "report": {
+        "path": "artifacts/pwa-e2e/p1-sabr-73187a1127b5ae37-chromium/summary.json",
+        "sha256": "5f8ff38e21fca04a8e34aaf0c8f9e73a71cd79aa28ac0bdf228bdc9f97877cb6",
+        "bytes": 24089
+      },
+      "profile": "chromium-android-layout",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "checkNames": [
+        "setup.open: install shell and open compiled application",
+        "setup.fixture: opaque-frame catalog requests are controlled",
+        "media.selection-html-audio",
+        "media.p1-sabr-only-renews-anonymous-context-once-and-plays-same-id-with-one-click"
+      ],
+      "log": {
+        "path": "artifacts/pwa-port/p1-sabr-73187a1127b5ae37-chromium-final.log",
+        "sha256": "c3250ad87fe90ea53c068ee3ac59d1c221382c52544407865c6510ee2ab63a29",
+        "bytes": 1153
+      },
+      "evidence": {
+        "requestedTrackId": 193,
+        "selected": {
+          "path": "/videoplayback",
+          "videoId": "qaP1Multi1a",
+          "itag": 140,
+          "mime": "audio/mp4"
+        },
+        "observed": {
+          "officialObserved": false,
+          "clicks": [
+            {
+              "trusted": true
+            }
+          ],
+          "sameNativeAudio": true,
+          "currentId": 193,
+          "ids": [
+            193
+          ]
+        },
+        "audioAdvanced": true,
+        "automaticDownloadObserved": false,
+        "embeddedPostHashes": [
+          {
+            "videoId": "qaP1Multi1a",
+            "ordinal": 1,
+            "responseKind": "sabr-only",
+            "locatorsAbsent": true,
+            "effectiveBodySha256": "3f17230c4f740957f80dbd91d2f8d329c7fcf41c4c04725129d18d48915f56d7",
+            "contextSha256": "9e301a2d1bc9609bff74d74172db2565adc4c76aa873e23c0fae6f7329dc6460",
+            "clientConfigSha256": "c362b0e1d71f8c18b52db12fa4c666e6f0f941a31e7f2ba64f745704e43de194"
+          },
+          {
+            "videoId": "qaP1Multi1a",
+            "ordinal": 2,
+            "responseKind": "direct-aac",
+            "locatorsAbsent": false,
+            "effectiveBodySha256": "7dd6eb3122ec69b06ee710358ef688bffb6b97fc58a685a5a7c74d0e4d478734",
+            "contextSha256": "3ef39a0225dae960551b691c504663d719f37a13b3d7343f818af39e6e4b21b6",
+            "clientConfigSha256": "ad8dc361d7f8f8dceda6e2a9769ff61ced3310aa809b788e83a5422caa72e846"
+          }
+        ]
+      },
+      "unexpectedErrors": []
+    },
+    {
+      "report": {
+        "path": "artifacts/pwa-e2e/p1-sabr-73187a1127b5ae37-firefox/summary.json",
+        "sha256": "dd5c7b949c69393e90a9b24bc6ef512747956c759f6adf607c76fdb34308ffe8",
+        "bytes": 22467
+      },
+      "profile": "firefox-narrow",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "checkNames": [
+        "setup.open: install shell and open compiled application",
+        "setup.fixture: opaque-frame catalog requests are controlled",
+        "media.selection-html-audio",
+        "media.p1-sabr-only-renews-anonymous-context-once-and-plays-same-id-with-one-click"
+      ],
+      "log": {
+        "path": "artifacts/pwa-port/p1-sabr-73187a1127b5ae37-firefox.log",
+        "sha256": "4c63eeeba92ba734d1f172c6d9695fdc0eec6a51b7ddb6b6ba349c6aa9aba01c",
+        "bytes": 1080
+      },
+      "evidence": {
+        "requestedTrackId": 193,
+        "selected": {
+          "path": "/videoplayback",
+          "videoId": "qaP1Multi1a",
+          "itag": 140,
+          "mime": "audio/mp4"
+        },
+        "observed": {
+          "officialObserved": false,
+          "clicks": [
+            {
+              "trusted": true
+            }
+          ],
+          "sameNativeAudio": true,
+          "currentId": 193,
+          "ids": [
+            193
+          ]
+        },
+        "audioAdvanced": true,
+        "automaticDownloadObserved": false,
+        "embeddedPostHashes": [
+          {
+            "videoId": "qaP1Multi1a",
+            "ordinal": 1,
+            "responseKind": "sabr-only",
+            "locatorsAbsent": true,
+            "effectiveBodySha256": "3f17230c4f740957f80dbd91d2f8d329c7fcf41c4c04725129d18d48915f56d7",
+            "contextSha256": "9e301a2d1bc9609bff74d74172db2565adc4c76aa873e23c0fae6f7329dc6460",
+            "clientConfigSha256": "c362b0e1d71f8c18b52db12fa4c666e6f0f941a31e7f2ba64f745704e43de194"
+          },
+          {
+            "videoId": "qaP1Multi1a",
+            "ordinal": 2,
+            "responseKind": "direct-aac",
+            "locatorsAbsent": false,
+            "effectiveBodySha256": "7dd6eb3122ec69b06ee710358ef688bffb6b97fc58a685a5a7c74d0e4d478734",
+            "contextSha256": "3ef39a0225dae960551b691c504663d719f37a13b3d7343f818af39e6e4b21b6",
+            "clientConfigSha256": "ad8dc361d7f8f8dceda6e2a9769ff61ced3310aa809b788e83a5422caa72e846"
+          }
+        ]
+      },
+      "unexpectedErrors": []
+    }
+  ],
+  "perRun": {
+    "preparations": 2,
+    "selectionPrerequisite": 1,
+    "newFeatures": 1,
+    "total": 4
+  },
+  "additionalDistinctFeatures": 1,
+  "separateFromPriorTwelveCheckReports": true,
+  "excludedLauncherError": {
+    "path": "artifacts/pwa-port/p1-sabr-73187a1127b5ae37-chromium.log",
+    "sha256": "13c51a7add646d6a3d07fb5d68956d4cd3b30877aa737ed1ab64aed09305767f",
+    "bytes": 402,
+    "reason": "Initial invocation supplied nonexistent profile android-chromium; runner rejected arguments before starting a browser. Final run uses chromium-android-layout; no product/test source change."
+  },
+  "limitations": [
+    "Synthetic catalog/provider responses and generated silent AAC do not prove live song availability or musical identity.",
+    "Desktop layout profiles do not verify physical Android/iPhone installation or background playback.",
+    "Wrong-ID/restricted/SABR-with-locators rejection remains separately covered by unit tests."
+  ]
+}

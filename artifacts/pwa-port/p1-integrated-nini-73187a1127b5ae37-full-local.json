@@ -1,0 +1,1525 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-24T08:02:10.444Z",
+  "expectedBuild": "73187a1127b5ae37",
+  "build": "73187a1127b5ae37",
+  "runnerSha256": "64ef46b173529057c04935e2cb4476a082a1ab3f8b46fee1adc40c73197c3eaf",
+  "sourceSnapshot": "artifacts/pwa-port/p1-integrated-source-64ef46b173529057.mjs",
+  "scope": "Compiled P1 check page; real anonymous browser provider requests, desktop Chrome foreground audio. No physical Android/iPhone, installed PWA, background, screen-off or audible human verification.",
+  "fullPlaybackRequested": true,
+  "policy": {
+    "providerMocks": false,
+    "productMethodsReplaced": false,
+    "sdkInjected": false,
+    "nodeProviderBootstrap": false,
+    "runtimeBackend": false,
+    "signedUrlsPersisted": false,
+    "rawRecipePersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "autoplayOverrides": false,
+    "outputSilencedByLaunchArgument": false,
+    "physicalAndroid": false,
+    "physicalIPhone": false,
+    "background": false,
+    "screenOff": false,
+    "programmedSeekIsUserPlaybackProof": false,
+    "audibleHumanVerification": false
+  },
+  "observationRpcCalls": 288,
+  "observationRpcWithGesture": 0,
+  "inputActions": [
+    {
+      "kind": "real mouse click",
+      "purpose": "start a real pending P1 resolution for cancellation",
+      "at": "2026-10-24T08:02:11.113Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "cancel while the public provider request is pending",
+      "at": "2026-10-24T08:02:11.144Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "single normal play click: nini",
+      "at": "2026-10-24T08:02:37.202Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "unload audio after natural end: nini",
+      "at": "2026-10-24T08:04:48.563Z"
+    }
+  ],
+  "checks": [
+    {
+      "name": "compiled build and anonymous context are visible before any activation",
+      "pass": true,
+      "build": "73187a1127b5ae37",
+      "initialActivation": {
+        "active": false,
+        "ever": false
+      },
+      "audioCount": 1,
+      "unmutedAudio": true
+    },
+    {
+      "name": "Stop cancels a real pending resolution and it cannot revive after the full deadline",
+      "pass": true,
+      "observedMs": 26053,
+      "samples": 51,
+      "noRevival": true,
+      "sameAudio": true
+    },
+    {
+      "name": "all observations used userGesture:false and no page runtime errors occurred",
+      "pass": true,
+      "observationRpcCalls": 288,
+      "observationRpcWithGesture": 0,
+      "compiledStaticRecipeUsed": true
+    }
+  ],
+  "cases": [
+    {
+      "name": "nini",
+      "videoId": "NGp3dh-hBe8",
+      "title": "Ni, Ni, Ni!",
+      "checks": [
+        {
+          "name": "nini: one real button click starts unmuted native audio through P1",
+          "pass": true,
+          "elapsedMs": 7301,
+          "duration": 125.581,
+          "transport": "p1",
+          "exactVideoId": true,
+          "time": 2.004601,
+          "paused": false,
+          "unmutedAudio": true,
+          "frameCount": 0,
+          "sameAudio": true,
+          "extraPlayInteraction": false
+        },
+        {
+          "name": "nini: complete uninterrupted native audio reaches natural ended without another interaction",
+          "pass": true,
+          "samples": [
+            {
+              "at": "2026-10-24T08:02:44.503Z",
+              "time": 2.00618,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:45.510Z",
+              "time": 3.013364,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:46.523Z",
+              "time": 4.025803,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:47.532Z",
+              "time": 5.03408,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:48.535Z",
+              "time": 6.037839,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:49.544Z",
+              "time": 7.047523,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:50.549Z",
+              "time": 8.052328,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:51.553Z",
+              "time": 9.056064,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:52.557Z",
+              "time": 10.060301,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:53.572Z",
+              "time": 11.075497,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:54.580Z",
+              "time": 12.083518,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:55.582Z",
+              "time": 13.085681,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:56.587Z",
+              "time": 14.090227,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:57.597Z",
+              "time": 15.100222,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:58.606Z",
+              "time": 16.109776,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:02:59.611Z",
+              "time": 17.114447,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:00.618Z",
+              "time": 18.121035,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:01.626Z",
+              "time": 19.129639,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:02.630Z",
+              "time": 20.133292,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:03.635Z",
+              "time": 21.138121,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:04.638Z",
+              "time": 22.141434,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:05.642Z",
+              "time": 23.14528,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:06.648Z",
+              "time": 24.151285,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:07.650Z",
+              "time": 25.153265,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:08.655Z",
+              "time": 26.158554,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:09.658Z",
+              "time": 27.161349,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:10.662Z",
+              "time": 28.165149,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:11.666Z",
+              "time": 29.169791,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:12.672Z",
+              "time": 30.175531,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:13.676Z",
+              "time": 31.179305,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:14.691Z",
+              "time": 32.194328,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:15.697Z",
+              "time": 33.20034,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:16.701Z",
+              "time": 34.204819,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:17.707Z",
+              "time": 35.210545,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:18.711Z",
+              "time": 36.214596,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:19.715Z",
+              "time": 37.219179,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:20.719Z",
+              "time": 38.222915,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:21.724Z",
+              "time": 39.227846,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:22.727Z",
+              "time": 40.23098,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:23.731Z",
+              "time": 41.234958,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:24.734Z",
+              "time": 42.237824,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:25.749Z",
+              "time": 43.25307,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:26.753Z",
+              "time": 44.257221,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:27.761Z",
+              "time": 45.265241,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:28.765Z",
+              "time": 46.269076,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:29.773Z",
+              "time": 47.276912,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:30.790Z",
+              "time": 48.29388,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:31.803Z",
+              "time": 49.307605,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:32.819Z",
+              "time": 50.323167,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:33.820Z",
+              "time": 51.324479,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:34.828Z",
+              "time": 52.332337,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:35.835Z",
+              "time": 53.339083,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:36.843Z",
+              "time": 54.346756,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:37.845Z",
+              "time": 55.349314,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:38.854Z",
+              "time": 56.358132,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:39.860Z",
+              "time": 57.364433,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:40.866Z",
+              "time": 58.370015,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:41.873Z",
+              "time": 59.37746,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:42.881Z",
+              "time": 60.385451,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:43.889Z",
+              "time": 61.393627,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:44.897Z",
+              "time": 62.401786,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:45.906Z",
+              "time": 63.41005,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:46.915Z",
+              "time": 64.419824,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:47.921Z",
+              "time": 65.42546,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:48.927Z",
+              "time": 66.431794,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:49.935Z",
+              "time": 67.439315,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:50.940Z",
+              "time": 68.444803,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:51.949Z",
+              "time": 69.453305,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:52.959Z",
+              "time": 70.463236,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:53.965Z",
+              "time": 71.469623,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:54.971Z",
+              "time": 72.475529,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:55.976Z",
+              "time": 73.481161,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:56.983Z",
+              "time": 74.487826,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:57.987Z",
+              "time": 75.491644,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:03:58.993Z",
+              "time": 76.497349,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:00.045Z",
+              "time": 77.505674,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:01.057Z",
+              "time": 78.561639,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:02.117Z",
+              "time": 79.599645,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:03.135Z",
+              "time": 80.638203,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:04.170Z",
+              "time": 81.664505,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:05.207Z",
+              "time": 82.703524,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:06.225Z",
+              "time": 83.72857,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:07.244Z",
+              "time": 84.748111,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:08.246Z",
+              "time": 85.751151,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:09.251Z",
+              "time": 86.755648,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:10.260Z",
+              "time": 87.764826,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:11.276Z",
+              "time": 88.780865,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:12.279Z",
+              "time": 89.783826,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:13.283Z",
+              "time": 90.788581,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:14.287Z",
+              "time": 91.792406,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:15.295Z",
+              "time": 92.800717,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:16.303Z",
+              "time": 93.808785,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:17.310Z",
+              "time": 94.815229,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:18.313Z",
+              "time": 95.818839,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:19.329Z",
+              "time": 96.83404,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:20.342Z",
+              "time": 97.847285,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:21.357Z",
+              "time": 98.862889,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:22.364Z",
+              "time": 99.86895,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:23.369Z",
+              "time": 100.874568,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:24.378Z",
+              "time": 101.883197,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:25.382Z",
+              "time": 102.887593,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:26.388Z",
+              "time": 103.894004,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:27.394Z",
+              "time": 104.899356,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:28.402Z",
+              "time": 105.907221,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:29.406Z",
+              "time": 106.911998,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:30.419Z",
+              "time": 107.924166,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:31.426Z",
+              "time": 108.93193,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:32.434Z",
+              "time": 109.939413,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:33.441Z",
+              "time": 110.946376,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:34.451Z",
+              "time": 111.957123,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:35.463Z",
+              "time": 112.968692,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:36.475Z",
+              "time": 113.981097,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:37.482Z",
+              "time": 114.987912,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:38.486Z",
+              "time": 115.992438,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:39.490Z",
+              "time": 116.995516,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:40.500Z",
+              "time": 118.005772,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:41.506Z",
+              "time": 119.012545,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:42.515Z",
+              "time": 120.021077,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:43.523Z",
+              "time": 121.02917,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:44.530Z",
+              "time": 122.035745,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:45.532Z",
+              "time": 123.037978,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:46.548Z",
+              "time": 124.054308,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:47.556Z",
+              "time": 125.06209,
+              "paused": false,
+              "ended": false
+            },
+            {
+              "at": "2026-10-24T08:04:48.561Z",
+              "time": 125.581,
+              "paused": true,
+              "ended": true
+            }
+          ],
+          "ended": true,
+          "duration": 125.581,
+          "seeks": 0,
+          "extraInteractions": 0,
+          "audibleHumanVerification": false
+        },
+        {
+          "name": "nini: Stop unloads the source and leaves one silent empty audio element",
+          "pass": true,
+          "paused": true,
+          "srcRemoved": true,
+          "frameCount": 0,
+          "audioCount": 1,
+          "sameAudio": true
+        }
+      ],
+      "samples": [
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.298683,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.453708,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.609467,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.763035,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0.918841,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.073746,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.230187,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.384697,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.538899,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.692263,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 1.847896,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        },
+        {
+          "build": "73187a1127b5ae37",
+          "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+          "videoId": "NGp3dh-hBe8",
+          "transport": "p1",
+          "status": "Suena «Ni, Ni, Ni!». Ya puedes pulsar Inicio o bloquear la pantalla.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 2.004601,
+            "duration": 125.581,
+            "paused": false,
+            "ended": false,
+            "readyState": 4,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": true,
+            "networkState": 1
+          }
+        }
+      ],
+      "startedAt": "2026-10-24T08:02:37.201Z",
+      "elapsedToAdvancingAudioMs": 7301,
+      "duration": 125.581
+    }
+  ],
+  "errors": [],
+  "providerResponses": [
+    {
+      "at": "2026-10-24T08:02:37.625Z",
+      "elapsedMs": 27181,
+      "client": "VISIONOS",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0,
+      "aac": []
+    },
+    {
+      "at": "2026-10-24T08:02:37.877Z",
+      "elapsedMs": 27433,
+      "client": "WEB_EMBEDDED_PLAYER",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4,
+      "aac": [
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "contentLength": 2034474,
+          "signatureCipher": true,
+          "drc": false
+        }
+      ]
+    }
+  ],
+  "cdnResponses": [
+    {
+      "at": "2026-10-24T08:02:42.324Z",
+      "elapsedMs": 31880,
+      "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+      "status": 206,
+      "itag": "251",
+      "type": "media",
+      "contentType": "audio/webm"
+    },
+    {
+      "at": "2026-10-24T08:02:42.357Z",
+      "elapsedMs": 31913,
+      "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+      "status": 206,
+      "itag": "251",
+      "type": "media",
+      "contentType": "audio/webm"
+    }
+  ],
+  "cdnHttp": [
+    {
+      "at": "2026-10-24T08:02:37.940Z",
+      "elapsedMs": 27496,
+      "request": {
+        "at": "2026-10-24T08:02:37.918Z",
+        "elapsedMs": 27474,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:38.200Z",
+      "elapsedMs": 27756,
+      "request": {
+        "at": "2026-10-24T08:02:38.179Z",
+        "elapsedMs": 27735,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:38.944Z",
+      "elapsedMs": 28500,
+      "request": {
+        "at": "2026-10-24T08:02:38.923Z",
+        "elapsedMs": 28479,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:39.439Z",
+      "elapsedMs": 28995,
+      "request": {
+        "at": "2026-10-24T08:02:39.420Z",
+        "elapsedMs": 28976,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:39.938Z",
+      "elapsedMs": 29494,
+      "request": {
+        "at": "2026-10-24T08:02:39.917Z",
+        "elapsedMs": 29473,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:40.944Z",
+      "elapsedMs": 30500,
+      "request": {
+        "at": "2026-10-24T08:02:40.921Z",
+        "elapsedMs": 30477,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 403,
+      "contentType": "text/plain",
+      "contentLength": null
+    },
+    {
+      "at": "2026-10-24T08:02:42.323Z",
+      "elapsedMs": 31879,
+      "request": {
+        "at": "2026-10-24T08:02:41.928Z",
+        "elapsedMs": 31484,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 206,
+      "contentType": "audio/webm",
+      "contentLength": 2041394
+    },
+    {
+      "at": "2026-10-24T08:02:42.357Z",
+      "elapsedMs": 31913,
+      "request": {
+        "at": "2026-10-24T08:02:42.335Z",
+        "elapsedMs": 31891,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "httpStatus": 206,
+      "contentType": "audio/webm",
+      "contentLength": 2041394
+    }
+  ],
+  "networkFailures": [
+    {
+      "at": "2026-10-24T08:02:11.147Z",
+      "elapsedMs": 703,
+      "provider": "youtube",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "at": "2026-10-24T08:02:37.940Z",
+      "elapsedMs": 27496,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:37.940Z",
+      "elapsedMs": 27496,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:37.918Z",
+        "elapsedMs": 27474,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:38.200Z",
+      "elapsedMs": 27756,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:38.200Z",
+      "elapsedMs": 27756,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:38.179Z",
+        "elapsedMs": 27735,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:38.945Z",
+      "elapsedMs": 28501,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:38.945Z",
+      "elapsedMs": 28501,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:38.923Z",
+        "elapsedMs": 28479,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:39.439Z",
+      "elapsedMs": 28995,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:39.439Z",
+      "elapsedMs": 28995,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:39.420Z",
+        "elapsedMs": 28976,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:39.939Z",
+      "elapsedMs": 29495,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:39.939Z",
+      "elapsedMs": 29495,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:39.917Z",
+        "elapsedMs": 29473,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:40.944Z",
+      "elapsedMs": 30500,
+      "provider": "googlevideo",
+      "error": "net::ERR_BLOCKED_BY_ORB"
+    },
+    {
+      "at": "2026-10-24T08:02:40.945Z",
+      "elapsedMs": 30501,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:40.921Z",
+        "elapsedMs": 30477,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "at": "2026-10-24T08:02:42.331Z",
+      "elapsedMs": 31887,
+      "provider": "googlevideo",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "at": "2026-10-24T08:02:42.331Z",
+      "elapsedMs": 31887,
+      "provider": "googlevideo-cdp",
+      "request": {
+        "at": "2026-10-24T08:02:41.928Z",
+        "elapsedMs": 31484,
+        "urlSha256": "65a4cc0922feb7ec22332592573e23ab0417e887799fb291324c29fb08d93fde",
+        "itag": "251",
+        "resourceType": "Media"
+      },
+      "error": "net::ERR_ABORTED",
+      "blockedReason": null,
+      "corsError": null
+    }
+  ],
+  "originKind": "ephemeral static loopback serving unmodified dist-pwa",
+  "browser": "Chrome/148.0.7778.97",
+  "initialCookieCount": 0,
+  "publicContextSha256": "2ef4993719cb0b155950a9dec9384f28569dc3cd68938b69cabe6f960a8380b9",
+  "recipePreparedDisplay": "Configuración: 2ef4993719cb · Preparada: 24/10/2026, 9:57:17",
+  "resourcesClosed": true
+}

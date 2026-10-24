@@ -1,0 +1,483 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-24T07:48:46.709Z",
+  "expectedBuild": "c2d16d18deb2d8c2",
+  "build": "c2d16d18deb2d8c2",
+  "runnerSha256": "7918fe965481854f710733f1ab37410015569051d79e4a566f26d8bffdd0a995",
+  "sourceSnapshot": "artifacts/pwa-port/p1-integrated-source-7918fe965481854f.mjs",
+  "scope": "Compiled P1 check page; real anonymous browser provider requests, desktop Chrome foreground audio. No physical Android/iPhone, installed PWA, background, screen-off or audible human verification.",
+  "policy": {
+    "providerMocks": false,
+    "productMethodsReplaced": false,
+    "sdkInjected": false,
+    "nodeProviderBootstrap": false,
+    "runtimeBackend": false,
+    "signedUrlsPersisted": false,
+    "rawRecipePersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "autoplayOverrides": false,
+    "outputSilencedByLaunchArgument": false,
+    "physicalAndroid": false,
+    "physicalIPhone": false,
+    "background": false,
+    "screenOff": false,
+    "programmedSeekIsUserPlaybackProof": false,
+    "audibleHumanVerification": false
+  },
+  "observationRpcCalls": 403,
+  "observationRpcWithGesture": 0,
+  "inputActions": [
+    {
+      "kind": "real mouse click",
+      "purpose": "start a real pending P1 resolution for cancellation",
+      "at": "2026-10-24T07:48:47.813Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "cancel while the public provider request is pending",
+      "at": "2026-10-24T07:48:47.825Z"
+    },
+    {
+      "kind": "real mouse click",
+      "purpose": "single normal play click: nini",
+      "at": "2026-10-24T07:49:13.914Z"
+    }
+  ],
+  "checks": [
+    {
+      "name": "compiled build and anonymous context are visible before any activation",
+      "pass": true,
+      "build": "c2d16d18deb2d8c2",
+      "initialActivation": {
+        "active": false,
+        "ever": false
+      },
+      "audioCount": 1,
+      "unmutedAudio": true
+    },
+    {
+      "name": "Stop cancels a real pending resolution and it cannot revive after the full deadline",
+      "pass": true,
+      "observedMs": 26083,
+      "samples": 51,
+      "noRevival": true,
+      "sameAudio": true
+    }
+  ],
+  "cases": [
+    {
+      "name": "nini",
+      "videoId": "NGp3dh-hBe8",
+      "title": "Ni, Ni, Ni!",
+      "checks": [
+        {
+          "name": "nini: one real button click starts unmuted AAC through P1",
+          "pass": false,
+          "error": "Unmuted P1 playback: nini timed out"
+        }
+      ],
+      "samples": [
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        },
+        {
+          "build": "c2d16d18deb2d8c2",
+          "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+          "videoId": null,
+          "transport": null,
+          "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+          "audioCount": 1,
+          "videoCount": 0,
+          "frameCount": 0,
+          "visibleVideoFrames": 0,
+          "activation": {
+            "active": false,
+            "ever": true
+          },
+          "audio": {
+            "time": 0,
+            "duration": null,
+            "paused": true,
+            "ended": false,
+            "readyState": 0,
+            "errorCode": null,
+            "muted": false,
+            "volume": 1,
+            "hasSrcAttribute": false,
+            "networkState": 0
+          }
+        }
+      ],
+      "startedAt": "2026-10-24T07:49:13.913Z"
+    }
+  ],
+  "errors": [
+    {
+      "kind": "runner failure",
+      "message": "Unmuted P1 playback: nini timed out"
+    }
+  ],
+  "providerResponses": [
+    {
+      "at": "2026-10-24T07:49:14.354Z",
+      "elapsedMs": 27645,
+      "client": "VISIONOS",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "UNPLAYABLE",
+      "exactResponseId": true,
+      "audioFormats": 0,
+      "aac": []
+    },
+    {
+      "at": "2026-10-24T07:49:14.574Z",
+      "elapsedMs": 27865,
+      "client": "WEB_EMBEDDED_PLAYER",
+      "requestedVideoId": "NGp3dh-hBe8",
+      "httpStatus": 200,
+      "status": "OK",
+      "exactResponseId": true,
+      "audioFormats": 4,
+      "aac": [
+        {
+          "itag": 140,
+          "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+          "contentLength": 2034474,
+          "signatureCipher": false,
+          "drc": false
+        }
+      ]
+    }
+  ],
+  "cdnResponses": [],
+  "cdnHttp": [],
+  "networkFailures": [],
+  "originKind": "ephemeral static loopback serving unmodified dist-pwa",
+  "browser": "Chrome/148.0.7778.97",
+  "initialCookieCount": 0,
+  "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+  "recipePreparedDisplay": "Configuración: 57af9765d70a · Preparada: 24/10/2026, 9:48:23",
+  "lastState": {
+    "build": "c2d16d18deb2d8c2",
+    "publicContextSha256": "57af9765d70afbba6273db62501a1bd01393529ad35850b527731342d351805c",
+    "videoId": null,
+    "transport": null,
+    "status": "No ha podido empezar. Pulsa otra canción o vuelve a intentarlo.",
+    "audioCount": 1,
+    "videoCount": 0,
+    "frameCount": 0,
+    "visibleVideoFrames": 0,
+    "activation": {
+      "active": false,
+      "ever": true
+    },
+    "audio": {
+      "time": 0,
+      "duration": null,
+      "paused": true,
+      "ended": false,
+      "readyState": 0,
+      "errorCode": null,
+      "muted": false,
+      "volume": 1,
+      "hasSrcAttribute": false,
+      "networkState": 0
+    }
+  },
+  "resourcesClosed": true
+}

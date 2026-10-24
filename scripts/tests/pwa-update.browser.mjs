@@ -1,7 +1,7 @@
 // Real desktop Chrome, temporary profile/site, no musical network or production output changes.
 // node scripts/tests/pwa-update.browser.mjs --playwright packageOrPath --chrome executable
 //   [--application dist-web-port] [--prototype pathToOldDist] [--report update-browser.json]
-//   [--cold-only] [--shell-source readonlyPwaSourceSnapshot]
+//   [--cold-only | --migration-only [--warm-migration] --prototype pathToOldDist] [--shell-source readonlyPwaSourceSnapshot]
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
@@ -17,9 +17,13 @@ const workspace = fileURLToPath(new URL('../../', import.meta.url))
 const args = process.argv.slice(2)
 const option = (name, fallback) => args.includes(name) ? args[args.indexOf(name) + 1] : fallback
 const coldOnly = args.includes('--cold-only')
+const migrationOnly = args.includes('--migration-only')
+const warmMigration = args.includes('--warm-migration')
 const traceMigrationReceiver = args.includes('--trace-migration-receiver')
 const migrationCDP = args.includes('--migration-cdp')
 assert.ok(!coldOnly || !option('--prototype', null), '--cold-only cannot also test prototype migration')
+assert.ok(!migrationOnly || !coldOnly && option('--prototype', null), '--migration-only requires --prototype and cannot use --cold-only')
+assert.ok(!warmMigration || migrationOnly, '--warm-migration requires --migration-only')
 const { chromium } = createRequire(import.meta.url)(option('--playwright', 'playwright'))
 const browserOptions = { headless: true, ...(option('--chrome', null) ? { executablePath: option('--chrome') } : {}) }
 const digest = (value) => createHash('sha256').update(value).digest('hex')
@@ -32,10 +36,10 @@ const report = {
   osShortcutInstallationVerified: false, androidVerified: false, iOSVerified: false,
   externalMusicNetworkUsed: false, productionDirectoriesMutated: false,
   updateTrigger: 'registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.',
-  playlistFixture: coldOnly ? 'No playlist or metadata fixture is seeded in the cold-installer-only run.' : 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
-  audioFixture: coldOnly ? 'No audio fixture is seeded in the cold-installer-only run.' : 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
-  coverFixture: coldOnly ? 'No cover fixture is seeded in the cold-installer-only run.' : 'Owned PNG bytes and a permanent public HTTPS reference seeded directly in the downloaded-track metadata and readable cover CacheStorage. Update persistence and the new offline SW route only; no UI/provider download or physical lock-screen artwork claim.',
-  runKind: coldOnly ? 'cold-installer-update-only' : 'cold-installer-and-opened-application-updates',
+  playlistFixture: coldOnly || migrationOnly ? 'No playlist or library metadata fixture is seeded in this isolated run.' : 'Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.',
+  audioFixture: coldOnly || migrationOnly ? 'No audio fixture is seeded in this isolated run.' : 'Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.',
+  coverFixture: coldOnly || migrationOnly ? 'No cover fixture is seeded in this isolated run.' : 'Owned PNG bytes and a permanent public HTTPS reference seeded directly in the downloaded-track metadata and readable cover CacheStorage. Update persistence and the new offline SW route only; no UI/provider download or physical lock-screen artwork claim.',
+  runKind: migrationOnly ? warmMigration ? 'existing-opened-distribution-migration-only' : 'existing-distribution-migration-only' : coldOnly ? 'cold-installer-update-only' : 'cold-installer-and-opened-application-updates',
 }
 const scrub = (value) => String(value ?? '').replace(/https?:\/\/[^\s"'<>]+/g, '[URL]')
   .replace(/[A-Z]:[\\/][^\s\n"']+/gi, '[path]').replace(/\u001b\[[0-9;]*m/g, '').slice(0, 700)
@@ -350,7 +354,13 @@ try {
   const compiledHtml = await readFile(join(applicationSnapshot, 'index.html'), 'utf8')
   report.sourceCompiledHtmlSha256 = digest(compiledHtml)
   const builds = {}
-  for (const name of ['A', 'B']) {
+  if (migrationOnly) {
+    // The migration control uses the exact unmodified candidate distribution,
+    // without the A/B title variants used for synthetic warm-update exercises.
+    builds.A = baseBuild
+    workerExpectations.set('A', { sha256: digest(await readFile(join(temporary, 'site-base', 'sw.js'))), version: baseBuild.version })
+    servers.set('A', createPwaServer({ directory: join(temporary, 'site-base') }))
+  } else for (const name of ['A', 'B']) {
     const app = join(temporary, `application-${name}`)
     await cp(applicationSnapshot, app, { recursive: true })
     await writeFile(join(app, 'index.html'), compiledHtml.replace(/<title>[^<]*<\/title>/,
@@ -360,15 +370,18 @@ try {
     workerExpectations.set(name, { sha256: digest(await readFile(join(output, 'sw.js'))), version: builds[name].version })
     servers.set(name, createPwaServer({ directory: output }))
   }
-  assert.notEqual(builds.A.version, builds.B.version)
-  assert.notEqual(builds.A.applicationPage, builds.B.applicationPage)
+  if (!migrationOnly) {
+    assert.notEqual(builds.A.version, builds.B.version)
+    assert.notEqual(builds.A.applicationPage, builds.B.applicationPage)
+  }
   report.builds = Object.fromEntries(Object.entries(builds).map(([name, value]) => [name, {
     version: value.version, applicationPage: value.applicationPage, optionalFiles: value.optionalFiles, workerSha256: workerExpectations.get(name).sha256,
   }]))
-  const compiledWorker = await readFile(join(temporary, 'site-A', 'sw.js'), 'utf8')
+  const primarySite = join(temporary, migrationOnly ? 'site-base' : 'site-A')
+  const compiledWorker = await readFile(join(primarySite, 'sw.js'), 'utf8')
   report.sourceApplicationAssets = JSON.parse(compiledWorker.match(/const OPTIONAL = (\[[^\n]+\])/)[1])
     .filter((file) => file.url.startsWith('application/assets/'))
-  const manifest = JSON.parse(await readFile(join(temporary, 'site-A', 'manifest.webmanifest'), 'utf8'))
+  const manifest = JSON.parse(await readFile(join(primarySite, 'manifest.webmanifest'), 'utf8'))
   report.manifestIdentity = { id: manifest.id, scope: manifest.scope, start_url: manifest.start_url }
 
   server = createServer(async (request, response) => {
@@ -397,6 +410,7 @@ try {
   const url = `${origin}/pletina/`
   browser = await chromium.launch(browserOptions)
   report.browser = browser.version()
+  if (!migrationOnly) {
   const coldContext = await context()
   page = await newPage(coldContext)
   const retiredA = builds.A.optionalFiles.filter(path => !builds.B.optionalFiles.includes(path)).map(path => '/pletina/' + path)
@@ -478,7 +492,9 @@ try {
   })
   await coldContext.close(); page = null
   failingPath = null; live = 'A'
+  }
   if (!coldOnly) {
+  if (!migrationOnly) {
   // The cold worker and offline-emulation state belong to an independent QA
   // exercise. Release its entire process before creating the warm update case,
   // as already required by the separate real-distribution migration below.
@@ -666,6 +682,7 @@ try {
   })
   await fullContext.close()
   page = null
+  }
 
   const prototype = option('--prototype', null)
   if (prototype) {
@@ -704,10 +721,15 @@ try {
       report.prototypeCDP.errors.push(error); report.errors.push(error)
     })
     await migrationSession?.send('ServiceWorker.enable')
-    try { await check(previousFull ? 'existing cold full distribution migrates through explicit legacy update and the same scope'
+    try { await check(previousFull ? warmMigration ? 'existing opened full distribution migrates through the application update and same scope'
+      : 'existing cold full distribution migrates through explicit legacy update and the same scope'
       : 'existing prototype migrates to full app through the same scope and manifest identity', async () => {
       await page.goto(url, { waitUntil: 'load' })
       await installed()
+      if (warmMigration) {
+        assert.ok(previousFull, 'Warm migration requires an existing full application distribution')
+        await openApplication()
+      }
       if (!previousFull) {
         await page.locator('#open-player').click()
         await page.waitForFunction(() => !document.querySelector('#player-screen').hidden)
@@ -718,12 +740,15 @@ try {
       })
       const before = await snapshot()
       if (previousFull) {
-        assert.equal(before.cacheInfo.flatMap(cache => cache.paths).filter(path => path.includes('/application/')).length, 0)
-        assert.equal(await page.evaluate(() => localStorage.getItem('pletina:web:opened')), null)
+        const applicationFiles = before.cacheInfo.flatMap(cache => cache.paths).filter(path => path.includes('/application/')).length
+        if (warmMigration) assert.ok(applicationFiles > 0, 'The actual old full application must be opened and cached before updating')
+        else assert.equal(applicationFiles, 0)
+        assert.equal(await page.evaluate(() => localStorage.getItem('pletina:web:opened')), warmMigration ? '1' : null)
       } else {
         assert.ok(before.cacheInfo.some((cache) => cache.paths.some((path) => path.includes('/player/'))))
         await page.locator('#back-home').click()
       }
+      const updateRequestMark = requests.length, updateMessageMark = report.messages.length
       live = 'A'
       await prepareWaiting()
       if (traceMigrationReceiver) {
@@ -750,18 +775,20 @@ try {
         assert.ok(migrationTraceWorkers.some(value => value.version === builds.A.version))
         report.prototypeReceiverInstrumentation = 'Diagnostic message observers and delegating wrappers on both real workers, identified by VERSION. Native skipWaiting is never invoked separately; original promise returned unchanged. This instrumented run is diagnostic evidence.'
       }
-      await page.locator('#apply-update').waitFor({ state: 'visible' })
-      await page.locator('#apply-update').click()
+      const migrationUpdateButton = warmMigration ? '.web-update button' : '#apply-update'
+      await page.locator(migrationUpdateButton).waitFor({ state: 'visible' })
+      await page.locator(migrationUpdateButton).click()
       // Older shells reload to the new installer; the current public full shell
       // records an explicit open intent and enters the prepared application.
-      await page.waitForFunction((version) => Boolean(document.querySelector('.app')) ||
-        document.querySelector('#version')?.textContent.includes(version) &&
-        document.querySelector('#open-player') && !document.querySelector('#open-player').disabled,
-      builds.A.version, { timeout: 30000 })
+      if (warmMigration) await page.waitForURL(`${origin}/pletina/${builds.A.applicationPage}`, { waitUntil: 'load', timeout: 30000 })
+      else await page.waitForFunction((version) => Boolean(document.querySelector('.app')) ||
+          document.querySelector('#version')?.textContent.includes(version) &&
+          document.querySelector('#open-player') && !document.querySelector('#open-player').disabled,
+        builds.A.version, { timeout: 30000 })
       const newPrimaryOpenUsed = await page.locator('#open-player').isVisible()
       if (newPrimaryOpenUsed) await openApplication()
       else await page.locator('.app .sidebar').waitFor({ state: 'visible', timeout: 20000 })
-      assert.equal(await page.title(), 'Pletina QA A')
+      assert.equal(await page.title(), migrationOnly ? compiledHtml.match(/<title>([^<]*)<\/title>/)?.[1] : 'Pletina QA A')
       await collectMigrationTrace()
       const after = await snapshot()
       assert.equal(after.scope, before.scope)
@@ -773,10 +800,13 @@ try {
       }))
       assert.deepEqual(preserved, { sentinel: 'kept', unrelatedCache: true })
       const retired = previousOptional.filter(path => !builds.A.optionalFiles.includes(path)).map(path => '/pletina/' + path)
-      assert.equal(requests.filter(request => request.phase === phase && retired.includes(request.path)).length, 0)
+      assert.equal(requests.slice(updateRequestMark).filter(request => request.phase === phase && retired.includes(request.path)).length, 0)
+      const migrationMessages = report.messages.slice(updateMessageMark).filter(message => message.phase === phase)
+      assert.equal(migrationMessages.filter(message => message.type === 'ACTIVATE_UPDATE').length, 1)
       return { prototypeVersion: report.prototypeVersion, newVersion: builds.A.version, scope: after.scope,
-        previousDistributionKind: previousFull ? 'cold-full-application' : 'opened-player-prototype',
-        previousApplicationOpened: !previousFull, explicitLegacySecondaryUpdateButtonUsed: true,
+        previousDistributionKind: previousFull ? warmMigration ? 'opened-full-application' : 'cold-full-application' : 'opened-player-prototype',
+        previousApplicationOpened: warmMigration || !previousFull, explicitLegacySecondaryUpdateButtonUsed: !warmMigration,
+        realApplicationUpdateButtonUsed: warmMigration, updateActivationMessages: 1,
         newPrimaryOpenUsedAfterUpdate: newPrimaryOpenUsed,
         newApplicationAutoOpenedAfterExplicitUpdate: !newPrimaryOpenUsed,
         legacyPrimaryAutoMigrationClaimed: false, retiredOptionalRequests: 0,
@@ -811,7 +841,7 @@ try {
       request.worker?.version === workerExpectations.get(request.version)?.version }))
   report.workerResponsesImmutable = report.workerResponses.length > 0 && report.workerResponses.every(response => response.matchesImmutableDistribution)
   report.finishedAt = new Date().toISOString()
-  report.passed = !report.fatal && report.checks.length >= (coldOnly ? 3 : option('--prototype', null) ? 11 : 10)
+  report.passed = !report.fatal && report.checks.length >= (migrationOnly ? 1 : coldOnly ? 3 : option('--prototype', null) ? 11 : 10)
     && report.checks.every((check) => check.pass) && report.errors.length === 0 && report.workerResponsesImmutable
   await mkdir(artifactDirectory, { recursive: true })
   await writeFile(join(artifactDirectory, reportName), `${JSON.stringify(report, null, 2)}\n`)

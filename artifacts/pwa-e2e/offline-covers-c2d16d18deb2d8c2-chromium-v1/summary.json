@@ -1,0 +1,2676 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-10-24T07:55:40.049Z",
+  "build": "c2d16d18deb2d8c2",
+  "suite": "media",
+  "selectedMediaScenarios": [
+    "media.selection-html-audio",
+    "media.downloaded-covers-survive-outage-and-prune-only-after-final-shared-removal"
+  ],
+  "profiles": [
+    {
+      "profile": "chromium-android-layout",
+      "engine": "chromium",
+      "checks": [
+        {
+          "name": "setup.open: install shell and open compiled application",
+          "startedAt": "2026-10-24T07:55:40.707Z",
+          "status": "pass",
+          "build": "c2d16d18deb2d8c2",
+          "applicationPath": "/pletina/application/index.c120f20400bd95e7.html",
+          "viewport": {
+            "width": 393,
+            "height": 852
+          },
+          "physicalPlatform": false,
+          "finishedAt": "2026-10-24T07:55:41.489Z"
+        },
+        {
+          "name": "setup.fixture: opaque-frame catalog requests are controlled",
+          "startedAt": "2026-10-24T07:55:41.491Z",
+          "status": "pass",
+          "firstSong": "Canción QA Uno",
+          "interceptedTrackSearches": 1,
+          "playbackStarted": false,
+          "finishedAt": "2026-10-24T07:55:42.899Z"
+        },
+        {
+          "name": "media.selection-html-audio",
+          "startedAt": "2026-10-24T07:55:42.909Z",
+          "status": "pass",
+          "audio": {
+            "title": "Canción QA Uno",
+            "metadata": {
+              "title": "Canción QA Uno",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": true,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.156922,
+                "duration": 12,
+                "source": true,
+                "local": false,
+                "host": "fixture.googlevideo.com",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "media": "Real silent AAC/MP4; no song-content claim",
+          "finishedAt": "2026-10-24T07:55:44.374Z"
+        },
+        {
+          "name": "media.downloaded-covers-survive-outage-and-prune-only-after-final-shared-removal",
+          "startedAt": "2026-10-24T07:55:44.375Z",
+          "status": "pass",
+          "downloadedIds": [
+            213,
+            214,
+            215
+          ],
+          "sharedCoverIds": [
+            213,
+            214
+          ],
+          "terminalEvents": [
+            {
+              "id": 213,
+              "state": "done",
+              "progress": 1,
+              "error": null
+            },
+            {
+              "id": 214,
+              "state": "done",
+              "progress": 1,
+              "error": null
+            },
+            {
+              "id": 215,
+              "state": "done",
+              "progress": 1,
+              "error": null
+            }
+          ],
+          "audioDatabase": {
+            "cacheEntries": 3,
+            "rows": [
+              {
+                "id": 213,
+                "title": "Canción QA Portada compartida uno",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 214,
+                "title": "Canción QA Portada compartida dos",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              },
+              {
+                "id": 215,
+                "title": "Canción QA Portada rechazada",
+                "size": 5002,
+                "present": true,
+                "type": "opaque"
+              }
+            ]
+          },
+          "persistedCoverReferences": [
+            "[URL]",
+            "[URL]",
+            "[URL]"
+          ],
+          "raster": {
+            "key": "[URL]",
+            "path": "/pletina/__covers__",
+            "source": "[URL]",
+            "type": "default",
+            "status": 200,
+            "mime": "image/png",
+            "measuredLength": "3564",
+            "bytes": 3564,
+            "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+          },
+          "fixture": {
+            "source": "pwa/icons/icon-192.png",
+            "bytes": 3564,
+            "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+            "mime": "image/png",
+            "width": 192,
+            "height": 192
+          },
+          "libraryArtwork": [
+            {
+              "width": 192,
+              "height": 192,
+              "local": true,
+              "path": "/pletina/__covers__",
+              "original": "[URL]"
+            },
+            {
+              "width": 192,
+              "height": 192,
+              "local": true,
+              "path": "/pletina/__covers__",
+              "original": "[URL]"
+            }
+          ],
+          "miniArtwork": {
+            "width": 192,
+            "height": 192,
+            "local": true,
+            "path": "/pletina/__covers__",
+            "original": "[URL]"
+          },
+          "playerArtwork": {
+            "width": 192,
+            "height": 192,
+            "local": true,
+            "path": "/pletina/__covers__",
+            "original": "[URL]"
+          },
+          "mediaSession": {
+            "title": "Canción QA Portada compartida uno",
+            "artwork": [
+              {
+                "src": "[URL]",
+                "sizes": "",
+                "type": ""
+              }
+            ]
+          },
+          "retainedArtwork": {
+            "width": 192,
+            "height": 192,
+            "local": true,
+            "path": "/pletina/__covers__",
+            "original": "[URL]"
+          },
+          "retainedAfterFirstRemoval": 1,
+          "retainedAfterFinalSharedRemoval": 0,
+          "invalidCoverAudio": {
+            "title": "Canción QA Portada rechazada",
+            "metadata": {
+              "title": "Canción QA Portada rechazada",
+              "artist": "Artista QA Uno"
+            },
+            "handlers": [
+              "play",
+              "pause",
+              "previoustrack",
+              "nexttrack",
+              "seekto"
+            ],
+            "online": false,
+            "events": [
+              {
+                "type": "waiting",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadstart",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "durationchange",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "loadedmetadata",
+                "index": 0,
+                "time": 0
+              },
+              {
+                "type": "playing",
+                "index": 0,
+                "time": 0
+              }
+            ],
+            "audios": [
+              {
+                "index": 0,
+                "playing": true,
+                "paused": false,
+                "time": 0.163986,
+                "duration": 12,
+                "source": true,
+                "local": true,
+                "host": "127.0.0.1",
+                "error": null,
+                "muted": false,
+                "volume": 0.8,
+                "readyState": 4
+              }
+            ]
+          },
+          "externalDeliveriesDuringOutage": 0,
+          "observedExternalAliases": [],
+          "networkMode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "scope": "Real compiled UI download/removal, readable PNG bytes, production worker and browser-decoded artwork with provider/origin outage. Browser MediaSession metadata only; no physical lock-screen, live-provider or universal cover support claim.",
+          "finishedAt": "2026-10-24T07:55:55.978Z"
+        }
+      ],
+      "errors": [],
+      "build": "c2d16d18deb2d8c2",
+      "providerMode": "fixture",
+      "host": {
+        "platform": "win32",
+        "arch": "x64",
+        "node": "v24.18.1"
+      },
+      "puppeteerVersion": "25.14.0",
+      "browserVersion": "153.0.8010.52",
+      "kind": "desktop-emulation",
+      "physical": false,
+      "startedAt": "2026-10-24T07:55:40.602Z",
+      "networkTransport": "Puppeteer HTTP interception for primary and additional pages + Playwright UI; unchanged provider fixtures and production service worker.",
+      "counts": {
+        "pass": 4,
+        "fail": 0,
+        "blocked": 0,
+        "unsupported": 0
+      },
+      "offlineTransitions": [
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-24T07:55:44.380Z"
+        },
+        {
+          "requestedOffline": true,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": true,
+          "expectedNavigatorOnline": false,
+          "before": true,
+          "after": false,
+          "at": "2026-10-24T07:55:49.038Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-24T07:55:54.556Z"
+        },
+        {
+          "requestedOffline": false,
+          "mode": "browser-offline",
+          "navigatorOfflineExpected": false,
+          "expectedNavigatorOnline": true,
+          "before": true,
+          "after": true,
+          "at": "2026-10-24T07:55:55.983Z"
+        }
+      ],
+      "finalState": {
+        "path": "/pletina/application/index.c120f20400bd95e7.html",
+        "online": true,
+        "title": "Pletina",
+        "headings": [
+          "Descargas"
+        ],
+        "navigation": {
+          "index": 12,
+          "route": {
+            "name": "downloads"
+          },
+          "historyLength": 15
+        },
+        "tabs": [
+          "Inicio",
+          "Buscar",
+          "Podcasts",
+          "Tu biblioteca"
+        ],
+        "notices": [
+          "Descarga quitada"
+        ],
+        "audio": {
+          "instances": [
+            {
+              "index": 0,
+              "srcPresent": true,
+              "local": true,
+              "time": 0.298296,
+              "duration": 12,
+              "paused": true,
+              "ended": false,
+              "muted": false,
+              "volume": 0.8,
+              "readyState": 4,
+              "error": null
+            }
+          ],
+          "events": [
+            {
+              "type": "waiting",
+              "index": 0,
+              "at": 13655,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadstart",
+              "index": 0,
+              "at": 13655,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "durationchange",
+              "index": 0,
+              "at": 13658,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "loadedmetadata",
+              "index": 0,
+              "at": 13658,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "playing",
+              "index": 0,
+              "at": 13665,
+              "time": 0,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 13923,
+              "time": 0.2351,
+              "paused": false,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "timeupdate",
+              "index": 0,
+              "at": 14001,
+              "time": 0.298296,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            },
+            {
+              "type": "pause",
+              "index": 0,
+              "at": 14001,
+              "time": 0.298296,
+              "paused": true,
+              "hidden": false,
+              "error": null,
+              "local": true
+            }
+          ],
+          "handlers": [
+            "play",
+            "pause",
+            "previoustrack",
+            "nexttrack",
+            "seekto"
+          ]
+        },
+        "viewport": {
+          "width": 393,
+          "height": 852,
+          "documentWidth": 393
+        }
+      },
+      "fixture": {
+        "source": "Synthetic HTTP provider contracts with real silent AAC/MP4 media; no live provider availability or physical phone claim.",
+        "counts": {
+          "api.deezer.com/chart/0/albums": 1,
+          "api.deezer.com/chart/0/artists": 1,
+          "images.pletina.test/cover.svg": 8,
+          "api.deezer.com/search/artist": 4,
+          "api.deezer.com/search/album": 4,
+          "api.deezer.com/search/track": 4,
+          "music.youtube.com/youtubei/v1/search": 5,
+          "www.youtube.com/youtubei/v1/search": 2,
+          "www.youtube.com/youtubei/v1/player": 5,
+          "fixture.googlevideo.com/audio/qaAudio001a": 1,
+          "images.pletina.test/download-cover-invalid.png": 139,
+          "images.pletina.test/download-cover.png": 4,
+          "fixture.googlevideo.com/audio/qaCover001a": 1,
+          "fixture.googlevideo.com/audio/qaCover002b": 1,
+          "fixture.googlevideo.com/audio/qaCover003c": 1
+        },
+        "requests": [
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/albums",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/chart/0/artists",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaAudio001a",
+            "method": "GET",
+            "type": "media"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "other"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaAudio002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/cover.svg",
+            "method": "GET",
+            "type": "image"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": false,
+            "cacheControl": "no-store",
+            "bodySha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": false,
+            "cacheControl": "no-store",
+            "bodySha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaCover001a",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaCover001a",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover.png",
+            "method": "GET",
+            "type": "fetch",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": false,
+            "cacheControl": "no-store",
+            "bodySha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": false,
+            "cacheControl": "no-store",
+            "bodySha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaCover002b",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaCover002b",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "music.youtube.com",
+            "path": "/youtubei/v1/search",
+            "method": "POST",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "www.youtube.com",
+            "path": "/youtubei/v1/player",
+            "method": "POST",
+            "type": "fetch",
+            "operation": "player",
+            "videoId": "qaCover003c",
+            "clientName": "VISIONOS"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "fixture.googlevideo.com",
+            "path": "/audio/qaCover003c",
+            "method": "GET",
+            "type": "fetch"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "fetch",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/artist",
+            "method": "GET",
+            "type": "script",
+            "injectedFailure": "offline",
+            "failureAt": 1792828549342
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/album",
+            "method": "GET",
+            "type": "script",
+            "injectedFailure": "offline",
+            "failureAt": 1792828549348
+          },
+          {
+            "host": "api.deezer.com",
+            "path": "/search/track",
+            "method": "GET",
+            "type": "script",
+            "injectedFailure": "offline",
+            "failureAt": 1792828549349
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "fetch",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          },
+          {
+            "host": "images.pletina.test",
+            "path": "/download-cover-invalid.png",
+            "method": "GET",
+            "type": "image",
+            "fixtureCase": "download-covers",
+            "operation": "image",
+            "responseStatus": 200,
+            "responseMime": "image/png",
+            "invalidRaster": true,
+            "cacheControl": "no-store",
+            "bodySha256": "583e80ce1c7944996b64281fa81ffbd0d04c02ff89e702031eff75d798fc9953"
+          }
+        ]
+      },
+      "contextClosed": true,
+      "finishedAt": "2026-10-24T07:55:56.005Z",
+      "browserClosed": true,
+      "puppeteerBrowserClosed": true
+    }
+  ],
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v24.18.1"
+  },
+  "scope": "Compiled PWA with synthetic HTTP provider fixtures and real browser audio, IDB and service worker. Desktop browser/device-layout emulation only.",
+  "allRequestedPlatformsVerified": false,
+  "platforms": [
+    {
+      "id": "android-physical",
+      "status": "blocked",
+      "reason": "No physical-device runner executed; desktop Chromium emulation is separate evidence."
+    },
+    {
+      "id": "iphone-physical",
+      "status": "blocked",
+      "reason": "No physical iPhone/Safari/installed PWA runner executed; Windows WebKit is separate evidence."
+    },
+    {
+      "id": "android-auto",
+      "status": "unsupported",
+      "reason": "Current static PWA does not expose a native Android car media service."
+    },
+    {
+      "id": "carplay",
+      "status": "unsupported",
+      "reason": "Current static PWA does not contain a signed iOS CarPlay app and entitlement."
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "pass": 4,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "platformCounts": {
+    "pass": 0,
+    "fail": 0,
+    "blocked": 2,
+    "unsupported": 2
+  },
+  "expectedHandledErrors": 0,
+  "unexpectedErrors": [],
+  "serverClosed": true,
+  "finishedAt": "2026-10-24T07:55:56.182Z",
+  "browserFeatureChecksPassed": true
+}

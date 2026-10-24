@@ -1,0 +1,1383 @@
+{
+  "testedAt": "2026-10-24T08:12:40.737Z",
+  "browser": "153.0.8010.52",
+  "checks": [
+    {
+      "name": "cold installer A waits for B without ever requesting or caching the application",
+      "pass": true,
+      "oldVersion": "3e5276c1848078ca",
+      "waitingVersion": "c218b309820e2c66",
+      "initialOptionalDownloads": 0,
+      "applicationOpened": false
+    },
+    {
+      "name": "cold primary open prepares waiting B and a failed preparation preserves A with a visible retry",
+      "pass": true,
+      "waitingVersion": "c218b309820e2c66",
+      "activationMessages": 0,
+      "retryEnabled": true,
+      "activeACachePreserved": true
+    },
+    {
+      "name": "cold primary retry prepares all of B before activation, opens it automatically and reloads offline",
+      "pass": true,
+      "newApplicationPath": "/pletina/application/index.4872b5a3f6c10148.html",
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "allOptionalFilesCached": true,
+      "oldOptionalRequests": 0,
+      "offline": true
+    },
+    {
+      "name": "full A installs without application downloads; app opens on demand",
+      "pass": true,
+      "applicationPath": "/pletina/application/index.d978122d15d61db5.html",
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": null,
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": null,
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "3e5276c1848078ca",
+            "paths": [
+              "/pletina/app.485bdf57fbd8bd3d.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-DbgZJMg7.js",
+              "/pletina/application/assets/index-W2XYcCbw.css",
+              "/pletina/application/assets/p1-recipe.generated-BtxtnceM.js",
+              "/pletina/application/assets/p1-recipe.generated-C4oQvyrS.js",
+              "/pletina/application/assets/p1check-eElhzM6G.js",
+              "/pletina/application/assets/storage-BJF4eTjj.js",
+              "/pletina/application/assets/storage-PSZZs3R7.js",
+              "/pletina/application/assets/updates.svelte-CaKsDr0l.js",
+              "/pletina/application/assets/updates.svelte-d2-IJVos.js",
+              "/pletina/application/assets/youtube-Bnw5FnW6.js",
+              "/pletina/application/assets/youtube-p1-OeC5GoPm.js",
+              "/pletina/application/assets/youtube-p1-probe-B9_PRGjk.js",
+              "/pletina/application/index.d978122d15d61db5.html",
+              "/pletina/application/launcher.53567139999752ec.js",
+              "/pletina/application/p1-check.html",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "UI-created playlist and duplicate entries persist in real IndexedDB before update",
+      "pass": true,
+      "playlistId": 1,
+      "entryIds": [
+        1,
+        2
+      ],
+      "duplicateTrackId": 101
+    },
+    {
+      "name": "v1 podcast progress upgrades intact; v2 episode and known WAV fixture are durable before update",
+      "pass": true,
+      "librarySchemaFrom": 1,
+      "librarySchemaTo": 2,
+      "podcastId": 500000000000101,
+      "episodeId": 750000000000101,
+      "progress": {
+        "id": 750000000000101,
+        "position": 57,
+        "duration": 600,
+        "completed": false
+      },
+      "download": {
+        "trackId": 101,
+        "bytes": 1644,
+        "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+        "stablePath": "/pletina/__audio__/101",
+        "playbackTested": false,
+        "providerDownloaded": false,
+        "cover": {
+          "sourceFile": "scripts/tests/e2e/fixtures/offline-cover.png",
+          "bytes": 3564,
+          "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+          "cachedType": "default",
+          "stablePath": "/pletina/__covers__",
+          "seededDirectly": true,
+          "providerDownloaded": false,
+          "uiDownloadClaimed": false
+        }
+      }
+    },
+    {
+      "name": "B waits behind the real update banner without replacing A or eagerly caching its app",
+      "pass": true,
+      "waitingVersion": "c218b309820e2c66",
+      "currentApplication": "A",
+      "initialOptionalDownloads": 0,
+      "automaticReentryKeptA": true,
+      "automaticUpdateMessages": 0
+    },
+    {
+      "name": "a failed application preparation keeps A active and the playlist intact",
+      "pass": true,
+      "oldApplicationRemainedActive": true,
+      "activationMessages": 0,
+      "retryEnabled": true
+    },
+    {
+      "name": "retry waits for the complete application before PREPARE_APPLICATION permits activation",
+      "pass": false,
+      "error": "page.waitForURL: net::ERR_ABORTED; maybe frame was detached?\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n============================================================"
+    }
+  ],
+  "errors": [],
+  "messages": [
+    {
+      "phase": "cold-minimal-A-waiting-B",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "cold-primary-open-failed",
+      "path": "/pletina/",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "full-A",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "failed-preparation",
+      "path": "/pletina/application/index.d978122d15d61db5.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.d978122d15d61db5.html",
+      "type": "PREPARE_APPLICATION",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.d978122d15d61db5.html",
+      "type": "ACTIVATE_UPDATE",
+      "state": "installed"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.d978122d15d61db5.html",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/application/index.d978122d15d61db5.html",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    },
+    {
+      "phase": "retry-preparation",
+      "path": "/pletina/",
+      "type": "controllerchange"
+    }
+  ],
+  "scope": "Desktop Chrome, real installed/controlling service worker and IndexedDB; isolated temporary browser profile and localhost site.",
+  "osShortcutInstallationVerified": false,
+  "androidVerified": false,
+  "iOSVerified": false,
+  "externalMusicNetworkUsed": false,
+  "productionDirectoriesMutated": false,
+  "updateTrigger": "registration.update() accelerates the normal check; update/ retry buttons and product message handlers are real.",
+  "playlistFixture": "Created through app UI; two duplicate local metadata entries seeded directly in test IndexedDB. No signed URLs.",
+  "audioFixture": "Known PCM WAV bytes seeded in the product download database and CacheStorage. Persistence and SW route bytes only; no playback or YouTube download claim.",
+  "coverFixture": "Owned PNG bytes and a permanent public HTTPS reference seeded directly in the downloaded-track metadata and readable cover CacheStorage. Update persistence and the new offline SW route only; no UI/provider download or physical lock-screen artwork claim.",
+  "runKind": "cold-installer-and-opened-application-updates",
+  "sourceShellAppSha256": "c03db8d49b6697cf810c8adb15cfc9029fba65efd09a3648c22e1e30a316330c",
+  "baseDistributionVersion": "73187a1127b5ae37",
+  "sourceCompiledHtmlSha256": "a6edded3871b074971c3e9269e813d79a3caf50bc72e9095001815cf3e34d9bc",
+  "builds": {
+    "A": {
+      "version": "3e5276c1848078ca",
+      "applicationPage": "application/index.d978122d15d61db5.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-DbgZJMg7.js",
+        "application/assets/index-W2XYcCbw.css",
+        "application/assets/p1-recipe.generated-BtxtnceM.js",
+        "application/assets/p1-recipe.generated-C4oQvyrS.js",
+        "application/assets/p1check-eElhzM6G.js",
+        "application/assets/storage-BJF4eTjj.js",
+        "application/assets/storage-PSZZs3R7.js",
+        "application/assets/updates.svelte-CaKsDr0l.js",
+        "application/assets/updates.svelte-d2-IJVos.js",
+        "application/assets/youtube-Bnw5FnW6.js",
+        "application/assets/youtube-p1-OeC5GoPm.js",
+        "application/assets/youtube-p1-probe-B9_PRGjk.js",
+        "application/p1-check.html",
+        "application/index.d978122d15d61db5.html",
+        "application/launcher.53567139999752ec.js"
+      ],
+      "workerSha256": "ee9dc9dd5cd5b25a9fd1db039d9953f3aba96e9dd363b4b6cbd13b0e49682dd4"
+    },
+    "B": {
+      "version": "c218b309820e2c66",
+      "applicationPage": "application/index.4872b5a3f6c10148.html",
+      "optionalFiles": [
+        "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "application/assets/index-DbgZJMg7.js",
+        "application/assets/index-W2XYcCbw.css",
+        "application/assets/p1-recipe.generated-BtxtnceM.js",
+        "application/assets/p1-recipe.generated-C4oQvyrS.js",
+        "application/assets/p1check-eElhzM6G.js",
+        "application/assets/storage-BJF4eTjj.js",
+        "application/assets/storage-PSZZs3R7.js",
+        "application/assets/updates.svelte-CaKsDr0l.js",
+        "application/assets/updates.svelte-d2-IJVos.js",
+        "application/assets/youtube-Bnw5FnW6.js",
+        "application/assets/youtube-p1-OeC5GoPm.js",
+        "application/assets/youtube-p1-probe-B9_PRGjk.js",
+        "application/p1-check.html",
+        "application/index.4872b5a3f6c10148.html",
+        "application/launcher.0da564890df54b04.js"
+      ],
+      "workerSha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de"
+    }
+  },
+  "sourceApplicationAssets": [
+    {
+      "url": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+    },
+    {
+      "url": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+    },
+    {
+      "url": "application/assets/index-DbgZJMg7.js",
+      "sha256": "5d2d226587b5c404b767df39ac456752bc2c8b543c29d82c930eb7259fd67656"
+    },
+    {
+      "url": "application/assets/index-W2XYcCbw.css",
+      "sha256": "14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47"
+    },
+    {
+      "url": "application/assets/p1-recipe.generated-BtxtnceM.js",
+      "sha256": "5e5fa499a78e08cb2de1fc425d70f7fcef6dc0c0477065f87ca07624a6295328"
+    },
+    {
+      "url": "application/assets/p1-recipe.generated-C4oQvyrS.js",
+      "sha256": "bfb45f9889a0110c35e009dd7dff50132d2473b35288cb05987a49e420039a52"
+    },
+    {
+      "url": "application/assets/p1check-eElhzM6G.js",
+      "sha256": "39f19f7e81a12f77955b09cab55431d80498ca711f2cf70a7863ad3e8ce2cd5d"
+    },
+    {
+      "url": "application/assets/storage-BJF4eTjj.js",
+      "sha256": "25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b"
+    },
+    {
+      "url": "application/assets/storage-PSZZs3R7.js",
+      "sha256": "95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba"
+    },
+    {
+      "url": "application/assets/updates.svelte-CaKsDr0l.js",
+      "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"
+    },
+    {
+      "url": "application/assets/updates.svelte-d2-IJVos.js",
+      "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"
+    },
+    {
+      "url": "application/assets/youtube-Bnw5FnW6.js",
+      "sha256": "2e9b9ea65f455a8c9d204409fa92e9a1bd12b3685d2869db0f73f6566a26d60a"
+    },
+    {
+      "url": "application/assets/youtube-p1-OeC5GoPm.js",
+      "sha256": "37fcaa33ab775f21061857481e4118df9f2e6462b073310ad909d410ac2d8dff"
+    },
+    {
+      "url": "application/assets/youtube-p1-probe-B9_PRGjk.js",
+      "sha256": "f9c332f959da2a5980ab1ac3607c3fec703c1412be5f819112692ece547c3f7f"
+    }
+  ],
+  "manifestIdentity": {
+    "id": "./",
+    "scope": "./",
+    "start_url": "./"
+  },
+  "coldInstaller": {
+    "applicationOpenedBeforeUpdate": false,
+    "retiredOptionalPaths": [
+      "/pletina/application/index.d978122d15d61db5.html",
+      "/pletina/application/launcher.53567139999752ec.js"
+    ],
+    "beforeOpen": {
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": "installed",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "3e5276c1848078ca",
+            "paths": [
+              "/pletina/app.485bdf57fbd8bd3d.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          },
+          {
+            "version": "c218b309820e2c66",
+            "paths": [
+              "/pletina/app.356117b4298e5645.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      },
+      "path": "/pletina/",
+      "status": "Hay una nueva versión lista.",
+      "version": "3e5276c1848078ca",
+      "button": {
+        "text": "Actualizar y abrir",
+        "disabled": false
+      },
+      "appVisible": false,
+      "controller": true,
+      "openedBefore": null,
+      "online": true
+    },
+    "failedPreparation": {
+      "serviceWorker": {
+        "scope": "/pletina/",
+        "registrations": 1,
+        "active": "activated",
+        "waiting": "installed",
+        "workers": {
+          "controller": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "active": {
+            "state": "activated",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "waiting": {
+            "state": "installed",
+            "scriptPath": "/pletina/sw.js"
+          },
+          "installing": null
+        },
+        "cacheInfo": [
+          {
+            "version": "3e5276c1848078ca",
+            "paths": [
+              "/pletina/app.485bdf57fbd8bd3d.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          },
+          {
+            "version": "c218b309820e2c66",
+            "paths": [
+              "/pletina/app.356117b4298e5645.js",
+              "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+              "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+              "/pletina/application/assets/index-DbgZJMg7.js",
+              "/pletina/application/assets/index-W2XYcCbw.css",
+              "/pletina/application/assets/p1-recipe.generated-BtxtnceM.js",
+              "/pletina/application/assets/p1-recipe.generated-C4oQvyrS.js",
+              "/pletina/application/assets/p1check-eElhzM6G.js",
+              "/pletina/application/assets/storage-BJF4eTjj.js",
+              "/pletina/application/assets/storage-PSZZs3R7.js",
+              "/pletina/application/assets/updates.svelte-CaKsDr0l.js",
+              "/pletina/application/assets/updates.svelte-d2-IJVos.js",
+              "/pletina/application/assets/youtube-Bnw5FnW6.js",
+              "/pletina/application/assets/youtube-p1-OeC5GoPm.js",
+              "/pletina/application/assets/youtube-p1-probe-B9_PRGjk.js",
+              "/pletina/icons/apple-touch-icon.png",
+              "/pletina/icons/icon-192.png",
+              "/pletina/icons/icon-512.png",
+              "/pletina/index.html",
+              "/pletina/manifest.webmanifest"
+            ]
+          }
+        ]
+      },
+      "path": "/pletina/",
+      "status": "No se pudo completar la actualización. Conservas tu versión. Reintenta con conexión.",
+      "version": "3e5276c1848078ca",
+      "button": {
+        "text": "Actualizar y abrir",
+        "disabled": false
+      },
+      "appVisible": false,
+      "controller": true,
+      "openedBefore": null,
+      "online": true
+    },
+    "completed": {
+      "messageOrder": [
+        "PREPARE_APPLICATION",
+        "ACTIVATE_UPDATE",
+        "controllerchange"
+      ],
+      "oldOptionalRequests": 0,
+      "offline": true
+    }
+  },
+  "fullApplicationBrowserIsolation": {
+    "previousBrowserClosed": true,
+    "mode": "Fresh disposable Chrome process after closing the cold-installer context; same launch options and immutable A/B distributions.",
+    "previousBrowserVersion": "153.0.8010.52",
+    "fullBrowserVersion": "153.0.8010.52"
+  },
+  "downloadFixture": {
+    "trackId": 101,
+    "bytes": 1644,
+    "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+    "stablePath": "/pletina/__audio__/101",
+    "playbackTested": false,
+    "providerDownloaded": false,
+    "cover": {
+      "sourceFile": "scripts/tests/e2e/fixtures/offline-cover.png",
+      "bytes": 3564,
+      "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713",
+      "cachedType": "default",
+      "stablePath": "/pletina/__covers__",
+      "seededDirectly": true,
+      "providerDownloaded": false,
+      "uiDownloadClaimed": false
+    }
+  },
+  "warmReentry": {
+    "title": "Pletina QA A",
+    "serviceWorker": {
+      "scope": "/pletina/",
+      "registrations": 1,
+      "active": "activated",
+      "waiting": "installed",
+      "workers": {
+        "controller": {
+          "state": "activated",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "active": {
+          "state": "activated",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "waiting": {
+          "state": "installed",
+          "scriptPath": "/pletina/sw.js"
+        },
+        "installing": null
+      },
+      "cacheInfo": [
+        {
+          "version": "3e5276c1848078ca",
+          "paths": [
+            "/pletina/app.485bdf57fbd8bd3d.js",
+            "/pletina/application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+            "/pletina/application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+            "/pletina/application/assets/index-DbgZJMg7.js",
+            "/pletina/application/assets/index-W2XYcCbw.css",
+            "/pletina/application/assets/p1-recipe.generated-BtxtnceM.js",
+            "/pletina/application/assets/p1-recipe.generated-C4oQvyrS.js",
+            "/pletina/application/assets/p1check-eElhzM6G.js",
+            "/pletina/application/assets/storage-BJF4eTjj.js",
+            "/pletina/application/assets/storage-PSZZs3R7.js",
+            "/pletina/application/assets/updates.svelte-CaKsDr0l.js",
+            "/pletina/application/assets/updates.svelte-d2-IJVos.js",
+            "/pletina/application/assets/youtube-Bnw5FnW6.js",
+            "/pletina/application/assets/youtube-p1-OeC5GoPm.js",
+            "/pletina/application/assets/youtube-p1-probe-B9_PRGjk.js",
+            "/pletina/application/index.d978122d15d61db5.html",
+            "/pletina/application/launcher.53567139999752ec.js",
+            "/pletina/application/p1-check.html",
+            "/pletina/icons/apple-touch-icon.png",
+            "/pletina/icons/icon-192.png",
+            "/pletina/icons/icon-512.png",
+            "/pletina/index.html",
+            "/pletina/manifest.webmanifest"
+          ]
+        },
+        {
+          "version": "c218b309820e2c66",
+          "paths": [
+            "/pletina/app.356117b4298e5645.js",
+            "/pletina/icons/apple-touch-icon.png",
+            "/pletina/icons/icon-192.png",
+            "/pletina/icons/icon-512.png",
+            "/pletina/index.html",
+            "/pletina/manifest.webmanifest"
+          ]
+        }
+      ]
+    },
+    "path": "/pletina/application/index.d978122d15d61db5.html",
+    "button": {},
+    "appVisible": true,
+    "controller": true,
+    "openedBefore": "1",
+    "online": true,
+    "messages": []
+  },
+  "updateFailure": {
+    "phase": "retry-preparation",
+    "diagnosticError": "page.evaluate: Execution context was destroyed, most likely because of a navigation",
+    "requests": [
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/application/index.4872b5a3f6c10148.html",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/application/launcher.0da564890df54b04.js",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/application/p1-check.html",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/sw.js",
+        "worker": {
+          "bytes": 22751,
+          "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+          "version": "c218b309820e2c66"
+        },
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/app.356117b4298e5645.js",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/apple-touch-icon.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-512.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/index.html",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/manifest.webmanifest",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/sw.js",
+        "worker": {
+          "bytes": 22751,
+          "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+          "version": "c218b309820e2c66"
+        },
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/sw.js",
+        "worker": {
+          "bytes": 22751,
+          "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+          "version": "c218b309820e2c66"
+        },
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/app.356117b4298e5645.js",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/apple-touch-icon.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-512.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/index.html",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/manifest.webmanifest",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/sw.js",
+        "worker": {
+          "bytes": 22751,
+          "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+          "version": "c218b309820e2c66"
+        },
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/app.356117b4298e5645.js",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/apple-touch-icon.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-192.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/icons/icon-512.png",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/index.html",
+        "status": 200
+      },
+      {
+        "phase": "retry-preparation",
+        "version": "B",
+        "path": "/pletina/manifest.webmanifest",
+        "status": 200
+      }
+    ]
+  },
+  "workerDiagnostic": {
+    "kind": "Passive CDP snapshot; no worker method was invoked or replaced.",
+    "versions": [
+      {
+        "versionId": "5",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "redundant",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "4",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "redundant",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "6",
+        "registrationId": "0",
+        "targetId": "0CAC2D394074D4B3DA9BE5B9855AC937",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "running",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installing",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installing",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installed",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "6",
+        "registrationId": "0",
+        "targetId": "0CAC2D394074D4B3DA9BE5B9855AC937",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "stopping",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "6",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "stopped",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "6",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "redundant",
+        "runningStatus": "stopped",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "running",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "stopped",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "new",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installing",
+        "runningStatus": "starting",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installing",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "installed",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": "7CAA588B70EDF0E7EDC833738D606B57",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "stopping",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "stopped",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "7",
+        "registrationId": "0",
+        "targetId": null,
+        "scriptPath": "/pletina/sw.js",
+        "status": "redundant",
+        "runningStatus": "stopped",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "running",
+        "controlledClients": []
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activating",
+        "runningStatus": "running",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "running",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "running",
+        "controlledClients": [
+          "682BF41D4B15355D5895EE7EFD4F2411"
+        ]
+      },
+      {
+        "versionId": "8",
+        "registrationId": "0",
+        "targetId": "5FC9959637CD8143411963482689729B",
+        "scriptPath": "/pletina/sw.js",
+        "status": "activated",
+        "runningStatus": "running",
+        "controlledClients": []
+      }
+    ],
+    "registrations": [
+      {
+        "registrationId": "0",
+        "scopePath": "/pletina/",
+        "isDeleted": false
+      }
+    ],
+    "errors": [],
+    "errorScope": "Only worker errors emitted during this snapshot; absence does not establish no earlier worker error.",
+    "targetError": null,
+    "targets": [
+      {
+        "targetId": "0CAC2D394074D4B3DA9BE5B9855AC937",
+        "type": "service_worker",
+        "scriptPath": "/pletina/sw.js",
+        "attached": true
+      }
+    ]
+  },
+  "fatal": "page.waitForURL: net::ERR_ABORTED; maybe frame was detached?\n=========================== logs ===========================\nwaiting for navigation to \"[URL]\" until \"load\"\n  navigated to \"[URL]\"\n============================================================",
+  "browserClosed": true,
+  "browserProfile": "Disposable Playwright launch profile; browser.close releases it.",
+  "localServerClosed": true,
+  "temporarySiteRemoved": true,
+  "blockedExternalHosts": [
+    "api.deezer.com",
+    "cdn-images.dzcdn.net"
+  ],
+  "workerResponses": [
+    {
+      "phase": "cold-minimal-A-waiting-B",
+      "version": "A",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "ee9dc9dd5cd5b25a9fd1db039d9953f3aba96e9dd363b4b6cbd13b0e49682dd4",
+        "version": "3e5276c1848078ca"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "cold-minimal-A-waiting-B",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "cold-primary-open-retry",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "full-A",
+      "version": "A",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "ee9dc9dd5cd5b25a9fd1db039d9953f3aba96e9dd363b4b6cbd13b0e49682dd4",
+        "version": "3e5276c1848078ca"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "waiting-B",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "waiting-B",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "waiting-B",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "waiting-B",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    },
+    {
+      "phase": "retry-preparation",
+      "version": "B",
+      "path": "/pletina/sw.js",
+      "worker": {
+        "bytes": 22751,
+        "sha256": "525492745b2618580631e54154a13d8f5317cd8be7026c87a5dab1cae57102de",
+        "version": "c218b309820e2c66"
+      },
+      "status": 200,
+      "matchesImmutableDistribution": true
+    }
+  ],
+  "workerResponsesImmutable": true,
+  "finishedAt": "2026-10-24T08:12:55.452Z",
+  "passed": false
+}

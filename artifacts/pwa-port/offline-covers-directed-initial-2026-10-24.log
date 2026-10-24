@@ -1,0 +1,215 @@
+✖ cover cache stores only fully read, native-decodable raster bytes under the canonical local key (1.6305ms)
+✖ cover cache rejects opaque, HTML, SVG, oversized, excessive-dimension and undecodable images (0.7264ms)
+✖ CORS rejection, quota errors and an ignored fetch timeout never produce an unhandled cover failure (0.4103ms)
+✖ Deezer size variants share one key and try the original only if the preferred readable image fails (0.6465ms)
+✖ duplicate requests coalesce, cover network jobs are serial and invalid metadata never contacts a host (0.4118ms)
+✖ removing one shared reference retains its cover until the final download disappears (0.3214ms)
+✖ removal during network or native decode prevents a late orphan cover commit (0.3889ms)
+✖ a local cache write finishing after timeout/removal is swept without deleting another referenced cover (0.3643ms)
+✖ offline backfill only collects orphans, while online backfill admits at most 32 missing unique families (0.4609ms)
+✖ FIFO storage caps enforce 256 canonical families and 64 MiB measured stored lengths (0.5209ms)
+✖ native image validation releases Blob URLs on decode success, invalid dimensions and failure (0.4206ms)
+✔ download metadata survives reopening and contains only library fields and an internal cache key (31.5462ms)
+✔ download store rejects unsafe IDs, signed metadata, and nonlocal or malformed staging routes (1.888ms)
+✔ downloads are serial, skip duplicates, and report done only after media validation and metadata commit (5.1797ms)
+✔ cancel discards only pending jobs while the active transfer finishes (1.9555ms)
+✔ metadata failure or cache.put failure rolls back staging and cannot report a completed download (15.391ms)
+✔ known size and available browser quota are checked before requesting media bytes (1.8441ms)
+✔ removing an active source prevents its late validation from committing stale media (1.8553ms)
+✔ removal during the initial cached lookup cannot announce the removed copy as completed (1.2215ms)
+✔ cache eviction removes stale metadata and download removal deletes both metadata and cached response (2.7183ms)
+✔ cold owner startup removes only unreferenced valid stages in its scope and never invents a completed download (2.5125ms)
+✔ startup reconciliation preserves a valid file pointer even when unrelated row metadata is corrupt (1.4503ms)
+✔ resume and read during an active transfer never sweep its not-yet-committed stage (4.0414ms)
+✔ reconciliation failure keeps the durable FIFO untouched and does not start or announce a partial queue (2.166ms)
+✔ lost ownership after enumerating cache keys stops reconciliation before any deletion or FIFO mutation (1.0167ms)
+✔ a hung resolver times out, preserves its FIFO job and waits for explicit resume before the next song (42.6628ms)
+✔ an interrupted transfer renews its source once and completes without exposing a failed attempt (14.5887ms)
+✔ a rejected cached audio is removed before retrying a fresh complete copy (15.5712ms)
+✔ two failed transfers pause the persisted FIFO without spinning and resume refreshes the interrupted source (30.9855ms)
+✔ quota, abort, timeout and metadata write errors do not trigger another download attempt (3.3842ms)
+✔ removing a song while its renewed source is pending prevents a late retry from fetching or committing (11.958ms)
+✔ cancelling the queued songs during source renewal still lets the active retry finish alone (15.5019ms)
+✔ the original transfer deadline bounds renewal waiting and preserves the pending FIFO without an automatic retry loop (46.2089ms)
+✔ P1 uses its selected locator, waits for complete cache.put, then validates duration and tail before a metadata-only commit (2.727ms)
+✔ P1 requires a consistent permitted same-ID Googlevideo locator with bounded duration and declared size before fetching (13.7575ms)
+✔ P1 validation rejection rolls back every body and renews only the same selected identity once (15.1204ms)
+✔ P1 transfer retry uses the renewed same-format URL and preserves legacy two-argument YouTube validation (16.1123ms)
+✔ removing a P1 job during a pending cache body cannot commit late audio or leave a stage (1.2361ms)
+✔ a readable partial P1 response cannot become an opaque full-file success (28.719ms)
+✔ a longer P1 transfer can finish after ninety seconds within its duration-based total budget (1.6839ms)
+✔ P1 retries share the original job deadline instead of restarting a duration-based budget (1.6548ms)
+✔ the P1 adaptive budget is capped at ten minutes and keeps interrupted work in its durable FIFO (1.4524ms)
+✔ an explicit download timeout wins over P1 duration while legacy YouTube keeps ninety seconds (1.9755ms)
+✔ external permitted audio uses CORS, preserves ISRC/version and never asks YouTube for its stream (8.4541ms)
+✔ sources without a full-file download capability refuse before media requests (1.66ms)
+✔ complete verified Blob copies retain bytes, integrity, file duration and start offset across reopening without provider requests (11.3327ms)
+✔ durable enqueue commits before queued events or transport and a journal write failure cannot announce work (1.3669ms)
+✔ offline persisted jobs restore in order, deduplicate and start only on resume while online (1.9866ms)
+✔ typed provider network failures retain the interrupted job while permanent capability errors retire it (1.9237ms)
+✔ a failed post-file journal checkpoint is reconciled from the complete local file without a second media acquisition (1.3812ms)
+✔ queued cancellation and removal persist before reopen and cannot resurrect a removed active job (2.1971ms)
+✔ two managers cannot overwrite, cancel or drain the same journal; closing its owner permits safe recovery (10.6378ms)
+✔ an invalidated owner cannot commit its late active file after the successor resumes the saved FIFO (15.1881ms)
+✔ verified Blob capability cannot admit another origin, network URL, missing proof or invalid offsets (5.3347ms)
+✔ changed, truncated, wrong-MIME and partial verified Blob bodies roll back before completion (56.0875ms)
+✔ external downloads reject arbitrary URLs, unknown providers and unsafe IDs before fetching (4.8063ms)
+✔ external HTTP errors, partial bodies and non-audio responses cannot become completed downloads (72.5609ms)
+✔ expected and declared lengths must match the whole streamed body, with one bounded renewed attempt (45.6852ms)
+✔ a response without Content-Length records counted bytes only after the stream closes (2.3884ms)
+✔ stream errors roll back a partial external cache and renew the same source once (13.4007ms)
+✔ unknown-size external audio enforces available storage while consuming and never retries quota failures (1.7849ms)
+✔ a declared checksum is checked against the full cached body before metadata commit (13.3848ms)
+✔ a preview duration fails validation and cannot mark its external song as downloaded (15.6523ms)
+✔ default external audio validation requires expected duration plus decodable tail; legacy two-argument validation remains compatible (1.9164ms)
+ℹ tests 64
+ℹ suites 0
+ℹ pass 53
+ℹ fail 11
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1142.9631
+
+✖ failing tests:
+
+test at scripts\tests\web-download-covers.test.mjs:47:1
+✖ cover cache stores only fully read, native-decodable raster bytes under the canonical local key (1.6305ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:48:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.start (node:internal/test_runner/test:1191:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:385:17)
+
+test at scripts\tests\web-download-covers.test.mjs:59:1
+✖ cover cache rejects opaque, HTML, SVG, oversized, excessive-dimension and undecodable images (0.7264ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:69:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+
+test at scripts\tests\web-download-covers.test.mjs:79:1
+✖ CORS rejection, quota errors and an ignored fetch timeout never produce an unhandled cover failure (0.4103ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:85:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:91:1
+✖ Deezer size variants share one key and try the original only if the preferred readable image fails (0.6465ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:95:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:105:1
+✖ duplicate requests coalesce, cover network jobs are serial and invalid metadata never contacts a host (0.4118ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:107:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:119:1
+✖ removing one shared reference retains its cover until the final download disappears (0.3214ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:120:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:129:1
+✖ removal during network or native decode prevents a late orphan cover commit (0.3889ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:132:15)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:144:1
+✖ a local cache write finishing after timeout/removal is swept without deleting another referenced cover (0.3643ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:147:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:159:1
+✖ offline backfill only collects orphans, while online backfill admits at most 32 missing unique families (0.4609ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:161:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:173:1
+✖ FIFO storage caps enforce 256 canonical families and 64 MiB measured stored lengths (0.5209ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:175:13)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-download-covers.test.mjs:190:1
+✖ native image validation releases Blob URLs on decode success, invalid dimensions and failure (0.4206ms)
+  TypeError: (0 , cover_routing_mjs_1.default) is not a function
+      at Object.createDownloadCovers (eval at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:32:3), <anonymous>:59:53)
+      at harness (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:35:27)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-covers.test.mjs:192:40)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1325:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:911:18)
+      at Test.postRun (node:internal/test_runner/test:1465:19)
+      at Test.run (node:internal/test_runner/test:1390:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)

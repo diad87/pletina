@@ -1,0 +1,662 @@
+✖ native maybe Opus support rescues the same video after the AAC probe fails (12.0273ms)
+✖ native probably Opus support rescues the same video after the AAC probe fails (5.8355ms)
+✖ a healthy AAC wins even when the higher-bitrate Opus probe finishes first (1.8737ms)
+✖ unsupported Opus capability  never reaches a probe (1.7267ms)
+✖ unsupported Opus capability no never reaches a probe (1.3827ms)
+✖ unsupported Opus capability true never reaches a probe (1.2864ms)
+✖ unsupported Opus capability Error: Capability unavailable never reaches a probe (1.3095ms)
+✔ Opus cannot borrow originality from a rejected or dubbed AAC encoding (1.7ms)
+✖ a rejected AAC does not hide an explicitly original Opus of the same video (1.4069ms)
+✖ mixed codecs retain the four-format bound and never evict an AAC sibling for Opus (2.0988ms)
+✖ abort while Opus is ready and AAC pending unloads both and caches neither (2.6001ms)
+✖ a failed Opus duration check cannot hide a transient AAC failure or poison the cache (1.404ms)
+✖ P1 tries another original AAC when the best metadata probe fails with network (1.3381ms)
+✖ P1 tries another original AAC when the best metadata probe fails with timeout (1.2774ms)
+✖ P1 tries another original AAC when the best metadata probe fails with duration (1.5343ms)
+✖ a valid higher-quality AAC wins and cancels a still-pending lower probe (3.7055ms)
+✖ a lower AAC success waits for the preferred candidate instead of silently lowering quality (1.3123ms)
+✖ an invalid AAC locator does not hide a healthy original AAC (1.1473ms)
+✖ many dubbed AAC encodings cannot use the four-candidate budget before the original (1.2235ms)
+✔ P1 transient network from all AAC probes stays transient and caches none (1.5376ms)
+✔ P1 transient timeout from all AAC probes stays transient and caches none (1.2113ms)
+✖ P1 transient failure is not hidden by a later AAC duration rejection (1.1814ms)
+✖ only a typed P1 probe failure can replace the original error category (8004.3634ms)
+✔ a typed P1 engine timeout remains transient instead of authorizing a visible fallback (1.7788ms)
+✖ abort cancels all simultaneous probes and late metadata cannot enter the cache (1.9905ms)
+✖ abort while unloading an unused probe prevents the chosen locator from being cached (2.2011ms)
+✖ duplicate AAC URLs use only one metadata probe (1.2331ms)
+✖ an expired highest-quality locator does not hide another fresh original AAC (1.2889ms)
+✔ VISIONOS success avoids all P1 imports and reuses only the in-memory stream (1.1456ms)
+✖ refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client (1.256ms)
+✔ a failed P1 repair still allows one freshly resolved primary locator (1.9432ms)
+✔ a failed P1 repair is not repeated after the fresh primary also fails and its transport category survives (1.3025ms)
+✔ cancelling primary repair cannot start a fresh primary request or cache late P1 audio (1.4412ms)
+✔ a P1 repair with another video ID is rejected before fresh primary recovery (1.3378ms)
+✔ an expired primary locator renews through the normal client order (2.2869ms)
+✔ refresh without an earlier primary locator keeps the initial fast path (1.0474ms)
+✔ a refresh without playback repair permission preserves the primary download path (2.3382ms)
+✖ unavailable invokes P1 and validates metadata before caching (1.9109ms)
+✖ format invokes P1 and validates metadata before caching (1.7372ms)
+✖ successful P1 refresh replaces the old locator instead of returning it (2.039ms)
+✖ failed refresh evicts the previously usable P1 URL and a retry resolves anew (1.2757ms)
+✔ login restriction never activates the format/unavailable rescue (1.4929ms)
+✔ identity mismatch never activates the format/unavailable rescue (0.6393ms)
+✖ anonymous session network transport failure can use the same-ID P1 recipe without a VISIONOS request (1.0095ms)
+✖ anonymous session timeout transport failure can use the same-ID P1 recipe without a VISIONOS request (1.2127ms)
+✖ VISIONOS network transport failure can recover the same ID with probed P1 audio (1.181ms)
+✖ VISIONOS timeout transport failure can recover the same ID with probed P1 audio (1.1368ms)
+✔ an anonymous session malformed response does not activate P1 (1.095ms)
+✔ P1 request network remains transient after a primary format rejection (0.9128ms)
+✔ P1 request timeout remains transient after a primary format rejection (0.8015ms)
+✔ transport recovery still rejects a P1 identity mismatch without caching it (0.9309ms)
+✔ invalid anonymous recipe does not replace a primary transport category or reach a P1 request (0.821ms)
+✔ P1 invalid format preserves original format for later providers (1.1317ms)
+✔ P1 invalid format preserves original unavailable for later providers (1.5125ms)
+✔ rejected lazy import leaves the original source error and no cached locator (0.7608ms)
+✔ P1 identity mismatch cannot enter the stream cache (1.4059ms)
+✔ P1 duration mismatch cannot enter the stream cache (1.5796ms)
+✔ P1 secondary-audio mismatch cannot enter the stream cache (1.4565ms)
+✔ abort before starting creates no frames, imports or cached stream (3.1557ms)
+✔ abort during primary session transport never activates P1 recovery (0.7335ms)
+✔ abort during primary VISIONOS transport never activates P1 recovery (0.6755ms)
+✔ abort during lazy loading does not invoke the loaded P1 engine (0.87ms)
+✔ abort during P1 request removes transport and ignores its late successful response (1.0868ms)
+✔ abort during metadata probing unloads its frame and never caches a late result (1.4039ms)
+✔ account-bearing recipes are rejected before the P1 transport; anonymous IDs remain RAM only (1.3826ms)
+✖ a fresh module instance cannot retrieve another instance's signed locator (1.4121ms)
+✖ abort between completed P1 cleanup and the public stream continuation cannot cache the locator (1.6679ms)
+ℹ tests 67
+ℹ suites 0
+ℹ pass 32
+ℹ fail 35
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8580.9359
+
+✖ failing tests:
+
+test at scripts\tests\web-p1-integration.test.mjs:139:46
+✖ native maybe Opus support rescues the same video after the AAC probe fails (12.0273ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:142:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:139:46
+✖ native probably Opus support rescues the same video after the AAC probe fails (5.8355ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:142:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:161:1
+✖ a healthy AAC wins even when the higher-bitrate Opus probe finishes first (1.8737ms)
+  Error [YouTubeError]: YouTube no permite reproducir esta fuente de audio en Pletina.
+      at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:432:15)
+      at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22) {
+    code: 'unavailable'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:170:78
+✖ unsupported Opus capability  never reaches a probe (1.7267ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:174:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:170:78
+✖ unsupported Opus capability no never reaches a probe (1.3827ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:174:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:170:78
+✖ unsupported Opus capability true never reaches a probe (1.2864ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:174:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:170:78
+✖ unsupported Opus capability Error: Capability unavailable never reaches a probe (1.3095ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:174:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=aac',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:188:1
+✖ a rejected AAC does not hide an explicitly original Opus of the same video (1.4069ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=251&clen=123456&fixture=opus&mime=audio%2Fwebm'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:195:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=251&clen=123456&fixture=opus&mime=audio%2Fwebm',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:200:1
+✖ mixed codecs retain the four-format bound and never evict an AAC sibling for Opus (2.0988ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 4
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:206:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 4,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:213:1
+✖ abort while Opus is ready and AAC pending unloads both and caches neither (2.6001ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    Comparison {
+  +   name: 'YouTubeError'
+  -   name: 'AbortError'
+    }
+  
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:220:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: YouTubeError: YouTube no permite reproducir esta fuente de audio en Pletina.
+        at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:432:15)
+        at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22),
+    expected: { name: 'AbortError' },
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:228:1
+✖ a failed Opus duration check cannot hide a transient AAC failure or poison the cache (1.404ms)
+  AssertionError [ERR_ASSERTION]: expected an active opaque transport frame
+      at args (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:40:12)
+      at Object.send (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:44:20)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:232:42)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:239:59
+✖ P1 tries another original AAC when the best metadata probe fails with network (1.3381ms)
+  AssertionError [ERR_ASSERTION]: bounded metadata probes share one time window
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:244:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:239:59
+✖ P1 tries another original AAC when the best metadata probe fails with timeout (1.2774ms)
+  AssertionError [ERR_ASSERTION]: bounded metadata probes share one time window
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:244:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:239:59
+✖ P1 tries another original AAC when the best metadata probe fails with duration (1.5343ms)
+  AssertionError [ERR_ASSERTION]: bounded metadata probes share one time window
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:244:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:262:1
+✖ a valid higher-quality AAC wins and cancels a still-pending lower probe (3.7055ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:265:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:271:1
+✖ a lower AAC success waits for the preferred candidate instead of silently lowering quality (1.3123ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:277:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:282:1
+✖ an invalid AAC locator does not hide a healthy original AAC (1.1473ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=139&clen=123456&fixture=lower'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:289:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=139&clen=123456&fixture=lower',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:294:1
+✖ many dubbed AAC encodings cannot use the four-candidate budget before the original (1.2235ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=original'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:303:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=140&clen=123456&fixture=original',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:320:1
+✖ P1 transient failure is not hidden by a later AAC duration rejection (1.1814ms)
+  AssertionError [ERR_ASSERTION]: expected an active opaque transport frame
+      at args (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:40:12)
+      at Object.send (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:44:20)
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:325:6)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:330:1
+✖ only a typed P1 probe failure can replace the original error category (8004.3634ms)
+  AssertionError [ERR_ASSERTION]: The validation function is expected to return "true". Received false
+  
+  Caught error:
+  
+  La dirección de audio no estuvo disponible a tiempo.
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:337:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: YouTubeError: La dirección de audio no estuvo disponible a tiempo.
+        at p1Stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:555:19)
+        at async Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:609:26),
+    operator: 'rejects',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:350:1
+✖ abort cancels all simultaneous probes and late metadata cannot enter the cache (1.9905ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:354:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:364:1
+✖ abort while unloading an unused probe prevents the chosen locator from being cached (2.2011ms)
+  TypeError: Cannot read properties of undefined (reading 'contentWindow')
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:367:61)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7)
+
+test at scripts\tests\web-p1-integration.test.mjs:377:1
+✖ duplicate AAC URLs use only one metadata probe (1.2331ms)
+  Error [YouTubeError]: YouTube no permite reproducir esta fuente de audio en Pletina.
+      at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:432:15)
+      at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22) {
+    code: 'unavailable'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:388:1
+✖ an expired highest-quality locator does not hide another fresh original AAC (1.2889ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=139&clen=123456&fixture=lower'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:395:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'https://r1.googlevideo.com/videoplayback?expire=9999999999&itag=139&clen=123456&fixture=lower',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:418:1
+✖ refresh of a still-valid primary locator tries probed P1 for the same video before repeating the failed client (1.256ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:423:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:516:51
+✖ unavailable invokes P1 and validates metadata before caching (1.9109ms)
+  Error [YouTubeError]: YouTube no permite reproducir esta fuente de audio en Pletina.
+      at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:432:15)
+      at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22) {
+    code: 'unavailable'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:516:51
+✖ format invokes P1 and validates metadata before caching (1.7372ms)
+  Error [YouTubeError]: Este vídeo no ofrece audio MP4 compatible.
+      at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:473:15)
+      at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22) {
+    code: 'format'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:535:1
+✖ successful P1 refresh replaces the old locator instead of returning it (2.039ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:537:24)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:547:1
+✖ failed refresh evicts the previously usable P1 URL and a retry resolves anew (1.2757ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:549:24)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:570:44
+✖ anonymous session network transport failure can use the same-ID P1 recipe without a VISIONOS request (1.0095ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:576:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:570:44
+✖ anonymous session timeout transport failure can use the same-ID P1 recipe without a VISIONOS request (1.2127ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:576:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:586:44
+✖ VISIONOS network transport failure can recover the same ID with probed P1 audio (1.181ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:592:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:586:44
+✖ VISIONOS timeout transport failure can recover the same ID with probed P1 audio (1.1368ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:592:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:749:1
+✖ a fresh module instance cannot retrieve another instance's signed locator (1.4121ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 209
+  
+      at completeP1 (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:119:10)
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:751:27)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 209,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-p1-integration.test.mjs:761:1
+✖ abort between completed P1 cleanup and the public stream continuation cannot cache the locator (1.6679ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    Comparison {
+  +   name: 'YouTubeError'
+  -   name: 'AbortError'
+    }
+  
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:776:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: YouTubeError: YouTube no permite reproducir esta fuente de audio en Pletina.
+        at parsePlayer (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:432:15)
+        at Object.stream (eval at instantiate (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-p1-integration.test.mjs:72:5), <anonymous>:595:22),
+    expected: { name: 'AbortError' },
+    operator: 'rejects',
+    diff: 'simple'
+  }

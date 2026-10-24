@@ -1,0 +1,31 @@
+✔ metadata success unloads the unplayed isolated probe before returning the duration (5.6821ms)
+✔ WebM metadata uses the same muted opaque probe and tears down without playing (2.0127ms)
+✔ a CDN that becomes metadata-readable is retried at bounded absolute slots without playing (2.6794ms)
+✔ media errors do not become absence or a claimed HTTP status, and at most nine preferred attempts run (1.67ms)
+✔ per-attempt timeout skips already elapsed slots and respects the overall bound (1.7631ms)
+✔ a suspended renderer skips expired retries instead of sending a burst (0.7531ms)
+✔ a renderer resuming beyond the deadline cannot report a late successful attempt (0.6154ms)
+✔ invalid, ambiguous or implausible media duration fails immediately without retrying (6.0809ms)
+✔ cancellation before mount, during metadata, or between retries unloads and preserves AbortError (1.2749ms)
+✔ a bridge that never starts is bounded and cancellation does not wait for its deadline (0.8977ms)
+✔ cancellation during mount or with an unresponsive bridge cannot retain media or replace AbortError at deadline (1.2051ms)
+✔ messages must come from this opaque frame and match the request; malformed result is rejected (0.5843ms)
+✔ bad URL/parameters and invalid expected durations fail before creating an iframe (3.2099ms)
+✔ concurrent independent probes do not cancel or accept messages for one another (0.4971ms)
+✔ ordered candidates use one isolated bridge and a healthy preferred format starts without probing siblings (0.988ms)
+✔ an unavailable preferred AAC leaves one shared-budget opportunity for native-supported Opus (1.8923ms)
+✔ four failing formats share at most ten dispatches, not a new retry schedule per format (2.0626ms)
+✔ a permanent duration mismatch skips preferred retries and validates the next candidate against its own duration (1.4767ms)
+✔ the optional 1500ms probe unloads by 2000ms and preserves the original next slot (1.5329ms)
+✔ a slow preferred format and a fallback cannot extend the shared eight-second deadline (1.3705ms)
+✔ cancelling the remaining fallback unloads it and preserves the original cancellation reason (2.109ms)
+✔ candidate count, distinct trusted locators and duration bounds are validated before mounting (1.0715ms)
+✔ the selected candidate index and its own expected duration are checked at the opaque boundary (1.6174ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 407.9434

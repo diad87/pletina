@@ -1,0 +1,44 @@
+✖ optional cover work starts only after the audio commit and completes before its done event (30.7899ms)
+✖ download listing schedules optional old-cover backfill without awaiting network or changing its result (5.8064ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 517.067
+
+✖ failing tests:
+
+test at artifacts\pwa-port\offline-covers-negative-sources\scripts\tests\web-downloads.test.mjs:122:1
+✖ optional cover work starts only after the audio commit and completes before its done event (30.7899ms)
+  AssertionError [ERR_ASSERTION]: Audio completed without invoking the optional cover saver
+      at file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/offline-covers-negative-sources/scripts/tests/web-downloads.test.mjs:133:67
+      at async TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/offline-covers-negative-sources/scripts/tests/web-downloads.test.mjs:133:3)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: undefined,
+    operator: 'fail',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\offline-covers-negative-sources\scripts\tests\web-downloads.test.mjs:165:1
+✖ download listing schedules optional old-cover backfill without awaiting network or changing its result (5.8064ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/offline-covers-negative-sources/scripts/tests/web-downloads.test.mjs:170:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

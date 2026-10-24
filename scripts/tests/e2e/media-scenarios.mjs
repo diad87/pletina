@@ -8,6 +8,7 @@ import { runDownloadCoversScenario, DOWNLOAD_COVERS_SCENARIO } from './download-
 export const mediaScenarioInventory = Object.freeze([
   'selection-html-audio', SEARCH_HOMONYM_SCENARIO_ID.replace(/^media\./, ''), 'music-unplayable-rescues-distinct-web-source-without-skipping-song',
   'p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download',
+  'p1-sabr-only-renews-anonymous-context-once-and-plays-same-id-with-one-click',
   'p1-native-opus-priority-when-supported-even-if-aac-is-denied',
   'p1-native-opus-priority-when-supported-with-healthy-aac-sibling',
   'p1-primary-json-ok-cdn403-repairs-same-id-without-extra-click-or-video',
@@ -920,6 +921,94 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         if (value?.click) document.removeEventListener('click', value.click, true)
         if (value?.onPlaying) value.audio.removeEventListener('playing', value.onPlaying)
         delete window.__p1PrimaryRepairQA
+      })
+      await closeOverlays(); await pause(); await fixture.reset()
+    }
+  })
+
+  await run('p1-sabr-only-renews-anonymous-context-once-and-plays-same-id-with-one-click', async () => {
+    const track = media.p1Multi?.track
+    assert.ok(track, 'An existing same-ID P1 fixture is required')
+    await closeOverlays(); await pause(); await controlsOff(); await fixture.reset(); await reload()
+    const mark = fixture.requests.length
+    const trace = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'p1-sabr-renewal')
+      .map(({ operation, videoId, clientName, playability, ordinal, responseKind, locatorsAbsent,
+        effectiveBodySha256, contextSha256, clientConfigSha256, candidateIds, sabrEndpoint, responseStatus, responseMime, bodySha256 }) => ({ operation,
+        ...(videoId ? { videoId } : {}), ...(clientName ? { clientName } : {}), ...(playability ? { playability } : {}),
+        ...(ordinal ? { ordinal, responseKind, locatorsAbsent, effectiveBodySha256, contextSha256, clientConfigSha256 } : {}),
+        ...(candidateIds ? { candidateIds } : {}), ...(sabrEndpoint !== undefined ? { sabrEndpoint } : {}),
+        ...(responseStatus ? { responseStatus } : {}), ...(responseMime ? { responseMime } : {}), ...(bodySha256 ? { bodySha256 } : {}) }))
+    let completed = false
+    try {
+      await fixture.set({ p1SabrRenewal: true })
+      await ctx.fillSearch('Buscar', track.title)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, track.title)
+      assert.equal(await page.locator('.tracks li[data-reorder-index]').count(), 1)
+      const before = await state(), downloadsBefore = await downloadState()
+      assert.equal(before.audios.length, 1)
+      await page.evaluate(() => {
+        const observation = window.__p1SabrQA = { officialObserved: false, clicks: [], audio: window.__qaAudio.instances[0] }
+        const inspect = () => { if (document.querySelector('iframe[data-official-video],dialog[data-official-youtube][open]')) observation.officialObserved = true }
+        observation.observer = new MutationObserver(inspect)
+        observation.observer.observe(document.body, { subtree: true, childList: true, attributes: true })
+        observation.click = event => { if (event.target.closest?.('.tracks .name,.mini button[aria-label="Reproducir"]')) observation.clicks.push({ trusted: event.isTrusted }) }
+        document.addEventListener('click', observation.click, true)
+      })
+      await tap(row(0) + ' .name')
+      // Do not use playing(): its fallback Play gesture could conceal failure
+      // of the automatic same-ID context renewal after the user's only tap.
+      await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
+        window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > .2), track.title)
+      const value = await state(), audio = active(value)
+      assert.equal(value.audios.length, 1); assert.equal(audio.index, before.audios[0].index)
+      assert.ok(!audio.muted && audio.volume > 0 && audio.duration >= 11 && audio.duration < 14)
+      const selected = await page.evaluate(index => {
+        const audio = window.__qaAudio.instances[index], url = new URL(audio.currentSrc || audio.src)
+        return { path: url.pathname, videoId: url.searchParams.get('qa_sabr_renewal'), itag: Number(url.searchParams.get('itag')), mime: url.searchParams.get('mime') }
+      }, audio.index)
+      assert.deepEqual(selected, { path: '/videoplayback', videoId: track.videoId, itag: 140, mime: 'audio/mp4' })
+      await wait(({ index, time }) => window.__qaAudio.instances[index].currentTime > time + .15, { index: audio.index, time: audio.time })
+      const attempts = trace(), players = attempts.filter(request => request.operation === 'player')
+      assert.deepEqual(players.map(({ videoId, clientName, playability }) => ({ videoId, clientName, playability })), [
+        { videoId: track.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
+        { videoId: track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'OK' },
+        { videoId: track.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'OK' },
+      ])
+      const embedded = players.filter(request => request.clientName === 'WEB_EMBEDDED_PLAYER')
+      assert.deepEqual(embedded.map(({ ordinal, responseKind, locatorsAbsent }) => ({ ordinal, responseKind, locatorsAbsent })), [
+        { ordinal: 1, responseKind: 'sabr-only', locatorsAbsent: true }, { ordinal: 2, responseKind: 'direct-aac', locatorsAbsent: false },
+      ])
+      for (const field of ['effectiveBodySha256', 'contextSha256', 'clientConfigSha256']) {
+        assert.match(embedded[0][field], /^[a-f0-9]{64}$/)
+        assert.match(embedded[1][field], /^[a-f0-9]{64}$/)
+        assert.notEqual(embedded[0][field], embedded[1][field], 'The second anonymous ' + field + ' must be semantically different')
+      }
+      assert.deepEqual(attempts.filter(request => request.operation.endsWith('-search')).map(request => request.operation), ['music-search'])
+      assert.equal(attempts.filter(request => request.operation === 'media' && request.sabrEndpoint).length, 0,
+        'The SABR endpoint itself is not a native audio locator')
+      assert.ok(attempts.some(request => request.operation === 'media' && !request.sabrEndpoint &&
+        request.responseMime === 'audio/mp4' && request.bodySha256 === fixture.audioFile.sha256))
+      const observed = await page.evaluate(() => {
+        const value = window.__p1SabrQA, queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return { officialObserved: value.officialObserved, clicks: value.clicks, sameNativeAudio: value.audio === window.__qaAudio.instances[0],
+          currentId: queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null, ids: queue?.queue?.map(item => item.track.id) ?? [] }
+      })
+      assert.deepEqual(observed.clicks, [{ trusted: true }]); assert.equal(observed.officialObserved, false)
+      assert.equal(observed.sameNativeAudio, true); assert.equal(observed.currentId, track.id); assert.deepEqual(observed.ids, [track.id])
+      assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
+      assert.deepEqual(await downloadState(), downloadsBefore)
+      await page.waitForTimeout(250)
+      assert.equal(trace().filter(request => request.operation === 'player').length, 3, 'Only one renewed embedded POST is allowed')
+      completed = true
+      return { requestedTrackId: track.id, selected, attempts, observed, audioAdvanced: true, automaticDownloadObserved: false,
+        scope: 'Compiled PWA and real silent AAC. Synthetic same-ID SABR-only response renews the shipped anonymous context once. Only canonical context/body hashes are retained; no raw context, signed address, live-provider or physical-background claim.' }
+    } finally {
+      ctx.report.p1SabrRenewal = { trackId: track.id, completed, attempts: trace() }
+      await page.evaluate(() => {
+        const value = window.__p1SabrQA
+        value?.observer?.disconnect()
+        if (value?.click) document.removeEventListener('click', value.click, true)
+        delete window.__p1SabrQA
       })
       await closeOverlays(); await pause(); await fixture.reset()
     }

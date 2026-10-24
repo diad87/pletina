@@ -164,6 +164,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
   const spotifyGates = new Set()
   const playerPlans = new Map()
   const transientCycles = new Map()
+  let sabrRenewals = 0
   const releaseDownloads = () => { for (const resolve of pending) resolve(); pending.clear() }
   const release = () => { releaseDownloads(); for (const gate of catalogGates) gate.release(); for (const gate of playerGates) gate.release(); for (const gate of spotifyGates) gate.release() }
   // Hold the actual guest-token or playlist HTTP response. Cancellation still
@@ -297,7 +298,7 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
     }
   }
   function failNext(path, count = 1) { failures.push({ path, remaining: count }) }
-  async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0); playerPlans.clear(); transientCycles.clear() }
+  async function reset() { release(); await set({ quotaFailure: false, storageFailure: false, holdDownload: false }); for (const key of Object.keys(flags)) delete flags[key]; failures.splice(0); playerPlans.clear(); transientCycles.clear(); sabrRenewals = 0 }
   const cancelledRouteError = error => /^(?:route\.(?:fulfill|abort|continue):\s*)?(?:Route is already handled!?|Request is already handled|Target (?:page, context or browser|page|context|browser) has been closed|Target closed|Invalid InterceptionId)/i.test(String(error.message))
   function cancellationProof(request, ownerPage = null) {
     let frame
@@ -485,6 +486,10 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
             ...(sessionBootstrap ? { videoId: sessionVideo.videoId, clientName: 'WEB', queryIsExactId: true, searchParamsAbsent: true } : {}) })
         }
         let selectedTracks = selected(body.query || '')
+        if (flags.p1SabrRenewal && selectedTracks.length === 1 && selectedTracks[0].id === p1MultiTrack.id) {
+          Object.assign(row, { fixtureCase: 'p1-sabr-renewal', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
+            requestedTrackId: p1MultiTrack.id, candidateIds: [p1MultiTrack.videoId] })
+        }
         if (flags.p1Downloads && selectedTracks.length === 1 && p1DownloadTracks.some(track => track.id === selectedTracks[0].id)) {
           Object.assign(row, { fixtureCase: 'p1-download', operation: url.hostname === 'music.youtube.com' ? 'music-search' : 'web-search',
             requestedTrackId: selectedTracks[0].id, candidateIds: selectedTracks.map(track => track.videoId) })
@@ -536,6 +541,31 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
         if (flags.delayPlayerMs) await new Promise(resolve => setTimeout(resolve, flags.delayPlayerMs))
         const videoId = body.videoId || tracks[0].videoId
         const clientName = body.context?.client?.clientName ?? null
+        if (flags.p1SabrRenewal && videoId === p1Multi.videoId) {
+          Object.assign(row, { fixtureCase: 'p1-sabr-renewal', operation: 'player', videoId, clientName })
+          if (clientName === 'VISIONOS') {
+            row.playability = 'UNPLAYABLE'
+            return json({ playabilityStatus: { status: 'UNPLAYABLE' }, videoDetails: { videoId } })
+          }
+          if (clientName !== 'WEB_EMBEDDED_PLAYER') return route.abort('blockedbyclient')
+          const ordinal = ++sabrRenewals
+          // Persist only canonical hashes, never the anonymous public context
+          // or a signed media URL. Key ordering alone cannot satisfy renewal.
+          const digest = value => createHash('sha256').update(JSON.stringify(value ?? null, (_key, item) =>
+            item && typeof item === 'object' && !Array.isArray(item)
+              ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : item)).digest('hex')
+          Object.assign(row, { playability: 'OK', ordinal, responseKind: ordinal === 1 ? 'sabr-only' : 'direct-aac',
+            effectiveBodySha256: digest(body), contextSha256: digest(body.context), clientConfigSha256: digest(body.context?.client?.configInfo),
+            locatorsAbsent: ordinal === 1 })
+          const format = { itag: 140, bitrate: 128000, mimeType: 'audio/mp4; codecs="mp4a.40.2"',
+            contentLength: String(audio.length), audioTrack: { audioIsDefault: true, displayName: 'Original' } }
+          return json({ playabilityStatus: { status: 'OK', playableInEmbed: true },
+            videoDetails: { videoId, title: p1MultiTrack.title, author: p1MultiTrack.artist.name, lengthSeconds: '12' },
+            streamingData: ordinal === 1
+              ? { serverAbrStreamingUrl: 'https://fixture.googlevideo.com/videoplayback?qa_sabr_endpoint=' + videoId, adaptiveFormats: [format] }
+              : { adaptiveFormats: [{ ...format, url: 'https://fixture.googlevideo.com/videoplayback?expire=' + (Math.floor(Date.now() / 1000) + 7200) +
+                  '&itag=140&mime=audio%2Fmp4&clen=' + audio.length + '&qa_sabr_renewal=' + videoId }] } })
+        }
         const p1Podcast = flags.p1PodcastDownloads && media.youtubePodcast.episodes.find(episode => episode.videoId === videoId)
         if (p1Podcast) {
           Object.assign(row, { fixtureCase: 'p1-podcast-download', operation: 'player', videoId, clientName })
@@ -680,6 +710,14 @@ export async function createProviderFixtures(context, { baseURL } = {}) {
       return route.abort()
     }
     if (url.hostname === 'fixture.googlevideo.com' || url.hostname === 'media.pletina.test' || audiusStream) {
+      if (flags.p1SabrRenewal && [url.searchParams.get('qa_sabr_renewal'), url.searchParams.get('qa_sabr_endpoint')].includes(p1Multi.videoId)) {
+        const sabrEndpoint = url.searchParams.has('qa_sabr_endpoint')
+        Object.assign(row, { fixtureCase: 'p1-sabr-renewal', operation: 'media', videoId: p1Multi.videoId, sabrEndpoint,
+          responseStatus: sabrEndpoint ? 403 : request.headers().range ? 206 : 200,
+          responseMime: sabrEndpoint ? 'text/plain' : 'audio/mp4',
+          bodySha256: createHash('sha256').update(sabrEndpoint ? 'The SABR endpoint must not be used as direct audio' : audio).digest('hex') })
+        if (sabrEndpoint) return route.fulfill({ status: 403, headers, contentType: 'text/plain', body: 'The SABR endpoint must not be used as direct audio' })
+      }
       const p1Podcast = flags.p1PodcastDownloads && media.youtubePodcast.episodes.find(episode => episode.videoId === url.searchParams.get('qa_p1_cast'))
       if (p1Podcast) {
         const transfer = request.resourceType() === 'fetch', rejected = transfer && p1Podcast.videoId === castVideos[1]

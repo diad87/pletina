@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "testedAt": "2026-10-24T07:52:54.188Z",
+  "song": {
+    "videoId": "NGp3dh-hBe8",
+    "title": "Ni, Ni, Ni!"
+  },
+  "scriptSha256": "7500a6aa4629dcd07290667fa1681282e22efdafa7ad41b412b73a16c4d6efd2",
+  "sourceSnapshot": "artifacts/pwa-port/p1-live-decoder-source-7500a6aa4629dcd0.mjs",
+  "checks": [
+    {
+      "name": "exact requested audio metadata deciphered in browser worker",
+      "pass": true
+    },
+    {
+      "name": "CDN selected audio loads in ordinary HTMLAudio",
+      "pass": true,
+      "metadata": {
+        "duration": 125.581
+      }
+    },
+    {
+      "name": "native audio advances from beginning",
+      "pass": true
+    },
+    {
+      "name": "audio advances after 80 percent seek",
+      "pass": true
+    },
+    {
+      "name": "tail reaches natural ended",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "scope": "Real cipher, isolated browser worker and CDN/audio control. Embed configuration obtained anonymously by QA Node in RAM; not autonomous PWA bootstrap.",
+  "policy": {
+    "productChanged": false,
+    "published": false,
+    "borrowedCredentials": false,
+    "accountsOrCookies": false,
+    "runtimeProxy": false,
+    "fullPlayerExecuted": false,
+    "signedUrlsOrSessionValuesPersisted": false,
+    "mediaPersisted": false,
+    "browserSecurityOverrides": false,
+    "physicalPhone": false,
+    "screenOffVerified": false,
+    "audibleAutoplayVerified": false
+  },
+  "control": {
+    "bootstrapSha256": "06b4ca21304e0d15116bd05c4eb84c2fa6c3d5a92458b242b4908f4f8eb80a45",
+    "bootstrapBytes": 152649,
+    "playerPath": "/s/player/cbcfbf2f/player_embed_es6.vflset/en_US/base.js",
+    "playerSha256": "c6acef753928cbe14214f3b0c379ced1091782a723207c5a805b5529c97a2f20",
+    "playerBytes": 1629008,
+    "scriptSha256": "41b45da92d687a851cfcdc9d8337bee8d48e9c0079bac10ce5a6f0e40d773f79",
+    "scriptBytes": 173175,
+    "signatureTimestamp": 20746,
+    "bodySha256": "32499869999ea360c3416486798fcf3928459fd7ae8ff6fa555209ae6e456795"
+  },
+  "browser": "Chrome/148.0.7778.97",
+  "cdnResponses": [
+    {
+      "status": 206,
+      "itag": "251",
+      "type": "media",
+      "contentType": "audio/webm",
+      "allowOrigin": null
+    }
+  ],
+  "networkFailures": [
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_BLOCKED_BY_ORB",
+      "blockedReason": null,
+      "corsError": null
+    },
+    {
+      "error": "net::ERR_FAILED",
+      "blockedReason": null,
+      "corsError": {
+        "corsError": "MissingAllowOriginHeader",
+        "failedParameter": ""
+      }
+    }
+  ],
+  "cdnHeaders": [
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 403,
+      "allowOrigin": null
+    },
+    {
+      "status": 206,
+      "allowOrigin": null
+    },
+    {
+      "status": 200,
+      "allowOrigin": null
+    }
+  ],
+  "result": {
+    "status": "OK",
+    "exactId": true,
+    "itag": 251,
+    "mime": "audio/webm; codecs=\"opus\"",
+    "declaredBytes": 2041394,
+    "bitrate": 135300,
+    "signatureCharsetValid": true,
+    "nCharsetValid": true,
+    "inputLengths": {
+      "sig": 110,
+      "n": 19
+    },
+    "outputLengths": {
+      "sig": 104,
+      "n": 14
+    },
+    "range": {
+      "readable": false
+    },
+    "metadata": {
+      "duration": 125.581
+    },
+    "attempts": [
+      {
+        "elapsedMs": 28,
+        "error": 4
+      },
+      {
+        "elapsedMs": 331,
+        "error": 4
+      },
+      {
+        "elapsedMs": 935,
+        "error": 4
+      },
+      {
+        "elapsedMs": 1834,
+        "error": 4
+      },
+      {
+        "elapsedMs": 3598,
+        "duration": 125.581
+      }
+    ]
+  },
+  "nodeRangeControl": {
+    "status": 206,
+    "bytes": 1024,
+    "contentRange": "bytes 1024-2047/2041394"
+  },
+  "fullFile": {
+    "readable": false,
+    "error": "opaque-cdn-blocked"
+  },
+  "browsersClosed": true
+}
