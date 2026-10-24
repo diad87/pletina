@@ -1,8 +1,9 @@
 # Captura oficial de YouTube — P1
 
 Trabajo aislado en `p1-oficial`, worktree `musify-oficial`. No fusionar ni hacer push
-a main. El 24 de octubre el usuario autoriza publicar la aplicación: se prepara
-Pletina 0.12.0 desde esta rama, integrando la versión publicada `v0.11.2` y
+a main. El 24 de octubre el usuario autoriza publicar la aplicación: se publica
+[Pletina 0.12.0](https://github.com/diad87/pletina-releases/releases/tag/v0.12.0)
+desde esta rama, integrando la versión publicada `v0.11.2` y
 `origin/main` `1868d4f`. No se publica una OTA separada de extractores. Estado: implementación
 API4/captura v25, todavía sin aprobar la promoción; el
 [informe inicial](informe-captura-youtube-2026-10-07.md) y el
@@ -12,8 +13,40 @@ La integración conserva temporizador, radio, favoritos, Android Auto, podcasts 
 recuperación de reproducción y descargas. La dependencia general youtubei.js es
 18.3.0; el constructor privado del descifrador sigue fijado en 18.1.0 y Meriyah
 7.4.0 mediante alias, con ambos assets idénticos a los medidos en R15. La captura
-Oficial sigue experimental en Windows y Propio conserva Legacy. La publicación
-queda pendiente de las compilaciones y pruebas de distribución en GitHub.
+Oficial sigue experimental en Windows y Propio conserva Legacy.
+
+### Publicación del 24 de octubre
+
+La etiqueta `v0.12.0` apunta a `9f54f4c`. La
+[ejecución final](https://github.com/diad87/pletina/actions/runs/40092473887)
+compila, firma y certifica las cuatro plataformas; antes pasó la validación
+completa `40091380399` sobre el mismo código.
+
+| Plataforma | Comprobaciones de distribución |
+| --- | --- |
+| Windows x64 | 585 JavaScript y 295 Rust aprobadas; firma del actualizador y versión PE verificadas |
+| macOS universal | 585 JavaScript y 297 Rust aprobadas; firma del actualizador y versión del bundle verificadas |
+| Linux x64 | 585 JavaScript y 301 Rust aprobadas; reproducción real de AppImage, firma y paquete Debian correctos |
+| Android ARM64 | APK firmado, versión 0.12.0/código 12000 e identificador estable; certificado idéntico a 0.11.2 |
+
+Las suites Rust conservan 32 pruebas ignoradas. Las pruebas de captura de Linux
+usan FFmpeg/FFprobe 8.1 construidos desde fuente oficial fijada por commit y
+SHA-256; la reproducción de la AppImage conserva las herramientas de Ubuntu.
+No se relajan los inventarios, los finales ni las comparaciones de PCM.
+
+La subida automática se omitió por faltar `RELEASES_TOKEN`; se publicaron con
+la sesión local de GitHub los mismos artefactos certificados de esa ejecución.
+Los 11 archivos descargados del repositorio público coinciden byte a byte con
+los preparados, sus SHA-256 coinciden con `SHA256SUMS.txt` y los digests de GitHub,
+y los seis binarios tienen procedencia verificada contra la etiqueta y commit
+exactos. El endpoint real del actualizador sirve 0.12.0 para las cuatro entradas
+de escritorio. Queda configurar ese secreto para futuras publicaciones
+automáticas; el workflow pasa a fallar explícitamente si falta.
+
+Estas comprobaciones no son una nueva campaña de tiempos de YouTube ni una
+prueba en dispositivo Android. R15 precede a la integración, no se usó Premium
+en esta publicación y Oficial conserva los criterios de promoción pendientes.
+Las mejoras Rust llegan con la actualización de la aplicación.
 
 ## Decisiones vigentes
 
