@@ -1,0 +1,132 @@
+✔ una ficha YouTube editada actualiza lista y resolución local tras reabrir sin alterar bytes ni staging (34.8875ms)
+✔ una biblioteca sin ficha YouTube mantiene la copia descargada y su resolución sin red (2.7361ms)
+✔ un fallo al leer la biblioteca canónica conserva la descarga utilizable sin escrituras cruzadas (2.1675ms)
+✔ catálogo y episodios conservan su snapshot sin consultar el lector canónico de YouTube (2.959ms)
+✔ descargas conservan ISRC y versión tras reabrir con sólo bytes locales y metadatos permitidos (2.0248ms)
+✔ el lector registrado por el adaptador se aplica también a una descarga creada antes del wiring (5.6115ms)
+✖ la lista visible de descargas agrupa artista y disco como la APK, con fecha ascendente y sin alterar el listado interno (4.0192ms)
+✖ el orden de descargas usa NOCASE ASCII y bytes UTF-8, sin idioma, plegado de acentos ni orden UTF-16 (4.2332ms)
+✖ el desempate visible por ID es ascendente y estable tras reabrir, aunque las inserciones se hagan al revés (1.5041ms)
+✖ el orden visible se calcula con los metadatos canónicos actuales de YouTube, conservando los archivos originales (3.2754ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 6
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 233.951
+
+✖ failing tests:
+
+test at artifacts\pwa-port\download-order-negative-sources\scripts\tests\web-download-store.test.mjs:153:1
+✖ la lista visible de descargas agrupa artista y disco como la APK, con fecha ascendente y sin alterar el listado interno (4.0192ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   103,
+  +   105,
+  +   101,
+      104,
+  -   105,
+  -   103,
+      102,
+  -   101
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/download-order-negative-sources/scripts/tests/web-download-store.test.mjs:166:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 103, 105, 101, 104, 102 ],
+    expected: [ 104, 105, 103, 102, 101 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\download-order-negative-sources\scripts\tests\web-download-store.test.mjs:173:1
+✖ el orden de descargas usa NOCASE ASCII y bytes UTF-8, sin idioma, plegado de acentos ni orden UTF-16 (4.2332ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  -   1,
+      8,
+  -   2,
+  -   3,
+  -   4,
+  -   5,
+      7,
+      6,
+  +   5,
+  +   4,
+  +   3,
+  +   2,
+  +   1
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/download-order-negative-sources/scripts/tests/web-download-store.test.mjs:181:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [
+      8, 7, 6, 5,
+      4, 3, 2, 1
+    ],
+    expected: [
+      1, 8, 2, 3,
+      4, 5, 7, 6
+    ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\download-order-negative-sources\scripts\tests\web-download-store.test.mjs:186:1
+✖ el desempate visible por ID es ascendente y estable tras reabrir, aunque las inserciones se hagan al revés (1.5041ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   30,
+  +   20,
+      10,
+  -   20,
+  -   30
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/download-order-negative-sources/scripts/tests/web-download-store.test.mjs:189:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 30, 20, 10 ],
+    expected: [ 10, 20, 30 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\download-order-negative-sources\scripts\tests\web-download-store.test.mjs:197:1
+✖ el orden visible se calcula con los metadatos canónicos actuales de YouTube, conservando los archivos originales (3.2754ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   250000000000002,
+      250000000000001,
+      90,
+  -   250000000000002
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/download-order-negative-sources/scripts/tests/web-download-store.test.mjs:209:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 250000000000002, 250000000000001, 90 ],
+    expected: [ 250000000000001, 90, 250000000000002 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

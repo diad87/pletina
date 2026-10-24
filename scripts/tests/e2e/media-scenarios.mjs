@@ -1698,6 +1698,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   await run('downloaded-library-native-order-and-offline-collection-playback', async () => {
     await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads(); await music()
     const indices = [0, 1, 4, 8], expected = [8, 4, 0, 1].map(index => fixture.tracks[index])
+    if (await visible('.page button.more:text-is("Ver más (12)")')) await tap('.page button.more:text-is("Ver más (12)")')
     await wait(titles => {
       const rows = [...document.querySelectorAll('.tracks li[data-reorder-index] .name')]
       return rows.length === titles.length && titles.every((title, index) => rows[index]?.textContent.trim() === title)
@@ -1751,6 +1752,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   await run('download-list-reconciles-evicted-copy-and-allows-redownload-without-reload', async () => {
     await restoreNetwork(); await fixture.reset(); await closeOverlays(); await pause(); await clearDownloads(); await music()
     const track = fixture.tracks[0]
+    if (await visible('.page button.more:text-is("Ver más (12)")')) await tap('.page button.more:text-is("Ver más (12)")')
     await wait(titles => {
       const rows = [...document.querySelectorAll('.tracks li[data-reorder-index] .name')]
       return rows.length === titles.length && titles.every((title, index) => rows[index]?.textContent.trim() === title)

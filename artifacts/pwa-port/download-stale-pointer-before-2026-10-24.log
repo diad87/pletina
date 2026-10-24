@@ -1,0 +1,108 @@
+✔ una ficha YouTube editada actualiza lista y resolución local tras reabrir sin alterar bytes ni staging (46.2358ms)
+✔ una biblioteca sin ficha YouTube mantiene la copia descargada y su resolución sin red (4.8656ms)
+✔ un fallo al leer la biblioteca canónica conserva la descarga utilizable sin escrituras cruzadas (3.5626ms)
+✔ catálogo y episodios conservan su snapshot sin consultar el lector canónico de YouTube (4.5983ms)
+✔ descargas conservan ISRC y versión tras reabrir con sólo bytes locales y metadatos permitidos (3.3152ms)
+✔ el lector registrado por el adaptador se aplica también a una descarga creada antes del wiring (9.6959ms)
+✔ la lista visible de descargas agrupa artista y disco como la APK, con fecha ascendente y sin alterar el listado interno (4.7637ms)
+✔ el orden de descargas usa NOCASE ASCII y bytes UTF-8, sin idioma, plegado de acentos ni orden UTF-16 (4.2046ms)
+✔ el desempate visible por ID es ascendente y estable tras reabrir, aunque las inserciones se hagan al revés (2.0803ms)
+✔ el orden visible se calcula con los metadatos canónicos actuales de YouTube, conservando los archivos originales (5.0202ms)
+✔ listDownloads: retira una referencia cuya copia sigue ausente sin borrar otros archivos (3.052ms)
+✖ listDownloads: una copia nueva confirmada mientras se comprueba la antigua conserva su referencia y se devuelve (2.0094ms)
+✖ listDownloads: la referencia nueva también se retira si su propia copia falta, con una sola comprobación adicional (1.8937ms)
+✔ readDownloadedPlayable: retira una referencia cuya copia sigue ausente sin borrar otros archivos (1.5268ms)
+✖ readDownloadedPlayable: una copia nueva confirmada mientras se comprueba la antigua conserva su referencia y se devuelve (0.9959ms)
+✖ readDownloadedPlayable: la referencia nueva también se retira si su propia copia falta, con una sola comprobación adicional (1.5991ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 12
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 287.7545
+
+✖ failing tests:
+
+test at scripts\tests\web-download-store.test.mjs:230:3
+✖ listDownloads: una copia nueva confirmada mientras se comprueba la antigua conserva su referencia y se devuelve (2.0094ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   'Copia nueva'
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-store.test.mjs:249:44)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 'Copia nueva' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-download-store.test.mjs:257:3
+✖ listDownloads: la referencia nueva también se retira si su propia copia falta, con una sola comprobación adicional (1.8937ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000',
+  -   'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000002'
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-store.test.mjs:272:12)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000' ],
+    expected: [ 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000', 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000002' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-download-store.test.mjs:230:3
+✖ readDownloadedPlayable: una copia nueva confirmada mientras se comprueba la antigua conserva su referencia y se devuelve (0.9959ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'Copia nueva'
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-store.test.mjs:250:17)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'Copia nueva',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\web-download-store.test.mjs:257:3
+✖ readDownloadedPlayable: la referencia nueva también se retira si su propia copia falta, con una sola comprobación adicional (1.5991ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000',
+  -   'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000002'
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/web-download-store.test.mjs:272:12)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000' ],
+    expected: [ 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000000', 'https://app.example/pletina/__audio__/1?stage=1700000000000-00000000-0000-4000-8000-000000000002' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

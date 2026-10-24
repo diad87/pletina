@@ -1,0 +1,1411 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-24T07:16:17.885Z",
+  "build": "435e0dc36a054099",
+  "sourceCommit": "cd5e6d1d10a2732181b6c6b9d2b2204e7432ed44",
+  "baselineBuild": "b698958a8a49ec05",
+  "baselineCommit": "f8c714698566d26aa56adbcabbe3b40b73c6d04b",
+  "runtime": {
+    "purePwa": true,
+    "architectureUnchanged": true,
+    "addedBackend": false,
+    "proxyAtRuntime": false,
+    "userAccountsRequired": false,
+    "subscriptionRequired": false
+  },
+  "changes": {
+    "visibleDownloadOrder": "Artist ASCII NOCASE, album ASCII NOCASE, download date ascending, using current canonical metadata before sorting.",
+    "collation": "ASCII A-Z folding only and UTF-8 byte order; no locale/accent normalization.",
+    "exactNativeSqlTieOrderClaimed": false,
+    "deterministicTieBreak": "Track ID ascending. APK SQL leaves complete ties unspecified.",
+    "rawStoreListOrderingChanged": false,
+    "atomicMissingPointerRetirement": "One files readwrite transaction rereads the row and deletes only if its cacheKey equals the stage actually observed missing.",
+    "replacementCacheProbes": 1,
+    "reconciliationDeletesAudioBodies": false,
+    "visibleDownloadBadges": "Authoritative local listing reconciles completed IDs while protecting current jobs, removals, overlapping reads and player-side corrections.",
+    "viewReadsReactiveDoneSnapshotUntracked": true,
+    "nativeFrontendListingBehaviorChanged": false,
+    "providersChanged": false,
+    "audioResolutionPolicyChanged": false,
+    "schemaChanged": false,
+    "workerChanged": false,
+    "signedLocatorsPersisted": false
+  },
+  "logic": {
+    "tests": 878,
+    "passed": 878,
+    "failed": 0,
+    "report": {
+      "path": "artifacts/pwa-port/downloads-parity-logic-final-2026-10-24.log",
+      "bytes": 89975,
+      "sha256": "d269bdda67110e0e92ab2fe0e89426a4cda163dac6601aefca57250601a17604"
+    },
+    "countsAreNotAdded": true,
+    "subsets": {
+      "downloadStore": {
+        "tests": 16,
+        "passed": 16,
+        "failed": 0,
+        "report": {
+          "path": "artifacts/pwa-port/download-stale-pointer-after-2026-10-24.log",
+          "bytes": 2051,
+          "sha256": "3750cc4ce3123695ff7ae0c9c81c0047853f13c57f67052b734111558b6dff82"
+        }
+      },
+      "intermediateOrder": {
+        "tests": 10,
+        "passed": 10,
+        "failed": 0,
+        "report": {
+          "path": "artifacts/pwa-port/download-order-after-2026-10-24.log",
+          "bytes": 1294,
+          "sha256": "4e38f8b816cc8acf589cf6b3a302a739124a800a246ef3d1c1cb6c8f882c4194"
+        }
+      },
+      "newFrontend": {
+        "tests": 12,
+        "passed": 12,
+        "failed": 0,
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-after-final-2026-10-24.log",
+          "bytes": 1322,
+          "sha256": "551d8b98a846895e7f5f88af77f18cc5e717a4deed9f7dfd5392401c31975954"
+        }
+      },
+      "completeFrontend": {
+        "tests": 47,
+        "passed": 47,
+        "failed": 0,
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-directed-2026-10-24.log",
+          "bytes": 4651,
+          "sha256": "9dbcf9e3fe2dbc01e07dd0db9a7d81ffa1afc71e15c3b30382443dae9412f493"
+        }
+      }
+    }
+  },
+  "typecheck": {
+    "errors": 0,
+    "warnings": 0,
+    "report": {
+      "path": "artifacts/pwa-port/downloads-parity-types-final-2026-10-24.log",
+      "bytes": 271,
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+    }
+  },
+  "nativeFrontendCompilation": {
+    "passed": true,
+    "chunkSizeWarningPresent": true,
+    "report": {
+      "path": "artifacts/pwa-port/downloads-parity-native-frontend-build-2026-10-24.log",
+      "bytes": 1765,
+      "sha256": "ae13878ff676ae54ec76d7ef75846c81dbbb0f020d83db3fa5418b7512538a1d"
+    },
+    "scope": "Vite compilation of the native frontend only; no APK build, native service execution or physical-device claim."
+  },
+  "controlledBrowsers": {
+    "passed": 33,
+    "failed": 0,
+    "engines": [
+      {
+        "engine": "chromium",
+        "profile": "chromium-android-layout",
+        "browserVersion": "153.0.8010.52",
+        "passed": 11,
+        "failed": 0,
+        "initialReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+          "bytes": 178871,
+          "sha256": "e4cba6b9175dc58560a3b8c530555c4d3afc066ca201686fbf365bc4e95cdf0b"
+        },
+        "correctedNewCasesReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+          "bytes": 141016,
+          "sha256": "7586c847bdf1b0014127d42510ccc0b62dc178a58d657d438179e930faa6cb6b"
+        },
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.download-remove-all-cancel-preserves-files-and-reload-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.download-removal-clears-pointer-body-and-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.downloaded-library-native-order-and-offline-collection-playback",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.download-list-reconciles-evicted-copy-and-allows-redownload-without-reload",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json"
+          }
+        ]
+      },
+      {
+        "engine": "firefox",
+        "profile": "firefox-narrow",
+        "browserVersion": "153.0",
+        "passed": 11,
+        "failed": 0,
+        "initialReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+          "bytes": 178871,
+          "sha256": "e4cba6b9175dc58560a3b8c530555c4d3afc066ca201686fbf365bc4e95cdf0b"
+        },
+        "correctedNewCasesReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+          "bytes": 141016,
+          "sha256": "7586c847bdf1b0014127d42510ccc0b62dc178a58d657d438179e930faa6cb6b"
+        },
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.download-remove-all-cancel-preserves-files-and-reload-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.download-removal-clears-pointer-body-and-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json"
+          },
+          {
+            "name": "media.youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.downloaded-library-native-order-and-offline-collection-playback",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+            "networkMode": "browser-offline",
+            "navigatorOfflineExpected": true
+          },
+          {
+            "name": "media.download-list-reconciles-evicted-copy-and-allows-redownload-without-reload",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json"
+          }
+        ]
+      },
+      {
+        "engine": "webkit",
+        "profile": "webkit-iphone-layout",
+        "browserVersion": "26.5",
+        "passed": 11,
+        "failed": 0,
+        "initialReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+          "bytes": 112977,
+          "sha256": "f438a5d38a4fe34cf8f09a4db09ed1001f196e99916c036ba56e16b29566506a"
+        },
+        "correctedNewCasesReport": {
+          "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json",
+          "bytes": 73131,
+          "sha256": "a5cba9057809330533275804faa424f0ca7b86a258c0750ce7084ac8437dc218"
+        },
+        "checks": [
+          {
+            "name": "setup.open: install shell and open compiled application",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "setup.fixture: opaque-frame catalog requests are controlled",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "media.selection-html-audio",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+            "networkMode": "origin-and-provider-unavailable",
+            "navigatorOfflineExpected": false
+          },
+          {
+            "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "media.download-remove-all-cancel-preserves-files-and-reload-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+            "networkMode": "origin-and-provider-unavailable",
+            "navigatorOfflineExpected": false
+          },
+          {
+            "name": "media.download-removal-clears-pointer-body-and-ui",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json"
+          },
+          {
+            "name": "media.youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+            "networkMode": "origin-and-provider-unavailable",
+            "navigatorOfflineExpected": false
+          },
+          {
+            "name": "media.downloaded-library-native-order-and-offline-collection-playback",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json",
+            "networkMode": "origin-and-provider-unavailable",
+            "navigatorOfflineExpected": false
+          },
+          {
+            "name": "media.download-list-reconciles-evicted-copy-and-allows-redownload-without-reload",
+            "status": "pass",
+            "sourceReport": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json"
+          }
+        ]
+      }
+    ],
+    "reports": [
+      {
+        "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+        "bytes": 178871,
+        "sha256": "e4cba6b9175dc58560a3b8c530555c4d3afc066ca201686fbf365bc4e95cdf0b"
+      },
+      {
+        "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+        "bytes": 112977,
+        "sha256": "f438a5d38a4fe34cf8f09a4db09ed1001f196e99916c036ba56e16b29566506a"
+      },
+      {
+        "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+        "bytes": 141016,
+        "sha256": "7586c847bdf1b0014127d42510ccc0b62dc178a58d657d438179e930faa6cb6b"
+      },
+      {
+        "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json",
+        "bytes": 73131,
+        "sha256": "a5cba9057809330533275804faa424f0ca7b86a258c0750ce7084ac8437dc218"
+      }
+    ],
+    "consolidation": "For each engine select nine passing v1 checks and the two corrected new cases from v2. The three repeated setup/selection checks per engine in v2 are not added.",
+    "observerHistory": {
+      "v1": {
+        "passed": 27,
+        "failed": 6,
+        "reason": "Both new cases assumed twelve search rows before clicking the real Ver más control. They failed in preparation before downloading; the existing nine checks per engine passed. Raw results remain unchanged."
+      },
+      "v2": {
+        "passed": 15,
+        "failed": 0,
+        "reason": "Only the UI preparation expands the twelve search results before its unchanged twelve-row assertion. Product, download, ordering, decoder, storage and outage assertions remain unchanged."
+      }
+    },
+    "countScope": "Eleven checks per engine: two setup checks, selection baseline and eight selected media scenarios. Not 33 distinct product features.",
+    "scope": "Compiled PWA, HTTP provider fixtures and genuine silent AAC, native HTMLAudio, IDB, CacheStorage and production service worker. Desktop browsers with mobile layouts.",
+    "outageScope": "The scenario report records the actual offline or origin/provider outage mode. A WebKit HTTP gate is not physical airplane mode.",
+    "syntheticCacheEviction": "Only the missing-cache scenario removes a previously product-downloaded cache body as a fault. No QA download-row insertion, replacement player, live-provider or physical-device claim.",
+    "frozenCopy": {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-frozen-copy.json",
+      "bytes": 28254,
+      "sha256": "8fbfeddd9799a17ff5589609d1b16e7228e8f15fc1813cb88456cd44dbc533cd"
+    },
+    "historicalBrowserAttempts": []
+  },
+  "negativeControls": {
+    "ordering": {
+      "tests": 10,
+      "passed": 6,
+      "failed": 4,
+      "report": {
+        "path": "artifacts/pwa-port/download-order-negative-frozen-2026-10-24.log",
+        "bytes": 5354,
+        "sha256": "49f5c5cf36ed68efadcf6f3b9c4decfd788d42e15d79071303cea49dbb80f349"
+      },
+      "expectedNegative": true,
+      "snapshot": {
+        "path": "artifacts/pwa-port/download-order-negative-sources/manifest.json",
+        "bytes": 1250,
+        "sha256": "cc573a3e45e639b0eeef905a11a1bc5a004c6672157efdb1689c5c0f92915fb0"
+      }
+    },
+    "stalePointer": {
+      "tests": 16,
+      "passed": 12,
+      "failed": 4,
+      "report": {
+        "path": "artifacts/pwa-port/download-stale-pointer-negative-frozen-2026-10-24.log",
+        "bytes": 6714,
+        "sha256": "3ae74cd6305900eed3fcf30e52e75ec21fa9861efa36db1b6c7d8192180ffe0b"
+      },
+      "expectedNegative": true,
+      "snapshotIncludesOrderingFix": true,
+      "snapshot": {
+        "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/manifest.json",
+        "bytes": 1348,
+        "sha256": "d781471c1ae71665e1f051aac4d09c784a6217ac1f055418355f62aa031cd45e"
+      }
+    },
+    "frontend": {
+      "tests": 12,
+      "passed": 8,
+      "failed": 4,
+      "expectedNegative": true,
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-frozen-2026-10-24.log",
+        "bytes": 4872,
+        "sha256": "4b6768b9c50afc1d66ae10a65982545209652b0926f1646149406fa1e9da25eb"
+      }
+    },
+    "reactiveSubscription": {
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "expectedNegative": true,
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-frozen-2026-10-24.log",
+        "bytes": 1122,
+        "sha256": "cacaee03a5978eb52a690bdf0255f429ab7b40d5ea1fbbbd86dcada164cd95ed"
+      }
+    },
+    "frontendManifest": {
+      "path": "artifacts/pwa-port/downloads-stale-badges-manifest.json",
+      "bytes": 7707,
+      "sha256": "9bd5a0ca18c38d1c103cf58b44daab61cdc02a7a759d0771206eb1a57d3f8c5c"
+    },
+    "intermediateObserverHistory": [
+      {
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-before-2026-10-24.log",
+          "bytes": 4209,
+          "sha256": "87d8d171c4481fd6934dcf760bf8f354e8e1b17725c72df6518c85696e672e77"
+        },
+        "scope": "Initial eleven test cases against old production; Node default plain collections. Superseded for full twelve-case baseline evidence by the frozen baseline above."
+      },
+      {
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-after-2026-10-24.log",
+          "bytes": 1212,
+          "sha256": "f64435c5276b38ea23015f2dd142c46254fccd36e76f2334f5d191aac42a40fe"
+        },
+        "scope": "Intermediate eleven passing cases before the real reactive-effect observer was added."
+      },
+      {
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-effect-server-reactivity-observer-2026-10-24.log",
+          "bytes": 233,
+          "sha256": "b44b6352118a6573bf55bc6bdd05e4aa34cde71b925ce115c34ec57dfb78e136"
+        },
+        "scope": "Observer insufficiency: Node default svelte/reactivity exported plain Map/Set, so this single passing check did not prove lack of reactive read subscription. Raw report retained, excluded from final proof."
+      },
+      {
+        "report": {
+          "path": "artifacts/pwa-port/downloads-stale-badges-effect-before-untrack-2026-10-24.log",
+          "bytes": 980,
+          "sha256": "cb9033b0a53a49e97ec05f46d9ffcef0f40bd93342f25fa577839022bb4664aa"
+        },
+        "scope": "Corrected client-reactivity observer demonstrated the intermediate extra-read defect before adding untrack; immutable reproduction is separately bound above."
+      }
+    ],
+    "observerPolicy": "The initial plain Map/Set server-reactivity observation is preserved but excluded from final proof. The final twelve cases use real Svelte browser reactive collections and the shared client runtime."
+  },
+  "update": {
+    "fromBuild": "b698958a8a49ec05",
+    "passed": 11,
+    "failed": 0,
+    "report": {
+      "path": "artifacts/pwa-port/update-e2e-435e0dc36a054099.json",
+      "bytes": 22880,
+      "sha256": "ab798d35a3cdf29f8eaefd01a8ae965335fa178e108c1cd3076e344477dbbb59"
+    },
+    "scope": "Final compiled graph, actual worker and IDB/cache fixtures, duplicate playlist persistence and offline entry. No APK database or physical icon migration."
+  },
+  "distribution": {
+    "files": 33,
+    "bytes": 885074,
+    "initialBytes": 51243,
+    "onDemandBytes": 788258,
+    "cssFontsAndP1RecipeUnchangedFrom": "b698958a8a49ec05",
+    "unchangedAssets": [
+      "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+      "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+      "application/assets/index-W2XYcCbw.css",
+      "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+      "application/assets/p1-recipe.generated-BGYpK-b1.js"
+    ],
+    "sourceHash": "0cc5ba5d1e9225505e51c993da4e3fc08c357c270a455aaa44d1efb1f85da884",
+    "inventory": [
+      {
+        "path": ".nojekyll",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "app.fd2c5aedfdc5d1f5.js",
+        "bytes": 16483,
+        "sha256": "fd2c5aedfdc5d1f5395697914c20ca851a12135547a1e1f442d418f85b203475"
+      },
+      {
+        "path": "application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2",
+        "bytes": 10280,
+        "sha256": "bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"
+      },
+      {
+        "path": "application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2",
+        "bytes": 20156,
+        "sha256": "4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"
+      },
+      {
+        "path": "application/assets/index-CDL4VedR.js",
+        "bytes": 372450,
+        "sha256": "c1e617322559f90d0a93053ff2c2b76cae98c92be95b734b7d550465c5d0a136"
+      },
+      {
+        "path": "application/assets/index-W2XYcCbw.css",
+        "bytes": 90362,
+        "sha256": "14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-B9VIf5Tl.js",
+        "bytes": 76,
+        "sha256": "d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13"
+      },
+      {
+        "path": "application/assets/p1-recipe.generated-BGYpK-b1.js",
+        "bytes": 175818,
+        "sha256": "942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812"
+      },
+      {
+        "path": "application/assets/p1check-BK26lOUg.js",
+        "bytes": 3465,
+        "sha256": "caab2a070840b91634387048d072f583e4d18dede5d57517d90894f8fe1312d3"
+      },
+      {
+        "path": "application/assets/storage-BJF4eTjj.js",
+        "bytes": 32111,
+        "sha256": "25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b"
+      },
+      {
+        "path": "application/assets/storage-PSZZs3R7.js",
+        "bytes": 138,
+        "sha256": "95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba"
+      },
+      {
+        "path": "application/assets/updates.svelte-CaKsDr0l.js",
+        "bytes": 77,
+        "sha256": "6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"
+      },
+      {
+        "path": "application/assets/updates.svelte-d2-IJVos.js",
+        "bytes": 46008,
+        "sha256": "cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"
+      },
+      {
+        "path": "application/assets/youtube-Bk2h8QR1.js",
+        "bytes": 16728,
+        "sha256": "1f205ff666ed70405aa6122d75fbfbe4e4d0a1a44c2535547c45924bd74d8b3a"
+      },
+      {
+        "path": "application/assets/youtube-p1-D6JsRkrB.js",
+        "bytes": 11395,
+        "sha256": "705ac7f9c675e978c0d943ff1d3b564a4f7f0d5f102afd1e778e063a3898fe8a"
+      },
+      {
+        "path": "application/assets/youtube-p1-probe-D3C8r15R.js",
+        "bytes": 5302,
+        "sha256": "fa0f6050c1d7695072926ad4b3faf0a577a9f1c97eec3988d7b783fdbdf09470"
+      },
+      {
+        "path": "application/index.2e2da91c415cb452.html",
+        "bytes": 1018,
+        "sha256": "2e2da91c415cb4520b9b32c8fcd3954c4be70c59849634ba954a4cbdd3eba9e0"
+      },
+      {
+        "path": "application/launcher.8e5000cb9d1e8f52.js",
+        "bytes": 897,
+        "sha256": "8e5000cb9d1e8f5288292a8d87ce7b6cfb37c892c72d72c1560f62acac8fb84f"
+      },
+      {
+        "path": "application/p1-check.html",
+        "bytes": 1977,
+        "sha256": "51eb814618a952e51a3176d0d2bf1c7bdb7030c0382330962aa53d30d068c2ab"
+      },
+      {
+        "path": "icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "index.html",
+        "bytes": 7798,
+        "sha256": "3a44312a362a09c8a6e2e742078a67288b22c7d78ee03f6fd2e9c8264f6c157a"
+      },
+      {
+        "path": "manifest.webmanifest",
+        "bytes": 499,
+        "sha256": "416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"
+      },
+      {
+        "path": "prueba-audio/app.js",
+        "bytes": 15259,
+        "sha256": "f2571b93e04efd036b90fbde3e0bc4837a3e7aa6209f0feea6b378327c0ec741"
+      },
+      {
+        "path": "prueba-audio/icons/apple-touch-icon.png",
+        "bytes": 3411,
+        "sha256": "86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"
+      },
+      {
+        "path": "prueba-audio/icons/icon-192.png",
+        "bytes": 3564,
+        "sha256": "2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"
+      },
+      {
+        "path": "prueba-audio/icons/icon-512.png",
+        "bytes": 8870,
+        "sha256": "9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"
+      },
+      {
+        "path": "prueba-audio/index.html",
+        "bytes": 5810,
+        "sha256": "74f637aaf16c5d3984425f362927eac4f5ea634423c3395f3a0d6237fc059cf9"
+      },
+      {
+        "path": "prueba-audio/manifest.webmanifest",
+        "bytes": 581,
+        "sha256": "7daae2a54616aa830ae3e4343acca0c5dbe08f67f0967aabb61812ae911f67ba"
+      },
+      {
+        "path": "prueba-audio/resolver.js",
+        "bytes": 4843,
+        "sha256": "4ecf2b7ea9f8b5376f5283582553e16112b42c12fb252c53b9664fd3563e82f6"
+      },
+      {
+        "path": "prueba-audio/sw.js",
+        "bytes": 3235,
+        "sha256": "63efadf107c51bae786b70a08bf8b8c4837af1339cbb2f7e752ae900b9ea884e"
+      },
+      {
+        "path": "sw.js",
+        "bytes": 10618,
+        "sha256": "aa50cd7b74d0a49234c754cbf07dc2bc3353194259361bc8f25ba6d0886437c7"
+      }
+    ],
+    "buildLog": {
+      "path": "artifacts/pwa-port/downloads-parity-build-2026-10-24.log",
+      "bytes": 1992,
+      "sha256": "df4d1b29873103698d6fdd4fe4721032c22851359e2bfb9ef68636184e0d5558"
+    }
+  },
+  "publication": {
+    "verified": true,
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "c7e669fe29c769473232caebb060ca2331ffd898",
+    "tree": "59164acd6bd82f2f4f161dec1b6932fdf8120ea1",
+    "source_hash": "0cc5ba5d1e9225505e51c993da4e3fc08c357c270a455aaa44d1efb1f85da884",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "435e0dc36a054099",
+    "workflow": "https://github.com/diad87/pletina/actions/runs/40073366431",
+    "workflowConclusion": "success",
+    "publicFilesPassed": 33,
+    "report": {
+      "path": "artifacts/pwa-deploy/public-files-435e0dc36a054099.json",
+      "bytes": 10937,
+      "sha256": "46fb00e96c3b0e8812811a08823111a54cf7ddf39af22c8badd3f868f7204df2"
+    },
+    "workflowReport": {
+      "path": "artifacts/pwa-deploy/workflow-435e0dc36a054099.json",
+      "bytes": 191,
+      "sha256": "eff009102fe6b4255c5ee3ae6076d33c0efa377a91d7113c57d2262e957ce53d"
+    },
+    "dryRun": {
+      "path": "artifacts/pwa-port/downloads-parity-publish-dry-run-435e0dc36a054099.json",
+      "bytes": 1521,
+      "sha256": "bbc58d5d2cd6bb7e0b6a31e468e15072d0964227fe1899a2509109f635f4bcdd"
+    }
+  },
+  "realProvider": {
+    "newLiveProviderCanaryExecuted": false,
+    "priorEvidenceReassigned": false
+  },
+  "limits": {
+    "universalAvailabilityClaimed": false,
+    "niNiNiPersistent403Resolved": false,
+    "newPhysicalAndroidTest": false,
+    "newPhysicalIOSTest": false,
+    "screenOffVerifiedForThisBuild": false,
+    "backgroundDownloadsGuaranteed": false,
+    "APKMigration": false,
+    "androidAuto": false,
+    "carPlay": false
+  },
+  "productSources": [
+    {
+      "path": "web-port/download-store.ts",
+      "bytes": 14874,
+      "sha256": "b288268c9cc1ec890ac31442c0510551b944d8525dcc3b3263b97ff073f23775"
+    },
+    {
+      "path": "src/lib/downloads.svelte.ts",
+      "bytes": 9617,
+      "sha256": "ce3f559465d24e720c72814137ca2b929f15636791095bba43a9ce65662260fe"
+    },
+    {
+      "path": "src/views/DownloadsView.svelte",
+      "bytes": 8588,
+      "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+    },
+    {
+      "path": "web-port/storage.ts",
+      "bytes": 47167,
+      "sha256": "b35ad7c939ec01929988130e60ffd022423ddd9a08cce1b53d0f8f7f83fe78d9"
+    },
+    {
+      "path": "web-port/downloads.ts",
+      "bytes": 25724,
+      "sha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868"
+    },
+    {
+      "path": "web-port/audio.ts",
+      "bytes": 26966,
+      "sha256": "5909429d59785f1e0a55f8dd105d96c15f7a311d167aa9114177c81c86ef0014"
+    },
+    {
+      "path": "web-port/podcast-audio.ts",
+      "bytes": 2164,
+      "sha256": "82e18ada8973dd07b5e7e126e0df03bc43cad1a759f14e09cc54c54995c9d056"
+    },
+    {
+      "path": "web-port/youtube-playable.ts",
+      "bytes": 1188,
+      "sha256": "171279fb6e6b967ef30d643b10979b45d70921b71959c7aee7e35a1c1fd8a804"
+    },
+    {
+      "path": "web-port/youtube.ts",
+      "bytes": 28480,
+      "sha256": "58ed574f962a075549523b894f345b1af144c05da804e90bac4f68f4ce874c91"
+    },
+    {
+      "path": "pwa/sw.js",
+      "bytes": 7806,
+      "sha256": "27424d9b93e93960353ffdf2c41d2cd673e3828bbab8315a1263e1846571d300"
+    }
+  ],
+  "sourceBindingPolicy": "Snapshots and raw reports retain the exact bytes and scope of each negative or intermediate observer. Only final successful build-specific reports supply final counts.",
+  "evidence": [
+    {
+      "path": "artifacts/pwa-deploy/public-files-435e0dc36a054099.json",
+      "bytes": 10937,
+      "sha256": "46fb00e96c3b0e8812811a08823111a54cf7ddf39af22c8badd3f868f7204df2"
+    },
+    {
+      "path": "artifacts/pwa-deploy/state.json",
+      "bytes": 337,
+      "sha256": "3ba2cc7a18c0d7b1df516649b20cc52a976593f9fff059556d25eb26d74e1b68"
+    },
+    {
+      "path": "artifacts/pwa-deploy/workflow-435e0dc36a054099.json",
+      "bytes": 191,
+      "sha256": "eff009102fe6b4255c5ee3ae6076d33c0efa377a91d7113c57d2262e957ce53d"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-frozen-copy.initial.json",
+      "bytes": 13659,
+      "sha256": "67614caf6830a4a3605e764342f2d7eb9543fd7462791e14370a7b37667a2edd"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-frozen-copy.json",
+      "bytes": 28254,
+      "sha256": "8fbfeddd9799a17ff5589609d1b16e7228e8f15fc1813cb88456cd44dbc533cd"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/build-pwa.mjs",
+      "bytes": 7964,
+      "sha256": "95b2d1190f8fb8c41297777e813f69769af5648400ca56c5aba6dd5a6e19029d"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/preview-pwa.mjs",
+      "bytes": 2216,
+      "sha256": "7a08162d1379c0ffe451af84753e8be71f4ad00eb7e2e07fca323f8df857acdb"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/fixtures/silence-12s.m4a",
+      "bytes": 5002,
+      "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/fixtures/silence-12s.webm",
+      "bytes": 52225,
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/fixtures/silence-90s.m4a",
+      "bytes": 32095,
+      "sha256": "74aa70b375092504de10410f0a079b307ebb094a3040f2d138f411ff583973f7"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/harness.mjs",
+      "bytes": 15609,
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/media-scenarios.mjs",
+      "bytes": 188505,
+      "sha256": "bcb2ed1b78f4777f18becd600cc8a422841d600aee809917c4c55363c1cecbd2"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/provider-fixtures.mjs",
+      "bytes": 61522,
+      "sha256": "99c3e579d9e995c3db36368fa6f8f1e69130056ba90398dec3066b9da2e7066f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/run.mjs",
+      "bytes": 16699,
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/scripts/tests/e2e/webkit-network-transport.mjs",
+      "bytes": 6486,
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/components/DownloadButton.svelte",
+      "bytes": 2640,
+      "sha256": "b1232973057176e2dd607635535fa019ee51e9d3239727a9df50b80f504d3ffc"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/lib/actions.ts",
+      "bytes": 6977,
+      "sha256": "a146f50a892ea810409c105c392608b9531502a24e357df83fcab908db627ab8"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/lib/api.ts",
+      "bytes": 11805,
+      "sha256": "d463eacf1e22139f4935957468c9bbf037c1be662c35be1d6701f7560ef65e0c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/lib/downloads.svelte.ts",
+      "bytes": 9617,
+      "sha256": "ce3f559465d24e720c72814137ca2b929f15636791095bba43a9ce65662260fe"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/lib/player.svelte.ts",
+      "bytes": 52622,
+      "sha256": "ec35149c9d18cb2437979e5e108c3406a1747e07e9399fb32bf8311bec3f6b6e"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/views/DownloadsView.svelte",
+      "bytes": 8588,
+      "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/src/views/PodcastView.svelte",
+      "bytes": 12737,
+      "sha256": "3047d6b21720f36a4d15cc9f3fec0bd709772cdffc54a23c03dadbe611bd2ac1"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/audio.ts",
+      "bytes": 26966,
+      "sha256": "5909429d59785f1e0a55f8dd105d96c15f7a311d167aa9114177c81c86ef0014"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/download-store.ts",
+      "bytes": 14874,
+      "sha256": "b288268c9cc1ec890ac31442c0510551b944d8525dcc3b3263b97ff073f23775"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/downloads.ts",
+      "bytes": 25724,
+      "sha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/podcast-audio.ts",
+      "bytes": 2164,
+      "sha256": "82e18ada8973dd07b5e7e126e0df03bc43cad1a759f14e09cc54c54995c9d056"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/youtube-p1-probe.ts",
+      "bytes": 11251,
+      "sha256": "1341ae91d40e67a42de8ef9ddbe3f5cafe83caa1b895c79bc3980f8cd741b801"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/youtube-p1.ts",
+      "bytes": 22038,
+      "sha256": "7a47d495e7f256911a390807bd3143518e31d234ce18448c00b7e7f227c6bc62"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/youtube-playable.ts",
+      "bytes": 1188,
+      "sha256": "171279fb6e6b967ef30d643b10979b45d70921b71959c7aee7e35a1c1fd8a804"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-sources/web-port/youtube.ts",
+      "bytes": 28480,
+      "sha256": "58ed574f962a075549523b894f345b1af144c05da804e90bac4f68f4ce874c91"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json",
+      "bytes": 73131,
+      "sha256": "a5cba9057809330533275804faa424f0ca7b86a258c0750ce7084ac8437dc218"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/webkit-iphone-layout/report.json",
+      "bytes": 61352,
+      "sha256": "fbcfc681f563c662dd97b78b0ae0a92f207e2d012ab660bdb238b4b9dcb04403"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-frozen-copy.initial.json",
+      "bytes": 13284,
+      "sha256": "82fff10e9d3026ca09bb609b0f0babb734f689cd131a1cdd344c6faddc3b55ed"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-frozen-copy.json",
+      "bytes": 35662,
+      "sha256": "7f1bf29136d7f849744fccc775a5cc7fb65e7bff7f15309791e22c5bfebf3edb"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-manifest.json",
+      "bytes": 7577,
+      "sha256": "5e83f4bea70fdebf284cf6f720045d7a1850974f2e69dcbcbd4a545b2719d602"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/build-pwa.mjs",
+      "bytes": 7964,
+      "sha256": "95b2d1190f8fb8c41297777e813f69769af5648400ca56c5aba6dd5a6e19029d"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/preview-pwa.mjs",
+      "bytes": 2216,
+      "sha256": "7a08162d1379c0ffe451af84753e8be71f4ad00eb7e2e07fca323f8df857acdb"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/fixtures/silence-12s.m4a",
+      "bytes": 5002,
+      "sha256": "f21d9207074ec8d99e8fc64257f6d221c3901829c215bf06ee258f83199c9612"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/fixtures/silence-12s.webm",
+      "bytes": 52225,
+      "sha256": "6d984bec75a665dfa9c10e66154f46643d4d80522c7a16a2c64eefa630a58ec4"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/fixtures/silence-90s.m4a",
+      "bytes": 32095,
+      "sha256": "74aa70b375092504de10410f0a079b307ebb094a3040f2d138f411ff583973f7"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/harness.mjs",
+      "bytes": 15609,
+      "sha256": "5fd24f1fc81348044c0403a6f6e2686d57cae61293f30c3401d770256126a739"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/media-scenarios.mjs",
+      "bytes": 188255,
+      "sha256": "a0e1161a58187e36119427b546fdd536c89f8edefae08a650dee2a995d74e803"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/provider-fixtures.mjs",
+      "bytes": 61522,
+      "sha256": "99c3e579d9e995c3db36368fa6f8f1e69130056ba90398dec3066b9da2e7066f"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/run.mjs",
+      "bytes": 16699,
+      "sha256": "8970c766c674b5969e2be70a3f30963c269e4989a60a2b870f74221ecfaeac53"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/scripts/tests/e2e/webkit-network-transport.mjs",
+      "bytes": 6486,
+      "sha256": "5f10be17d00faf45d1ccccfc1f59118d30b30fbb5539f3c68ee68d32ca09f48e"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/components/DownloadButton.svelte",
+      "bytes": 2640,
+      "sha256": "b1232973057176e2dd607635535fa019ee51e9d3239727a9df50b80f504d3ffc"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/lib/actions.ts",
+      "bytes": 6977,
+      "sha256": "a146f50a892ea810409c105c392608b9531502a24e357df83fcab908db627ab8"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/lib/api.ts",
+      "bytes": 11805,
+      "sha256": "d463eacf1e22139f4935957468c9bbf037c1be662c35be1d6701f7560ef65e0c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/lib/downloads.svelte.ts",
+      "bytes": 9617,
+      "sha256": "ce3f559465d24e720c72814137ca2b929f15636791095bba43a9ce65662260fe"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/lib/player.svelte.ts",
+      "bytes": 52622,
+      "sha256": "ec35149c9d18cb2437979e5e108c3406a1747e07e9399fb32bf8311bec3f6b6e"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/views/DownloadsView.svelte",
+      "bytes": 8588,
+      "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/src/views/PodcastView.svelte",
+      "bytes": 12737,
+      "sha256": "3047d6b21720f36a4d15cc9f3fec0bd709772cdffc54a23c03dadbe611bd2ac1"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/audio.ts",
+      "bytes": 26966,
+      "sha256": "5909429d59785f1e0a55f8dd105d96c15f7a311d167aa9114177c81c86ef0014"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/download-store.ts",
+      "bytes": 14874,
+      "sha256": "b288268c9cc1ec890ac31442c0510551b944d8525dcc3b3263b97ff073f23775"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/downloads.ts",
+      "bytes": 25724,
+      "sha256": "e9a9bc663b281e6eb396eed2dbbf6786992c470805da104e171b40e6b6382868"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/podcast-audio.ts",
+      "bytes": 2164,
+      "sha256": "82e18ada8973dd07b5e7e126e0df03bc43cad1a759f14e09cc54c54995c9d056"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/youtube-p1-probe.ts",
+      "bytes": 11251,
+      "sha256": "1341ae91d40e67a42de8ef9ddbe3f5cafe83caa1b895c79bc3980f8cd741b801"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/youtube-p1.ts",
+      "bytes": 22038,
+      "sha256": "7a47d495e7f256911a390807bd3143518e31d234ce18448c00b7e7f227c6bc62"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/youtube-playable.ts",
+      "bytes": 1188,
+      "sha256": "171279fb6e6b967ef30d643b10979b45d70921b71959c7aee7e35a1c1fd8a804"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-sources/web-port/youtube.ts",
+      "bytes": 28480,
+      "sha256": "58ed574f962a075549523b894f345b1af144c05da804e90bac4f68f4ce874c91"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+      "bytes": 112977,
+      "sha256": "f438a5d38a4fe34cf8f09a4db09ed1001f196e99916c036ba56e16b29566506a"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/webkit-iphone-layout/05-media-downloaded-library-native-order-and-offline-collection-playback.png",
+      "bytes": 63336,
+      "sha256": "0ebde5b98e83df278e0c4e4389b65adc25e0a91c56085af6d50f6d639dcda487"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/webkit-iphone-layout/06-media-download-list-reconciles-evicted-copy-and-allows-redownload-with.png",
+      "bytes": 63336,
+      "sha256": "0ebde5b98e83df278e0c4e4389b65adc25e0a91c56085af6d50f6d639dcda487"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/webkit-iphone-layout/report.json",
+      "bytes": 96257,
+      "sha256": "0aa7eb7f156cce8c8dbadb661ef2391569cde09df196265864b03c169d2ae371"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/chromium-android-layout/report.json",
+      "bytes": 80376,
+      "sha256": "b68ab631370e1b416fedd4385bcf3426f0bbe2192b0da4e727280159b81d7aea"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/firefox-narrow/report.json",
+      "bytes": 39115,
+      "sha256": "3f7dd4645890c3dd0176a62ba4465bb02e584ce9ffdf26341a7a1c592145d329"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win-expanded-final/summary.json",
+      "bytes": 141016,
+      "sha256": "7586c847bdf1b0014127d42510ccc0b62dc178a58d657d438179e930faa6cb6b"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/chromium-android-layout/05-media-downloaded-library-native-order-and-offline-collection-playback.png",
+      "bytes": 65030,
+      "sha256": "e6795c5f032440e53a473ea7afe1d6ea9b2c743a89689eb7712f505792741781"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/chromium-android-layout/06-media-download-list-reconciles-evicted-copy-and-allows-redownload-with.png",
+      "bytes": 65030,
+      "sha256": "e6795c5f032440e53a473ea7afe1d6ea9b2c743a89689eb7712f505792741781"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/chromium-android-layout/report.json",
+      "bytes": 94422,
+      "sha256": "e0609bf4e22c7a4e43ef611c185b2f4c2c3d8c79fe778993152a71a9fed18607"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/firefox-narrow/05-media-downloaded-library-native-order-and-offline-collection-playback.png",
+      "bytes": 51632,
+      "sha256": "2297c01193f75725ceff0898247869f892d0e519440f96dc49df77a23f124246"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/firefox-narrow/06-media-download-list-reconciles-evicted-copy-and-allows-redownload-with.png",
+      "bytes": 51632,
+      "sha256": "2297c01193f75725ceff0898247869f892d0e519440f96dc49df77a23f124246"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/firefox-narrow/report.json",
+      "bytes": 58911,
+      "sha256": "bd20d72e025e95b16421b4b0ef007d8e4c8d1c58615a4fba4db7e38c3ff252bc"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-win/summary.json",
+      "bytes": 178871,
+      "sha256": "e4cba6b9175dc58560a3b8c530555c4d3afc066ca201686fbf365bc4e95cdf0b"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-after-2026-10-24.log",
+      "bytes": 1294,
+      "sha256": "4e38f8b816cc8acf589cf6b3a302a739124a800a246ef3d1c1cb6c8f882c4194"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-before-2026-10-24.log",
+      "bytes": 4948,
+      "sha256": "7b69b07b13173222c56f33b56b37e04927f1782d5a07a97022f3a92b0ac8701d"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-frozen-2026-10-24.log",
+      "bytes": 5354,
+      "sha256": "49f5c5cf36ed68efadcf6f3b9c4decfd788d42e15d79071303cea49dbb80f349"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-sources/manifest.json",
+      "bytes": 1250,
+      "sha256": "cc573a3e45e639b0eeef905a11a1bc5a004c6672157efdb1689c5c0f92915fb0"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-sources/scripts/tests/web-download-store.test.mjs",
+      "bytes": 13227,
+      "sha256": "d074a934cc0b2e9dba06cb21a7c958c153a8bf91e92b2c85a67a062e45f49722"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-sources/web-port/download-store.ts",
+      "bytes": 12090,
+      "sha256": "d08fdcddd5961018926b6be48bfdedab9dece0c7146bc00b4273ec6e986b35ab"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-sources/web-port/library-backup.ts",
+      "bytes": 16395,
+      "sha256": "362bb10a2d2334bbea1042248d16513f1c46ea7cbacf4bd094219f3d4cbedf02"
+    },
+    {
+      "path": "artifacts/pwa-port/download-order-negative-sources/web-port/storage.ts",
+      "bytes": 47167,
+      "sha256": "b35ad7c939ec01929988130e60ffd022423ddd9a08cce1b53d0f8f7f83fe78d9"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-after-2026-10-24.log",
+      "bytes": 2051,
+      "sha256": "3750cc4ce3123695ff7ae0c9c81c0047853f13c57f67052b734111558b6dff82"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-before-2026-10-24.log",
+      "bytes": 6241,
+      "sha256": "00934118f6023b2e4a00538668f677e2e806fc41e25dcac93eb6e8d50beb40f8"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-frozen-2026-10-24.log",
+      "bytes": 6714,
+      "sha256": "3ae74cd6305900eed3fcf30e52e75ec21fa9861efa36db1b6c7d8192180ffe0b"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/manifest.json",
+      "bytes": 1348,
+      "sha256": "d781471c1ae71665e1f051aac4d09c784a6217ac1f055418355f62aa031cd45e"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/scripts/tests/web-download-store.test.mjs",
+      "bytes": 16438,
+      "sha256": "455a9c5c0b4c239e8ed897ec30749ac85a7fc30183cb0af6b7bfe881930e5c86"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/web-port/download-store.ts",
+      "bytes": 13358,
+      "sha256": "f34e6c523470fdb6dfec777b56ad1e86cfca1e050a574ca7f938c970a0f291ec"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/web-port/library-backup.ts",
+      "bytes": 16395,
+      "sha256": "362bb10a2d2334bbea1042248d16513f1c46ea7cbacf4bd094219f3d4cbedf02"
+    },
+    {
+      "path": "artifacts/pwa-port/download-stale-pointer-negative-sources/web-port/storage.ts",
+      "bytes": 47167,
+      "sha256": "b35ad7c939ec01929988130e60ffd022423ddd9a08cce1b53d0f8f7f83fe78d9"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-webkit-expanded-final.log",
+      "bytes": 1432,
+      "sha256": "2f2a9d9cb7c89a5a454865468a90c65a9a284ef960ace5e60a890a0c6a2e3f36"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-webkit.log",
+      "bytes": 2598,
+      "sha256": "bb8135b6fe703275fdff8677169ed4e9573ef296e743f4fb524a286710933b67"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-win-expanded-final.log",
+      "bytes": 2193,
+      "sha256": "327e037d879884696cbeb876e59ef32983e4514d051461324e03fc306ca50989"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-win.log",
+      "bytes": 4527,
+      "sha256": "eace73bfbcecc4a73e1d2acef65aa8e2716d717d9389cc1d7756bd3331dd4150"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-build-2026-10-24.log",
+      "bytes": 1992,
+      "sha256": "df4d1b29873103698d6fdd4fe4721032c22851359e2bfb9ef68636184e0d5558"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-logic-final-2026-10-24.log",
+      "bytes": 89975,
+      "sha256": "d269bdda67110e0e92ab2fe0e89426a4cda163dac6601aefca57250601a17604"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-native-frontend-build-2026-10-24.log",
+      "bytes": 1765,
+      "sha256": "ae13878ff676ae54ec76d7ef75846c81dbbb0f020d83db3fa5418b7512538a1d"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-public-verify-435e0dc36a054099.log",
+      "bytes": 165,
+      "sha256": "9333468d82afea00a8439f7c8c82303110c994476bbcae57048a635c65d7b0d6"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-publish-435e0dc36a054099.log",
+      "bytes": 310,
+      "sha256": "ac3099cd891ad95f47a45f0129435d647643ea4fc35a75f70e944626bd8db1b5"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-publish-dry-run-435e0dc36a054099.json",
+      "bytes": 1521,
+      "sha256": "bbc58d5d2cd6bb7e0b6a31e468e15072d0964227fe1899a2509109f635f4bcdd"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-release-manifest-generator.mjs",
+      "bytes": 19601,
+      "sha256": "4ca2dce8fe8f52b6c3b45765d20d5ca4c014470792bcfca0903748d0f968f479"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-types-final-2026-10-24.log",
+      "bytes": 271,
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-update-435e0dc36a054099.log",
+      "bytes": 1205,
+      "sha256": "d37ec382f865eb23de369e591d3a50f64c7ee046f5065a64e980db87f9152499"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-workflow-435e0dc36a054099.log",
+      "bytes": 4560,
+      "sha256": "0fcd93da91153f7197b6c08f42c059e9cd9e76e8b1963003f3d9cec9a15268b5"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-after-2026-10-24.log",
+      "bytes": 1212,
+      "sha256": "f64435c5276b38ea23015f2dd142c46254fccd36e76f2334f5d191aac42a40fe"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-after-final-2026-10-24.log",
+      "bytes": 1322,
+      "sha256": "551d8b98a846895e7f5f88af77f18cc5e717a4deed9f7dfd5392401c31975954"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-before-2026-10-24.log",
+      "bytes": 4209,
+      "sha256": "87d8d171c4481fd6934dcf760bf8f354e8e1b17725c72df6518c85696e672e77"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-directed-2026-10-24.log",
+      "bytes": 4651,
+      "sha256": "9dbcf9e3fe2dbc01e07dd0db9a7d81ffa1afc71e15c3b30382443dae9412f493"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-effect-before-untrack-2026-10-24.log",
+      "bytes": 980,
+      "sha256": "cb9033b0a53a49e97ec05f46d9ffcef0f40bd93342f25fa577839022bb4664aa"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-effect-server-reactivity-observer-2026-10-24.log",
+      "bytes": 233,
+      "sha256": "b44b6352118a6573bf55bc6bdd05e4aa34cde71b925ce115c34ec57dfb78e136"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-manifest.json",
+      "bytes": 7707,
+      "sha256": "9bd5a0ca18c38d1c103cf58b44daab61cdc02a7a759d0771206eb1a57d3f8c5c"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-frozen-2026-10-24.log",
+      "bytes": 4872,
+      "sha256": "4b6768b9c50afc1d66ae10a65982545209652b0926f1646149406fa1e9da25eb"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs",
+      "bytes": 33586,
+      "sha256": "98574782d62fa9064454b0c744c6706f2880e2d2f5f0ffa14373118ee57aa321"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/lib/downloads.svelte.ts",
+      "bytes": 8431,
+      "sha256": "b01cfee879ed237f3ee5e95596f9c0df1b95fc00d79d81ba42f86f62322525ba"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/views/DownloadsView.svelte",
+      "bytes": 8570,
+      "sha256": "15a9a153095a11d0f4383f9ed46d41ecac2e102fbe6bb10e0bac60fd40caea92"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/views/ImportPlaylist.svelte",
+      "bytes": 15629,
+      "sha256": "4d9692a2097f98d7d9d4555fda579e8979361b7642fe77bab81d4f8422ca8382"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-frozen-2026-10-24.log",
+      "bytes": 1122,
+      "sha256": "cacaee03a5978eb52a690bdf0255f429ab7b40d5ea1fbbbd86dcada164cd95ed"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/scripts/tests/audit-frontend.test.mjs",
+      "bytes": 33586,
+      "sha256": "98574782d62fa9064454b0c744c6706f2880e2d2f5f0ffa14373118ee57aa321"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/lib/downloads.svelte.ts",
+      "bytes": 9569,
+      "sha256": "079b707eab88a02276a3e6a0b6105716f8a5bd5ce71a38dc4ffce3f00b176abf"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/views/DownloadsView.svelte",
+      "bytes": 8588,
+      "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/views/ImportPlaylist.svelte",
+      "bytes": 15629,
+      "sha256": "4d9692a2097f98d7d9d4555fda579e8979361b7642fe77bab81d4f8422ca8382"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-stale-badges-types-2026-10-24.log",
+      "bytes": 271,
+      "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+    },
+    {
+      "path": "artifacts/pwa-port/update-e2e-435e0dc36a054099.json",
+      "bytes": 22880,
+      "sha256": "ab798d35a3cdf29f8eaefd01a8ae965335fa178e108c1cd3076e344477dbbb59"
+    }
+  ]
+}

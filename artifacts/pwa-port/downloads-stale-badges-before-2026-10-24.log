@@ -1,0 +1,101 @@
+✖ PWA-DL-LIST: opening downloads clears evicted badges and permits downloading the missing audio again (5.639ms)
+✖ PWA-DL-LIST: a verified local listing adopts copies completed in another window without writing jobs (1.7424ms)
+✔ PWA-DL-LIST: an unavailable listing preserves badges and reports the read failure (1.5295ms)
+✖ PWA-DL-LIST: listing cannot clear pending rows or promote an active transfer to done (1.3454ms)
+✔ PWA-DL-LIST: a completion after the read starts survives an older missing-copy result (0.8719ms)
+✔ PWA-DL-LIST: an older read cannot resurrect an explicitly removed download (0.7976ms)
+✔ PWA-DL-LIST: a replacement transfer survives stale metadata from its previous copy (0.7004ms)
+✖ PWA-DL-LIST: overlapping reads reconcile only the latest requested snapshot (0.7153ms)
+✔ PWA-DL-LIST: a partial removal failure is not undone by an already pending read (0.735ms)
+✔ PWA-DL-LIST: player-side local-copy corrections survive an older listing (1.0549ms)
+✔ PWA-DL-LIST: native listings retain their previous direct read behavior (0.5149ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 7
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9949.774
+
+✖ failing tests:
+
+test at scripts\tests\audit-frontend.test.mjs:79:1
+✖ PWA-DL-LIST: opening downloads clears evicted badges and permits downloading the missing audio again (5.639ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   1,
+      2
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/audit-frontend.test.mjs:84:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 1, 2 ],
+    expected: [ 2 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\audit-frontend.test.mjs:91:1
+✖ PWA-DL-LIST: a verified local listing adopts copies completed in another window without writing jobs (1.7424ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   2
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/audit-frontend.test.mjs:97:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 2 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\audit-frontend.test.mjs:112:1
+✖ PWA-DL-LIST: listing cannot clear pending rows or promote an active transfer to done (1.3454ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   4
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/audit-frontend.test.mjs:118:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 4 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at scripts\tests\audit-frontend.test.mjs:165:1
+✖ PWA-DL-LIST: overlapping reads reconcile only the latest requested snapshot (0.7153ms)
+  AssertionError [ERR_ASSERTION]: An older request cannot restore an evicted badge
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/scripts/tests/audit-frontend.test.mjs:179:14)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

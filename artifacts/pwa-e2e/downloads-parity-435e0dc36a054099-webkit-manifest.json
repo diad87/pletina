@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "completedAt": "2026-10-24T07:13:40.252Z",
+  "build": "435e0dc36a054099",
+  "sourceCommit": "cd5e6d1d10a2732181b6c6b9d2b2204e7432ed44",
+  "scope": "Frozen compiled PWA on desktop WebKit Linux, webkit-iphone-layout390x844 with emulated UA/touch. Controlled HTTP providers and real native silent AAC decoder, IndexedDB, CacheStorage and production service worker. Not a physical iPhone, live-provider, audible sound, long-episode or background-download test.",
+  "counts": {
+    "pass": 11,
+    "fail": 0,
+    "blocked": 0,
+    "unsupported": 0
+  },
+  "effectiveChecks": {
+    "features": 8,
+    "preparations": 3,
+    "totalUnique": 11
+  },
+  "consolidation": "Nine previously passing unique v1 IDs plus the two affected v2 scenarios. The three repeated setup/selection preparations in v2 are not added. Both original v1 failures and exact source snapshots remain intact.",
+  "qaCorrection": {
+    "productChanged": false,
+    "compiledDistributionChanged": false,
+    "functionalAssertionsChanged": false,
+    "reason": "The initial QA preparation expected twelve visible search rows while Search displays eight until the visible Ver más (12) button is pressed. V2 adds that UI click, when visible, in the two new scenarios before the unchanged twelve-title assertion. Both v1 failures occurred before any new scenario download.",
+    "previousMediaScenarioSha256": "a0e1161a58187e36119427b546fdd536c89f8edefae08a650dee2a995d74e803",
+    "finalMediaScenarioSha256": "bcb2ed1b78f4777f18becd600cc8a422841d600aee809917c4c55363c1cecbd2",
+    "originalScreenshotInspected": true
+  },
+  "browserVersion": "26.5",
+  "errors": 0,
+  "uniqueChecks": [
+    {
+      "name": "setup.open: install shell and open compiled application",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "setup.fixture: opaque-frame catalog requests are controlled",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.selection-html-audio",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.p1-opaque-download-completes-and-reloads-for-local-play-seek-with-providers-unavailable",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.downloads-serial-duplicate-suppression-and-cancel-pending",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.download-remove-all-cancel-preserves-files-and-reload-ui",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.download-offline-reload-play-seek-from-local-service-worker",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.download-removal-clears-pointer-body-and-ui",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.youtube-p1-podcast-download-button-serial-rollback-and-offline-progress-resume",
+      "status": "pass",
+      "from": "v1"
+    },
+    {
+      "name": "media.downloaded-library-native-order-and-offline-collection-playback",
+      "status": "pass",
+      "from": "v2"
+    },
+    {
+      "name": "media.download-list-reconciles-evicted-copy-and-allows-redownload-without-reload",
+      "status": "pass",
+      "from": "v2"
+    }
+  ],
+  "frozenDistributionInventorySha256": "6777c3640412fdec684a98260d0e62c148c4c902af3d4a0cd70c49c41ff7deb8",
+  "allSourcesAndDistributionUnchangedBeforeAfterEachRun": true,
+  "nativeOrder": {
+    "downloadedIds": [
+      101,
+      102,
+      105,
+      109
+    ],
+    "visibleIds": [
+      109,
+      105,
+      101,
+      102
+    ],
+    "metadata": [
+      {
+        "title": "Canción QA Nueve",
+        "artist": "Artista QA Dos",
+        "album": "Disco QA Tres",
+        "downloaded": true
+      },
+      {
+        "title": "Canción QA Cinco",
+        "artist": "Artista QA Uno",
+        "album": "Disco QA Dos",
+        "downloaded": true
+      },
+      {
+        "title": "Canción QA Uno",
+        "artist": "Artista QA Uno",
+        "album": "Disco QA Uno",
+        "downloaded": true
+      },
+      {
+        "title": "Canción QA Dos",
+        "artist": "Artista QA Uno",
+        "album": "Disco QA Uno",
+        "downloaded": true
+      }
+    ],
+    "collectionQueueIds": [
+      109,
+      105,
+      101,
+      102
+    ],
+    "automaticEnded": true,
+    "sameAudio": true,
+    "providerDelivery": {
+      "appProviderRequests": 0,
+      "externalFixtureDeliveries": 0,
+      "nativeMediaObservations": []
+    },
+    "networkMode": "origin-and-provider-unavailable",
+    "navigatorOfflineExpected": false
+  },
+  "eviction": {
+    "trackId": 101,
+    "fault": "Only the committed CacheStorage body was deleted; no IDB or done state was seeded",
+    "stalePointerRetired": true,
+    "staleDoneMarkerCleared": true,
+    "menuAllowedNewDownload": true,
+    "replacementUsesNewStage": true,
+    "documentReloaded": false,
+    "events": [
+      "queued",
+      "downloading",
+      "done"
+    ],
+    "database": {
+      "cacheEntries": 1,
+      "rows": [
+        {
+          "id": 101,
+          "title": "Canción QA Uno",
+          "size": 5002,
+          "present": true,
+          "type": "opaque"
+        }
+      ]
+    },
+    "activeAudio": {
+      "index": 0,
+      "playing": true,
+      "paused": false,
+      "time": 0.157717,
+      "duration": 12,
+      "source": true,
+      "local": true,
+      "host": "127.0.0.1",
+      "error": null,
+      "muted": false,
+      "volume": 0.7999907732009888,
+      "readyState": 4
+    }
+  },
+  "resources": {
+    "v1": {
+      "browserClosed": true,
+      "fixtureNetworkTransportClosed": true,
+      "previewServerClosed": true
+    },
+    "v2": {
+      "browserClosed": true,
+      "fixtureNetworkTransportClosed": true,
+      "previewServerClosed": true
+    }
+  },
+  "physicalAndroid": false,
+  "physicalIPhone": false,
+  "backgroundDownloadsVerified": false,
+  "bindings": [
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-frozen-copy.json",
+      "bytes": 35662,
+      "sha256": "7f1bf29136d7f849744fccc775a5cc7fb65e7bff7f15309791e22c5bfebf3edb"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final-frozen-copy.json",
+      "bytes": 28254,
+      "sha256": "8fbfeddd9799a17ff5589609d1b16e7228e8f15fc1813cb88456cd44dbc533cd"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/summary.json",
+      "bytes": 112977,
+      "sha256": "f438a5d38a4fe34cf8f09a4db09ed1001f196e99916c036ba56e16b29566506a"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit/webkit-iphone-layout/report.json",
+      "bytes": 96257,
+      "sha256": "0aa7eb7f156cce8c8dbadb661ef2391569cde09df196265864b03c169d2ae371"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/summary.json",
+      "bytes": 73131,
+      "sha256": "a5cba9057809330533275804faa424f0ca7b86a258c0750ce7084ac8437dc218"
+    },
+    {
+      "path": "artifacts/pwa-e2e/downloads-parity-435e0dc36a054099-webkit-expanded-final/webkit-iphone-layout/report.json",
+      "bytes": 61352,
+      "sha256": "fbcfc681f563c662dd97b78b0ae0a92f207e2d012ab660bdb238b4b9dcb04403"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-webkit.log",
+      "bytes": 2598,
+      "sha256": "bb8135b6fe703275fdff8677169ed4e9573ef296e743f4fb524a286710933b67"
+    },
+    {
+      "path": "artifacts/pwa-port/downloads-parity-435e0dc36a054099-webkit-expanded-final.log",
+      "bytes": 1432,
+      "sha256": "2f2a9d9cb7c89a5a454865468a90c65a9a284ef960ace5e60a890a0c6a2e3f36"
+    }
+  ]
+}

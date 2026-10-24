@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "scope": "Pure PWA UI completed-download badges reconciled from the authoritative local listing; native read behavior unchanged. No live-provider/physical-device/browser-E2E claim in this unit report.",
+  "originalProductCommit": "f8c714698566d26aa56adbcabbe3b40b73c6d04b",
+  "production": [
+    {
+      "path": "src/lib/downloads.svelte.ts",
+      "bytes": 9617,
+      "sha256": "ce3f559465d24e720c72814137ca2b929f15636791095bba43a9ce65662260fe"
+    },
+    {
+      "path": "src/views/DownloadsView.svelte",
+      "bytes": 8588,
+      "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+    }
+  ],
+  "test": {
+    "path": "scripts/tests/audit-frontend.test.mjs",
+    "bytes": 33586,
+    "sha256": "98574782d62fa9064454b0c744c6706f2880e2d2f5f0ffa14373118ee57aa321"
+  },
+  "dependencies": {
+    "lock": {
+      "path": "package-lock.json",
+      "bytes": 63130,
+      "sha256": "24ba10df53d0574f93fb33039dd494ef9f86d3dea85dfe584d51e3dcc8d7edb8"
+    },
+    "clientRuntime": "file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/node_modules/svelte/src/internal/client/index.js",
+    "reactiveCollections": "file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/node_modules/svelte/src/reactivity/index-client.js",
+    "note": "The browser collection source imports the same physical Svelte internal client modules passed to the compiled store, rather than Node server plain Map/Set exports."
+  },
+  "final": {
+    "directedNew": {
+      "tests": 12,
+      "passed": 12,
+      "failed": 0,
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-after-final-2026-10-24.log",
+        "bytes": 1322,
+        "sha256": "551d8b98a846895e7f5f88af77f18cc5e717a4deed9f7dfd5392401c31975954"
+      }
+    },
+    "fullFrontend": {
+      "tests": 47,
+      "passed": 47,
+      "failed": 0,
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-directed-2026-10-24.log",
+        "bytes": 4651,
+        "sha256": "9dbcf9e3fe2dbc01e07dd0db9a7d81ffa1afc71e15c3b30382443dae9412f493"
+      }
+    },
+    "types": {
+      "errors": 0,
+      "warnings": 0,
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-types-2026-10-24.log",
+        "bytes": 271,
+        "sha256": "d8b8e50a24ad4f21d2e5028f2348ee7beed52c582b91348af8ba167bbe1699a9"
+      }
+    }
+  },
+  "negatives": [
+    {
+      "variant": "baseline",
+      "command": "node --test --test-name-pattern \"PWA-DL-LIST:\" artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs",
+      "tests": 12,
+      "passed": 8,
+      "failed": 4,
+      "expectedNegative": true,
+      "files": [
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/lib/downloads.svelte.ts",
+          "bytes": 8431,
+          "sha256": "b01cfee879ed237f3ee5e95596f9c0df1b95fc00d79d81ba42f86f62322525ba"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/views/DownloadsView.svelte",
+          "bytes": 8570,
+          "sha256": "15a9a153095a11d0f4383f9ed46d41ecac2e102fbe6bb10e0bac60fd40caea92"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/src/views/ImportPlaylist.svelte",
+          "bytes": 15629,
+          "sha256": "4d9692a2097f98d7d9d4555fda579e8979361b7642fe77bab81d4f8422ca8382"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs",
+          "bytes": 33586,
+          "sha256": "98574782d62fa9064454b0c744c6706f2880e2d2f5f0ffa14373118ee57aa321"
+        }
+      ],
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-negative-baseline-frozen-2026-10-24.log",
+        "bytes": 4872,
+        "sha256": "4b6768b9c50afc1d66ae10a65982545209652b0926f1646149406fa1e9da25eb"
+      },
+      "meaning": "Frozen old production has no reconciliation. Tests use the exact old direct API read path when list() is absent. Four expected stale-badge failures; unchanged race/native controls remain passing."
+    },
+    {
+      "variant": "subscription",
+      "command": "node --test --test-name-pattern \"PWA-DL-LIST: reconciling\" artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/scripts/tests/audit-frontend.test.mjs",
+      "tests": 1,
+      "passed": 0,
+      "failed": 1,
+      "expectedNegative": true,
+      "files": [
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/lib/downloads.svelte.ts",
+          "bytes": 9569,
+          "sha256": "079b707eab88a02276a3e6a0b6105716f8a5bd5ce71a38dc4ffce3f00b176abf"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/views/DownloadsView.svelte",
+          "bytes": 8588,
+          "sha256": "37770626fd63c0c13ce01737bfc2c9549b1e1a413db179131d18bd7da958542c"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/src/views/ImportPlaylist.svelte",
+          "bytes": 15629,
+          "sha256": "4d9692a2097f98d7d9d4555fda579e8979361b7642fe77bab81d4f8422ca8382"
+        },
+        {
+          "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-sources/scripts/tests/audit-frontend.test.mjs",
+          "bytes": 33586,
+          "sha256": "98574782d62fa9064454b0c744c6706f2880e2d2f5f0ffa14373118ee57aa321"
+        }
+      ],
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-negative-subscription-frozen-2026-10-24.log",
+        "bytes": 1122,
+        "sha256": "cacaee03a5978eb52a690bdf0255f429ab7b40d5ea1fbbbd86dcada164cd95ed"
+      },
+      "meaning": "Isolated intermediate reconciliation without untrack reads the genuine reactive Set inside the view effect and produces a second listing request. Released code does not subscribe that snapshot."
+    }
+  ],
+  "initialObservations": [
+    {
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-before-2026-10-24.log",
+        "bytes": 4209,
+        "sha256": "87d8d171c4481fd6934dcf760bf8f354e8e1b17725c72df6518c85696e672e77"
+      },
+      "scope": "Initial eleven test cases against old production; Node default plain collections. Superseded for full twelve-case baseline evidence by the frozen baseline above."
+    },
+    {
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-after-2026-10-24.log",
+        "bytes": 1212,
+        "sha256": "f64435c5276b38ea23015f2dd142c46254fccd36e76f2334f5d191aac42a40fe"
+      },
+      "scope": "Intermediate eleven passing cases before the real reactive-effect observer was added."
+    },
+    {
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-effect-server-reactivity-observer-2026-10-24.log",
+        "bytes": 233,
+        "sha256": "b44b6352118a6573bf55bc6bdd05e4aa34cde71b925ce115c34ec57dfb78e136"
+      },
+      "scope": "Observer insufficiency: Node default svelte/reactivity exported plain Map/Set, so this single passing check did not prove lack of reactive read subscription. Raw report retained, excluded from final proof."
+    },
+    {
+      "report": {
+        "path": "artifacts/pwa-port/downloads-stale-badges-effect-before-untrack-2026-10-24.log",
+        "bytes": 980,
+        "sha256": "cb9033b0a53a49e97ec05f46d9ffcef0f40bd93342f25fa577839022bb4664aa"
+      },
+      "scope": "Corrected client-reactivity observer demonstrated the intermediate extra-read defect before adding untrack; immutable reproduction is separately bound above."
+    }
+  ]
+}

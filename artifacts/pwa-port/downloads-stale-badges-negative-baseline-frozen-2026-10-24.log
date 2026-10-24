@@ -1,0 +1,102 @@
+✖ PWA-DL-LIST: opening downloads clears evicted badges and permits downloading the missing audio again (10.0989ms)
+✖ PWA-DL-LIST: a verified local listing adopts copies completed in another window without writing jobs (2.5507ms)
+✔ PWA-DL-LIST: reconciling the real Svelte set does not subscribe the view effect to its own read (5.5463ms)
+✔ PWA-DL-LIST: an unavailable listing preserves badges and reports the read failure (2.5432ms)
+✖ PWA-DL-LIST: listing cannot clear pending rows or promote an active transfer to done (3.8923ms)
+✔ PWA-DL-LIST: a completion after the read starts survives an older missing-copy result (1.6931ms)
+✔ PWA-DL-LIST: an older read cannot resurrect an explicitly removed download (1.5668ms)
+✔ PWA-DL-LIST: a replacement transfer survives stale metadata from its previous copy (1.2299ms)
+✖ PWA-DL-LIST: overlapping reads reconcile only the latest requested snapshot (1.6648ms)
+✔ PWA-DL-LIST: a partial removal failure is not undone by an already pending read (1.1156ms)
+✔ PWA-DL-LIST: player-side local-copy corrections survive an older listing (2.5363ms)
+✔ PWA-DL-LIST: native listings retain their previous direct read behavior (0.9329ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 8
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2166.5243
+
+✖ failing tests:
+
+test at artifacts\pwa-port\downloads-stale-badges-negative-baseline-sources\scripts\tests\audit-frontend.test.mjs:83:1
+✖ PWA-DL-LIST: opening downloads clears evicted badges and permits downloading the missing audio again (10.0989ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   1,
+      2
+    ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs:88:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 1, 2 ],
+    expected: [ 2 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\downloads-stale-badges-negative-baseline-sources\scripts\tests\audit-frontend.test.mjs:95:1
+✖ PWA-DL-LIST: a verified local listing adopts copies completed in another window without writing jobs (2.5507ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   2
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs:101:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 2 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\downloads-stale-badges-negative-baseline-sources\scripts\tests\audit-frontend.test.mjs:133:1
+✖ PWA-DL-LIST: listing cannot clear pending rows or promote an active transfer to done (3.8923ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   4
+  - ]
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs:139:10)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ 4 ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at artifacts\pwa-port\downloads-stale-badges-negative-baseline-sources\scripts\tests\audit-frontend.test.mjs:186:1
+✖ PWA-DL-LIST: overlapping reads reconcile only the latest requested snapshot (1.6648ms)
+  AssertionError [ERR_ASSERTION]: An older request cannot restore an evicted badge
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///C:/Users/iunan/.codex/worktrees/pwa-0-11-2-port/musify/artifacts/pwa-port/downloads-stale-badges-negative-baseline-sources/scripts/tests/audit-frontend.test.mjs:200:14)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
