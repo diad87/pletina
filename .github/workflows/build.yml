@@ -75,8 +75,24 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: 1
         run: brew install ffmpeg
 
+      - name: FFprobe fijado para los inventarios de las pruebas Linux
+        if: runner.os == 'Linux'
+        id: test-ffprobe
+        run: bash scripts/install-test-ffprobe.sh
+
       - name: Comprobar antes de compilar instaladores
+        if: runner.os != 'Linux'
         run: |
+          npm test
+          npm run check
+          npm run build:youtube-decoder -- --check
+
+      - name: Comprobar antes de compilar instaladores (Linux)
+        if: runner.os == 'Linux'
+        env:
+          TEST_FFPROBE_DIR: ${{ steps.test-ffprobe.outputs.bin }}
+        run: |
+          export PATH="$TEST_FFPROBE_DIR:$PATH"
           npm test
           npm run check
           npm run build:youtube-decoder -- --check
@@ -125,7 +141,16 @@ jobs:
           if-no-files-found: ignore
 
       - name: Comprobar el núcleo
+        if: runner.os != 'Linux'
         run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Comprobar el núcleo (Linux)
+        if: runner.os == 'Linux'
+        env:
+          TEST_FFPROBE_DIR: ${{ steps.test-ffprobe.outputs.bin }}
+        run: |
+          export PATH="$TEST_FFPROBE_DIR:$PATH"
+          cargo test --release --locked --manifest-path src-tauri/Cargo.toml
 
       # Certificado de procedencia: GitHub firma que estos archivos salen de este código y de esta
       # ejecución. Cualquiera lo comprueba con `gh attestation verify <archivo> --repo diad87/pletina`.
