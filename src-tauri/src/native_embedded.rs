@@ -1211,6 +1211,34 @@ where
     }
     result
 }
+
+async fn disk_preview_after_unlock<'a, F, R>(
+    cache: tokio::sync::MutexGuard<'_, DecoderCache>,
+    mode: &str,
+    supplied: bool,
+    id: Option<&'a str>,
+    admission: Option<tokio::sync::oneshot::Receiver<()>>,
+    request: F,
+) -> Option<Preview>
+where
+    F: FnOnce(&'a str, Option<PostTrace>) -> R,
+    R: Future<Output = Result<Value, Error>>,
+{
+    // Installation and reservation cleanup precede this helper. A slow/rejected
+    // watch or metadata POST must not hold COMPILED or poison a valid decoder.
+    drop(cache);
+    if mode != "disk" || supplied {
+        return None;
+    }
+    let id = id?;
+    let trace = post_trace(PostOrigin::Preview);
+    // ST is already verified against the freshly downloaded source. Keep even
+    // errors in Preview so ordinary SABR recovery consumes POST1 exactly once.
+    // No EarlySabr: there is no pending analysis to abandon on this path.
+    let response = admitted_request(admission, request(id, trace)).await;
+    Some(Preview { response, trace })
+}
+
 fn prepared_measurement(
     id: Option<&str>,
     mode: &str,
@@ -1267,7 +1295,7 @@ async fn prepare_request_inner(
     http: &reqwest::Client,
     config: &Config,
     id: Option<&str>,
-    admission: Option<tokio::sync::oneshot::Receiver<()>>,
+    mut admission: Option<tokio::sync::oneshot::Receiver<()>>,
     early: Option<tokio::sync::oneshot::Sender<EarlySabr>>,
     downloaded: Option<DownloadedSource>,
     inherited: Option<Instant>,
@@ -1360,7 +1388,7 @@ async fn prepare_request_inner(
                 analyze_preview(
                     youtube_decoder::prepare_until(source.clone(), deadline),
                     admitted_preview(
-                        admission,
+                        admission.take(),
                         player_response_traced(http, PLAYER, config, id, hint, trace),
                         early,
                         EarlySabr {
@@ -1419,6 +1447,22 @@ async fn prepare_request_inner(
         at: Instant::now(),
     });
     cache.failed.remove(config.player.as_str());
+    if let Some(cached) = disk_preview_after_unlock(
+        cache,
+        mode,
+        supplied,
+        id,
+        admission.take(),
+        |id, trace| {
+            player_response_traced(http, PLAYER, config, id, decoder.signature_timestamp, trace)
+        },
+    )
+    .await
+    {
+        post_started = true;
+        preview = true;
+        response = Some(cached);
+    }
     prepared_measurement(id, mode, started, download_ms, analyze_ms, preview);
     Ok(Preparation {
         decoder,
@@ -3347,6 +3391,327 @@ mod tests {
         eligible(&value, ID).unwrap();
         admit.send(()).unwrap();
         assert_eq!(waiting.await.unwrap(), value);
+    }
+
+    #[tokio::test]
+    async fn disk_preview_excludes_ram_replacements_and_preparation_without_video() {
+        let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+        let calls = AtomicU64::new(0);
+        for (mode, supplied, id) in [
+            ("memory", false, Some(ID)),
+            ("memory-sha", false, Some(ID)),
+            ("analyzed", false, Some(ID)),
+            ("disk", true, Some(ID)),
+            ("disk", false, None),
+        ] {
+            let preview = disk_preview_after_unlock(
+                compiled.lock().await,
+                mode,
+                supplied,
+                id,
+                None,
+                |_, _| {
+                    calls.fetch_add(1, Ordering::Relaxed);
+                    std::future::ready(Err(fail("UNEXPECTED_POST")))
+                },
+            )
+            .await;
+            assert!(preview.is_none(), "{mode}, supplied={supplied}, id={id:?}");
+            assert!(compiled.try_lock().is_ok());
+        }
+        assert_eq!(calls.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn disk_preview_posts_cached_timestamp_while_watch_waits_and_unlocks_compiled() {
+        let mut value = watch_value();
+        value["streamingData"] = json!({"adaptiveFormats":[]});
+        let (url, server) = local(response(200, "", value.to_string().as_bytes()));
+        let http = local_http();
+        let config = cfg();
+        // Deliberately unlike source_fixture's hint: the cached, verified ST wins.
+        let decoder = ready(Arc::new(config.clone()), 24123).decoder;
+        let compiled = tokio::sync::Mutex::new(DecoderCache {
+            entries: vec![Compiled {
+                url: config.player.clone(),
+                sha: [7; 32],
+                decoder: decoder.clone(),
+                at: Instant::now(),
+            }],
+            failed: HashMap::new(),
+        });
+        let (admit, admission) = tokio::sync::oneshot::channel();
+        let (received, response_received) = tokio::sync::oneshot::channel();
+        let waiting = disk_preview_after_unlock(
+            compiled.lock().await,
+            "disk",
+            false,
+            Some(ID),
+            Some(admission),
+            |id, trace| {
+                let compiled = &compiled;
+                let decoder = &decoder;
+                let config = &config;
+                let http = &http;
+                let url = &url;
+                async move {
+                    // The installed entry is available before even starting HTTP.
+                    let available = compiled.try_lock().expect("POST must not own COMPILED");
+                    assert!(Arc::ptr_eq(&available.entries[0].decoder, &decoder));
+                    assert!(!available.failed.contains_key(config.player.as_str()));
+                    drop(available);
+                    let result = player_response_traced(
+                        &http,
+                        &url,
+                        &config,
+                        id,
+                        decoder.signature_timestamp,
+                        trace,
+                    )
+                    .await;
+                    received.send(()).unwrap();
+                    result
+                }
+            },
+        );
+        tokio::pin!(waiting);
+        tokio::time::timeout(Duration::from_secs(1), async {
+            tokio::select! {
+                _ = &mut waiting => panic!("cached result escaped before admission"),
+                result = response_received => result.unwrap(),
+            }
+        })
+        .await
+        .unwrap();
+        assert!(
+            compiled.try_lock().is_ok(),
+            "watch must not own COMPILED either"
+        );
+        let request = server.join().unwrap();
+        let posted: Value =
+            serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+        assert_eq!(posted["videoId"], ID);
+        assert_eq!(
+            posted["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"],
+            24123
+        );
+        admit.send(()).unwrap();
+        assert_eq!(waiting.await.unwrap().response.unwrap(), value);
+    }
+
+    #[tokio::test]
+    async fn disk_preview_quarantines_success_and_sabr_until_watch_and_preserves_errors() {
+        for reject in [false, true] {
+            for sabr in [false, true] {
+                let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+                let (admit, admission) = tokio::sync::oneshot::channel();
+                let (received, response_received) = tokio::sync::oneshot::channel();
+                let calls = AtomicU64::new(0);
+                let waiting = disk_preview_after_unlock(
+                    compiled.lock().await,
+                    "disk",
+                    false,
+                    Some(ID),
+                    Some(admission),
+                    |_, _| async {
+                        calls.fetch_add(1, Ordering::Relaxed);
+                        received.send(()).unwrap();
+                        if sabr {
+                            Err(fail("SABR_ONLY"))
+                        } else {
+                            Ok(json!({"fixture":true}))
+                        }
+                    },
+                );
+                tokio::pin!(waiting);
+                tokio::select! {
+                    _ = &mut waiting => panic!("response/error escaped before watch"),
+                    result = response_received => result.unwrap(),
+                }
+                if reject {
+                    drop(admit);
+                } else {
+                    admit.send(()).unwrap();
+                }
+                let preview = waiting
+                    .await
+                    .expect("an HTTP error is still a consumed POST1");
+                if reject {
+                    assert!(
+                        matches!(preview.response, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_ADMISSION")
+                    );
+                } else if sabr {
+                    assert!(is_sabr(&preview.response));
+                } else {
+                    assert_eq!(preview.response.unwrap(), json!({"fixture":true}));
+                }
+                assert_eq!(calls.load(Ordering::Relaxed), 1);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn disk_preview_watch_rejection_caller_drop_and_inherited_deadline_drop_pending_post() {
+        struct Dropped(Arc<AtomicBool>);
+        impl Drop for Dropped {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Relaxed);
+            }
+        }
+        for reason in ["watch", "caller", "deadline"] {
+            let config = cfg();
+            let decoder = ready(Arc::new(config.clone()), 20746).decoder;
+            let compiled = tokio::sync::Mutex::new(DecoderCache {
+                entries: vec![Compiled {
+                    url: config.player.clone(),
+                    sha: [7; 32],
+                    decoder: decoder.clone(),
+                    at: Instant::now(),
+                }],
+                failed: HashMap::new(),
+            });
+            let dropped = Arc::new(AtomicBool::new(false));
+            let (admit, admission) = tokio::sync::oneshot::channel();
+            let (started, request_started) = tokio::sync::oneshot::channel();
+            let deadline = Instant::now() + Duration::from_millis(20);
+            let mut waiting = Box::pin(disk_preview_after_unlock(
+                compiled.lock().await,
+                "disk",
+                false,
+                Some(ID),
+                Some(admission),
+                |_, _| async {
+                    let _dropped = Dropped(dropped.clone());
+                    started.send(()).unwrap();
+                    std::future::pending::<Result<Value, Error>>().await
+                },
+            ));
+            tokio::select! {
+                _ = &mut waiting => panic!("pending metadata body returned"),
+                result = request_started => result.unwrap(),
+            }
+            assert!(compiled.try_lock().is_ok());
+            match reason {
+                "watch" => {
+                    drop(admit);
+                    let preview = waiting.await.unwrap();
+                    assert!(
+                        matches!(preview.response, Err(Error::Failed(code)) if code == "NATIVE_EMBEDDED_ADMISSION")
+                    );
+                }
+                "caller" => {
+                    drop(waiting);
+                    drop(admit);
+                }
+                "deadline" => {
+                    // Same inherited timeout_at boundary as prepare_request;
+                    // no renewed timeout is granted after the HTTP dispatch.
+                    assert!(tokio::time::timeout_at(deadline.into(), waiting)
+                        .await
+                        .is_err());
+                    drop(admit);
+                }
+                _ => unreachable!(),
+            }
+            assert!(dropped.load(Ordering::Relaxed), "{reason}");
+            let available = compiled.try_lock().unwrap();
+            assert!(Arc::ptr_eq(&available.entries[0].decoder, &decoder));
+            assert!(
+                available.failed.is_empty(),
+                "cancellation does not poison the installed decoder"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn cached_sabr_preview_spends_post1_and_allows_only_changed_post2() {
+        for changed in [false, true] {
+            let first = ready(Arc::new(cfg()), 20746);
+            let configs = cache_with(first.config.clone());
+            let compiled = tokio::sync::Mutex::new(DecoderCache::default());
+            let mut fresh = config_value();
+            if changed {
+                fresh["INNERTUBE_CONTEXT"]["client"] = json!({"rolloutToken":"new-public-rollout"});
+            }
+            let mut replies = vec![
+                response(200, "", sabr_response().to_string().as_bytes()),
+                response(200, "", format!("ytcfg.set({fresh});").as_bytes()),
+            ];
+            if changed {
+                // A second SABR remains final: it must not trigger POST3.
+                replies.push(response(200, "", sabr_response().to_string().as_bytes()));
+            }
+            let (url, server) = local_sequence(replies);
+            let http = local_http();
+            let endpoint = format!("{url}/player");
+            let (admit, admission) = tokio::sync::oneshot::channel();
+            admit.send(()).unwrap();
+            let mut preview = disk_preview_after_unlock(
+                compiled.lock().await,
+                "disk",
+                false,
+                Some(ID),
+                Some(admission),
+                |id, trace| {
+                    player_response_traced(
+                        &http,
+                        &endpoint,
+                        &first.config,
+                        id,
+                        first.decoder.signature_timestamp,
+                        trace,
+                    )
+                },
+            )
+            .await;
+            assert!(is_sabr(&preview.as_ref().unwrap().response));
+            let result = resolve_ready(
+                &configs,
+                ID,
+                first.clone(),
+                |next| {
+                    let saved = preview.take();
+                    let http = &http;
+                    let endpoint = &endpoint;
+                    async move {
+                        match saved {
+                            Some(saved) => saved.response,
+                            None => {
+                                player_response(
+                                    http,
+                                    endpoint,
+                                    &next.config,
+                                    ID,
+                                    next.decoder.signature_timestamp,
+                                )
+                                .await
+                            }
+                        }
+                    }
+                },
+                |current| {
+                    fetch_local_ready(&http, &url, current, first.decoder.signature_timestamp)
+                },
+            )
+            .await;
+            assert!(is_sabr(&result));
+            let requests = server.join().unwrap();
+            let posts: Vec<_> = requests.iter().filter(|r| r.starts_with("POST ")).collect();
+            assert_eq!(posts.len(), if changed { 2 } else { 1 });
+            assert_eq!(requests.iter().filter(|r| r.starts_with("GET ")).count(), 1);
+            for request in &posts {
+                let body: Value =
+                    serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+                assert_eq!(body["videoId"], ID);
+                assert_eq!(
+                    body["playbackContext"]["contentPlaybackContext"]["signatureTimestamp"],
+                    20746
+                );
+            }
+            if changed {
+                assert_ne!(posts[0], posts[1]);
+            }
+        }
     }
 
     #[tokio::test]
