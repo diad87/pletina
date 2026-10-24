@@ -1,5 +1,10 @@
 # Arranque frío de Propio — 24 de octubre de 2026
 
+Última ronda: **R12 retirada** (`21e0fa6` → `fedec82`): cambiar la preconexión
+a `anonymous` no produjo reutilización TCP/TLS. El código conserva R11.
+Comprobación posterior solicitada: **«Ni, Ni, Ni!» funciona por Native**, sin
+Legacy ni sesión, con búsqueda incluida: 5234,7 ms en un único intento frío.
+
 Ronda 11: se conserva un ahorro pequeño y repetido en la consulta DNS del
 reproductor: **1,9735→0,007 ms de mediana, mejora en los doce pares**. No se
 observó reutilización TCP/TLS ni una mejora consistente del arranque completo
@@ -110,3 +115,82 @@ nuevas cifras publicitarias ni aprobación de EOF. Oficial sigue experimental,
 yt-dlp predeterminado y Propio conserva sus respaldos. Requiere reconstruir la
 app; PWA, bundles, receta, `capture.js`, `youtubei.ts`, versiones/API y OTA no
 cambian. Sólo se sube la rama de revisión, sin publicar versión o extractor.
+
+## Ronda 12: preconexión anónima descartada
+
+Se ensayó sólo `crossOrigin='anonymous'` antes de insertar el enlace, sin
+alterar HTMLAudio ni las comprobaciones del CDN. La hipótesis era una
+diferencia de [PrivacyMode entre preconexión](https://github.com/chromium/chromium/blob/main/services/network/network_context.cc)
+y [petición real](https://github.com/chromium/chromium/blob/main/net/url_request/url_request_http_job.cc),
+no una corrección demostrada de CORS. No se confirmó: **0/12 conexiones
+reutilizadas en control y 0/11 en candidata; una respuesta no observada**.
+El criterio se fijó antes de medir y el cambio se revirtió con `fedec82`.
+
+Dos cohortes de doce casos, mismos tres IDs y método R11, carpetas anónimas
+nuevas, FreshDecoder, sin actividad de compilación simultánea. No se repite
+ningún caso fallido. La primera Media es HTTP/1.1 y 206 en las 23 observadas,
+sin caché de disco ni Service Worker; mantienen conexión y TLS nuevos.
+
+| Resultado | Control R11 | Candidata R12 |
+|---|---:|---:|
+| Casos programados | 12 | 12 |
+| Native, ID correcto y reproducción observada | 12 | 11 |
+| Sin reproducción al agotar el límite operativo | 0 | 1 |
+| Mediana hasta reproducción, sólo casos medidos | 4444,8 ms | 4145,4 ms |
+| Rango de casos medidos | 3427,6–5391,8 ms | 3274,4–5442,8 ms |
+| Casos ≤3500 ms | 3/12 | 3/12 |
+| Conexión: mediana de respuestas observadas | 12,804 ms | 13,341 ms |
+| Cabeceras: mediana desde la petición Media | 21,067 ms | 21,661 ms |
+| Reproducciones Legacy acreditadas | 0 | 0 |
+| 429 observados | 0 | 0 |
+
+Los once pares medibles mejoran seis veces y empeoran cinco; mediana del
+cambio −83,1 ms. La diferencia entre medianas de poblaciones 12/11 no acredita
+un ahorro: el fallo sigue contado y falta el mecanismo de red buscado.
+Todos los casos conservan el incumplimiento histórico de 300 ms.
+
+El fallo fue Pupu, cohorte 2, repetición 2: búsqueda Music 200, identidad
+esperada y análisis de decoder completo; dos respuestas embedded sólo SABR,
+sin URL/cipher. `NATIVE_EMBEDDED_SABR_ONLY` y WEB `video-unavailable` impidieron
+llegar a descifrado, sonda, preconexión o Media. El proceso agotó 90 s, sin
+selección final ni audio observado. El literal del auditor `wrong-video-id`
+representa aquí selección ausente, **no entrega de otra canción**. No se
+atribuye ese fallo al atributo, que no llegó a ejecutarse en ese intento.
+
+Pasaron 254 Rust/30 ignoradas y 13 pruebas DOM de la candidata; helpers
+77 Node/46 aserciones PowerShell. Tras revertir, las fuentes del producto
+coinciden con R11 y pasan los ocho controles DOM del script original. No se
+repiten Android, las 30 habituales, EOF, PCM, anuncios ni Premium para un
+candidato retirado. La compresión NTFS se limitó a la caché `debug/deps` de
+este worktree; recuperó 3,91 GB sin borrar archivos y terminó antes de medir.
+
+Candidata: fuente `21e0fa6623bc6d9abfc0889c77f8d3134b8f7732`, EXE
+`db6349bea9924c20f9840db354f1270f57db5d67568e9082000082154f315f64`.
+Control: EXE `a6026c2f…bcf26`, fuente `506986a`, sin reetiquetar su procedencia
+por los commits posteriores de documentación. Evidencia local ignorada:
+`round12-cold-search-20261024-092842-c0ad455a-index.json.local`,
+`round12-cold-search-20261024-092949-f8e2c269-index.json.local`, sus dos auditorías
+y `round12-network-analysis.json.local` (SHA256
+`257635b9e494762e08b000f10b10eb37ae06e00d1d41738b99f637e907898fef`).
+Revisión independiente: `r12-independent-app-analysis.json.local`, SHA256
+`a57f27aa195e5bcf5b03fb7b3ecc5e3b915058d2fc850be73bd56f21415bd263`.
+Cierre previsto: `round12-final-manifest.json.local`, con dos pases de hashes.
+
+Pendientes: disponibilidad del CDN, SABR sin URL y arranque estable. Mover
+250→625 ms sería otra hipótesis, aún sin ensayar: puede adelantar o retrasar
+375 ms y un intento lento también puede hacer perder el turno de 1 s. Añadir
+otro sondeo sin más reduciría el cupo para alternativas. No se modifica el
+calendario ni se presenta una mejora de esta ronda.
+
+## Comprobación independiente: «Ni, Ni, Ni!»
+
+Por petición del usuario se comprobó después [la versión Topic de Zazpikoloroa](https://www.youtube.com/watch?v=NGp3dh-hBe8),
+ID `NGp3dh-hBe8`, con el binario R11 que corresponde al código restaurado.
+Una búsqueda real por título, artista y duración seleccionó ese ID y arrancó
+en **5234,7 ms**, Native, sin Legacy ni sesión y con decoder/perfil nuevos.
+Los identificadores de pista/disco del banco son sintéticos; no representan
+una selección real de Deezer. Hubo cuatro sondas lógicas, la última 206 válido,
+y reproducción observada. No verifica EOF ni igualdad PCM. No reemplaza
+ninguna de las 24 filas R12 ni se usa como comparación de rendimiento.
+Evidencia: `ni-ni-ni-compatibility-verified.json.local`, SHA256
+`da1cf0822e1a01d234c7b3ee185e93ab5f68440d6f46a88901fb13fc247e8f8b`.
