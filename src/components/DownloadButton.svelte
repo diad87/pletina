@@ -60,6 +60,11 @@
 {/if}
 
 <style>
+  button {
+    flex: none;
+    width: 44px;
+    height: 44px;
+  }
   .ring {
     transform: rotate(-90deg);
   }

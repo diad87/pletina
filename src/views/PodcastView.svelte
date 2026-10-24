@@ -212,6 +212,7 @@
 {/if}
 
 <style>
+  .actions { flex-wrap: wrap; }
   .favorite {
     display: inline-flex;
     align-items: center;
@@ -222,6 +223,7 @@
     border-radius: 24px;
     color: var(--muted);
     font-weight: 700;
+    white-space: nowrap;
   }
   .favorite:hover, .favorite.on { color: var(--accent); border-color: currentColor; }
   .favorite:disabled { opacity: 0.6; }
@@ -309,6 +311,7 @@
   .add-queue { color: var(--muted); }
   .add-queue:hover { color: var(--text); background: var(--press); }
   @media (max-width: 720px) {
+    .play-hint { flex-basis: 100%; }
     .about { margin-left: 4px; margin-right: 4px; }
     .episode { gap: 12px; padding: 20px 4px; flex-wrap: wrap; }
     .episode-art { width: 64px; }
