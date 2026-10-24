@@ -58,6 +58,17 @@ jobs:
 
       - run: npm ci
 
+      - name: FFmpeg para las pruebas de audio en Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install ffmpeg --no-progress -y
+          if ($LASTEXITCODE -ne 0) { throw 'No se pudo instalar FFmpeg.' }
+          ffmpeg -version
+          if ($LASTEXITCODE -ne 0) { throw 'Falta FFmpeg.' }
+          ffprobe -version
+          if ($LASTEXITCODE -ne 0) { throw 'Falta ffprobe.' }
+
       - name: FFmpeg para las pruebas de audio en macOS
         if: runner.os == 'macOS'
         env:
