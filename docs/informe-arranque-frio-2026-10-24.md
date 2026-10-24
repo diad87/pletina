@@ -1,10 +1,15 @@
 # Arranque frío de Propio — 24 de octubre de 2026
 
-Última ronda: **R14 conserva el análisis verificado en disco durante 30 días**
-en vez de seis horas (`38a4ded`). Ayuda al volver con el mismo reproductor:
-preparación mediana 2741,6→66,1 ms; mediana de Pupu 3532,1→1706,1 ms.
-El total sigue irregular y conserva esperas CDN; Maite empeora en tres de cuatro
-pares. No mejora el primer uso con caché vacía. [Método y límites R14](#ronda-14-conservar-el-análisis-verificado-entre-días).
+Última ronda: **R15 solapa los metadatos con la comprobación del vídeo también
+al acertar la caché de disco** (`025f9e8`). Diez pares elegibles: ocho mejoran y
+dos empeoran, cambio mediano **−270,1 ms** hasta `playing`. La espera tras validar
+el vídeo para consumir los metadatos pasa de 232,35 a 0,36 ms de mediana.
+Ayuda al reabrir con caché; no cambia el primer uso con caché vacía. El total
+sigue variable, hasta 5611 ms en la candidata. [Método y límites R15](#ronda-15-metadatos-en-paralelo-con-caché-verificada).
+
+R14 conserva el análisis verificado en disco durante 30 días en vez de seis
+horas (`38a4ded`), evitando repetirlo si la fuente actual es idéntica. Sus
+mediciones y regresiones permanecen [separadas](#ronda-14-conservar-el-análisis-verificado-entre-días).
 
 R12 se retiró (`21e0fa6` → `fedec82`): la preconexión `anonymous` no produjo
 reutilización TCP/TLS. R13 se descartó antes de integrar código. La
@@ -307,7 +312,7 @@ sigue experimental, yt-dlp predeterminado y Propio conserva sus respaldos.
 El cambio requiere reconstruir la app; PWA, receta, `capture.js`, `youtubei.ts`,
 versiones/API y OTA no cambian. Sólo rama de revisión, sin publicación.
 
-El siguiente solapamiento concreto está identificado, **todavía sin implementar**:
+Al cerrar R14 quedó identificado este solapamiento, **entonces sin implementar**:
 un acierto de disco espera al resultado de `watch` antes del POST de metadatos.
 La ruta con análisis ya puede enviarlo en paralelo y retener su respuesta hasta
 admitir la identidad. Se estudiará reutilizar ese mismo mecanismo, con
@@ -315,3 +320,106 @@ cancelación, plazo y cupo intactos; no adelantar descifrado ni acceso al audio.
 Los GET iniciales de watch/embed ya se solapan con los clientes rápidos.
 Analizar anticipadamente la variante de la portada requiere comprobarla: no
 siempre coincide con la de embedded.
+
+## Ronda 15: metadatos en paralelo con caché verificada
+
+`025f9e8` adelanta un único POST de metadatos sólo cuando el decoder viene de
+disco, hay ID y no se está preparando una fuente de reemplazo. El ST procede
+del decoder vinculado a la fuente recién descargada. Instala el decoder y
+limpia su reserva antes de liberar COMPILED y esperar la petición. Conserva
+la cuarentena de `admitted_request`: ni éxito ni error se consumen antes de
+admitir la identidad de `watch`; no adelanta descifrado, recuperación ni CDN.
+Las rutas RAM, memory-sha, análisis y reemplazo mantienen su comportamiento.
+
+Conserva el resultado incluso si es un error para consumir POST1 una sola vez.
+No emite EarlySabr en este camino: no hay AST pendiente. La recuperación
+secuencial sigue admitiendo sólo POST2 con cuerpo efectivo distinto y una
+renovación. El POST anticipado comparte los 12 s de preparación; un caso lento
+puede fallar antes que en el control, que lo enviaba después. Cancelar conserva
+el decoder válido y no deja cooldown. No amplía plazos ni cuotas.
+
+Comparación anónima fijada antes de medir: dos cohortes de doce, Epo/Maite/Pupu,
+dos repeticiones por brazo y orden alternado. Proceso y carpeta de WebView nuevos
+por caso; FreshDecoder ausente. Ambos brazos reciben los mismos bytes de la
+fixture R14, fijada inicialmente a doce horas, y descargan la fuente actual.
+**Las 24 preparaciones iniciales son disk**; aquí no se compara análisis con
+caché ni se mide primer uso. No hubo repeticiones de casos ni cohortes extra.
+El control no registra el fingerprint por petición: compartir la fixture no
+prueba una repetición exacta de la variante remota, aunque cada acierto siga
+exigiendo coincidencia con la fuente actual.
+
+**24/24 Native, IDs correctos y cero Legacy**. Son **22 filas elegibles y diez
+pares completos**, cinco por cohorte. Se conservan dos exclusiones:
+
+- C1/Pupu/candidata/repetición 2: después del disk inicial correcto, una
+  recuperación SABR añadió una preparación RAM sin ID y un segundo POST. El
+  comprobador congelado exige una sola preparación y la excluye; no se modifica
+  después de medir, aunque la recuperación termine reproduciendo correctamente.
+- C2/Pupu/control/repetición 1: falla la prueba de frescura de un archivo DB
+  preexistente con el mismo PID. Sólo se inspeccionó su metadata, sin abrir SQLite.
+
+| Pares completos elegibles | Cohorte 1 | Cohorte 2 |
+|---|---:|---:|
+| Número de pares | 5 | 5 |
+| Mejoran / empeoran hasta `playing` | 4 / 1 | 4 / 1 |
+| Mediana candidata − control, hasta `playing` | −66,1 ms | −1123,1 ms |
+| Mediana del cambio watch → primer Consumed | −252,85 ms | −235,07 ms |
+
+Cumple el criterio previo de mejora pareada en ambas cohortes y mínimo diez
+pares. Se conserva el cambio. El cambio total mediano de los diez pares es
+**−270,1 ms**. Los doce POST iniciales candidatos empiezan antes de terminar
+`watch`; los doce controles esperan. ST y orden de consumo coinciden, sin
+contradicciones observadas. La espera watch → Consumed pasa de **232,35 a
+0,36 ms** de mediana en los doce casos por brazo. Es una medición del mismo
+reloj Native, no una resta entre relojes de navegador y Rust.
+
+Los 24 tiempos, incluidos los dos casos excluidos, dan medianas descriptivas
+de 3309,0→1840,65 ms y rangos 1650,8–6600,4→1301,2–5611,0 ms. Llegan a ≤3500 ms
+6/12→7/12. No se atribuyen esos 1468,35 ms de diferencia agregada al código ni
+se suman a los ahorros R14. Las dos regresiones elegibles quedan visibles:
+Maite C1/repetición 1, **+44,1 ms**, y Epo C2/repetición 1, **+2966,3 ms**.
+La espera CDN sigue variable; no se acredita un arranque uniforme de 3500 ms.
+
+Se observaron 12 POST en control y 13 en candidata, máximo dos por caso; la
+petición adicional corresponde a la recuperación SABR de Pupu conservada.
+Sondeos lógicos completados 47→38, respuestas 403 35→26 y ningún 429. No se
+acredita que toda esa diferencia remota proceda del solapamiento ni que un
+403 sea un anuncio. Los 24 primeros Media fueron 206/HTTP 1.1 y ninguna conexión
+se reutilizó. Se verificó igualdad de los bloques de sonda estricta, calendario,
+validación/selección de audio y cuerpo de metadatos frente a R14: mismos nueve
+turnos, diez intentos compartidos y ocho segundos, con validación al 80 % y
+cuerpo de sonda completo. El límite de logs sigue siendo invocaciones lógicas
+completadas, no un inventario de GET físicos y redirecciones.
+
+Pasan **261 Rust, cero fallos/30 ignoradas**, exit 0 y sin avisos del compilador
+de tests. Cinco pruebas nuevas cubren exclusiones, POST HTTP local/ST, mutex,
+cuarentena, cancelación y recuperación de uno/dos POST. Ejercitan el helper y
+las primitivas reales, no una lectura persistente completa. Build release y
+checks Android arm64/x86_64 `--tests --offline --locked`: exit 0, sin avisos
+nuevos en los checks. Helpers: 108 tests Node/72 aserciones PowerShell/siete
+checks de sintaxis. Las fuentes quedan intactas durante validación y medidas.
+
+Control EXE `708384d1…04e1`, fuente `38a4ded`; candidata, fuente `025f9e8`, EXE
+`d78efd571e41bad902aeb95d4fbfd06ae99c17a85112fdb809646f15de5c8930`.
+Evidencia ignorada en `capture-bench.local/`: índices
+`round15-cold-search-20261024-120939-3c4e4f57-index.json.local` y
+`round15-cold-search-20261024-121149-7dcc04b6-index.json.local`, sus auditorías,
+`round15-network-analysis.json.local` (SHA256
+`13b90d88001d145230d99fa9d1518a823380e9eed4c6e3e23fe0436ac39173db`),
+`r15-independent-app-analysis.json.local` (SHA256
+`4fe2958ebc0f6aa69b27fb6d9077db2fe81cac3c5f27eb9971838a4b21aa13cf`),
+`round15-candidate.local/source-proof.json.local` y
+`round15-policy-equivalence.json.local`. Android:
+`round15-final-android-clang-vendor-checks-20261024-121508.json.local`, SHA256
+`b230776d18f07962265d0aabe6cd73da8d7fead20b330f34de734fa9b93c428a`.
+Cierre después del commit de docs: `round15-final-manifest.json.local`, dos
+pases de hashes, sin incluir perfiles ni DB. Originales de caché restaurados.
+
+No se repiten EOF, PCM, las 30 habituales, campañas reales con anuncios, Premium
+ni rendimiento móvil. La observación breve de HTMLAudio silenciado no sustituye
+esas pruebas. Oficial sigue experimental, yt-dlp predeterminado y Propio
+conserva sus respaldos. Requiere nueva app; PWA/OTA, receta, capture.js,
+youtubei.ts, versiones/API, UI, db.rs y downloads.rs no cambian. Sólo rama de
+revisión; no se publica versión ni extractor. Pendientes: disponibilidad CDN,
+primer uso sin caché y corregir el exceso de rigor del helper en una futura
+campaña, conservando las exclusiones de ésta.
