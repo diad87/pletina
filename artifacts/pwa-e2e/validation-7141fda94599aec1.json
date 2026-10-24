@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "build": "7141fda94599aec1",
+  "sourceCommit": "e1e35cd2efdeb3146868f67e9ce5fc9d6c06e15a",
+  "createdAt": "2026-10-24T09:03:20.268Z",
+  "scope": "Search song rows in compiled static PWA. Browser touch/layout emulation and mouse; not physical Android/iOS, screen-off or native car integration.",
+  "behavior": "Whole Search song row starts selected song and opens album. Existing song is preserved/resumed. Menu and heart are independent, including keyboard. Other lists/native retain previous behavior.",
+  "types": {
+    "command": "npm run check",
+    "errors": 0,
+    "warnings": 0,
+    "log": "artifacts/pwa-port/search-row-final-check.log"
+  },
+  "buildResult": {
+    "command": "npm run build:pwa",
+    "files": 33,
+    "bytes": 910558,
+    "initialBytes": 63376,
+    "onDemandBytes": 801609,
+    "log": "artifacts/pwa-port/search-row-final-build.log"
+  },
+  "freeze": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final-freeze.json",
+  "controlled": {
+    "uniqueChecks": 14,
+    "byProfile": {
+      "chromium-android-layout": 5,
+      "firefox-narrow": 5,
+      "webkit-iphone-layout": 4
+    },
+    "includesPreparationAndBaseAudio": true,
+    "chromium": "Trusted touchscreen taps and explicit keyboard tests",
+    "firefox": "Mouse and keyboard; no touch claim",
+    "webkit": "Trusted touchscreen taps and keyboard in Linux WebKit/iPhone layout; no physical iOS claim",
+    "checks": [
+      {
+        "profile": "chromium-android-layout",
+        "name": "setup.open: install shell and open compiled application",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "setup.fixture: opaque-frame catalog requests are controlled",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "media.selection-html-audio",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "media.search-song-row-starts-selected-audio-and-opens-album-with-one-touch",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "chromium-android-layout",
+        "name": "media.artist-current-byline-plays-row-and-guest-byline-only-navigates",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "setup.open: install shell and open compiled application",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "setup.fixture: opaque-frame catalog requests are controlled",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "media.selection-html-audio",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "media.search-song-row-starts-selected-audio-and-opens-album-with-one-touch",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "firefox-narrow",
+        "name": "media.artist-current-byline-plays-row-and-guest-byline-only-navigates",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/7141fda94599aec1-search-album-contract-final/summary.json"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "setup.open: install shell and open compiled application",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/search-row-7141fda94599aec1-webkit-final/summary.json"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "setup.fixture: opaque-frame catalog requests are controlled",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/search-row-7141fda94599aec1-webkit-final/summary.json"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "media.selection-html-audio",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/search-row-7141fda94599aec1-webkit-final/summary.json"
+      },
+      {
+        "profile": "webkit-iphone-layout",
+        "name": "media.search-song-row-starts-selected-audio-and-opens-album-with-one-touch",
+        "status": "pass",
+        "source": "artifacts/pwa-e2e/search-row-7141fda94599aec1-webkit-final/summary.json"
+      }
+    ]
+  },
+  "publicCanary": {
+    "source": "artifacts/pwa-port/p1-song-eminem-7141fda94599aec1-touch-artist-public.json",
+    "oneSelectionTap": true,
+    "selectionControl": "Artist text inside the whole Search song row",
+    "catalogId": 916424,
+    "title": "Without Me",
+    "album": "The Eminem Show",
+    "route": "album",
+    "searchQuery": null,
+    "nativeAudio": true,
+    "videoOpened": false,
+    "physicalPhone": false,
+    "screenOff": false,
+    "fullSongRun": false,
+    "screenshot": "artifacts/pwa-port/p1-song-eminem-7141fda94599aec1-touch-artist-public.png"
+  },
+  "deployment": {
+    "repository": "diad87/pletina",
+    "branch": "gh-pages",
+    "commit": "47f70eaa55a3b638d2e8c03cb6a0b7de516a29c0",
+    "tree": "b78992ac1c72ba6b293f7038597e2c95c268aae7",
+    "source_hash": "0502161765b131fa929745bd1d9578cb6a6459d5ec0892b31c8b79c4aaf94b23",
+    "url": "https://diad87.github.io/pletina/",
+    "pwa_build": "7141fda94599aec1",
+    "workflow": "artifacts/pwa-deploy/workflow-7141fda94599aec1.json",
+    "publicFiles": "artifacts/pwa-deploy/public-files-7141fda94599aec1.json",
+    "verifiedFiles": 33
+  },
+  "earlierEvidence": [
+    {
+      "path": "artifacts/pwa-e2e/e74729a4dd1d6894-search-album-contract",
+      "role": "Superseded diagnostic: 12s fixture finished during same-song reselection; dedicated fixture extended to90s with identity precondition."
+    },
+    {
+      "path": "artifacts/pwa-e2e/e74729a4dd1d6894-search-album-contract-final",
+      "role": "Preserved real product failure: Space bubbled to global player toggle. Source fix then passed dc8 and final7141."
+    },
+    {
+      "path": "artifacts/pwa-e2e/search-row-e74729a4dd1d6894-webkit-final",
+      "role": "Same Space failure in WebKit; preserved, not counted as final success."
+    },
+    {
+      "path": "artifacts/pwa-e2e/e74729a4dd1d6894-search-album-negative-73187a1127b5ae37",
+      "role": "Old public build fails new album-navigation contract, showing scenario discriminates behavior."
+    },
+    {
+      "path": "artifacts/pwa-e2e/dc8d0aa30fcaeae5-search-album-contract-final",
+      "role": "Keyboard fix passes Chrome/Firefox before final tooltip/icon adjustment."
+    },
+    {
+      "path": "artifacts/pwa-e2e/search-row-dc8d0aa30fcaeae5-webkit-final",
+      "role": "Keyboard fix passes WebKit before final tooltip/icon adjustment."
+    }
+  ],
+  "notRerun": [
+    "926 logic tests from prior731 release are historical, not recounted as7141 tests.",
+    "Physical Android/iPhone installation/background playback and Auto/CarPlay were not rerun for this UI-only change.",
+    "Previously documented warm-update limitation remains; use closed-app installer update path."
+  ]
+}
