@@ -1,9 +1,15 @@
 # Arranque frío de Propio — 24 de octubre de 2026
 
-Última ronda: **R12 retirada** (`21e0fa6` → `fedec82`): cambiar la preconexión
-a `anonymous` no produjo reutilización TCP/TLS. El código conserva R11.
-Comprobación posterior solicitada: **«Ni, Ni, Ni!» funciona por Native**, sin
-Legacy ni sesión, con búsqueda incluida: 5234,7 ms en un único intento frío.
+Última ronda: **R14 conserva el análisis verificado en disco durante 30 días**
+en vez de seis horas (`38a4ded`). Ayuda al volver con el mismo reproductor:
+preparación mediana 2741,6→66,1 ms; mediana de Pupu 3532,1→1706,1 ms.
+El total sigue irregular y conserva esperas CDN; Maite empeora en tres de cuatro
+pares. No mejora el primer uso con caché vacía. [Método y límites R14](#ronda-14-conservar-el-análisis-verificado-entre-días).
+
+R12 se retiró (`21e0fa6` → `fedec82`): la preconexión `anonymous` no produjo
+reutilización TCP/TLS. R13 se descartó antes de integrar código. La
+comprobación independiente de **«Ni, Ni, Ni!» funciona por Native**, sin
+Legacy ni sesión: 5234,7 ms en un único intento frío con búsqueda incluida.
 
 Ronda 11: se conserva un ahorro pequeño y repetido en la consulta DNS del
 reproductor: **1,9735→0,007 ms de mediana, mejora en los doce pares**. No se
@@ -194,3 +200,118 @@ y reproducción observada. No verifica EOF ni igualdad PCM. No reemplaza
 ninguna de las 24 filas R12 ni se usa como comparación de rendimiento.
 Evidencia: `ni-ni-ni-compatibility-verified.json.local`, SHA256
 `da1cf0822e1a01d234c7b3ee185e93ab5f68440d6f46a88901fb13fc247e8f8b`.
+
+## Ronda 13: optimización del parser descartada
+
+Se ensayó fuera del producto un atajo ASCII al buscar palabras reservadas.
+Conservó los 1429 casos de sintaxis y 32 resultados exactos de firma/n; los
+16 procesos QuickJS nuevos dieron resultados correctos. Sólo tres de ocho
+pares mejoraron: mediana del cambio **+43,5 ms**, con medianas por repetición
+de −218 y +844,5 ms. No cumplió el criterio previo; no se integró ni se midió en la app.
+El prototipo, los fallos iniciales de helpers anteriores a las mediciones y
+todas las filas permanecen ignorados. Resultado:
+`keyword-ascii.local/quickjs-20261024-105710.local/result.json.local`, SHA256
+`023657d09adb7351979e3d5ae44a93beed461755e804ff1d06457d09fdbddf5a`.
+
+## Ronda 14: conservar el análisis verificado entre días
+
+`38a4ded` amplía sólo la vida del decoder preparado **en disco, 6 h→30 días**.
+Antes de consultarlo sigue descargando el reproductor actual y exige URL,
+SHA256 de esa fuente, ABI y checksum exactos. Si cambia la fuente o el
+analizador, no hay acierto. Leer no renueva su edad. Se conservan cuatro
+entradas/8 MiB, los límites y las comprobaciones de identidad, audio original,
+firma/n y sonda 206 al 80 %. No amplía las cachés en RAM/configuración de
+seis horas. La ABI actual vincula los assets y el código del decoder; un
+cambio futuro de semántica del motor también deberá invalidarla explícitamente.
+
+Se fijaron dos cohortes de doce casos sin sesión: Epo, Maite y Pupu dos veces
+por brazo, orden alternado, proceso y carpeta de WebView nuevos. Ambos brazos
+reciben antes de cada caso los mismos cuatro registros derivados con edad
+controlada de doce horas; sólo cambian fecha y checksum respecto al original.
+FreshDecoder está ausente. No representa primer uso, caché vacía ni doce horas
+de envejecimiento natural. Se restaura el inventario original tras cada caso;
+las 24 restauraciones y los dos inventarios finales coinciden. No se leen
+perfiles, cuentas ni contenido de SQLite.
+
+**24/24 Native, ID correcto, cero Legacy**. Control: doce preparaciones
+`analyzed`; candidata: doce `disk`, todas con descarga de fuente actual.
+La auditoría admite **23 filas y once pares completos**: el primer Epo del
+control reutilizó un PID cuyo archivo de DB de pruebas se creó el día anterior.
+Falla la prueba previa de frescura del archivo, aunque reprodujo correctamente.
+Se conserva su tiempo descriptivo, sin repetirlo ni dispensar el requisito.
+Los bindings observados de fuente/ABI/script/ST no cambiaron; el binario antiguo
+no registra el fingerprint por petición, por lo que no se acredita igualdad
+exacta de la variante remota entre brazos sólo por compartir el fixture.
+
+| Mediana, salvo contadores | Control R11 | Candidata R14 |
+|---|---:|---:|
+| Preparación, doce casos por brazo | 2741,6 ms | 66,1 ms |
+| Búsqueda → `playing`, todos los tiempos descriptivos | 4541,6 ms | 3932,6 ms |
+| Búsqueda → `playing`, sólo once pares elegibles | 4515,8 ms | 5574,3 ms |
+| Pupu, cuatro pares elegibles | 3532,1 ms | 1706,1 ms |
+| Maite, cuatro pares elegibles | 4783,3 ms | 5736,2 ms |
+| Casos ≤3500 ms, todos los tiempos | 2/12 | 6/12 |
+| Sondeos lógicos completados / respuestas 403 | 31 / 19 | 48 / 36 |
+| 429 observados | 0 | 0 |
+
+En los once pares elegibles mejoran seis y empeoran cinco; la mediana de sus
+diferencias es **−53,6 ms**. Restar las medianas de cada brazo produce otra
+cifra: esta muestra pequeña es sensible al orden y a las esperas remotas.
+Pupu mejora en cuatro de cuatro pares, mediana pareada −1780,0 ms. Maite
+empeora en tres de cuatro; su ventana de sonda CDN pasa de 1289,4 a 4030,0 ms
+de mediana. La candidata alcanza 5916,0 ms. No se afirma una mejora uniforme
+del total ni el cumplimiento estable de 3500 ms.
+
+La preparación mejora en las dos cohortes: cambios pareados medianos de
+−2719,2 ms en los cinco pares elegibles de C1 y −2624,3 ms en los seis de C2.
+Incluye descarga y trabajo de metadatos solapado; no es tiempo puro de CPU
+ni se suma a otras fases. Se conserva el cambio por evitar el análisis
+repetido y el beneficio observado en Pupu, con las regresiones totales visibles.
+Las primeras 24 Media fueron 206/HTTP 1.1, sin reutilización de conexión ni
+caché del navegador. La política CDN no cambia: nueve turnos, diez intentos
+compartidos y ocho segundos. Más 403 tras llegar antes al CDN no demuestran
+una causa publicitaria ni justifican añadir intentos sin otra prueba.
+
+Validación: **256 pruebas Rust aprobadas, 30 ignoradas**, dos nuevas sobre edad
+y vinculación exacta. El helper de cierre falló después de finalizar los tests
+por serialización de PowerShell; se recuperó la prueba del mismo log y PE,
+sin repetirlos. No quedó persistido el exit code de Cargo; sí su resumen
+correcto y `build-finished.success`. Build release y checks Android arm64 y
+x86_64 `--tests --offline --locked` con exit 0, sin avisos nuevos en los checks.
+Helpers: 99 tests Node, 71 aserciones PowerShell y siete checks de sintaxis.
+No se repiten tipos/JavaScript para un cambio aislado del almacén Rust.
+
+Control EXE `a6026c2f…bcf26`, fuente `506986a`, conservando su procedencia.
+Candidata EXE
+`708384d1ed4ce6140f4ab3195da5948736dd55a1cf37ee896f16ddac16e104e1`,
+fuente `38a4ded`. Evidencia ignorada en `capture-bench.local/`:
+
+- Índices `round14-cold-search-20261024-112615-a208e23c-index.json.local` y
+  `round14-cold-search-20261024-112855-cf95f71a-index.json.local`, con sus recibos.
+- Fixture `round14-aged-cache-fixture.local/manifest.json.local`, SHA256
+  `7275b5300a28343e7688f2d40168ad72bc41c18a958720f439da0237b5ca4507`.
+- Revisión independiente `r14-independent-app-analysis.json.local`, SHA256
+  `7fa5081579768b65d33bf4cc89cdb486e79af4056eeab821139dc5b138915d29`.
+- Red `round14-network-analysis.json.local`, SHA256
+  `ea66d96de08e121e312e4ea34a3b02f97b5a3d86dbd3b1f59bffc9b7c05922a7`.
+- Fuentes/log/PE `round14-candidate.local/source-proof.json.local`, SHA256
+  `a14dd046830a16f4ed5de0e8392e99237694c010404f432e1a0c14be0211b27f`.
+- Android `round14-final-android-clang-vendor-checks-20261024-113328.json.local`,
+  SHA256 `dbd6a4d628ca158569f7f64a87d46c62e0bf93c1181b759a7468ee9a64ac73a4`.
+
+Cierre local: `round14-final-manifest.json.local`, después del commit de docs,
+con dos pases de hashes. No se acredita canción completa, EOF, PCM, las 30
+habituales, campañas de anuncios, Premium ni rendimiento móvil. La ventana
+breve silenciada no observó cortes, pero no sustituye esas pruebas. Oficial
+sigue experimental, yt-dlp predeterminado y Propio conserva sus respaldos.
+El cambio requiere reconstruir la app; PWA, receta, `capture.js`, `youtubei.ts`,
+versiones/API y OTA no cambian. Sólo rama de revisión, sin publicación.
+
+El siguiente solapamiento concreto está identificado, **todavía sin implementar**:
+un acierto de disco espera al resultado de `watch` antes del POST de metadatos.
+La ruta con análisis ya puede enviarlo en paralelo y retener su respuesta hasta
+admitir la identidad. Se estudiará reutilizar ese mismo mecanismo, con
+cancelación, plazo y cupo intactos; no adelantar descifrado ni acceso al audio.
+Los GET iniciales de watch/embed ya se solapan con los clientes rápidos.
+Analizar anticipadamente la variante de la portada requiere comprobarla: no
+siempre coincide con la de embedded.
