@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "build": "cc8c27ed537f3353",
+  "sourceCommit": "913799e8446dbe3b72df96b0b78b8644f6a52aeb",
+  "sourceBranch": "codex/pwa-0-11-2-port",
+  "publicationCommit": "5c5578898effcf09c564956ca42c05fac82673f3",
+  "url": "https://diad87.github.io/pletina/",
+  "workflow": "https://github.com/diad87/pletina/actions/runs/40130223056",
+  "scope": "Welcome/installation page and confirmed installed startup only. Existing application bundle is byte-identical to the previous release.",
+  "typeCheck": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "logicTests": {
+    "passed": 994,
+    "failed": 0,
+    "command": "npm test"
+  },
+  "browserTests": {
+    "passed": 8,
+    "failed": 0,
+    "report": "artifacts/pwa-e2e/welcome-cc8c27ed537f3353/summary.json",
+    "scope": "Compiled PWA and native desktop Chromium, real service worker/IndexedDB/localStorage. Android/iPhone user-agent and standalone property are explicitly simulated. Library/queue migration uses declared metadata fixtures in isolated browser storage. No OS install, physical phone, car, provider audio or public deployment claim."
+  },
+  "publicInstalled": {
+    "passed": 6,
+    "failed": 0,
+    "report": "artifacts/pwa-e2e/welcome-cc8c27ed537f3353/public-installed.json",
+    "scope": "Installed browser app lifecycle in a disposable desktop profile, controlled by CDP; not the native install dialog or a physical mobile device.",
+    "manualOpenClick": false
+  },
+  "publicBrowser": {
+    "passed": 3,
+    "failed": 0,
+    "report": "artifacts/pwa-e2e/welcome-cc8c27ed537f3353/public-welcome.json",
+    "scope": "Public landing and installation-guide canary, fresh Chromium context at390×844. No opening the player, catalogue requests, audio, native installation or library writes."
+  },
+  "publicFiles": {
+    "passed": true,
+    "checked": 33,
+    "report": "artifacts/pwa-deploy/public-files-cc8c27ed537f3353.json"
+  },
+  "previousApplication": {
+    "build": "e6e79b96d898769a",
+    "identical": true,
+    "files": 17,
+    "report": "artifacts/pwa-e2e/welcome-cc8c27ed537f3353/application-unchanged.json"
+  },
+  "distribution": {
+    "files": 33,
+    "bytes": 1006287,
+    "sha256": "6c76414d21ecd47dbc05331a3697b651be761542792bdb98d178ff3e1ba12574",
+    "initialBytes": 99327,
+    "applicationBytes": 861387
+  },
+  "limitations": [
+    "Mobile user-agent and navigator.standalone tests are desktop simulations, not physical Android/iPhone verification.",
+    "CDP installation uses a disposable desktop profile and does not verify the native confirmation dialog.",
+    "Ordinary browser visits cannot infer an installation that the browser does not expose.",
+    "No native Android Auto or Apple CarPlay integration was added."
+  ]
+}

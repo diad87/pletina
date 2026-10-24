@@ -1,7 +1,15 @@
 # Pletina PWA: port de la APK 0.11.2
 
+<!-- welcome-summary:start -->
+**Actual: `cc8c27ed537f3353`, publicada y verificada.** [Bienvenida oscura](pwa-welcome.md) con el diseño Esencial, el disco y la funda y «Dale al play.». La PWA instalada abre directamente la aplicación actual; también entra al terminar de instalar desde el navegador. **Los 17 archivos de la interfaz interior permanecen idénticos a e6e.** Tipos sin errores ni avisos, **994/994 pruebas de lógica**, **8/8 recorridos locales de navegador** y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-cc8c27ed537f3353.json). La actualización conserva biblioteca y cola, incluida la recarga sin red. [Despliegue correcto](https://github.com/diad87/pletina/actions/runs/40130223056), fuente `913799e`.
+
+No hace falta reinstalar. Aplica el aviso de actualización de Pletina o cierra la app y usa **«Actualizar y abrir»** en la portada.
+<!-- welcome-summary:end -->
+
+## Historial anterior a cc8c27ed537f3353
+
 <!-- driving-mode-summary:start -->
-**Actual: `e6e79b96d898769a`, publicada y verificada.** [Modo coche](pwa-driving-mode.md): controles grandes en vertical y horizontal, favoritos/descargas/colecciones/cola, pantalla encendida cuando el navegador lo permite y órdenes Media Session reforzadas. Incluye las correcciones de saltos desde una posición atrasada y reanudación tras una interrupción durante carga. Tipos sin errores ni avisos, **982/982 pruebas de lógica**, **20/20 casos de navegador** en Chromium/Firefox y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-e6e79b96d898769a.json). [Despliegue correcto](https://github.com/diad87/pletina/actions/runs/40105817115), fuente `7e84907`. La comprobación en móviles y mandos de coche físicos sigue pendiente.
+**Anterior: `e6e79b96d898769a`, publicada y verificada.** [Modo coche](pwa-driving-mode.md): controles grandes en vertical y horizontal, favoritos/descargas/colecciones/cola, pantalla encendida cuando el navegador lo permite y órdenes Media Session reforzadas. Incluye las correcciones de saltos desde una posición atrasada y reanudación tras una interrupción durante carga. Tipos sin errores ni avisos, **982/982 pruebas de lógica**, **20/20 casos de navegador** en Chromium/Firefox y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-e6e79b96d898769a.json). [Despliegue correcto](https://github.com/diad87/pletina/actions/runs/40105817115), fuente `7e84907`. La comprobación en móviles y mandos de coche físicos sigue pendiente.
 
 Para actualizar, cierra Pletina y pulsa **«Actualizar y abrir»** en la portada, sin reinstalar. Abre el **icono del coche** en la barra superior o **Sonando ahora → Modo coche**.
 <!-- driving-mode-summary:end -->
