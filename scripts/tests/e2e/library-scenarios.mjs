@@ -767,6 +767,12 @@ export async function runLibraryScenarios(ctx) {
     const original = { title: 'E2E YouTube Cola Anterior', artist: 'E2E Canal Anterior' }
     const edited = { title: 'E2E YouTube Ficha Corregida', artist: 'E2E Canal Corregido' }
     const listName = 'E2E YouTube Cola Guardada'
+    const playerTitle = '.mini .title, .player .info .title'
+    const playerArtist = '.mini .artist, .player .info .artist'
+    const playButton = '.mini button[aria-label="Reproducir"], .player button[aria-label="Reproducir"]'
+    const pauseButton = '.mini button[aria-label="Pausa"], .player button[aria-label="Pausa"]'
+    const openPlayer = '.mini button.open, .player button.thumb'
+    const likeButton = '.mini button[aria-label="Me gusta"], .player button.heart'
     let savedId, createdPlaylistId, initialHistoryCount = 0, initiallyLiked = false, failure, stage = 'setup'
     const visible = selector => page.locator(selector).first().isVisible().catch(() => false)
     const closeOverlays = async () => {
@@ -775,7 +781,7 @@ export async function runLibraryScenarios(ctx) {
     }
     const pause = async () => {
       await closeOverlays()
-      if (await visible('.mini button[aria-label="Pausa"]')) await u.tap('.mini button[aria-label="Pausa"]')
+      if (await visible(pauseButton)) await u.tap(pauseButton)
       await u.wait(() => window.__qaAudio.instances.every(audio => audio.paused))
     }
     const inspect = () => page.evaluate(() => new Promise((resolve, reject) => {
@@ -861,12 +867,14 @@ export async function runLibraryScenarios(ctx) {
 
       stage = 'edit while the player keeps an old copy'
       await save(edited)
-      assert.equal(await page.locator('.mini .title').textContent(), original.title, 'The player intentionally still holds the pre-edit queue copy')
-      assert.equal(await page.locator('.mini .artist').textContent(), original.artist)
+      assert.equal(await page.locator(playerTitle).textContent(), original.title, 'The player intentionally still holds the pre-edit queue copy')
+      assert.equal(await page.locator(playerArtist).textContent(), original.artist)
       stage = 'favorite and playlist from the old current item'
-      await u.tap('.mini button[aria-label="Me gusta"]')
-      await page.locator('.mini button[aria-label="Me gusta"].on').waitFor()
-      await u.tap('.mini button.open'); await u.tap('.np .extras button:has-text("Cola")')
+      await u.tap(likeButton)
+      await page.locator('.mini button[aria-label="Me gusta"].on, .player button.heart.on').waitFor()
+      if (await visible('.mini')) {
+        await u.tap(openPlayer); await u.tap('.np .extras button:has-text("Cola")')
+      } else await u.tap('.player button.queue-btn')
       await page.locator('.queue-panel button.save').waitFor()
       assert.equal((await page.locator('.queue-panel .scroll > .row .title').first().textContent()).trim(), original.title)
       await u.tap('.queue-panel button.save')
@@ -888,9 +896,9 @@ export async function runLibraryScenarios(ctx) {
 
       stage = 'record history from the old current item'
       // Resume the old current item, then use the real seek control to exercise record_play(old).
-      await u.tap('.mini button[aria-label="Reproducir"]')
+      await u.tap(playButton)
       await u.wait(() => window.__qaAudio.instances.some(audio => !audio.paused && audio.currentTime > 0.2))
-      await u.tap('.mini button.open')
+      await u.tap(openPlayer)
       const seek = page.locator('.np input[aria-label="Posición"]'); await seek.waitFor()
       await u.wait(() => !document.querySelector('.np input[aria-label="Posición"]').disabled)
       const box = await seek.boundingBox(); assert.ok(box?.width > 10)
@@ -905,7 +913,7 @@ export async function runLibraryScenarios(ctx) {
       await page.reload({ waitUntil: 'load' }); await page.locator('.app').waitFor(); await assertEditedRow(true)
       for (const label of [listName, 'Canciones que te gustan', 'Descargas']) { await u.library(label); await assertEditedRow(label === 'Canciones que te gustan') }
       const waitForLocalPlayback = async () => {
-        await u.wait(() => document.querySelector('.mini button[aria-label="Pausa"]') &&
+        await u.wait(() => document.querySelector('.mini button[aria-label="Pausa"], .player button[aria-label="Pausa"]') &&
           window.__qaAudio.instances.some(audio => !audio.paused && !audio.seeking && !audio.error && audio.readyState >= 2 &&
             audio.currentTime > 0.15 && new URL(audio.src, location.href).origin === location.origin &&
             new URL(audio.src, location.href).pathname.includes('/__audio__/')))
@@ -917,7 +925,7 @@ export async function runLibraryScenarios(ctx) {
         // progress after the UI and native media are ready, before reading metadata.
         await u.wait(({ index, time }) => {
           const audio = window.__qaAudio.instances[index]
-          return document.querySelector('.mini button[aria-label="Pausa"]') && audio && !audio.paused &&
+          return document.querySelector('.mini button[aria-label="Pausa"], .player button[aria-label="Pausa"]') && audio && !audio.paused &&
             !audio.seeking && !audio.error && audio.readyState >= 2 && audio.currentTime > time + 0.05 &&
             new URL(audio.src, location.href).origin === location.origin && new URL(audio.src, location.href).pathname.includes('/__audio__/')
         }, ready)
@@ -927,15 +935,15 @@ export async function runLibraryScenarios(ctx) {
       await waitForLocalPlayback()
       // Shared APK behavior: clicking the current ID resumes its existing queue
       // item. Editing the library does not rewrite that live/restored queue copy.
-      assert.equal(await page.locator('.mini .title').textContent(), original.title)
-      assert.equal(await page.locator('.mini .artist').textContent(), original.artist)
+      assert.equal(await page.locator(playerTitle).textContent(), original.title)
+      assert.equal(await page.locator(playerArtist).textContent(), original.artist)
       await pause()
       // The collection play button explicitly builds a new queue from the
       // canonical Downloads rows, so this is the fresh-selection metadata check.
       await u.tap('.actions button.big-play[title="Reproducir"]')
       await waitForLocalPlayback()
-      assert.equal(await page.locator('.mini .title').textContent(), edited.title)
-      assert.equal(await page.locator('.mini .artist').textContent(), edited.artist)
+      assert.equal(await page.locator(playerTitle).textContent(), edited.title)
+      assert.equal(await page.locator(playerArtist).textContent(), edited.artist)
       await pause()
       assert.equal(mediaRequests(), beforeLocalMedia, 'Playback from the existing download must stay local')
       assert.deepEqual(await cacheSnapshot(), cachedBefore)
@@ -952,7 +960,7 @@ export async function runLibraryScenarios(ctx) {
     } finally {
       try {
         await closeOverlays(); await pause()
-        if (!initiallyLiked && await visible('.mini button[aria-label="Me gusta"].on')) await u.tap('.mini button[aria-label="Me gusta"]')
+        if (!initiallyLiked && await visible('.mini button[aria-label="Me gusta"].on, .player button.heart.on')) await u.tap(likeButton)
         if (createdPlaylistId) {
           const created = (await inspect()).playlists.find(list => list.id === createdPlaylistId)
           if (created) {
@@ -1070,7 +1078,7 @@ export async function runLibraryHistoryScenario(ctx) {
   const { page, check } = ctx
   const u = ui(ctx)
   await check('library.history: recorded plays, cancel clear, clear and reload', async () => {
-    const playback = ctx.report.checks.find(entry => entry.name === 'media.selection-html-audio')
+    const playback = ctx.report.checks.find(entry => entry.name === 'media.selection-html-audio' || entry.name === 'desktop.download-album-offline')
     if (!playback || playback.status !== 'pass') return {
       status: 'blocked', reason: 'Recording history requires the preceding real-playback scenario to pass.',
       prerequisite: playback?.name ?? 'media.selection-html-audio', prerequisiteStatus: playback?.status ?? 'not-run',

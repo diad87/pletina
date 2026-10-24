@@ -18,10 +18,11 @@ const require = createRequire(import.meta.url)
 const requested = option('--profiles', 'chromium-android-layout,webkit-iphone-layout,firefox-narrow').split(',').filter(Boolean)
 for (const profile of requested) assert.ok(PROFILES[profile], `Unknown profile ${profile}`)
 const suite = option('--suite', 'all')
-assert.ok(['smoke', 'library', 'responsive', 'media', 'all'].includes(suite), 'Invalid suite')
+assert.ok(['smoke', 'library', 'responsive', 'media', 'desktop', 'all'].includes(suite), 'Invalid suite')
+if (suite === 'desktop') assert.ok(requested.every(profile => profile === 'chromium-desktop'), 'The focused desktop suite requires an actual desktop profile')
 const selectedMedia = option('--scenarios', null)?.split(',').filter(Boolean).map(id => id.startsWith('media.') ? id : 'media.' + id)
 if (selectedMedia) {
-  assert.equal(suite, 'media', '--scenarios is restricted to the media suite')
+  assert.ok(suite === 'media' || suite === 'all', '--scenarios is supported in the media suite or after the library/responsive stages of all')
   assert.ok(selectedMedia.length && new Set(selectedMedia).size === selectedMedia.length, 'Select distinct media scenarios')
   const { mediaScenarioInventory } = await import('./media-scenarios.mjs')
   for (const id of selectedMedia) assert.ok(mediaScenarioInventory.some(item => item.id === id), 'Unknown media scenario: ' + id)
@@ -128,9 +129,10 @@ async function fixtureGate(ctx) {
 async function blockRemaining(ctx, reason) {
   if (suite === 'smoke') { await ctx.check('smoke.search-play', async () => ({ status: 'blocked', reason })); return }
   const suites = []
-  if (suite === 'all' || suite === 'library') suites.push(['./library-scenarios.mjs', 'libraryScenarioInventory', 'library'])
-  if (suite === 'all' || suite === 'responsive') suites.push(['./responsive-scenarios.mjs', 'responsiveScenarioInventory', 'responsive'])
+  if (suite === 'all' || suite === 'library' || suite === 'desktop') suites.push(['./library-scenarios.mjs', 'libraryScenarioInventory', 'library'])
+  if (suite === 'all' || suite === 'responsive' || suite === 'desktop') suites.push(['./responsive-scenarios.mjs', 'responsiveScenarioInventory', 'responsive'])
   if (suite === 'all' || suite === 'media') suites.push(['./media-scenarios.mjs', 'mediaScenarioInventory', 'media'])
+  if (suite === 'desktop') suites.push(['./desktop-scenarios.mjs', 'desktopScenarioInventory', 'desktop'])
   for (const [file, name, fallback] of suites) {
     let inventory = []
     try { inventory = (await import(file))[name] ?? [] } catch { /* A missing suite is explicitly blocked below. */ }
@@ -177,7 +179,7 @@ try {
       ctx = await createHarness({ browser, baseURL, profile, engine: spec.engine, directory: join(output, profile), report, networkAvailability,
         ...(spec.engine === 'chromium' ? { networkTransport: chromiumBridge } : {}),
         ...(platformTransport ? { contextOptions: platformTransport.contextOptions, networkTransport: platformTransport.connect } : {}) })
-      if (suite === 'all') {
+      if (suite === 'all' || suite === 'desktop') {
         const installation = await loadScenario(ctx, './installation-scenarios.mjs', 'runInstallationScenarios')
         if (installation) await installation(ctx)
       }
@@ -187,11 +189,11 @@ try {
       if (!controlled) { await blockRemaining(ctx, 'Strict provider-fixture gate failed. Live provider data cannot verify deterministic feature scenarios.'); continue }
       if (suite === 'smoke') await smoke(ctx)
       let library
-      if (suite === 'library' || suite === 'all') {
+      if (suite === 'library' || suite === 'all' || suite === 'desktop') {
         library = await loadScenario(ctx, './library-scenarios.mjs', 'runLibraryScenarios')
         if (library) await library(ctx)
       }
-      if (suite === 'responsive' || suite === 'all') {
+      if (suite === 'responsive' || suite === 'all' || suite === 'desktop') {
         const responsive = await loadScenario(ctx, './responsive-scenarios.mjs', 'runResponsiveScenarios')
         if (responsive) await responsive(ctx)
       }
@@ -199,7 +201,11 @@ try {
         const media = await loadScenario(ctx, './media-scenarios.mjs', 'runMediaScenarios')
         if (media) await media(ctx, { scenarioIds: selectedMedia })
       }
-      if (suite === 'all' && library) {
+      if (suite === 'desktop') {
+        const desktop = await loadScenario(ctx, './desktop-scenarios.mjs', 'runDesktopScenarios')
+        if (desktop) await desktop(ctx)
+      }
+      if ((suite === 'all' || suite === 'desktop') && library) {
         const { runLibraryHistoryScenario } = await import('./library-scenarios.mjs')
         if (runLibraryHistoryScenario) await runLibraryHistoryScenario(ctx)
       }

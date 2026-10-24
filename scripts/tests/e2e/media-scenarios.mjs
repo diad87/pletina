@@ -74,10 +74,15 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   const wait = (fn, arg, timeout = 15000) => page.waitForFunction(fn, arg, { timeout })
   const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   const transferObserver = () => {
+    // Library cases can already observe transfers before Media starts. Native
+    // connectivity events are independent and must still be installed once.
+    if (!window.__e2eNetworkEvents) {
+      window.__e2eNetworkEvents = [{ type: 'initial', online: navigator.onLine }]
+      for (const type of ['online', 'offline']) addEventListener(type, event =>
+        window.__e2eNetworkEvents.push({ type, online: navigator.onLine, trusted: event.isTrusted }))
+    }
     if (window.__e2eTransfers) return
     window.__e2eTransfers = []
-    window.__e2eNetworkEvents = [{type:'initial',online:navigator.onLine}]
-    for(const type of ['online','offline']) addEventListener(type,event=>window.__e2eNetworkEvents.push({type,online:navigator.onLine,trusted:event.isTrusted}))
     window.addEventListener('pletina:download', ({ detail }) => window.__e2eTransfers.push({
       id: detail.trackId, state: detail.state, progress: detail.progress,
       error: detail.error ? String(detail.error).replace(/https?:\/\/[^\s]+/g, '[URL]') : null,
@@ -145,6 +150,14 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       return titles.every((title, index) => rows[index]?.textContent.trim() === title)
     }, media.tracks.map(track => track.title))
     return page.locator('.tracks li[data-reorder-index] .name').allTextContents()
+  }
+  async function returnToSearchRows(query, titles) {
+    // A song selection now deliberately opens its album. A later action on a
+    // search result must return to Search rather than silently target album rows.
+    await ctx.fillSearch('Buscar', query)
+    await wait(titles => titles.every((title, index) =>
+      document.querySelector(`.tracks li[data-reorder-index="${index}"] .name`)?.textContent.trim() === title), titles)
+    assert.equal(await page.evaluate(() => history.state?.snapshot?.stack[history.state?.index]?.name), 'search')
   }
   async function playing(title, timeout = 15000) {
     await wait(title => document.querySelector('.mini .title')?.textContent.trim() === title &&
@@ -237,7 +250,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     await context.setOffline(false)
     await ctx.goOffline(false)
   }
-  function observeProviderRequests({ captureBrowseIdentity = false } = {}) {
+  function observeProviderRequests({ captureBrowseIdentity = false, captureAudioIdentity = false } = {}) {
     const attempts = [], rows = new Map()
     const observe = request => {
       const url = new URL(request.url())
@@ -249,6 +262,12 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
             try { body = request.postDataJSON() } catch { body = null }
             row.metadataBrowse = { method: request.method(), browseId: body?.browseId ?? null,
               continuation: body?.continuation ?? null, clientName: body?.context?.client?.clientName ?? null }
+          }
+          if (captureAudioIdentity && /(?:^|\.)youtube\.com$/.test(url.hostname) && /^\/youtubei\/v1\/(?:search|player)$/.test(url.pathname)) {
+            let body
+            try { body = request.postDataJSON() } catch { body = null }
+            row.audioLookup = { method: request.method(), videoId: body?.videoId ?? null, query: body?.query ?? null,
+              clientName: body?.context?.client?.clientName ?? null }
           }
           rows.set(request, row); attempts.push(row)
         }
@@ -708,6 +727,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
             await page.locator('.mini button[aria-label="Reproducir"]').waitFor()
             await wait(() => !document.querySelector('.mini[aria-busy="true"]'))
           } else {
+            await returnToSearchRows(retries.query(track.title.replace('Reintento QA ', '')), [track.title, destination.title])
             await tap(row(1) + ' .name'); await retryPlaying(destination)
           }
           gate.release(); const delivery = await gate.waitForDelivery(); await page.waitForTimeout(1000)
@@ -1188,7 +1208,26 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
   await run('p1-multiple-aac-isolates-invalid-and-denied-candidates-without-video-or-download', async () => {
     const rescue = media.p1Multi
     assert.ok(rescue?.track && rescue.videoId === rescue.track.videoId)
-    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff()
+    await fixture.reset(); await closeOverlays(); await pause(); await controlsOff(); await reload()
+    let selectedDifferentSongForIsolation = false
+    if (await page.evaluate(id => {
+      const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+      return queue?.queue?.[queue.order?.[queue.pos]]?.track.id === id
+    }, rescue.track.id)) {
+      // Selecting the already-current song deliberately resumes its old queue.
+      // Start a different real fixture song first, then clear only RAM through
+      // reload, so this case tests a new two-song Search selection naturally.
+      await ctx.fillSearch('Buscar', media.query)
+      await wait(title => document.querySelector('.tracks li[data-reorder-index="0"] .name')?.textContent.trim() === title, fixture.tracks[0].title)
+      await tap(row(0) + ' .name'); await playing(fixture.tracks[0].title); await pause(); await reload()
+      selectedDifferentSongForIsolation = true
+    }
+    // The earlier SABR case intentionally uses this same recording. Its valid
+    // remembered identity skips text search; an isolated run remains cold and
+    // must still perform exactly one search. Both paths retain exact formats.
+    const rememberedChoice = (await sourceChoiceSnapshot()).find(row => row.trackId === rescue.track.id)?.choice ?? null
+    if (rememberedChoice) assert.equal(rememberedChoice.videoId, rescue.videoId, 'A warm case must retain this exact recording')
+    const expectedMusicSearches = rememberedChoice ? 0 : 1
     const mark = fixture.requests.length
     const attempts = () => fixture.requests.slice(mark).filter(request => request.fixtureCase === 'p1-multi-aac-rescue')
       .map(({ operation, candidateIds, videoId, clientName, playability, candidate, responseStatus, type }) => ({ operation,
@@ -1238,7 +1277,8 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         { videoId: rescue.videoId, clientName: 'VISIONOS', playability: 'UNPLAYABLE' },
         { videoId: rescue.videoId, clientName: 'WEB_EMBEDDED_PLAYER', playability: 'OK' },
       ])
-      assert.equal(trace.filter(row => row.operation === 'music-search').length, 1)
+      assert.equal(trace.filter(row => row.operation === 'music-search').length, expectedMusicSearches,
+        'A cold identity searches once; the exact remembered recording requires no text search')
       assert.equal(trace.filter(row => row.operation === 'web-search').length, 0, 'P1 recovery must not search for another recording')
       assert.equal(trace.filter(row => row.operation === 'media' && row.candidate === 'p1-invalid-locator').length, 0,
         'A rejected locator must never reach the browser media transport')
@@ -1264,6 +1304,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       assert.equal(await page.locator('dialog[data-official-youtube][open]').count(), 0)
       completed = true
       return { requestedTrackId: rescue.track.id, videoId: rescue.videoId, selected, attempts: trace, sameAudio: true,
+        sourceLookup: { rememberedSameRecording: Boolean(rememberedChoice), expectedMusicSearches, selectedDifferentSongForIsolation },
         sameSongAndQueue: true, extraPlayInteractions: 0, officialVideoOpened: false,
         sourceContract: { expectedProvider: 'youtube-p1', privateProviderDirectlyInspected: false,
           p1TransportObserved: true, automaticDownloadObserved: false },
@@ -1724,6 +1765,15 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
         window.__qaAudio.instances.some(audio => !audio.paused && !audio.error && audio.currentTime > .2), track.title)
       await pause()
       assert.deepEqual(await downloadState(), { rows: [], cacheEntries: 0 }, 'P1 listening alone cannot save media')
+      assert.equal(await page.evaluate(() => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null
+      }), track.id, 'The dedicated P1 song must be selected before downloading its search result')
+      await returnToSearchRows(media.p1Downloads.query(track), [track.title])
+      assert.equal(await page.evaluate(() => {
+        const queue = JSON.parse(localStorage.getItem('pletina:web:queue:v1') || 'null')
+        return queue?.queue?.[queue.order?.[queue.pos]]?.track.id ?? null
+      }), track.id, 'Returning to Search cannot change the selected song')
       const mark = await transferMark()
       await menu(0, 'Descargar')
       const event = await terminal(mark, track.id)
@@ -2061,6 +2111,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
     const hostLimitation = await offlineQueueHostLimitation(); if (hostLimitation) return hostLimitation
     await fixture.reset(); await clearDownloads(); await music(); await downloadMusic([0, 2, 5])
     const { titles, state: before } = await start(0), index = active(before).index
+    await returnToSearchRows(media.query, titles)
     await menu(2, 'Añadir a la cola'); await menu(5, 'Añadir a la cola')
     await nowPlaying(); await tap('.np button[title="Repetir"]'); await closeOverlays()
     assert.equal(await removeCachedBody(fixture.tracks[2].id), true, 'Explicit QA cache eviction leaves a stale downloaded marker for the real player to reconcile')
@@ -2477,7 +2528,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       assert.doesNotMatch(JSON.stringify(record), /googlevideo|youtube-p1|signature|sha256|[?&](?:expire|sig)=/i)
       assert.deepEqual(await sourceChoiceSnapshot(), choicesBefore, 'Podcast resolution must not create or change music source associations')
       assert.equal(await page.locator('iframe[data-official-video]').count(), 0)
-      networkObserver = observeProviderRequests({ captureBrowseIdentity: true })
+      networkObserver = observeProviderRequests({ captureBrowseIdentity: true, captureAudioIdentity: true })
       offline = await ctx.goOffline(true)
       const fixtureMark = fixture.requests.length, observedMark = networkObserver.attempts.length
       await reload()
@@ -2498,14 +2549,36 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       await reload(); assert.ok((await state()).audios.every(audio => audio.paused))
       await tap('.mini button[aria-label="Reproducir"]'); value = await playing(episodes[0].title)
       assert.equal(active(value).local, true); assert.ok(active(value).time >= checkpoint.position - .5)
+      // Native requestfailed notification can follow the last browser command.
+      // Observe its real completion instead of accepting an in-flight request
+      // as blocked. No connectivity event or provider response is fabricated.
+      const networkDeadline = Date.now() + 2000
+      while (Date.now() < networkDeadline && networkObserver.attempts.slice(observedMark).some(request =>
+        request.type === 'fetch' && request.failed === null && request.responseStatus === null)) await page.waitForTimeout(25)
       const observations = networkObserver.attempts.slice(observedMark)
+      ctx.report.podcastOutageRequests = JSON.parse(JSON.stringify({ networkMode: offline.mode,
+        navigatorOfflineExpected: offline.navigatorOfflineExpected, observations }))
       // Restoring PodcastView refreshes that program's metadata before falling
       // back to its saved detail. This is separate from resolving audio.
       const metadataRequests = observations.filter(request => request.host === 'music.youtube.com' && request.path === '/youtubei/v1/browse' &&
         request.type === 'fetch' && request.metadataBrowse?.method === 'POST' && request.metadataBrowse.browseId === media.youtubePodcast.browseId &&
         request.metadataBrowse.continuation === null && request.metadataBrowse.clientName === 'WEB_REMIX')
-      assert.deepEqual(observations.filter(request => request.type !== 'media' && !metadataRequests.includes(request)), [],
-        'Offline audio must not search or request a player; only the exact restored program may attempt a metadata refresh')
+      // The WebKit origin/provider gate preserves navigator.onLine=true. If a
+      // prior two-episode queue is resumed, the player may prepare its missing
+      // successor while the current episode still plays exclusively locally.
+      // Real browser-offline mode must never make these resolution requests.
+      const nextEpisodePrefetch = offline.navigatorOfflineExpected ? [] : observations.filter(request =>
+        request.host === 'www.youtube.com' && request.type === 'fetch' && request.audioLookup?.method === 'POST' &&
+        (request.path === '/youtubei/v1/search' && request.audioLookup.query === episodes[1].videoId &&
+          request.audioLookup.videoId === null && request.audioLookup.clientName === 'WEB' ||
+         request.path === '/youtubei/v1/player' && request.audioLookup.videoId === episodes[1].videoId &&
+          request.audioLookup.query === null && request.audioLookup.clientName === 'WEB_EMBEDDED_PLAYER'))
+      assert.ok(nextEpisodePrefetch.length <= 3, 'An origin outage permits only the three observed bounded successor prefetch requests')
+      assert.ok(!saved.rows.some(row => row.id === ids[1]), 'Only the exact undownloaded successor may need a prefetch')
+      assert.deepEqual(observations.filter(request => request.type !== 'media' && !metadataRequests.includes(request) && !nextEpisodePrefetch.includes(request)), [],
+        'Cached current audio cannot resolve remotely; real offline forbids all search/player calls and an online origin outage permits only its exact missing successor')
+      for (const request of nextEpisodePrefetch) assert.deepEqual({ failed: Boolean(request.failed), status: request.responseStatus, fromServiceWorker: request.fromServiceWorker },
+        { failed: true, status: null, fromServiceWorker: null }, 'A successor prefetch must be blocked without delivering any provider bytes')
       for (const request of metadataRequests) assert.ok(request.failed && request.responseStatus === null,
         'A metadata refresh must fail during the actual provider outage, without delivering a response')
       for (const request of observations.filter(request => request.type === 'media')) assert.ok(
@@ -2517,6 +2590,7 @@ export async function runMediaScenarios(ctx, { scenarioIds = null } = {}) {
       assert.deepEqual(await downloadState(), saved, 'Reload and checkpoint restoration must retain the validated copy without resurrecting the failed episode')
       return { episodeIds: ids, videoIds: episodes.map(episode => episode.videoId), events, attempts, database: saved,
         persistedFields: Object.keys(record), checkpoint, resumed: value, nativeMediaObservations: observations, blockedProgramMetadataRequests: metadataRequests,
+        blockedNextEpisodePrefetch: nextEpisodePrefetch,
         networkMode: offline.mode, navigatorOfflineExpected: offline.navigatorOfflineExpected, physicalAirplaneModeClaimed: false,
         scope: 'Actual podcast DownloadButton and serial product queue; native ninety-second silent AAC decoder, CacheStorage, IDB, local reload/seek/checkpoint resume, controlled second transfer403 HTML rollback. Opaque size is declared; no product body SHA, musical identity, live-provider, long-episode, physical-phone or background-download claim.' }
     } finally {

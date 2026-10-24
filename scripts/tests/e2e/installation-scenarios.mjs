@@ -51,12 +51,21 @@ export async function runInstallationScenarios(ctx) {
       return { manifest, icons, reference, appleStatus: (await fetch(appleIcon.href)).status }
     })
     assert.equal(result.manifest.display, 'standalone')
-    for (const name of ['id', 'scope', 'start_url']) assert.equal(new URL(result.manifest[name], result.reference).href, baseURL)
+    const startURL = new URL(result.manifest.start_url, result.reference)
+    const scope = new URL(result.manifest.scope, result.reference)
+    // Unlike start_url/scope, a relative manifest id uses start_url's origin.
+    // Preserve the existing installed identity: './' means the origin root.
+    const manifestId = new URL(result.manifest.id, startURL.origin + '/').href
+    assert.equal(startURL.href, baseURL)
+    assert.equal(scope.href, baseURL)
+    assert.equal(manifestId, new URL(baseURL).origin + '/')
     assert.ok(result.icons.some(icon => icon.size === '192x192'))
     assert.ok(result.icons.some(icon => icon.size === '512x512'))
     assert.ok(result.icons.every(icon => icon.status === 200))
     assert.equal(result.appleStatus, 200)
-    return { stableIdentity: true, iconSizes: result.icons.map(icon => icon.size) }
+    return { stableIdentity: true, manifestId, startURL: startURL.href, scope: scope.href,
+      idResolutionBase: 'start_url origin, per Web App Manifest processing rules',
+      iconSizes: result.icons.map(icon => icon.size) }
   })
   await check('install.guide: platform instructions open and close', async () => {
     await ctx.tap('#install')
