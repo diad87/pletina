@@ -1,5 +1,7 @@
 # Letras y transcripciones en la PWA
 
+Publicada y verificada en la compilación **`bbdda9c0c16f145e`**, fuente `5a6967c`. [Informe de entrega](../artifacts/pwa-port/media-text-release-bbdda9c0c16f145e.json): tipos sin errores/avisos, **956/956 pruebas de lógica**, **18/18 comprobaciones de navegador** y **33/33 archivos públicos HTTP/SHA**. [Publicación correcta](https://github.com/diad87/pletina/actions/runs/40085844089).
+
 En **Sonando ahora**, **Letra** abre la letra de la canción actual y **Transcripción** abre el texto publicado por el autor del episodio. La barra de reproducción del ordenador tiene otro acceso. En móvil el texto ocupa el espacio de la portada, mantiene los controles de audio y permite desplazamiento táctil y con teclado.
 
 Las consultas se realizan al abrir el panel. Una respuesta que llega después de cambiar de pista se descarta. El reproductor, sus fuentes, la cola y las descargas conservan su comportamiento. La interfaz distingue carga, ausencia, canción instrumental y fallo con reintento. Los enlaces de atribución abren la fuente publicada en otra pestaña.
@@ -20,3 +22,7 @@ Al abrir una letra se envían sus metadatos a LRCLIB. Al abrir una transcripció
 ## Verificación
 
 Las pruebas de lógica cubren selección de grabación, LRC, formatos de transcripción, límites, errores, cancelación y persistencia de referencias. Las pruebas de navegador usan la distribución real compilada y respuestas HTTP controladas para comprobar el panel, el cambio de pista y el diseño móvil. Sus resultados se registran por compilación y no sustituyen una prueba en un teléfono físico.
+
+La prueba de LRCLIB real usó Chrome desde un origen HTTP local con el módulo productivo y obtuvo HTTP 200 con CORS, sin guardar el cuerpo de la letra. El recorrido de la aplicación compilada se verificó en escritorio de 1440 px y diseño Android de 320 px, con nueve comprobaciones por perfil. Los dos primeros intentos del observador fallaron por un selector de cierre demasiado amplio y por reintentar antes de vencer `Retry-After`; ambos informes se conservan. El ensayo final pasa tras corregir únicamente esas condiciones del observador.
+
+Durante la publicación se detectó una entrega concurrente que mejora las duraciones de más de una hora (`dced66a0c3e715b5`). Se conservó su código `af7f849`, ya incluido como antecesor de la entrega de letras, y se publicó como descendiente de esa distribución. La guardia de publicación rechazó el primer intento con estado antiguo y no se forzó la rama.

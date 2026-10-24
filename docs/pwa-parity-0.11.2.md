@@ -1,7 +1,15 @@
 # Paridad de la PWA con la APK 0.11.2
 
+<!-- media-text-summary:start -->
+**Actual: `bbdda9c0c16f145e`, publicada y verificada**, fuente `5a6967c`. [Letras y transcripciones](pwa-media-text.md) en Sonando ahora: LRCLIB, texto RSS publicado, seguimiento y salto por fragmentos, estados de ausencia/instrumental/error y reintento. Conserva la mejora concurrente de duraciones de más de una hora (`af7f849`). [Validación](../artifacts/pwa-port/media-text-release-bbdda9c0c16f145e.json): tipos **0 errores/0 avisos**, **956/956 pruebas de lógica**, **18/18 comprobaciones** en Chromium de escritorio y diseño móvil de 320 px, y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-bbdda9c0c16f145e.json). [Publicación correcta](https://github.com/diad87/pletina/actions/runs/40085844089). LRCLIB comprobado con CORS real; las transcripciones necesitan que el proveedor permita acceso web. Sin nuevas pruebas de teléfonos físicos ni pantalla apagada.
+
+Para actualizar, cierra Pletina y pulsa **«Actualizar y abrir»** en la portada; no hace falta reinstalar. Después abre **Sonando ahora → Letra / Transcripción**.
+<!-- media-text-summary:end -->
+
+## Historial anterior a bbdda9c0c16f145e
+
 <!-- podcast-controls-a2-summary:start -->
-**Actual: `a2e6b8da9fb17c07`, publicada y verificada**, fuente `0f930563fb29b3f4d61c75ab09fbf135c1ee9882`. [Controles del pódcast](pwa-podcast-controls.md): play circular sin compresión, descarga con área fija de 44 × 44 px y fila de controles que permite saltos; el mensaje queda debajo en móvil. Inspección visual antes/después en seis anchos (320–1280 px), tipos sin errores/avisos y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-a2e6b8da9fb17c07.json). [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40081086271). La inspección usa Firefox de escritorio y respuestas HTTP controladas; no acredita un móvil físico ni reproducción. Las 14 comprobaciones de selección de canciones corresponden a la entrega anterior.
+**Anterior: `a2e6b8da9fb17c07`, publicada y verificada**, fuente `0f930563fb29b3f4d61c75ab09fbf135c1ee9882`. [Controles del pódcast](pwa-podcast-controls.md): play circular sin compresión, descarga con área fija de 44 × 44 px y fila de controles que permite saltos; el mensaje queda debajo en móvil. Inspección visual antes/después en seis anchos (320–1280 px), tipos sin errores/avisos y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-a2e6b8da9fb17c07.json). [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40081086271). La inspección usa Firefox de escritorio y respuestas HTTP controladas; no acredita un móvil físico ni reproducción. Las 14 comprobaciones de selección de canciones corresponden a la entrega anterior.
 <!-- podcast-controls-a2-summary:end -->
 
 ## Historial anterior a a2e6b8da9fb17c07
