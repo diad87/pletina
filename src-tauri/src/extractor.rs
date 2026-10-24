@@ -77,6 +77,7 @@ const CDN_PRECONNECT_SCRIPT: &str = r#"
     if (active.length >= 2) return;
     const link = document.createElement('link');
     link.rel = 'preconnect';
+    link.crossOrigin = 'anonymous';
     link.href = origin;
     link.dataset.pletinaCdnPreconnect = String(now);
     head.append(link);
@@ -412,7 +413,8 @@ mod tests {
     fn cdn_preconnect_keeps_only_the_validated_https_audio_origin() {
         let script = cdn_preconnect_script("https://rr3---sn-abc.googlevideo.com/videoplayback?sig=private&n=secret").unwrap();
         assert!(script.ends_with("})(\"https://rr3---sn-abc.googlevideo.com\");"));
-        for excluded in ["videoplayback", "private", "secret", "?sig", "fetch(", "Audio(", "crossOrigin"] {
+        assert!(script.contains("link.crossOrigin = 'anonymous';"));
+        for excluded in ["videoplayback", "private", "secret", "?sig", "fetch(", "Audio(", "use-credentials"] {
             assert!(!script.contains(excluded), "{excluded}");
         }
         for rejected in [
