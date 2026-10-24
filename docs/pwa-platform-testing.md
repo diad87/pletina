@@ -1,7 +1,13 @@
 # Pruebas por plataforma de la PWA
 
+<!-- podcast-controls-a2-summary:start -->
+**Actual: `a2e6b8da9fb17c07`, publicada y verificada**, fuente `0f930563fb29b3f4d61c75ab09fbf135c1ee9882`. [Controles del pódcast](pwa-podcast-controls.md): play circular sin compresión, descarga con área fija de 44 × 44 px y fila de controles que permite saltos; el mensaje queda debajo en móvil. Inspección visual antes/después en seis anchos (320–1280 px), tipos sin errores/avisos y [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-a2e6b8da9fb17c07.json). [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40081086271). La inspección usa Firefox de escritorio y respuestas HTTP controladas; no acredita un móvil físico ni reproducción. Las 14 comprobaciones de selección de canciones corresponden a la entrega anterior.
+<!-- podcast-controls-a2-summary:end -->
+
+## Historial anterior a a2e6b8da9fb17c07
+
 <!-- search-row-7141-summary:start -->
-**Actual: `7141fda94599aec1`, publicada y verificada**, fuente `e1e35cd2efdeb3146868f67e9ce5fc9d6c06e15a`. [Seleccionar una canción desde Buscar](pwa-search-selection.md): tocar cualquier parte de una fila de Canciones reproduce esa canción, abre su disco y deja la búsqueda. Repetir la selección no pausa ni reinicia; ⋯ y favoritos siguen siendo independientes, también con teclado. El comportamiento se limita a Buscar de la PWA.
+**Anterior: `7141fda94599aec1`, publicada y verificada**, fuente `e1e35cd2efdeb3146868f67e9ce5fc9d6c06e15a`. [Seleccionar una canción desde Buscar](pwa-search-selection.md): tocar cualquier parte de una fila de Canciones reproduce esa canción, abre su disco y deja la búsqueda. Repetir la selección no pausa ni reinicia; ⋯ y favoritos siguen siendo independientes, también con teclado. El comportamiento se limita a Buscar de la PWA.
 
 [Validación](../artifacts/pwa-e2e/validation-7141fda94599aec1.json): tipos **0 errores/0 avisos**, **14/14 comprobaciones** con preparación y audio base incluidos (5 Chrome, 5 Firefox y 4 WebKit). Chrome/WebKit usan pulsaciones táctiles de confianza; Firefox usa ratón. Son navegadores de escritorio con emulación de vista, no móviles físicos. El canario sobre la web pública toca «Eminem» bajo **Without Me** y reproduce esa canción mostrando **The Eminem Show**, sin vídeo ni segundo toque. [Workflow correcto](https://github.com/diad87/pletina/actions/runs/40080270874); [33/33 archivos públicos HTTP/SHA](../artifacts/pwa-deploy/public-files-7141fda94599aec1.json). Distribución: **910.558 bytes**.
 
