@@ -5,6 +5,7 @@
 //!   (`http_fetch`) y le pide las URLs con un evento. Si falla, yt-dlp.
 //! - `propio`: primero el nivel rápido (`native.rs`, una petición desde Rust) y, si falla, el nivel
 //!   histórico (`capture_legacy.rs`, el reproductor de YouTube Music en una ventana oculta).
+//!   En Linux se conserva el respaldo publicado con yt-dlp.
 //!   `oficial` usa solo la captura oficial (para probarla).
 
 use crate::youtube::BROWSER_UA;
@@ -148,19 +149,25 @@ async fn propio(video_id: &str, refresh: bool, foreground: bool, ticket: Option<
             if ticket.is_some_and(|t| !crate::player::request_current(t)) {
                 return Err("CAPTURE_SUPERSEDED: otra canción tiene prioridad".into());
             }
-            // La ruta histórica sólo tiene una ventana de precarga. La segunda
-            // plaza sí puede preparar URLs nativas, pero nunca desplaza esa ventana.
-            if !foreground && ticket.and_then(|t| t.prefetch_slot) == Some(1) {
-                return Err("CAPTURE_BUSY: el respaldo histórico sólo admite una precarga".into());
+            #[cfg(target_os = "linux")]
+            { official(video_id, refresh, foreground, ticket, None).await }
+            #[cfg(not(target_os = "linux"))]
+            {
+                // La ruta histórica sólo tiene una ventana de precarga. La segunda
+                // plaza sí puede preparar URLs nativas, pero nunca desplaza esa ventana.
+                if !foreground && ticket.and_then(|t| t.prefetch_slot) == Some(1) {
+                    return Err("CAPTURE_BUSY: el respaldo histórico sólo admite una precarga".into());
+                }
+                let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
+                let meta = capture_legacy::stream(app, video_id, refresh, foreground, ticket).await?;
+                Ok(VideoInfo { url: format!("{}{video_id}", capture_legacy::SCHEME), title: meta.title, channel: meta.channel, duration: meta.duration })
             }
-            let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
-            let meta = capture_legacy::stream(app, video_id, refresh, foreground, ticket).await?;
-            Ok(VideoInfo { url: format!("{}{video_id}", capture_legacy::SCHEME), title: meta.title, channel: meta.channel, duration: meta.duration })
         }
     }
 }
 
 /// Captura oficial experimental: empieza con la primera unidad confirmada; EOF se valida aparte.
+#[cfg(not(target_os = "linux"))]
 async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Option<RequestTicket>, admission: Option<ForegroundAdmission>) -> Result<VideoInfo, String> {
     let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
     let meta = capture::stream_with_priority(app, video_id, refresh, foreground, ticket, admission).await?;
@@ -170,6 +177,15 @@ async fn official(video_id: &str, refresh: bool, foreground: bool, ticket: Optio
         channel: meta.channel,
         duration: meta.duration,
     })
+}
+
+/// En Linux la ventana de captura no tiene canal nativo: el respaldo del motor propio usa
+/// yt-dlp, incluido su runtime, en vez de esperar audio de una ventana que permanece en blanco.
+#[cfg(target_os = "linux")]
+async fn official(video_id: &str, refresh: bool, _foreground: bool, _ticket: Option<RequestTicket>, _admission: Option<ForegroundAdmission>) -> Result<VideoInfo, String> {
+    use tauri::Manager;
+    let app = &BRIDGE.get().ok_or("La app aún no está lista")?.app;
+    app.state::<YtDlp>().stream(video_id, refresh).await
 }
 
 /// Pide la URL a youtubei.js (en la interfaz) y la guarda mientras no caduque.

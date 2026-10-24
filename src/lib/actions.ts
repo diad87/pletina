@@ -6,11 +6,12 @@ import { toast } from './toast.svelte'
 import type { AlbumDetail } from './types'
 import { layout } from './layout.svelte'
 import { library } from './library.svelte'
-import { isLocal, isPodcast } from './media'
+import { isLocal, isPodcast, isYouTubeTrack } from './media'
 import { youtubeEpisodes } from './podcasts'
 import type { MenuItem } from './menu.svelte'
 import { nav } from './nav.svelte'
 import { player, type QueueItem } from './player.svelte'
+import { pins } from './pins.svelte'
 import { justCreated } from '../views/PlaylistView.svelte'
 
 /** "Añadir a playlist ▸": nueva playlist + las que ya hay. */
@@ -51,6 +52,25 @@ export function albumCardMenu(albumId: number): MenuItem[] {
     { label: 'Reproducir', icon: 'play', action: () => playAlbum(albumId) },
     ...queueMenu(tracks),
     { ...addToPlaylistMenu(tracks), separated: true },
+    {
+      label: pins.has('album', albumId) ? 'Desfijar de Inicio' : 'Fijar en Inicio',
+      icon: 'pin',
+      action: async () => {
+        const pinned = pins.items.find((pin) => pin.kind === 'album' && pin.id === albumId)
+        if (pinned) {
+          pins.toggle(pinned)
+          return
+        }
+        try {
+          const album = await api.album(albumId)
+          if (!pins.has('album', albumId)) {
+            pins.toggle({ kind: 'album', id: album.id, title: album.title, image: album.coverBig })
+          }
+        } catch (e) {
+          toast.show(`No se pudo fijar el disco: ${e}`)
+        }
+      },
+    },
     { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: albumId }) },
   ]
 }
@@ -69,6 +89,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
   ]
   const id = item.track.id
   const podcast = isPodcast(id)
+  const youtube = isYouTubeTrack(id)
   if (isLocal(id)) {
     // Música local: ya está en el equipo y no viene de YouTube.
     items.push({ label: 'Mostrar en la carpeta', icon: 'folder', action: () => api.revealLocal(id).catch(() => {}) })
@@ -86,7 +107,19 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       action: () => library.removeFromPlaylist(playlist.id, playlist.entryId),
     })
   }
-  if (podcast) {
+  if (youtube) {
+    items.push({ label: 'Ir a Canciones de YouTube', icon: 'note', separated: true, action: () => nav.go({ name: 'youtube-tracks' }) })
+    items.push({
+      label: 'Quitar de Canciones de YouTube', icon: 'trash',
+      action: async () => {
+        try {
+          await api.removeYouTubeTrack(id)
+          library.version++
+          toast.show('Quitada de Canciones de YouTube. Se conserva en tus playlists y favoritos.')
+        } catch (e) { toast.show(`No se pudo quitar: ${e}`) }
+      },
+    })
+  } else if (podcast) {
     items.push({ label: 'Ir al podcast', icon: 'disc', separated: true, action: () => nav.go({ name: 'podcast', id: item.albumId }) })
   } else {
     items.push(
@@ -99,7 +132,7 @@ export function trackMenu(item: QueueItem, playlist?: { id: number; entryId: num
       { label: 'Ir al disco', icon: 'disc', action: () => nav.go({ name: 'album', id: item.albumId }) },
     )
   }
-  if (!isLocal(id) && !podcast) {
+  if (!isLocal(id) && !podcast && !youtube) {
     items.push({ label: '¿No es esta canción?', icon: 'swap', separated: true, action: () => (player.picking = item) })
   }
   return items
@@ -124,7 +157,7 @@ export async function playAlbum(albumId: number) {
   if (player.current?.albumId === albumId && player.status !== 'idle') return player.toggle()
   try {
     const album = await api.album(albumId)
-    player.playQueue(albumQueue(album), 0, album.title)
+    player.playQueue(albumQueue(album), null, album.title)
   } catch (e) {
     toast.show(`No se pudo abrir el disco: ${e}`)
   }

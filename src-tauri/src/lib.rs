@@ -19,14 +19,19 @@ mod downloads;
 mod extractor;
 mod extractors;
 mod library;
+#[cfg(any(target_os = "android", test))]
+mod media_library;
 mod playlist_import;
 mod spotify;
 mod local;
+#[cfg(target_os = "linux")]
+mod local_media;
 mod native;
 mod native_player;
 mod player;
 mod playback_network;
 mod podcasts;
+mod podcast_progress;
 #[cfg_attr(mobile, path = "updater_mobile.rs")]
 mod updater;
 mod youtube;
@@ -34,10 +39,11 @@ mod youtube_decoder;
 mod youtube_decoder_cache;
 mod youtube_session;
 mod youtube_podcasts;
+mod youtube_tracks;
 mod ytdlp;
 
 use db::Db;
-use deezer::{AlbumDetail, ArtistPage, Deezer, SearchResults};
+use deezer::{Album, AlbumDetail, Artist, ArtistPage, Deezer, Discovery, SearchResults};
 use player::{Alternative, Playable};
 use tauri::{Manager, State};
 use tauri_plugin_opener::OpenerExt;
@@ -78,16 +84,23 @@ async fn search(
 }
 
 #[tauri::command]
-async fn artist(
-    id: u64,
-    deezer: State<'_, Deezer>,
-    db: State<'_, Db>,
-) -> Result<ArtistPage, String> {
-    if local::is_local(id) {
-        local::artist(&db, id)
-    } else {
-        deezer.artist(id).await
-    }
+async fn discovery(deezer: State<'_, Deezer>) -> Result<Discovery, String> {
+    deezer.discovery().await
+}
+
+#[tauri::command]
+async fn related_artists(id: u64, deezer: State<'_, Deezer>) -> Result<Vec<Artist>, String> {
+    deezer.related_artists(id).await
+}
+
+#[tauri::command]
+async fn artist_albums(id: u64, deezer: State<'_, Deezer>) -> Result<Vec<Album>, String> {
+    deezer.artist_albums(id).await
+}
+
+#[tauri::command]
+async fn artist(id: u64, deezer: State<'_, Deezer>, db: State<'_, Db>) -> Result<ArtistPage, String> {
+    if local::is_local(id) { local::artist(&db, id) } else { deezer.artist(id).await }
 }
 
 #[tauri::command]
@@ -118,7 +131,8 @@ async fn resolve(
     ytdlp: State<'_, YtDlp>,
     app: tauri::AppHandle,
 ) -> Result<Playable, String> {
-    let playable = player::resolve_with_priority(
+    #[allow(unused_mut)]
+    let mut playable = player::resolve_with_priority(
         &track,
         refresh,
         &db,
@@ -130,11 +144,14 @@ async fn resolve(
         next_slot,
     )
     .await?;
-    // El archivo descargado se sirve por el protocolo de archivos locales: hay que permitirlo.
+    // WebKitGTK necesita HTTP para audio local; el resto usa el protocolo asset de Tauri.
     if playable.local {
-        app.asset_protocol_scope()
-            .allow_file(&playable.url)
-            .map_err(|e| e.to_string())?;
+        #[cfg(target_os = "linux")]
+        {
+            playable.url = app.state::<local_media::LocalMedia>().register(std::path::Path::new(&playable.url))?;
+        }
+        #[cfg(not(target_os = "linux"))]
+        app.asset_protocol_scope().allow_file(&playable.url).map_err(|e| e.to_string())?;
     }
     Ok(playable)
 }
@@ -283,7 +300,12 @@ pub fn run() {
             #[cfg(target_os = "android")]
             android::attach(app.handle(), &db, &dir);
             app.manage(db);
-            app.manage(YtDlp::new(dir.join("bin")));
+            let ytdlp = YtDlp::new(dir.join("bin"));
+            #[cfg(target_os = "linux")]
+            let ytdlp = ytdlp.with_node_runtime(app.path().resource_dir()?.join("bin/node"));
+            app.manage(ytdlp);
+            #[cfg(target_os = "linux")]
+            app.manage(tauri::async_runtime::block_on(local_media::LocalMedia::start())?);
             extractor::init(app.handle().clone());
             playback_network::init(app.handle());
             app.manage(downloads::Downloads::start(app.handle()));
@@ -309,9 +331,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             search,
+            discovery,
+            related_artists,
+            artist_albums,
             podcasts::podcast_search,
             podcasts::podcast_detail,
             podcasts::podcast_feed_url,
+            podcast_progress::podcast_progress,
+            podcast_progress::save_podcast_progress,
+            podcasts::set_podcast_saved,
             artist,
             album,
             resolve,
@@ -323,6 +351,11 @@ pub fn run() {
             library::set_liked,
             library::liked_tracks,
             library::set_album_saved,
+            library::set_artist_saved,
+            youtube_tracks::preview_youtube_track,
+            youtube_tracks::save_youtube_track,
+            youtube_tracks::youtube_tracks,
+            youtube_tracks::remove_youtube_track,
             library::create_playlist,
             playlist_import::read_spotify_playlist,
             playlist_import::read_playlist_csv,
@@ -391,8 +424,19 @@ pub fn run() {
         // Al cerrar la ventana principal se cierra la app, aunque el motor propio tenga abierta su
         // ventana oculta con YouTube Music.
         .on_window_event(|window, event| {
-            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
-                window.app_handle().exit(0);
+            if window.label() != "main" { return; }
+            match event {
+                // La interfaz guarda el punto del pódcast y cierra ella misma; si está colgada y no
+                // contesta, la ventana se cierra igual.
+                tauri::WindowEvent::CloseRequested { .. } => {
+                    let window = window.clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        let _ = window.destroy();
+                    });
+                }
+                tauri::WindowEvent::Destroyed => window.app_handle().exit(0),
+                _ => {}
             }
         })
         .build(context)

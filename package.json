@@ -1,14 +1,14 @@
 {
   "name": "musify",
   "private": true,
-  "version": "0.9.1",
+  "version": "0.12.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:youtube-decoder": "node scripts/build-youtube-decoder.mjs",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --test tests/*.test.mjs scripts/tests/*.test.mjs",
     "tauri": "tauri",
     "build:local": "tauri build --config src-tauri/tauri.local.conf.json"
   },
@@ -20,11 +20,13 @@
     "svelte": "^5.57.1",
     "svelte-check": "^4.7.6",
     "typescript": "~6.0.2",
-    "vite": "^8.3.2"
+    "vite": "^8.3.2",
+    "youtube-decoder-upstream": "npm:youtubei.js@18.1.0",
+    "meriyah": "7.4.0"
   },
   "dependencies": {
     "@fontsource-variable/figtree": "^5.3.0",
     "@tauri-apps/api": "^2.12.1",
-    "youtubei.js": "^18.1.0"
+    "youtubei.js": "^18.3.0"
   }
 }

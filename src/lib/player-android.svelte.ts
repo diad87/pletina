@@ -10,10 +10,11 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from './events'
 import * as api from './api'
 import { library, toLib } from './library.svelte'
-import { isPodcast } from './media'
+import { isPodcast, isYouTubeTrack } from './media'
 import { load, playOrder, save, shuffled, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import { toast } from './toast.svelte'
 import type { LibTrack, TrackQuery } from './types'
+import { isSleepMinutes, type SleepTimerState } from './sleep-timer'
 
 export const isAndroid = api.inTauri && /Android/i.test(navigator.userAgent)
 
@@ -40,6 +41,7 @@ interface NativeStatus {
   playWhenReady: boolean
   state: 'idle' | 'buffering' | 'ready' | 'ended'
   repeat: Repeat
+  sleepTimer: SleepTimerState
   at: number
 }
 
@@ -55,6 +57,7 @@ export class AndroidPlayer implements PlayerApi {
   muted = $state(false)
   shuffle = $state(load('musify:shuffle', false, (v) => typeof v === 'boolean'))
   repeat = $state<Repeat>('off')
+  sleepTimer = $state<SleepTimerState>({ mode: 'off', endsAt: 0 })
   picking = $state<QueueItem | null>(null)
 
   /** Última posición que dio el servicio; entre avisos, la hora se calcula aquí. */
@@ -64,6 +67,7 @@ export class AndroidPlayer implements PlayerApi {
   constructor() {
     listen<{ entries: (Entry | null)[] }>('player-timeline', (e) => this.#applyTimeline(e.payload.entries))
     listen<NativeStatus>('player-status', (e) => this.#applyStatus(e.payload))
+    listen<SleepTimerState>('sleep-timer', (e) => { this.sleepTimer = e.payload })
     listen<{ message: string }>('player-error', (e) => toast.show(e.payload.message))
     listen('history-changed', () => library.historyVersion++)
     this.#sync()
@@ -144,7 +148,7 @@ export class AndroidPlayer implements PlayerApi {
     }
   }
 
-  playQueue(items: QueueItem[], start: number, context = '') {
+  playQueue(items: QueueItem[], start: number | null, context = '') {
     if (!items.length) return
     const label = context || (items.every((i) => i.albumId === items[0].albumId) ? items[0].albumTitle : '')
     const entries = items.map((item, i) => this.#entry(item, false, i, label))
@@ -157,8 +161,8 @@ export class AndroidPlayer implements PlayerApi {
       list = [entries[order[0]], ...mine, ...order.slice(1).map((i) => entries[i])]
       index = 0
     } else {
-      list = [...entries.slice(0, start + 1), ...mine, ...entries.slice(start + 1)]
-      index = start
+      index = start ?? 0
+      list = [...entries.slice(0, index + 1), ...mine, ...entries.slice(index + 1)]
     }
     this.#setQueue(list, index, true)
   }
@@ -296,8 +300,15 @@ export class AndroidPlayer implements PlayerApi {
     this.#call('setRepeat', { mode: this.repeat })
   }
 
+  async setSleepTimer(minutes: number): Promise<boolean> {
+    if (minutes !== 0 && minutes !== -1 && !isSleepMinutes(minutes)) return false
+    if (minutes !== 0 && !this.current) return false
+    // El servicio confirma el estado por evento y en la instantánea.
+    return this.#call('setSleepTimer', { minutes })
+  }
+
   async useSource(videoId: string, item: QueueItem | null = this.current, onError?: (message: string) => void): Promise<boolean> {
-    if (!item || isPodcast(item.track.id)) return false
+    if (!item || isPodcast(item.track.id) || isYouTubeTrack(item.track.id)) return false
     try {
       if (item.track.id === this.current?.track.id) {
         await api.chooseSource(toQuery(item), videoId)
@@ -353,6 +364,7 @@ export class AndroidPlayer implements PlayerApi {
   #applyStatus(s: NativeStatus) {
     this.index = s.index
     this.repeat = s.repeat
+    this.sleepTimer = s.sleepTimer ?? { mode: 'off', endsAt: 0 }
     const current = this.current
     this.duration = s.durationMs > 0 ? s.durationMs / 1000 : (current?.track.duration ?? 0)
     // La foto es de hace un instante (s.at): se descuenta lo que tardó en llegar.

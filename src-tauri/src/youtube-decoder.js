@@ -1,9 +1,9 @@
 // Pure player analysis for the native extractor. Rust supplies the public player
 // source and owns the isolated runtime, memory limits, deadline and URL handling.
 // No complete player, DOM, network, filesystem or application API is executed.
-import { JsAnalyzer } from '../../node_modules/youtubei.js/dist/src/utils/javascript/JsAnalyzer.js'
-import { JsExtractor } from '../../node_modules/youtubei.js/dist/src/utils/javascript/JsExtractor.js'
-import { nsigMatcher, timestampMatcher } from '../../node_modules/youtubei.js/dist/src/utils/javascript/matchers.js'
+import { JsAnalyzer } from '../../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/JsAnalyzer.js'
+import { JsExtractor } from '../../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/JsExtractor.js'
+import { nsigMatcher, timestampMatcher } from '../../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/matchers.js'
 
 import { decode } from './youtube-decoder-values.js'
 

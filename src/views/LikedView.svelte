@@ -1,6 +1,7 @@
 <script lang="ts">
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -43,7 +44,7 @@
   const playing = $derived(isThis && player.status === 'playing')
 
   $effect(() => {
-    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0, 'Canciones que te gustan')) } : null
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, null, 'Canciones que te gustan')) } : null
   })
 </script>
 
@@ -66,14 +67,23 @@
       <div class="actions">
         <button
           class="big-play"
-          onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0, 'Canciones que te gustan'))}
+          onclick={() => (isThis ? player.toggle() : player.playQueue(items, null, 'Canciones que te gustan'))}
           title={playing ? 'Pausa' : 'Reproducir'}
         >
           <Icon name={playing ? 'pause' : 'play'} size={26} />
         </button>
+        <ShuffleButton />
         <DownloadButton {items} />
       </div>
-      <TrackList {items} variant="list" context="Canciones que te gustan" metaLabel="Añadida" meta={(i) => shortDate(entries![i].at)} />
+      <TrackList
+        {items}
+        variant="list"
+        context="Canciones que te gustan"
+        searchable
+        searchLabel="Buscar en Canciones que te gustan"
+        metaLabel="Añadida"
+        meta={(i) => shortDate(entries![i].at)}
+      />
     {:else}
       <div class="empty-state">
         <Icon name="heart" size={48} />
@@ -85,6 +95,9 @@
 {/if}
 
 <style>
+  .actions {
+    flex-wrap: wrap;
+  }
   .liked-art {
     display: grid;
     place-items: center;

@@ -77,6 +77,11 @@ export interface SearchResults {
   localAlbums: Album[]
 }
 
+export interface Discovery {
+  albums: Album[]
+  artists: Artist[]
+}
+
 /** Catálogo de podcasts y episodios publicados en sus fuentes RSS. */
 export interface Podcast {
   id: number
@@ -110,6 +115,13 @@ export interface PodcastSearchResults {
 export interface PodcastDetail {
   podcast: Podcast
   episodes: PodcastEpisode[]
+}
+
+export interface PodcastProgress {
+  id: number
+  position: number
+  duration: number
+  completed: boolean
 }
 
 /** Tu música local (carpetas importadas). */
@@ -192,6 +204,20 @@ export interface PlaylistSummary {
   covers: string[]
 }
 
+export interface SavedArtist {
+  id: number
+  name: string
+  picture: string | null
+}
+
+export interface YouTubeTrackPreview {
+  videoId: string
+  title: string
+  artist: string
+  duration: number
+  cover: string | null
+}
+
 /** Metadatos de una lista externa, antes de buscar sus canciones en el catálogo. */
 export interface ImportTrack {
   title: string
@@ -222,6 +248,8 @@ export interface LibraryData {
   likedIds: number[]
   downloadedIds: number[]
   albums: SavedAlbum[]
+  artists: SavedArtist[]
+  podcasts: Podcast[]
   playlists: PlaylistSummary[]
 }
 

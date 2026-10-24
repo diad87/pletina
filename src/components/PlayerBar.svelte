@@ -1,17 +1,19 @@
 <script lang="ts">
   import { coverColor, FALLBACK_COLOR } from '../lib/color'
   import { library } from '../lib/library.svelte'
-  import { isLocal, isPodcast } from '../lib/media'
+  import { isLocal, isPodcast, isYouTubeTrack } from '../lib/media'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
   import { theme } from '../lib/theme.svelte'
   import { toast } from '../lib/toast.svelte'
   import Cover from './Cover.svelte'
   import Icon from './Icon.svelte'
+  import SleepTimer from './SleepTimer.svelte'
   import Transport from './Transport.svelte'
 
   const current = $derived(player.current)
   const podcast = $derived(current ? isPodcast(current.track.id) : false)
+  const youtube = $derived(current ? isYouTubeTrack(current.track.id) : false)
   const liked = $derived(current ? library.liked.has(current.track.id) : false)
 
   // La barra se tiñe con el color de la carátula que suena.
@@ -36,12 +38,14 @@
         <span class="expand"><Icon name="chevronUp" size={22} /></span>
       </button>
       <div class="info">
-        <button class="link title" onclick={() => nav.go({ name: podcast ? 'podcast' : 'album', id: current.albumId })}
+        <button class="link title" onclick={() => nav.go(youtube ? { name: 'youtube-tracks' } : { name: podcast ? 'podcast' : 'album', id: current.albumId })}
           >{current.track.title}</button
         >
+        {#if youtube}<span class="artist">{current.track.artist.name}</span>{:else}
         <button class="link artist" onclick={() => nav.go(podcast ? { name: 'podcast', id: current.albumId } : { name: 'artist', id: current.track.artist.id })}
           >{current.track.artist.name}</button
         >
+        {/if}
         {#if player.status === 'loading'}<span class="hint">{podcast ? 'Cargando episodio…' : 'Preparando audio…'}</span>{/if}
       </div>
       <button
@@ -58,7 +62,8 @@
   <div class="center"><Transport /></div>
 
   <div class="side">
-    {#if !podcast}
+    <SleepTimer />
+    {#if !podcast && !youtube}
       <button
         class="icon"
         onclick={() => current && (player.picking = current)}
@@ -116,7 +121,7 @@
     position: relative;
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) minmax(340px, 2fr) minmax(200px, 1fr);
+    grid-template-columns: minmax(160px, 1fr) minmax(300px, 2fr) minmax(270px, 1fr);
     align-items: center;
     gap: 16px;
     height: 80px;
@@ -234,10 +239,10 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 14px;
+    gap: 12px;
   }
   .volume {
-    width: 110px;
+    width: 90px;
     height: 14px;
     margin: 0;
     appearance: none;
@@ -302,6 +307,18 @@
     from {
       opacity: 0;
       transform: translate(-50%, 8px) scale(0.97);
+    }
+  }
+  @media (max-width: 1000px) {
+    .player {
+      grid-template-columns: minmax(120px, 1fr) minmax(260px, 1.5fr) auto;
+      gap: 10px;
+    }
+    .side {
+      gap: 10px;
+    }
+    .volume {
+      display: none;
     }
   }
 </style>

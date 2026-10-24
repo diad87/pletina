@@ -2,8 +2,11 @@ import { invoke as tauriInvoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import type {
   AlbumDetail,
+  Album,
   Alternative,
+  Artist,
   ArtistPage,
+  Discovery,
   DownloadEntry,
   Entry,
   ImportSource,
@@ -13,10 +16,13 @@ import type {
   LibTrack,
   Playable,
   PodcastDetail,
+  PodcastProgress,
   PodcastSearchResults,
   PlaylistDetail,
   PlaylistSummary,
   SavedAlbum,
+  SavedArtist,
+  YouTubeTrackPreview,
   SearchResults,
   TrackQuery,
 } from './types'
@@ -49,26 +55,52 @@ const invoke: typeof tauriInvoke =
     : async (cmd, args) => (await import('../dev/mock')).mockInvoke(cmd, args)
 
 // Caché en memoria: volver atrás o reabrir un disco es instantáneo y no gasta cuota de Deezer.
-const cache = new Map<string, Promise<unknown>>()
+const cache = new Map<string, { value: Promise<unknown>; expiresAt: number }>()
 
-function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
-  let hit = cache.get(key) as Promise<T> | undefined
-  if (!hit) {
-    hit = load()
+function cached<T>(key: string, load: () => Promise<T>, ttl = Infinity): Promise<T> {
+  let hit = cache.get(key)
+  if (!hit || hit.expiresAt <= Date.now()) {
+    const value = load()
+    hit = { value, expiresAt: Date.now() + ttl }
     cache.set(key, hit)
     // Si falla, que el siguiente intento vuelva a preguntar.
-    hit.catch(() => cache.delete(key))
+    value.catch(() => {
+      if (cache.get(key)?.value === value) cache.delete(key)
+    })
   }
-  return hit
+  return hit.value as Promise<T>
 }
 
 export const search = (query: string) => invoke<SearchResults>('search', { query })
+
+// Listados ligeros para Inicio. Se renuevan cada hora sin repetir peticiones al volver atrás.
+const DISCOVERY_TTL = 60 * 60 * 1000
+export const discovery = () => cached('discovery', () => invoke<Discovery>('discovery'), DISCOVERY_TTL)
+// Al recuperar conexión, también se reintentan las secciones de un resultado parcial.
+export const invalidateDiscovery = () => cache.delete('discovery')
+export const relatedArtists = (id: number) =>
+  cached(`related:${id}`, () => invoke<Artist[]>('related_artists', { id }), DISCOVERY_TTL)
+export const artistAlbums = (id: number) =>
+  cached(`artist-albums:${id}`, () => invoke<Album[]>('artist_albums', { id }), DISCOVERY_TTL)
 
 // Los episodios cambian con cada publicación: el backend limita la caché de las fuentes.
 export const podcastSearch = (query: string, language: string) =>
   invoke<PodcastSearchResults>('podcast_search', { query, language })
 export const podcastDetail = (feedUrl: string) => invoke<PodcastDetail>('podcast_detail', { feedUrl })
 export const podcastFeedUrl = (id: number) => invoke<string>('podcast_feed_url', { id })
+
+export const podcastProgress = (ids: number[]) => invoke<PodcastProgress[]>('podcast_progress', { ids })
+export const savePodcastProgress = (progress: PodcastProgress) => {
+  if (!inTauri && import.meta.env.DEV) {
+    // La vista previa también conserva el último segundo si se cierra/recarga la pestaña.
+    let rows: Record<number, PodcastProgress> = {}
+    try { rows = JSON.parse(localStorage.getItem('pletina:dev:podcast-progress') ?? '{}') } catch { /* Sin progreso previo válido. */ }
+    rows[progress.id] = progress
+    localStorage.setItem('pletina:dev:podcast-progress', JSON.stringify(rows))
+    return Promise.resolve()
+  }
+  return invoke<void>('save_podcast_progress', { progress })
+}
 
 // La música local cambia al reescanear: sin caché (además es instantánea).
 const LOCAL_BASE = 1_000_000_000_000_000
@@ -134,6 +166,12 @@ export const library = () => invoke<LibraryData>('library')
 export const setLiked = (track: LibTrack, liked: boolean) => invoke<void>('set_liked', { track, liked })
 export const likedTracks = () => invoke<Entry[]>('liked_tracks')
 export const setAlbumSaved = (album: SavedAlbum, saved: boolean) => invoke<void>('set_album_saved', { album, saved })
+export const setArtistSaved = (artist: SavedArtist, saved: boolean) => invoke<void>('set_artist_saved', { artist, saved })
+export const setPodcastSaved = (id: number, saved: boolean) => invoke<void>('set_podcast_saved', { id, saved })
+export const previewYouTubeTrack = (url: string) => invoke<YouTubeTrackPreview>('preview_youtube_track', { url })
+export const saveYouTubeTrack = (track: YouTubeTrackPreview) => invoke<LibTrack>('save_youtube_track', { ...track })
+export const youtubeTracks = () => invoke<Entry[]>('youtube_tracks')
+export const removeYouTubeTrack = (id: number) => invoke<void>('remove_youtube_track', { id })
 export const createPlaylist = (name: string, tracks: LibTrack[] = []) =>
   invoke<PlaylistSummary>('create_playlist', { name, tracks })
 export const readSpotifyPlaylist = (url: string) => invoke<ImportSource>('read_spotify_playlist', { url })

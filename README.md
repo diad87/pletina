@@ -4,6 +4,24 @@ Reproductor de música tipo Spotify para Windows, Mac, Linux y Android. Busca gr
 
 Software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
 
+### Tu música, a mano
+
+El botón **Aleatorio**, junto a Play en playlists, artistas, discos y **Canciones que te gustan**, activa o desactiva la mezcla. Al iniciar una colección con ese modo activo, también la primera canción se elige al azar; el resto suena sin repetir entradas hasta terminar la lista. Si eliges una canción concreta, empieza por ella. Cambiar el modo durante la escucha conserva la canción y la posición actuales. La elección se recuerda al cerrar la app, tanto en el PC como en Android.
+
+En las playlists y en **Canciones que te gustan**, busca por título o artista sin preocuparte por las tildes o las mayúsculas. Los resultados conservan su posición en la lista: al reproducir uno, la cola continúa desde esa canción. Para cambiar el orden arrastrando, borra primero la búsqueda.
+
+El botón de la chincheta en un disco o una playlist permite **Fijar en Inicio**. Los fijados aparecen primero, se conservan al cerrar la app y se pueden quitar desde la misma chincheta. En Inicio, **Ponme un disco** elige al azar uno de tus álbumes guardados y lo reproduce desde la primera canción, en orden; si tienes varios, evita elegir el que ya está puesto.
+
+### Sugeridos en Inicio
+
+**Sugeridos para ti** mezcla discos de los artistas que escuchas y guardas con discos de artistas similares. **Artistas que te pueden gustar** permite descubrir otros grupos, indicando con qué artista están relacionados. La selección usa tus últimas 300 escuchas, canciones favoritas y discos guardados; omite los discos que ya aparecen en esos datos y no usa podcasts, archivos locales ni canciones independientes de YouTube como semillas.
+
+Si aún no tienes gustos guardados, muestra discos y artistas populares de Deezer. La selección se calcula en tu equipo, sin cuenta de Spotify; al catálogo se le piden listas populares, discos y artistas relacionados. Puedes abrir y reproducir los discos desde sus tarjetas. Si falla la conexión, Inicio conserva tus accesos habituales y permite reintentar los sugeridos.
+
+### Radio de artista
+
+En la ficha de un artista del catálogo, **Radio de…** prepara una mezcla de hasta 45 canciones suyas y de artistas similares. Alterna artistas y evita repetir una canción o una grabación con el mismo ISRC. La selección entra en la cola habitual, conservando las canciones que habías añadido manualmente; puedes preparar otra mezcla cuando quieras. Necesita conexión para consultar el catálogo y avisa si alguna fuente falla. Es una selección finita, no una emisión continua.
+
 ![Inicio](docs/screenshots/inicio.png)
 
 | | |
@@ -52,6 +70,24 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
   </tr>
 </table>
 
+### Android Auto (en desarrollo)
+
+El servicio multimedia ofrece **Favoritos**, **Playlists**, **Descargas** y **YouTube** a Android Auto. Al elegir una canción, continúa con el resto de su lista; los mandos del coche permiten pausar, reanudar y cambiar de canción. Puede arrancar sin abrir antes la pantalla de Pletina. La búsqueda consulta las canciones guardadas en tu biblioteca.
+
+Esta integración todavía no está publicada ni validada en un coche. Para probar un APK instalado fuera de Google Play, activa **Orígenes desconocidos** en las opciones de desarrollador de Android Auto. Consulta las [instrucciones y pruebas de Android Auto](docs/android-auto.md).
+
+### Artistas favoritos
+
+En la página de un artista, pulsa **Añadir a favoritos**. Aparecerá en **Tu biblioteca → Artistas favoritos**, tanto en el ordenador como en el móvil. Puedes quitarlo desde su página o con el corazón de la biblioteca. Los favoritos se guardan en el dispositivo y se conservan al cerrar la app.
+
+### Canciones de YouTube
+
+En **Tu biblioteca → Canciones de YouTube**, pega el enlace de un vídeo de YouTube o YouTube Music y pulsa **Continuar**. Revisa el título y el artista o canal, corrígelos si hace falta y pulsa **Guardar canción**. También se admiten enlaces compartidos de `youtu.be` y enlaces de Shorts. No hace falta que la canción esté en el catálogo de Deezer.
+
+Las canciones guardadas se pueden reproducir, añadir a la cola, favoritos y playlists, y descargar para escucharlas sin conexión, también en Android. Guardar otra vez el mismo vídeo actualiza sus datos sin duplicarlo. **Quitar de Canciones de YouTube**, en el menú ⋯, lo oculta de esa sección: conserva sus apariciones en playlists, favoritos, historial y descargas. Pegar de nuevo su enlace vuelve a mostrarlo.
+
+Para añadir un vídeo nuevo hace falta conexión y que esté disponible públicamente; si requiere una cuenta o ya no está disponible, la app muestra el error y no lo sustituye por otro vídeo.
+
 ### Importar playlists de Spotify
 
 En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.
@@ -64,9 +100,19 @@ No hace falta iniciar sesión en Spotify. La importación copia las canciones en
 
 La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
 
+En la ficha de cada programa puedes **añadirlo a favoritos**, tanto si procede de RSS como de YouTube. Queda anclado en **Tus pódcasts**, al principio de la sección, y se conserva al reiniciar. Tus programas siguen visibles al cambiar de búsqueda o idioma y aunque falle el catálogo. Puedes quitarlos desde su ficha o desde esa sección; los episodios que hayas marcado como favoritos, añadido a playlists o descargado se conservan.
+
 Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
 
 Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios suenan con el mismo motor que la música (también en el móvil con la pantalla apagada) y se pueden **descargar** para escucharlos sin conexión, igual que una canción. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
+
+Cada episodio recuerda su punto de escucha en este dispositivo. Al volver a reproducirlo, continúa donde lo dejaste, también después de cerrar la app. La lista muestra **Continuar desde…**, una barra de progreso y **Escuchado** al terminar; los episodios completados vuelven a empezar desde el principio. En Android, el servicio de audio guarda el progreso incluso con la pantalla apagada.
+
+### Temporizador de apagado
+
+Pulsa la luna de **Sonando ahora** o de la barra de reproducción del PC para pausar la música o el pódcast dentro de **15, 30 o 60 minutos**, elegir un tiempo **Personalizado** (de 1 minuto a 24 horas) o detenerte **al terminar el episodio o la canción**. La cuenta atrás muestra cuánto queda y la hora de pausa. Puedes cambiar o desactivar el temporizador desde el mismo botón; en móvil se abre como un panel inferior.
+
+La cuenta sigue corriendo durante las pausas. Al agotarse, conserva el punto de escucha. «Al terminar» detiene la cola aunque tengas la repetición activada y marca el episodio como escuchado; si cambias de canción o episodio antes del final, se cancela esa opción. En Android funciona en el servicio de audio, también con la pantalla apagada. El temporizador es para la sesión actual: no se recupera al volver a arrancar la app o su servicio.
 
 ## Instalar
 
@@ -76,12 +122,14 @@ Descarga el archivo de tu sistema desde la [última versión](https://github.com
 |---|---|
 | Windows 10/11 | `Pletina_x.y.z_x64-setup.exe`: doble clic |
 | Mac (chip de Apple o Intel, macOS 11+) | `Pletina_x.y.z_universal.dmg`: arrastrar a Aplicaciones |
-| Linux (64 bits) | `Pletina_x.y.z_amd64.AppImage` (cualquier distribución) o `.deb` (Ubuntu/Debian) |
+| Linux (64 bits) | `Pletina_x.y.z_amd64.AppImage` (distribuciones recientes) o `.deb` (Ubuntu/Debian) |
 | Android 7 o superior (64 bits) | `Pletina_x.y.z_android.apk`, mejor con Obtainium (abajo) para que se actualice sola |
 
 Mientras el instalador de Windows no esté firmado (ver [Code signing policy](#code-signing-policy)), Windows avisa la primera vez: «Más información» → «Ejecutar de todas formas». El de Mac no está firmado por Apple: la primera vez, clic derecho en la app → Abrir. Las actualizaciones no avisan, porque las baja la propia app.
 
 Si tenías Musify, Pletina la sustituye al instalarse (o al actualizarse sola) y conserva tu biblioteca.
+
+En Linux, la AppImage incluye el soporte multimedia y el motor JavaScript necesario para YouTube. Dale permiso de ejecución antes de abrirla (`chmod +x Pletina_*.AppImage`). Para el `.deb`, usa `sudo apt install ./Pletina_*.deb` para instalar también sus dependencias de audio. La compilación de distribución usa Ubuntu 22.04 como base; las distribuciones más antiguas pueden necesitar una versión más nueva del sistema.
 
 ### Android, con Obtainium
 
@@ -134,7 +182,7 @@ Privacy: see [Privacidad](#privacidad). Pletina connects to Deezer, YouTube, Git
 
 - **Tauri 2** (Rust) + **Svelte 5** + TypeScript. Instalador de unos 3 MB en Windows; el APK de Android, 12 MB.
 - Datos en local (SQLite en la carpeta de datos de la app). El PC y el móvil tienen cada uno los suyos: todavía no se sincronizan.
-- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
+- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). yt-dlp y los scripts de los extractores se actualizan desde sus fuentes sin reinstalar la app. El núcleo Rust de Propio y su analizador privado se distribuyen con las actualizaciones de la aplicación; el análisis guardado sólo se reutiliza en disco si coincide con el reproductor recién descargado.
 - En Android, la música la reproduce un servicio nativo (Media3/ExoPlayer) que pide el audio directamente al núcleo de Rust; la interfaz es el mando. Las descargas usan el motor propio (allí no hay yt-dlp).
 - Por dentro, algunas cosas conservan el nombre antiguo (el identificador `dev.musify.desktop`, el paquete de Android, la base de datos `musify.db`) para que las instalaciones de Musify sigan actualizándose y no pierdan la biblioteca.
 
@@ -142,7 +190,7 @@ El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); l
 
 ## Desarrollo
 
-Requisitos: Node 24, Rust (toolchain MSVC en Windows), Visual Studio Build Tools (C++) y WebView2.
+Requisitos: Node 24 y Rust. En Windows, toolchain MSVC, Visual Studio Build Tools (C++) y WebView2.
 
 ```bash
 npm install
@@ -152,6 +200,12 @@ npm run dev            # solo la interfaz en el navegador, con datos de ejemplo 
 npm run check          # tipos
 cd src-tauri && cargo test   # tests (con red: cargo test -- --ignored --nocapture)
 ```
+
+**Linux:** instala las dependencias de Tauri y audio: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`. Usa la distribución oficial de Node 24 conservando su archivo `LICENSE`: al compilar, `scripts/prepare-linux-runtime.mjs` incorpora ese ejecutable y su licencia en los paquetes. `npm run tauri build -- --config src-tauri/tauri.local.conf.json --bundles appimage,deb` genera los paquetes sin firmar. Antes de ejecutar `cargo test` directamente, prepara los recursos con `node scripts/prepare-linux-runtime.mjs`.
+
+La prueba `bash scripts/test-linux-appimage.sh ruta/al/paquete.AppImage` necesita `ffmpeg` y `gstreamer1.0-tools`. Comprueba el Node incluido y decodifica WAV, MP3, FLAC, Ogg, M4A, Opus y WebM con las bibliotecas y plugins del paquete, sin usar los plugins del sistema. GitHub Actions ejecuta esta prueba antes de publicar los instaladores de Linux.
+
+La regresión del reproductor real se ejecuta con `python3 scripts/tests/linux-playback.py ruta/al/paquete.AppImage --output-dir target/linux-playback-test`. Requiere también `xvfb webkit2gtk-driver pulseaudio` y `cargo install tauri-driver --version 2.1.0 --locked`. Extrae el paquete, crea datos y biblioteca temporales, y prueba desde la interfaz seis formatos locales y una descarga WebM de prueba, con avance, pausa y reanudación. Usa una pantalla y una salida de audio virtuales privadas, sin Node en el `PATH` ni servicios externos de música. Guarda el resultado JSON, los registros y una captura en el directorio indicado. Esta prueba detecta fallos del transporte de archivos en WebKit que la comprobación de códecs por sí sola no puede detectar.
 
 **Android:** además, el SDK de Android con el NDK 27.3.13750724, Java 21 y el objetivo de Rust `aarch64-linux-android` (y `x86_64-linux-android` para el emulador). `npm run tauri android build -- --apk --target aarch64` compila el APK; sale firmado si está la clave en `%USERPROFILE%\.musify\android.jks`. En Windows, Tauri no puede crear el enlace a la librería de Rust: se copia `src-tauri/target/<objetivo>/release/libmusify_lib.so` a `src-tauri/gen/android/app/src/main/jniLibs/<abi>/` y se termina con Gradle (`gradlew.bat assembleUniversalRelease -x rustBuildUniversalRelease`). Detalles y pruebas en [docs/plan-mobile.md](docs/plan-mobile.md).
 

@@ -6,10 +6,12 @@
   import Status from '../components/Status.svelte'
   import * as api from '../lib/api'
   import { trackMenu } from '../lib/actions'
+  import { library } from '../lib/library.svelte'
   import { menu } from '../lib/menu.svelte'
-  import { longDuration } from '../lib/format'
+  import { duration, longDuration } from '../lib/format'
   import { nav } from '../lib/nav.svelte'
   import { player } from '../lib/player.svelte'
+  import { episodeProgress } from '../lib/podcast-progress.svelte'
   import { adPlatform } from '../lib/podcast-ads'
   import { episodeQueue, noteYoutubeEpisodes, podcastLanguage } from '../lib/podcasts'
   import { theme } from '../lib/theme.svelte'
@@ -57,6 +59,18 @@
   )
   const isThisPodcast = $derived(queue.length > 0 && player.current?.albumId === queue[0].albumId)
   const playing = $derived(isThisPodcast && player.status !== 'paused' && player.status !== 'idle')
+  const saved = $derived(data ? library.isPodcastSaved(data.podcast.id) : false)
+  const saving = $derived(data ? library.savingPodcasts.has(data.podcast.id) : false)
+
+  $effect(() => {
+    const ids = data?.episodes.map((episode) => episode.id) ?? []
+    if (!ids.length) return
+    const refresh = () => { void episodeProgress.load(ids).catch(() => {}) }
+    refresh()
+    const visible = () => { if (!document.hidden) refresh() }
+    document.addEventListener('visibilitychange', visible)
+    return () => document.removeEventListener('visibilitychange', visible)
+  })
 
   function playPodcast() {
     if (!queue.length) return
@@ -103,16 +117,30 @@
   </header>
 
   <section class="page">
-    {#if data.episodes.length}
-      <div class="actions">
+    <div class="actions">
+      {#if data.episodes.length}
         <button class="big-play" onclick={playPodcast} title={playing ? 'Pausar pódcast' : 'Reproducir pódcast'} aria-label={playing ? 'Pausar pódcast' : 'Reproducir pódcast'}>
           <Icon name={playing ? 'pause' : 'play'} size={26} />
         </button>
         <!-- Solo aparece en los de YouTube: los del RSS no se descargan. -->
         <DownloadButton items={queue} />
+      {/if}
+      <button
+        class="favorite"
+        class:on={saved}
+        disabled={saving}
+        aria-pressed={saved}
+        aria-busy={saving}
+        title={saved ? 'Quitar de Tus pódcasts' : 'Guardar programa en Tus pódcasts'}
+        onclick={() => data && library.togglePodcast(data.podcast)}
+      >
+        <Icon name={saved ? 'heartFilled' : 'heart'} size={22} />
+        {saving ? 'Guardando…' : saved ? 'En Tus pódcasts' : 'Guardar pódcast'}
+      </button>
+      {#if data.episodes.length}
         <span class="play-hint">{isThisPodcast ? 'Continúa escuchando' : 'Reproducir episodios'}</span>
-      </div>
-    {/if}
+      {/if}
+    </div>
 
     {#if data.podcast.description}
       <details class="about">
@@ -135,6 +163,11 @@
           {@const current = player.current?.track.id === queue[index]?.track.id}
           {@const active = current && player.status !== 'paused' && player.status !== 'idle'}
           {@const date = publishedDate(episode.publishedAt)}
+          {@const progress = episodeProgress.entries[episode.id]}
+          {@const position = current && player.time > 0 ? player.time : progress?.position ?? 0}
+          {@const completed = progress?.completed && !active}
+          {@const total = current && player.duration > 0 ? player.duration : progress?.duration || episode.duration}
+          {@const label = active ? 'Pausar' : !completed && position > 0 ? `Continuar desde ${duration(position)}` : completed ? 'Volver a escuchar' : 'Reproducir'}
           <li class="episode" class:current>
             <div class="episode-art"><Cover src={episode.image ?? data.podcast.image} /></div>
             <div class="episode-info">
@@ -145,6 +178,14 @@
                 {#if episode.explicit}<span class="explicit" aria-label="Contenido explícito" title="Contenido explícito">E</span>{/if}
                 {#if current}<span class="current-label">{player.status === 'loading' ? 'Cargando…' : active ? 'Sonando' : 'En pausa'}</span>{/if}
               </div>
+              {#if completed || position > 0}
+                <div class="listening-progress">
+                  <span>{completed ? 'Escuchado' : `Continuar desde ${duration(position)}`}</span>
+                  {#if total > 0}
+                    <progress max={total} value={completed ? total : Math.min(position, total)} aria-label={`Progreso de ${episode.title}`}></progress>
+                  {/if}
+                </div>
+              {/if}
               {#if episode.description}
                 <details class="description">
                   <summary>Descripción del episodio</summary>
@@ -153,7 +194,7 @@
               {/if}
             </div>
             <div class="episode-actions">
-              <button class="episode-play" class:active onclick={() => playEpisode(index)} aria-label={`${active ? 'Pausar' : 'Reproducir'} ${episode.title}`} title={active ? 'Pausar' : 'Reproducir'}>
+              <button class="episode-play" class:active onclick={() => playEpisode(index)} aria-label={`${label}: ${episode.title}`} title={label}>
                 <Icon name={active ? 'pause' : 'play'} size={22} />
               </button>
               <button class="add-queue" onclick={() => player.addToQueue([queue[index]])} aria-label={`Añadir ${episode.title} a la cola`} title="Añadir a la cola">
@@ -171,6 +212,19 @@
 {/if}
 
 <style>
+  .favorite {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .favorite:hover, .favorite.on { color: var(--accent); border-color: currentColor; }
+  .favorite:disabled { opacity: 0.6; }
   .play-hint { color: var(--muted); }
   .ads {
     margin-left: 4px;
@@ -236,6 +290,11 @@
     font-weight: 800;
   }
   .description { margin-top: 12px; color: var(--muted); font-size: 13px; }
+  .listening-progress { display: grid; gap: 7px; margin-top: 12px; color: var(--accent); font-size: 12px; }
+  .listening-progress progress { width: min(100%, 280px); height: 4px; border: 0; border-radius: 4px; overflow: hidden; background: var(--line); accent-color: var(--accent); }
+  .listening-progress progress::-webkit-progress-bar { background: var(--line); }
+  .listening-progress progress::-webkit-progress-value { background: var(--accent); }
+  .listening-progress progress::-moz-progress-bar { background: var(--accent); }
   .description summary { width: fit-content; min-height: 24px; }
   .episode-actions { display: flex; align-items: center; gap: 8px; flex: none; }
   .episode-play, .add-queue {

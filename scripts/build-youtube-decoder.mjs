@@ -182,7 +182,7 @@ function specializePositions(source) {
 export function transformDecoderDependency(source, id) {
   const file = id.replaceAll('\\', '/')
   const code = source.replaceAll('\r\n', '\n')
-  if (file.endsWith('/youtubei.js/dist/src/utils/javascript/JsAnalyzer.js')) {
+  if (file.endsWith('/youtube-decoder-upstream/dist/src/utils/javascript/JsAnalyzer.js')) {
     expectOccurrences(code, 'parseScript(', 1, 'analyzer parser call')
     expectOccurrences(code, analyzerParse, 1, 'analyzer parser options')
     // The extractor accepts start/end; the redundant per-node range array is
@@ -210,12 +210,19 @@ export function transformDecoderDependency(source, id) {
     }`)), map: null }
 }
 
+export function normalizeDecoderModuleLabels(code) {
+  // The private npm alias changes only the physical package directory. Preserve
+  // the reviewed asset's logical module labels, never source/string contents.
+  return code.replace(/^\/\/#region node_modules\/youtube-decoder-upstream\//gm,
+    '//#region node_modules/youtubei.js/')
+}
+
 async function buildDecoder() {
-  const [youtubeiPackage, meriyahPackage] = await Promise.all(['youtubei.js', 'meriyah'].map(async name =>
+  const [youtubeiPackage, meriyahPackage] = await Promise.all(['youtube-decoder-upstream', 'meriyah'].map(async name =>
     JSON.parse(await fs.readFile(path.join(root, 'node_modules', name, 'package.json'), 'utf8')),
   ))
   assertDecoderCompatibility(youtubeiPackage.version, meriyahPackage.version)
-  const licenses = await Promise.all(['youtubei.js/LICENSE', 'meriyah/LICENSE.md'].map(async name =>
+  const licenses = await Promise.all(['youtube-decoder-upstream/LICENSE', 'meriyah/LICENSE.md'].map(async name =>
     (await fs.readFile(path.join(root, 'node_modules', name), 'utf8')).replaceAll('\r\n', '\n').trim(),
   ))
   for (const [entry, asset, parser] of [
@@ -227,7 +234,15 @@ async function buildDecoder() {
       input: `src-tauri/src/${entry}`,
       platform: 'neutral',
       treeshake: true,
-      plugins: [{ name: 'bounded-decoder-parser', transform: transformDecoderDependency }],
+      plugins: [{
+        name: 'bounded-decoder-parser',
+        // Resolve the exact root dependency checked above, even if another
+        // youtubei.js version installs a different nested parser dependency.
+        resolveId(id) {
+          if (id === 'meriyah') return path.join(root, 'node_modules/meriyah/dist/meriyah.mjs')
+        },
+        transform: transformDecoderDependency,
+      }],
       onwarn(warning) { throw new Error(warning.message) },
     })
     try {
@@ -246,7 +261,7 @@ async function buildDecoder() {
         path.join(root, 'src-tauri/src/youtube-decoder-execute.js'),
         path.join(root, 'src-tauri/src/youtube-decoder-values.js'),
       ].includes(path.resolve(id)))) throw new Error('Decode asset must contain only its pure entry and implementation')
-      const code = output[0].code.replaceAll('\r\n', '\n')
+      const code = normalizeDecoderModuleLabels(output[0].code.replaceAll('\r\n', '\n'))
       const destination = path.join(root, 'src-tauri/src', asset)
       if (process.argv.includes('--check')) {
         if (await fs.readFile(destination, 'utf8') !== code) throw new Error(`Decoder asset ${asset} is stale; run npm run build:youtube-decoder`)

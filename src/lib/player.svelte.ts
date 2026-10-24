@@ -1,14 +1,17 @@
 import { convertFileSrc } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import * as api from './api'
 import { downloads } from './downloads.svelte'
 import { CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture } from './extractor/capture'
 import { extractor } from './extractor/engine.svelte'
 import { library, toLib } from './library.svelte'
-import { isPodcast } from './media'
+import { isPodcast, isYouTubeTrack, mediaUrl } from './media'
 import { toast } from './toast.svelte'
+import { episodeProgress } from './podcast-progress.svelte'
 import { AndroidPlayer, isAndroid } from './player-android.svelte'
 import { load, playOrder, save, toQuery, type PlayerApi, type QueueItem, type Repeat, type Status } from './queue'
 import type { Playable } from './types'
+import { isSleepMinutes, type SleepTimerState } from './sleep-timer'
 
 export { toQuery, type QueueItem, type Repeat }
 
@@ -18,9 +21,40 @@ type PrefetchEntry = { item: QueueItem; engine: string; slot: 0 | 1; version: nu
 
 /** Tras tantos fallos seguidos se deja de saltar a la siguiente (p. ej. sin conexión). */
 const MAX_FAILURES = 3
+const RESOLVE_TIMEOUT = 120_000
+const AUDIO_TIMEOUT = 30_000
+/** Lo que espera el cierre de la ventana a que se guarde el punto del pódcast. */
+const CLOSE_TIMEOUT = 1_500
 
-/** Lo que se pone en el `<audio>`: el archivo descargado (protocolo local) o la URL del stream. */
-const audioSrc = (p: Playable) => (p.local ? convertFileSrc(p.url) : p.url)
+/** También limita las promesas del navegador que no llegan a resolver ni rechazar. */
+function withTimeout<T>(pending: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  return Promise.race([
+    pending,
+    new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms) }),
+  ]).finally(() => clearTimeout(timer))
+}
+
+function audioError(audio: HTMLAudioElement): string {
+  if (audio.error?.code === 3) return 'No se pudo decodificar el audio'
+  // SRC_NOT_SUPPORTED también puede ser un HTTP 403 de una URL caducada.
+  if (audio.error?.code === 4) return 'No se pudo cargar la fuente de audio'
+  return audio.error?.message || 'El audio no se puede reproducir'
+}
+
+/** Linux sirve los archivos por HTTP local porque WebKitGTK no reproduce audio desde asset://. */
+function audioSrc(p: Playable): string {
+  if (!p.local) return p.url
+  if (p.url.startsWith('http://127.0.0.1:')) {
+    try {
+      const url = new URL(p.url)
+      if (url.hostname === '127.0.0.1' && !url.username && !url.password) return p.url
+    } catch {
+      // Una ruta local o una URL inválida sigue usando el protocolo de archivos de Tauri.
+    }
+  }
+  return convertFileSrc(p.url)
+}
 
 /** El reproductor de escritorio: un `<audio>` en la interfaz. */
 class Player implements PlayerApi {
@@ -45,12 +79,13 @@ class Player implements PlayerApi {
   muted = $state(false)
   shuffle = $state(load('musify:shuffle', false, (v) => typeof v === 'boolean'))
   repeat = $state<Repeat>(load('musify:repeat', 'off', (v) => v === 'off' || v === 'all' || v === 'one'))
+  sleepTimer = $state<SleepTimerState>({ mode: 'off', endsAt: 0 })
   /** Canción para la que está abierto el selector "¿No es esta canción?". */
   picking = $state<QueueItem | null>(null)
   /** YouTube necesita que la persona resuelva algo en su ventana antes de reintentar. */
   captureInteraction = $state<string | null>(null)
 
-  #audio = new Audio()
+  #audio: HTMLAudioElement
   #source: { trackId: number; videoId: string; kind: 'capture' | 'capture-legacy' | 'local' | 'network' } | null = null
   #prefetches = new Map<number, PrefetchEntry>()
   /** La sesión preparada sigue siendo next hasta que termina su promoción nativa. */
@@ -68,59 +103,142 @@ class Player implements PlayerApi {
   /** Un vídeo elegido aún no se guarda si YouTube exige interacción antes de capturarlo. */
   #pendingSource: { videoId: string; item: QueueItem } | null = null
   #retried = false
+  #sourceLocal = true
+  #playable: Playable | null = null
+  /** La intención del usuario es independiente de los eventos tardíos del navegador. */
+  #wantsPlay = false
+  #progressTimer: ReturnType<typeof setTimeout> | undefined
+  #progressAt = 0
+  /** Una reparación automática por bloqueo; Reproducir permite volver a intentarlo. */
+  #repaired = false
   #failures = 0
   /** Si la canción actual ya se apuntó en el historial. */
   #recorded = false
   #nextKey = 1
+  // La cola visible puede cambiar antes de sustituir el audio que todavía suena.
+  #activeItem: QueueItem | null = null
+  #progressSavedAt = 0
+  #completed = false
+  #resumeAt = 0
+  #requestedSeek: number | null = null
+  #metadataReady = false
+  #positionKnown = false
+  #sleepTimeout: ReturnType<typeof setTimeout> | undefined
+  #sleepDeadline = 0
 
   constructor() {
-    this.#bindAudio(this.#audio)
+    this.#audio = this.#createAudio()
     this.#setupMediaSession()
+    window.addEventListener('pagehide', () => this.#saveProgress(true))
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.#saveProgress(true)
+      else this.#checkSleepTimer()
+    })
+    window.addEventListener('focus', () => this.#checkSleepTimer())
+    if (api.inTauri) {
+      const win = getCurrentWindow()
+      void win.onCloseRequested(async (event) => {
+        event.preventDefault()
+        try {
+          this.#pause()
+          this.#saveProgress(true)
+          // Si la base de datos no responde, se cierra igual: como mucho se pierde el último punto.
+          await withTimeout(episodeProgress.flush(), CLOSE_TIMEOUT, 'cierre').catch(() => {})
+        } finally {
+          await win.destroy()
+        }
+      }).catch(() => {})
+    }
+  }
+
+  /** Un elemento por carga: los eventos tardíos de una canción anterior se ignoran. */
+  #createAudio() {
+    const a = new Audio()
+    this.#bindAudio(a)
+    return a
   }
 
   #bindAudio(a: HTMLAudioElement) {
-    // Los eventos tardíos del audio anterior o de la precarga nunca cambian el estado actual.
     const on = (name: string, listener: (event: Event) => void) =>
       a.addEventListener(name, event => { if (a === this.#audio) listener(event) })
     a.preload = 'auto'
     a.volume = this.volume
-    on('timeupdate', () => {
+    a.muted = this.muted
+    a.addEventListener('timeupdate', () => {
+      if (a === this.#audio && this.#checkSleepTimer()) return
       // Mientras carga la siguiente, el audio aún tiene el tiempo de la anterior: se ignora.
-      if (this.status === 'loading') return
+      if (a !== this.#audio || this.status === 'loading') return
       this.time = a.currentTime
+      this.#watchProgress()
       this.#maybeRecord()
+      this.#saveProgress()
     })
-    on('durationchange', () => {
+    a.addEventListener('loadedmetadata', () => {
+      if (a !== this.#audio) return
+      this.#metadataReady = true
+      if (!this.#resumeAt) return
+      // YouTube y RSS pueden tener duraciones distintas; conservar los segundos sin salir del audio.
+      a.currentTime = Number.isFinite(a.duration) && a.duration > 0
+        ? Math.min(this.#resumeAt, Math.max(0, a.duration - 1)) : this.#resumeAt
+      this.time = a.currentTime
+      this.#resumeAt = 0
+    })
+    a.addEventListener('durationchange', () => {
+      if (a !== this.#audio) return
       if (Number.isFinite(a.duration)) this.duration = a.duration
       this.#syncPosition()
     })
-    on('playing', () => {
+    a.addEventListener('playing', () => {
+      if (a !== this.#audio || this.#checkSleepTimer() || !this.#wantsPlay) {
+        a.pause()
+        return
+      }
+      if (a.paused || a.error) return
       this.status = 'playing'
+      this.#requestedSeek = null
       this.#failures = 0
+      this.#watchProgress()
       this.#syncPosition()
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing'
+      this.#withMediaSession((ms) => { ms.playbackState = 'playing' })
       if (this.#promotion) {
-        // Un nuevo playing después de pause/AbortError completa la reproducción
-        // pendiente; no convierte un rechazo de promoción en éxito.
         if (this.#promotion.interrupted) this.#promotion.played = true
         this.#completePromotion(this.#promotion)
       }
     })
-    on('pause', () => {
+    a.addEventListener('pause', () => {
+      if (a !== this.#audio || !a.paused) return
+      this.#clearProgressTimer()
       if (this.status === 'playing') this.status = 'paused'
-      if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused'
+      this.#saveProgress(true)
+      this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
     })
-    on('seeked', () => this.#syncPosition())
-    on('ended', () => {
+    a.addEventListener('seeked', () => {
+      if (a !== this.#audio) return
+      this.#syncPosition()
+      this.#watchProgress()
+      this.#saveProgress(true)
+    })
+    a.addEventListener('ended', () => {
+      if (a !== this.#audio || !this.#wantsPlay || this.status === 'loading') return
+      this.#clearProgressTimer()
+      this.#completed = true
+      this.#saveProgress(true)
+      if (this.sleepTimer.mode === 'end') {
+        this.#finishSleep(true)
+        return
+      }
+      if (this.#checkSleepTimer()) return
       if (this.repeat === 'one') {
         this.#recorded = false
+        this.#completed = false
         a.currentTime = 0
-        a.play().catch(() => {})
+        this.time = 0
+        this.#resume()
       } else {
         this.next()
       }
     })
-    on('error', () => this.#onAudioError())
+    a.addEventListener('error', () => { if (a === this.#audio) this.#onAudioError() })
     on('captureerror', (event) => {
       const item = this.current
       if (!item) return
@@ -140,6 +258,24 @@ class Player implements PlayerApi {
         ? `No se pudo promover la captura; se conserva el audio confirmado: ${message.slice('CAPTURE_PROMOTION_FAILED:'.length).trim()}`
         : `La captura se está recuperando: ${message}`)
     })
+  }
+
+  #resetAudio(cancelBackend = true, nextAudio?: HTMLAudioElement) {
+    this.#clearProgressTimer()
+    const previous = this.#audio
+    this.#audio = nextAudio ?? this.#createAudio()
+    this.#source = null
+    this.#admission = null
+    this.#promotion = null
+    this.#sourceLocal = true
+    this.#playable = null
+    this.#metadataReady = false
+    this.#resumeAt = 0
+    stopCapture(cancelBackend)
+    previous.pause()
+    previous.removeAttribute('src')
+    previous.load()
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
   }
 
   get current(): QueueItem | null {
@@ -174,12 +310,13 @@ class Player implements PlayerApi {
     this.#load(pos)
   }
 
-  /** Reproduce una lista (p. ej. un disco) empezando por la canción `start`. Tu cola se conserva. */
-  playQueue(items: QueueItem[], start: number, context = '') {
+  /** Reproduce una colección (`start = null`) o una canción concreta. Tu cola se conserva. */
+  playQueue(items: QueueItem[], start: number | null, context = '') {
+    if (!items.length) return
     this.queue = items
     this.context = context || (items.every((i) => i.albumId === items[0]?.albumId) ? (items[0]?.albumTitle ?? '') : '')
     this.order = playOrder(items.length, start, this.shuffle)
-    this.#load(this.shuffle ? 0 : start)
+    this.#load(this.shuffle ? 0 : (start ?? 0))
   }
 
   // ----- Tu cola (DJ) -----
@@ -252,26 +389,59 @@ class Player implements PlayerApi {
   }
 
   toggle() {
-    if (this.status === 'loading') this.#cancelLoading()
-    else if (this.status === 'playing') this.#audio.pause()
-    else if (this.status === 'paused') this.#audio.play().catch(() => {})
-    else if (this.manual && this.status === 'idle') this.#loadManual(this.manual)
-    else if (this.current && this.status === 'idle') this.#load(this.pos)
+    if (this.status === 'playing' || this.status === 'loading' && this.#wantsPlay) this.#pause()
+    else this.#resume()
+  }
+
+  #pause() {
+    if (!this.current) return
+    this.#wantsPlay = false
+    this.#clearProgressTimer()
+    this.#saveProgress(true)
+    // Una promoción ya tiene audio confirmado: pausar no revoca su acuse nativo.
+    if (this.status === 'loading') {
+      this.#cancelLoading()
+      this.status = 'paused'
+      return
+    }
+    if (!this.#promotion) ++this.#token
+    if (this.#audio.src) this.time = Math.max(this.time, this.#audio.currentTime)
+    this.#audio.pause()
+    this.status = 'paused'
+  }
+
+  async #resume() {
+    const item = this.current
+    if (!item || this.#wantsPlay && this.status === 'loading') return
+    if (this.#checkSleepTimer()) return
+    this.#wantsPlay = true
+    this.#repaired = false
+    if (!this.#audio.src || this.status === 'idle' || !this.#activeItem) {
+      this.#start(item, false, this.time, true)
+      return
+    }
+    const token = this.#promotion ? this.#token : ++this.#token
+    const at = this.time
+    this.status = 'loading'
+    try {
+      await this.#playElement(this.#audio)
+      if (token === this.#token && this.#wantsPlay) this.#prefetchNext()
+    } catch (e) {
+      if (token !== this.#token || !this.#wantsPlay) return
+      if (this.#canRefreshSource()) this.#repair(at)
+      else this.#fail(item, String(e), token, false)
+    }
   }
 
   #cancelLoading() {
     ++this.#token
-    this.#admission = null
+    this.#wantsPlay = false
     this.#loadingCanPrefetch = false
     this.#pendingSource = null
     this.#inFlight.clear()
     this.#discardPrefetch(true)
-    stopCapture()
-    this.#audio.pause()
-    this.#audio.removeAttribute('src')
-    this.#audio.load()
+    this.#resetAudio()
     this.status = 'idle'
-    this.#source = null
     this.captureInteraction = null
     this.#cancelPending = this.#cancelPending.then(() => api.cancelResolve()).catch((e) => {
       toast.show(`No se pudo cancelar la preparación: ${e}`)
@@ -311,12 +481,16 @@ class Player implements PlayerApi {
       this.#load(0)
     } else {
       // Fin de la cola: se queda parado al principio de la última canción.
+      this.#saveProgress(true)
+      this.#activeItem = null
+      this.#positionKnown = false
       if (this.status === 'loading') {
         this.#cancelLoading()
         return
       }
-      this.#audio.pause()
+      this.#pause()
       this.#audio.currentTime = 0
+      this.time = 0
       this.status = 'paused'
     }
   }
@@ -330,10 +504,35 @@ class Player implements PlayerApi {
   }
 
   seek(seconds: number) {
-    const audio = this.#audio, token = this.#token
-    void seekCapture(audio, seconds).then(ready => {
-      if (ready && token === this.#token && audio === this.#audio) this.time = seconds
-    })
+    if (this.#source?.kind === 'capture') {
+      const audio = this.#audio, token = this.#token
+      void seekCapture(audio, seconds).then(ready => {
+        if (!ready || token !== this.#token || audio !== this.#audio) return
+        this.#completed = false
+        this.#positionKnown = true
+        this.#requestedSeek = null
+        this.time = seconds
+        this.#syncPosition()
+      })
+      return
+    }
+    this.#completed = false
+    this.#positionKnown = true
+    if (this.status === 'loading') {
+      this.#requestedSeek = seconds
+      this.time = seconds
+      if (this.#activeItem && this.#metadataReady) {
+        this.#resumeAt = 0
+        this.#audio.currentTime = seconds
+      } else this.#resumeAt = seconds
+      return
+    }
+    this.#resumeAt = 0
+    this.#audio.currentTime = seconds
+    this.time = seconds
+    this.#clearProgressTimer()
+    this.#watchProgress()
+    this.#saveProgress(true)
   }
 
   setVolume(v: number) {
@@ -366,12 +565,54 @@ class Player implements PlayerApi {
     this.#prefetchNext()
   }
 
+  async setSleepTimer(minutes: number): Promise<boolean> {
+    if (minutes !== 0 && minutes !== -1 && !isSleepMinutes(minutes)) return false
+    if (minutes !== 0 && !this.current) return false
+    clearTimeout(this.#sleepTimeout)
+    this.#sleepTimeout = undefined
+    this.#sleepDeadline = 0
+    if (minutes === 0) this.sleepTimer = { mode: 'off', endsAt: 0 }
+    else if (minutes === -1) this.sleepTimer = { mode: 'end', endsAt: 0 }
+    else {
+      const delay = minutes * 60_000
+      this.sleepTimer = { mode: 'time', endsAt: Date.now() + delay }
+      this.#sleepDeadline = performance.now() + delay
+      this.#scheduleSleepCheck()
+    }
+    return true
+  }
+
+  #checkSleepTimer(): boolean {
+    if (this.sleepTimer.mode !== 'time' || performance.now() < this.#sleepDeadline) return false
+    this.#finishSleep()
+    return true
+  }
+
+  #scheduleSleepCheck() {
+    this.#sleepTimeout = setTimeout(() => {
+      if (!this.#checkSleepTimer() && this.sleepTimer.mode === 'time') this.#scheduleSleepCheck()
+    }, Math.max(1, this.#sleepDeadline - performance.now()))
+  }
+
+  #finishSleep(atEnd = false) {
+    void this.setSleepTimer(0)
+    // La pausa invalida cargas pendientes y detiene el detector de bloqueos y la recuperación.
+    this.#pause()
+    if (atEnd || this.#completed) {
+      this.#activeItem = null
+      this.#positionKnown = false
+      this.#resetAudio()
+      this.time = 0
+    }
+    this.#withMediaSession((ms) => { ms.playbackState = 'paused' })
+  }
+
   /**
    * Fija a mano el vídeo de una canción y lo recuerda. Si es la que suena, se cambia al momento;
    * si no, solo se guarda para la próxima vez.
    */
   async useSource(videoId: string, item: QueueItem | null = this.current, onError?: (message: string) => void): Promise<boolean> {
-    if (!item || isPodcast(item.track.id)) return false
+    if (!item || isPodcast(item.track.id) || isYouTubeTrack(item.track.id)) return false
     const reportError = (e: unknown) => {
       const message = `No se pudo usar ese vídeo: ${e}`
       if (onError) onError(message)
@@ -399,28 +640,37 @@ class Player implements PlayerApi {
       }
     }
 
+    this.#saveProgress(true)
     this.#discardPrefetch(true)
     const token = ++this.#token
-    this.#admission = null
     this.#loadingCanPrefetch = true
     this.#pendingSource = null
     this.captureInteraction = null
+    this.#wantsPlay = true
+    this.#repaired = false
     this.status = 'loading'
-    this.#audio.pause()
-    stopCapture()
     try {
+      this.#resetAudio()
       await this.#cancelPending
       if (token !== this.#token) return false
-      const playable = await api.chooseSource(toQuery(item), videoId, true, this.#admissionOptions(item))
+      const playable = await withTimeout(
+        api.chooseSource(toQuery(item), videoId, true, this.#admissionOptions(item)), RESOLVE_TIMEOUT,
+        'No se pudo preparar el audio a tiempo. Vuelve a intentarlo')
       redownload()
       if (token !== this.#token) return true
-      this.#rememberPlayback(item, playable)
       this.#retried = false
-      setAudioSource(this.#audio, audioSrc(playable))
-      const audio = this.#audio
-      await waitForCaptureReady(audio)
-      if (token !== this.#token || audio !== this.#audio) return true
-      await audio.play()
+      try {
+        await this.#playAudio(playable)
+      } catch (e) {
+        if (token !== this.#token) return true
+        if (!this.#canRefreshSource()) throw e
+        this.#resetAudio()
+        this.#retried = true
+        const refreshed = await this.#resolve(item, true)
+        if (token !== this.#token) return true
+        await this.#playAudio(refreshed)
+      }
+      if (token !== this.#token) return true
       this.#prefetchNext()
       toast.show('Hecho: a partir de ahora esta canción sonará con ese vídeo')
       return true
@@ -428,12 +678,13 @@ class Player implements PlayerApi {
       if (token === this.#token) {
         if (String(e).includes('CAPTURE_REQUIRES_INTERACTION')) {
           this.#pendingSource = { videoId, item }
-          this.#fail(item, String(e))
-        }
-        else {
-          this.#admission = null
+          this.#fail(item, String(e), token)
+        } else {
+          ++this.#token
+          this.#wantsPlay = false
           this.#discardPrefetch(true)
-          this.status = 'paused'
+          this.#resetAudio()
+          this.status = 'idle'
           reportError(e)
         }
       }
@@ -458,6 +709,7 @@ class Player implements PlayerApi {
   #load(pos: number, refresh = false, startAt = 0) {
     const item = this.queue[this.order[pos]]
     if (!item) return
+    if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = null
     this.pos = pos
     this.#start(item, refresh, startAt)
@@ -465,41 +717,47 @@ class Player implements PlayerApi {
 
   /** Pone una canción de tu cola (sin mover la posición en el disco o playlist de fondo). */
   #loadManual(item: QueueItem, refresh = false, startAt = 0) {
+    if (!refresh && this.sleepTimer.mode === 'end') void this.setSleepTimer(0)
     this.manual = item
     this.#start(item, refresh, startAt)
   }
 
-  async #start(item: QueueItem, refresh = false, startAt = 0) {
+  async #start(item: QueueItem, refresh = false, startAt = 0, preserveHistory = false) {
+    this.#saveProgress(true)
+    this.#activeItem = null
+    const restore = !refresh && (!preserveHistory || !this.#positionKnown)
+    if (!preserveHistory && !refresh) {
+      this.#requestedSeek = null
+      this.#positionKnown = false
+    }
     const prefetched = this.#prefetches.get(item.track.id)
     const prepared = !refresh && prefetched?.engine === extractor.engine ? prefetched.prepared : null
-    // La señal nativa llega después de asegurar la plaza foreground, incluso si
-    // antes era next. Un Audio ya preparado conserva además su barrera de play.
+    // La señal nativa llega después de asegurar foreground. Un Audio preparado
+    // conserva además su barrera de promoción y reproducción.
     this.#loadingCanPrefetch = !prepared
-    this.#admission = null
-    // La plaza promovida deja de ser next; nunca se cancela por su número después.
-    // Las otras canciones deseadas conservan plaza, lector y Audio.
     if (prefetched) this.#removePrefetch(prefetched, false, !!prepared)
     this.#prunePrefetch(this.#followingItems())
     const token = ++this.#token
-    this.#promotion = null
     this.#pendingSource = null
     this.captureInteraction = null
-    // Recargar la misma canción (URL caducada) no cuenta como otra escucha.
-    if (!refresh) this.#recorded = false
+    this.#wantsPlay = true
+    if (!refresh) this.#repaired = false
+    if (!refresh && !preserveHistory) this.#recorded = false
     this.status = 'loading'
-    this.#source = null
     this.time = startAt
     this.duration = item.track.duration
-    this.#audio.pause()
-    // Si sonaba una captura del motor propio, deja de leerse: así puede empezar la siguiente.
-    stopCapture()
+    const readyPrepared = !refresh && prepared && startAt === 0 && !isPodcast(item.track.id) && this.#readyCapture(prepared)
+    this.#resetAudio(true, readyPrepared ? prepared.audio : undefined)
     this.#updateMediaSession(item)
 
-    if (!refresh && prepared && startAt === 0 && this.#readyCapture(prepared)) {
-      // Estos bytes ya están confirmados y aceptados por MSE. El cierre de la ventana
-      // anterior no debe retrasar play; el ticket foreground se promociona en paralelo.
+    if (readyPrepared) {
+      // Sólo audio confirmado: promover el ticket en paralelo no retrasa play.
       this.#adoptPrepared(prepared)
       this.#rememberPlayback(item, prepared.playable)
+      this.#activeItem = item
+      this.#completed = false
+      this.#positionKnown = true
+      this.#metadataReady = true
       this.#retried = false
       const pendingPromotion: CapturePromotion = { token, audio: prepared.audio, ready: false, played: false, interrupted: false }
       this.#promotion = pendingPromotion
@@ -525,7 +783,8 @@ class Player implements PlayerApi {
       })
       try {
         phase('play-request')
-        await prepared.audio.play()
+        await this.#playElement(prepared.audio)
+        if (!current()) return
         pendingPromotion.played = true
         if (await promotion) this.#completePromotion(pendingPromotion)
       } catch (error) {
@@ -536,34 +795,148 @@ class Player implements PlayerApi {
           return
         }
         prepared.stop(false)
-        this.#fail(item, String(error))
+        this.#fail(item, String(error), token)
       }
       return
     }
 
     try {
-      const playable = await this.#resolve(item, refresh)
-      if (token !== this.#token) { prepared?.stop(false); return }
-      this.#rememberPlayback(item, playable)
       this.#retried = refresh
-      if (prepared && audioSrc(prepared.playable) === audioSrc(playable)) {
-        // El resolve foreground promociona la sesión nativa; el Audio y su MSE ya están listos.
-        this.#adoptPrepared(prepared)
-      } else {
-        prepared?.stop(false)
-        setAudioSource(this.#audio, audioSrc(playable))
-      }
-      if (startAt) await seekCapture(this.#audio, startAt)
-      const audio = this.#audio
-      await waitForCaptureReady(audio)
-      if (token !== this.#token || audio !== this.#audio) return
-      await audio.play()
+      const [playable, savedAt] = await Promise.all([
+        this.#resolve(item, refresh),
+        restore && isPodcast(item.track.id)
+          ? episodeProgress.position(item.track.id).catch(() => {
+              toast.show('No se pudo recuperar el punto de escucha del pódcast')
+              return 0
+            }) : Promise.resolve(startAt),
+      ])
+      if (token !== this.#token) { prepared?.stop(false); return }
+      const adopt = !!prepared && audioSrc(prepared.playable) === audioSrc(playable)
+      if (adopt) this.#adoptPrepared(prepared!)
+      else prepared?.stop(false)
+      await this.#playAudio(playable, savedAt, adopt)
+      if (token !== this.#token) return
       this.#prefetchNext()
     } catch (e) {
       prepared?.stop(false)
       if (token !== this.#token) return
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      this.#fail(item, String(e))
+      if (this.#canRefreshSource()) {
+        this.#start(item, true, this.#requestedSeek ?? this.time)
+        return
+      }
+      this.#fail(item, String(e), token)
+    }
+  }
+
+  async #playAudio(playable: Playable, startAt = 0, adopted = false) {
+    const a = this.#audio
+    const token = this.#token
+    this.#activeItem = this.current
+    if (this.#activeItem) this.#rememberPlayback(this.#activeItem, playable)
+    this.#completed = false
+    this.#progressSavedAt = Date.now()
+    this.#positionKnown = true
+    this.#metadataReady = adopted && a.readyState >= 1
+    const at = this.#requestedSeek ?? startAt
+    this.#resumeAt = playable.url.startsWith(CAPTURE) ? 0 : at
+    this.time = at
+    if (!adopted) setAudioSource(a, audioSrc(playable))
+    if (playable.url.startsWith(CAPTURE)) {
+      if (at) await seekCapture(a, at)
+    } else if (adopted && this.#resumeAt) {
+      // El metadata de una precarga pudo llegar antes de adoptarla.
+      a.currentTime = Number.isFinite(a.duration) && a.duration > 0
+        ? Math.min(this.#resumeAt, Math.max(0, a.duration - 1)) : this.#resumeAt
+      this.time = a.currentTime
+      this.#resumeAt = 0
+    }
+    if (token !== this.#token || a !== this.#audio) return
+    await this.#playElement(a)
+  }
+
+  #saveProgress(force = false) {
+    const item = this.#activeItem
+    const audio = this.#audio
+    if (!item || !isPodcast(item.track.id) || !this.#metadataReady || this.status === 'loading' || this.#resumeAt) return
+    if (!Number.isFinite(audio.currentTime) || (!force && Date.now() - this.#progressSavedAt < 5000)) return
+    this.#progressSavedAt = Date.now()
+    void episodeProgress.save({
+      id: item.track.id,
+      position: audio.currentTime,
+      duration: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0,
+      completed: this.#completed,
+    })
+  }
+
+  async #playElement(a: HTMLAudioElement) {
+    const token = this.#token
+    if (this.#source?.kind === 'capture' && !captureReady(a)) await waitForCaptureReady(a)
+    if (token !== this.#token || a !== this.#audio || !this.#wantsPlay)
+      throw new DOMException('Reproducción sustituida', 'AbortError')
+    let onError: () => void = () => {}
+    const started = new Promise<void>((resolve, reject) => {
+      onError = () => reject(new Error(audioError(a)))
+      a.addEventListener('error', onError)
+      try {
+        if (a.error) throw new Error(audioError(a))
+        a.play().then(resolve, reject)
+      } catch (e) {
+        reject(e)
+      }
+    })
+    try {
+      await withTimeout(started, AUDIO_TIMEOUT, 'El reproductor no ha podido iniciar el audio (30 s). Vuelve a intentarlo')
+    } finally {
+      a.removeEventListener('error', onError)
+    }
+  }
+
+  #clearProgressTimer() {
+    clearTimeout(this.#progressTimer)
+    this.#progressTimer = undefined
+  }
+
+  /** `playing` y una promesa resuelta no garantizan que el decoder avance (WebKit incluido). */
+  #watchProgress() {
+    const a = this.#audio
+    if (!this.#wantsPlay || a.paused || !a.src || this.#source?.kind === 'capture') return
+    // No alargar el plazo por timeupdate/playing repetidos con la misma posición.
+    if (this.#progressTimer !== undefined && a.currentTime <= this.#progressAt + 0.05) return
+    this.#clearProgressTimer()
+    this.#progressAt = a.currentTime
+    const token = this.#token
+    this.#progressTimer = setTimeout(() => {
+      this.#progressTimer = undefined
+      if (token !== this.#token || a !== this.#audio || !this.#wantsPlay || a.paused) return
+      if (a.currentTime > this.#progressAt + 0.05) this.#watchProgress()
+      else this.#repair(Math.max(this.time, this.#progressAt, a.currentTime))
+    }, AUDIO_TIMEOUT)
+  }
+
+  /** Reconstruye el decoder una vez, sin cambiar de canción ni reextraer los archivos locales. */
+  async #repair(at: number) {
+    if (this.#checkSleepTimer()) return
+    const item = this.current
+    const playable = this.#playable
+    if (!item || !playable || !this.#wantsPlay) return
+    if (this.#repaired) {
+      this.#fail(item, 'El audio no avanza. Pulsa Reproducir para volver a intentarlo', this.#token, false)
+      return
+    }
+    this.#repaired = true
+    this.#saveProgress(true)
+    const token = ++this.#token
+    this.time = at
+    this.status = 'loading'
+    this.#resetAudio()
+    try {
+      // Una ruta local sigue siendo local; nunca se busca en YouTube para reparar su decoder.
+      const source = playable.local ? playable : await this.#resolve(item, true)
+      if (token !== this.#token) return
+      this.#retried = !source.local
+      await this.#playAudio(source, at)
+    } catch (e) {
+      if (token === this.#token) this.#fail(item, String(e), token, false)
     }
   }
 
@@ -592,6 +965,8 @@ class Player implements PlayerApi {
   }
 
   #rememberPlayback(item: QueueItem, playable: Playable) {
+    this.#sourceLocal = playable.local
+    this.#playable = playable
     this.#source = { trackId: item.track.id, videoId: playable.videoId,
       kind: playable.local ? 'local' : playable.url.startsWith(CAPTURE) ? 'capture' :
         playable.url.startsWith('musify-capture-legacy:') ? 'capture-legacy' : 'network' }
@@ -706,7 +1081,8 @@ class Player implements PlayerApi {
       const entry = {
         promise: this.#cancelPending.then(() => {
           if (options.isCurrent?.() === false) throw new DOMException('Resolución sustituida', 'AbortError')
-          return api.resolve(toQuery(item), refresh, foreground, options)
+          return withTimeout(api.resolve(toQuery(item), refresh, foreground, options), RESOLVE_TIMEOUT,
+            'No se pudo preparar el audio a tiempo. Vuelve a intentarlo')
         }),
         token: this.#token,
         prefetchVersion: prefetch?.version ?? 0,
@@ -742,60 +1118,90 @@ class Player implements PlayerApi {
     }
   }
 
-  /** El audio falló a mitad (normalmente la URL caducó): se pide otra una vez y se sigue donde iba. */
+  /** Una URL remota caducada puede aparecer como error de red o de fuente no compatible. */
+  #canRefreshSource() {
+    const code = this.#audio.error?.code
+    return !this.#retried && !this.#sourceLocal && this.#source?.kind !== 'capture' && (code === 2 || code === 4)
+  }
+
+  /** El audio falló a mitad: si la URL pudo caducar, se pide otra una vez y se sigue donde iba. */
   #onAudioError() {
+    if (this.#checkSleepTimer()) return
     const item = this.current
-    if (!item || !this.#audio.src) return
+    // Al arrancar, #playAudio recoge tanto el evento error como el rechazo de play(): un solo fallo.
+    if (this.status === 'loading' || !item || !this.#audio.src || !this.#wantsPlay) return
     const at = this.#audio.currentTime
-    if (this.#retried) this.#fail(item, 'el audio no se puede reproducir')
+    if (!this.#canRefreshSource())
+      this.#fail(item, audioError(this.#audio), this.#token, !this.#repaired)
     else if (this.manual) this.#loadManual(this.manual, true, at)
     else this.#load(this.pos, true, at)
   }
 
-  #fail(item: QueueItem, reason: string) {
+  #fail(item: QueueItem, reason: string, token = this.#token, advance = true) {
+    if (token !== this.#token) return
+    if (this.#checkSleepTimer()) return
+    if (this.sleepTimer.mode === 'end') {
+      toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)
+      this.#finishSleep()
+      this.#activeItem = null
+      this.#resetAudio()
+      return
+    }
+    this.#saveProgress(true)
+    ++this.#token
+    this.#wantsPlay = false
+    const interaction = reason.includes('CAPTURE_REQUIRES_INTERACTION')
+    this.#resetAudio(!interaction)
+    this.#discardPrefetch(true)
     if (reason.includes('SOURCE_SELECTION_REQUIRED')) {
-      this.#admission = null
-      this.#discardPrefetch(true)
       this.status = 'idle'
       this.picking = item
       return
     }
-    if (reason.includes('CAPTURE_REQUIRES_INTERACTION')) {
-      this.#admission = null
-      this.#discardPrefetch(true)
+    if (interaction) {
       this.captureInteraction = reason.split('CAPTURE_REQUIRES_INTERACTION:').pop()?.trim() || 'YouTube necesita tu intervención.'
       this.status = 'idle'
       return
     }
     this.#failures++
     toast.show(`No se pudo reproducir «${item.track.title}»: ${reason}`)
-    if (this.#failures < MAX_FAILURES && (this.userQueue.length > 0 || this.pos < this.order.length - 1)) {
+    if (advance && this.#failures < MAX_FAILURES && (this.userQueue.length > 0 || this.pos < this.order.length - 1)) {
       this.next()
     } else {
-      this.#admission = null
-      this.#discardPrefetch(true)
       this.status = 'idle'
     }
   }
 
   // Teclas multimedia del teclado y panel multimedia de Windows.
   #setupMediaSession() {
-    if (!('mediaSession' in navigator)) return
-    const ms = navigator.mediaSession
-    ms.setActionHandler('play', () => this.toggle())
-    ms.setActionHandler('pause', () => this.toggle())
-    ms.setActionHandler('previoustrack', () => this.prev())
-    ms.setActionHandler('nexttrack', () => this.next())
-    ms.setActionHandler('seekto', (d) => d.seekTime != null && this.seek(d.seekTime))
+    const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+      ['play', () => { if (this.status !== 'playing') this.#resume() }],
+      ['pause', () => this.#pause()],
+      ['previoustrack', () => this.prev()],
+      ['nexttrack', () => this.next()],
+      ['seekto', (d) => d.seekTime != null && this.seek(d.seekTime)],
+    ]
+    for (const [action, handler] of handlers) this.#withMediaSession((ms) => ms.setActionHandler(action, handler))
+  }
+
+  #withMediaSession(update: (session: MediaSession) => void) {
+    try {
+      if ('mediaSession' in navigator) update(navigator.mediaSession)
+    } catch {
+      // Integración opcional: un WebView sin esta función no debe impedir que suene el audio.
+    }
   }
 
   #updateMediaSession(item: QueueItem) {
-    if (!('mediaSession' in navigator)) return
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: item.track.title,
-      artist: item.track.artist.name,
-      album: item.albumTitle,
-      artwork: item.cover ? [{ src: item.cover, sizes: '500x500', type: 'image/jpeg' }] : [],
+    this.#withMediaSession((ms) => {
+      if (typeof MediaMetadata === 'undefined') return
+      const cover = mediaUrl(item.cover)
+      ms.metadata = new MediaMetadata({
+        title: item.track.title,
+        artist: item.track.artist.name,
+        album: item.albumTitle,
+        artwork: cover ? [{ src: cover, sizes: '500x500', type: 'image/jpeg' }] : [],
+      })
     })
   }
 

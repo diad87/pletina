@@ -23,6 +23,7 @@
   import DownloadsView from './views/DownloadsView.svelte'
   import HistoryView from './views/HistoryView.svelte'
   import ImportPlaylist from './views/ImportPlaylist.svelte'
+  import YouTubeTracks from './views/YouTubeTracks.svelte'
   import LibraryView from './views/LibraryView.svelte'
   import Home from './views/Home.svelte'
   import LikedView from './views/LikedView.svelte'
@@ -55,6 +56,7 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
+    if (document.querySelector('dialog[open]')) return
     if (e.altKey && e.key === 'ArrowLeft') nav.back()
     else if (e.altKey && e.key === 'ArrowRight') nav.forward()
     else if (e.ctrlKey && (e.key === 'k' || e.key === 'l')) nav.focusSearch()
@@ -72,6 +74,11 @@
   // Botón "atrás" de Android (MainActivity.kt): cierra lo que haya abierto o vuelve a la página
   // anterior. Si no queda nada, la app pasa a segundo plano.
   ;(window as unknown as { __musifyBack: () => boolean }).__musifyBack = () => {
+    const sleepDialog = document.querySelector<HTMLDialogElement>('dialog[data-sleep-timer][open]')
+    if (sleepDialog) {
+      sleepDialog.close()
+      return true
+    }
     if (menu.open) menu.close()
     else if (player.picking) player.picking = null
     else if (theme.queueSheet && layout.mobile) theme.queueSheet = false
@@ -111,6 +118,8 @@
         <PlaylistView id={route.id} />
       {:else if route.name === 'import-playlist'}
         <ImportPlaylist />
+      {:else if route.name === 'youtube-tracks'}
+        <YouTubeTracks />
       {:else if route.name === 'downloads'}
         <DownloadsView />
       {:else if route.name === 'local'}

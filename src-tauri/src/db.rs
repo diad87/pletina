@@ -136,6 +136,38 @@ const MIGRATIONS: &[&str] = &[
         UNIQUE(show_id, guid)
     );
     ",
+    // 6: artistas favoritos y canciones añadidas directamente desde YouTube.
+    "
+    CREATE TABLE saved_artists (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        picture TEXT,
+        added_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE youtube_tracks (
+        track_id INTEGER PRIMARY KEY REFERENCES tracks(id),
+        video_id TEXT NOT NULL UNIQUE,
+        added_at INTEGER NOT NULL DEFAULT (unixepoch()),
+        saved INTEGER NOT NULL DEFAULT 1
+    );
+    ",
+    // 7: programas de podcasts favoritos. Sus metadatos siguen en podcast_shows.
+    "
+    CREATE TABLE saved_podcasts (
+        show_id INTEGER PRIMARY KEY REFERENCES podcast_shows(id),
+        added_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    ",
+    // 8: progreso por episodio; independiente de la cola y de la URL del audio.
+    "
+    CREATE TABLE podcast_progress (
+        episode_id INTEGER PRIMARY KEY REFERENCES podcast_episodes(id) ON DELETE CASCADE,
+        position REAL NOT NULL CHECK(position >= 0),
+        duration REAL NOT NULL CHECK(duration >= 0),
+        completed INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    ",
 ];
 
 #[derive(Debug, Clone)]
@@ -194,35 +226,39 @@ impl Db {
             .flatten()
     }
 
-    /// Una búsqueda antigua no puede sustituir la elección manual que terminó antes que ella.
-    pub fn save_source(&self, track_id: u64, s: &Source) -> bool {
-        self.0.lock().unwrap().execute(
-            "INSERT INTO sources (track_id, video_id, title, channel, duration, score, verified, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())
-             ON CONFLICT(track_id) DO UPDATE SET video_id = excluded.video_id,
-               title = excluded.title, channel = excluded.channel, duration = excluded.duration,
-               score = excluded.score, verified = excluded.verified, updated_at = excluded.updated_at
-             WHERE sources.verified = 0 OR excluded.verified = 1",
-            params![track_id as i64, s.video_id, s.title, s.channel, s.duration, s.score, s.verified],
-        ).is_ok_and(|rows| rows == 1)
+    /// Una búsqueda antigua no sustituye una elección manual; los errores de escritura se propagan.
+    pub fn save_source(&self, track_id: u64, s: &Source) -> rusqlite::Result<bool> {
+        write_source(&self.0.lock().unwrap(), track_id, s)
     }
 
-    #[cfg(test)]
-    pub fn delete_source(&self, track_id: u64) {
-        let _ = self
-            .0
-            .lock()
-            .unwrap()
-            .execute("DELETE FROM sources WHERE track_id = ?1", params![track_id as i64]);
+    // El arnés de auditoría externo también verifica que el borrado propaga errores.
+    #[allow(dead_code)]
+    pub fn delete_source(&self, track_id: u64) -> rusqlite::Result<()> {
+        self.0.lock().unwrap().execute("DELETE FROM sources WHERE track_id = ?1", params![track_id as i64])?;
+        Ok(())
     }
 
-    /// Un error de una petición anterior solo puede retirar su propia asociación automática.
-    pub fn delete_automatic_source(&self, track_id: u64, video_id: &str) -> bool {
+    /// Un error anterior sólo puede retirar su propia asociación automática.
+    pub fn delete_automatic_source(&self, track_id: u64, video_id: &str) -> rusqlite::Result<bool> {
         self.0.lock().unwrap().execute(
             "DELETE FROM sources WHERE track_id = ?1 AND video_id = ?2 AND verified = 0",
             params![track_id as i64, video_id],
-        ).is_ok_and(|rows| rows == 1)
+        ).map(|rows| rows == 1)
     }
+}
+
+/// También guarda una elección y la invalidación de su descarga en una transacción.
+/// false indica que una elección manual vigente protegió la fila de una búsqueda tardía.
+pub(crate) fn write_source(conn: &Connection, track_id: u64, s: &Source) -> rusqlite::Result<bool> {
+    conn.execute(
+        "INSERT INTO sources (track_id, video_id, title, channel, duration, score, verified, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, unixepoch())
+         ON CONFLICT(track_id) DO UPDATE SET video_id = excluded.video_id,
+           title = excluded.title, channel = excluded.channel, duration = excluded.duration,
+           score = excluded.score, verified = excluded.verified, updated_at = excluded.updated_at
+         WHERE sources.verified = 0 OR excluded.verified = 1",
+        params![track_id as i64, s.video_id, s.title, s.channel, s.duration, s.score, s.verified],
+    ).map(|rows| rows == 1)
 }
 
 impl Db {
@@ -238,12 +274,13 @@ impl Db {
     }
 
     /// Quita la descarga de la base de datos (no borra el archivo).
-    pub fn forget_download(&self, track_id: u64) {
-        let _ = self
+    pub fn forget_download(&self, track_id: u64) -> rusqlite::Result<()> {
+        self
             .0
             .lock()
             .unwrap()
-            .execute("DELETE FROM downloads WHERE track_id = ?1", params![track_id as i64]);
+            .execute("DELETE FROM downloads WHERE track_id = ?1", params![track_id as i64])?;
+        Ok(())
     }
 
     pub fn setting(&self, key: &str) -> Option<String> {
@@ -256,11 +293,12 @@ impl Db {
             .flatten()
     }
 
-    pub fn set_setting(&self, key: &str, value: &str) {
-        let _ = self.0.lock().unwrap().execute(
+    pub fn set_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
+        self.0.lock().unwrap().execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![key, value],
-        );
+        )?;
+        Ok(())
     }
 }
 
@@ -332,19 +370,83 @@ mod tests {
         let manual = Source { video_id: "chosenvideo".into(), title: "Chosen".into(), channel: "Artist".into(),
             duration: Some(180), score: 100, verified: true };
         let automatic = Source { video_id: "oldsearchid".into(), verified: false, ..manual.clone() };
-        assert!(db.save_source(1, &manual));
-        assert!(!db.save_source(1, &automatic));
+        assert!(db.save_source(1, &manual).unwrap());
+        assert!(!db.save_source(1, &automatic).unwrap());
         let saved = db.source(1).unwrap();
         assert_eq!(saved.video_id, manual.video_id);
         assert!(saved.verified);
-        assert!(!db.delete_automatic_source(1, &automatic.video_id));
-        assert!(!db.delete_automatic_source(1, &manual.video_id));
+        assert!(!db.delete_automatic_source(1, &automatic.video_id).unwrap());
+        assert!(!db.delete_automatic_source(1, &manual.video_id).unwrap());
         let replacement = Source { video_id: "newchoiceid".into(), ..manual };
-        assert!(db.save_source(1, &replacement));
+        assert!(db.save_source(1, &replacement).unwrap());
         assert_eq!(db.source(1).unwrap().video_id, replacement.video_id);
-        assert!(db.save_source(2, &automatic));
-        assert!(!db.delete_automatic_source(2, "differentid"));
-        assert!(db.delete_automatic_source(2, &automatic.video_id));
+        assert!(db.save_source(2, &automatic).unwrap());
+        assert!(!db.delete_automatic_source(2, "differentid").unwrap());
+        assert!(db.delete_automatic_source(2, &automatic.video_id).unwrap());
+    }
+
+    #[test]
+    fn write_helpers_propagate_readonly_errors_and_allow_retry() {
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        let source = Source { video_id: "old".into(), title: "Fixture".into(), channel: "Fixture".into(), duration: None, score: 90, verified: true };
+        db.save_source(7, &source).unwrap();
+        db.set_setting("key", "old").unwrap();
+        db.0.lock().unwrap().execute_batch(
+            "INSERT INTO tracks (id,title,duration,artist_id,artist_name,album_id,album_title,album_artist_id)
+             VALUES (7,'Fixture',1,1,'Fixture',1,'Fixture',1);
+             INSERT INTO downloads (track_id,path,size,video_id) VALUES (7,'fixture.webm',1,'old');
+             PRAGMA query_only=ON;"
+        ).unwrap();
+        let new_source = Source { video_id: "new".into(), ..source };
+        for result in [db.set_setting("key", "new"), db.save_source(7, &new_source).map(|_| ()), db.delete_automatic_source(7, "old").map(|_| ()), db.delete_source(7), db.forget_download(7)] {
+            assert_eq!(result.unwrap_err().sqlite_error_code(), Some(rusqlite::ErrorCode::ReadOnly));
+        }
+        assert_eq!(db.setting("key").as_deref(), Some("old"));
+        assert_eq!(db.source(7).unwrap().video_id, "old");
+        assert_eq!(db.download_path(7).as_deref(), Some("fixture.webm"));
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        db.set_setting("key", "new").unwrap();
+        db.save_source(7, &new_source).unwrap();
+        db.forget_download(7).unwrap();
+        assert_eq!(db.setting("key").as_deref(), Some("new"));
+        assert_eq!(db.source(7).unwrap().video_id, "new");
+        assert!(db.download_path(7).is_none());
+        db.delete_source(7).unwrap();
+        assert!(db.source(7).is_none());
+    }
+
+    #[test]
+    fn settings_report_sqlite_full_without_losing_existing_data() {
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        db.set_setting("keep", "old").unwrap();
+        {
+            let conn = db.0.lock().unwrap();
+            let pages: i64 = conn.query_row("PRAGMA page_count", [], |r| r.get(0)).unwrap();
+            conn.execute_batch(&format!("PRAGMA max_page_count={pages};")).unwrap();
+        }
+        let error = db.set_setting("too-large", &"x".repeat(1024 * 1024)).unwrap_err();
+        assert_eq!(error.sqlite_error_code(), Some(rusqlite::ErrorCode::DiskFull));
+        assert_eq!(db.setting("keep").as_deref(), Some("old"));
+        assert_eq!(db.setting("too-large"), None);
+    }
+
+    #[test]
+    fn source_writer_reports_busy_and_can_retry_after_lock_release() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-db-busy-{}-{nonce}.db", std::process::id()));
+        let db = Db::open(&path).unwrap();
+        let source = Source { video_id: "new".into(), title: "Fixture".into(), channel: "Fixture".into(), duration: None, score: 90, verified: true };
+        db.0.lock().unwrap().busy_timeout(std::time::Duration::from_millis(1)).unwrap();
+        let other = Connection::open(&path).unwrap();
+        other.execute_batch("BEGIN IMMEDIATE;").unwrap();
+        assert_eq!(db.save_source(7, &source).unwrap_err().sqlite_error_code(), Some(rusqlite::ErrorCode::DatabaseBusy));
+        assert!(db.source(7).is_none());
+        other.execute_batch("ROLLBACK;").unwrap();
+        db.save_source(7, &source).unwrap();
+        assert_eq!(db.source(7).unwrap().video_id, "new");
+        drop(other);
+        drop(db);
+        std::fs::remove_file(path).unwrap();
     }
 
     #[test]
@@ -360,11 +462,83 @@ mod tests {
         assert!(!has_content(&path));
 
         let db = Db::open(&path).unwrap();
-        db.set_setting("k", "v");
+        db.set_setting("k", "v").unwrap();
         drop(db);
         assert!(has_content(&path));
         assert_eq!(Db::open(&path).unwrap().setting("k").as_deref(), Some("v"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn migrations_preserve_version_six_library_and_podcast_data() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-migration-seven-{}-{nonce}.db", std::process::id()));
+        {
+            let conn = Connection::open(&path).unwrap();
+            conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+            for migration in &MIGRATIONS[..6] {
+                conn.execute_batch(migration).unwrap();
+            }
+            conn.execute_batch(
+                "PRAGMA user_version = 6;
+                 INSERT INTO sources (track_id, video_id, title, channel, score) VALUES (7, 'video', 'Canción', 'Artista', 90);
+                 INSERT INTO tracks (id, title, duration, artist_id, artist_name, album_id, album_title, album_artist_id)
+                    VALUES (7, 'Canción', 120, 1, 'Artista', 2, 'Disco', 1);
+                 INSERT INTO liked_tracks (track_id) VALUES (7);
+                 INSERT INTO saved_albums (id, title, artist_id, artist_name) VALUES (2, 'Disco', 1, 'Artista');
+                 INSERT INTO saved_artists (id, name) VALUES (1, 'Artista');
+                 INSERT INTO playlists (id, name) VALUES (1, 'Mi lista');
+                 INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES (1, 7, 0);
+                 INSERT INTO history (track_id) VALUES (7);
+                 INSERT INTO downloads (track_id, path, size, video_id) VALUES (7, 'audio.webm', 42, 'video');
+                 INSERT INTO settings (key, value) VALUES ('keep', 'value');
+                 INSERT INTO youtube_tracks (track_id, video_id, saved) VALUES (7, 'video', 1);
+                 INSERT INTO local_artists (id, name, key) VALUES (1, 'Local', 'local');
+                 INSERT INTO local_albums (id, title, artist_id, key) VALUES (1, 'Disco local', 1, 'local-album');
+                 INSERT INTO local_tracks (path, title, artist_id, album_id, duration, mtime, size)
+                    VALUES ('local.flac', 'Canción local', 1, 1, 10, 100, 200);
+                 INSERT INTO podcast_shows (id, feed_url, title, author, description, language)
+                    VALUES (1, 'https://feed.example/rss', 'Programa RSS', 'Autora', 'Descripción', 'es'),
+                           (2, 'youtube:MPSPtest', 'Programa YouTube', 'Canal', 'Vídeos', NULL);
+                 INSERT INTO podcast_episodes (show_id, guid, audio_url)
+                    VALUES (1, 'rss-episode', 'https://audio.example/episode.mp3'), (2, 'video', 'youtube:video');",
+            ).unwrap();
+        }
+        {
+            let db = Db::open(&path).unwrap();
+            assert_eq!(db.source(7).unwrap().video_id, "video");
+            assert_eq!(db.setting("keep").as_deref(), Some("value"));
+            assert_eq!(db.download_path(7).as_deref(), Some("audio.webm"));
+            let conn = db.0.lock().unwrap();
+            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), MIGRATIONS.len() as i64);
+            for table in ["sources", "tracks", "liked_tracks", "saved_albums", "saved_artists", "playlists",
+                "playlist_tracks", "history", "downloads", "settings", "youtube_tracks", "local_artists", "local_albums", "local_tracks"]
+            {
+                assert_eq!(conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get::<_, i64>(0)).unwrap(), 1, "{table}");
+            }
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_shows", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            let audio: String = conn.query_row("SELECT audio_url FROM podcast_episodes WHERE guid = 'rss-episode'", [], |r| r.get(0)).unwrap();
+            assert_eq!(audio, "https://audio.example/episode.mp3");
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_episodes", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_progress", [], |r| r.get::<_, i64>(0)).unwrap(), 0);
+            assert!(crate::podcasts::saved_shows(&conn).unwrap().is_empty());
+            assert!(conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (999)", []).is_err());
+            conn.execute("INSERT INTO saved_podcasts (show_id) VALUES (1), (2)", []).unwrap();
+            let saved = crate::podcasts::saved_shows(&conn).unwrap();
+            assert_eq!(saved.len(), 2);
+            assert_eq!(saved[0].feed_url, "youtube:MPSPtest");
+            assert_eq!(saved[1].title, "Programa RSS");
+        }
+        // La copia previa sigue siendo v6 y conserva los datos originales.
+        let backup = path.with_extension(format!("db.antes-de-v{}", MIGRATIONS.len()));
+        {
+            let conn = Connection::open(&backup).unwrap();
+            assert_eq!(conn.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)).unwrap(), 6);
+            assert_eq!(conn.query_row("SELECT COUNT(*) FROM podcast_episodes", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+            assert!(conn.prepare("SELECT * FROM saved_podcasts").is_err());
+        }
+        std::fs::remove_file(path).unwrap();
+        std::fs::remove_file(backup).unwrap();
     }
 }
 

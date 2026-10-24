@@ -219,7 +219,7 @@ fn valid_video_id(video_id: &str) -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct Playable {
     pub video_id: String,
-    /// URL del stream, o ruta del archivo si `local`.
+    /// URL del stream, o ruta del archivo si `local` (HTTP loopback en Linux).
     pub url: String,
     pub title: String,
     pub channel: String,
@@ -247,6 +247,10 @@ pub struct Alternative {
 const MAX_ATTEMPTS: usize = 3;
 
 type Scored = (Candidate, i32, &'static str);
+
+fn db_write_error(e: rusqlite::Error) -> String {
+    format!("No se pudo actualizar la biblioteca: {e}")
+}
 
 #[cfg(any(test, target_os = "android"))]
 pub async fn resolve(
@@ -286,6 +290,21 @@ async fn resolve_with_ticket(
     ticket: Option<RequestTicket>,
     request_id: Option<&str>,
 ) -> Result<Playable, String> {
+    // Enlaces añadidos por el usuario: nunca se sustituyen buscando otra canción por título.
+    // El mapeo se conserva aunque se quite la canción del listado de YouTube.
+    if crate::youtube_tracks::is_youtube(q.id) {
+        let video_id = crate::youtube_tracks::video(db, q.id)?;
+        if let Some(path) = db.download_path(q.id) {
+            if std::path::Path::new(&path).exists() {
+                return Ok(Playable { video_id, url: path, title: q.title.clone(), channel: q.artist.clone(), local: true });
+            }
+            db.forget_download(q.id).map_err(db_write_error)?;
+        }
+        let admission = ForegroundAdmission::new(request_id, ticket, q.id, &video_id, extractor::stream_engine());
+        let info = extractor::stream_with_admission(ytdlp, &video_id, refresh, foreground, ticket, admission).await?;
+        ensure_current(ticket)?;
+        return Ok(Playable { video_id, url: info.url, title: q.title.clone(), channel: q.artist.clone(), local: false });
+    }
     // Episodios: el audio publicado en el RSS, también desde el servicio nativo de Android.
     if crate::podcasts::is_podcast(q.id) {
         let audio = crate::podcasts::audio(db, q.id)?;
@@ -363,7 +382,7 @@ async fn resolve_with_ticket(
             });
         }
         // Borrado a mano desde el explorador: se vuelve al streaming.
-        db.forget_download(q.id);
+        db.forget_download(q.id).map_err(db_write_error)?;
     }
 
     let mut gone = None;
@@ -392,7 +411,7 @@ async fn resolve_with_ticket(
             // El vídeo ya no existe: se busca otro.
             Err(e) if is_gone(&e) && !src.verified => {
                 ensure_current(ticket)?;
-                if !db.delete_automatic_source(q.id, &src.video_id) {
+                if !db.delete_automatic_source(q.id, &src.video_id).map_err(db_write_error)? {
                     let chosen = db
                         .source(q.id)
                         .ok_or("El vídeo de la canción ha cambiado; vuelve a intentarlo")?;
@@ -463,7 +482,7 @@ async fn resolve_with_ticket(
                     score,
                     verified: false,
                 };
-                if !db.save_source(q.id, &src) {
+                if !db.save_source(q.id, &src).map_err(db_write_error)? {
                     let chosen = db
                         .source(q.id)
                         .ok_or("No se pudo guardar el vídeo de la canción")?;
@@ -493,6 +512,9 @@ pub async fn alternatives(
     ytm: &YouTubeMusic,
     ytdlp: &YtDlp,
 ) -> Result<Vec<Alternative>, String> {
+    if crate::youtube_tracks::is_youtube(q.id) {
+        return Err("Esta canción usa el enlace de YouTube que añadiste".into());
+    }
     if crate::podcasts::is_podcast(q.id) {
         return Err("Los episodios usan el audio original del podcast".into());
     }
@@ -540,12 +562,10 @@ pub async fn alternatives(
 
 /// Solo el vídeo de una canción, sin pedir la URL del audio (para descargar):
 /// el guardado o la mejor coincidencia, que queda guardada.
-pub async fn find_video(
-    q: &TrackQuery,
-    db: &Db,
-    ytm: &YouTubeMusic,
-    ytdlp: &YtDlp,
-) -> Result<String, String> {
+pub async fn find_video(q: &TrackQuery, db: &Db, ytm: &YouTubeMusic, ytdlp: &YtDlp) -> Result<String, String> {
+    if crate::youtube_tracks::is_youtube(q.id) {
+        return crate::youtube_tracks::video(db, q.id);
+    }
     if crate::podcasts::is_podcast(q.id) {
         return crate::podcasts::youtube_video(db, q.id)
             .ok_or_else(|| "La descarga de episodios todavía no está disponible".into());
@@ -566,7 +586,7 @@ pub async fn find_video(
         score,
         verified: false,
     };
-    if db.save_source(q.id, &src) {
+    if db.save_source(q.id, &src).map_err(db_write_error)? {
         Ok(src.video_id)
     } else {
         db.source(q.id)
@@ -585,6 +605,9 @@ pub async fn choose(
     foreground: bool,
     request_id: Option<&str>,
 ) -> Result<Playable, String> {
+    if crate::youtube_tracks::is_youtube(q.id) {
+        return Err("Esta canción usa el enlace de YouTube que añadiste".into());
+    }
     if crate::podcasts::is_podcast(q.id) {
         return Err("Los episodios usan el audio original del podcast".into());
     }
@@ -606,10 +629,6 @@ pub async fn choose(
     )
     .await?;
     ensure_current(ticket)?;
-    if let Some(path) = db.download_path(q.id) {
-        let _ = std::fs::remove_file(path);
-        db.forget_download(q.id);
-    }
     let src = Source {
         video_id: video_id.to_string(),
         title: info.title,
@@ -618,15 +637,32 @@ pub async fn choose(
         score: 100,
         verified: true,
     };
-    if !db.save_source(q.id, &src) {
-        return Err("No se pudo guardar el vídeo elegido".into());
-    }
+    remember_choice(db, q.id, &src)?;
     Ok(playable(src, info.url))
+}
+
+fn remember_choice(db: &Db, id: u64, src: &Source) -> Result<(), String> {
+    use rusqlite::{OptionalExtension, params};
+    let mut conn = db.0.lock().unwrap();
+    let tx = conn.transaction().map_err(db_write_error)?;
+    let path: Option<String> = tx.query_row("SELECT path FROM downloads WHERE track_id = ?1", params![id as i64], |r| r.get(0))
+        .optional().map_err(db_write_error)?;
+    // Verifica ambas escrituras antes de tocar el archivo. Si el borrado falla, la transacción
+    // revierte la elección y su descarga: no queda una fuente nueva asociada al audio anterior.
+    crate::db::write_source(&tx, id, src).map_err(db_write_error)?;
+    tx.execute("DELETE FROM downloads WHERE track_id = ?1", params![id as i64]).map_err(db_write_error)?;
+    if let Some(path) = path {
+        crate::downloads::remove_file_if_present(std::path::Path::new(&path))?;
+    }
+    tx.commit().map_err(db_write_error)
 }
 
 /// Asocia el enlace elegido para otra canción sin preparar audio ni afectar la reproducción.
 /// Los metadatos son los del catálogo; la disponibilidad del vídeo se comprueba al reproducirlo.
 pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), String> {
+    if crate::youtube_tracks::is_youtube(q.id) {
+        return Err("Esta canción usa el enlace de YouTube que añadiste".into());
+    }
     if crate::podcasts::is_podcast(q.id) {
         return Err("Los episodios usan el audio original del podcast".into());
     }
@@ -645,14 +681,7 @@ pub fn remember_source(q: &TrackQuery, video_id: &str, db: &Db) -> Result<(), St
         score: 100,
         verified: true,
     };
-    if !db.save_source(q.id, &src) {
-        return Err("No se pudo guardar el vídeo elegido".into());
-    }
-    if let Some(path) = db.download_path(q.id) {
-        let _ = std::fs::remove_file(path);
-        db.forget_download(q.id);
-    }
-    Ok(())
+    remember_choice(db, q.id, &src)
 }
 
 /// Candidatos puntuados, de mejor a peor y sin repetidos. Con `everywhere` busca siempre
@@ -1024,6 +1053,97 @@ mod resolve_tests {
         assert!(ensure_current(replacement).is_ok());
     }
 
+    #[test]
+    fn manual_choice_keeps_previous_source_and_download_when_writes_or_removal_fail() {
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let path = std::env::temp_dir().join(format!("pletina-choice-{}-{nonce}.webm", std::process::id()));
+        std::fs::write(&path, b"old audio").unwrap();
+        let db = Db::open(std::path::Path::new(":memory:")).unwrap();
+        let old = Source { video_id: "old".into(), title: "Fixture".into(), channel: "Fixture".into(), duration: None, score: 90, verified: true };
+        db.save_source(7, &old).unwrap();
+        {
+            let conn = db.0.lock().unwrap();
+            conn.execute_batch("INSERT INTO tracks (id,title,duration,artist_id,artist_name,album_id,album_title,album_artist_id) VALUES (7,'Fixture',1,1,'Fixture',1,'Fixture',1);").unwrap();
+            conn.execute("INSERT INTO downloads (track_id,path,size,video_id) VALUES (7,?1,9,'old')", rusqlite::params![path.to_string_lossy()]).unwrap();
+            conn.execute_batch("PRAGMA query_only=ON;").unwrap();
+        }
+        let new = Source { video_id: "new".into(), ..old };
+        assert!(remember_choice(&db, 7, &new).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), b"old audio");
+        assert_eq!(db.source(7).unwrap().video_id, "old");
+        assert!(db.download_path(7).is_some());
+
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        // Un directorio provoca un fallo real de remove_file en todas las plataformas.
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        assert!(remember_choice(&db, 7, &new).is_err());
+        assert_eq!(db.source(7).unwrap().video_id, "old");
+        assert!(db.download_path(7).is_some());
+        std::fs::remove_dir(&path).unwrap();
+        std::fs::write(&path, b"old audio").unwrap();
+        remember_choice(&db, 7, &new).unwrap();
+        assert_eq!(db.source(7).unwrap().video_id, "new");
+        assert!(db.download_path(7).is_none());
+        assert!(!path.exists());
+    }
+
+    /// Un enlace mantiene su vídeo al reiniciar aunque otra caché sugiera una coincidencia,
+    /// y el mismo resolvedor usado por Android y escritorio reproduce su descarga sin red.
+    #[tokio::test]
+    async fn youtube_link_keeps_its_video_and_offline_audio_after_reopening() {
+        use crate::youtube_tracks::{Preview, YOUTUBE_BASE};
+        use rusqlite::params;
+        let unique = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let dir = std::env::temp_dir().join(format!("pletina-youtube-{}-{unique}", std::process::id()));
+        std::fs::create_dir(&dir).unwrap();
+        let database = dir.join("library.db");
+        let audio = dir.join("song.webm");
+        std::fs::write(&audio, b"downloaded audio").unwrap();
+        let q = {
+            let db = Db::open(&database).unwrap();
+            let track = crate::youtube_tracks::save(&db, Preview {
+                video_id: "dQw4w9WgXcQ".into(),
+                title: "Mi título".into(),
+                artist: "Mi artista".into(),
+                duration: 215,
+                cover: None,
+            }).unwrap();
+            db.save_source(track.id, &Source {
+                video_id: "jNY_wLukVW0".into(), title: "Otra canción".into(), channel: "Otro".into(),
+                duration: Some(215), score: 100, verified: true,
+            }).unwrap();
+            db.0.lock().unwrap().execute(
+                "INSERT INTO downloads (track_id, path, size, video_id) VALUES (?1, ?2, 16, 'dQw4w9WgXcQ')",
+                params![track.id as i64, audio.to_string_lossy()],
+            ).unwrap();
+            TrackQuery { id: track.id, title: track.title, artist: track.artist_name, album: track.album_title, duration: track.duration }
+        };
+        let db = Db::open(&database).unwrap();
+        let ytm = YouTubeMusic::new();
+        let ytdlp = YtDlp::new(std::path::PathBuf::new());
+        assert_eq!(find_video(&q, &db, &ytm, &ytdlp).await.unwrap(), "dQw4w9WgXcQ");
+        for refresh in [false, true] {
+            let p = resolve(&q, refresh, &db, &ytm, &ytdlp).await.unwrap();
+            assert!(p.local);
+            assert_eq!(p.video_id, "dQw4w9WgXcQ");
+            assert_eq!(p.url, audio.to_string_lossy());
+            assert_eq!(p.title, "Mi título");
+            assert_eq!(p.channel, "Mi artista");
+        }
+        assert_eq!(alternatives(&q, &db, &ytm, &ytdlp).await.err().as_deref(), Some("Esta canción usa el enlace de YouTube que añadiste"));
+        assert_eq!(choose(&q, "jNY_wLukVW0", &db, &ytdlp, true, None).await.err().as_deref(), Some("Esta canción usa el enlace de YouTube que añadiste"));
+        assert_eq!(remember_source(&q, "jNY_wLukVW0", &db).err().as_deref(), Some("Esta canción usa el enlace de YouTube que añadiste"));
+        let missing = TrackQuery { id: YOUTUBE_BASE + 98765, ..q };
+        assert!(find_video(&missing, &db, &ytm, &ytdlp).await.is_err());
+        assert!(resolve(&missing, false, &db, &ytm, &ytdlp).await.is_err());
+        assert!(db.source(missing.id).is_none());
+        drop(db);
+        std::fs::remove_file(audio).unwrap();
+        std::fs::remove_file(database).unwrap();
+        std::fs::remove_dir(dir).unwrap();
+    }
+
     /// El mismo resolvedor sirve al escritorio y a Android, sin buscar el episodio en YouTube.
     #[tokio::test]
     async fn podcast_uses_persisted_audio_and_rejects_music_sources() {
@@ -1093,11 +1213,7 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(
-            std::path::PathBuf::from(env!("LOCALAPPDATA"))
-                .join("dev.musify.desktop")
-                .join("bin"),
-        );
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-resolve-{}", std::process::id())).join("bin"));
         let q = TrackQuery {
             id: 138539971,
             title: "Airbag".into(),
@@ -1105,7 +1221,7 @@ mod resolve_tests {
             album: "OK Computer".into(),
             duration: 287,
         };
-        db.delete_source(q.id);
+        db.delete_source(q.id).unwrap();
 
         let t = std::time::Instant::now();
         let first = resolve(&q, false, &db, &ytm, &ytdlp).await.unwrap();
@@ -1134,11 +1250,7 @@ mod resolve_tests {
         std::fs::create_dir_all(&dir).unwrap();
         let db = Db::open(&dir.join("test.db")).unwrap();
         let ytm = YouTubeMusic::new();
-        let ytdlp = YtDlp::new(
-            std::path::PathBuf::from(env!("LOCALAPPDATA"))
-                .join("dev.musify.desktop")
-                .join("bin"),
-        );
+        let ytdlp = YtDlp::new(std::env::temp_dir().join(format!("pletina-test-alternatives-{}", std::process::id())).join("bin"));
         let q = TrackQuery {
             id: 999_001,
             title: "Zuri".into(),
@@ -1146,7 +1258,7 @@ mod resolve_tests {
             album: "Infrasoinuak".into(),
             duration: 223,
         };
-        db.delete_source(q.id);
+        db.delete_source(q.id).unwrap();
         resolve(&q, false, &db, &ytm, &ytdlp).await.unwrap();
 
         let list = alternatives(&q, &db, &ytm, &ytdlp).await.unwrap();
@@ -1185,6 +1297,6 @@ mod resolve_tests {
             "se recuerda la elección manual"
         );
         println!("elegido a mano: {} ({})", chosen.title, chosen.channel);
-        db.delete_source(q.id);
+        db.delete_source(q.id).unwrap();
     }
 }

@@ -59,9 +59,13 @@ class Local {
   }
 
   async removeFolder(path: string) {
-    const folders = await api.removeLocalFolder(path)
-    if (this.data) this.data.folders = folders
-    this.scan = { state: 'scanning', done: 0, total: 0 }
+    try {
+      const folders = await api.removeLocalFolder(path)
+      if (this.data) this.data.folders = folders
+      this.scan = { state: 'scanning', done: 0, total: 0 }
+    } catch (e) {
+      toast.show(`No se pudo quitar la carpeta: ${e}`)
+    }
   }
 
   rescan() {

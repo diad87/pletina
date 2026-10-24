@@ -122,7 +122,7 @@
       </div>
     {/if}
     <div class="actions">
-      <button class="big-play" onclick={() => (playing ? player.toggle() : player.playQueue(items, 0))} title={playing ? 'Pausa' : 'Reproducir'}>
+      <button class="big-play" onclick={() => (playing ? player.toggle() : player.playQueue(items, null))} title={playing ? 'Pausa' : 'Reproducir'}>
         <Icon name={playing ? 'pause' : 'play'} size={24} />
       </button>
     </div>

@@ -22,7 +22,9 @@
       class="icon toggle"
       class:on={player.shuffle}
       onclick={() => player.toggleShuffle()}
-      title={player.shuffle ? 'Desactivar aleatorio' : 'Aleatorio'}
+      aria-label={player.shuffle ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
+      aria-pressed={player.shuffle}
+      title={player.shuffle ? 'Desactivar reproducción aleatoria' : 'Activar reproducción aleatoria'}
     >
       <Icon name="shuffle" size={big ? 22 : 18} />
     </button>

@@ -76,8 +76,9 @@ fn folders(db: &Db) -> Vec<String> {
     db.setting(FOLDERS_KEY).and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default()
 }
 
-fn save_folders(db: &Db, list: &[String]) {
-    db.set_setting(FOLDERS_KEY, &serde_json::to_string(list).unwrap_or_default());
+fn save_folders(db: &Db, list: &[String]) -> Res<()> {
+    let json = serde_json::to_string(list).map_err(|e| format!("No se pudieron guardar las carpetas: {e}"))?;
+    db.set_setting(FOLDERS_KEY, &json).map_err(|e| format!("No se pudieron guardar las carpetas: {e}"))
 }
 
 fn covers_dir(app: &AppHandle) -> PathBuf {
@@ -580,7 +581,7 @@ pub async fn add_local_folder(app: AppHandle, db: State<'_, Db>) -> Res<Vec<Stri
         let path = folder.to_string_lossy().into_owned();
         if !list.contains(&path) {
             list.push(path);
-            save_folders(&db, &list);
+            save_folders(&db, &list)?;
             start_scan(&app);
         }
     }
@@ -588,12 +589,12 @@ pub async fn add_local_folder(app: AppHandle, db: State<'_, Db>) -> Res<Vec<Stri
 }
 
 #[tauri::command]
-pub fn remove_local_folder(path: String, app: AppHandle, db: State<'_, Db>) -> Vec<String> {
+pub fn remove_local_folder(path: String, app: AppHandle, db: State<'_, Db>) -> Res<Vec<String>> {
     let mut list = folders(&db);
     list.retain(|f| f != &path);
-    save_folders(&db, &list);
+    save_folders(&db, &list)?;
     start_scan(&app);
-    list
+    Ok(list)
 }
 
 #[tauri::command]
@@ -611,6 +612,18 @@ pub fn reveal_local(track_id: u64, app: AppHandle, db: State<'_, Db>) -> Res<()>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn folder_changes_report_write_failure_and_keep_previous_setting() {
+        let db = Db::open(Path::new(":memory:")).unwrap();
+        save_folders(&db, &["original".to_string()]).unwrap();
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=ON;").unwrap();
+        assert!(save_folders(&db, &["replacement".to_string()]).is_err());
+        assert_eq!(folders(&db), ["original"]);
+        db.0.lock().unwrap().execute_batch("PRAGMA query_only=OFF;").unwrap();
+        save_folders(&db, &["replacement".to_string()]).unwrap();
+        assert_eq!(folders(&db), ["replacement"]);
+    }
 
     #[test]
     fn titles_from_file_names() {

@@ -2,6 +2,8 @@
   import Collage from '../components/Collage.svelte'
   import DownloadButton from '../components/DownloadButton.svelte'
   import Icon from '../components/Icon.svelte'
+  import PinButton from '../components/PinButton.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
@@ -23,6 +25,7 @@
   let editing = $state(false)
   let draft = $state('')
   let confirmDelete = $state(false)
+  let query = $state('')
   let loadedId = -1
 
   theme.clear()
@@ -37,6 +40,7 @@
       error = null
       editing = false
       confirmDelete = false
+      query = ''
     }
     api
       .playlist(current)
@@ -68,7 +72,7 @@
   const playing = $derived(isThis && player.status === 'playing')
 
   $effect(() => {
-    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name)) } : null
+    theme.play = items.length ? { playing, toggle: () => (isThis ? player.toggle() : player.playQueue(items, null, data?.name)) } : null
   })
 
   function startRename() {
@@ -142,12 +146,14 @@
       <button
         class="big-play"
         disabled={!items.length}
-        onclick={() => (isThis ? player.toggle() : player.playQueue(items, 0, data?.name))}
+        onclick={() => (isThis ? player.toggle() : player.playQueue(items, null, data?.name))}
         title={playing ? 'Pausa' : 'Reproducir'}
       >
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <ShuffleButton />
       <DownloadButton {items} />
+      <PinButton item={{ kind: 'playlist', id: data.id, title: data.name, covers: data.covers }} />
       <button class="action" onclick={playlistMenu} title="Más opciones"><Icon name="more" size={32} /></button>
     </div>
 
@@ -166,11 +172,14 @@
         playlistId={data.id}
         context={data.name}
         {entryIds}
+        searchable
+        searchLabel="Buscar en esta playlist"
+        bind:query
         metaLabel="Añadida"
         meta={(i) => shortDate(data!.entries[i].at)}
       />
       <p class="tip">
-        {layout.mobile ? 'Arrastra las canciones por el asa de la izquierda para cambiar el orden.' : 'Arrastra las canciones para cambiar el orden.'}
+        {query.trim() ? 'Borra la búsqueda para cambiar el orden de las canciones.' : layout.mobile ? 'Arrastra las canciones por el asa de la izquierda para cambiar el orden.' : 'Arrastra las canciones para cambiar el orden.'}
       </p>
     {:else}
       <div class="empty-state">
@@ -183,6 +192,9 @@
 {/if}
 
 <style>
+  .actions {
+    flex-wrap: wrap;
+  }
   .info {
     min-width: 0;
     flex: 1;

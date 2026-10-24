@@ -1,14 +1,17 @@
 <script lang="ts">
   import Card from '../components/Card.svelte'
   import Icon from '../components/Icon.svelte'
+  import ShuffleButton from '../components/ShuffleButton.svelte'
   import Skeleton from '../components/Skeleton.svelte'
   import Status from '../components/Status.svelte'
   import TrackList from '../components/TrackList.svelte'
   import { albumCardMenu, albumPlaying, playAlbum } from '../lib/actions'
+  import { createArtistRadio, isRadioArtist, sameRadioPlayback } from '../lib/artist-radio'
   import { menu } from '../lib/menu.svelte'
   import * as api from '../lib/api'
   import { fans, recordType, songs, year } from '../lib/format'
   import { isLocal, mediaUrl } from '../lib/media'
+  import { library } from '../lib/library.svelte'
   import { nav } from '../lib/nav.svelte'
   import { player, type QueueItem } from '../lib/player.svelte'
   import { recents } from '../lib/recents.svelte'
@@ -22,6 +25,11 @@
   let attempt = $state(0)
   let showAllTop = $state(false)
   let filter = $state<'all' | 'album' | 'single' | 'compile'>('all')
+  let radioLoading = $state(false)
+  let radioMessage = $state('')
+  let radioError = $state(false)
+  let radioGuard = $state<(() => boolean) | null>(null)
+  let radioRequest = 0
 
   theme.clear()
 
@@ -30,6 +38,11 @@
     void attempt
     data = null
     error = null
+    radioRequest++
+    radioLoading = false
+    radioMessage = ''
+    radioError = false
+    radioGuard = null
     let alive = true
     api
       .artist(current)
@@ -49,8 +62,64 @@
       .catch((e) => alive && (error = String(e)))
     return () => {
       alive = false
+      radioRequest++
     }
   })
+
+  $effect(() => {
+    if (radioLoading && radioGuard && !radioGuard()) {
+      radioRequest++
+      radioLoading = false
+      radioGuard = null
+      radioMessage = 'La reproducción ha cambiado. Puedes volver a preparar la radio.'
+    }
+  })
+
+  async function playRadio() {
+    if (!data || radioLoading || !isRadioArtist(data.artist.id)) return
+    const seed = data
+    const route = nav.route
+    const request = ++radioRequest
+    const playback = { queue: [...player.queue], current: player.current, context: player.context, status: player.status }
+    const unchanged = () => id === seed.artist.id && nav.route === route && sameRadioPlayback(playback, player)
+    radioLoading = true
+    radioError = false
+    radioMessage = 'Preparando una mezcla de hasta 45 canciones…'
+    radioGuard = unchanged
+    try {
+      const radio = await createArtistRadio(seed, { relatedArtists: api.relatedArtists, artist: api.artist })
+      if (request !== radioRequest) return
+      if (!unchanged()) {
+        radioMessage = 'La reproducción ha cambiado. Puedes volver a preparar la radio.'
+        return
+      }
+      radioGuard = null
+      if (!radio.items.length) {
+        radioError = true
+        radioMessage = 'No hay canciones disponibles para esta radio. Vuelve a intentarlo.'
+        return
+      }
+      // La mezcla ya alterna artistas; respetar ese orden y permitir que avance.
+      if (player.shuffle) player.toggleShuffle()
+      if (player.repeat === 'one') player.cycleRepeat()
+      player.playQueue(radio.items, 0, `Radio de ${seed.artist.name}`)
+      radioMessage = `${songs(radio.items.length)} · ${radio.artistCount === 1 ? '1 artista' : `${radio.artistCount} artistas`}. ` +
+        (radio.failedSources ? 'Algunos artistas no se han podido cargar.' : 'Puedes preparar otra mezcla cuando quieras.')
+    } catch {
+      if (request !== radioRequest) return
+      if (!unchanged()) {
+        radioMessage = 'La reproducción ha cambiado. Puedes volver a preparar la radio.'
+        return
+      }
+      radioError = true
+      radioMessage = 'No se pudo preparar la radio. Vuelve a intentarlo.'
+    } finally {
+      if (request === radioRequest) {
+        radioLoading = false
+        radioGuard = null
+      }
+    }
+  }
 
   // Las más escuchadas, como cola (cada una con su disco).
   const top = $derived<QueueItem[]>(
@@ -67,7 +136,7 @@
 
   function playTop() {
     if (isThis) player.toggle()
-    else if (top.length) player.playQueue(top, 0, data?.artist.name)
+    else if (top.length) player.playQueue(top, null, data?.artist.name)
   }
 
   $effect(() => {
@@ -75,6 +144,8 @@
   })
 
   const mine = $derived(isLocal(id))
+  const saved = $derived(library.isArtistSaved(id))
+  const saving = $derived(library.savingArtists.has(id))
 
   const kindOf = (t: string | null) => (t === 'single' || t === 'ep' ? 'single' : t === 'compile' ? 'compile' : 'album')
   const counts = $derived({
@@ -114,7 +185,39 @@
       <button class="big-play" onclick={playTop} disabled={!top.length} title={playing ? 'Pausa' : 'Reproducir lo más escuchado'}>
         <Icon name={playing ? 'pause' : 'play'} size={26} />
       </button>
+      <ShuffleButton />
+      <button
+        class="favorite"
+        class:on={saved}
+        disabled={saving}
+        aria-pressed={saved}
+        aria-busy={saving}
+        title={saved ? 'Quitar de artistas favoritos' : 'Añadir a artistas favoritos'}
+        onclick={() => data && library.toggleArtist({ id: data.artist.id, name: data.artist.name, picture: data.artist.pictureMedium ?? data.artist.pictureXl })}
+      >
+        <Icon name={saved ? 'heartFilled' : 'heart'} size={22} />
+        {saving ? 'Guardando…' : saved ? 'En favoritos' : 'Añadir a favoritos'}
+      </button>
+      {#if isRadioArtist(data.artist.id)}
+        <button
+          class="radio"
+          disabled={radioLoading}
+          aria-busy={radioLoading}
+          aria-describedby="artist-radio-status"
+          onclick={playRadio}
+          title={`Preparar hasta 45 canciones de ${data.artist.name} y artistas similares`}
+        >
+          <Icon name="shuffle" size={20} />
+          {radioLoading ? 'Preparando radio…' : `Radio de ${data.artist.name}`}
+        </button>
+      {/if}
     </div>
+
+    {#if isRadioArtist(data.artist.id)}
+      <!-- Vacío hasta pulsar la radio (el botón ya lo explica al pasar el ratón); sigue en la
+           página para que el lector de pantalla anuncie el resultado. -->
+      <p id="artist-radio-status" class="radio-status" class:error={radioError} role="status" aria-atomic="true">{radioMessage}</p>
+    {/if}
 
     {#if top.length}
       <h2 class="section-title">{mine ? 'Canciones' : 'Populares'}</h2>
@@ -151,6 +254,33 @@
 {/if}
 
 <style>
+  .actions { flex-wrap: wrap; gap: 16px; }
+  .favorite,
+  .radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    color: var(--muted);
+    font-weight: 700;
+  }
+  .favorite:hover,
+  .radio:hover,
+  .favorite.on {
+    color: var(--accent);
+    border-color: currentColor;
+  }
+  .favorite:disabled,
+  .radio:disabled { opacity: 0.6; }
+  .radio { max-width: 100%; text-align: left; }
+  .radio :global(svg) { flex: none; }
+  .radio-status { margin: -8px 16px 24px; color: var(--muted); font-size: 13px; }
+  .radio-status.error { color: #ffb4a8; }
+  .radio-status:empty { margin: 0; }
+
   /* Cabecera con la foto del artista a todo lo ancho, fundida con el color de la página. */
   .banner {
     position: relative;
@@ -251,6 +381,7 @@
   }
 
   @media (max-width: 720px) {
+    .radio-status { margin-left: 4px; margin-right: 4px; }
     .banner {
       min-height: 300px;
       padding: calc(60px + var(--safe-top)) 16px 20px;

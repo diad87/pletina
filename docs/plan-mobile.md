@@ -5,7 +5,7 @@ Estado: sin empezar. Plan del 6 de octubre de 2026.
 ## Decisiones
 - **Primero Android.** iPhone, más adelante (ver al final).
 - **Sin tiendas oficiales ni cuentas de pago.** El APK lo firmamos nosotros, se publica en [pletina-releases](https://github.com/diad87/pletina-releases) y se instala y actualiza con **Obtainium**.
-- **Android Auto y CarPlay, fuera por ahora.** No hay acceso a corto plazo. Se diseña de forma que Android Auto se pueda añadir después sin rehacer nada; CarPlay exige una cuenta de pago de Apple, así que queda descartado.
+- **Android Auto en desarrollo**, con servicio multimedia y validación en un paquete de prueba aislado. La prueba con Android Auto y coche sigue pendiente; ver [integración y validación](android-auto.md). CarPlay queda fuera de este trabajo.
 - **Uso personal**, como el resto del proyecto.
 
 ## Qué tiene que hacer la primera versión
@@ -199,6 +199,27 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
   - buscar dice «Sin conexión».
 - **Falta:** la música guardada en el teléfono (`MediaStore`) y, quizá, descargar solo con wifi.
 
+## Reanudar podcasts: comprobación del servicio Android
+
+**Prueba inicial del 10 de octubre de 2026 en el emulador Android 15 (API 35, x86_64):** 11 casos correctos con el servicio `PlaybackService`, JNI y SQLite reales, antes de integrar los cambios sobre la 0.10.1. La app de prueba usa el identificador independiente `dev.musify.desktop.resumeqa` y dos episodios con audio WAV servido dentro del emulador.
+
+- Cada episodio conserva su posición al pausar, buscar y cambiar de episodio. Tras 48 saltos rápidos entre dos episodios se mantienen sus puntos separados, de 23 y 45 segundos.
+- Buscar a cero sustituye el punto anterior. Llegar al final marca el episodio como escuchado; seleccionarlo de nuevo empieza desde cero.
+- Con la Activity detenida y la pantalla apagada (`Wakefulness=Asleep`, `mScreenState=OFF` antes y después), el audio avanza de 51,353 a 63,333 segundos durante 12 segundos. El servicio sigue guardando en SQLite cada 5 segundos.
+- Tras forzar el cierre y abrir un proceso nuevo, recupera la cola en pausa exactamente en 63,307 segundos. Al reproducir, el audio continúa desde ese punto.
+
+Esta prueba cubre la reproducción nativa y la persistencia con audio RSS controlado. Quedan fuera el teléfono físico, las restricciones de batería de cada fabricante, la selección de audio en YouTube y el botón de la interfaz que repite un episodio acabado. El estrés de cambios rápidos comprueba que los puntos se conservan, pero no fuerza un orden concreto de las lecturas pendientes.
+
+## Temporizador de apagado (0.11.2)
+
+El botón de luna de «Sonando ahora» permite pausar dentro de 15, 30 o 60 minutos, elegir un tiempo personalizado de 1 a 1.440 minutos o parar al terminar el episodio o la canción. La interfaz muestra la cuenta atrás y permite cambiarla o desactivarla. La cuenta sigue durante las pausas; el temporizador no se guarda al destruir el servicio.
+
+`PlaybackService` conserva el plazo con `SystemClock.elapsedRealtime()` y publica el estado mediante los extras de `MediaLibrarySession`. La WebView solo manda la orden y recupera ese estado al volver del segundo plano. La parada al terminar usa `setPauseAtEndOfMediaItems`, conserva el modo de repetición e invalida la recuperación automática mediante `PlaybackRecovery`. El servicio mantiene sus funciones de exploración y búsqueda para Android Auto.
+
+Validación: pruebas del reproductor compilado con Svelte y del puente Android, además de cinco pruebas Kotlin de plazos y las once existentes de recuperación. La interfaz se ha revisado en escritorio y a 320 y 390 píxeles, incluida la edición con poca altura disponible.
+
+El emulador comprueba el servicio de esta versión, junto a `CarLibrary` y `PlaybackRecovery`, con una fuente WAV local y el puente JNI de prueba. Pasan la exploración con `MediaBrowser`, la parada al final y reanudación con los tres modos de repetición, la última pista, la cancelación al cambiar de pista, el progreso completado del pódcast y un temporizador real de un minuto con la pantalla apagada. Esta comprobación aísla el servicio; no sustituye las pruebas en teléfonos físicos ni en el coche.
+
 ## Pruebas antes de darla por buena
 
 | Prueba | Tiene que pasar |
@@ -214,10 +235,7 @@ Antes de adaptar nada, se prueba lo que puede tumbar el plan. Hace falta un Andr
 | Modo avión | Música local y descargada sonando, biblioteca navegable |
 
 ## Más adelante
-- **Android Auto**, cuando haya acceso: el servicio ya será un `MediaLibraryService`. Faltaría:
-  - publicar la biblioteca por carpetas (Favoritos, Playlists, Recientes, Descargadas);
-  - declarar el soporte en el manifiesto;
-  - con un APK que no viene de Google Play, activar «Orígenes desconocidos» en los ajustes de desarrollador de Android Auto.
+- **Android Auto:** integración en desarrollo y prueba con coche pendiente. Los requisitos del servicio, compilación, pruebas aisladas y configuración para APK fuera de Play están en [Android Auto: integración y validación](android-auto.md).
 - **iPhone, gratis:**
   - Se instala con **SideStore** y un Apple ID normal: la app se firma en el propio iPhone. Con una cuenta gratis la firma dura 7 días; SideStore la renueva desde el propio iPhone y se puede automatizar con Atajos.
   - El audio con la pantalla apagada no necesita cuenta de pago: es un permiso normal de la app. Con AVPlayer y el mismo núcleo Rust, pidiendo m4a, porque AVPlayer no reproduce opus/webm.

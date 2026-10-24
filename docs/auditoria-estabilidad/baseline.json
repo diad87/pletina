@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "preparedOn": "2026-10-08",
+  "status": "audit-prepared-not-completed",
+  "product": "Pletina",
+  "version": "0.10.0",
+  "commit": "2d679e477d906682974d2ee763d3cf09c5b4a7a2",
+  "platforms": [
+    "Android",
+    "Windows",
+    "macOS",
+    "Linux"
+  ],
+  "excluded": [
+    "iOS",
+    "web",
+    "Play Store",
+    "radio de canción",
+    "radio de artista"
+  ],
+  "existingEvidence": [
+    {
+      "kind": "android-kotlin-policy",
+      "result": "defects-reproduced-with-doubles",
+      "path": "D:/tmp/pletina-forum-bugs-20261008/android/policy-repro.log",
+      "notCovered": "Radio móvil, JNI, HTTP y salida de audio real"
+    },
+    {
+      "kind": "desktop-player",
+      "result": "baseline-23-pass-additional-8-pass-3-fail",
+      "path": "D:/tmp/pletina-forum-bugs-20261008/desktop/results.json",
+      "notCovered": "Decodificación del motor web y red real"
+    },
+    {
+      "kind": "published-apk",
+      "result": "clean-install-and-upgrade-pass",
+      "path": "D:/tmp/pletina-forum-bugs-20261008/apk/result.json",
+      "notCovered": "Teléfono físico, biblioteca poblada, mínimo API24 y móvil del forero"
+    },
+    {
+      "kind": "real-network",
+      "result": "4-searches-7-streams-28-range-reads-pass",
+      "path": "D:/tmp/pletina-forum-bugs-20261008/network/results.json",
+      "notCovered": "Reproducción completa, cobertura móvil y canción exacta del foro"
+    },
+    {
+      "kind": "audit-runner-quick",
+      "result": "not-passed-known-desktop-regressions",
+      "path": "D:/tmp/pletina-stability-audit-20261008/runs/2026-10-08T17-39-33.289Z-win32-d1daf168/results.json",
+      "notCovered": "Ejecución completa de matriz, dispositivos y sesiones largas"
+    }
+  ],
+  "knownDefects": [
+    {
+      "id": "STAB-001",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Reintentos se acumulan pese a recuperaciones y el cuarto corte salta la pista",
+      "evidenceKind": "original-kotlin-with-doubles"
+    },
+    {
+      "id": "STAB-002",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Reintento pendiente deshace pausa o actúa sobre una pista posterior",
+      "evidenceKind": "original-kotlin-with-doubles"
+    },
+    {
+      "id": "STAB-003",
+      "priority": "P1",
+      "platform": "Android",
+      "status": "open",
+      "summary": "Retorno de red reanuda pese a pausa durante la espera",
+      "evidenceKind": "original-kotlin-with-doubles"
+    },
+    {
+      "id": "STAB-004",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Búfer detenido sin progreso ni error queda mostrando reproducción indefinidamente",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    },
+    {
+      "id": "STAB-005",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Rechazo de play al reanudar se silencia",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    },
+    {
+      "id": "STAB-006",
+      "priority": "P1",
+      "platform": "Desktop shared control",
+      "status": "open",
+      "summary": "Reanudación pendiente sin timeout",
+      "evidenceKind": "real-svelte-player-with-audio-ipc-clock-doubles"
+    }
+  ],
+  "openReports": [
+    {
+      "subject": "Saltos con datos móviles en coche",
+      "version": null,
+      "cause": "No confirmada en el dispositivo del forero",
+      "needed": [
+        "versión",
+        "teléfono",
+        "tipo de fuente",
+        "log con tiempo y pista"
+      ]
+    },
+    {
+      "subject": "Canción visible que no reproduce",
+      "version": null,
+      "cause": "No identificada",
+      "needed": [
+        "título y artista o enlace",
+        "plataforma",
+        "versión",
+        "fuente elegida y error"
+      ]
+    },
+    {
+      "subject": "No se ha instalado la aplicación",
+      "version": null,
+      "cause": "No reproducida",
+      "needed": [
+        "modelo",
+        "Android y ABI",
+        "nombre del APK",
+        "instalación previa",
+        "código INSTALL_FAILED"
+      ]
+    }
+  ]
+}

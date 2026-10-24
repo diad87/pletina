@@ -7,6 +7,8 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 const API: &str = "https://api.deezer.com";
+/// A partir de aquí los ids pertenecen a YouTube, podcasts o música local.
+const CATALOG_LIMIT: u64 = 250_000_000_000_000;
 /// Tope de páginas al seguir `next`, para no disparar la cuota (50 peticiones / 5 s).
 const MAX_PAGES: usize = 10;
 
@@ -126,6 +128,12 @@ pub struct SearchResults {
 }
 
 #[derive(Debug, Serialize)]
+pub struct Discovery {
+    pub albums: Vec<Album>,
+    pub artists: Vec<Artist>,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ArtistPage {
     pub artist: Artist,
     pub albums: Vec<Album>,
@@ -226,6 +234,36 @@ impl Deezer {
         })
     }
 
+    /// Una selección general para Inicio cuando todavía no hay gustos guardados.
+    /// Si falla una de las listas, la otra sigue siendo útil.
+    pub async fn discovery(&self) -> Result<Discovery, String> {
+        let albums_url = format!("{API}/chart/0/albums?limit=20");
+        let artists_url = format!("{API}/chart/0/artists?limit=12");
+        let (albums, artists) = tokio::join!(
+            self.get::<Page<Album>>(&albums_url),
+            self.get::<Page<Artist>>(&artists_url),
+        );
+        discovery_results(albums, artists)
+    }
+
+    pub async fn related_artists(&self, id: u64) -> Result<Vec<Artist>, String> {
+        validate_catalog_artist(id)?;
+        let url = format!("{API}/artist/{id}/related?limit=12");
+        Ok(self.get::<Page<Artist>>(&url).await?.data)
+    }
+
+    /// Para sugerencias solo hace falta una página; no se descarga toda la discografía.
+    /// Deezer no incluye el artista aquí: la interfaz ya lo conoce por la semilla.
+    pub async fn artist_albums(&self, id: u64) -> Result<Vec<Album>, String> {
+        validate_catalog_artist(id)?;
+        let url = format!("{API}/artist/{id}/albums?limit=20");
+        let mut albums = dedupe_albums(self.get::<Page<Album>>(&url).await?.data);
+        albums.sort_by(|a, b| b.fans.cmp(&a.fans)
+            .then_with(|| b.release_date.cmp(&a.release_date))
+            .then_with(|| a.id.cmp(&b.id)));
+        Ok(albums)
+    }
+
     /// Busca una grabación equivalente para una importación. Una ausencia devuelve
     /// `None`; los fallos de conexión o cuota se propagan para no tratarlos como ausencias.
     pub async fn match_import_track(
@@ -317,6 +355,27 @@ impl Deezer {
             artist: raw.artist,
             tracks,
         })
+    }
+}
+
+fn validate_catalog_artist(id: u64) -> Result<(), String> {
+    if id == 0 || id >= CATALOG_LIMIT {
+        Err("Las sugerencias musicales requieren un artista del catálogo.".into())
+    } else {
+        Ok(())
+    }
+}
+
+fn discovery_results(
+    albums: Result<Page<Album>, String>,
+    artists: Result<Page<Artist>, String>,
+) -> Result<Discovery, String> {
+    match (albums, artists) {
+        (Err(albums_error), Err(artists_error)) => Err(format!("{albums_error}; {artists_error}")),
+        (albums, artists) => Ok(Discovery {
+            albums: albums.map(|page| page.data).unwrap_or_default(),
+            artists: artists.map(|page| page.data).unwrap_or_default(),
+        }),
     }
 }
 
@@ -534,6 +593,72 @@ fn urlencode(s: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod discovery_tests {
+    use super::*;
+
+    fn albums() -> Page<Album> {
+        serde_json::from_value(serde_json::json!({
+            "data": [
+                { "id": 1, "title": "Greatest Hits", "artist": { "id": 10, "name": "First Artist" } },
+                { "id": 2, "title": "Greatest Hits", "artist": { "id": 20, "name": "Second Artist" } }
+            ]
+        })).unwrap()
+    }
+
+    fn artists() -> Page<Artist> {
+        serde_json::from_value(serde_json::json!({
+            "data": [{ "id": 10, "name": "First Artist" }]
+        })).unwrap()
+    }
+
+    #[test]
+    fn discovery_preserves_chart_order_and_same_titles_from_different_artists() {
+        let result = discovery_results(Ok(albums()), Ok(artists())).unwrap();
+        assert_eq!(result.albums.iter().map(|album| album.id).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(result.artists[0].id, 10);
+    }
+
+    #[test]
+    fn discovery_keeps_the_successful_section_and_reports_total_failure() {
+        let only_albums = discovery_results(Ok(albums()), Err("artists offline".into())).unwrap();
+        assert_eq!(only_albums.albums.len(), 2);
+        assert!(only_albums.artists.is_empty());
+        let only_artists = discovery_results(Err("albums offline".into()), Ok(artists())).unwrap();
+        assert!(only_artists.albums.is_empty());
+        assert_eq!(only_artists.artists.len(), 1);
+        let error = discovery_results(Err("albums offline".into()), Err("artists offline".into())).unwrap_err();
+        assert!(error.contains("albums offline") && error.contains("artists offline"));
+    }
+
+    #[tokio::test]
+    async fn rejects_podcast_and_local_ids_before_requesting_music_suggestions() {
+        let deezer = Deezer::new();
+        for id in [0, CATALOG_LIMIT, 1_000_000_000_000_000, u64::MAX] {
+            assert!(deezer.related_artists(id).await.unwrap_err().contains("catálogo"));
+            assert!(deezer.artist_albums(id).await.unwrap_err().contains("catálogo"));
+        }
+        assert!(validate_catalog_artist(399).is_ok());
+        assert!(validate_catalog_artist(CATALOG_LIMIT - 1).is_ok());
+    }
+
+    /// Comprueba los cuatro contratos reales sin depender de la red en los tests habituales.
+    #[tokio::test]
+    #[ignore]
+    async fn real_discovery_catalog() {
+        let deezer = Deezer::new();
+        let discovery = deezer.discovery().await.expect("selección general de Deezer");
+        assert!(!discovery.albums.is_empty() && discovery.albums.len() <= 20);
+        assert!(!discovery.artists.is_empty() && discovery.artists.len() <= 12);
+        assert!(discovery.albums.iter().all(|album| album.artist.is_some()));
+        let related = deezer.related_artists(399).await.expect("artistas similares a Radiohead");
+        assert!(!related.is_empty() && related.len() <= 12);
+        let albums = deezer.artist_albums(399).await.expect("discos de Radiohead");
+        assert!(!albums.is_empty() && albums.len() <= 20);
+        assert!(albums.windows(2).all(|pair| pair[0].fans >= pair[1].fans));
+    }
 }
 
 #[cfg(test)]

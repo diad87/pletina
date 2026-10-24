@@ -3,13 +3,13 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs/promises'
 import vm from 'node:vm'
 import { parseScript } from 'meriyah'
-import { assertDecoderCompatibility, transformDecoderDependency } from '../scripts/build-youtube-decoder.mjs'
-import { JsAnalyzer, JsExtractor } from '../node_modules/youtubei.js/dist/src/utils/javascript/index.js'
-import { nsigMatcher, timestampMatcher } from '../node_modules/youtubei.js/dist/src/utils/javascript/matchers.js'
+import { assertDecoderCompatibility, normalizeDecoderModuleLabels, transformDecoderDependency } from '../scripts/build-youtube-decoder.mjs'
+import { JsAnalyzer, JsExtractor } from '../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/index.js'
+import { nsigMatcher, timestampMatcher } from '../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/matchers.js'
 
 const bundle = await fs.readFile(new URL('../src-tauri/src/youtube-decoder.bundle.js', import.meta.url), 'utf8')
 const decodeBundle = await fs.readFile(new URL('../src-tauri/src/youtube-decoder-execute.bundle.js', import.meta.url), 'utf8')
-const analyzerPath = '../node_modules/youtubei.js/dist/src/utils/javascript/JsAnalyzer.js'
+const analyzerPath = '../node_modules/youtube-decoder-upstream/dist/src/utils/javascript/JsAnalyzer.js'
 const meriyahPath = '../node_modules/meriyah/dist/meriyah.mjs'
 const analyzerSource = await fs.readFile(new URL(analyzerPath, import.meta.url), 'utf8')
 const meriyahSource = await fs.readFile(new URL(meriyahPath, import.meta.url), 'utf8')
@@ -23,6 +23,7 @@ test('generator accepts only the reviewed dependency versions and exact private 
     assert.throws(() => assertDecoderCompatibility(...versions), /compatibility/)
   }
   assert.ok(transformDecoderDependency(analyzerSource, analyzerPath))
+  assert.equal(transformDecoderDependency(analyzerSource, analyzerPath.replace('youtube-decoder-upstream', 'youtubei.js')), null)
   for (const changed of [
     analyzerSource.replace('loc: false', 'loc: true'),
     analyzerSource.replace('module: false', 'module: true'),
@@ -31,6 +32,13 @@ test('generator accepts only the reviewed dependency versions and exact private 
     analyzerSource.replace('module: false', 'module: false, onComment: []'),
     analyzerSource + '\nparseScript(otherSource);',
   ]) assert.throws(() => transformDecoderDependency(changed, analyzerPath), /parser .*compatibility/)
+})
+
+test('private upstream alias keeps logical module labels without rewriting string contents', () => {
+  const label = '//#region node_modules/youtube-decoder-upstream/dist/src/utils/javascript/JsAnalyzer.js'
+  const literal = 'const value = "node_modules/youtube-decoder-upstream/dist/source.js";'
+  assert.equal(normalizeDecoderModuleLabels(`${label}\n${literal}\n//#endregion`),
+    `${label.replace('youtube-decoder-upstream', 'youtubei.js')}\n${literal}\n//#endregion`)
 })
 
 test('generator rejects changed token getter and node offset semantics', () => {

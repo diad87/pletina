@@ -19,6 +19,10 @@ object MusifyCore {
   /** Apunta una escucha en el historial (LibTrack en JSON). Devuelve el error, o "" si fue bien. */
   external fun recordPlay(track: String): String
 
+  /** Progreso por episodio; JSON o null. Llamar desde el worker, como recordPlay. */
+  external fun podcastProgress(episodeId: Long): String
+  external fun savePodcastProgress(progress: String): String
+
   /** Aviso a la interfaz, si la app está abierta (evento de Tauri con datos en JSON). */
   external fun emit(event: String, payload: String)
 
@@ -27,4 +31,13 @@ object MusifyCore {
 
   /** La canción (id de Deezer) está descargada: se puede escuchar sin conexión. */
   external fun isDownloaded(trackId: Long): Boolean
+
+  /** Catálogo Android Auto, sin interfaz: `{items: [...]}` o `{error}`. Bloquea mientras lee SQLite. */
+  external fun browse(parentId: String): String
+
+  /** Un nodo del catálogo: `{item: {...}}` o `{error}`. */
+  external fun mediaItem(mediaId: String): String
+
+  /** Búsqueda en las canciones guardadas de la biblioteca: `{items: [...]}` o `{error}`. */
+  external fun search(query: String): String
 }

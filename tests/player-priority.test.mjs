@@ -10,7 +10,9 @@ const queueJavascript = ts.transpileModule(queueSource, { compilerOptions: { tar
 const queueHelpers = await import(`data:text/javascript;base64,${Buffer.from(queueJavascript).toString('base64')}`)
 const mediaSource = await readFile(new URL('../src/lib/media.ts', import.meta.url), 'utf8')
 const mediaJavascript = ts.transpileModule(mediaSource, { compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).outputText.replace(/^import[^\n]+\n/gm, '')
-const { isPodcast } = await import(`data:text/javascript;base64,${Buffer.from('const inTauri = false; const convertFileSrc = value => value;\n' + mediaJavascript).toString('base64')}`)
+const { isPodcast, isYouTubeTrack, mediaUrl } = await import(`data:text/javascript;base64,${Buffer.from('const inTauri = false; const convertFileSrc = value => value;\n' + mediaJavascript).toString('base64')}`)
+const sleepSource = await readFile(new URL('../src/lib/sleep-timer.ts', import.meta.url), 'utf8')
+const { isSleepMinutes } = await import(`data:text/javascript;base64,${Buffer.from(ts.transpileModule(sleepSource, { compilerOptions: { module: ts.ModuleKind.ESNext } }).outputText).toString('base64')}`)
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b }); return { promise, resolve, reject } }
 async function settle(predicate) { for (let i = 0; i < 50; i++) { if (predicate()) return; await tick() } assert.fail('La operación no terminó') }
@@ -19,7 +21,6 @@ const playable = url => ({ videoId: url.startsWith('musify-capture:') ? url.slic
 const captured = id => playable(`musify-capture:${String(id).padStart(11, 'a')}`)
 let count = 0
 async function setup(t, methods) {
-  let audio
   const audios = []
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null, setItem() {} } })
@@ -31,21 +32,27 @@ async function setup(t, methods) {
   globalThis.Audio = class extends EventTarget {
     src = ''; currentTime = 0; duration = 100; paused = true; readyState = 4; error = null
     ranges = [{ start: 0, end: 40 }]
-    constructor() { super(); audio = this; audios.push(this) }
+    constructor() { super(); audios.push(this) }
     get buffered() { return { length: this.ranges.length, start: i => this.ranges[i].start, end: i => this.ranges[i].end } }
     pause() { this.paused = true; this.dispatchEvent(new Event('pause')) }
-    play() { this.paused = false; this.dispatchEvent(new Event('playing')); return Promise.resolve() }
+    play() { this.dispatchEvent(new Event('loadedmetadata')); this.paused = false; this.dispatchEvent(new Event('playing')); return Promise.resolve() }
     removeAttribute() { this.src = '' }
     load() {}
   }
   t.after(() => { globalThis.Audio = previousAudio })
+  const timers = new Set()
+  t.after(() => { for (const timer of timers) clearTimeout(timer) })
   const stopped = []
   const progress = new Map()
   const toasts = []
   const key = `__playerTest${++count}`
   globalThis[key] = {
-    ...queueHelpers, isPodcast, isAndroid: false,
-    api: { recordPlay: async () => {}, cancelPrefetch: async () => {}, ...methods },
+    ...queueHelpers, isPodcast, isYouTubeTrack, mediaUrl, isSleepMinutes, isAndroid: false,
+    window: new EventTarget(), document: new EventTarget(),
+    episodeProgress: { position: async () => 0, save: async () => {}, flush: async () => {} },
+    setTimeout: (fn, ms) => { const timer = setTimeout(fn, ms); timer.unref(); timers.add(timer); return timer },
+    clearTimeout: timer => { timers.delete(timer); clearTimeout(timer) },
+    api: { inTauri: false, recordPlay: async () => {}, cancelPrefetch: async () => {}, cancelResolve: async () => {}, ...methods },
     extractor: { engine: 'ytdlp' },
     convertFileSrc: value => value,
     downloads: { done: new Set(), start() {} },
@@ -63,9 +70,9 @@ async function setup(t, methods) {
   }
   t.after(() => delete globalThis[key])
   // La reactividad no interviene en estas carreras; sí ejecutamos los métodos privados reales.
-  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast, load, playOrder, save, toQuery, isPodcast, isAndroid } = globalThis.${key};\n`
+  const prelude = `const $state = value => value; const { api, extractor, convertFileSrc, downloads, CAPTURE, captureProgress, captureReady, waitForCaptureReady, setAudioSource, stopCapture, prepareAudioSource, adoptAudioSource, seekCapture, library, toLib, toast, load, playOrder, save, toQuery, isPodcast, isYouTubeTrack, mediaUrl, isSleepMinutes, isAndroid, window, document, episodeProgress, setTimeout, clearTimeout } = globalThis.${key};\n`
   const { player } = await import(`data:text/javascript;base64,${Buffer.from(prelude + javascript).toString('base64')}`)
-  return { player, audio, audios, stopped, toasts, progress, downloads: globalThis[key].downloads, extractor: globalThis[key].extractor }
+  return { player, get audio() { return player.playbackAudio }, audios, stopped, toasts, progress, downloads: globalThis[key].downloads, extractor: globalThis[key].extractor }
 }
 
 test('el clic promociona la precarga pendiente y su resultado tardío no sustituye la canción', async t => {
@@ -97,16 +104,20 @@ test('cancelar o cambiar mientras se reúne reserva no reproduce después la can
     waitForCaptureReady: audio => audio.src === captured(1).url ? reserve.promise : Promise.resolve(),
   })
   let plays = 0
-  env.audio.addEventListener('playing', () => plays++)
   env.player.playQueue([item(1), item(2)], 0)
+  const original = env.audio
+  original.addEventListener('playing', () => plays++)
   await settle(() => env.audio.src === captured(1).url)
   assert.equal(env.player.status, 'loading'); assert.equal(plays, 0)
   env.player.next()
+  env.audio.addEventListener('playing', () => plays++)
   await settle(() => env.player.status === 'playing')
   reserve.resolve(); await tick()
   assert.equal(env.player.current.track.id, 2)
   assert.equal(env.audio.src, captured(2).url)
-  assert.equal(plays, 1, 'la espera anterior no puede hacer play sobre el Audio reutilizado')
+  assert.equal(plays, 1, 'la espera anterior no puede hacer play sobre ningún Audio sustituido')
+  assert.notEqual(env.audio, original)
+  assert.equal(original.paused, true)
 })
 
 test('el motor oficial permite elegir el vídeo sin saltar a la siguiente canción si falta asociación', async t => {
@@ -135,7 +146,7 @@ test('cancelar antes de conocer el vídeo termina antes del siguiente resolve y 
   env.player.playQueue([item(1)], 0)
   await settle(() => calls.length === 1)
   env.player.toggle()
-  assert.equal(env.player.status, 'idle')
+  assert.equal(env.player.status, 'paused')
   env.player.playQueue([item(2)], 0)
   await settle(() => cancels === 1)
   assert.deepEqual(calls, [1])
@@ -322,8 +333,9 @@ test('la precarga prepara un segundo Audio y el fin de canción lo promociona si
     return playable(`musify-capture:${track.id === 1 ? 'aaaaaaaaaaa' : 'bbbbbbbbbbb'}`)
   } })
   env.player.playQueue([item(1), item(2)], 0)
-  await settle(() => env.audios.length === 2)
-  const first = env.player.playbackAudio, prepared = env.audios[1]
+  await settle(() => env.player.preparedAudio !== null)
+  const count = env.audios.length
+  const first = env.player.playbackAudio, prepared = env.player.preparedAudio
   assert.equal(first, env.audio)
   assert.equal(prepared.muted, true)
   assert.equal(prepared.paused, true)
@@ -332,7 +344,7 @@ test('la precarga prepara un segundo Audio y el fin de canción lo promociona si
   await settle(() => env.player.current.track.id === 2 && env.player.status === 'playing')
   assert.equal(env.player.playbackAudio, prepared)
   assert.equal(prepared.muted, false)
-  assert.equal(env.audios.length, 2)
+  assert.equal(env.audios.length, count, 'promover conserva el Audio preparado sin crear otro')
   assert.deepEqual(calls, [{ id: 1, foreground: true }, { id: 2, foreground: false }, { id: 2, foreground: true }])
   // Un evento atrasado del objeto anterior no avanza otra vez ni pausa la canción promovida.
   first.dispatchEvent(new Event('pause')); first.dispatchEvent(new Event('ended'))
@@ -348,18 +360,19 @@ test('insertar una canción DJ conserva la anterior siguiente como segunda preca
     calls.push({ id: track.id, foreground }); return playable(`track-${track.id}`)
   } })
   env.player.playQueue([item(1), item(2)], 0)
-  await settle(() => env.audios.length === 2)
-  const retained = env.audios[1]
+  await settle(() => env.player.preparedAudio !== null)
+  const retained = env.player.preparedAudio
   env.player.playNext([item(3)])
-  await settle(() => env.audios.length === 3)
+  await settle(() => env.player.preparedAudios.length === 2)
+  const inserted = env.player.preparedAudios.find(entry => entry.trackId === 3).audio
   assert.equal(env.player.playbackAudio, env.audio)
   assert.equal(env.player.status, 'playing')
   assert.equal(retained.src, 'track-2')
   assert.deepEqual(env.player.preparedAudios.map(entry => entry.trackId), [3, 2])
-  assert.equal(env.audios[2].src, 'track-3')
+  assert.equal(inserted.src, 'track-3')
   env.audio.dispatchEvent(new Event('ended'))
   await settle(() => env.player.current.track.id === 3 && env.player.status === 'playing')
-  assert.equal(env.player.playbackAudio, env.audios[2])
+  assert.equal(env.player.playbackAudio, inserted)
   assert(calls.some(call => call.id === 3 && call.foreground))
 })
 
@@ -611,7 +624,7 @@ test('pausa y AbortError durante promoción permiten precargar tras reanudar, cu
     assert.equal(calls.some(call => call.id === 4), false)
     env.player.toggle()
     assert.equal(env.player.playbackAudio, prepared)
-    assert.equal(env.player.status, 'playing')
+    await settle(() => env.player.status === 'playing')
     if (!ackBeforeResume) { await tick(); assert.equal(calls.some(call => call.id === 4), false); promotion.resolve(captured(2)) }
     await settle(() => calls.some(call => call.id === 4 && !call.foreground))
     assert.equal(env.toasts.some(message => /No se pudo|AbortError/.test(message)), false)
@@ -664,10 +677,10 @@ test('cancelar la carga promovida invalida su éxito de promoción aunque play s
   await tick()
   env.player.toggle()
   await settle(() => cancellations === 1)
-  assert.equal(env.player.status, 'idle')
+  assert.equal(env.player.status, 'paused')
   playing.resolve()
   await tick(); await tick()
-  assert.equal(env.player.status, 'idle')
+  assert.equal(env.player.status, 'paused')
   assert.equal(prepared.paused, true)
   assert.equal(prepared.src, '')
   assert.equal(calls.filter(call => call.id === 3).length, 1)
@@ -765,7 +778,9 @@ test('una precarga sin buffer inicial, sin lector o de URL normal conserva el ca
     if (kind === 'reader') env.progress.delete(prepared)
     env.player.next()
     await tick()
-    assert.equal(env.player.playbackAudio, previous)
+    assert.notEqual(env.player.playbackAudio, previous)
+    assert.notEqual(env.player.playbackAudio, prepared, 'una precarga no lista espera el acuse antes de adoptarse')
+    assert.equal(previous.src, '')
     assert.equal(prepared.paused, true)
     promotion.resolve(result(2))
     await settle(() => env.player.playbackAudio === prepared && env.player.status === 'playing')
@@ -783,11 +798,13 @@ test('refresh no adopta una precarga del mismo track ni pierde la petición de r
   const current = env.player.playbackAudio, oldPrepared = env.player.preparedAudio
   env.player.retryCapture()
   await settle(() => calls.some(call => call.refresh))
-  assert.equal(env.player.playbackAudio, current)
+  assert.notEqual(env.player.playbackAudio, current)
+  assert.notEqual(env.player.playbackAudio, oldPrepared)
+  assert.equal(current.src, '')
   assert.equal(env.player.status, 'loading')
   assert.equal(oldPrepared.paused, true)
   refreshed.resolve(captured(99))
-  await settle(() => env.player.status === 'playing' && current.src === captured(99).url)
+  await settle(() => env.player.status === 'playing' && env.player.playbackAudio.src === captured(99).url)
   assert.notEqual(env.player.playbackAudio, oldPrepared)
   assert.deepEqual(calls.find(call => call.refresh), { id: 1, refresh: true, foreground: true })
 })
@@ -923,9 +940,9 @@ test('la admisión oficial prepara next durante el anuncio inicial, antes del pr
     return foreground ? first.promise : Promise.resolve(captured(track.id))
   } })
   env.extractor.engine = 'oficial'
+  env.player.playQueue([item(1), item(2)], 0)
   env.audio.addEventListener('capturehandoff', event => events.push(event.detail.phase))
   env.audio.addEventListener('playing', () => events.push('playing'))
-  env.player.playQueue([item(1), item(2)], 0)
   await settle(() => calls.length === 1)
   admit(calls[0].options, 1)
   await settle(() => env.player.preparedAudio !== null)
@@ -1074,7 +1091,7 @@ test('la cola cambiante durante loading conserva sólo sus dos destinos y cancel
   env.player.toggle()
   await settle(() => cancels === cancelledBeforeStop + 1)
   backgrounds[3].resolve(captured(2)); first.resolve(captured(1)); await tick()
-  assert.equal(env.player.status, 'idle')
+  assert.equal(env.player.status, 'paused')
   assert.equal(env.player.preparedAudio, null)
 })
 
@@ -1110,4 +1127,44 @@ test('elegir fuente actual precarga durante login pendiente y conserva ID manual
   assert.equal(calls.filter(call => call.foreground).length, 1)
   pending[1].resolve(captured(9))
   await settle(() => env.player.status === 'playing')
+})
+
+
+test('el temporizador al terminar detiene una promoción pendiente y su ack tardío no inicia otra pista', async t => {
+  const promotion = deferred(), calls = []
+  const env = await setup(t, { resolve: (track, _refresh, foreground) => {
+    calls.push({ id: track.id, foreground })
+    return track.id === 2 && foreground ? promotion.promise : Promise.resolve(captured(track.id))
+  } })
+  env.player.playQueue([item(1), item(2), item(3), item(4)], 0)
+  await settle(() => env.player.preparedAudios.length === 2)
+  env.player.next()
+  await settle(() => env.player.current.track.id === 2 && env.player.status === 'playing')
+  const promoted = env.player.playbackAudio
+  assert.equal(await env.player.setSleepTimer(-1), true)
+  promoted.dispatchEvent(new Event('ended'))
+  assert.equal(env.player.current.track.id, 2)
+  assert.equal(env.player.status, 'paused')
+  assert.equal(promoted.paused, true)
+  assert.equal(promoted.src, '')
+  assert.equal(env.player.sleepTimer.mode, 'off')
+  promotion.resolve(captured(2)); await tick(); await tick()
+  assert.equal(env.player.current.track.id, 2)
+  assert.equal(env.player.status, 'paused')
+  assert.equal(calls.some(call => call.id === 4), false)
+  assert.equal(env.player.preparedAudios.every(entry => entry.audio.paused), true)
+})
+
+test('el temporizador fin no convierte un error de captura en salto automático', async t => {
+  const pending = deferred(), calls = []
+  const env = await setup(t, { resolve: track => { calls.push(track.id); return pending.promise } })
+  env.player.playQueue([item(1), item(2)], 0)
+  await settle(() => calls.length === 1)
+  assert.equal(await env.player.setSleepTimer(-1), true)
+  pending.reject(new Error('CAPTURE_UNSUPPORTED_TIMELINE'))
+  await settle(() => env.player.status === 'paused')
+  assert.equal(env.player.current.track.id, 1)
+  assert.equal(env.player.sleepTimer.mode, 'off')
+  assert.deepEqual(calls, [1])
+  assert.equal(env.player.playbackAudio.paused, true)
 })

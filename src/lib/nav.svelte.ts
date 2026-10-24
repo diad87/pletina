@@ -10,6 +10,7 @@ export type Route =
   | { name: 'liked' }
   | { name: 'playlist'; id: number }
   | { name: 'import-playlist' }
+  | { name: 'youtube-tracks' }
   | { name: 'history' }
   | { name: 'downloads' }
   | { name: 'local' }

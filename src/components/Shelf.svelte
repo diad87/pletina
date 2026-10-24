@@ -3,7 +3,7 @@
   import type { Snippet } from 'svelte'
   import Icon from './Icon.svelte'
 
-  let { title, children }: { title: string; children: Snippet } = $props()
+  let { title, subtitle, children }: { title: string; subtitle?: string; children: Snippet } = $props()
 
   let row: HTMLElement | undefined = $state()
   let canLeft = $state(false)
@@ -24,13 +24,22 @@
     update()
     const observer = new ResizeObserver(update)
     observer.observe(row)
-    return () => observer.disconnect()
+    // Los sugeridos pueden cambiar sin que cambie el ancho de la estantería.
+    const contents = new MutationObserver(update)
+    contents.observe(row, { childList: true })
+    return () => {
+      observer.disconnect()
+      contents.disconnect()
+    }
   })
 </script>
 
 <section class="shelf">
   <header>
-    <h2 class="section-title">{title}</h2>
+    <div class="heading">
+      <h2 class="section-title">{title}</h2>
+      {#if subtitle}<p>{subtitle}</p>{/if}
+    </div>
     <div class="arrows">
       <button class="arrow" onclick={() => scroll(-1)} disabled={!canLeft} title="Anterior"><Icon name="back" size={18} /></button>
       <button class="arrow" onclick={() => scroll(1)} disabled={!canRight} title="Siguiente"><Icon name="forward" size={18} /></button>
@@ -57,6 +66,14 @@
     padding-bottom: 6px;
     opacity: 0;
     transition: opacity 0.2s;
+  }
+  .heading {
+    min-width: 0;
+  }
+  .heading p {
+    margin: 0 12px 8px;
+    color: var(--muted);
+    font-size: 13px;
   }
   .shelf:hover .arrows {
     opacity: 1;

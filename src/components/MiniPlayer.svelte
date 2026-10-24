@@ -28,7 +28,7 @@
       <span class="thumb"><Cover src={current.cover} /></span>
       <span class="text">
         <span class="title">{current.track.title}</span>
-        <span class="artist">{player.status === 'loading' ? (isPodcast(current.track.id) ? 'Cargando episodio…' : 'Buscando en YouTube…') : current.track.artist.name}</span>
+        <span class="artist">{player.status === 'loading' ? (isPodcast(current.track.id) ? 'Cargando episodio…' : 'Cargando audio…') : current.track.artist.name}</span>
       </span>
     </button>
     <button class="icon" class:on={liked} onclick={() => library.toggleLike(current)} aria-label="Me gusta">
