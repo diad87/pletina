@@ -1,8 +1,195 @@
 // El build sustituye estos valores. No publicar los fuentes directamente.
-const VERSION = "435e0dc36a054099"
-const FILES = [{"url":"app.fd2c5aedfdc5d1f5.js","sha256":"fd2c5aedfdc5d1f5395697914c20ca851a12135547a1e1f442d418f85b203475"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"3a44312a362a09c8a6e2e742078a67288b22c7d78ee03f6fd2e9c8264f6c157a"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
-const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-CDL4VedR.js","sha256":"c1e617322559f90d0a93053ff2c2b76cae98c92be95b734b7d550465c5d0a136"},{"url":"application/assets/index-W2XYcCbw.css","sha256":"14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47"},{"url":"application/assets/p1-recipe.generated-B9VIf5Tl.js","sha256":"d3bca80c0abde5aa6d17c0e0b4b7425fbb4a38f2742b5fbd44aa50ca39c60c13"},{"url":"application/assets/p1-recipe.generated-BGYpK-b1.js","sha256":"942b50d47435f0fe31a8fe1e9514310d4d1c32f6a4f268d42475e79fba14a812"},{"url":"application/assets/p1check-BK26lOUg.js","sha256":"caab2a070840b91634387048d072f583e4d18dede5d57517d90894f8fe1312d3"},{"url":"application/assets/storage-BJF4eTjj.js","sha256":"25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b"},{"url":"application/assets/storage-PSZZs3R7.js","sha256":"95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba"},{"url":"application/assets/updates.svelte-CaKsDr0l.js","sha256":"6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"},{"url":"application/assets/updates.svelte-d2-IJVos.js","sha256":"cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"},{"url":"application/assets/youtube-Bk2h8QR1.js","sha256":"1f205ff666ed70405aa6122d75fbfbe4e4d0a1a44c2535547c45924bd74d8b3a"},{"url":"application/assets/youtube-p1-D6JsRkrB.js","sha256":"705ac7f9c675e978c0d943ff1d3b564a4f7f0d5f102afd1e778e063a3898fe8a"},{"url":"application/assets/youtube-p1-probe-D3C8r15R.js","sha256":"fa0f6050c1d7695072926ad4b3faf0a577a9f1c97eec3988d7b783fdbdf09470"},{"url":"application/index.2e2da91c415cb452.html","sha256":"2e2da91c415cb4520b9b32c8fcd3954c4be70c59849634ba954a4cbdd3eba9e0"},{"url":"application/launcher.8e5000cb9d1e8f52.js","sha256":"8e5000cb9d1e8f5288292a8d87ce7b6cfb37c892c72d72c1560f62acac8fb84f"},{"url":"application/p1-check.html","sha256":"51eb814618a952e51a3176d0d2bf1c7bdb7030c0382330962aa53d30d068c2ab"}]
+const VERSION = "73187a1127b5ae37"
+const FILES = [{"url":"app.50036716ea9510b9.js","sha256":"50036716ea9510b9df99ca750a0ec503fad98d2530099512b89d5fbf671198d6"},{"url":"icons/apple-touch-icon.png","sha256":"86b852fff90393252a3572788d7fa2599c91da1c45c6af0e282b4ce81a036740"},{"url":"icons/icon-192.png","sha256":"2bb6f09431e0b78d861999f0075bd715482b9ac3c4abcfc8cc05aefa7e810713"},{"url":"icons/icon-512.png","sha256":"9e5a9b7e3c80a66183e808cd4fd83d1d0112a9d6ca627afe1beb963cd400febf"},{"url":"index.html","sha256":"ae8edd538710e0567420e86b015496b4eb972eb4e15e96c379c000fd2a302b0e"},{"url":"manifest.webmanifest","sha256":"416a20c33358a4f4fbd968875d0a5bbcb94b0dafa13ba50761d486b2a8fd288f"}]
+const OPTIONAL = [{"url":"application/assets/figtree-latin-ext-wght-normal-DCwSJGxG.woff2","sha256":"bf7828e2c258cffcfa50a048ee388a36b95bc16b452e8d36fa797635dbe15965"},{"url":"application/assets/figtree-latin-wght-normal-D_ZTVpCC.woff2","sha256":"4ba7d3d096695818fe0686be4f1e82c6b05134e18a22260336130335027462dd"},{"url":"application/assets/index-DbgZJMg7.js","sha256":"5d2d226587b5c404b767df39ac456752bc2c8b543c29d82c930eb7259fd67656"},{"url":"application/assets/index-W2XYcCbw.css","sha256":"14fa408fcc7369cd48b310d7ac79052e3f9fb0871606c6dccd363be6902ebc47"},{"url":"application/assets/p1-recipe.generated-BtxtnceM.js","sha256":"5e5fa499a78e08cb2de1fc425d70f7fcef6dc0c0477065f87ca07624a6295328"},{"url":"application/assets/p1-recipe.generated-C4oQvyrS.js","sha256":"bfb45f9889a0110c35e009dd7dff50132d2473b35288cb05987a49e420039a52"},{"url":"application/assets/p1check-eElhzM6G.js","sha256":"39f19f7e81a12f77955b09cab55431d80498ca711f2cf70a7863ad3e8ce2cd5d"},{"url":"application/assets/storage-BJF4eTjj.js","sha256":"25ddb61c2fa9204e705a4bd74ec449389ded2321a4b7ff2442c7decdc82af79b"},{"url":"application/assets/storage-PSZZs3R7.js","sha256":"95875109ebfca5945c47ae5556640fcb64cc6cc81567398293e7bf9cb92d62ba"},{"url":"application/assets/updates.svelte-CaKsDr0l.js","sha256":"6d7dc0d4ec0379302054c297d7db354b79454eafcef7348e46c4f85a0f18510a"},{"url":"application/assets/updates.svelte-d2-IJVos.js","sha256":"cdd94861f8449390ee7e5caaa4be57ec844d3885f8ca6e83a04eab59d801efb4"},{"url":"application/assets/youtube-Bnw5FnW6.js","sha256":"2e9b9ea65f455a8c9d204409fa92e9a1bd12b3685d2869db0f73f6566a26d60a"},{"url":"application/assets/youtube-p1-OeC5GoPm.js","sha256":"37fcaa33ab775f21061857481e4118df9f2e6462b073310ad909d410ac2d8dff"},{"url":"application/assets/youtube-p1-probe-B9_PRGjk.js","sha256":"f9c332f959da2a5980ab1ac3607c3fec703c1412be5f819112692ece547c3f7f"},{"url":"application/index.a6edded3871b0749.html","sha256":"a6edded3871b074971c3e9269e813d79a3caf50bc72e9095001815cf3e34d9bc"},{"url":"application/launcher.ed9de22e2ecf2f3d.js","sha256":"ed9de22e2ecf2f3d296e0723b41cdd378bf4a6cfa0528013f2bf9aec74fc601c"},{"url":"application/p1-check.html","sha256":"6d2cc3af920b603cb3f728ebd3b51b933a04949bdccad8cae40dbc58f0a356d6"}]
 const ROOT = new URL(self.registration.scope)
+const COVERS = (/**
+ * Shared by the UI, downloader and the classic worker (the build embeds this
+ * self-contained factory). Keys are absolute local URLs naming canonical image
+ * families; local() retains the requested permanent URL for online fallback.
+ * @param {string | URL} rootURL
+ */
+function coverRouting(rootURL) {
+  const root = new URL(rootURL)
+  root.search = ''; root.hash = ''
+  if (!root.pathname.endsWith('/')) root.pathname += '/'
+  const endpoint = new URL('__covers__', root)
+  const limits = { maxBytes: 5 * 1024 * 1024, maxDimension: 4096, maxPixels: 16 * 1024 * 1024 }
+  const forbidden = /^(?:sig|lsig|signature|signaturecipher|token|access_token|auth|auth_token|authorization|jwt|expires?|policy|key-pair-id|x-amz-(?:signature|credential|security-token)|x-goog-(?:signature|credential))$/i
+
+  /** @param {unknown} value @returns {string | null} */
+  function normalize(value) {
+    if (typeof value !== 'string' || value.length > 4000 || !value.trim() || /[\u0000-\u001f\u007f]/.test(value)) return null
+    try {
+      const url = new URL(value.trim())
+      if (url.protocol !== 'https:' || url.username || url.password || url.port || url.hash ||
+        [...url.searchParams.keys()].some(key => forbidden.test(key))) return null
+      return url.href.length <= 4000 ? url.href : null
+    } catch { return null }
+  }
+  /** @param {string} value */
+  function family(value) {
+    const url = new URL(value)
+    if (/(?:^|\.)(?:dzcdn\.net|deezer\.com)$/i.test(url.hostname)) {
+      url.pathname = url.pathname.replace(/^(\/images\/(?:cover|artist)\/[A-Za-z0-9_-]{1,200}\/)\d{1,5}x\d{1,5}(-[^/]{1,200})$/, (_match, prefix, suffix) => prefix + '1000x1000' + suffix)
+    }
+    return url.href
+  }
+  /** @param {string} value */
+  function route(value) { const url = new URL(endpoint); url.searchParams.set('url', value); return url.href }
+  /** @param {unknown} value @returns {string | null} */
+  function key(value) { const normalized = normalize(value); return normalized ? route(family(normalized)) : null }
+  /** @param {unknown} value @returns {string | null} */
+  function local(value) { const normalized = normalize(value); return normalized ? route(normalized) : null }
+  /** @param {unknown} value @returns {string | null} */
+  function parse(value) {
+    try {
+      const url = new URL(String(value))
+      if (url.origin !== endpoint.origin || url.pathname !== endpoint.pathname || url.username || url.password || url.hash ||
+        url.searchParams.size !== 1 || url.searchParams.getAll('url').length !== 1) return null
+      const original = normalize(url.searchParams.get('url'))
+      return original && url.href === route(original) ? original : null
+    } catch { return null }
+  }
+  /** @param {unknown} value @returns {string[]} */
+  function candidates(value) { const normalized = normalize(value); return normalized ? [...new Set([family(normalized), normalized])] : [] }
+  /** @param {Uint8Array} bytes @param {number} at */
+  const be16 = (bytes, at) => bytes[at] * 256 + bytes[at + 1]
+  /** @param {Uint8Array} bytes @param {number} at */
+  const be32 = (bytes, at) => bytes[at] * 0x1000000 + bytes[at + 1] * 0x10000 + bytes[at + 2] * 256 + bytes[at + 3]
+  /** @param {Uint8Array} bytes @param {number} at */
+  const le24 = (bytes, at) => bytes[at] + bytes[at + 1] * 256 + bytes[at + 2] * 0x10000
+  /** @param {Uint8Array} bytes @param {number} at */
+  const le32 = (bytes, at) => le24(bytes, at) + bytes[at + 3] * 0x1000000
+  /** @param {Uint8Array} bytes @param {number} at @param {number} length */
+  const ascii = (bytes, at, length) => String.fromCharCode(...bytes.subarray(at, at + length))
+  /** @param {number} width @param {number} height */
+  const validSize = (width, height) => Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 &&
+    width <= limits.maxDimension && height <= limits.maxDimension && width * height <= limits.maxPixels
+
+  /** @param {Uint8Array} bytes @param {string} mime */
+  function raster(bytes, mime) {
+    if (mime === 'image/gif') {
+      if (bytes.length < 27 || !['GIF87a', 'GIF89a'].includes(ascii(bytes, 0, 6))) return false
+      const width = bytes[6] + bytes[7] * 256, height = bytes[8] + bytes[9] * 256
+      if (!validSize(width, height)) return false
+      let at = 13 + (bytes[10] & 128 ? 3 * 2 ** ((bytes[10] & 7) + 1) : 0), frames = 0
+      const blocks = () => {
+        let data = false
+        while (at < bytes.length) {
+          const length = bytes[at++]
+          if (!length) return data
+          if (length > bytes.length - at) return null
+          data = true; at += length
+        }
+        return null
+      }
+      while (at < bytes.length) {
+        const type = bytes[at++]
+        if (type === 0x3b) return frames === 1 && at === bytes.length
+        if (type === 0x21) { if (at >= bytes.length) return false; at++; if (blocks() === null) return false; continue }
+        if (type !== 0x2c || ++frames > 1 || at + 9 > bytes.length) return false
+        const x = bytes[at] + bytes[at + 1] * 256, y = bytes[at + 2] + bytes[at + 3] * 256
+        const w = bytes[at + 4] + bytes[at + 5] * 256, h = bytes[at + 6] + bytes[at + 7] * 256, flags = bytes[at + 8]
+        if (!validSize(w, h) || x + w > width || y + h > height) return false
+        at += 9 + (flags & 128 ? 3 * 2 ** ((flags & 7) + 1) : 0)
+        if (at >= bytes.length || bytes[at] < 2 || bytes[at++] > 8 || blocks() !== true) return false
+      }
+      return false
+    }
+    if (mime === 'image/png') {
+      if (bytes.length < 45 || ![137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value) ||
+        be32(bytes, 8) !== 13 || ascii(bytes, 12, 4) !== 'IHDR' || !validSize(be32(bytes, 16), be32(bytes, 20))) return false
+      let at = 8, data = false
+      while (at + 12 <= bytes.length) {
+        const length = be32(bytes, at), type = ascii(bytes, at + 4, 4)
+        if (length > bytes.length - at - 12 || ['acTL', 'fcTL', 'fdAT'].includes(type)) return false
+        if (type === 'IDAT') data = data || length > 0
+        if (type === 'IEND') return data && length === 0 && at + 12 === bytes.length
+        at += length + 12
+      }
+      return false
+    }
+    if (mime === 'image/jpeg') {
+      if (bytes.length < 15 || be16(bytes, 0) !== 0xffd8 || be16(bytes, bytes.length - 2) !== 0xffd9) return false
+      for (let at = 2; at + 4 < bytes.length;) {
+        if (bytes[at++] !== 0xff) return false
+        while (bytes[at] === 0xff) at++
+        const marker = bytes[at++]
+        if (marker === 0xd9 || marker === 0xda) return false
+        if (marker === 1 || marker >= 0xd0 && marker <= 0xd8) continue
+        const length = be16(bytes, at)
+        if (length < 2 || at + length > bytes.length) return false
+        if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) return length >= 8 && validSize(be16(bytes, at + 5), be16(bytes, at + 3))
+        at += length
+      }
+      return false
+    }
+    if (mime !== 'image/webp' || bytes.length < 30 || ascii(bytes, 0, 4) !== 'RIFF' || ascii(bytes, 8, 4) !== 'WEBP' || le32(bytes, 4) + 8 !== bytes.length) return false
+    let at = 12, width = 0, height = 0, canvasWidth = 0, canvasHeight = 0
+    while (at + 8 <= bytes.length) {
+      const type = ascii(bytes, at, 4), length = le32(bytes, at + 4), data = at + 8
+      if (length > bytes.length - data || ['ANIM', 'ANMF'].includes(type)) return false
+      if (type === 'VP8X') {
+        if (length !== 10 || bytes[data] & 2) return false
+        canvasWidth = le24(bytes, data + 4) + 1; canvasHeight = le24(bytes, data + 7) + 1
+        if (!validSize(canvasWidth, canvasHeight)) return false
+      } else if (type === 'VP8 ') {
+        if (length < 10 || bytes[data] & 1 || ascii(bytes, data + 3, 3) !== '\x9d\x01\x2a') return false
+        width = (bytes[data + 6] + bytes[data + 7] * 256) & 0x3fff; height = (bytes[data + 8] + bytes[data + 9] * 256) & 0x3fff
+      } else if (type === 'VP8L') {
+        if (length < 5 || bytes[data] !== 0x2f || bytes[data + 4] >> 5) return false
+        width = 1 + bytes[data + 1] + ((bytes[data + 2] & 0x3f) << 8)
+        height = 1 + (bytes[data + 2] >> 6) + (bytes[data + 3] << 2) + ((bytes[data + 4] & 15) << 10)
+      }
+      at = data + length + (length & 1)
+    }
+    return at === bytes.length && validSize(width, height) && (!canvasWidth || canvasWidth === width && canvasHeight === height)
+  }
+
+  /** Bounded readable raster bytes only; native decode is an additional saver gate.
+   * @param {Response} response @param {AbortSignal} [signal] @returns {Promise<Response | null>} */
+  async function readRaster(response, signal) {
+    const mime = (response.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+    const declared = response.headers.get('content-length')
+    if (response.type === 'opaque' || response.status !== 200 || response.headers.has('content-range') ||
+      !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mime) || !response.body ||
+      declared !== null && (!/^\d+$/.test(declared) || Number(declared) > limits.maxBytes)) {
+      await response.body?.cancel().catch(() => {})
+      return null
+    }
+    const reader = response.body.getReader(), chunks = []
+    let total = 0, complete = false
+    const aborted = () => { if (signal?.aborted) throw signal.reason instanceof Error ? signal.reason : new DOMException('Carátula cancelada.', 'AbortError') }
+    const abort = () => { void reader.cancel().catch(() => {}) }
+    signal?.addEventListener('abort', abort, { once: true })
+    try {
+      aborted()
+      while (true) {
+        const part = await reader.read()
+        aborted()
+        if (part.done) { complete = true; break }
+        total += part.value.byteLength
+        if (total > limits.maxBytes) return null
+        chunks.push(part.value)
+      }
+      if (!total) return null
+      const bytes = new Uint8Array(total)
+      let offset = 0
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+      if (!raster(bytes, mime)) return null
+      return new Response(bytes, { headers: { 'content-type': mime, 'content-length': String(total),
+        'cache-control': 'public, max-age=31536000, immutable', 'x-content-type-options': 'nosniff',
+        'content-security-policy': "default-src 'none'; sandbox" } })
+    } finally {
+      signal?.removeEventListener('abort', abort)
+      if (!complete) await reader.cancel().catch(() => {})
+      reader.releaseLock()
+    }
+  }
+  return { cacheName: 'pletina-cover-downloads:v1', root, normalize, key, local, parse, candidates, readRaster, limits }
+}
+)(ROOT)
 const PREFIX = `pletina-pwa:${encodeURIComponent(ROOT.href)}:`
 const CACHE = PREFIX + VERSION
 // Audio separado de los archivos de la app: una actualización conserva las descargas.
@@ -12,6 +199,35 @@ const audioPath = new URL('__audio__/', ROOT).pathname
 const indexURL = new URL('index.html', ROOT).href
 const required = new Map(FILES.map((file) => [new URL(file.url, ROOT).href, file]))
 const assets = new Map([...FILES, ...OPTIONAL].map((file) => [new URL(file.url, ROOT).href, file]))
+const coverPath = new URL('__covers__', ROOT).pathname
+
+async function coveredImage(url) {
+  const original = COVERS.parse(url)
+  if (!original) return new Response('', { status: 404 })
+  try {
+    const cached = await (await caches.open(COVERS.cacheName)).match(COVERS.key(original))
+    if (cached) {
+      const raster = await COVERS.readRaster(cached)
+      if (raster) return raster
+    }
+  } catch { /* Artwork must remain independent of audio/storage failures. */ }
+  if (self.navigator?.onLine === false) return new Response('', { status: 404 })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 8000)
+  try {
+    for (const candidate of COVERS.candidates(original)) {
+      try {
+        const response = await fetch(candidate, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer', signal: controller.signal })
+        const raster = await COVERS.readRaster(response, controller.signal)
+        if (raster) return raster
+      } catch { /* A readable original candidate can still follow a failed variant. */ }
+      if (controller.signal.aborted) break
+    }
+  } finally { clearTimeout(timer) }
+  // Unsupported/CORS-blocked art keeps its normal online image behaviour.
+  // Never store or serve an opaque, SVG or HTML body under our own origin.
+  return Response.redirect(original, 302)
+}
 
 function audioKey(url, id) {
   if (url.origin !== ROOT.origin || url.pathname !== audioPath + id || url.hash) return false
@@ -144,6 +360,10 @@ self.addEventListener('fetch', (event) => {
   const request = event.request
   const url = new URL(request.url)
   if (request.method !== 'GET' || url.origin !== ROOT.origin) return
+  if (url.pathname === coverPath) {
+    event.respondWith(coveredImage(url).catch(() => new Response('', { status: 404 })))
+    return
+  }
   if (url.pathname.startsWith(audioPath)) {
     event.respondWith(downloadedAudio(url, request.headers.get('range')).catch(() => new Response('', { status: 404 })))
     return

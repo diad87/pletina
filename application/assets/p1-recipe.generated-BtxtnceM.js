@@ -1,0 +1,1 @@
+import{n as e,t}from"./p1-recipe.generated-C4oQvyrS.js";export{t as p1FallbackRecipe,e as p1Recipe};
