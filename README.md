@@ -116,7 +116,15 @@ La cuenta sigue corriendo durante las pausas. Al agotarse, conserva el punto de 
 
 ## Instalar
 
-Descarga el archivo de tu sistema desde la [última versión](https://github.com/diad87/pletina-releases/releases/latest):
+Abre [Pletina en Tuqo](https://pletina-app.tuqo.ru/) para escuchar desde el navegador o instalarla en Android, iPhone, iPad, Windows, macOS o Linux con un navegador compatible.
+
+Si ya tienes Pletina instalada desde otra web, guarda una copia desde **Tu biblioteca → Copia de seguridad**. Instala Pletina desde Tuqo, abre el icono nuevo y elige el archivo en el mismo apartado.
+
+Si usas la app nativa, la versión 0.13.0 permite guardar la copia desde **Tu biblioteca → Llevar mi biblioteca a la web**. Puedes conservar la APK para Android Auto y para acceder al audio que ya descargaste.
+
+### Actualizar o recuperar una instalación nativa
+
+Descarga el archivo de tu sistema desde la [última versión nativa](https://github.com/diad87/pletina-releases/releases/latest):
 
 | Sistema | Archivo |
 |---|---|
