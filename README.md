@@ -1,149 +1,56 @@
 # Pletina
 
-Pletina es un reproductor de música y pódcasts disponible como **app web en iPhone, iPad, Android, Windows, macOS y Linux**. Descubre artistas y discos, crea playlists, importa listas de Spotify y descarga el audio disponible para escucharlo sin conexión. Es software libre con licencia [GPL-3.0](LICENSE). Antes se llamaba Musify.
+Música y pódcasts en **iPhone, iPad, Android, Windows, macOS y Linux**.
 
-**[Abrir Pletina en Tuqo](https://pletina-app.tuqo.ru/)** · [Cómo instalarla](#instalar) · [Versiones nativas](#aplicación-nativa)
+**[Abrir Pletina en Tuqo](https://pletina-app.tuqo.ru/)** · [Instalar la app web](#instalar) · [Descargas nativas](#aplicación-nativa)
 
-## Capturas de la versión web
+Por ahora, seguiremos desarrollando solo la **app web (PWA)**. No se prevén nuevas versiones de la APK de Android.
 
 ![Inicio de Pletina en escritorio con discos y artistas para descubrir](docs/screenshots/web-escritorio-inicio.png)
 
-La interfaz móvil se muestra en una vista emulada de iPhone.
-
 | Álbum | Sonando ahora | Pódcast |
 | :---: | :---: | :---: |
-| ![Ficha de un álbum con su lista de canciones en la vista de iPhone](docs/screenshots/web-iphone-disco.png) | ![Reproductor en la vista de iPhone con saltos de 15 segundos](docs/screenshots/web-iphone-sonando.png) | ![Ficha de un pódcast y sus episodios en la vista de iPhone](docs/screenshots/web-iphone-podcast.png) |
+| ![Ficha de un álbum y su lista de canciones](docs/screenshots/web-iphone-disco.png) | ![Reproductor con saltos de 15 segundos](docs/screenshots/web-iphone-sonando.png) | ![Ficha de un pódcast y sus episodios](docs/screenshots/web-iphone-podcast.png) |
+
+<sub>Capturas de la web oficial. La vista de iPhone está emulada.</sub>
 
 ## Instalar
 
-- **iPhone y iPad.** Abre [Pletina en Safari](https://pletina-app.tuqo.ru/). En el menú **Compartir**, toca **Añadir a pantalla de inicio**. Si aparece **Abrir como app web**, actívalo y toca **Añadir**. [Guía de Apple para iPhone](https://support.apple.com/es-es/guide/iphone/iphea86e5236/ios).
-- **Android y ordenador.** En la [web oficial de Pletina](https://pletina-app.tuqo.ru/), pulsa **Instalar Pletina** y sigue las indicaciones de tu navegador.
-- **Desde el navegador.** Pulsa **Probar sin instalar** en la [web oficial de Pletina](https://pletina-app.tuqo.ru/).
+Abre [Pletina en Tuqo](https://pletina-app.tuqo.ru/) y sigue los pasos de tu dispositivo si quieres instalarla. Para escuchar desde el navegador, pulsa **Probar sin instalar**.
 
-### Llevar tu biblioteca a Tuqo
+| Dispositivo | Cómo instalar la app web |
+| --- | --- |
+| **iPhone y iPad** | Abre la web en Safari. Ve a **Compartir → Añadir a pantalla de inicio**. Si aparece **Abrir como app web**, actívalo y pulsa **Añadir**. |
+| **Android y ordenador** | Pulsa **Instalar Pletina** y sigue los pasos de tu navegador. |
 
-Si instalaste Pletina desde otra web, guarda una copia desde **Tu biblioteca → Copia de seguridad**. En la aplicación nativa 0.13.0, usa **Tu biblioteca → Llevar mi biblioteca a la web**. Después de instalar desde Tuqo, abre el icono nuevo e importa el archivo en **Tu biblioteca → Copia de seguridad**.
+<details>
+<summary>Llevar tu biblioteca a Tuqo</summary>
 
-La copia incluye favoritos, listas, historial y progreso de pódcasts. El audio que descargaste queda en la instalación anterior. Puedes volver a descargar en la web el audio que esté disponible. [Notas de Pletina 0.13.0](https://github.com/diad87/pletina-releases/releases/tag/v0.13.0).
+Guarda una copia desde **Tu biblioteca → Copia de seguridad**. En la app nativa 0.13.0, usa **Tu biblioteca → Llevar mi biblioteca a la web**. Abre Pletina desde el nuevo icono de Tuqo e importa el archivo en **Tu biblioteca → Copia de seguridad**.
 
-## Funciones
+La copia incluye favoritos, listas, historial y progreso de pódcasts. El audio descargado queda en la instalación anterior. [Notas de Pletina 0.13.0](https://github.com/diad87/pletina-releases/releases/tag/v0.13.0).
 
-### Tu música, a mano
+</details>
 
-El botón **Aleatorio**, junto a Play en playlists, artistas, discos y **Canciones que te gustan**, activa o desactiva la mezcla. Al iniciar una colección con ese modo activo, también la primera canción se elige al azar; el resto suena sin repetir entradas hasta terminar la lista. Si eliges una canción concreta, empieza por ella. Cambiar el modo durante la escucha conserva la canción y la posición actuales. La elección se recuerda al cerrar la app, tanto en el PC como en Android.
+## Qué puedes hacer
 
-En las playlists y en **Canciones que te gustan**, busca por título o artista sin preocuparte por las tildes o las mayúsculas. Los resultados conservan su posición en la lista: al reproducir uno, la cola continúa desde esa canción. Para cambiar el orden arrastrando, borra primero la búsqueda.
-
-El botón de la chincheta en un disco o una playlist permite **Fijar en Inicio**. Los fijados aparecen primero, se conservan al cerrar la app y se pueden quitar desde la misma chincheta. En Inicio, **Ponme un disco** elige al azar uno de tus álbumes guardados y lo reproduce desde la primera canción, en orden; si tienes varios, evita elegir el que ya está puesto.
-
-### Sugeridos en Inicio
-
-**Sugeridos para ti** mezcla discos de los artistas que escuchas y guardas con discos de artistas similares. **Artistas que te pueden gustar** permite descubrir otros grupos, indicando con qué artista están relacionados. La selección usa tus últimas 300 escuchas, canciones favoritas y discos guardados; omite los discos que ya aparecen en esos datos y no usa podcasts, archivos locales ni canciones independientes de YouTube como semillas.
-
-Si aún no tienes gustos guardados, muestra discos y artistas populares de Deezer. La selección se calcula en tu equipo, sin cuenta de Spotify; al catálogo se le piden listas populares, discos y artistas relacionados. Puedes abrir y reproducir los discos desde sus tarjetas. Si falla la conexión, Inicio conserva tus accesos habituales y permite reintentar los sugeridos.
-
-### Radio de artista
-
-En la ficha de un artista del catálogo, **Radio de…** prepara una mezcla de hasta 45 canciones suyas y de artistas similares. Alterna artistas y evita repetir una canción o una grabación con el mismo ISRC. La selección entra en la cola habitual, conservando las canciones que habías añadido manualmente; puedes preparar otra mezcla cuando quieras. Necesita conexión para consultar el catálogo y avisa si alguna fuente falla. Es una selección finita, no una emisión continua.
-
-### Artistas favoritos
-
-En la página de un artista, pulsa **Añadir a favoritos**. Aparecerá en **Tu biblioteca → Artistas favoritos**, tanto en el ordenador como en el móvil. Puedes quitarlo desde su página o con el corazón de la biblioteca. Los favoritos se guardan en el dispositivo y se conservan al cerrar la app.
-
-### Canciones de YouTube
-
-En **Tu biblioteca → Canciones de YouTube**, pega el enlace de un vídeo de YouTube o YouTube Music y pulsa **Continuar**. Revisa el título y el artista o canal, corrígelos si hace falta y pulsa **Guardar canción**. También se admiten enlaces compartidos de `youtu.be` y enlaces de Shorts. No hace falta que la canción esté en el catálogo de Deezer.
-
-Las canciones guardadas se pueden reproducir, añadir a la cola, favoritos y playlists, y descargar para escucharlas sin conexión, también en Android. Guardar otra vez el mismo vídeo actualiza sus datos sin duplicarlo. **Quitar de Canciones de YouTube**, en el menú ⋯, lo oculta de esa sección: conserva sus apariciones en playlists, favoritos, historial y descargas. Pegar de nuevo su enlace vuelve a mostrarlo.
-
-Para añadir un vídeo nuevo hace falta conexión y que esté disponible públicamente; si requiere una cuenta o ya no está disponible, la app muestra el error y no lo sustituye por otro vídeo.
-
-### Importar playlists de Spotify
-
-En **Tu biblioteca → Importar de Spotify**, pega el enlace completo de una lista pública. Pletina lee sus títulos y artistas, busca las canciones equivalentes en su catálogo y muestra las encontradas y las omitidas. Revisa el resultado, cambia el nombre si quieres y pulsa **Guardar playlist**: se crea una lista nueva, conservando el orden y las repeticiones. Puedes cancelar o reintentar una búsqueda interrumpida sin crear una lista a medias.
-
-La vista pública de Spotify puede devolver solo parte de una lista (habitualmente hasta las primeras 100 canciones) y no permite consultar listas privadas. Para esas listas, importa un **CSV que ya hayas exportado**, de hasta 10 MB y 10.000 filas. Se admiten columnas `Track Name` y `Artist Name(s)` (o `Title` y `Artist`), y opcionalmente `Duration (ms)` e `ISRC`; los artistas múltiples se separan con punto y coma. Se leen archivos separados por comas, punto y coma o tabuladores. Los episodios, archivos locales y filas sin título o artista se omiten con aviso.
-
-No hace falta iniciar sesión en Spotify. La importación copia las canciones encontradas al catálogo local de Pletina; no sincroniza cambios posteriores. Las listas originales de Spotify no se modifican. La disponibilidad depende de la vista pública de Spotify y de las coincidencias del catálogo.
-
-### Podcasts
-
-La sección **Podcasts**, en la barra lateral y en la navegación del móvil, permite buscar programas y escuchar sus episodios. El filtro **Idioma** empieza en español y recuerda tu elección; incluye inglés, catalán, euskera, gallego, francés, portugués, alemán, italiano y todos los idiomas. Se comprueba el idioma que publica cada programa en su RSS: las variantes regionales se agrupan y los programas sin idioma declarado solo aparecen al elegir todos.
-
-En la ficha de cada programa puedes **añadirlo a favoritos**, tanto si procede de RSS como de YouTube. Queda anclado en **Tus pódcasts**, al principio de la sección, y se conserva al reiniciar. Tus programas siguen visibles al cambiar de búsqueda o idioma y aunque falle el catálogo. Puedes quitarlos desde su ficha o desde esa sección; los episodios que hayas marcado como favoritos, añadido a playlists o descargado se conservan.
-
-Los episodios se reproducen desde el audio publicado por su autor y comparten la cola, favoritos, playlists e historial con la música. El catálogo procede de Apple Podcasts y la disponibilidad depende de las fuentes de cada programa; estos episodios necesitan conexión.
-
-Debajo salen también los programas de **YouTube Music**, en su propia sección («En YouTube»), con su portada; allí cada temporada suele ser un programa aparte. Sus episodios se reproducen con el mismo motor que la música y se pueden **descargar** para escucharlos sin conexión. YouTube no dice el idioma de cada programa, así que esa sección no se filtra.
-
-Cada episodio recuerda su punto de escucha en este dispositivo. Al volver a reproducirlo, continúa donde lo dejaste, también después de cerrar la app. La lista muestra **Continuar desde…**, una barra de progreso y **Escuchado** al terminar; los episodios completados vuelven a empezar desde el principio. En **Sonando ahora**, los botones de 15 segundos permiten retroceder y avanzar durante el episodio. En la APK de Android, el servicio de audio guarda el progreso incluso con la pantalla apagada.
-
-### Temporizador de apagado
-
-Pulsa la luna de **Sonando ahora** o de la barra de reproducción del PC para pausar la música o el pódcast dentro de **15, 30 o 60 minutos**, elegir un tiempo **Personalizado** (de 1 minuto a 24 horas) o detenerte **al terminar el episodio o la canción**. La cuenta atrás muestra cuánto queda y la hora de pausa. Puedes cambiar o desactivar el temporizador desde el mismo botón; en móvil se abre como un panel inferior.
-
-La cuenta sigue corriendo durante las pausas. Al agotarse, conserva el punto de escucha. «Al terminar» detiene la cola aunque tengas la repetición activada y marca el episodio como escuchado; si cambias de canción o episodio antes del final, se cancela esa opción. En la APK de Android funciona en el servicio de audio, también con la pantalla apagada. El temporizador es para la sesión actual: no se recupera al volver a arrancar la app o su servicio.
-
-### Letras y transcripciones en la web
-
-En **Sonando ahora**, puedes abrir la letra de una canción o la transcripción de un pódcast cuando la fuente ofrece el texto. Si incluye marcas de tiempo, pulsa un fragmento para saltar a ese punto del audio.
+- **Descubrir música.** Explora discos y artistas en Deezer, escucha la radio de un artista o añade canciones por enlace de YouTube.
+- **Organizar tu biblioteca.** Guarda favoritos, fija discos y playlists en Inicio o importa una lista de Spotify por enlace público o CSV.
+- **Escuchar pódcasts.** Guarda programas, retoma un episodio donde lo dejaste y salta 15 segundos en ambos sentidos.
+- **Escuchar a tu ritmo.** Descarga el audio disponible, activa el temporizador o abre las letras y transcripciones disponibles en la web.
 
 ## Aplicación nativa
 
-La versión de escritorio permite reproducir archivos de música locales. En Android, el servicio de audio de la APK sigue reproduciendo con la pantalla apagada y responde a los controles de la pantalla de bloqueo, la notificación y los auriculares.
+Las versiones publicadas siguen disponibles para Windows, macOS, Linux y Android. En escritorio puedes reproducir archivos locales. La APK de Android permite usar Android Auto y escuchar el audio que ya descargaste en ella.
 
-### Android Auto
-
-La APK incluye integración con Android Auto. Desde el coche puedes acceder a **Favoritos**, **Playlists**, **Descargas** y **YouTube**. La búsqueda consulta tu biblioteca y recurre al catálogo si no encuentra coincidencias. Los mandos del coche permiten pausar, reanudar y cambiar de pista. [Notas de Pletina 0.13.0](https://github.com/diad87/pletina-releases/releases/tag/v0.13.0).
-
-Para usar una APK instalada fuera de Google Play, activa **Orígenes desconocidos** en las opciones de desarrollador de Android Auto. [Instrucciones de prueba](docs/android-auto.md).
-
-### Actualizar o recuperar una instalación nativa
-
-Descarga el archivo de tu sistema desde la [última versión nativa](https://github.com/diad87/pletina-releases/releases/latest):
-
-| Sistema | Archivo |
-|---|---|
-| Windows 10/11 | `Pletina_x.y.z_x64-setup.exe`: doble clic |
-| Mac (chip de Apple o Intel, macOS 11+) | `Pletina_x.y.z_universal.dmg`: arrastrar a Aplicaciones |
-| Linux (64 bits) | `Pletina_x.y.z_amd64.AppImage` (distribuciones recientes) o `.deb` (Ubuntu/Debian) |
-| Android 7 o superior (64 bits) | `Pletina_x.y.z_android.apk`, mejor con Obtainium (abajo) para que se actualice sola |
-
-Mientras el instalador de Windows no esté firmado (ver [Code signing policy](#code-signing-policy)), Windows avisa la primera vez: «Más información» → «Ejecutar de todas formas». El de Mac no está firmado por Apple: la primera vez, clic derecho en la app → Abrir. Las actualizaciones no avisan, porque las baja la propia app.
-
-Si tenías Musify, Pletina la sustituye al instalarse (o al actualizarse sola) y conserva tu biblioteca.
-
-En Linux, la AppImage incluye el soporte multimedia y el motor JavaScript necesario para YouTube. Dale permiso de ejecución antes de abrirla (`chmod +x Pletina_*.AppImage`). Para el `.deb`, usa `sudo apt install ./Pletina_*.deb` para instalar también sus dependencias de audio. La compilación de distribución usa Ubuntu 22.04 como base; las distribuciones más antiguas pueden necesitar una versión más nueva del sistema.
-
-### Android, con Obtainium
-
-No está en Google Play. [Obtainium](https://github.com/ImranR98/Obtainium) instala el APK desde aquí y lo actualiza cuando sale una versión nueva:
-
-1. Instala Obtainium (desde su GitHub o desde F-Droid).
-2. En Obtainium, «Añadir app», pega `https://github.com/diad87/pletina-releases` y pulsa «Añadir». Se queda con el `.apk` de la última versión (la de los extractores no cuenta: es una versión previa).
-3. Pulsa «Instalar». La primera vez, Android pide permiso para instalar apps desde Obtainium.
-
-Para escuchar sin conexión: ⬇ en un disco o una playlist, o «Descargar» en el menú ⋯ de una canción. Lo descargado está en Tu biblioteca → Descargas, y sin conexión suena también desde su disco o su playlist (lo que no está descargado se salta). Todavía no se puede escuchar la música guardada en el teléfono (fase 4 del plan).
-
-### Se actualiza sola
-
-En el PC, la app busca versiones nuevas al arrancar y cada pocas horas, las descarga en segundo plano y las instala al cerrarse (en Linux, con el AppImage). En Android, Obtainium avisa de cada versión y la instala encima sin perder la biblioteca. Todas las actualizaciones van firmadas: la app de escritorio no instala nada que no lleve nuestra firma, y Android no deja instalar encima un APK firmado por otro.
-
-### Comprobar que una descarga es auténtica
-
-Desde la 0.8.0, cada archivo de una versión lleva un certificado de procedencia de GitHub: demuestra que sale de este código y de su compilación en GitHub Actions, sin pasar por el ordenador de nadie. Con la [CLI de GitHub](https://cli.github.com):
-
-```bash
-gh attestation verify Pletina_0.8.0_x64-setup.exe --repo diad87/pletina
-```
-
-Cada versión trae además `SHA256SUMS.txt` con la huella de cada archivo: `sha256sum -c SHA256SUMS.txt` en Linux o Mac, o en Windows `Get-FileHash Pletina_0.8.0_x64-setup.exe` y compararla con la de la lista.
+[Descargar instaladores nativos](https://github.com/diad87/pletina-releases/releases/latest) · [Instrucciones de instalación](https://github.com/diad87/pletina-releases#instalar) · [Guía de Android Auto](docs/android-auto.md)
 
 ## Privacidad
 
-Pletina funciona sin cuenta. La versión web guarda tu biblioteca, tus playlists y tu historial en el navegador. En la aplicación nativa, esos datos se guardan en el dispositivo y la app funciona sin analíticas.
+Pletina funciona sin cuenta. La app web guarda tu biblioteca en el navegador y la versión nativa la guarda en el dispositivo.
 
-Según la función que uses, Pletina consulta estos servicios.
+<details>
+<summary>Servicios que consulta Pletina</summary>
 
 - **Deezer**, para buscar artistas y discos y bajar las carátulas ([privacidad de Deezer](https://www.deezer.com/legal/personal-datas)).
 - **LRCLIB**, en la versión web, para buscar la letra cuando abres su panel. Se consulta el título, el artista, el disco y la duración de la canción. [LRCLIB](https://lrclib.net/).
@@ -154,38 +61,27 @@ Según la función que uses, Pletina consulta estos servicios.
 
 El registro de errores de la aplicación nativa se comparte cuando usas «Enviar registro».
 
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-La firma gratuita para proyectos de código abierto está solicitada a SignPath Foundation; hasta que la aprueben, los instaladores de Windows van sin firmar. Los instaladores se compilan en GitHub Actions a partir de este repositorio y solo se firman los que salen de ahí. Cada firma la aprueba a mano una persona del equipo.
-
-- Committers and reviewers: [diad87](https://github.com/diad87)
-- Approvers: [diad87](https://github.com/diad87)
-
-The native app connects to Deezer, YouTube, GitHub, Spotify when importing public playlists, Apple Podcasts and podcast publishers. The native app has no accounts or telemetry. See [Privacidad](#privacidad).
-
-## Cómo funciona la aplicación nativa
-
-- **Tauri 2** (Rust) + **Svelte 5** + TypeScript. Instalador de unos 3 MB en Windows; el APK de Android, 12 MB.
-- Datos en local (SQLite en la carpeta de datos de la app). El PC y el móvil tienen cada uno los suyos: todavía no se sincronizan.
-- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
-- En Android, la música la reproduce un servicio nativo (Media3/ExoPlayer) que pide el audio directamente al núcleo de Rust; la interfaz es el mando. Las descargas usan el motor propio (allí no hay yt-dlp).
-- Por dentro, algunas cosas conservan el nombre antiguo (el identificador `dev.musify.desktop`, el paquete de Android, la base de datos `musify.db`) para que las instalaciones de Musify sigan actualizándose y no pierdan la biblioteca.
-
-El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); lo del móvil, en [docs/plan-mobile.md](docs/plan-mobile.md).
+</details>
 
 ## Desarrollo
 
-Requisitos: Node 24 y Rust. En Windows, toolchain MSVC, Visual Studio Build Tools (C++) y WebView2.
+La aplicación nativa usa Tauri 2, Svelte 5 y TypeScript. Para la vista previa de su interfaz necesitas Node 24.
 
 ```bash
-npm install
-npm run tauri dev      # app en modo desarrollo
-npm run build:local    # instalador sin firmar en src-tauri/target/release/bundle/
-npm run dev            # solo la interfaz en el navegador, con datos de ejemplo (src/dev)
-npm run check          # tipos
-cd src-tauri && cargo test   # tests (con red: cargo test -- --ignored --nocapture)
+npm ci
+npm run dev
+npm run check
+```
+
+<details>
+<summary>Compilación, pruebas y publicación de la aplicación nativa</summary>
+
+Para compilar la aplicación necesitas Rust. En Windows, instala el toolchain MSVC, Visual Studio Build Tools (C++) y WebView2.
+
+```bash
+npm run tauri dev
+npm run build:local
+cd src-tauri && cargo test
 ```
 
 **Linux:** instala las dependencias de Tauri y audio: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-libav`. Usa la distribución oficial de Node 24 conservando su archivo `LICENSE`: al compilar, `scripts/prepare-linux-runtime.mjs` incorpora ese ejecutable y su licencia en los paquetes. `npm run tauri build -- --config src-tauri/tauri.local.conf.json --bundles appimage,deb` genera los paquetes sin firmar. Antes de ejecutar `cargo test` directamente, prepara los recursos con `node scripts/prepare-linux-runtime.mjs`.
@@ -196,9 +92,17 @@ La regresión del reproductor real se ejecuta con `python3 scripts/tests/linux-p
 
 **Android:** además, el SDK de Android con el NDK 27.3.13750724, Java 21 y el objetivo de Rust `aarch64-linux-android` (y `x86_64-linux-android` para el emulador). `npm run tauri android build -- --apk --target aarch64` compila el APK; sale firmado si está la clave en `%USERPROFILE%\.musify\android.jks`. En Windows, Tauri no puede crear el enlace a la librería de Rust: se copia `src-tauri/target/<objetivo>/release/libmusify_lib.so` a `src-tauri/gen/android/app/src/main/jniLibs/<abi>/` y se termina con Gradle (`gradlew.bat assembleUniversalRelease -x rustBuildUniversalRelease`). Detalles y pruebas en [docs/plan-mobile.md](docs/plan-mobile.md).
 
-Las capturas de la galería se tomaron en la web oficial de Tuqo, a 1440 × 900 en escritorio y con una vista de iPhone emulada en WebKit.
+### Cómo funciona la aplicación nativa
 
-## Publicar una versión
+- **Tauri 2** (Rust) + **Svelte 5** + TypeScript. Instalador de unos 3 MB en Windows; el APK de Android, 12 MB.
+- Datos en local (SQLite en la carpeta de datos de la app). El PC y el móvil tienen cada uno los suyos: todavía no se sincronizan.
+- El audio de YouTube sale de yt-dlp, de youtubei.js o de un motor propio (se elige pulsando el número de versión, arriba a la izquierda; en el móvil, siempre el propio). Cada extractor se actualiza solo desde su fuente, sin reinstalar la app: yt-dlp desde su GitHub, youtubei.js desde npm y el motor propio desde este repositorio.
+- En Android, la música la reproduce un servicio nativo (Media3/ExoPlayer) que pide el audio directamente al núcleo de Rust; la interfaz es el mando. Las descargas usan el motor propio (allí no hay yt-dlp).
+- Por dentro, algunas cosas conservan el nombre antiguo (el identificador `dev.musify.desktop`, el paquete de Android, la base de datos `musify.db`) para que las instalaciones de Musify sigan actualizándose y no pierdan la biblioteca.
+
+El plan, el estado de cada fase y las decisiones están en [PLAN.md](PLAN.md); lo del móvil, en [docs/plan-mobile.md](docs/plan-mobile.md).
+
+### Publicar una versión
 
 1. Subir la versión en `package.json` y `src-tauri/Cargo.toml`.
 2. Commit y etiqueta anotada: `git tag -a vX.Y.Z` (el mensaje de la etiqueta son las notas de la versión) y `git push --follow-tags`.
@@ -212,7 +116,7 @@ node scripts/release.mjs artifacts vX.Y.Z notas.md
 gh release create vX.Y.Z artifacts/_release/* -R diad87/pletina-releases --title "Pletina X.Y.Z" --notes-file notas.md
 ```
 
-## Publicar extractores
+### Publicar extractores
 
 Los extractores (receta y script del motor propio, youtubei.js) se publican aparte, sin sacar versión de la app:
 
@@ -221,10 +125,12 @@ Los extractores (receta y script del motor propio, youtubei.js) se publican apar
 
 Cada día GitHub Actions mira también si hay youtubei.js nuevo y, si funciona, lo pone y lo publica. A mano: `node scripts/extractors.mjs` (o `--dry-run`, o `--to <carpeta>` para probar con `MUSIFY_EXTRACTORS_URL`).
 
-## Claves de firma
+### Claves de firma
 
 Están en `%USERPROFILE%\.musify\` y en los secretos del repositorio: `updater.key` para escritorio y extractores (`TAURI_SIGNING_PRIVATE_KEY`) y `android.jks` para el APK (`ANDROID_KEYSTORE`), cada una con su contraseña. Sin ellas no se pueden publicar actualizaciones. Si se pierde la de Android, los móviles no aceptan la versión siguiente sin desinstalar (y perder la biblioteca): hay que guardar una copia de esa carpeta.
 
+</details>
+
 ## Licencia
 
-Pletina es software libre: puedes usarla, estudiarla, cambiarla y compartirla según la [GNU General Public License v3.0](LICENSE) o posterior. Si distribuyes una versión modificada, tiene que ir también con su código y la misma licencia.
+Pletina, antes Musify, es software libre bajo la [GNU General Public License v3.0 o posterior](LICENSE).
