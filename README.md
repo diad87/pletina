@@ -43,7 +43,7 @@ La copia incluye favoritos, listas, historial y progreso de pódcasts. El audio 
 
 Las versiones publicadas siguen disponibles para Windows, macOS, Linux y Android. En escritorio puedes reproducir archivos locales. La APK de Android permite usar Android Auto y escuchar el audio que ya descargaste en ella.
 
-[Descargar instaladores nativos](https://github.com/diad87/pletina-releases/releases/latest) · [Instrucciones de instalación](https://github.com/diad87/pletina-releases#instalar) · [Guía de Android Auto](docs/android-auto.md)
+[Descargar instaladores nativos](https://github.com/diad87/pletina-releases/releases/latest) · [Instrucciones de instalación](https://github.com/diad87/pletina-releases#instaladores-nativos) · [Guía de Android Auto](docs/android-auto.md)
 
 ## Privacidad
 
