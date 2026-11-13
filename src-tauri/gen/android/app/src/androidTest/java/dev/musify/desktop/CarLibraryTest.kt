@@ -21,6 +21,30 @@ class CarLibraryTest {
       .put("duration", 120).put("explicit", false).put("cover", JSONObject.NULL))
 
   @Test
+  fun unsavedSearchResultsCanBeSelectedWithoutRepeatingTheSearch() {
+    val query = "Artista / Disco"
+    var calls = 0
+    val library = CarLibrary(
+      itemJson = { error("La canción sin guardar no existe en SQLite: $it") },
+      searchJson = { requested ->
+        assertEquals(query, requested)
+        calls++
+        JSONObject().put("items", JSONArray(listOf(song(11, "Primera"), song(12, "Segunda")))).toString()
+      },
+    )
+
+    assertEquals(2, library.searchCount(query))
+    val shown = library.search(query, 1, 1).single()
+    val request = MediaItem.Builder().setMediaId(shown.mediaId).build()
+    assertEquals("Segunda", library.item(shown.mediaId).mediaMetadata.title.toString())
+    assertEquals("12", PlaybackService.trackId(library.single(request)))
+    val selection = library.selection(request)
+    assertEquals(1, selection.index)
+    assertEquals(listOf("11", "12"), selection.items.map { PlaybackService.trackId(it) })
+    assertEquals(1, calls)
+  }
+
+  @Test
   fun selectionRecoversContextAndDuplicateOccurrenceWithoutAnInMemoryCache() {
     val first = song(1, "Primera")
     val second = song(250_000_000_000_123, "Vídeo independiente")

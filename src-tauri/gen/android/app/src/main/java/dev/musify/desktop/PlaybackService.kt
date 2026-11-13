@@ -277,8 +277,12 @@ class PlaybackService : MediaLibraryService() {
       query: String,
       params: LibraryParams?,
     ): ListenableFuture<LibraryResult<Void>> = libraryTask {
-      val count = carLibrary.count(CarLibrary.searchParent(query))
-      main.post { if (this@PlaybackService.session === session) session.notifySearchResultChanged(browser, query, count, params) }
+      val count = runCatching { carLibrary.searchCount(query) }
+      main.post {
+        // MediaBrowserCompat solo completa la petición cuando recibe esta notificación.
+        if (this@PlaybackService.session === session) session.notifySearchResultChanged(browser, query, count.getOrDefault(0), params)
+      }
+      count.getOrThrow()
       LibraryResult.ofVoid(params)
     }
 
@@ -352,7 +356,7 @@ class PlaybackService : MediaLibraryService() {
     }
   }
 
-  /** La app aporta su cola completa; los controladores externos solo eligen IDs de SQLite. */
+  /** La app aporta su cola completa; los controladores externos eligen elementos del catálogo. */
   private fun nativeItem(item: MediaItem, controller: MediaSession.ControllerInfo): MediaItem {
     if (controller.packageName == packageName) {
       entryOf(item)?.let {

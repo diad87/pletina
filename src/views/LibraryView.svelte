@@ -2,6 +2,7 @@
   // "Tu biblioteca" en el móvil (en escritorio es la barra lateral).
   import Icon from '../components/Icon.svelte'
   import LibraryList from '../components/LibraryList.svelte'
+  import NativeMigration from '../components/NativeMigration.svelte'
   import { newPlaylist } from '../lib/actions'
   import * as api from '../lib/api'
   import { isAndroid } from '../lib/player-android.svelte'
@@ -22,6 +23,9 @@
   <button class="import" onclick={() => nav.go({ name: 'import-playlist' })}>
     <Icon name="download" size={20} /> Importar de Spotify
   </button>
+  {#if api.inTauri}
+    <div class="migration"><NativeMigration /></div>
+  {/if}
   <LibraryList />
 
   <!-- Lo que en el escritorio está en la barra lateral: versión y actualizaciones. -->
@@ -66,6 +70,7 @@
     color: var(--faint);
     font-size: 12px;
   }
+  .migration { margin: 0 8px 16px; }
   .about p {
     margin: 0;
   }

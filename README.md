@@ -72,9 +72,9 @@ La misma app, pensada para el dedo. La música suena en un servicio de Android: 
 
 ### Android Auto (en desarrollo)
 
-El servicio multimedia ofrece **Favoritos**, **Playlists**, **Descargas** y **YouTube** a Android Auto. Al elegir una canción, continúa con el resto de su lista; los mandos del coche permiten pausar, reanudar y cambiar de canción. Puede arrancar sin abrir antes la pantalla de Pletina. La búsqueda consulta las canciones guardadas en tu biblioteca.
+El servicio multimedia ofrece **Favoritos**, **Playlists**, **Descargas** y **YouTube** a Android Auto. Al elegir una canción, continúa con el resto de su lista; los mandos del coche permiten pausar, reanudar y cambiar de canción. Puede arrancar sin abrir antes la pantalla de Pletina. La búsqueda consulta tu biblioteca y, si no encuentra coincidencias, busca canciones en el catálogo de Deezer.
 
-Esta integración todavía no está publicada ni validada en un coche. Para probar un APK instalado fuera de Google Play, activa **Orígenes desconocidos** en las opciones de desarrollador de Android Auto. Consulta las [instrucciones y pruebas de Android Auto](docs/android-auto.md).
+La APK incluye esta integración. Para usar un APK instalado fuera de Google Play, activa **Orígenes desconocidos** en las opciones de desarrollador de Android Auto. Consulta las [instrucciones y pruebas de Android Auto](docs/android-auto.md).
 
 ### Artistas favoritos
 
@@ -114,7 +114,15 @@ Pulsa la luna de **Sonando ahora** o de la barra de reproducción del PC para pa
 
 La cuenta sigue corriendo durante las pausas. Al agotarse, conserva el punto de escucha. «Al terminar» detiene la cola aunque tengas la repetición activada y marca el episodio como escuchado; si cambias de canción o episodio antes del final, se cancela esa opción. En Android funciona en el servicio de audio, también con la pantalla apagada. El temporizador es para la sesión actual: no se recupera al volver a arrancar la app o su servicio.
 
-## Instalar
+## Instalar Pletina
+
+Abre [Pletina en Tuqo](https://pletina-app.tuqo.ru/) para usar la versión web en el navegador o instalarla y abrirla desde su icono.
+
+Si ya usas Pletina, actualiza a **0.13.0** y abre **Tu biblioteca → Llevar mi biblioteca a la web**. Guarda la copia, instala Pletina desde Tuqo y, desde el icono nuevo, elige el archivo en **Tu biblioteca → Copia de seguridad**. Revisa tus listas y tu progreso antes de retirar la instalación anterior. Puedes volver a descargar el audio que siga disponible. Si usas Android Auto, puedes conservar la APK.
+
+Si ya tienes Pletina instalada desde otra web, guarda una copia desde ese icono antes de instalarla desde Tuqo. Abre el icono nuevo e importa el archivo en el mismo apartado.
+
+### Instaladores para actualizar o recuperar la app anterior
 
 Descarga el archivo de tu sistema desde la [última versión](https://github.com/diad87/pletina-releases/releases/latest):
 

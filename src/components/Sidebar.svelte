@@ -7,6 +7,8 @@
   import { updates } from '../lib/updates.svelte'
   import Icon from './Icon.svelte'
   import LibraryList from './LibraryList.svelte'
+  import NativeMigration from './NativeMigration.svelte'
+  import { inTauri } from '../lib/api'
 
   const route = $derived(nav.route)
 
@@ -81,6 +83,7 @@
     <button class="import" class:active={route.name === 'import-playlist'} onclick={() => nav.go({ name: 'import-playlist' })}>
       <Icon name="download" size={18} /> Importar de Spotify
     </button>
+    {#if inTauri}<NativeMigration />{/if}
     <LibraryList />
   </section>
 </aside>

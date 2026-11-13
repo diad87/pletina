@@ -1,6 +1,6 @@
 [package]
 name = "musify"
-version = "0.12.0"
+version = "0.13.0"
 description = "Pletina: reproductor de música tipo Spotify"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/diad87/pletina"
@@ -38,6 +38,7 @@ minisign-verify = "0.2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
+tempfile = "3"
 
 # Android: el servicio de música llama al núcleo Rust por JNI (ver android.rs).
 [target.'cfg(target_os = "android")'.dependencies]

@@ -75,6 +75,10 @@ for (const re of [/\.dmg$/, /\.deb$/]) {
 const apk = find(/\.apk$/)
 if (apk) publish(apk, `Pletina_${version}_android.apk`)
 
+if (tag === 'v0.13.0' && (!exe || !app || !appImage || !apk || !find(/\.dmg$/) || !find(/\.deb$/))) {
+  throw new Error('La versión de migración requiere Android y todos los instaladores de escritorio.')
+}
+
 if (!Object.keys(platforms).length) {
   console.error('No se ha encontrado ningún instalador en', dir)
   process.exit(1)

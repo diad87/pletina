@@ -1,5 +1,6 @@
 package dev.musify.desktop
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
@@ -44,6 +45,7 @@ class CarPlaybackTest {
     return task.get(15, TimeUnit.SECONDS)
   }
 
+  @SuppressLint("RestrictedApi")
   @Test
   fun mediaIdSelectionPreparesOfflineAndPreservesPlaylistDuplicates() {
     // La variante habitual puede contener la biblioteca del usuario: ni siquiera se abre su DB.
@@ -55,6 +57,9 @@ class CarPlaybackTest {
     var browser: MediaBrowser? = null
     try {
       assertFixtureVisibleToRust(fixture)
+      val matches = checkNotNull(legacySearch(instrumentation, "Auto test B")) { "Falló la búsqueda legacy" }
+      assertEquals(listOf("Auto test B"), matches.map { it.description.title.toString() })
+      assertTrue(matches.single().isPlayable)
       assertOffline(fixture.first, "Auto test A")
       assertOffline(fixture.second, "Auto test B")
       val connected = onMain {

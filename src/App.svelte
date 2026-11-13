@@ -74,9 +74,9 @@
   // Botón "atrás" de Android (MainActivity.kt): cierra lo que haya abierto o vuelve a la página
   // anterior. Si no queda nada, la app pasa a segundo plano.
   ;(window as unknown as { __musifyBack: () => boolean }).__musifyBack = () => {
-    const sleepDialog = document.querySelector<HTMLDialogElement>('dialog[data-sleep-timer][open]')
-    if (sleepDialog) {
-      sleepDialog.close()
+    const dialog = document.querySelector<HTMLDialogElement>('dialog[data-sleep-timer][open], dialog[data-native-migration][open]')
+    if (dialog) {
+      dialog.close()
       return true
     }
     if (menu.open) menu.close()

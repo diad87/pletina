@@ -250,11 +250,10 @@ jobs:
           path: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
           if-no-files-found: error
 
-  # Publica en el repositorio público (de ahí se descargan las actualizaciones). Si falla solo el
-  # APK, se publica igual lo de escritorio.
+  # El mismo índice sirve a escritorio y Android. La versión de migración necesita ambas partes.
   publish:
     needs: [build, android]
-    if: startsWith(github.ref, 'refs/tags/v') && !cancelled() && needs.build.result == 'success'
+    if: startsWith(github.ref, 'refs/tags/v') && !cancelled() && needs.build.result == 'success' && needs.android.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

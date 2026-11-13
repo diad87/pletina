@@ -1,12 +1,15 @@
 <script lang="ts">
   // Botones de reproducción y barra de progreso; se usan en la barra inferior y en "Sonando ahora".
   import { duration } from '../lib/format'
+  import { isPodcast } from '../lib/media'
   import { player } from '../lib/player.svelte'
   import Icon from './Icon.svelte'
 
   let { big = false }: { big?: boolean } = $props()
 
   const current = $derived(player.current)
+  const podcast = $derived(current != null && isPodcast(current.track.id))
+  const jumpSeconds = 15
 
   // Mientras se arrastra la barra de progreso, manda la posición del ratón, no la del audio.
   let dragging = $state(false)
@@ -14,10 +17,15 @@
   const position = $derived(dragging ? dragValue : player.time)
   const total = $derived(player.duration || current?.track.duration || 0)
   const fill = $derived(`${total > 0 ? Math.min(100, (position / total) * 100) : 0}%`)
+  const canJump = $derived(player.status !== 'loading' && Number.isFinite(total) && total > 0)
+
+  function jump(seconds: number) {
+    player.seek(Math.min(total, Math.max(0, player.time + seconds)))
+  }
 </script>
 
 <div class="transport" class:big>
-  <div class="buttons">
+  <div class="buttons" class:podcast>
     <button
       class="icon toggle"
       class:on={player.shuffle}
@@ -31,6 +39,15 @@
     <button class="icon" onclick={() => player.prev()} disabled={!current} title="Anterior">
       <Icon name="prev" size={big ? 30 : 20} />
     </button>
+    {#if podcast}
+      <button
+        class="icon jump"
+        onclick={() => jump(-jumpSeconds)}
+        disabled={!canJump || player.time <= 0}
+        aria-label="Retroceder 15 segundos"
+        title="Retroceder 15 segundos"
+      >−15 s</button>
+    {/if}
     <button
       class="play"
       onclick={() => player.toggle()}
@@ -43,6 +60,15 @@
         <Icon name={player.status === 'playing' ? 'pause' : 'play'} size={big ? 28 : 18} />
       {/if}
     </button>
+    {#if podcast}
+      <button
+        class="icon jump"
+        onclick={() => jump(jumpSeconds)}
+        disabled={!canJump || player.time >= total}
+        aria-label="Avanzar 15 segundos"
+        title="Avanzar 15 segundos"
+      >+15 s</button>
+    {/if}
     <button class="icon" onclick={() => player.next()} disabled={!player.hasNext} title="Siguiente">
       <Icon name="next" size={big ? 30 : 20} />
     </button>
@@ -96,6 +122,31 @@
   }
   .big .buttons {
     gap: 36px;
+  }
+  .buttons.podcast {
+    gap: 12px;
+  }
+  .jump {
+    width: 40px;
+    min-height: 36px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .big .jump {
+    min-height: 44px;
+  }
+  @media (max-width: 380px) {
+    .buttons.podcast {
+      gap: 6px;
+    }
+    .jump {
+      width: 36px;
+    }
+    .big .podcast .play {
+      width: 56px;
+      height: 56px;
+    }
   }
   .icon {
     position: relative;

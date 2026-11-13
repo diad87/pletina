@@ -1,19 +1,22 @@
-//! Catálogo local para Android Auto. Solo necesita SQLite: funciona sin Tauri, WebView ni red.
+//! Catálogo para Android Auto, sin Tauri ni WebView. La biblioteca funciona sin red.
 //! Kotlin pagina los resultados de browse y crea la cola conservando el orden y las repeticiones.
 //! Los IDs canónicos identifican carpetas o canciones; el servicio añade el contexto de la cola.
 
 use crate::db::Db;
+use crate::deezer::Deezer;
 use crate::library::{LibTrack, TRACK_COLS, track_at};
 use crate::youtube::normalize;
 use reqwest::Url;
 use rusqlite::{OptionalExtension, params};
 use serde::Serialize;
 use std::path::Path;
+use std::time::Duration;
 
 type Res<T> = Result<T, String>;
 const MAX_ID: u64 = 9_007_199_254_740_991;
-/// La búsqueda por voz solo consulta la biblioteca del usuario, con un máximo de 100 resultados.
+/// Máximo de coincidencias de la biblioteca del usuario.
 const SEARCH_LIMIT: usize = 100;
+const CATALOG_SEARCH_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -157,11 +160,26 @@ pub fn media_item(db: &Db, media_id: &str) -> Res<CatalogItem> {
     Ok(song(track))
 }
 
-pub fn search(db: &Db, query: &str) -> Res<Vec<CatalogItem>> {
-    if query.chars().count() > 200 { return Err("La búsqueda no puede superar 200 caracteres".into()); }
-    let query = normalize(query);
-    if query.is_empty() { return Ok(vec![]); }
-    let words: Vec<_> = query.split_whitespace().collect();
+pub async fn search(db: &Db, deezer: &Deezer, query: &str) -> Res<Vec<CatalogItem>> {
+    if query.chars().count() > 200 {
+        return Err("La búsqueda no puede superar 200 caracteres".into());
+    }
+    let normalized = normalize(query);
+    if normalized.is_empty() {
+        return Ok(vec![]);
+    }
+    let local = search_library(db, &normalized)?;
+    if !local.is_empty() {
+        return Ok(local);
+    }
+    let remote = tokio::time::timeout(CATALOG_SEARCH_TIMEOUT, deezer.search_tracks(query.trim()))
+        .await
+        .map_err(|_| "El catálogo tardó demasiado en responder")??;
+    Ok(remote.into_iter().map(song).collect())
+}
+
+fn search_library(db: &Db, normalized_query: &str) -> Res<Vec<CatalogItem>> {
+    let words: Vec<_> = normalized_query.split_whitespace().collect();
     // EXISTS evita repetir canciones de varias listas y excluye restos de canciones quitadas.
     let sql = format!("SELECT {TRACK_COLS} FROM tracks t WHERE
         EXISTS (SELECT 1 FROM liked_tracks l WHERE l.track_id = t.id)
@@ -263,7 +281,7 @@ mod tests {
         assert!(media_item(&db, &format!("track:{local}")).is_err());
         std::fs::remove_file(&path).unwrap();
         assert!(browse(&db, "downloads").unwrap().is_empty());
-        assert!(search(&db, "Descargada").unwrap().is_empty());
+        assert!(search_library(&db, "descargada").unwrap().is_empty());
     }
 
     #[test]
@@ -283,13 +301,24 @@ mod tests {
         assert!(browse(&db, "youtube").unwrap().is_empty());
         assert_eq!(browse(&db, "playlist:5").unwrap().len(), 2);
         assert!(media_item(&db, &format!("track:{}", youtube.id)).unwrap().playable);
-        let results = search(&db, "bjork joga").unwrap();
+        let results = search_library(&db, "bjork joga").unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].track.as_ref().unwrap().id, youtube.id);
-        assert!(search(&db, "Sin referencias").unwrap().is_empty());
-        assert!(search(&db, "   ").unwrap().is_empty());
+        assert!(search_library(&db, "sin referencias").unwrap().is_empty());
         for id in ["track:0", "track:-1", "track:01", "track:1 OR 1=1", "playlist:0", "../root"] {
             assert!(media_item(&db, id).is_err(), "{id}");
         }
+    }
+
+    #[tokio::test]
+    async fn search_keeps_saved_matches_and_ignores_queries_without_words() {
+        let db = db();
+        let deezer = Deezer::new();
+        add(&db, &track(1, "Jóga"), true);
+
+        let results = search(&db, &deezer, "bjork joga").await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].id, "track:1");
+        assert!(search(&db, &deezer, "  …  ").await.unwrap().is_empty());
     }
 }

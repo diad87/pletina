@@ -21,6 +21,8 @@ mod extractors;
 mod library;
 #[cfg(any(target_os = "android", test))]
 mod media_library;
+mod migration;
+mod migration_flow;
 mod playlist_import;
 mod spotify;
 mod local;
@@ -258,6 +260,8 @@ pub fn run() {
     // Android: el reproductor nativo (servicio de música), al que la interfaz manda órdenes.
     #[cfg(target_os = "android")]
     let builder = builder.plugin(native_player::plugin());
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(migration_flow::android_plugin());
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -369,6 +373,8 @@ pub fn run() {
             library::record_play,
             library::history,
             library::clear_history,
+            migration_flow::save_native_migration,
+            migration_flow::open_pwa_migration,
             downloads::download,
             downloads::cancel_downloads,
             downloads::downloads_list,

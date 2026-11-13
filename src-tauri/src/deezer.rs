@@ -234,6 +234,25 @@ impl Deezer {
         })
     }
 
+    #[cfg(any(target_os = "android", test))]
+    pub async fn search_tracks(&self, query: &str) -> Result<Vec<crate::library::LibTrack>, String> {
+        const LIMIT: usize = 20;
+        let url = format!("{API}/search/track?q={}&limit={LIMIT}", urlencode(query));
+        let page = self.get::<Page<TopTrack>>(&url).await?;
+        let mut seen = std::collections::HashSet::new();
+        Ok(page.data.into_iter()
+            .filter(|value| {
+                let track = &value.track;
+                (1..CATALOG_LIMIT).contains(&track.id)
+                    && !track.title.trim().is_empty()
+                    && !track.artist.name.trim().is_empty()
+                    && seen.insert(track.id)
+            })
+            .take(LIMIT)
+            .map(catalog_lib_track)
+            .collect())
+    }
+
     /// Una selección general para Inicio cuando todavía no hay gustos guardados.
     /// Si falla una de las listas, la otra sigue siendo útil.
     pub async fn discovery(&self) -> Result<Discovery, String> {
@@ -283,7 +302,7 @@ impl Deezer {
             let url = format!("{API}/track/isrc:{code}");
             if let Some(track) = self.get_import::<TopTrack>(&url, true).await? {
                 if import_isrc_matches(&track, &code, title, artist, duration_ms) {
-                    return Ok(Some(import_lib_track(track)));
+                    return Ok(Some(catalog_lib_track(track)));
                 }
             }
         }
@@ -295,7 +314,7 @@ impl Deezer {
         let url = format!("{API}/search/track?q={}&limit=25", urlencode(&query));
         let page = self.get_import::<Page<TopTrack>>(&url, false).await?
             .ok_or_else(|| "Respuesta inesperada de Deezer".to_string())?;
-        Ok(select_import_track(page.data, title, artist, duration_ms).map(import_lib_track))
+        Ok(select_import_track(page.data, title, artist, duration_ms).map(catalog_lib_track))
     }
 
     async fn get_import<T: DeserializeOwned>(&self, url: &str, allow_missing: bool) -> Result<Option<T>, String> {
@@ -393,7 +412,7 @@ fn decode_import_response<T: DeserializeOwned>(value: Value, allow_missing: bool
         .map_err(|e| format!("Respuesta inesperada de Deezer: {e}"))
 }
 
-fn import_lib_track(value: TopTrack) -> crate::library::LibTrack {
+fn catalog_lib_track(value: TopTrack) -> crate::library::LibTrack {
     let TopTrack { track, album } = value;
     crate::library::LibTrack {
         id: track.id,
@@ -764,7 +783,7 @@ mod import_tests {
     fn copies_library_metadata_from_the_selected_recording() {
         let mut source = candidate(42, "Song", "Artist", 201);
         source.track.explicit_lyrics = true;
-        let saved = import_lib_track(source);
+        let saved = catalog_lib_track(source);
         assert_eq!((saved.id, saved.album_id, saved.artist_id, saved.album_artist_id), (42, 12, 7, 7));
         assert_eq!(saved.duration, 201);
         assert!(saved.explicit);

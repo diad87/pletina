@@ -6,6 +6,7 @@
 //! solo (p. ej. tras cerrar la app, al pulsar "play" en los auriculares), la abre él (`init`).
 
 use crate::db::Db;
+use crate::deezer::Deezer;
 use crate::library::LibTrack;
 use crate::player;
 use crate::youtube::{TrackQuery, YouTubeMusic};
@@ -24,6 +25,7 @@ use tauri::{AppHandle, Emitter};
 static RT: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
     tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().expect("runtime")
 });
+static DEEZER: LazyLock<Deezer> = LazyLock::new(Deezer::new);
 /// El registro de la app (el mismo que escribe Kotlin, ver MusifyLog.kt).
 const LOG: &str = "/data/data/dev.musify.desktop/files/musify.log";
 
@@ -201,7 +203,8 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_isDownloaded<'l>(_env:
     u8::from(core.db.download_path(id as u64).is_some_and(|p| Path::new(&p).exists()))
 }
 
-/// Catálogo navegable: solo SQLite, también cuando Android Auto inicia el servicio sin la app.
+/// Catálogo navegable, también cuando Android Auto inicia el servicio sin la app.
+/// La búsqueda consulta Deezer si no hay coincidencias en SQLite.
 /// `browse(parentId)` y `search(query)` devuelven {items:[...]}; `mediaItem(id)`, {item:{...}}.
 /// Los tres devuelven {error:"..."} si la petición no se puede completar.
 #[unsafe(no_mangle)]
@@ -229,7 +232,7 @@ pub extern "system" fn Java_dev_musify_desktop_MusifyCore_search<'l>(
     mut env: JNIEnv<'l>, _class: JClass<'l>, query: JString<'l>,
 ) -> jstring {
     let query = from_java(&mut env, &query);
-    let result = core().and_then(|core| crate::media_library::search(&core.db, &query));
+    let result = core().and_then(|core| RT.block_on(crate::media_library::search(&core.db, &DEEZER, &query)));
     let out = result.map(|items| json!({ "items": items })).unwrap_or_else(|error| json!({ "error": error }));
     to_java(&mut env, out.to_string())
 }

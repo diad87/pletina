@@ -19,6 +19,10 @@ internal class CarLibrary(
   data class Snapshot(val count: Int, val fingerprint: List<Byte>)
   private data class Location(val parent: String, val index: Int, val trackId: Long)
 
+  // Android Auto pide el recuento, los resultados y luego un ID en llamadas separadas.
+  // El mismo worker usa este mapa; una búsqueda nueva siempre actualiza sus resultados.
+  private val searches = LinkedHashMap<String, Result<List<JSONObject>>>(16, 0.75f, true)
+
   fun root(): MediaItem = MediaItem.Builder().setMediaId("root").setMediaMetadata(
     MediaMetadata.Builder().setTitle("Pletina").setIsBrowsable(true).setIsPlayable(false)
       .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED).build(),
@@ -31,7 +35,7 @@ internal class CarLibrary(
 
   fun search(query: String, page: Int, pageSize: Int): List<MediaItem> = children(searchParent(query), page, pageSize)
 
-  fun count(parent: String): Int = nodes(parent).size
+  fun searchCount(query: String): Int = searchNodes(searchParent(query), refresh = true).size
 
   /** También detecta ediciones/reordenaciones aunque no cambie el número de canciones. */
   fun snapshot(parent: String): Snapshot {
@@ -45,7 +49,7 @@ internal class CarLibrary(
     val requestedId = id.removePrefix("auto:")
     if (requestedId == "root") return root()
     val location = location(requestedId)
-    val node = node(location?.let { "track:${it.trackId}" } ?: requestedId)
+    val node = contextualNode(requestedId, location)
     return browsableItem(node, location?.parent, location?.index ?: 0).buildUpon().setMediaId(id).build()
   }
 
@@ -64,12 +68,12 @@ internal class CarLibrary(
   fun single(request: MediaItem): MediaItem {
     val id = request.mediaId.removePrefix("auto:")
     val location = location(id)
-    val node = node(location?.let { "track:${it.trackId}" } ?: id)
+    val node = contextualNode(id, location)
     return playbackItem(node, id, location?.index ?: 0, location?.parent?.let(::label) ?: "Tu biblioteca")
   }
 
   private fun playlist(parent: String, location: Location?): Selection {
-    val nodes = nodes(parent)
+    val nodes = nodes(parent, retrySearch = true)
     val playable = nodes.withIndex().filter { it.value.optBoolean("playable") && it.value.has("track") }
     require(playable.isNotEmpty()) { "No hay canciones en esta lista" }
     val selected = if (location == null) 0 else {
@@ -85,10 +89,32 @@ internal class CarLibrary(
     return Selection(items, selected)
   }
 
-  private fun nodes(parent: String): List<JSONObject> {
-    val result = response(if (parent.startsWith(SEARCH)) searchJson(parent.removePrefix(SEARCH)) else browseJson(parent))
-    val items = result.getJSONArray("items")
+  private fun nodes(parent: String, retrySearch: Boolean = false): List<JSONObject> =
+    if (parent.startsWith(SEARCH)) searchNodes(parent, retryFailure = retrySearch) else parseNodes(browseJson(parent))
+
+  private fun searchNodes(parent: String, refresh: Boolean = false, retryFailure: Boolean = false): List<JSONObject> {
+    if (!refresh) {
+      val cached = searches[parent]
+      if (cached != null && !(retryFailure && cached.isFailure)) return cached.getOrThrow()
+    }
+    val result = runCatching { parseNodes(searchJson(parent.removePrefix(SEARCH))) }
+    searches[parent] = result
+    if (searches.size > 16) searches.remove(searches.keys.first())
+    return result.getOrThrow()
+  }
+
+  private fun parseNodes(json: String): List<JSONObject> {
+    val items = response(json).getJSONArray("items")
     return (0 until items.length()).map { items.getJSONObject(it) }
+  }
+
+  private fun contextualNode(id: String, location: Location?): JSONObject {
+    if (location == null) return node(id)
+    if (!location.parent.startsWith(SEARCH)) return node("track:${location.trackId}")
+    val results = searchNodes(location.parent, retryFailure = true)
+    fun matches(result: JSONObject) = result.optJSONObject("track")?.optLong("id") == location.trackId
+    return results.getOrNull(location.index)?.takeIf(::matches) ?: results.firstOrNull(::matches)
+      ?: throw IllegalArgumentException("Esta canción ya no está en los resultados")
   }
 
   private fun node(id: String): JSONObject = response(itemJson(id)).getJSONObject("item")
@@ -169,9 +195,12 @@ internal class CarLibrary(
 
   companion object {
     private const val SEARCH = "search:"
-    fun searchParent(query: String): String {
-      require(query.isNotBlank() && query.length <= 200) { "Escribe una búsqueda de hasta 200 caracteres" }
-      return SEARCH + query.trim()
+    private fun searchParent(query: String): String {
+      val trimmed = query.trim()
+      require(trimmed.isNotEmpty() && trimmed.codePointCount(0, trimmed.length) <= 200) {
+        "Escribe una búsqueda de hasta 200 caracteres"
+      }
+      return SEARCH + trimmed
     }
   }
 }

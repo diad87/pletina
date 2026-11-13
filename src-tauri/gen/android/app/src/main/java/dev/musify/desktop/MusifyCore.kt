@@ -38,6 +38,6 @@ object MusifyCore {
   /** Un nodo del catálogo: `{item: {...}}` o `{error}`. */
   external fun mediaItem(mediaId: String): String
 
-  /** Búsqueda en las canciones guardadas de la biblioteca: `{items: [...]}` o `{error}`. */
+  /** Busca en la biblioteca y luego en Deezer si hace falta. Llamar fuera del hilo principal. */
   external fun search(query: String): String
 }
